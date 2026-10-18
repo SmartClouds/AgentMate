@@ -435,13 +435,14 @@ internal sealed partial class FirewallManager(
         }
     }
 
+    // A delay rather than a PeriodicTimer: a PeriodicTimer catches up on every interval a clock
+    // jump skipped, so a test that moves its fake clock 30 days on ran this half a million times.
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await ReconcileQuietlyAsync(stoppingToken);
-        using var ticks = new PeriodicTimer(options.MonitorInterval, time);
-        while (await ticks.WaitForNextTickAsync(stoppingToken))
+        while (true)
         {
             await ReconcileQuietlyAsync(stoppingToken);
+            await Task.Delay(options.MonitorInterval, time, stoppingToken);
         }
     }
 

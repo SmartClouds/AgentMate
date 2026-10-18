@@ -260,10 +260,11 @@ internal sealed partial class SshHardeningManager(
         }
     }
 
+    // A delay rather than a PeriodicTimer: a PeriodicTimer catches up on every interval a clock
+    // jump skipped, so a test that moves its fake clock 30 days on ran this half a million times.
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var ticker = new PeriodicTimer(options.MonitorInterval, time);
-        do
+        while (true)
         {
             try
             {
@@ -273,8 +274,9 @@ internal sealed partial class SshHardeningManager(
             {
                 LogSettleFailed(logger, error);
             }
+
+            await Task.Delay(options.MonitorInterval, time, stoppingToken);
         }
-        while (await ticker.WaitForNextTickAsync(stoppingToken));
     }
 
     private static void Check(SshHardeningRequest? request)
