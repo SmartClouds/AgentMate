@@ -45,7 +45,7 @@ Opening a server without a core runs a read-only check over SSH. Nothing is chan
 
 If anything blocks the install, a red box titled "This server cannot take the core yet" lists the reasons and the install button is disabled. Fix the problem on the server and click **Check again**.
 
-If the check itself fails (for example the server cannot be reached), you see the error and a **Check again** button.
+While the check runs, a line under the placeholders says which server is being checked. On a slow connection it changes to say the server is slow to answer. The check stops by itself if the server stops answering. If it fails (for example the server cannot be reached, or it accepts the login but does not answer a command, which usually means it is overloaded or the connection is failing), you see the reason and a **Check again** button. It does not retry by itself.
 
 ## Install the server core
 

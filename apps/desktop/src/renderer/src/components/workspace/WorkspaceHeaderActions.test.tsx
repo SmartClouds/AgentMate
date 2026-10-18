@@ -4,6 +4,8 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RUN_PROJECT_EVENT } from '@/lib/workspace/commands';
+import { useRunPauseStore } from '@/stores/runPauseStore';
+import { useTerminalStore } from '@/stores/terminalStore';
 import { useVersionDialogStore } from '@/stores/versionDialogStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
@@ -312,5 +314,89 @@ describe('WorkspaceHeaderActions run labels for placeholders', () => {
     expect(plain?.textContent).toBe('Devpnpm dev');
     expect(templated).toHaveTextContent('pnpm dev -- --port <port>');
     expect(templated).toHaveTextContent('Asks for input');
+  });
+});
+
+describe('WorkspaceHeaderActions pause', () => {
+  function runTab(id: string, projectId: string, label = 'Dev') {
+    return {
+      id,
+      title: projectId.toUpperCase(),
+      projectId,
+      run: { commandId: id, label, command: 'pnpm dev', kind: 'web' as const, startedAt: Date.now() },
+    };
+  }
+
+  const PAUSE_RESULT = {
+    ok: true,
+    paused: true,
+    reason: 'user',
+    pausedAt: 1,
+    processCount: 2,
+    failedCount: 0,
+    containersOnly: false,
+  };
+
+  async function renderWithRuns(
+    sessions: ReturnType<typeof runTab>[],
+    paused: Record<string, { reason: 'user' | 'agent'; pausedAt: number }> = {},
+  ) {
+    useTerminalStore.setState({ sessions, activeSessionId: null, isOpen: false });
+    useRunPauseStore.setState({ paused, pending: {} });
+    useWorkspaceStore.getState().openProject('a');
+    const view = renderWithProviders(<WorkspaceHeaderActions />, {
+      bridge: {
+        'projects.list': [project('a'), project('b')],
+        'terminal.runStatus': { available: true, cpuReady: true, sessions: [] },
+        'terminal.pause': PAUSE_RESULT,
+        'terminal.resume': { ...PAUSE_RESULT, paused: false, reason: null, pausedAt: null },
+      },
+    });
+    await screen.findByRole('button', { name: 'Tag a version' });
+    return view;
+  }
+
+  beforeEach(() => {
+    useTerminalStore.setState({ sessions: [] });
+    useRunPauseStore.setState({ paused: {}, pending: {} });
+  });
+
+  it('is not there while the project has no run going', async () => {
+    await renderWithRuns([runTab('other', 'b')]);
+    expect(screen.queryByRole('button', { name: /^Pause|^Resume/ })).not.toBeInTheDocument();
+  });
+
+  it("pauses the project's run", async () => {
+    const { user, bridge } = await renderWithRuns([runTab('dev', 'a')]);
+
+    await user.click(screen.getByRole('button', { name: 'Pause Dev' }));
+
+    expect(bridge.$fn('terminal.pause')).toHaveBeenCalledWith('dev', 'user');
+    expect(await screen.findByRole('button', { name: 'Resume Dev' })).toBeInTheDocument();
+  });
+
+  it('resumes it once paused', async () => {
+    const { user, bridge } = await renderWithRuns([runTab('dev', 'a')], {
+      dev: { reason: 'user', pausedAt: 1 },
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Resume Dev' }));
+
+    expect(bridge.$fn('terminal.resume')).toHaveBeenCalledWith('dev');
+  });
+
+  it('pauses every run of the project together, and only those', async () => {
+    const { user, bridge } = await renderWithRuns([
+      runTab('web', 'a', 'Web'),
+      runTab('api', 'a', 'Api'),
+      runTab('other', 'b'),
+    ]);
+
+    await user.click(screen.getByRole('button', { name: 'Pause 2 runs of A' }));
+
+    expect(bridge.$fn('terminal.pause').mock.calls).toEqual([
+      ['web', 'user'],
+      ['api', 'user'],
+    ]);
   });
 });

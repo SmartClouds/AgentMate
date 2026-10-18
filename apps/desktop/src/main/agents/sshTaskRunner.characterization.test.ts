@@ -73,6 +73,7 @@ const fake = vi.hoisted(() => {
 
 vi.mock('../ipc/ssh', () => ({
   hasSshSession: () => fake.state.connected,
+  sshSessionServerId: () => null,
   writeToSshSession: (id: string, data: string) => fake.type(id, data),
   subscribeSshOutput: (id: string, listener: (data: string) => void) =>
     fake.subscribe(fake.state.outputListeners, id, listener),

@@ -1,4 +1,5 @@
 import type { DeployPreflight } from '@shared/deployTypes';
+import { useEffect, useState } from 'react';
 import { CircleCheck, CircleInfo, CircleX } from '@/components/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -119,22 +120,38 @@ export function PreflightChecklist({
   );
 }
 
-export function PreflightSkeleton(): React.JSX.Element {
+/** How long the check runs before the panel says the server is slow instead of only shimmering. */
+const SLOW_CHECK_MS = 8_000;
+
+export function PreflightSkeleton({ serverName }: { serverName: string }): React.JSX.Element {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), SLOW_CHECK_MS);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <div
-      className="grid gap-x-6 gap-y-3 sm:grid-cols-2"
-      aria-busy="true"
-      aria-label="Checking the server"
-    >
-      {Array.from({ length: 6 }, (_, index) => (
-        <div key={index} className="flex items-start gap-2.5">
-          <Skeleton className="h-4 w-4 rounded-full" />
-          <div className="flex-1 space-y-1.5">
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-4 w-40" />
+    <div className="space-y-3">
+      <div
+        className="grid gap-x-6 gap-y-3 sm:grid-cols-2"
+        aria-busy="true"
+        aria-label="Checking the server"
+      >
+        {Array.from({ length: 6 }, (_, index) => (
+          <div key={index} className="flex items-start gap-2.5">
+            <Skeleton className="h-4 w-4 rounded-full" />
+            <div className="flex-1 space-y-1.5">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-4 w-40" />
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground" role="status">
+        {slow
+          ? `${serverName} is slow to answer. The check stops by itself if the server stops answering, and you can check again then.`
+          : `Checking ${serverName}.`}
+      </p>
     </div>
   );
 }

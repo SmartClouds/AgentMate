@@ -1,8 +1,10 @@
 import { agentSessionTitle, type PaneGroupNode, type Project } from '@agentmat/core';
 import { isImagePath } from '@shared/imageFiles';
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { CliLogo } from '@/components/cliLogos';
 import {
+  ArrowLeft,
+  ArrowRight,
   CodeCompare,
   Compress,
   Expand,
@@ -67,15 +69,29 @@ const BrowserTab = lazy(() => import('./browser/BrowserTab'));
 /** Drag payload type for workspace tabs, kept apart from OS file drags. */
 const TAB_MIME = 'application/x-agentmate-tab';
 
+interface DraggedTab {
+  projectId: string;
+  tabId: string;
+  groupId: string;
+}
+
+/**
+ * The tab being dragged right now. A drag only says what it carries on the drop, so this is how
+ * a strip knows, while the tab is still over it, how much room to make and whether it's its own.
+ */
+let liveTabDrag: (DraggedTab & { width: number }) | null = null;
+
 /**
  * Pages of browser tabs sit above the panes in their own layer and would swallow the drag, so
  * they step aside until it ends. The tab that started the drag may be gone by then (a move
  * remounts it), so the end is watched on the window, with the first mouse move after a drop as
  * a backstop.
  */
-function beginTabDrag(): void {
+function beginTabDrag(drag: DraggedTab & { width: number }): void {
+  liveTabDrag = drag;
   browserRuntime.setDragging(true);
   const end = (): void => {
+    liveTabDrag = null;
     browserRuntime.setDragging(false);
     for (const type of ['dragend', 'drop', 'mousemove'] as const) {
       window.removeEventListener(type, end, true);
@@ -86,10 +102,95 @@ function beginTabDrag(): void {
   }
 }
 
-interface DraggedTab {
-  projectId: string;
-  tabId: string;
-  groupId: string;
+/** A tab slot's place in its strip. Offsets ignore transforms, so a slot still sliding reads true. */
+interface SlotBox {
+  left: number;
+  width: number;
+}
+
+/** A tab held over a strip, and where the strip makes room for it. */
+interface StripDrag {
+  /** The slot the tab would land in front of if dropped now. The length means the end. */
+  at: number;
+  /** The tab's own slot when it comes from this strip, or -1 when it comes from another pane. */
+  from: number;
+  /** How wide the tab is, so the gap opened for it fits. */
+  width: number;
+  /** Every slot's place, untouched by the slide. */
+  boxes: SlotBox[];
+}
+
+function sameStripDrag(a: StripDrag | null, b: StripDrag): boolean {
+  return (
+    a !== null &&
+    a.at === b.at &&
+    a.from === b.from &&
+    a.width === b.width &&
+    a.boxes.length === b.boxes.length &&
+    a.boxes.every((box, i) => box.left === b.boxes[i].left && box.width === b.boxes[i].width)
+  );
+}
+
+function slotGap(boxes: SlotBox[]): number {
+  return boxes.length > 1 ? boxes[1].left - boxes[0].left - boxes[0].width : 2;
+}
+
+/** Where the tab lands when it comes from another pane: the gap the slots open for it. */
+function landingLeft({ at, boxes }: StripDrag): number {
+  if (at < boxes.length) return boxes[at].left;
+  const last = boxes[boxes.length - 1];
+  return last ? last.left + last.width + slotGap(boxes) : 0;
+}
+
+/**
+ * How far a slot slides while a tab is held over the strip. A tab from another pane pushes the
+ * slots from its landing spot on to the right. A tab from this strip moves to where it would land,
+ * and the slots it passes step over into the place it left, the way rows and cards reorder.
+ */
+function slotShift(drag: StripDrag, index: number): number {
+  const { at, from, width, boxes } = drag;
+  const room = width + slotGap(boxes);
+  if (from === -1) return index >= at ? room : 0;
+  const to = from < at ? at - 1 : at;
+  if (index === from) {
+    if (to > from) return boxes[to].left + boxes[to].width - width - boxes[from].left;
+    if (to < from) return boxes[to].left - boxes[from].left;
+    return 0;
+  }
+  if (from < to && index > from && index <= to) return -room;
+  if (to < from && index >= to && index < from) return room;
+  return 0;
+}
+
+/** How far a click on an edge arrow scrolls the strip. */
+const TAB_SCROLL = 120;
+/** How far each dragover on an edge arrow scrolls, so holding a tab there keeps the strip moving. */
+const TAB_DRAG_SCROLL = 12;
+
+function StripArrow({
+  side,
+  disabled,
+  onScroll,
+}: {
+  side: 'left' | 'right';
+  disabled: boolean;
+  onScroll: (delta: number, behavior: ScrollBehavior) => void;
+}): React.JSX.Element {
+  const sign = side === 'left' ? -1 : 1;
+  const Icon = side === 'left' ? ArrowLeft : ArrowRight;
+  return (
+    <button
+      type="button"
+      tabIndex={-1}
+      aria-label={`Scroll tabs ${side}`}
+      disabled={disabled}
+      onClick={() => onScroll(sign * TAB_SCROLL, 'smooth')}
+      onDragOver={() => onScroll(sign * TAB_DRAG_SCROLL, 'instant')}
+      className="flex h-7 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+    >
+      <Icon className="h-3 w-3" />
+    </button>
+  );
 }
 
 function readDraggedTab(event: React.DragEvent): DraggedTab | null {
@@ -297,7 +398,8 @@ function PaneTab({
         const payload: DraggedTab = { projectId, tabId: tab.id, groupId };
         event.dataTransfer.setData(TAB_MIME, JSON.stringify(payload));
         event.dataTransfer.effectAllowed = 'move';
-        beginTabDrag();
+        const slot = event.currentTarget.closest<HTMLElement>('[data-tab-slot]');
+        beginTabDrag({ ...payload, width: slot?.offsetWidth ?? event.currentTarget.offsetWidth });
       }}
       onClick={onSelect}
       onKeyDown={(event) => {
@@ -562,8 +664,111 @@ export function PaneGroup({
 
   const stripRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
-  const [insertAt, setInsertAt] = useState<number | null>(null);
   const [dropZone, setDropZone] = useState<DropZone | null>(null);
+  const tabs = group.tabIds.flatMap((tabId) => {
+    const tab = workspace.tabs[tabId];
+    return tab ? [tab] : [];
+  });
+
+  // The tab held over the strip. The ref is what the drop reads, since a render can land between
+  // the window seeing the drop and the strip handling it.
+  const [stripDrag, setStripDragState] = useState<StripDrag | null>(null);
+  const stripDragRef = useRef<StripDrag | null>(null);
+  const setStripDrag = useCallback((next: StripDrag | null) => {
+    stripDragRef.current = next;
+    setStripDragState(next);
+  }, []);
+  // The tab picked up from this strip, drawn faded until the drag ends.
+  const [draggingTabId, setDraggingTabId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!draggingTabId && !stripDrag) return;
+    const endDrag = (): void => {
+      setDraggingTabId(null);
+      setStripDrag(null);
+    };
+    // A drop that moves the tab to another pane unmounts it here, so no dragend may follow.
+    const endPickup = (): void => setDraggingTabId(null);
+    window.addEventListener('dragend', endDrag, true);
+    window.addEventListener('drop', endPickup, true);
+    return () => {
+      window.removeEventListener('dragend', endDrag, true);
+      window.removeEventListener('drop', endPickup, true);
+    };
+  }, [draggingTabId, stripDrag, setStripDrag]);
+
+  // Where each slot was last drawn, slide included, so a slot whose place changes can glide there
+  // from where the user last saw it. That covers a drop here, a tab moved off to another pane
+  // and a tab closed.
+  const drawnRef = useRef(new Map<string, number>());
+  const orderKey = tabs.map((tab) => tab.id).join('\n');
+  const drawnOrderRef = useRef(orderKey);
+  useLayoutEffect(() => {
+    const strip = stripRef.current;
+    if (!strip) return;
+    const slots = Array.from(strip.querySelectorAll<HTMLElement>(':scope > [data-tab-slot]'));
+    // Mid-drag the slots are placed by the slide itself, so they're left to it.
+    if (drawnOrderRef.current !== orderKey && !stripDrag) {
+      const drawn = drawnRef.current;
+      // Transitions go off before anything is read, so the layout reads below can't start one.
+      for (const slot of slots) slot.style.transition = 'none';
+      for (const slot of slots) {
+        const start = drawn.get(slot.dataset.tabSlot ?? '');
+        const gap = start === undefined ? 0 : start - slot.offsetLeft;
+        slot.style.transform = gap ? `translateX(${gap}px)` : '';
+      }
+      // Reading layout applies those starting spots, so the release below is the change that moves.
+      strip.getBoundingClientRect();
+      for (const slot of slots) {
+        slot.style.transition = '';
+        slot.style.transform = '';
+      }
+    }
+    drawnOrderRef.current = orderKey;
+    drawnRef.current = new Map(
+      slots.map((slot, index) => [
+        slot.dataset.tabSlot ?? '',
+        slot.offsetLeft + (stripDrag ? slotShift(stripDrag, index) : 0),
+      ]),
+    );
+  });
+
+  // Arrows show at either end once the tabs no longer fit, like the terminal drawer's.
+  const [overflow, setOverflow] = useState({ start: false, end: false });
+  const syncOverflow = useCallback(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    setOverflow((prev) => {
+      const next = { start: el.scrollLeft > 1, end: el.scrollLeft < max - 1 };
+      return prev.start === next.start && prev.end === next.end ? prev : next;
+    });
+  }, []);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: tabs were added, removed or switched, so the new slots need observing and the active one scrolled into view
+  useLayoutEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    // Offsets, not client rects: a slot still gliding to its new place would read off by its slide.
+    const active = el
+      .querySelector('[aria-selected="true"]')
+      ?.closest<HTMLElement>('[data-tab-slot]');
+    if (active) {
+      const left = active.offsetLeft;
+      const right = left + active.offsetWidth;
+      if (left < el.scrollLeft) el.scrollLeft = left;
+      else if (right > el.scrollLeft + el.clientWidth) el.scrollLeft = right - el.clientWidth;
+    }
+    syncOverflow();
+    const observer = new ResizeObserver(syncOverflow);
+    observer.observe(el);
+    for (const child of Array.from(el.children)) observer.observe(child);
+    return () => observer.disconnect();
+  }, [orderKey, group.activeTabId, syncOverflow]);
+
+  const scrollStrip = useCallback((delta: number, behavior: ScrollBehavior) => {
+    stripRef.current?.scrollBy({ left: delta, behavior });
+  }, []);
 
   // Wheel scrolls the strip sideways once tabs no longer fit.
   useEffect(() => {
@@ -616,21 +821,32 @@ export function PaneGroup({
     closeGroup(projectId, group.id);
   }
 
-  function stripInsertIndex(event: React.DragEvent): number {
+  /**
+   * Works out where a held tab would land and makes room for it. The slots are measured by their
+   * offsets, which the slide doesn't change, so the landing spot doesn't flicker as they move.
+   */
+  function trackStripDrag(event: React.DragEvent): void {
     const el = stripRef.current;
-    if (!el) return group.tabIds.length;
-    const tabs = Array.from(el.querySelectorAll<HTMLElement>('[data-tab-id]'));
-    const index = tabs.findIndex((tab) => {
-      const rect = tab.getBoundingClientRect();
-      return event.clientX < rect.left + rect.width / 2;
-    });
-    return index === -1 ? tabs.length : index;
+    if (!el) return;
+    const slots = Array.from(el.querySelectorAll<HTMLElement>(':scope > [data-tab-slot]'));
+    const boxes = slots.map((slot) => ({ left: slot.offsetLeft, width: slot.offsetWidth }));
+    const x = event.clientX - el.getBoundingClientRect().left + el.scrollLeft;
+    const index = boxes.findIndex((box) => x < box.left + box.width / 2);
+    const live = liveTabDrag?.projectId === projectId ? liveTabDrag : null;
+    const from = live ? slots.findIndex((slot) => slot.dataset.tabSlot === live.tabId) : -1;
+    const next: StripDrag = {
+      at: index === -1 ? boxes.length : index,
+      from,
+      width: from !== -1 ? boxes[from].width : (live?.width ?? 0),
+      boxes,
+    };
+    if (!sameStripDrag(stripDragRef.current, next)) setStripDrag(next);
   }
 
   function dropOnStrip(event: React.DragEvent): void {
     const dragged = readDraggedTab(event);
-    const at = insertAt ?? group.tabIds.length;
-    setInsertAt(null);
+    const at = stripDragRef.current?.at ?? group.tabIds.length;
+    setStripDrag(null);
     if (!dragged || dragged.projectId !== projectId) return;
     event.preventDefault();
     const from = group.tabIds.indexOf(dragged.tabId);
@@ -674,48 +890,77 @@ export function PaneGroup({
       )}
     >
       <header className="flex h-9 shrink-0 items-center gap-1 px-1.5 shadow-[inset_0_-1px_0_hsl(var(--border)/0.6)]">
+        {/* The whole stretch up to the pane buttons takes a dropped tab, not only the tabs. */}
         <div
-          ref={stripRef}
-          role="tablist"
-          aria-label="Tabs"
           onDragOver={(event) => {
             if (!isTabDrag(event)) return;
             event.preventDefault();
             event.dataTransfer.dropEffect = 'move';
-            setInsertAt(stripInsertIndex(event));
+            trackStripDrag(event);
           }}
           onDragLeave={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget as Node)) setInsertAt(null);
+            if (!event.currentTarget.contains(event.relatedTarget as Node)) setStripDrag(null);
           }}
           onDrop={dropOnStrip}
-          className="relative flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto overflow-y-hidden py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex h-full min-w-0 flex-1 items-center gap-0.5"
         >
-          {group.tabIds.map((tabId, index) => {
-            const tab = workspace.tabs[tabId];
-            if (!tab) return null;
-            // The slot never gets narrower than the tab's own minimum. Below it the tab spilled
-            // out of its slot and the next tab covered it, so a click on it hit its neighbor.
-            // A strip too full for every tab scrolls instead.
-            return (
-              <div key={tabId} className="relative flex min-w-[4.5rem] shrink items-center">
-                {insertAt === index ? (
-                  <span className="absolute -left-[2px] top-1 bottom-1 w-[2px] rounded-full bg-primary" />
-                ) : null}
-                <PaneTab
-                  project={project}
-                  projectId={projectId}
-                  groupId={group.id}
-                  tab={tab}
-                  active={tabId === group.activeTabId}
-                  groupFocused={focused}
-                  onSelect={() => activateTab(projectId, tabId)}
-                  onClose={() => void requestCloseTab(tabId)}
-                />
-              </div>
-            );
-          })}
-          {insertAt === group.tabIds.length && group.tabIds.length > 0 ? (
-            <span className="h-5 w-[2px] shrink-0 rounded-full bg-primary" />
+          {overflow.start || overflow.end ? (
+            <StripArrow side="left" disabled={!overflow.start} onScroll={scrollStrip} />
+          ) : null}
+          <div
+            ref={stripRef}
+            role="tablist"
+            aria-label="Tabs"
+            onScroll={syncOverflow}
+            // The strip is only as wide as its tabs, so it grows by the gap a tab from another
+            // pane needs, or the last tabs would slide out of sight.
+            style={
+              stripDrag && stripDrag.from === -1 && stripDrag.width > 0
+                ? { paddingRight: stripDrag.width + slotGap(stripDrag.boxes) }
+                : undefined
+            }
+            className="relative flex min-w-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden py-1 transition-[padding] duration-200 ease-out motion-reduce:transition-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {tabs.map((tab, index) => {
+              const shift = stripDrag ? slotShift(stripDrag, index) : 0;
+              // The slot never gets narrower than the tab's own minimum. Below it the tab spilled
+              // out of its slot and the next tab covered it, so a click on it hit its neighbor.
+              // A strip too full for every tab scrolls instead.
+              return (
+                <div
+                  key={tab.id}
+                  data-tab-slot={tab.id}
+                  // Faded only after the browser has taken its picture of the tab for the drag.
+                  onDragStart={() => window.setTimeout(() => setDraggingTabId(tab.id))}
+                  style={shift ? { transform: `translateX(${shift}px)` } : undefined}
+                  className={cn(
+                    'relative flex min-w-[4.5rem] shrink items-center transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none',
+                    draggingTabId === tab.id && 'opacity-40',
+                  )}
+                >
+                  <PaneTab
+                    project={project}
+                    projectId={projectId}
+                    groupId={group.id}
+                    tab={tab}
+                    active={tab.id === group.activeTabId}
+                    groupFocused={focused}
+                    onSelect={() => activateTab(projectId, tab.id)}
+                    onClose={() => void requestCloseTab(tab.id)}
+                  />
+                </div>
+              );
+            })}
+            {stripDrag && stripDrag.from === -1 && stripDrag.width > 0 ? (
+              <span
+                data-tab-landing
+                style={{ left: landingLeft(stripDrag), width: stripDrag.width }}
+                className="pointer-events-none absolute top-1 h-7 rounded-md bg-primary/10 ring-1 ring-inset ring-primary/40"
+              />
+            ) : null}
+          </div>
+          {overflow.start || overflow.end ? (
+            <StripArrow side="right" disabled={!overflow.end} onScroll={scrollStrip} />
           ) : null}
           <LauncherMenu project={project} groupId={group.id}>
             <Button

@@ -7,6 +7,7 @@ import { showOsNotification } from '../notifications/osNotification';
 import {
   answerSshTaskPassword,
   continueSshTask,
+  getSshServerTaskHistory,
   getSshTaskHistory,
   isSshTaskRunning,
   notifySshTaskWaiting,
@@ -183,6 +184,17 @@ vi.mock('../store', () => ({
         createdAt: 0,
         lastConnectedAt: null,
       },
+      {
+        id: 'server-2',
+        nickname: 'Staging',
+        host: 'staging.test',
+        port: 22,
+        username: 'deploy',
+        authMethod: 'password',
+        secretEnvelope: { mode: 'safeStorage', ciphertext: 'y' },
+        createdAt: 0,
+        lastConnectedAt: null,
+      },
     ]),
     setSshServers: vi.fn(async () => undefined),
     getSettings: vi.fn(async () => ({
@@ -280,7 +292,9 @@ afterEach(() => {
 });
 
 /** Opens an SSH tab whose output is drawn on a headless terminal, like the renderer does. */
-async function openSshTab(): Promise<{ sessionId: string; screen: TerminalScreen }> {
+async function openSshTab(
+  savedServerId = 'server-1',
+): Promise<{ sessionId: string; screen: TerminalScreen }> {
   sessionCounter += 1;
   const sessionId = `session-${sessionCounter}`;
   const screen = createTerminalScreen(80, 40);
@@ -294,7 +308,7 @@ async function openSshTab(): Promise<{ sessionId: string; screen: TerminalScreen
   Object.assign(fake.handlers, standardHandlers);
   await handlers.get(IPC.ssh.create)?.(
     { sender },
-    { sessionId, savedServerId: 'server-1', cols: 80, rows: 40 },
+    { sessionId, savedServerId, cols: 80, rows: 40 },
   );
   return { sessionId, screen };
 }
@@ -533,6 +547,42 @@ describe('notifying about a run that waits on the user', () => {
   });
 });
 
+describe("a saved server's AI history", () => {
+  it('lists the tasks from every tab on the server, newest first, after the tabs close', async () => {
+    const first = await openSshTab('server-1');
+    const firstRun = startTask(first.sessionId, ['FINISHED: Checked the OS.']);
+    await waitForPhase(firstRun, 'finished');
+    const second = await openSshTab('server-1');
+    const secondRun = startTask(second.sessionId, ['RUN: ls /nope', 'FINISHED: Looked.']);
+    await waitForPhase(secondRun, 'finished');
+    // Closing the tabs is what used to lose them: the server view had no way to find them.
+    await handlers.get(IPC.ssh.kill)?.({}, first.sessionId);
+    await handlers.get(IPC.ssh.kill)?.({}, second.sessionId);
+
+    const runs = getSshServerTaskHistory('server-1').filter((run) =>
+      [first.sessionId, second.sessionId].includes(run.sessionId),
+    );
+    expect(runs.map((run) => run.sessionId)).toEqual([second.sessionId, first.sessionId]);
+    expect(runs.every((run) => run.serverId === 'server-1')).toBe(true);
+    expect(runs[0]).toMatchObject({ status: 'finished', aiLabel: 'OpenAI' });
+    expect(runs[0]?.entries.map((entry) => entry.kind)).toEqual(['command', 'finished']);
+  });
+
+  it("keeps another server's tasks out", async () => {
+    const other = await openSshTab('server-2');
+    const progress = startTask(other.sessionId, ['FINISHED: done']);
+    await waitForPhase(progress, 'finished');
+
+    expect(getSshServerTaskHistory('server-2').map((run) => run.sessionId)).toEqual([
+      other.sessionId,
+    ]);
+    expect(getSshServerTaskHistory('server-1').some((r) => r.sessionId === other.sessionId)).toBe(
+      false,
+    );
+    expect(getSshServerTaskHistory('no-such-server')).toEqual([]);
+  });
+});
+
 describe('AI task in a local terminal', () => {
   async function openLocalTab(): Promise<{
     screen: TerminalScreen;
@@ -587,5 +637,16 @@ describe('AI task in a local terminal', () => {
       /^ls \/nope; printf '\\n__AGENTMATE_DONE_\w+__:%s\\n' "\$\?"\r$/,
     );
     expect(fake.aiPrompts[1]).toContain('$ ls /nope [exit code 2]');
+  });
+
+  it('belongs to no saved server', async () => {
+    await openLocalTab();
+    const progress = startTask('local-3', ['FINISHED: ok'], undefined, 'local');
+    await waitForPhase(progress, 'finished');
+
+    expect(getSshTaskHistory('local-3')[0]?.serverId).toBeUndefined();
+    expect(
+      ['server-1', 'server-2'].flatMap((id) => getSshServerTaskHistory(id)).map((r) => r.sessionId),
+    ).not.toContain('local-3');
   });
 });

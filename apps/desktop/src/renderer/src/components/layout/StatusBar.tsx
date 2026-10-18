@@ -21,9 +21,11 @@ import {
   Globe,
   MemoryStick,
   MugHot,
+  Pause,
   Play,
   RefreshCw,
   Smartphone,
+  Spinner,
   StopCircle,
   TerminalSquare,
   TriangleAlert,
@@ -32,10 +34,12 @@ import {
 import { ProviderLogo } from '@/components/providerLogos';
 import { Button } from '@/components/ui/button';
 import { OVERLAY_MOTION, OVERLAY_SURFACE } from '@/components/ui/overlay';
+import { Switch } from '@/components/ui/switch';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { AGENT_STATUS_LABEL, AgentStatusDot } from '@/components/workspace/AgentStatusDot';
+import { useAutoPauseRunsSetting } from '@/hooks/useAutoPauseRunsSetting';
 import { useRefreshProviderUsage } from '@/hooks/useRefreshProviderUsage';
-import { type RunRow, useRunRows } from '@/hooks/useRunRows';
+import { isPausable, type RunRow, useRunRows } from '@/hooks/useRunRows';
 import { useSystemStatsHistory } from '@/hooks/useSystemStatsHistory';
 import { formatBytes as formatMemory, formatPercent } from '@/lib/format';
 import { queryKeys } from '@/lib/queryKeys';
@@ -45,6 +49,7 @@ import { formatCountdown } from '@/lib/usageFormat';
 import { cn } from '@/lib/utils';
 import { useAgentStatusStore } from '@/stores/agentStatusStore';
 import { useRunningClisStore } from '@/stores/runningClisStore';
+import { pauseRuns, resumeRuns, togglePauseRun, useRunPauseStore } from '@/stores/runPauseStore';
 import { stopRun } from '@/stores/runSessionStore';
 import { useShortcutLabel } from '@/stores/shortcutStore';
 import { useTerminalStore } from '@/stores/terminalStore';
@@ -1014,6 +1019,9 @@ function formatRunTime(ms: number): string {
 }
 
 function RunStateDot({ state }: { state: RunRow['state'] }): React.JSX.Element {
+  if (state === 'paused') {
+    return <Pause data-state-dot="paused" className="h-2 w-2 shrink-0 text-warning" />;
+  }
   return (
     <span
       data-state-dot={state}
@@ -1059,14 +1067,60 @@ const RUN_STATE_LABEL: Record<RunRow['state'], string> = {
   starting: 'starting',
   running: 'running',
   idle: 'finished, the shell is still open',
+  paused: 'paused, using no CPU',
 };
+
+function runStateLabel(row: RunRow): string {
+  if (row.state === 'paused' && row.pause?.reason === 'agent') {
+    return 'paused while an agent works';
+  }
+  return RUN_STATE_LABEL[row.state];
+}
+
+/** Pause or Resume for one run, showing the change while main makes it. */
+function PauseRunButton({
+  row,
+  pauseLabel,
+}: {
+  row: RunRow;
+  pauseLabel: string | null;
+}): React.JSX.Element {
+  const pending = useRunPauseStore((s) => s.pending[row.session.id] ?? null);
+  const paused = row.state === 'paused';
+  const verb = paused ? 'Resume' : 'Pause';
+  const tip = paused
+    ? 'Resume: thaw its processes, they pick up where they were'
+    : 'Pause: freeze its processes so they use no CPU';
+  return (
+    <SimpleTooltip label={pauseLabel ? `${tip} (${pauseLabel})` : tip} side="top">
+      <Button
+        variant="soft"
+        size="xs"
+        aria-label={`${verb} ${row.session.run.label}`}
+        disabled={pending !== null}
+        onClick={() => void togglePauseRun(row.session.id)}
+      >
+        {pending ? (
+          <Spinner className="motion-safe:animate-spin" />
+        ) : paused ? (
+          <Play />
+        ) : (
+          <Pause />
+        )}
+        {pending === 'pausing' ? 'Pausing' : pending === 'resuming' ? 'Resuming' : verb}
+      </Button>
+    </SimpleTooltip>
+  );
+}
 
 function RunDetail({
   row,
   stopLabel,
+  pauseLabel,
 }: {
   row: RunRow;
   stopLabel: string | null;
+  pauseLabel: string | null;
 }): React.JSX.Element {
   const navigate = useNavigate();
   const { session, status, urls, device } = row;
@@ -1081,17 +1135,14 @@ function RunDetail({
       <div className="flex items-center gap-2">
         <RunStateDot state={row.state} />
         <span className="min-w-0 flex-1 truncate text-xs font-medium">{session.title}</span>
-        <PopoverPrimitive.Close asChild>
-          <Button
-            variant="ghost"
-            size="xs"
-            onClick={openTerminal}
-            className="text-muted-foreground"
-          >
-            <TerminalSquare />
-            Show terminal
-          </Button>
-        </PopoverPrimitive.Close>
+        <SimpleTooltip label="Show terminal" side="top">
+          <PopoverPrimitive.Close asChild>
+            <Button variant="ghost" size="icon-xs" aria-label="Show terminal" onClick={openTerminal}>
+              <TerminalSquare />
+            </Button>
+          </PopoverPrimitive.Close>
+        </SimpleTooltip>
+        {isPausable(row) ? <PauseRunButton row={row} pauseLabel={pauseLabel} /> : null}
         <SimpleTooltip label={stopLabel ? `Stop (${stopLabel})` : 'Stop'} side="top">
           <Button
             variant="danger"
@@ -1105,13 +1156,15 @@ function RunDetail({
         </SimpleTooltip>
       </div>
       <p className="truncate text-[10px] text-muted-foreground">
-        <span className="font-mono">{session.run.command}</span> · {RUN_STATE_LABEL[row.state]} ·{' '}
+        <span className="font-mono">{session.run.command}</span> · {runStateLabel(row)} ·{' '}
         {formatRunTime(Date.now() - session.run.startedAt)}
       </p>
       {status ? (
         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
           <Cpu className="h-2.5 w-2.5" />
-          {row.cpuReady ? (
+          {row.state === 'paused' ? (
+            <span className="text-warning">paused</span>
+          ) : row.cpuReady ? (
             <>
               <Meter percent={status.cpuPercent} />
               <span className="tabular-nums">{formatPercent(status.cpuPercent)}</span>
@@ -1171,40 +1224,100 @@ function RunDetail({
   );
 }
 
+/** Pause all, or Resume all once every run that can be paused is. Only for two or more. */
+function PauseAllButton({ rows }: { rows: RunRow[] }): React.JSX.Element | null {
+  const pending = useRunPauseStore((s) => s.pending);
+  const pausable = rows.filter(isPausable);
+  if (pausable.length < 2) return null;
+  const running = pausable.filter((row) => row.state !== 'paused');
+  const busy = pausable.some((row) => pending[row.session.id]);
+  const ids = (list: RunRow[]): string[] => list.map((row) => row.session.id);
+  return running.length > 0 ? (
+    <Button variant="soft" size="xs" disabled={busy} onClick={() => void pauseRuns(ids(running))}>
+      <Pause />
+      Pause all
+    </Button>
+  ) : (
+    <Button variant="soft" size="xs" disabled={busy} onClick={() => void resumeRuns(ids(pausable))}>
+      <Play />
+      Resume all
+    </Button>
+  );
+}
+
+function AutoPauseSwitch(): React.JSX.Element {
+  const { loaded, enabled, setEnabled } = useAutoPauseRunsSetting();
+  return (
+    <div className="mt-2 flex items-center gap-2 border-t border-border/60 pt-2">
+      <div className="min-w-0 flex-1">
+        <p id="auto-pause-runs-label" className="text-[11px] font-medium">
+          Pause runs while an agent works
+        </p>
+        <p className="text-[10px] text-muted-foreground">
+          Hot reload waits and catches up once the agent is done.
+        </p>
+      </div>
+      <Switch
+        aria-labelledby="auto-pause-runs-label"
+        checked={enabled}
+        disabled={!loaded}
+        onCheckedChange={setEnabled}
+      />
+    </div>
+  );
+}
+
 /**
  * The projects started with Run, and where each can be reached. One run gets its name, port or
  * device and usage right in the bar; more than one collapse into a count, so the agents on the
- * left keep their room. The panel lists every run with its own Stop button.
+ * left keep their room. The panel lists every run with its own Pause and Stop buttons.
  */
 function RunSegments(): React.JSX.Element | null {
   const rows = useRunRows();
   const stopLabel = useShortcutLabel('terminal.stopRun');
+  const pauseLabel = useShortcutLabel('terminal.togglePauseRun');
   if (rows.length === 0) return null;
 
   const cpuReady = rows[0].cpuReady;
   const cpu = rows.reduce((sum, row) => sum + (row.status?.cpuPercent ?? 0), 0);
   const mem = rows.reduce((sum, row) => sum + (row.status?.memBytes ?? 0), 0);
   const single = rows.length === 1 ? rows[0] : null;
+  const pausedCount = rows.filter((row) => row.state === 'paused').length;
+  const allPaused = pausedCount === rows.length;
 
   return (
     <PopSegment
       label={
         single
-          ? `${single.session.title}: ${single.session.run.label}`
-          : `${rows.length} project runs`
+          ? `${single.session.title}: ${single.session.run.label}${allPaused ? ', paused' : ''}`
+          : `${rows.length} project runs${pausedCount > 0 ? `, ${pausedCount} paused` : ''}`
       }
       width="w-80"
       panel={
         <>
           <PanelTitle
             title="Runs"
-            detail={stopLabel ? `${stopLabel} stops the active run` : null}
+            detail={
+              [
+                pauseLabel ? `${pauseLabel} pauses` : null,
+                stopLabel ? `${stopLabel} stops the active run` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ') || null
+            }
+            action={<PauseAllButton rows={rows} />}
           />
           <div className="-mx-3 flex max-h-96 flex-col divide-y divide-border/60 overflow-y-auto px-1">
             {rows.map((row) => (
-              <RunDetail key={row.session.id} row={row} stopLabel={stopLabel} />
+              <RunDetail
+                key={row.session.id}
+                row={row}
+                stopLabel={stopLabel}
+                pauseLabel={pauseLabel}
+              />
             ))}
           </div>
+          <AutoPauseSwitch />
         </>
       }
     >
@@ -1216,11 +1329,18 @@ function RunSegments(): React.JSX.Element | null {
         </>
       ) : (
         <>
-          <Play className="h-2.5 w-2.5" />
+          {allPaused ? <Pause className="h-2.5 w-2.5 text-warning" /> : <Play className="h-2.5 w-2.5" />}
           <span className="tabular-nums">{rows.length} runs</span>
+          {pausedCount > 0 && !allPaused ? (
+            <span className="tabular-nums text-warning">{pausedCount} paused</span>
+          ) : null}
         </>
       )}
-      {cpuReady ? <span className="tabular-nums">{formatPercent(Math.min(100, cpu))}</span> : null}
+      {allPaused ? (
+        <span className="text-warning">paused</span>
+      ) : cpuReady ? (
+        <span className="tabular-nums">{formatPercent(Math.min(100, cpu))}</span>
+      ) : null}
       {mem > 0 ? <span className="tabular-nums">{formatMemory(mem)}</span> : null}
     </PopSegment>
   );

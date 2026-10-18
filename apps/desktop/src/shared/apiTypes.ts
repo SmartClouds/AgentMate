@@ -36,6 +36,7 @@ import type {
   VaultEntryType,
   VaultImportFormat,
   WorktreeInfo,
+  RunPauseReason,
 } from '@agentmat/core';
 import type { GuestShortcut } from './browserGuest';
 
@@ -209,6 +210,38 @@ export interface TerminalRunStatus {
   processCount: number;
   /** TCP ports any process in the tree is listening on, lowest first. */
   ports: number[];
+  /** True while the run's processes are frozen by Pause. */
+  paused: boolean;
+  pauseReason: RunPauseReason | null;
+  pausedAt: number | null;
+}
+
+/** What pausing or resuming a run did. */
+export interface TerminalPauseResult {
+  /** False when nothing could be paused (or resumed); `error` says why. */
+  ok: boolean;
+  /** Whether the run is paused now, whatever was asked. */
+  paused: boolean;
+  reason: RunPauseReason | null;
+  pausedAt: number | null;
+  /** How many processes were frozen or thawed. */
+  processCount: number;
+  /** How many processes in the tree could not be (an elevated one, say). */
+  failedCount: number;
+  /**
+   * True when the only work frozen was a Docker client (`docker compose up`): its containers
+   * run inside Docker and keep using CPU.
+   */
+  containersOnly: boolean;
+  error?: string;
+}
+
+/** Sent to every window when a run is paused or resumed, from anywhere. */
+export interface TerminalPauseChange {
+  sessionId: string;
+  paused: boolean;
+  reason: RunPauseReason | null;
+  pausedAt: number | null;
 }
 
 export interface TerminalRunStatusResult {
@@ -2680,6 +2713,11 @@ export type SshAgentRunStatus = 'running' | 'paused' | 'finished' | 'error' | 's
 export interface SshAgentHistoryRun {
   id: string;
   sessionId: string;
+  /**
+   * The saved server the run's SSH tab was connected to when it started, so the server's AI
+   * history can list it after the tab is gone. Absent for a local terminal.
+   */
+  serverId?: string;
   prompt: string;
   /** Who decided each step, e.g. "Claude Code" or "OpenAI". */
   aiLabel: string;
@@ -2729,6 +2767,8 @@ export interface RdpAgentProgress {
   message?: string;
   /** Only on `error`: the run is paused rather than over, and continuing picks it up again. */
   canContinue?: boolean;
+  /** Messages the user sent mid-run that the AI has not read yet. Absent when there are none. */
+  queuedMessages?: number;
 }
 
 /** One thing that happened during an AI Remote Desktop task, as shown in its history. */
@@ -2737,6 +2777,8 @@ export type RdpAgentHistoryEntry =
   | { kind: 'skipped'; at: number; action: string }
   | { kind: 'question'; at: number; text: string }
   | { kind: 'answer'; at: number; text: string }
+  /** Something the user told the AI on their own, while it was working. */
+  | { kind: 'message'; at: number; text: string }
   | { kind: 'error'; at: number; text: string }
   | { kind: 'continued'; at: number }
   | { kind: 'finished'; at: number; text: string }

@@ -18,6 +18,8 @@ export interface RdpAgentSessionState {
   message?: string;
   /** Set on an `error` the run is paused on, rather than ended by. */
   canContinue?: boolean;
+  /** Messages the user sent mid-run that the AI has not read yet. */
+  queuedMessages?: number;
 }
 
 /** The AI the user picked last time: a CLI with its model and effort, or null for Settings' provider. */
@@ -97,6 +99,11 @@ export function answerRdpAgentInput(sessionId: string, answer: string): void {
   void window.agentmat.rdpAgent.answerNeedsInput(sessionId, answer);
 }
 
+/** Sends the running task a message of the user's own. False when the task has ended by now. */
+export async function sendRdpAgentMessage(sessionId: string, text: string): Promise<boolean> {
+  return window.agentmat.rdpAgent.sendMessage(sessionId, text);
+}
+
 export function stopRdpAgentTask(sessionId: string): void {
   void window.agentmat.rdpAgent.stop(sessionId);
 }
@@ -122,6 +129,7 @@ export function initRdpAgentStatus(title: () => string): () => void {
         target: progress.target,
         message: progress.message,
         canContinue: progress.canContinue,
+        queuedMessages: progress.queuedMessages,
       };
       return { sessions: { ...state.sessions, [progress.sessionId]: next } };
     });

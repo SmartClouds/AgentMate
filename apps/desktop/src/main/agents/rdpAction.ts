@@ -216,6 +216,8 @@ export type RdpImageMode = 'flag' | 'mention' | 'read-tool' | 'api';
 
 export interface RdpPromptInput {
   task: string;
+  /** What the user told the AI after starting the task, oldest first. */
+  followUps?: string[];
   /** What happened so far, one line per step, oldest first. */
   transcript: string;
   frameWidth: number;
@@ -242,6 +244,16 @@ function preamble(mode: RdpImageMode): string {
   );
 }
 
+/**
+ * What the user said after starting the run, as a block right under the task. It goes in every
+ * prompt rather than the transcript, whose start is cut once the task runs long.
+ */
+function followUpBlock(followUps: string[] | undefined): string {
+  if (!followUps?.length) return '';
+  const lines = followUps.map((text) => `- ${text.replace(/\n/g, '\n  ')}`);
+  return `\n\nThe user added these while you were working, oldest first. They take priority over anything earlier, so change course if one asks for it:\n${lines.join('\n')}`;
+}
+
 export function buildRdpPrompt(input: RdpPromptInput): string {
   const { transcript, frameWidth, frameHeight } = input;
   const tail =
@@ -250,7 +262,7 @@ export function buildRdpPrompt(input: RdpPromptInput): string {
       : transcript || '(no actions yet)';
   return `${preamble(input.imageMode)}You are operating a remote desktop through screenshots and mouse and keyboard actions, on behalf of a user who is watching it live.
 
-User's task: "${input.task}"
+User's task: "${input.task}"${followUpBlock(input.followUps)}
 
 The screenshot is ${frameWidth} x ${frameHeight} pixels. Every coordinate you give is in that screenshot, with (0,0) at the top-left corner.
 

@@ -1,5 +1,5 @@
 import type { AgentHistorySession } from '@agentmat/core';
-import type { SshConversationsResult, SshSavedServer } from '@shared/apiTypes';
+import type { SshAgentHistoryRun, SshConversationsResult, SshSavedServer } from '@shared/apiTypes';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -17,7 +17,8 @@ const { SshHistoryPanel } = await import('./SshHistoryPanel');
 /**
  * The history panel lists what Claude Code and Codex left on a saved server, by folder, and
  * picks a conversation back up in an SSH tab. It talks to the server only when opened or
- * refreshed, never on a timer.
+ * refreshed, never on a timer. Above those it lists the Ask AI tasks run in the server's SSH
+ * tabs, which this app keeps itself.
  */
 
 const server: SshSavedServer = {
@@ -95,11 +96,36 @@ function result(overrides: Partial<SshConversationsResult> = {}): SshConversatio
   };
 }
 
-function renderPanel(answer: unknown = result()) {
+function askAiRun(overrides: Partial<SshAgentHistoryRun> = {}): SshAgentHistoryRun {
+  return {
+    id: 'run-1',
+    sessionId: 'tab-closed',
+    serverId: server.id,
+    prompt: 'Free up disk space on the server',
+    aiLabel: 'OpenAI',
+    startedAt: Date.now() - HOUR,
+    endedAt: Date.now() - HOUR + 60_000,
+    status: 'finished',
+    entries: [
+      {
+        kind: 'command',
+        at: Date.now() - HOUR,
+        command: 'df -h /',
+        output: '/dev/sda1  40G  38G  2G  95% /',
+        exitCode: 0,
+        timedOut: false,
+      },
+      { kind: 'finished', at: Date.now() - HOUR + 60_000, text: 'Cleared 12G of old logs.' },
+    ],
+    ...overrides,
+  };
+}
+
+function renderPanel(answer: unknown = result(), runs: SshAgentHistoryRun[] = []) {
   const onOpenChange = vi.fn();
   const view = renderWithProviders(
     <SshHistoryPanel server={server} onOpenChange={onOpenChange} onRequestUnlock={vi.fn()} />,
-    { bridge: { 'ssh.conversations': answer } },
+    { bridge: { 'ssh.conversations': answer, 'sshAgent.serverHistory': async () => runs } },
   );
   return { ...view, onOpenChange };
 }
@@ -259,6 +285,7 @@ describe('SshHistoryPanel', () => {
               "Error invoking remote method 'ssh:conversations': Error: [ssh:vault-locked] The Servers vault is locked.",
             );
           },
+          'sshAgent.serverHistory': async () => [],
         },
       },
     );
@@ -309,6 +336,7 @@ describe('SshHistoryPanel', () => {
 
     expect(bridge.$fn('ssh.conversations')).toHaveBeenCalledTimes(1);
     expect(bridge.$fn('ssh.conversations')).toHaveBeenCalledWith(server.id);
+    expect(bridge.$fn('sshAgent.serverHistory')).toHaveBeenCalledTimes(1);
   });
 
   it('refreshes on demand', async () => {
@@ -318,6 +346,87 @@ describe('SshHistoryPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
     await waitFor(() => expect(bridge.$fn('ssh.conversations')).toHaveBeenCalledTimes(2));
+  });
+
+  describe('Ask AI tasks', () => {
+    it('lists them when the server has no CLI conversations, instead of saying it is empty', async () => {
+      const { bridge } = renderPanel(result({ sessions: [] }), [askAiRun()]);
+
+      const tasks = await screen.findByRole('list', { name: 'Ask AI tasks' });
+      expect(within(tasks).getByText('Free up disk space on the server')).toBeInTheDocument();
+      expect(within(tasks).getByText(/Done · .* · OpenAI · 1 command/)).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'prod' })).toHaveTextContent('1 Ask AI task');
+      await waitFor(() => expect(bridge.$fn('ssh.conversations')).toHaveBeenCalled());
+      expect(
+        screen.queryByText('No agent conversations on this server yet.'),
+      ).not.toBeInTheDocument();
+      expect(bridge.$fn('sshAgent.serverHistory')).toHaveBeenCalledWith(server.id);
+    });
+
+    it('lists them above the CLI conversations, newest first', async () => {
+      renderPanel(result(), [
+        askAiRun({ id: 'run-new', prompt: 'Restart nginx', startedAt: Date.now() }),
+        askAiRun({ id: 'run-old', prompt: 'Check memory', startedAt: Date.now() - 2 * HOUR }),
+      ]);
+
+      await screen.findByText('Fix the login flow');
+      const tasks = screen.getByRole('list', { name: 'Ask AI tasks' });
+      expect(
+        within(tasks)
+          .getAllByRole('button')
+          .map((b) => b.textContent),
+      ).toEqual([
+        expect.stringContaining('Restart nginx'),
+        expect.stringContaining('Check memory'),
+      ]);
+    });
+
+    it('still lists them when the server cannot be reached', async () => {
+      renderPanel(async () => {
+        throw new Error('Connection refused');
+      }, [askAiRun()]);
+
+      expect(await screen.findByText('Connection refused')).toBeInTheDocument();
+      expect(await screen.findByText('Free up disk space on the server')).toBeInTheDocument();
+    });
+
+    it('opens the full timeline of the one clicked', async () => {
+      const { user } = renderPanel(result({ sessions: [] }), [
+        askAiRun({ id: 'run-new', prompt: 'Restart nginx', startedAt: Date.now(), entries: [] }),
+        askAiRun(),
+      ]);
+
+      await user.click(await screen.findByText('Free up disk space on the server'));
+
+      const timeline = await screen.findByRole('dialog', { name: 'AI task history' });
+      expect(within(timeline).getByText('df -h /')).toBeInTheDocument();
+      expect(within(timeline).getByText('Cleared 12G of old logs.')).toBeInTheDocument();
+      expect(within(timeline).getByRole('button', { current: true })).toHaveTextContent(
+        'Free up disk space on the server',
+      );
+    });
+
+    it('narrows them with the search box', async () => {
+      const { user } = renderPanel(result(), [
+        askAiRun({ id: 'run-a', prompt: 'Restart nginx' }),
+        askAiRun({ id: 'run-b', prompt: 'Check memory' }),
+      ]);
+      await screen.findByText('Restart nginx');
+
+      await user.type(screen.getByRole('textbox', { name: 'Search conversations' }), 'nginx');
+
+      expect(screen.getByText('Restart nginx')).toBeInTheDocument();
+      expect(screen.queryByText('Check memory')).not.toBeInTheDocument();
+    });
+
+    it('shows the empty state only when there are no tasks and no conversations', async () => {
+      renderPanel(result({ sessions: [] }), []);
+
+      expect(
+        await screen.findByText('No agent conversations on this server yet.'),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('list', { name: 'Ask AI tasks' })).not.toBeInTheDocument();
+    });
   });
 
   it('closes on Escape', async () => {

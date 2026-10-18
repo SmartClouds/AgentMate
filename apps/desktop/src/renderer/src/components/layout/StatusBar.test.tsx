@@ -2,6 +2,7 @@ import type { AndroidSdkStatus } from '@agentmat/core';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { queryKeys } from '@/lib/queryKeys';
+import { useRunPauseStore } from '@/stores/runPauseStore';
 import { useRunSessionStore } from '@/stores/runSessionStore';
 import { type TerminalSessionMeta, useTerminalStore } from '@/stores/terminalStore';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
@@ -219,6 +220,20 @@ describe('the project runs entry', () => {
   ): void {
     useTerminalStore.setState({ sessions, activeSessionId: null, isOpen: false });
     useRunSessionStore.setState({ outputs });
+    useRunPauseStore.setState({ paused: {}, pending: {} });
+  }
+
+  function pauseResult(over: Record<string, unknown> = {}) {
+    return {
+      ok: true,
+      paused: true,
+      reason: 'user',
+      pausedAt: Date.now(),
+      processCount: 3,
+      failedCount: 0,
+      containersOnly: false,
+      ...over,
+    };
   }
 
   const DEV: TerminalSessionMeta = {
@@ -357,6 +372,136 @@ describe('the project runs entry', () => {
 
     await user.click(web);
     expect(bridge.$fn('shell.openExternal')).toHaveBeenCalledWith('http://localhost:3001/');
+  });
+
+  describe('pausing', () => {
+    const API: TerminalSessionMeta = {
+      id: 'api',
+      title: 'Zeus',
+      run: runInfo('API', 'dotnet run'),
+    };
+
+    it('pauses a run from its panel and offers to resume it', async () => {
+      runs([DEV]);
+      const { user, bridge } = setupRuns([status('dev')], {
+        'terminal.pause': pauseResult(),
+      });
+
+      await user.click(await screen.findByRole('button', { name: 'Apollo: Dev' }));
+      const panel = await screen.findByRole('dialog');
+      await user.click(within(panel).getByRole('button', { name: 'Pause Dev' }));
+
+      expect(bridge.$fn('terminal.pause')).toHaveBeenCalledWith('dev', 'user');
+      expect(await within(panel).findByRole('button', { name: 'Resume Dev' })).toBeEnabled();
+      expect(within(panel).getByText(/paused, using no CPU/)).toBeInTheDocument();
+      expect(panel.querySelector('[data-state-dot="paused"]')).toBeInTheDocument();
+    });
+
+    it('resumes a paused run', async () => {
+      runs([DEV]);
+      useRunPauseStore.setState({ paused: { dev: { reason: 'user', pausedAt: 1 } }, pending: {} });
+      const { user, bridge } = setupRuns([status('dev', { paused: true, pauseReason: 'user', pausedAt: 1 })], {
+        'terminal.resume': pauseResult({ paused: false, reason: null, pausedAt: null }),
+      });
+
+      await user.click(await screen.findByRole('button', { name: 'Apollo: Dev, paused' }));
+      await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Resume Dev' }));
+
+      expect(bridge.$fn('terminal.resume')).toHaveBeenCalledWith('dev');
+      expect(await screen.findByRole('button', { name: 'Apollo: Dev' })).toBeInTheDocument();
+    });
+
+    it('shows the button busy while main is pausing', async () => {
+      runs([DEV]);
+      useRunPauseStore.setState({ paused: {}, pending: { dev: 'pausing' } });
+      const { user } = setupRuns([status('dev')]);
+
+      await user.click(await screen.findByRole('button', { name: 'Apollo: Dev' }));
+      const button = within(await screen.findByRole('dialog')).getByRole('button', {
+        name: 'Pause Dev',
+      });
+      expect(button).toBeDisabled();
+      expect(button).toHaveTextContent('Pausing');
+    });
+
+    it('marks a paused run in the bar and shows it uses no CPU', async () => {
+      runs([DEV]);
+      useRunPauseStore.setState({ paused: { dev: { reason: 'user', pausedAt: 1 } }, pending: {} });
+      setupRuns([status('dev', { cpuPercent: 0, paused: true, pauseReason: 'user', pausedAt: 1 })]);
+
+      const chip = await screen.findByRole('button', { name: 'Apollo: Dev, paused' });
+      expect(chip.querySelector('[data-state-dot="paused"]')).toBeInTheDocument();
+      expect(within(chip).getByText('paused')).toBeInTheDocument();
+      expect(within(chip).queryByText('0.0%')).not.toBeInTheDocument();
+    });
+
+    it('says when the agent paused it', async () => {
+      runs([DEV]);
+      useRunPauseStore.setState({ paused: { dev: { reason: 'agent', pausedAt: 1 } }, pending: {} });
+      const { user } = setupRuns([status('dev', { paused: true, pauseReason: 'agent', pausedAt: 1 })]);
+
+      await user.click(await screen.findByRole('button', { name: 'Apollo: Dev, paused' }));
+      expect(
+        within(await screen.findByRole('dialog')).getByText(/paused while an agent works/),
+      ).toBeInTheDocument();
+    });
+
+    it('offers no pause for a run whose command has finished', async () => {
+      runs([{ ...DEV, run: { ...runInfo('Dev', 'pnpm dev'), startedAt: Date.now() - 600_000 } }]);
+      const { user } = setupRuns([status('dev', { processCount: 1 })]);
+
+      const chip = await screen.findByRole('button', { name: 'Apollo: Dev' });
+      await waitFor(() => expect(chip.querySelector('[data-state-dot="idle"]')).toBeInTheDocument());
+      await user.click(chip);
+      const panel = await screen.findByRole('dialog');
+      expect(within(panel).queryByRole('button', { name: 'Pause Dev' })).not.toBeInTheDocument();
+      expect(within(panel).getByRole('button', { name: 'Stop Dev' })).toBeInTheDocument();
+    });
+
+    it('counts the paused runs in the collapsed entry', async () => {
+      runs([DEV, API]);
+      useRunPauseStore.setState({ paused: { api: { reason: 'user', pausedAt: 1 } }, pending: {} });
+      setupRuns([status('dev'), status('api', { paused: true, pauseReason: 'user', pausedAt: 1 })]);
+
+      const chip = await screen.findByRole('button', { name: '2 project runs, 1 paused' });
+      expect(within(chip).getByText('1 paused')).toBeInTheDocument();
+    });
+
+    it('pauses every run at once, then resumes them all', async () => {
+      runs([DEV, API]);
+      const { user, bridge } = setupRuns([status('dev'), status('api')], {
+        'terminal.pause': pauseResult(),
+        'terminal.resume': pauseResult({ paused: false, reason: null, pausedAt: null }),
+      });
+
+      await user.click(await screen.findByRole('button', { name: '2 project runs' }));
+      const panel = await screen.findByRole('dialog');
+      await user.click(within(panel).getByRole('button', { name: 'Pause all' }));
+
+      expect(bridge.$fn('terminal.pause')).toHaveBeenCalledWith('dev', 'user');
+      expect(bridge.$fn('terminal.pause')).toHaveBeenCalledWith('api', 'user');
+      await user.click(await within(panel).findByRole('button', { name: 'Resume all' }));
+      await waitFor(() => expect(bridge.$fn('terminal.resume')).toHaveBeenCalledTimes(2));
+    });
+
+    it('turns the automatic pause on from the panel', async () => {
+      runs([DEV]);
+      const { user, bridge } = setupRuns([status('dev')], {
+        'settings.get': { autoPauseRunsWhileAgentWorks: false },
+      });
+
+      await user.click(await screen.findByRole('button', { name: 'Apollo: Dev' }));
+      const panel = await screen.findByRole('dialog');
+      const toggle = await within(panel).findByRole('switch', {
+        name: 'Pause runs while an agent works',
+      });
+      expect(toggle).not.toBeChecked();
+      await user.click(toggle);
+
+      expect(bridge.$fn('settings.update')).toHaveBeenCalledWith({
+        autoPauseRunsWhileAgentWorks: true,
+      });
+    });
   });
 
   it('stays out of the bar, and measures nothing, with no runs', async () => {

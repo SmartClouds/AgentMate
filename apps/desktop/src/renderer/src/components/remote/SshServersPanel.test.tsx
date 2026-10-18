@@ -32,6 +32,7 @@ function renderPanel(vault: { hasPasskey: boolean; unlocked: boolean }) {
       // A primitive answer reads as a value on the fake bridge; a call needs a function.
       'ssh.unlockVault': async () => true,
       'ssh.conversations': emptyHistory,
+      'sshAgent.serverHistory': async () => [],
     },
   });
 }
@@ -81,6 +82,7 @@ describe('SshServersPanel', () => {
         'ssh.vaultStatus': { hasPasskey: true, unlocked: true },
         'ssh.unlockVault': async () => true,
         'ssh.conversations': conversations,
+        'sshAgent.serverHistory': async () => [],
       },
     });
 

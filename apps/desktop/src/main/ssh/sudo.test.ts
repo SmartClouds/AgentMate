@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { sshErrorCode } from '../../shared/sshErrors';
-import { SshConnection } from './connection';
+import { CommandTimeoutError, SshConnection } from './connection';
 import { detectSudoMode, openRootShell } from './sudo';
 import { type ExecRequest, type FakeSshServer, startFakeSshServer } from './testing/fakeSshServer';
 
@@ -96,6 +96,40 @@ describe('detectSudoMode', () => {
     const { connection } = await connectAs({ uid: 1000, sudo: 'missing' });
 
     await expect(detectSudoMode(connection)).rejects.toThrow(/sudo is not installed/);
+  });
+
+  async function connectTo(options: Parameters<typeof startFakeSshServer>[0]) {
+    server = await startFakeSshServer(options);
+    connection = await SshConnection.open({
+      host: server.host,
+      port: server.port,
+      username: 'deploy',
+      authMethod: 'password',
+      password: LOGIN_PASSWORD,
+    });
+    return connection;
+  }
+
+  it('says so when the server logs in but never runs a command', async () => {
+    const quiet = await connectTo({ password: LOGIN_PASSWORD, neverAnswer: 'commands' });
+
+    const failure = detectSudoMode(quiet, { timeoutMs: 150 });
+
+    await expect(failure).rejects.toBeInstanceOf(CommandTimeoutError);
+    await expect(failure).rejects.toThrow(/did not answer within 150 ms/);
+  });
+
+  it('does not take a silent sudo for one that wants a password', async () => {
+    const stalled = await connectTo({
+      password: LOGIN_PASSWORD,
+      // `id -u` answers, then the server goes quiet on the sudo probe.
+      exec: ({ command }) =>
+        command === 'id -u' ? { stdout: '1000\n' } : new Promise<never>(() => undefined),
+    });
+
+    await expect(detectSudoMode(stalled, { timeoutMs: 150 })).rejects.toBeInstanceOf(
+      CommandTimeoutError,
+    );
   });
 });
 

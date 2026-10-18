@@ -227,6 +227,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   desktopPetAgentStatus: false,
   keepTerminalsRunning: true,
   stopDockerWithRun: 'ask',
+  autoPauseRunsWhileAgentWorks: false,
   workspaceNotifications: true,
   terminalAiNotifications: true,
   keepAwake: 'agent',
@@ -365,6 +366,7 @@ function withSettingsMigrations(settings: AppSettings): AppSettings {
     stopDockerWithRun: isRunDockerStopMode(settings.stopDockerWithRun)
       ? settings.stopDockerWithRun
       : 'ask',
+    autoPauseRunsWhileAgentWorks: settings.autoPauseRunsWhileAgentWorks === true,
     workspaceNotifications: settings.workspaceNotifications !== false,
     terminalAiNotifications: settings.terminalAiNotifications !== false,
     checkToolUpdatesEnabled: settings.checkToolUpdatesEnabled !== false,

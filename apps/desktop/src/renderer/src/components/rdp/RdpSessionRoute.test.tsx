@@ -85,7 +85,17 @@ describe('RdpSessionRoute Ask AI', () => {
     expect(screen.getByTestId('rdp-agent-overlay')).toBeInTheDocument();
 
     fake.$set('rdpAgent.history', []);
-    await user.click(screen.getByRole('button', { name: /History/ }));
+    await user.click(screen.getByRole('button', { name: 'History' }));
+    expect(await screen.findByText('AI task history')).toBeInTheDocument();
+    await waitFor(() => expect(fake.$fn('rdpAgent.history')).toHaveBeenCalledWith('s1'));
+  });
+
+  it('opens the history from the toolbar with no task running, even before connecting', async () => {
+    useRdpAgentStore.setState({ sessions: {} });
+    const { user, bridge: fake } = renderRoute();
+    fake.$set('rdpAgent.history', []);
+
+    await user.click(screen.getByRole('button', { name: /AI history/ }));
     expect(await screen.findByText('AI task history')).toBeInTheDocument();
     await waitFor(() => expect(fake.$fn('rdpAgent.history')).toHaveBeenCalledWith('s1'));
   });

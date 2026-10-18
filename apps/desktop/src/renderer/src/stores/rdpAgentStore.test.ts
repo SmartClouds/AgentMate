@@ -8,6 +8,7 @@ import {
   initRdpAgentStatus,
   isRdpAgentActive,
   isRdpAgentWaitingOnUser,
+  sendRdpAgentMessage,
   skipRdpAgentAction,
   startRdpAgentTask,
   stopRdpAgentTask,
@@ -99,6 +100,22 @@ describe('rdpAgentStore', () => {
     expect(acting?.action).toBe('CLICK 10 20');
     // The marker belongs to the proposal only.
     expect(acting?.target).toBeUndefined();
+  });
+
+  it('sends a message mid-run and says whether it got there', async () => {
+    bridge.$set('rdpAgent.sendMessage', async () => false);
+    expect(await sendRdpAgentMessage('s1', 'use the keyboard')).toBe(false);
+    expect(bridge.$fn('rdpAgent.sendMessage')).toHaveBeenCalledWith('s1', 'use the keyboard');
+  });
+
+  it('follows how many messages wait for the AI', () => {
+    vi.spyOn(document, 'hasFocus').mockReturnValue(true);
+    stopFollowing = initRdpAgentStatus(() => 'Office PC');
+    bridge.$emit('rdpAgent.onProgress', progress({ phase: 'acting', queuedMessages: 2 }));
+    expect(useRdpAgentStore.getState().sessions.s1?.queuedMessages).toBe(2);
+
+    bridge.$emit('rdpAgent.onProgress', progress({ phase: 'thinking', step: 2 }));
+    expect(useRdpAgentStore.getState().sessions.s1?.queuedMessages).toBeUndefined();
   });
 
   it('stops following when the returned function is called', () => {

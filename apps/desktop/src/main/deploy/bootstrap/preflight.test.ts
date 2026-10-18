@@ -1,12 +1,17 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { SshConnection } from '../../ssh/connection';
+import {
+  CommandTimeoutError,
+  type ExecResult,
+  SshConnection,
+  TunnelRefusedError,
+} from '../../ssh/connection';
 import {
   type ExecReply,
   type ExecRequest,
   type FakeSshServer,
   startFakeSshServer,
 } from '../../ssh/testing/fakeSshServer';
-import { runPreflight } from './preflight';
+import { type PreflightConnection, runPreflight } from './preflight';
 
 /**
  * Before anything runs as root, the installer looks at the server as the login user and says in
@@ -151,5 +156,75 @@ describe('runPreflight', () => {
     const report = await preflight(overrides);
 
     expect(report.problems.join('\n')).toMatch(message);
+  });
+});
+
+/**
+ * A server can accept the login and then never run a command. `exec` gives up on it with
+ * `timedOut` and empty output, which the check must not read as an answer: it would wait out
+ * every remaining probe, then call a healthy server's system unknown.
+ */
+describe('runPreflight against a server that stops answering', () => {
+  const SILENT: ExecResult = {
+    stdout: '',
+    stderr: '',
+    exitCode: null,
+    signal: null,
+    timedOut: true,
+  };
+
+  function connectionWhere(isSilent: (command: string) => boolean, machine: Machine = typical) {
+    const asked: string[] = [];
+    const connection: PreflightConnection = {
+      endpoint: { host: 'quiet.example', port: 22, username: 'deployer', authMethod: 'password' },
+      exec: async (command) => {
+        asked.push(command);
+        if (isSilent(command)) return SILENT;
+        const reply = answer(machine, { command, stdin: Buffer.alloc(0) });
+        return {
+          stdout: '',
+          stderr: '',
+          exitCode: 0,
+          signal: null,
+          timedOut: false,
+          ...reply,
+        } as ExecResult;
+      },
+      openStream: async () => {
+        throw new TunnelRefusedError('nothing there', 2);
+      },
+    };
+    return { connection, asked };
+  }
+
+  it('fails at the first silent probe and says the server did not answer', async () => {
+    const { connection, asked } = connectionWhere(() => true);
+
+    const failure = runPreflight(connection);
+
+    await expect(failure).rejects.toBeInstanceOf(CommandTimeoutError);
+    await expect(failure).rejects.toThrow(
+      'quiet.example accepted the login but did not answer within 30 seconds',
+    );
+    expect(asked).toEqual(['cat /etc/os-release']);
+  });
+
+  it('does not take a silent sudo probe for a server that wants a password', async () => {
+    const { connection } = connectionWhere((command) => command === 'sudo -k -n true');
+
+    await expect(runPreflight(connection)).rejects.toBeInstanceOf(CommandTimeoutError);
+  });
+
+  it('still treats a core that hangs on its version as a broken install', async () => {
+    // The release link exists, so the version probe runs, and goes quiet.
+    const { connection } = connectionWhere((command) => command.includes('admin version'), {
+      ...typical,
+      installed: { release: '/opt/agentmate-core/releases/1.52.0-abcdef012345', version: '1.52.0' },
+    });
+
+    const report = await runPreflight(connection);
+
+    expect(report.installed).toBeNull();
+    expect(report.problems).toEqual([]);
   });
 });

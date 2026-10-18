@@ -7,6 +7,7 @@ import {
 } from '@/lib/shortcuts';
 import { isWorkspacePath, workspaceCommands } from '@/lib/workspace/commands';
 import { stopActiveRun } from '@/stores/runSessionStore';
+import { togglePauseActiveRun } from '@/stores/runPauseStore';
 import { useSearchStore } from '@/stores/searchStore';
 import { commandForEvent, useShortcutStore } from '@/stores/shortcutStore';
 import { useTerminalStore } from '@/stores/terminalStore';
@@ -71,6 +72,7 @@ export function useGlobalShortcuts(): void {
       'terminal.toggle': toggleDrawer,
       'terminal.new': () => void openDefaultSession(),
       'terminal.stopRun': stopActiveRun,
+      'terminal.togglePauseRun': () => void togglePauseActiveRun(),
       'nav.projects': () => navigate('/projects'),
       'nav.help': () => navigate('/help'),
       'search.toggle': toggleSearch,

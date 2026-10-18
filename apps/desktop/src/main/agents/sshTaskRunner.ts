@@ -17,6 +17,7 @@ import {
   getSshSessionPassword,
   hasSshSession,
   setSshDisplayCaptured,
+  sshSessionServerId,
   subscribeSshExit,
   subscribeSshOutput,
   writeToSshDisplay,
@@ -60,6 +61,8 @@ const COMMAND_TIMEOUT_MS = 5 * 60 * 1000;
 const TRANSCRIPT_TAIL_CHARS = 6000;
 /** Past tasks kept per terminal for the history view. */
 const MAX_HISTORY_RUNS = 20;
+/** Past tasks a saved server's AI history lists, across all of its tabs. */
+const MAX_SERVER_HISTORY_RUNS = 50;
 /** Output kept per command in the history. The end is what explains how a command went. */
 const MAX_HISTORY_OUTPUT_CHARS = 8000;
 
@@ -340,10 +343,15 @@ function endHistory(run: RunState, status: SshAgentHistoryRun['status']): void {
   run.history.endedAt = Date.now();
 }
 
-function startHistory(sessionId: string, prompt: string): SshAgentHistoryRun {
+function startHistory(
+  sessionId: string,
+  serverId: string | null,
+  prompt: string,
+): SshAgentHistoryRun {
   const entry: SshAgentHistoryRun = {
     id: randomUUID(),
     sessionId,
+    ...(serverId ? { serverId } : {}),
     prompt,
     aiLabel: '',
     startedAt: Date.now(),
@@ -360,6 +368,18 @@ function startHistory(sessionId: string, prompt: string): SshAgentHistoryRun {
 /** The terminal's AI tasks, newest first. */
 export function getSshTaskHistory(sessionId: string): SshAgentHistoryRun[] {
   return [...(histories.get(sessionId) ?? [])].reverse();
+}
+
+/**
+ * The AI tasks run in any SSH tab on a saved server, newest first. They outlive the tab, so the
+ * server's AI history still lists them after it closed.
+ */
+export function getSshServerTaskHistory(serverId: string): SshAgentHistoryRun[] {
+  return [...histories.values()]
+    .flat()
+    .filter((run) => run.serverId === serverId)
+    .sort((a, b) => b.startedAt - a.startedAt)
+    .slice(0, MAX_SERVER_HISTORY_RUNS);
 }
 
 const PROVIDER_LABELS: Record<AiProvider, string> = {
@@ -811,7 +831,12 @@ export function startAgentTask(
     pendingPassword: null,
     pendingContinue: null,
     stepLimit: MAX_STEPS,
-    history: startHistory(sessionId, prompt.trim()),
+    // Read now: the session forgets its server as soon as the tab closes.
+    history: startHistory(
+      sessionId,
+      target.kind === 'ssh' ? sshSessionServerId(sessionId) : null,
+      prompt.trim(),
+    ),
     lastProgress: null,
     // Replaced immediately below, once the real subscription exists.
     unsubscribeExit: () => undefined,

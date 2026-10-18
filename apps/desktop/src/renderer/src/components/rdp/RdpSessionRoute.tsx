@@ -5,6 +5,7 @@ import {
   Compress,
   Download,
   Expand,
+  History,
   Keyboard,
   Monitor,
   RefreshCw,
@@ -215,6 +216,14 @@ export default function RdpSessionRoute(): React.JSX.Element {
         onClick={() => setAskAiOpen(true)}
       >
         <Sparkles className="h-3.5 w-3.5" /> Ask AI
+      </ToolbarButton>
+      {/* Kept in the app rather than on the server, so it opens even while disconnected. */}
+      <ToolbarButton
+        label="The AI tasks run on this desktop, with every action and message"
+        active={historyOpen}
+        onClick={() => setHistoryOpen(true)}
+      >
+        <History className="h-3.5 w-3.5" /> AI history
       </ToolbarButton>
       <ToolbarButton
         label="Send Ctrl+Alt+Del to the server"

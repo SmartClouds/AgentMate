@@ -453,6 +453,7 @@ export function SshAgentHistoryDialog({
   open,
   onOpenChange,
   source,
+  initialRunId = null,
 }: {
   sessionId: string;
   sessionTitle: string;
@@ -460,6 +461,8 @@ export function SshAgentHistoryDialog({
   onOpenChange: (open: boolean) => void;
   /** Where to read the history from. A terminal's AI task history when absent. */
   source?: AgentHistorySource;
+  /** The task shown first. The newest one when absent. */
+  initialRunId?: string | null;
 }): React.JSX.Element {
   const sshLiveState = useSshAgentSession(sessionId);
   const liveState = source ? source.live : sshLiveState;
@@ -480,10 +483,10 @@ export function SshAgentHistoryDialog({
     if (open && liveState) void refetch();
   }, [open, liveState, refetch]);
 
-  // Opening again starts on the newest task.
+  // Opening again starts on the task asked for, or the newest one.
   useEffect(() => {
-    if (open) setSelectedId(null);
-  }, [open]);
+    if (open) setSelectedId(initialRunId);
+  }, [open, initialRunId]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

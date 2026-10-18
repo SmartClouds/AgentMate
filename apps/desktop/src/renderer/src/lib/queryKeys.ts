@@ -145,6 +145,7 @@ export const queryKeys = {
   sshServers: ['ssh-servers'] as const,
   /** A terminal's AI task history, refetched as the running task reports progress. */
   sshAgentHistory: (sessionId: string) => ['ssh-agent-history', sessionId] as const,
+  sshServerAgentHistory: (serverId: string) => ['ssh-server-agent-history', serverId] as const,
   /** A Remote Desktop session's AI task history, refetched as the running task reports progress. */
   rdpAgentHistory: (sessionId: string) => ['rdp-agent-history', sessionId] as const,
   /** The agent CLI conversations stored on a saved server. */

@@ -78,6 +78,7 @@ import type {
   WidgetSize,
   WidgetStyle,
   WorktreeInfo,
+  RunPauseReason,
 } from '@agentmat/core';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import type {
@@ -285,6 +286,8 @@ import type {
   SystemStatsSample,
   TerminalAttachResult,
   TerminalClipboardPaste,
+  TerminalPauseChange,
+  TerminalPauseResult,
   TerminalRunStatusResult,
   TerminalUsageResult,
   TextSearchBatch,
@@ -542,6 +545,11 @@ const terminal = {
   /** CPU, memory and listening ports for the given project runs' terminals. */
   runStatus: (sessionIds: string[]): Promise<TerminalRunStatusResult> =>
     ipcRenderer.invoke(IPC.terminal.runStatus, sessionIds),
+  /** Freezes a run's shell and everything it started; `reason` says who asked. */
+  pause: (sessionId: string, reason: RunPauseReason = 'user'): Promise<TerminalPauseResult> =>
+    ipcRenderer.invoke(IPC.terminal.pause, sessionId, reason),
+  resume: (sessionId: string): Promise<TerminalPauseResult> =>
+    ipcRenderer.invoke(IPC.terminal.resume, sessionId),
   onData: (callback: (payload: TerminalDataPayload) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, payload: TerminalDataPayload): void =>
       callback(payload);
@@ -553,6 +561,12 @@ const terminal = {
       callback(payload);
     ipcRenderer.on(IPC.terminal.onExit, listener);
     return () => ipcRenderer.removeListener(IPC.terminal.onExit, listener);
+  },
+  onPauseChange: (callback: (change: TerminalPauseChange) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, change: TerminalPauseChange): void =>
+      callback(change);
+    ipcRenderer.on(IPC.terminal.onPauseChange, listener);
+    return () => ipcRenderer.removeListener(IPC.terminal.onPauseChange, listener);
   },
 };
 
@@ -627,6 +641,9 @@ const sshAgent = {
   /** The terminal's AI tasks, newest first, with every command, question and answer. */
   history: (sessionId: string): Promise<SshAgentHistoryRun[]> =>
     ipcRenderer.invoke(IPC.sshAgent.history, sessionId),
+  /** The AI tasks run in any SSH tab on a saved server, newest first, including closed tabs. */
+  serverHistory: (serverId: string): Promise<SshAgentHistoryRun[]> =>
+    ipcRenderer.invoke(IPC.sshAgent.serverHistory, serverId),
   /** Raises a system notification for a run that is waiting on the user. */
   notifyWaiting: (sessionId: string, tabTitle: string): Promise<void> =>
     ipcRenderer.invoke(IPC.sshAgent.notifyWaiting, sessionId, tabTitle),
@@ -648,6 +665,12 @@ const rdpAgent = {
     ipcRenderer.invoke(IPC.rdpAgent.skipAction, sessionId),
   answerNeedsInput: (sessionId: string, answer: string): Promise<void> =>
     ipcRenderer.invoke(IPC.rdpAgent.answerNeedsInput, sessionId, answer),
+  /**
+   * Tells a task that is already running something new, without waiting for it to ask. Resolves
+   * false when the task is over by now, so the caller can keep the text.
+   */
+  sendMessage: (sessionId: string, text: string): Promise<boolean> =>
+    ipcRenderer.invoke(IPC.rdpAgent.sendMessage, sessionId, text),
   stop: (sessionId: string): Promise<void> => ipcRenderer.invoke(IPC.rdpAgent.stop, sessionId),
   /** Picks a run that paused on an error back up where it left off. */
   continueTask: (sessionId: string): Promise<void> =>

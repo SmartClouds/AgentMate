@@ -1,8 +1,9 @@
 import type { AndroidSnapshot } from '@agentmat/core';
 import type { TerminalRunStatus, TerminalRunStatusResult } from '@shared/apiTypes';
 import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { queryKeys } from '@/lib/queryKeys';
+import { type RunPauseInfo, syncPausesFromStatus, useRunPauseStore } from '@/stores/runPauseStore';
 import {
   type RunOutput,
   type RunSessionMeta,
@@ -32,8 +33,18 @@ export interface RunRow {
   ports: number[];
   mobile: boolean;
   device: RunDevice | null;
-  /** `idle` is a shell whose command has finished or crashed, so only the shell is left. */
-  state: 'starting' | 'running' | 'idle';
+  /**
+   * `idle` is a shell whose command has finished or crashed, so only the shell is left.
+   * `paused` is a run frozen by Pause, which uses no CPU until it is resumed.
+   */
+  state: 'starting' | 'running' | 'idle' | 'paused';
+  /** Who paused it and when, while it is paused. */
+  pause: RunPauseInfo | null;
+}
+
+/** A run whose command is still going (or about to) can be paused; a finished one cannot. */
+export function isPausable(row: Pick<RunRow, 'state'>): boolean {
+  return row.state !== 'idle';
 }
 
 function portOfUrl(url: string): number | null {
@@ -110,6 +121,7 @@ export function buildRunRows(
   result: TerminalRunStatusResult | undefined,
   snapshot: AndroidSnapshot | undefined,
   now: number,
+  paused: Record<string, RunPauseInfo> = {},
 ): RunRow[] {
   const byId = new Map((result?.sessions ?? []).map((status) => [status.sessionId, status]));
   return runs.map((session) => {
@@ -123,6 +135,8 @@ export function buildRunRows(
     else if (!status.alive || status.processCount <= 1) {
       state = now - session.run.startedAt < STARTING_GRACE_MS ? 'starting' : 'idle';
     }
+    const pause = paused[session.id] ?? null;
+    if (pause) state = 'paused';
     return {
       session,
       status,
@@ -132,6 +146,7 @@ export function buildRunRows(
       mobile,
       device: pickRunDevice(devices, snapshot),
       state,
+      pause,
     };
   });
 }
@@ -140,17 +155,26 @@ export function buildRunRows(
 export function useRunRows(): RunRow[] {
   const sessions = useTerminalStore((s) => s.sessions);
   const outputs = useRunSessionStore((s) => s.outputs);
+  const paused = useRunPauseStore((s) => s.paused);
   const runs = useMemo(() => runSessionsOf(sessions), [sessions]);
   const ids = runs.map((run) => run.id);
 
   const statusQuery = useQuery({
     queryKey: queryKeys.terminalRunStatus(ids),
-    queryFn: () => window.agentmat.terminal.runStatus(ids),
+    queryFn: async () => {
+      const askedAt = Date.now();
+      return { ...(await window.agentmat.terminal.runStatus(ids)), askedAt };
+    },
     enabled: ids.length > 0,
     refetchInterval: ids.length > 0 ? RUN_STATUS_INTERVAL_MS : false,
     placeholderData: (previous) => previous,
     meta: { silentLoading: true },
   });
+
+  // A window opened after a pause, or a main that restarted, learns about it from the poll.
+  useEffect(() => {
+    if (statusQuery.data) syncPausesFromStatus(statusQuery.data.sessions, statusQuery.data.askedAt);
+  }, [statusQuery.data]);
 
   // Only reads what the Android segment already polls; never asks adb itself.
   const androidQuery = useQuery({
@@ -160,5 +184,5 @@ export function useRunRows(): RunRow[] {
     meta: { silentLoading: true },
   });
 
-  return buildRunRows(runs, outputs, statusQuery.data, androidQuery.data, Date.now());
+  return buildRunRows(runs, outputs, statusQuery.data, androidQuery.data, Date.now(), paused);
 }

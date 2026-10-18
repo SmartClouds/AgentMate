@@ -15,6 +15,7 @@ import { WorkspaceHeaderActions } from '@/components/workspace/WorkspaceHeaderAc
 import { WorkspaceHost } from '@/components/workspace/WorkspaceHost';
 import { useStartupLoading } from '@/hooks/useAppLoadingOverlay';
 import { useAppNotificationMessages } from '@/hooks/useAppNotificationMessages';
+import { useAutoPauseRuns } from '@/hooks/useAutoPauseRuns';
 import { useGlobalShortcuts } from '@/hooks/useGlobalShortcuts';
 import { usePetDragGuard } from '@/hooks/usePetDragGuard';
 import { useRememberRoute } from '@/hooks/useRememberRoute';
@@ -22,6 +23,7 @@ import { useScheduledTaskRunner } from '@/hooks/useScheduledTaskRunner';
 import { useVaultEvents } from '@/hooks/useVaultEvents';
 import { queryKeys } from '@/lib/queryKeys';
 import { startRunSessionFeed } from '@/lib/terminal/runSessionFeed';
+import { initRunPauses } from '@/stores/runPauseStore';
 import { cn } from '@/lib/utils';
 import { isWorkspacePath } from '@/lib/workspace/commands';
 import { initAgentStatus } from '@/stores/agentStatusStore';
@@ -215,6 +217,10 @@ export function AppShell(): React.JSX.Element {
   useEffect(() => initSshAgentStatus(), []);
   // Project runs are followed from their first line, whichever page is open, for the status bar.
   useEffect(() => startRunSessionFeed(), []);
+  // Which runs are paused comes from main, which also hears about pauses made in other windows.
+  useEffect(() => initRunPauses(), []);
+  // Pauses a project's runs while an agent works in the same folder, when that is switched on.
+  useAutoPauseRuns();
   // The desktop companion would otherwise swallow every drop in the app window.
   usePetDragGuard();
   // Main keeps the page this window is on, so the next launch can open there.

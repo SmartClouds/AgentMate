@@ -961,6 +961,13 @@ button.search-pill:hover {
   margin: 0;
 }
 
+/* sonner pins its 16px spinner box to the icon's top-left (inset: 0 with a
+   fixed size), which was fine for its own 16px icon slot. Our disc is 24px,
+   so the spinner sat off-center until margin: auto pulled it to the middle. */
+.toaster-glass [data-sonner-toast][data-styled="true"] [data-icon] .sonner-loading-wrapper {
+  margin: auto;
+}
+
 .toaster-glass [data-sonner-toast][data-styled="true"] [data-content] {
   gap: 3px;
   padding-top: 2px;

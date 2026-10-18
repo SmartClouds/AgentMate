@@ -1,4 +1,9 @@
-import { type SshConnection, TunnelRefusedError } from '../../ssh/connection';
+import {
+  CommandTimeoutError,
+  requireAnswer,
+  type SshConnection,
+  TunnelRefusedError,
+} from '../../ssh/connection';
 import { detectSudoMode, type SudoMode } from '../../ssh/sudo';
 import { CORE_BINARY_PATH } from '../connection/transport';
 import {
@@ -37,14 +42,31 @@ export interface PreflightReport {
 
 const MIN_FREE_MB = 300;
 const PROBE_TIMEOUT_MS = 30_000;
+/**
+ * sshd answers a tunnel it will not open in one round trip, so a longer silence is not coming.
+ * Unlike the command probes, silence here does not fail the check: it reads as "allowed", and
+ * the installer settles it by trying the real socket.
+ */
+const TUNNEL_PROBE_TIMEOUT_MS = 10_000;
 /** A path no core listens on: the answer only tells whether sshd allows the tunnel at all. */
 const STREAM_LOCAL_PROBE = '/run/agentmate-core/.preflight-probe';
 
 /** What the preflight needs from a connection. */
 export type PreflightConnection = Pick<SshConnection, 'exec' | 'endpoint' | 'openStream'>;
 
-export async function runPreflight(connection: PreflightConnection): Promise<PreflightReport> {
-  const run = (command: string) => connection.exec(command, { timeoutMs: PROBE_TIMEOUT_MS });
+/**
+ * A server that logs in but then does not answer a probe fails the whole check with a
+ * `CommandTimeoutError`, at the first probe that goes quiet. Reading its empty output as the
+ * answer would run through every remaining probe's timeout and then report an unknown system.
+ */
+export async function runPreflight(
+  connection: PreflightConnection,
+  options: { probeTimeoutMs?: number } = {},
+): Promise<PreflightReport> {
+  const timeoutMs = options.probeTimeoutMs ?? PROBE_TIMEOUT_MS;
+  const { host } = connection.endpoint;
+  const run = async (command: string) =>
+    requireAnswer(await connection.exec(command, { timeoutMs }), host, timeoutMs);
   const problems: string[] = [];
 
   const os = osSupport(parseOsRelease((await run('cat /etc/os-release')).stdout));
@@ -78,15 +100,20 @@ export async function runPreflight(connection: PreflightConnection): Promise<Pre
 
   let sudo: SudoMode | null = null;
   try {
-    sudo = await detectSudoMode(connection);
+    sudo = await detectSudoMode(connection, { timeoutMs });
   } catch (error) {
+    if (error instanceof CommandTimeoutError) throw error;
     problems.push((error as Error).message);
   }
 
   let installed: PreflightReport['installed'] = null;
   const current = await run('readlink -f /opt/agentmate-core/current 2>/dev/null');
   if (current.exitCode === 0 && current.stdout.trim()) {
-    const version = await run(`${CORE_BINARY_PATH} admin version 2>/dev/null`);
+    // Not `run`: a core that hangs here is as broken as one that prints nothing, and the install
+    // is what replaces it, so this probe may not fail the check.
+    const version = await connection.exec(`${CORE_BINARY_PATH} admin version 2>/dev/null`, {
+      timeoutMs,
+    });
     try {
       const parsed = JSON.parse(version.stdout) as { version?: unknown };
       if (typeof parsed.version === 'string') {
@@ -109,7 +136,10 @@ export async function runPreflight(connection: PreflightConnection): Promise<Pre
 
   let streamLocal: PreflightReport['streamLocal'] = 'allowed';
   try {
-    const probe = await connection.openStream({ socketPath: STREAM_LOCAL_PROBE });
+    const probe = await connection.openStream(
+      { socketPath: STREAM_LOCAL_PROBE },
+      { timeoutMs: TUNNEL_PROBE_TIMEOUT_MS },
+    );
     probe.destroy();
   } catch (error) {
     // Any other refusal may be nothing listening there, or (from OpenSSH) a policy refusal.

@@ -1,9 +1,9 @@
 import type { AgentHistorySession } from '@agentmat/core';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import type { SshSavedServer } from '@shared/apiTypes';
+import type { SshAgentHistoryRun, SshSavedServer } from '@shared/apiTypes';
 import { sshErrorCode, sshErrorMessage } from '@shared/sshErrors';
 import { useQuery } from '@tanstack/react-query';
-import { useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
   BackgroundToggle,
@@ -29,11 +29,13 @@ import {
   Lock,
   LockOpen,
   RefreshCw,
+  Robot,
   Server,
   Spinner,
   TriangleAlert,
   X,
 } from '@/components/icons';
+import { SshAgentHistoryDialog } from '@/components/terminal/SshAgentHistoryDialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,6 +45,7 @@ import { withHostKeyTrust } from '@/lib/ssh/hostKeyTrust';
 import { timeAgo } from '@/lib/time';
 import { cn } from '@/lib/utils';
 import { openRemoteResume } from '@/lib/workspace/launch';
+import { useSshAgentSession, useSshAgentStore } from '@/stores/sshAgentStore';
 import { useTerminalStore } from '@/stores/terminalStore';
 
 /**
@@ -50,6 +53,9 @@ import { useTerminalStore } from '@/stores/terminalStore';
  * folder it ran in. Resuming one opens an SSH tab in the terminal drawer that `cd`s there and
  * runs the CLI's resume command. The server is asked only on open and on Refresh: each ask is
  * an SSH round trip, so there is no polling.
+ *
+ * Above them sit the Ask AI tasks run in this server's SSH tabs. Those live in this app, not on
+ * the server, so they show even while the server can't be reached.
  */
 
 /** The command each agent runs as on the server. */
@@ -172,6 +178,27 @@ function HistorySheet({
   });
   const { data, isPending, isError, isFetching, error, refetch } = history;
 
+  // Ask AI tasks are kept by this app, so reading them is cheap and never waits on the server.
+  const askAi = useQuery({
+    queryKey: queryKeys.sshServerAgentHistory(server.id),
+    queryFn: () => window.agentmat.sshAgent.serverHistory(server.id),
+    enabled: open,
+    meta: { silentLoading: true },
+  });
+  const refetchAskAi = askAi.refetch;
+  // Every progress event from any tab may be a task on this server moving on.
+  const agentProgress = useSshAgentStore((s) => s.sessions);
+  // Opening already reads them once, so only later progress asks again.
+  const seenProgress = useRef(agentProgress);
+  useEffect(() => {
+    if (!open || seenProgress.current === agentProgress) return;
+    seenProgress.current = agentProgress;
+    void refetchAskAi();
+  }, [open, agentProgress, refetchAskAi]);
+  const [openRunId, setOpenRunId] = useState<string | null>(null);
+  const openRun = askAi.data?.find((run) => run.id === openRunId) ?? null;
+  const openRunLive = useSshAgentSession(openRun?.sessionId ?? null);
+
   const sessions = data?.sessions ?? [];
   const home = data?.home ?? null;
   const searching = query.trim() !== '';
@@ -181,6 +208,13 @@ function HistorySheet({
   const visible = filterSessions(sessions, { query, provider, showBackground });
   const groups = groupByFolder(visible);
   const hiddenCount = backgroundCount(sessions, provider);
+  const needle = query.trim().toLowerCase();
+  // They are not one of the CLIs the filter picks, so a CLI filter hides them.
+  const askAiRuns =
+    provider === 'all'
+      ? (askAi.data ?? []).filter((run) => !needle || run.prompt.toLowerCase().includes(needle))
+      : [];
+  const hasAskAiRuns = (askAi.data?.length ?? 0) > 0;
   // The probe runs in a login shell, so a CLI on a PATH set only in .bashrc reads as missing
   // while the interactive resume shell would still find it. Warn, never block.
   const CLI_PRESENT: Record<HistoryProvider, (clis: NonNullable<typeof data>['clis']) => boolean> =
@@ -205,6 +239,7 @@ function HistorySheet({
           plural(groupByFolder(browsable).length, 'folder'),
         ].join(' · ')
       : null;
+  const askAiSummary = hasAskAiRuns ? plural(askAi.data?.length ?? 0, 'Ask AI task') : null;
 
   function changeQuery(next: string): void {
     setQuery(next);
@@ -274,6 +309,7 @@ function HistorySheet({
                 {server.port === 22 ? '' : `:${server.port}`}
               </span>
               {summary ? <span className="tabular-nums"> · {summary}</span> : null}
+              {askAiSummary ? <span className="tabular-nums"> · {askAiSummary}</span> : null}
             </DialogPrimitive.Description>
           </div>
           <div className="-mr-1.5 flex shrink-0 items-center gap-0.5">
@@ -340,6 +376,10 @@ function HistorySheet({
         {/* Radix renders the viewport child as display:table, which lets a long unbroken
             prompt stretch rows past the sheet edge. Force it back to block. */}
         <ScrollArea className="min-h-0 flex-1 [&_[data-radix-scroll-area-viewport]>div]:!block">
+          {askAiRuns.length > 0 ? (
+            <AskAiSection runs={askAiRuns} onOpen={(run) => setOpenRunId(run.id)} />
+          ) : null}
+
           {vaultLocked ? (
             <VaultLockedCard nickname={server.nickname} onUnlock={onRequestUnlock} />
           ) : isError ? (
@@ -354,7 +394,9 @@ function HistorySheet({
           {isPending ? (
             <LoadingState nickname={server.nickname} />
           ) : data && sessions.length === 0 ? (
-            <EmptyState />
+            hasAskAiRuns ? null : (
+              <EmptyState />
+            )
           ) : data ? (
             <div className="pb-4 pt-1.5">
               {groups.map((group, index) => {
@@ -388,6 +430,22 @@ function HistorySheet({
             </div>
           ) : null}
         </ScrollArea>
+
+        <SshAgentHistoryDialog
+          sessionId={openRun?.sessionId ?? ''}
+          sessionTitle={server.nickname}
+          open={openRun !== null}
+          onOpenChange={(next) => {
+            if (!next) setOpenRunId(null);
+          }}
+          initialRunId={openRunId}
+          source={{
+            kind: 'ssh',
+            queryKey: queryKeys.sshServerAgentHistory(server.id),
+            load: () => window.agentmat.sshAgent.serverHistory(server.id),
+            live: openRunLive,
+          }}
+        />
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>
   );
@@ -481,6 +539,88 @@ function FolderSection({
   );
 }
 
+const RUN_STATUS: Record<SshAgentHistoryRun['status'], { label: string; dot: string }> = {
+  running: { label: 'Running', dot: 'animate-pulse bg-primary motion-reduce:animate-none' },
+  paused: { label: 'Paused', dot: 'bg-amber-400' },
+  finished: { label: 'Done', dot: 'bg-success' },
+  error: { label: 'Failed', dot: 'bg-destructive' },
+  stopped: { label: 'Stopped', dot: 'bg-muted-foreground/50' },
+};
+
+/** The Ask AI tasks run in this server's SSH tabs, newest first. Each opens its full timeline. */
+function AskAiSection({
+  runs,
+  onOpen,
+}: {
+  runs: SshAgentHistoryRun[];
+  onOpen: (run: SshAgentHistoryRun) => void;
+}): React.JSX.Element {
+  const regionId = useId();
+  const [expanded, setExpanded] = useState(true);
+
+  return (
+    <section className="px-2 pt-1.5">
+      <button
+        type="button"
+        aria-expanded={expanded}
+        aria-controls={expanded ? regionId : undefined}
+        onClick={() => setExpanded((value) => !value)}
+        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-foreground/[0.05] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      >
+        <ChevronRight
+          className={cn(
+            'h-2.5 w-2.5 shrink-0 text-muted-foreground transition-transform duration-150 motion-reduce:transition-none',
+            expanded && 'rotate-90',
+          )}
+        />
+        <Robot className="h-3.5 w-3.5 shrink-0 text-primary/80" />
+        <span className="min-w-0 flex-1 text-[12px] font-medium leading-4">Ask AI tasks</span>
+        <span className="shrink-0 rounded-full bg-foreground/[0.06] px-1.5 py-px text-[10px] font-medium tabular-nums text-muted-foreground">
+          {runs.length}
+        </span>
+      </button>
+      {expanded ? (
+        <ul
+          id={regionId}
+          aria-label="Ask AI tasks"
+          className="ml-[13px] border-l border-border/60 pb-1.5 pl-1"
+        >
+          {runs.map((run) => {
+            const status = RUN_STATUS[run.status];
+            const commands = run.entries.filter((entry) => entry.kind === 'command').length;
+            return (
+              <li key={run.id} className="mx-1">
+                <button
+                  type="button"
+                  onClick={() => onOpen(run)}
+                  className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-foreground/[0.05] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <span className={cn('mt-[5px] h-2 w-2 shrink-0 rounded-full', status.dot)} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[12px] leading-4 text-foreground/90">
+                      {run.prompt}
+                    </span>
+                    <span className="mt-0.5 block truncate text-[10px] leading-3 text-muted-foreground">
+                      {[
+                        status.label,
+                        timeAgo(new Date(run.startedAt).toISOString()),
+                        run.aiLabel || null,
+                        plural(commands, 'command'),
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </section>
+  );
+}
+
 function LoadingState({ nickname }: { nickname: string }): React.JSX.Element {
   return (
     <div className="pt-3">
@@ -508,7 +648,7 @@ function EmptyState(): React.JSX.Element {
       <div className="space-y-1">
         <p className="text-sm font-medium">No agent conversations on this server yet.</p>
         <p className="mx-auto max-w-xs text-xs leading-relaxed text-muted-foreground">
-          They show up here after you run an agent CLI over SSH on it.
+          They show up here after you use Ask AI in an SSH tab on it, or run an agent CLI there.
         </p>
       </div>
     </div>

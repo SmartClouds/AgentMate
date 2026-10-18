@@ -287,6 +287,23 @@ describe('the command registry', () => {
     expect(taken).toEqual([]);
   });
 
+  it('pauses or resumes a project run with F6 from anywhere, as in a debugger', () => {
+    const pause = SHORTCUT_COMMANDS.find((command) => command.id === 'terminal.togglePauseRun');
+    expect(pause).toMatchObject({
+      scope: 'global',
+      group: 'Terminal',
+      defaults: [{ code: 'F6' }],
+    });
+    // A bare function key still reaches the app from inside a focused terminal.
+    expect(isSafeWhileTyping({ code: 'F6' })).toBe(true);
+    const taken = SHORTCUT_COMMANDS.filter(
+      (command) =>
+        command.id !== 'terminal.togglePauseRun' &&
+        command.defaults.some((binding) => sameShortcut(binding, { code: 'F6' })),
+    );
+    expect(taken).toEqual([]);
+  });
+
   it('gives every command an id of its own', () => {
     const ids = SHORTCUT_COMMANDS.map((command) => command.id);
     expect(new Set(ids).size).toBe(ids.length);

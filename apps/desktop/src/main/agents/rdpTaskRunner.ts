@@ -14,6 +14,7 @@ import type {
   SshAgentMode,
   StartRdpAgentTaskInput,
 } from '../../shared/apiTypes';
+import { MAX_SSH_AGENT_MESSAGE_CHARS } from '../../shared/sshAgentMessage';
 import { cancelHeadlessPrompt, runHeadlessCliPrompt } from '../cli/headlessPrompt';
 import { runAiPrompt } from '../ipc/ai';
 import { showOsNotification } from '../notifications/osNotification';
@@ -70,6 +71,10 @@ interface RunState {
   /** Set while a CLI is working out the next step, so Stop can kill it. */
   cliRequestId: string | null;
   prompt: string;
+  /** What the user told the AI after starting the run, oldest first. */
+  followUps: string[];
+  /** How many of `followUps` the AI has been asked with so far. */
+  followUpsPrompted: number;
   transcript: string;
   step: number;
   startedAt: number;
@@ -96,8 +101,30 @@ const runs = new Map<string, RunState>();
 /** Every session's past and current tasks, newest last. Kept for as long as the app runs. */
 const histories = new Map<string, RdpAgentHistoryRun[]>();
 
+/** Messages from the user the AI has not been asked with yet. */
+function queuedMessages(run: RunState): number {
+  return run.followUps.length - run.followUpsPrompted;
+}
+
 function emit(run: RunState, phase: RdpAgentPhase, extra: Partial<RdpAgentProgress> = {}): void {
-  run.lastProgress = { sessionId: run.sessionId, phase, step: run.step, ...extra };
+  const queued = queuedMessages(run);
+  run.lastProgress = {
+    sessionId: run.sessionId,
+    phase,
+    step: run.step,
+    ...extra,
+    // Left out when nothing waits, so a run nobody talked to reports what it always did.
+    ...(queued > 0 ? { queuedMessages: queued } : {}),
+  };
+  run.listener(run.lastProgress);
+}
+
+/** Reports the queue again with whatever the run last said, so the bar shows a new message at once. */
+function announceQueue(run: RunState): void {
+  if (!run.lastProgress) return;
+  const { queuedMessages: _old, ...rest } = run.lastProgress;
+  const queued = queuedMessages(run);
+  run.lastProgress = queued > 0 ? { ...rest, queuedMessages: queued } : rest;
   run.listener(run.lastProgress);
 }
 
@@ -294,7 +321,12 @@ async function runLoop(run: RunState): Promise<void> {
       }
 
       run.step += 1;
+      // Everything the user has said so far goes into this step's prompt, so none of it waits now.
+      const askedWith = run.followUps.length;
+      run.followUpsPrompted = askedWith;
       emit(run, 'thinking');
+      // A message that lands while the AI is working out this step makes its answer out of date.
+      const outdated = (): boolean => run.followUps.length !== askedWith;
 
       let frame: RdpAgentFrame;
       try {
@@ -308,6 +340,10 @@ async function runLoop(run: RunState): Promise<void> {
         continue;
       }
       if (run.aborted) return;
+      if (outdated()) {
+        run.step -= 1;
+        continue;
+      }
 
       const hash = createHash('sha1').update(frame.png).digest('hex');
       if (hash === run.lastFrameHash && run.actedSinceFrame) run.transcript += UNCHANGED_NOTE;
@@ -321,6 +357,7 @@ async function runLoop(run: RunState): Promise<void> {
       };
       const prompt = buildRdpPrompt({
         task: run.prompt,
+        followUps: run.followUps,
         transcript: run.transcript,
         frameWidth: frame.width,
         frameHeight: frame.height,
@@ -337,10 +374,17 @@ async function runLoop(run: RunState): Promise<void> {
       } catch (error) {
         if (run.aborted) return;
         run.step -= 1;
+        // The CLI was cancelled for the new message, which is not a failure.
+        if (outdated()) continue;
         if (!(await pauseOnError(run, (error as Error).message))) return;
         continue;
       }
       if (run.aborted) return;
+      if (outdated()) {
+        // Acting on it would ignore what the user just said, so the AI is asked again.
+        run.step -= 1;
+        continue;
+      }
 
       const parsed = parseRdpReply(reply);
       if (!parsed) {
@@ -473,6 +517,8 @@ export function startRdpTask(
     runDir: cliId ? mkdtempSync(join(tmpdir(), 'agentmate-rdp-')) : null,
     cliRequestId: null,
     prompt: prompt.trim(),
+    followUps: [],
+    followUpsPrompted: 0,
     transcript: '',
     step: 0,
     startedAt: Date.now(),
@@ -517,6 +563,29 @@ export function answerRdpTaskInput(sessionId: string, answer: string): void {
   const resolve = run.pendingInputAnswer;
   run.pendingInputAnswer = null;
   resolve(answer);
+}
+
+/**
+ * Passes the user's own message to a run that is still going, without the run having asked. The
+ * AI reads it at its next step. Whatever it is working out right now was decided without the
+ * message, so that reply is dropped and asked for again, and an action waiting for approval is
+ * skipped. An action already being sent is left to finish. False when there is no such run any more.
+ */
+export function sendRdpTaskMessage(sessionId: string, text: string): boolean {
+  const run = runs.get(sessionId);
+  if (!run || run.aborted || typeof text !== 'string') return false;
+  const message = text.trim().slice(0, MAX_SSH_AGENT_MESSAGE_CHARS);
+  if (!message) return false;
+  run.followUps.push(message);
+  record(run, { kind: 'message', text: message });
+  if (run.cliRequestId) cancelHeadlessPrompt(run.cliRequestId);
+  if (run.pendingApproval) {
+    const { resolve } = run.pendingApproval;
+    run.pendingApproval = null;
+    resolve(false);
+  }
+  announceQueue(run);
+  return true;
 }
 
 /** Picks a run paused on an error back up where it left off. */

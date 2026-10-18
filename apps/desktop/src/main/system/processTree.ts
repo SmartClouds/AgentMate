@@ -116,7 +116,8 @@ async function readDarwinProcesses(): Promise<ProcessRow[]> {
   }
 }
 
-function readProcesses(): Promise<ProcessRow[]> {
+/** Every process on the machine, read the way this platform allows. Empty when it cannot. */
+export function listProcesses(): Promise<ProcessRow[]> {
   if (process.platform === 'win32') return readWindowsProcesses();
   if (process.platform === 'linux') return readLinuxProcesses();
   if (process.platform === 'darwin') return readDarwinProcesses();
@@ -147,7 +148,7 @@ const baselines = new Map<string, ProcessSample>();
 
 /** Reads the process list once, sharing the read between callers that ask at the same time. */
 function takeSample(): Promise<SamplePair | null> {
-  inflight ??= readProcesses()
+  inflight ??= listProcesses()
     .then((processes) => {
       if (processes.length === 0) return null;
       const current: ProcessSample = { at: Date.now(), processes };

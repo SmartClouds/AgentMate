@@ -21,6 +21,7 @@ export type ShortcutCommandId =
   | 'terminal.toggle'
   | 'terminal.new'
   | 'terminal.stopRun'
+  | 'terminal.togglePauseRun'
   | 'nav.projects'
   | 'nav.help'
   | 'search.toggle'
@@ -139,6 +140,15 @@ export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
     group: 'Terminal',
     scope: 'global',
     defaults: [{ code: 'F5', shift: true }],
+  },
+  {
+    id: 'terminal.togglePauseRun',
+    label: 'Pause or resume run',
+    description:
+      'Freezes the project run so it uses no CPU, or lets a paused one carry on: the same run Stop run would pick.',
+    group: 'Terminal',
+    scope: 'global',
+    defaults: [{ code: 'F6' }],
   },
   {
     id: 'nav.projects',

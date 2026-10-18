@@ -96,7 +96,8 @@ export function friendlyConnectError(
   if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
     return new Error(`Could not reach ${host}:${port}.`);
   }
-  if (error.code === 'ETIMEDOUT') {
+  // ssh2's own deadline (`readyTimeout`) for a server that connects but never finishes the login.
+  if (error.code === 'ETIMEDOUT' || error.level === 'client-timeout') {
     return new Error(`Connection to ${host}:${port} timed out.`);
   }
   return error instanceof Error ? error : new Error(String(error));

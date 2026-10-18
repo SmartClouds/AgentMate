@@ -30,6 +30,9 @@ function status(
     memBytes: 200 * 1024 * 1024,
     processCount: 3,
     ports: [],
+    paused: false,
+    pauseReason: null,
+    pausedAt: null,
     ...over,
   };
 }
@@ -225,6 +228,32 @@ describe('buildRunRows', () => {
     expect(old.state).toBe('idle');
     // The shell has not started the command's process yet.
     expect(fresh.state).toBe('starting');
+  });
+
+  it('is paused while frozen, whatever its processes look like', () => {
+    const [row] = buildRunRows(
+      [runSession('dev')],
+      {},
+      result(status('dev', { cpuPercent: 0 })),
+      undefined,
+      NOW,
+      { dev: { reason: 'agent', pausedAt: NOW - 5000 } },
+    );
+
+    expect(row.state).toBe('paused');
+    expect(row.pause).toEqual({ reason: 'agent', pausedAt: NOW - 5000 });
+  });
+
+  it('is paused even before the first reading, for a run paused in another window', () => {
+    const [row] = buildRunRows([runSession('dev')], {}, undefined, undefined, NOW, {
+      dev: { reason: 'user', pausedAt: 1 },
+    });
+    expect(row.state).toBe('paused');
+  });
+
+  it('has no pause on a run that is not frozen', () => {
+    const [row] = buildRunRows([runSession('dev')], {}, result(status('dev')), undefined, NOW);
+    expect(row.pause).toBeNull();
   });
 
   it('is idle when the shell itself is gone', () => {

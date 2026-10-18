@@ -64,6 +64,13 @@ function reassertTopmost(): void {
   win.setAlwaysOnTop(true, 'floating');
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: false });
   win.moveTop();
+  // On Windows `skipTaskbar` only asks Explorer once to drop the button
+  // (ITaskbarList::DeleteTab). Explorer adds it back when the window is shown
+  // again, which the drag guard does on every in-app drag, and after Explorer
+  // restarts. The pet then sat in the taskbar as a second AgentMate and people
+  // closed it from there. The tool window style set at creation is the real
+  // fix, asking again here covers anything that still slips past.
+  win.setSkipTaskbar(true);
 }
 
 function startTopmostKeeper(): void {
@@ -133,6 +140,10 @@ function createPetWindow(): BrowserWindow {
     minimizable: false,
     fullscreenable: false,
     skipTaskbar: true,
+    // WS_EX_TOOLWINDOW: Windows never gives a tool window a taskbar button or an
+    // Alt+Tab entry. Only on Windows, Linux reads `toolbar` as a window manager
+    // hint that changes stacking.
+    ...(process.platform === 'win32' ? { type: 'toolbar' } : {}),
     hasShadow: false,
     alwaysOnTop: true,
     backgroundColor: '#00000000',

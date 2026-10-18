@@ -53,6 +53,9 @@ export function InstallPanel({
     // even when the page was left and opened again since.
     enabled: installRun?.status !== 'running',
     staleTime: 60_000,
+    // A server that does not answer fails after its own deadlines. A silent retry would double
+    // the wait before the panel says so, and "Check again" is right there.
+    retry: false,
   });
   const preflight = preflightQuery.data;
 
@@ -149,7 +152,7 @@ export function InstallPanel({
       </>
     );
   } else if (preflightQuery.isPending) {
-    body = <PreflightSkeleton />;
+    body = <PreflightSkeleton serverName={server.nickname} />;
   } else if (preflightQuery.isError) {
     body = (
       <>

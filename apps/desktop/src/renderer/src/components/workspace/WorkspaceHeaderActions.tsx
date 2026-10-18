@@ -26,6 +26,7 @@ import { useRunningClisStore } from '@/stores/runningClisStore';
 import { useShortcutLabel } from '@/stores/shortcutStore';
 import { useVersionDialogStore } from '@/stores/versionDialogStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { PauseProjectRunsButton } from './PauseProjectRunsButton';
 import { WorkspaceScopeSwitcher } from './worktrees/WorkspaceScopeSwitcher';
 
 /**
@@ -138,6 +139,11 @@ export function WorkspaceHeaderActions(): React.JSX.Element | null {
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
+      <PauseProjectRunsButton
+        scopeId={activeProjectId}
+        projectId={project.id}
+        projectName={project.name}
+      />
       <SimpleTooltip label={`Tag a version of ${project.name}`}>
         <Button
           variant={tagOpen ? 'soft' : 'ghost'}

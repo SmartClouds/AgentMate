@@ -26,6 +26,7 @@ const runner = vi.hoisted(() => ({
   continueSshTask: vi.fn(),
   stopSshTask: vi.fn(),
   getSshTaskHistory: vi.fn(),
+  getSshServerTaskHistory: vi.fn((): SshAgentHistoryRun[] => []),
   notifySshTaskWaiting: vi.fn(async () => undefined),
 }));
 
@@ -117,6 +118,30 @@ describe('controlling a running task', () => {
 
     await invoke(IPC.sshAgent.notifyWaiting, 'ssh-1', 'Build server');
     expect(runner.notifySshTaskWaiting).toHaveBeenCalledWith('ssh-1', 'Build server');
+  });
+
+  it("returns a saved server's tasks from every tab, and nothing for a bad id", async () => {
+    const history: SshAgentHistoryRun[] = [
+      {
+        id: 'run-2',
+        sessionId: 'ssh-gone',
+        serverId: 'srv-1',
+        prompt: 'restart nginx',
+        aiLabel: 'OpenAI',
+        startedAt: 1,
+        endedAt: 2,
+        status: 'finished',
+        entries: [],
+      },
+    ];
+    runner.getSshServerTaskHistory.mockReturnValueOnce(history);
+    expect(await invoke(IPC.sshAgent.serverHistory, 'srv-1')).toEqual(history);
+    expect(runner.getSshServerTaskHistory).toHaveBeenCalledWith('srv-1');
+
+    runner.getSshServerTaskHistory.mockClear();
+    expect(await invoke(IPC.sshAgent.serverHistory, 42)).toEqual([]);
+    expect(await invoke(IPC.sshAgent.serverHistory, '')).toEqual([]);
+    expect(runner.getSshServerTaskHistory).not.toHaveBeenCalled();
   });
 });
 

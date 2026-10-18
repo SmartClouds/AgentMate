@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { type RdpAgentSessionState, useRdpAgentStore } from '@/stores/rdpAgentStore';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
@@ -86,5 +86,96 @@ describe('RdpAgentStatusBar', () => {
     const { user, onOpenHistory } = renderBar({ phase: 'stopped', message: 'You took over.' });
     await user.click(screen.getByRole('button', { name: /History/ }));
     expect(onOpenHistory).toHaveBeenCalled();
+  });
+});
+
+/** Moves the run on, the way a progress event from main would. */
+function setState(patch: Partial<RdpAgentSessionState>): void {
+  act(() => {
+    useRdpAgentStore.setState((current) => ({
+      sessions: { s1: { ...current.sessions.s1, ...patch } as RdpAgentSessionState },
+    }));
+  });
+}
+
+describe('messaging the AI mid-task', () => {
+  it('is offered while the task runs, but not during a question or once it is over', () => {
+    const { unmount } = renderBar({ phase: 'thinking' });
+    expect(screen.getByRole('button', { name: 'Message' })).toBeInTheDocument();
+
+    setState({ phase: 'needs-input', message: 'Which file?' });
+    expect(screen.queryByRole('button', { name: 'Message' })).not.toBeInTheDocument();
+
+    setState({ phase: 'finished', message: 'Done.' });
+    expect(screen.queryByRole('button', { name: 'Message' })).not.toBeInTheDocument();
+    unmount();
+  });
+
+  it('sends on Enter and says what happens next', async () => {
+    const { user, bridge } = renderBar({ phase: 'thinking' });
+    bridge.$set('rdpAgent.sendMessage', async () => true);
+    await user.click(screen.getByRole('button', { name: 'Message' }));
+    const box = screen.getByRole('textbox', { name: 'Message to the AI' });
+    expect(box).toHaveFocus();
+
+    await user.type(box, 'use the Start menu{Enter}');
+    expect(await screen.findByText('Sent. The AI is reading it now.')).toBeInTheDocument();
+    expect(bridge.$fn('rdpAgent.sendMessage')).toHaveBeenCalledWith('s1', 'use the Start menu');
+    expect(box).toHaveValue('');
+  });
+
+  it.each([
+    ['thinking', {}, /reads this right away/, /The AI is reading it now/],
+    [
+      'proposed',
+      { action: 'CLICK 10 10' },
+      /what to do instead\. This skips the action above/,
+      /That action was skipped/,
+    ],
+    [
+      'acting',
+      { action: 'WAIT 2000' },
+      /once the current action is done/,
+      /once the current action is done/,
+    ],
+    [
+      'error',
+      { canContinue: true, message: 'Paused: boom' },
+      /reads this when you continue/,
+      /reads it when you continue/,
+    ],
+  ] as const)('says when the AI reads it while %s', async (phase, extra, placeholder, sent) => {
+    const { user, bridge } = renderBar({ phase, ...extra });
+    bridge.$set('rdpAgent.sendMessage', async () => true);
+    await user.click(screen.getByRole('button', { name: 'Message' }));
+    const box = screen.getByRole('textbox', { name: 'Message to the AI' });
+    expect(box).toHaveAttribute('placeholder', expect.stringMatching(placeholder));
+
+    await user.type(box, 'hello{Enter}');
+    expect(await screen.findByText(sent)).toBeInTheDocument();
+  });
+
+  it('shows how many messages wait for the AI', () => {
+    renderBar({ phase: 'acting', action: 'WAIT 2000', queuedMessages: 1 });
+    expect(screen.getByText('Message queued')).toBeInTheDocument();
+
+    setState({ queuedMessages: 2 });
+    expect(screen.getByText('2 messages queued')).toBeInTheDocument();
+
+    setState({ phase: 'thinking', queuedMessages: undefined });
+    expect(screen.queryByText(/queued/)).not.toBeInTheDocument();
+  });
+
+  it('closes when the task ends and does not leave a draft for the next one', async () => {
+    const { user } = renderBar({ phase: 'thinking' });
+    await user.click(screen.getByRole('button', { name: 'Message' }));
+    await user.type(screen.getByRole('textbox', { name: 'Message to the AI' }), 'unsent');
+
+    setState({ phase: 'stopped', message: 'Stopped by user.' });
+    expect(screen.queryByRole('textbox', { name: 'Message to the AI' })).not.toBeInTheDocument();
+
+    setState({ phase: 'thinking', step: 1, message: undefined });
+    await user.click(screen.getByRole('button', { name: 'Message' }));
+    expect(screen.getByRole('textbox', { name: 'Message to the AI' })).toHaveValue('');
   });
 });

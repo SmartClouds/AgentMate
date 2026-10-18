@@ -1,5 +1,5 @@
 import type { PaneGroupNode, Project } from '@agentmat/core';
-import { screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useExplorerStore } from '@/stores/explorerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -77,6 +77,93 @@ describe('PaneGroup', () => {
     expect(imageTab.querySelector('[data-icon="image"]')).toBeInTheDocument();
     const codeTab = screen.getByRole('tab', { name: /index\.ts/ });
     expect(codeTab.querySelector('[data-icon="file"]')).toBeInTheDocument();
+  });
+
+  it('shows scroll arrows only once the tabs no longer fit', () => {
+    const scrollBy = vi.fn();
+    HTMLElement.prototype.scrollBy = scrollBy;
+    const scrollWidth = vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(100);
+    const clientWidth = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(100);
+    try {
+      const { unmount } = renderWithProviders(<Harness />);
+      expect(screen.queryByRole('button', { name: 'Scroll tabs right' })).not.toBeInTheDocument();
+      unmount();
+
+      scrollWidth.mockReturnValue(400);
+      renderWithProviders(<Harness />);
+      // At the start of the strip only the right arrow has anywhere to go.
+      expect(screen.getByRole('button', { name: 'Scroll tabs left' })).toBeDisabled();
+      const right = screen.getByRole('button', { name: 'Scroll tabs right' });
+      expect(right).toBeEnabled();
+      fireEvent.click(right);
+      expect(scrollBy).toHaveBeenCalledWith({ left: 120, behavior: 'smooth' });
+      // The new tab button sits outside the scrolling tabs, so it never scrolls out of reach.
+      expect(
+        within(screen.getByRole('tablist', { name: 'Tabs' })).queryByRole('button', {
+          name: 'New tab',
+        }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'New tab' })).toBeInTheDocument();
+    } finally {
+      scrollWidth.mockRestore();
+      clientWidth.mockRestore();
+      Reflect.deleteProperty(HTMLElement.prototype, 'scrollBy');
+    }
+  });
+
+  it('slides the tabs out of the way of a dragged tab, then moves it there on drop', () => {
+    // jsdom does no layout, so each slot is 100px wide with a 2px gap.
+    const slotIndex = (el: HTMLElement): number =>
+      el.dataset.tabSlot && el.parentElement
+        ? Array.from(el.parentElement.querySelectorAll(':scope > [data-tab-slot]')).indexOf(el)
+        : -1;
+    const left = vi.spyOn(HTMLElement.prototype, 'offsetLeft', 'get').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return Math.max(slotIndex(this), 0) * 102;
+    });
+    const width = vi
+      .spyOn(HTMLElement.prototype, 'offsetWidth', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return slotIndex(this) === -1 ? 0 : 100;
+      });
+    try {
+      renderWithProviders(<Harness />);
+      const workspace = useWorkspaceStore.getState().workspaces.p1;
+      const terminal = screen.getByRole('tab', { name: /Claude Code/ });
+      const terminalId = terminal.dataset.tabId as string;
+      const tablist = screen.getByRole('tablist', { name: 'Tabs' });
+      const slots = (): HTMLElement[] =>
+        Array.from(tablist.querySelectorAll<HTMLElement>(':scope > [data-tab-slot]'));
+      expect(slots().map((slot) => slot.dataset.tabSlot)[0]).toBe(terminalId);
+
+      const dataTransfer = {
+        types: ['application/x-agentmate-tab'],
+        setData: vi.fn(),
+        getData: () =>
+          JSON.stringify({ projectId: 'p1', tabId: terminalId, groupId: workspace?.root.id }),
+        effectAllowed: '',
+        dropEffect: '',
+      };
+      const drag = (type: string, clientX = 0): Event =>
+        Object.assign(new Event(type, { bubbles: true, cancelable: true }), {
+          dataTransfer,
+          clientX,
+        });
+      fireEvent(terminal, drag('dragstart'));
+      // Past the middle of the second tab, so the first one belongs after it.
+      fireEvent(tablist, drag('dragover', 160));
+      expect(slots()[0].style.transform).toBe('translateX(102px)');
+      expect(slots()[1].style.transform).toBe('translateX(-102px)');
+
+      fireEvent(tablist, drag('drop', 160));
+      expect(slots().map((slot) => slot.dataset.tabSlot)[1]).toBe(terminalId);
+      expect(screen.getAllByRole('tab')[1]).toBe(screen.getByRole('tab', { name: /Claude Code/ }));
+      window.dispatchEvent(new Event('dragend'));
+    } finally {
+      left.mockRestore();
+      width.mockRestore();
+    }
   });
 
   it('opens the tab menu on a terminal tab', async () => {

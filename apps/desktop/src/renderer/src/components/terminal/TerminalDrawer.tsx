@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Folder,
   History,
+  Pause,
   Plus,
   Robot,
   Server,
@@ -15,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { useRunPauseStore } from '@/stores/runPauseStore';
 import { closeTerminalTab } from '@/stores/runSessionStore';
 import { useShortcutLabel } from '@/stores/shortcutStore';
 import { isSshAgentWaitingOnUser, useSshAgentStore } from '@/stores/sshAgentStore';
@@ -24,6 +26,7 @@ import {
   type TerminalSessionMeta,
   useTerminalStore,
 } from '@/stores/terminalStore';
+import { PausedRunBanner } from './PausedRunBanner';
 import { SshAgentHistoryDialog } from './SshAgentHistoryDialog';
 import { SshAgentStatusBar } from './SshAgentStatusBar';
 import { SshAskAiDialog } from './SshAskAiDialog';
@@ -74,7 +77,9 @@ function SessionTab({
   onClose: () => void;
 }): React.JSX.Element {
   const aiWaiting = useSshAgentStore((s) => isSshAgentWaitingOnUser(s.sessions[session.id]));
-  const label = session.cwd ? `${session.title}\n${session.cwd}` : session.title;
+  const paused = useRunPauseStore((s) => s.paused[session.id] !== undefined);
+  const where = session.cwd ? `${session.title}\n${session.cwd}` : session.title;
+  const label = paused ? `${where}\nPaused, using no CPU` : where;
   // The whole highlighted box is the tab. With only the label inside it clickable, a click on
   // the padding or beside the close button did nothing, and the user had to click again.
   return (
@@ -115,18 +120,23 @@ function SessionTab({
           />
         ) : null}
         <span className="flex min-w-0 flex-1 items-center gap-2">
-          <span
-            className={cn(
-              'h-1.5 w-1.5 shrink-0 rounded-full',
-              aiWaiting
-                ? 'animate-pulse bg-warning shadow-[0_0_6px_hsl(var(--warning))]'
-                : active
-                  ? 'terminal-live-dot bg-primary shadow-[0_0_6px_hsl(var(--primary))]'
-                  : 'bg-foreground/25',
-            )}
-          />
+          {paused ? (
+            <Pause data-paused className="h-2 w-2 shrink-0 text-warning" />
+          ) : (
+            <span
+              className={cn(
+                'h-1.5 w-1.5 shrink-0 rounded-full',
+                aiWaiting
+                  ? 'animate-pulse bg-warning shadow-[0_0_6px_hsl(var(--warning))]'
+                  : active
+                    ? 'terminal-live-dot bg-primary shadow-[0_0_6px_hsl(var(--primary))]'
+                    : 'bg-foreground/25',
+              )}
+            />
+          )}
           {session.kind === 'ssh' && <Server className="h-3 w-3 shrink-0 opacity-70" />}
           <span className="truncate">{session.title}</span>
+          {paused ? <span className="sr-only">, paused</span> : null}
         </span>
         <button
           type="button"
@@ -457,6 +467,7 @@ export function TerminalDrawer({
           </div>
         </div>
 
+        {activeSession?.run ? <PausedRunBanner sessionId={activeSession.id} /> : null}
         {activeSession && (
           <SshAgentStatusBar
             sessionId={activeSession.id}

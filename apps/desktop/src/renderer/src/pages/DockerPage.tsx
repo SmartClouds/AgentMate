@@ -256,7 +256,15 @@ export default function DockerPage(): React.JSX.Element {
                   )}
                 </div>
               )}
-              <div className="settings-rows">
+              {/* Rows at the card's edge follow its inner corner (radius + 2px, less the 1px
+                  border), so a focused row's ring curves with the card instead of cutting square. */}
+              <div
+                className={cn(
+                  'settings-rows [&>*:last-child]:rounded-b-[calc(var(--radius)+1px)]',
+                  !(group.label || hasComposeGroups) &&
+                    '[&>*:first-child]:rounded-t-[calc(var(--radius)+1px)]',
+                )}
+              >
                 {group.containers.map((container) => (
                   <DockerContainerRow
                     key={container.id}

@@ -57,6 +57,7 @@ export * from './promptBuilder/targetAiNotes.js';
 export * from './promptBuilder/templateEngine.js';
 export * from './promptBuilder/types.js';
 export * from './resourceActivity/index.js';
+export * from './run/autoPause.js';
 export * from './run/runInputs.js';
 export * from './run/runTargets.js';
 export * from './security/codeql.js';

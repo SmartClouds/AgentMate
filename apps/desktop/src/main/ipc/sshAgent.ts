@@ -10,6 +10,7 @@ import {
   answerSshTaskPassword,
   approveSshTaskCommand,
   continueSshTask,
+  getSshServerTaskHistory,
   getSshTaskHistory,
   notifySshTaskWaiting,
   sendSshTaskMessage,
@@ -79,6 +80,10 @@ export function registerSshAgentHandlers(): void {
 
   ipcMain.handle(IPC.sshAgent.history, (_event, sessionId: string): SshAgentHistoryRun[] =>
     getSshTaskHistory(sessionId),
+  );
+
+  ipcMain.handle(IPC.sshAgent.serverHistory, (_event, serverId: unknown): SshAgentHistoryRun[] =>
+    typeof serverId === 'string' && serverId ? getSshServerTaskHistory(serverId) : [],
   );
 
   ipcMain.handle(

@@ -11,6 +11,7 @@ import {
   continueRdpTask,
   getRdpTaskHistory,
   notifyRdpTaskWaiting,
+  sendRdpTaskMessage,
   skipRdpTaskAction,
   startRdpTask,
   stopRdpTask,
@@ -57,6 +58,10 @@ export function registerRdpAgentHandlers(): void {
     (_event, sessionId: string, answer: string): void => {
       answerRdpTaskInput(sessionId, answer);
     },
+  );
+
+  ipcMain.handle(IPC.rdpAgent.sendMessage, (_event, sessionId: string, text: string): boolean =>
+    sendRdpTaskMessage(sessionId, text),
   );
 
   ipcMain.handle(IPC.rdpAgent.stop, (_event, sessionId: string): void => {

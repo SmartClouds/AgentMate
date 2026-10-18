@@ -138,6 +138,16 @@ describe('friendlyConnectError', () => {
     expect(friendlyConnectError(failure, endpoint, noVerdict).message).toBe(message);
   });
 
+  it("explains ssh2's own handshake deadline the same way as a timed out socket", () => {
+    const failure = Object.assign(new Error('Timed out while waiting for handshake'), {
+      level: 'client-timeout',
+    });
+
+    expect(friendlyConnectError(failure, endpoint, noVerdict).message).toBe(
+      'Connection to example.test:2222 timed out.',
+    );
+  });
+
   it('passes anything else through untouched', () => {
     const failure = new Error('Unsupported key format');
 

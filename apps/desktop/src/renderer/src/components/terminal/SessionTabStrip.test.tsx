@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { useRunPauseStore } from '@/stores/runPauseStore';
 import type { TerminalSessionMeta } from '@/stores/terminalStore';
 import { SessionTabStrip } from './TerminalDrawer';
 
@@ -33,7 +34,10 @@ function renderStrip(activeSessionId = 's1') {
   return { onSelect, onClose, tabs };
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  useRunPauseStore.setState({ paused: {}, pending: {} });
+});
 
 describe('SessionTabStrip', () => {
   it('makes the whole highlighted box the tab, not just its label', () => {
@@ -60,6 +64,15 @@ describe('SessionTabStrip', () => {
     fireEvent.click(screen.getByText('Command Prompt'));
     expect(onSelect).toHaveBeenCalledTimes(2);
     expect(onSelect).toHaveBeenLastCalledWith('s2');
+  });
+
+  it('marks a paused run on its tab, also for screen readers', () => {
+    useRunPauseStore.setState({ paused: { s2: { reason: 'user', pausedAt: 1 } }, pending: {} });
+    const { tabs } = renderStrip();
+
+    expect(tabs[1].querySelector('[data-paused]')).not.toBeNull();
+    expect(tabs[1]).toHaveAccessibleName(/Command Prompt.*paused/);
+    expect(tabs[0].querySelector('[data-paused]')).toBeNull();
   });
 
   it('switches from the keyboard', () => {

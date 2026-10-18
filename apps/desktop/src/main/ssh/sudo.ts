@@ -1,6 +1,6 @@
 import { quoteForShell } from '@agentmat/core';
 import { encodeSshError } from '../../shared/sshErrors';
-import type { ExecOptions, ExecResult, SshConnection } from './connection';
+import { type ExecOptions, type ExecResult, requireAnswer, type SshConnection } from './connection';
 
 /**
  * Running commands as root over a login that may or may not be root.
@@ -29,11 +29,24 @@ export interface RootShell {
 const PROBE_TIMEOUT_MS = 30_000;
 const PASSWORD_ONLY = "sudo -S -k -p '' true";
 
-export async function detectSudoMode(connection: CommandRunner): Promise<SudoMode> {
-  const who = await connection.exec('id -u', { timeoutMs: PROBE_TIMEOUT_MS });
+/**
+ * A server that stops answering is not one that wants a password, so a probe that times out
+ * rejects with a `CommandTimeoutError` instead of falling through to 'password'.
+ */
+export async function detectSudoMode(
+  connection: CommandRunner,
+  options: { timeoutMs?: number } = {},
+): Promise<SudoMode> {
+  const timeoutMs = options.timeoutMs ?? PROBE_TIMEOUT_MS;
+  const { host } = connection.endpoint;
+  const who = requireAnswer(await connection.exec('id -u', { timeoutMs }), host, timeoutMs);
   if (who.exitCode === 0 && who.stdout.trim() === '0') return 'root';
 
-  const probe = await connection.exec('sudo -k -n true', { timeoutMs: PROBE_TIMEOUT_MS });
+  const probe = requireAnswer(
+    await connection.exec('sudo -k -n true', { timeoutMs }),
+    host,
+    timeoutMs,
+  );
   if (probe.exitCode === 0) return 'passwordless';
   if (probe.exitCode === 127 || /command not found/i.test(probe.stderr)) {
     throw new Error(
@@ -81,10 +94,11 @@ export async function openRootShell(
   }
 
   const passwordLine = Buffer.from(`${password}\n`, 'utf8');
-  const check = await connection.exec(PASSWORD_ONLY, {
-    stdin: passwordLine,
-    timeoutMs: PROBE_TIMEOUT_MS,
-  });
+  const check = requireAnswer(
+    await connection.exec(PASSWORD_ONLY, { stdin: passwordLine, timeoutMs: PROBE_TIMEOUT_MS }),
+    connection.endpoint.host,
+    PROBE_TIMEOUT_MS,
+  );
   if (check.exitCode !== 0) {
     throw new Error(
       encodeSshError(

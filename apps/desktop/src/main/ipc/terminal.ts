@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { delimiter } from 'node:path';
-import { looksLikeNeedsInput } from '@agentmat/core';
-import { type IpcMainInvokeEvent, ipcMain, type WebContents } from 'electron';
+import { delimiter, join } from 'node:path';
+import { looksLikeNeedsInput, type RunPauseReason } from '@agentmat/core';
+import { app, type IpcMainInvokeEvent, ipcMain, type WebContents } from 'electron';
 import type {
   AgentSessionEntry,
   CreateTerminalOptions,
   TerminalAttachResult,
+  TerminalPauseResult,
   TerminalRunStatusResult,
   TerminalSurface,
   TerminalUsageResult,
@@ -22,11 +23,14 @@ import type {
   CreateOrAttachResult,
   HostSessionInfo,
 } from '../ptyHost/protocol';
+import { ptyHostPaths } from '../ptyHost/protocol';
 import { PtySessionManager, type SessionListener } from '../ptyHost/sessionManager';
 import { ALLOWED_SHELLS, type AllowedShell, defaultShellName } from '../ptyHost/shellResolve';
 import { store } from '../store';
 import { sampleListeningPorts } from '../system/listeningPorts';
+import { createProcessSuspender, type ProcessSuspender } from '../system/processSuspend';
 import { sampleProcessTrees } from '../system/processTree';
+import { RunPauseRegistry } from '../system/runPauseRegistry';
 import { toolPathCandidates } from '../toolPaths';
 import { pathKey } from '../windowsPath';
 import { broadcastToWindows, sendToContents } from './send';
@@ -80,6 +84,67 @@ const capturedDisplays = new Set<string>();
 let host: HostClient | null = null;
 let local: PtySessionManager | null = null;
 let backendReady: Promise<void> | null = null;
+
+/**
+ * Runs frozen by Pause. Kept on disk next to the host's files, because the host (and the frozen
+ * shells in it) can outlive this process; see `RunPauseRegistry`.
+ */
+let suspender: ProcessSuspender | null = null;
+let runPauses: RunPauseRegistry | null = null;
+
+function processSuspender(): ProcessSuspender {
+  suspender ??= createProcessSuspender({ helperDir: join(app.getPath('userData'), 'bin') });
+  return suspender;
+}
+
+function pauses(): RunPauseRegistry {
+  runPauses ??= new RunPauseRegistry({
+    suspender: processSuspender(),
+    file: join(ptyHostPaths(app.getPath('userData')).runtimeDir, 'paused-runs.json'),
+    onChange: (change) => broadcastToWindows(IPC.terminal.onPauseChange, change),
+  });
+  return runPauses;
+}
+
+/** Builds the Windows pause helper once, a while after the first terminal, so Pause is quick. */
+const WARM_SUSPENDER_DELAY_MS = 10_000;
+let suspenderWarmed = false;
+
+function warmSuspenderSoon(): void {
+  if (suspenderWarmed) return;
+  suspenderWarmed = true;
+  setTimeout(() => void processSuspender().warm(), WARM_SUSPENDER_DELAY_MS).unref?.();
+}
+
+/**
+ * A stopped process acts on the host's SIGHUP only once it runs again, so on Linux and macOS a
+ * frozen run that is being ended gets continued. Windows' taskkill ends frozen processes as is.
+ */
+function thawForKill(sessionId: string): void {
+  const frozen = runPauses?.forget(sessionId);
+  if (frozen && process.platform !== 'win32') void processSuspender().resumePids(frozen.pids);
+}
+
+function thawAllForKill(): void {
+  for (const run of runPauses?.list() ?? []) thawForKill(run.sessionId);
+}
+
+function pauseRefused(error: string): TerminalPauseResult {
+  return {
+    ok: false,
+    paused: false,
+    reason: null,
+    pausedAt: null,
+    processCount: 0,
+    failedCount: 0,
+    containersOnly: false,
+    error,
+  };
+}
+
+function isPauseReason(value: unknown): value is RunPauseReason {
+  return value === 'user' || value === 'agent';
+}
 
 /** Set when the upcoming quit is a restart (update install, relaunch) that must keep shells. */
 let preserveOnQuit = false;
@@ -135,6 +200,7 @@ function forwardData(sessionId: string, data: string): void {
 }
 
 function forwardExit(sessionId: string, exitCode: number): void {
+  runPauses?.forget(sessionId);
   agentStatus.exit(sessionId);
   autoContinue.exit(sessionId);
   sendToContents(owners.get(sessionId), IPC.terminal.onExit, { sessionId, exitCode });
@@ -173,6 +239,8 @@ async function startBackend(): Promise<void> {
   }
   if (!connected) {
     local ??= newLocalManager();
+    // Shells from an earlier host died with it, frozen or not.
+    await pauses().load([]);
     return;
   }
   const client = connected.client;
@@ -189,7 +257,9 @@ async function startBackend(): Promise<void> {
     },
   });
   host = client;
-  rememberSessions(await client.request<HostSessionInfo[]>({ type: 'list' }).catch(() => []));
+  const running = await client.request<HostSessionInfo[]>({ type: 'list' }).catch(() => []);
+  rememberSessions(running);
+  await pauses().load(running);
 }
 
 function ensureBackend(): Promise<void> {
@@ -287,6 +357,7 @@ export function registerTerminalHandlers(): void {
         return null;
       }
       attached.add(sessionId);
+      warmSuspenderSoon();
       const known = sessions.get(sessionId);
       sessions.set(sessionId, {
         // A session remembered from the host list lacks what only the renderer knows.
@@ -319,6 +390,7 @@ export function registerTerminalHandlers(): void {
   ipcMain.handle(IPC.terminal.kill, (_event, sessionId: string): void => {
     if (host) host.notify({ type: 'kill', payload: { sessionId } });
     else local?.kill(sessionId);
+    thawForKill(sessionId);
     autoContinue.exit(sessionId);
     owners.delete(sessionId);
     sessions.delete(sessionId);
@@ -381,6 +453,7 @@ export function registerTerminalHandlers(): void {
           for (const pid of tree?.pids ?? []) {
             for (const port of portsByPid.get(pid) ?? []) ports.add(port);
           }
+          const frozen = runPauses?.get(sessionId);
           return {
             sessionId,
             alive: info !== undefined,
@@ -388,11 +461,43 @@ export function registerTerminalHandlers(): void {
             memBytes: tree?.memBytes ?? 0,
             processCount: tree?.processCount ?? 0,
             ports: [...ports].sort((a, b) => a - b),
+            paused: frozen !== undefined,
+            pauseReason: frozen?.reason ?? null,
+            pausedAt: frozen?.pausedAt ?? null,
           };
         }),
       };
     },
   );
+
+  ipcMain.handle(
+    IPC.terminal.pause,
+    async (_event, sessionId: unknown, reason: unknown): Promise<TerminalPauseResult> => {
+      if (typeof sessionId !== 'string' || !SESSION_ID_PATTERN.test(sessionId)) {
+        return pauseRefused('not a terminal session');
+      }
+      if (!isPauseReason(reason)) return pauseRefused('unknown reason');
+      const info = (await listRunningSessions()).find((one) => one.sessionId === sessionId);
+      if (!info || !Number.isInteger(info.pid) || info.pid <= 0) return pauseRefused('not running');
+      return pauses().pause(sessionId, info.pid, reason);
+    },
+  );
+
+  ipcMain.handle(
+    IPC.terminal.resume,
+    async (_event, sessionId: unknown): Promise<TerminalPauseResult> => {
+      if (typeof sessionId !== 'string' || !SESSION_ID_PATTERN.test(sessionId)) {
+        return pauseRefused('not a terminal session');
+      }
+      if (backendReady) await backendReady;
+      return pauses().resume(sessionId);
+    },
+  );
+}
+
+/** Resolves once the paused-runs list is on disk. For tests. */
+export function flushRunPauses(): Promise<void> {
+  return runPauses?.flush() ?? Promise.resolve();
 }
 
 /** The shells the backend is running. Only waits on a backend that is already starting. */
@@ -468,6 +573,7 @@ export function terminalsHoldQuit(): Promise<void> | null {
   if (quitSettled) return null;
   if (local) {
     local.killAll();
+    thawAllForKill();
     quitSettled = true;
     return null;
   }
@@ -484,9 +590,11 @@ export function terminalsHoldQuit(): Promise<void> | null {
       .then((settings) => settings.keepTerminalsRunning)
       .catch(() => true);
     if (!keep) {
-      await client
+      const ending = client
         .request({ type: 'shutdown', payload: { killSessions: true } }, 1500)
         .catch(() => undefined);
+      thawAllForKill();
+      await ending;
     }
     quitSettled = true;
     await client.closeAfterFlush();

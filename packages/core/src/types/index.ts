@@ -669,6 +669,11 @@ export interface AppSettings {
    */
   stopDockerWithRun: RunDockerStopMode;
   /**
+   * When true, a project's runs are paused while an agent works in the same folder and resumed
+   * a few seconds after it stops, so hot reload does not rebuild on every file the agent writes.
+   */
+  autoPauseRunsWhileAgentWorks: boolean;
+  /**
    * When true, an agent in a Workspace tab that finishes or asks a question while you are
    * looking elsewhere raises a system notification.
    */

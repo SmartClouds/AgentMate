@@ -3,13 +3,13 @@ title: Remote
 category: Connect
 order: 10
 summary: Control another AgentMate over your network, connect to servers over SSH, open Windows Remote Desktop sessions, and pair the AgentMate mobile app.
-keywords: remote, ssh, remote control, host, pairing code, qr code, mobile, phone, companion app, anydesk, servers, saved servers, host key, passkey, lan, rdp, connect
+keywords: remote, ssh, remote control, host, pairing code, qr code, mobile, phone, companion app, servers, saved servers, host key, passkey, lan, rdp, connect
 route: /remote
 ---
 
 The Remote page is where you reach other computers. It has four tabs: **Host** (let another AgentMate or the mobile app control this computer), **Connect** (control another AgentMate), **SSH** (saved servers you open in a terminal tab) and **Remote Desktop** (saved Windows machines you open in their own window).
 
-Two sets of tools live here. The first is an AnyDesk-style remote control that works between AgentMate installs on the same network, and from the AgentMate mobile app. The second is a saved server list for SSH and Remote Desktop.
+Two sets of tools live here. The first is a remote control that works between AgentMate installs on the same network, and from the AgentMate mobile app. The second is a saved server list for SSH and Remote Desktop.
 
 ## Where to find it
 

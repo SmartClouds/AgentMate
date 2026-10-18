@@ -2,7 +2,7 @@
 
 A React Native (Expo) controller app for AgentMate's Remote feature. It connects
 directly to an AgentMate desktop instance that is hosting (Remote → Host tab)
-over your local network, using the same AnyDesk-style WebSocket protocol the
+over your local network, using the same WebSocket protocol the
 desktop app uses to control itself. It's defined once in
 [`@agentmat/protocol`](../../packages/protocol) and shared by both apps.
 

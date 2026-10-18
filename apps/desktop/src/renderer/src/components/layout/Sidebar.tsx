@@ -81,6 +81,9 @@ export function Sidebar(): React.JSX.Element {
         end={item.end}
         className={cn(
           'group relative flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-[5px] text-sm font-medium transition-colors',
+          // The nav scrolls with overflow hidden, which clips an outline drawn outside the entry,
+          // so keyboard focus gets a ring drawn inside its edge instead.
+          'outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
           // On the icon rail each entry is a centred square, so the active pill and the hover
           // background are squares too. 34px keeps all the entries on screen in a short window.
           collapsed && 'mx-auto h-8.5 w-8.5 justify-center p-0',

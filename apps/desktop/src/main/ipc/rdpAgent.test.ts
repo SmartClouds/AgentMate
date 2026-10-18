@@ -22,6 +22,7 @@ const runner = vi.hoisted(() => ({
   skipRdpTaskAction: vi.fn(),
   answerRdpTaskInput: vi.fn(),
   continueRdpTask: vi.fn(),
+  sendRdpTaskMessage: vi.fn(() => true),
   stopRdpTask: vi.fn(),
   getRdpTaskHistory: vi.fn(),
   notifyRdpTaskWaiting: vi.fn(async () => undefined),
@@ -103,6 +104,14 @@ describe('controlling a running task', () => {
     expect(runner.answerRdpTaskInput).toHaveBeenCalledWith('rdp-1', 'the second file');
     expect(runner.continueRdpTask).toHaveBeenCalledWith('rdp-1');
     expect(runner.stopRdpTask).toHaveBeenCalledWith('rdp-1');
+  });
+
+  it('passes a mid-run message on and says whether the run took it', async () => {
+    expect(await invoke(IPC.rdpAgent.sendMessage, 'rdp-1', 'use the keyboard')).toBe(true);
+    expect(runner.sendRdpTaskMessage).toHaveBeenCalledWith('rdp-1', 'use the keyboard');
+
+    runner.sendRdpTaskMessage.mockReturnValueOnce(false);
+    expect(await invoke(IPC.rdpAgent.sendMessage, 'rdp-1', 'too late')).toBe(false);
   });
 
   it('returns the history and raises notifications', async () => {

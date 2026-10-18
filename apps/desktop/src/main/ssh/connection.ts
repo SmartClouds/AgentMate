@@ -77,6 +77,27 @@ export class TunnelRefusedError extends Error {
   }
 }
 
+/**
+ * A command that got no answer in time. `exec` resolves with `timedOut` and empty output instead
+ * of rejecting, so a caller that reads the output as the answer takes a silent server for an
+ * empty one. `requireAnswer` turns that into this error for the callers that cannot go on without.
+ */
+export class CommandTimeoutError extends Error {
+  constructor(host: string, timeoutMs: number) {
+    super(
+      `${host} accepted the login but did not answer within ${seconds(timeoutMs)}. It may be ` +
+        'overloaded or out of resources, or the connection to it may be failing. Try again in a moment.',
+    );
+    this.name = 'CommandTimeoutError';
+  }
+}
+
+/** `result` itself, or a `CommandTimeoutError` when the command was given up on. */
+export function requireAnswer(result: ExecResult, host: string, timeoutMs: number): ExecResult {
+  if (result.timedOut) throw new CommandTimeoutError(host, timeoutMs);
+  return result;
+}
+
 const KEEPALIVE_INTERVAL_MS = 15_000;
 const KEEPALIVE_COUNT_MAX = 3;
 const DEFAULT_TIMEOUT_MS = 5 * 60_000;

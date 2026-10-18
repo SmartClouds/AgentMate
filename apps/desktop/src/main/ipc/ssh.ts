@@ -71,6 +71,11 @@ function forwardExit(sessionId: string, error?: string): void {
   exitSubscribers.delete(sessionId);
 }
 
+/** The saved server a live session is connected to, or null once it has closed. */
+export function sshSessionServerId(sessionId: string): string | null {
+  return sessions.get(sessionId)?.serverId ?? null;
+}
+
 /** True while `sessionId` has a live shell channel to write into. */
 export function hasSshSession(sessionId: string): boolean {
   return sessions.has(sessionId);

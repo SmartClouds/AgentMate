@@ -207,6 +207,9 @@ export class FakeBrowserWindow {
   show(): void {
     this.visible = true;
   }
+  showInactive(): void {
+    this.visible = true;
+  }
   hide(): void {
     this.visible = false;
   }
@@ -270,6 +273,15 @@ export class FakeBrowserWindow {
     return undefined;
   }
   setSkipTaskbar(): void {
+    return undefined;
+  }
+  setVisibleOnAllWorkspaces(): void {
+    return undefined;
+  }
+  moveTop(): void {
+    return undefined;
+  }
+  setMenu(): void {
     return undefined;
   }
   loadURL(): Promise<void> {

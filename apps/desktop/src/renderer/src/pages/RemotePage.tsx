@@ -36,7 +36,7 @@ export default function RemotePage(): React.JSX.Element {
 
   usePageHeader(
     'Remote',
-    'Control another AgentMate over your local network, AnyDesk-style, over WebSockets.',
+    'Control another AgentMate over your local network, over WebSockets.',
   );
 
   const connected = connection?.status === 'connected';

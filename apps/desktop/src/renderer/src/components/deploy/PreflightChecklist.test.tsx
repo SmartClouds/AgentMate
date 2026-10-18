@@ -1,7 +1,7 @@
 import type { DeployPreflight } from '@shared/deployTypes';
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-import { PreflightChecklist } from './PreflightChecklist';
+import { act, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { PreflightChecklist, PreflightSkeleton } from './PreflightChecklist';
 
 /**
  * The facts a check found, each marked ready, blocking or just worth knowing, and said out loud
@@ -104,5 +104,23 @@ describe('PreflightChecklist', () => {
     expect(row('Free space').textContent).toContain('Could not tell');
     expect(row('Installed now').textContent).toContain('Server core 1.52.0');
     expect(row('Installed now').textContent).toContain('note');
+  });
+});
+
+describe('PreflightSkeleton', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('names the server, then says it is slow when the check drags on', () => {
+    vi.useFakeTimers();
+    render(<PreflightSkeleton serverName="Staging" />);
+    expect(screen.getByRole('status').textContent).toBe('Checking Staging.');
+
+    act(() => {
+      vi.advanceTimersByTime(8_000);
+    });
+
+    expect(screen.getByRole('status').textContent).toContain('Staging is slow to answer');
   });
 });

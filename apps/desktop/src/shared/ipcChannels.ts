@@ -57,8 +57,11 @@ export const IPC = {
     kill: 'terminal:kill',
     usage: 'terminal:usage',
     runStatus: 'terminal:runStatus',
+    pause: 'terminal:pause',
+    resume: 'terminal:resume',
     onData: 'terminal:onData',
     onExit: 'terminal:onExit',
+    onPauseChange: 'terminal:onPauseChange',
   },
   ssh: {
     listServers: 'ssh:listServers',
@@ -163,6 +166,7 @@ export const IPC = {
     stop: 'sshAgent:stop',
     continue: 'sshAgent:continue',
     history: 'sshAgent:history',
+    serverHistory: 'sshAgent:serverHistory',
     notifyWaiting: 'sshAgent:notifyWaiting',
     // main -> renderer: the task's status changed (thinking, proposed a command, running it, ...)
     onProgress: 'sshAgent:onProgress',
@@ -172,6 +176,7 @@ export const IPC = {
     approveAction: 'rdpAgent:approveAction',
     skipAction: 'rdpAgent:skipAction',
     answerNeedsInput: 'rdpAgent:answerNeedsInput',
+    sendMessage: 'rdpAgent:sendMessage',
     stop: 'rdpAgent:stop',
     continue: 'rdpAgent:continue',
     history: 'rdpAgent:history',

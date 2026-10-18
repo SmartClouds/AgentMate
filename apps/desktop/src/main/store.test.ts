@@ -326,6 +326,28 @@ describe('settings migrations', () => {
     });
   });
 
+  describe('autoPauseRunsWhileAgentWorks', () => {
+    it('is off by default, so a run never freezes without the user asking for it', async () => {
+      const { store } = await loadStore();
+
+      expect((await store.getSettings()).autoPauseRunsWhileAgentWorks).toBe(false);
+    });
+
+    it('keeps a saved true', async () => {
+      userData.writeData('settings.json', { autoPauseRunsWhileAgentWorks: true });
+      const { store } = await loadStore();
+
+      expect((await store.getSettings()).autoPauseRunsWhileAgentWorks).toBe(true);
+    });
+
+    it.each(['yes', 1, null])('stays off for %s', async (value) => {
+      userData.writeData('settings.json', { autoPauseRunsWhileAgentWorks: value });
+      const { store } = await loadStore();
+
+      expect((await store.getSettings()).autoPauseRunsWhileAgentWorks).toBe(false);
+    });
+  });
+
   describe('idle resources', () => {
     it('lists things as idle after 20 minutes and alerts about them by default', async () => {
       const { store } = await loadStore();
