@@ -6,7 +6,7 @@ import { renderWithProviders } from '../../../test/renderer/renderWithProviders'
 
 /**
  * The project detail page reads its project out of the route, so everything here renders it
- * under `projects/:projectId`. The page is a shell around seventeen sections, so the tests cover
+ * under `projects/:projectId`. The page is a shell around eighteen sections, so the tests cover
  * the shell (the header, the section nav, the not-found path) plus the sections that are the
  * page's own code rather than a separate component with its own tests.
  */
@@ -304,7 +304,7 @@ describe('ProjectDetailPage sections', () => {
   });
 
   it('mounts every section in the nav without falling over', async () => {
-    // The page is mostly a router between seventeen sections, so the thing worth proving is that
+    // The page is mostly a router between eighteen sections, so the thing worth proving is that
     // each one can be reached and rendered with nothing but a project behind the bridge.
     const { user } = renderPage({
       'tools.detectAll': [{ id: 'diffray', installed: true }],
@@ -315,7 +315,7 @@ describe('ProjectDetailPage sections', () => {
     const labels = within(sectionNav())
       .getAllByRole('button')
       .map((button) => button.textContent?.trim() ?? '');
-    expect(labels.length).toBe(17);
+    expect(labels.length).toBe(18);
 
     for (const label of labels) {
       const button = within(sectionNav()).getByRole('button', { name: label });
@@ -812,5 +812,82 @@ describe('ProjectDetailPage WordPress section', () => {
     await waitFor(() =>
       expect(bridge.$fn('deployWordPress.unlinkProject')).toHaveBeenCalledWith('p1'),
     );
+  });
+});
+
+describe('ProjectDetailPage Deploy section', () => {
+  const SITE = {
+    id: 'fs-1',
+    label: 'Apollo static',
+    protocol: 'sftp',
+    connection: {
+      kind: 'custom',
+      host: 'files.example',
+      port: 22,
+      username: 'deploy',
+      authMethod: 'password',
+      privateKeyPath: null,
+      hostKeyFingerprint: null,
+      tlsPin: null,
+      tlsServername: null,
+      hasSecret: true,
+    },
+    remoteRoot: '/var/www/apollo',
+    localFolder: 'C:\\code\\apollo\\dist',
+    projectIds: ['p1'],
+    deployOnSave: false,
+    quietSeconds: 5,
+    ignorePatterns: [],
+    capabilities: null,
+    lastDeploy: null,
+    needsReview: null,
+    createdAt: 1,
+    updatedAt: 1,
+  };
+  const SNAPSHOT = {
+    siteId: 'fs-1',
+    computedAt: 1,
+    state: 'ready',
+    error: null,
+    files: [
+      { path: 'index.html', change: 'modified', size: 10 },
+      { path: 'app.js', change: 'added', size: 20 },
+    ],
+    totals: { added: 1, modified: 1, deleted: 0, bytes: 30 },
+    leftOut: [],
+    leftOutTruncated: false,
+    localFileCount: 2,
+    baseFileCount: 1,
+    firstDeploy: false,
+  };
+
+  it('opens from the query string with a way to add a site when none is attached', async () => {
+    renderWithProviders(<ProjectDetailPage />, {
+      route: '/projects/p1?tab=deploy',
+      path: 'projects/:projectId',
+      bridge: { 'projects.list': [project()], 'deployFiles.list': [] },
+    });
+
+    expect(await screen.findByText('No FTP or SFTP site yet')).toBeTruthy();
+    expect(
+      within(sectionNav()).getByRole('button', { name: /^Deploy/, current: 'page' }),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Add an FTP or SFTP site/ })).toBeTruthy();
+  });
+
+  it('counts the changes waiting on the attached sites in the nav', async () => {
+    const { user } = renderPage({
+      'deployFiles.list': [SITE],
+      'deployFiles.changes': SNAPSHOT,
+      'deployFiles.subscribe': SNAPSHOT,
+    });
+    await screen.findByRole('heading', { name: 'Apollo' });
+
+    const deploy = await waitFor(() =>
+      within(sectionNav()).getByRole('button', { name: /^Deploy\s*2$/ }),
+    );
+    await user.click(deploy);
+    expect(await screen.findByRole('region', { name: 'Apollo static' })).toBeTruthy();
+    expect(await screen.findByText('2 changes, 30 B since the last deploy')).toBeTruthy();
   });
 });

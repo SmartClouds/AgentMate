@@ -1,5 +1,4 @@
-import { createHash } from 'node:crypto';
-import { createReadStream, type Dirent } from 'node:fs';
+import type { Dirent } from 'node:fs';
 import { lstat, readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
@@ -20,6 +19,9 @@ import type {
   DeployWordPressLeftOutReason,
 } from '../../../shared/deployWordPressTypes';
 import { wordPressError } from '../../../shared/wordpressErrors';
+import { type HashCache, hashFile } from '../hashFile';
+
+export { hashFile };
 
 /**
  * What a WordPress project holds on this computer, item by item (E19). Only the folder of each
@@ -36,7 +38,8 @@ import { wordPressError } from '../../../shared/wordpressErrors';
  * Every path left out is reported, so the review can say so.
  */
 
-export type WpHashCache = Map<string, { size: number; mtimeMs: number; sha256: string }>;
+/** The shared size and time hash cache (hashFile.ts), keyed here by absolute path. */
+export type WpHashCache = HashCache;
 
 export interface WpLocalWalk {
   item: WpItemRef;
@@ -184,22 +187,6 @@ export async function itemIgnoreRules(
     );
   }
   return compiled.rules;
-}
-
-/** SHA-256 of a file, from the cache when its size and modification time are unchanged. */
-export async function hashFile(
-  path: string,
-  size: number,
-  mtimeMs: number,
-  cache?: WpHashCache,
-): Promise<string> {
-  const cached = cache?.get(path);
-  if (cached && cached.size === size && cached.mtimeMs === mtimeMs) return cached.sha256;
-  const hash = createHash('sha256');
-  for await (const chunk of createReadStream(path)) hash.update(chunk as Buffer);
-  const sha256 = hash.digest('hex');
-  cache?.set(path, { size, mtimeMs, sha256 });
-  return sha256;
 }
 
 /** Up to DENIED_LIST_MAX files under a denied folder, or the folder itself when there are more. */

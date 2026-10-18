@@ -25,6 +25,8 @@
     "src/preload/deployDirectTls.ts",
     "src/preload/deployAssistant.ts",
     "src/preload/deployWordPress.ts",
-    "src/preload/health.ts"
+    "src/preload/deployFiles.ts",
+    "src/preload/health.ts",
+    "src/preload/errorTracking.ts"
   ]
 }

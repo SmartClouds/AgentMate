@@ -114,6 +114,8 @@ describe('macAcceleratorsToGpus', () => {
         percent: 14,
         memUsedBytes: 270172160,
         memTotalBytes: 16 * GIB,
+        // ioreg has no temperature, and powermetrics needs sudo.
+        tempC: null,
       },
     ]);
   });
@@ -220,7 +222,9 @@ describe('sampleGpus', () => {
   });
 
   it('still reads an NVIDIA GPU through nvidia-smi', async () => {
-    answers.byCommand['nvidia-smi'] = { stdout: '0, NVIDIA GeForce RTX 4070, 35, 2048, 12282\n' };
+    answers.byCommand['nvidia-smi'] = {
+      stdout: '0, NVIDIA GeForce RTX 4070, 35, 2048, 12282, 61\n',
+    };
 
     const gpus = await withPlatform('linux', () => sampleGpus());
 
@@ -231,12 +235,41 @@ describe('sampleGpus', () => {
         percent: 35,
         memUsedBytes: 2048 * 1024 * 1024,
         memTotalBytes: 12282 * 1024 * 1024,
+        tempC: 61,
       },
     ]);
   });
 
+  it('asks nvidia-smi for the temperature as the sixth column', async () => {
+    answers.byCommand['nvidia-smi'] = {
+      stdout: '0, NVIDIA GeForce RTX 4070, 35, 2048, 12282, 61\n',
+    };
+
+    await withPlatform('linux', () => sampleGpus());
+
+    expect(calls.find((c) => c.command === 'nvidia-smi')?.args[0]).toBe(
+      '--query-gpu=index,name,utilization.gpu,memory.used,memory.total,temperature.gpu',
+    );
+  });
+
+  it('gives no NVIDIA temperature when the driver reports none', async () => {
+    answers.byCommand['nvidia-smi'] = {
+      stdout:
+        '0, NVIDIA A100, 12, 1024, 40960, [N/A]\n1, NVIDIA A100, 9, 512, 40960, [Not Supported]\n',
+    };
+
+    const gpus = await withPlatform('linux', () => sampleGpus());
+
+    expect(gpus.map((g) => [g.id, g.percent, g.tempC])).toEqual([
+      ['nvidia-0', 12, null],
+      ['nvidia-1', 9, null],
+    ]);
+  });
+
   it('lists a Windows integrated GPU next to the NVIDIA one', async () => {
-    answers.byCommand['nvidia-smi'] = { stdout: '0, NVIDIA GeForce RTX 4070, 35, 2048, 12282\n' };
+    answers.byCommand['nvidia-smi'] = {
+      stdout: '0, NVIDIA GeForce RTX 4070, 35, 2048, 12282, 58\n',
+    };
     answers.byCommand.powershell = {
       stdout: JSON.stringify({
         name: 'Intel(R) UHD Graphics',
@@ -251,5 +284,7 @@ describe('sampleGpus', () => {
     expect(gpus.map((g) => g.label)).toEqual(['NVIDIA GeForce RTX 4070', 'Intel(R) UHD Graphics']);
     // AdapterRAM is 0 on some integrated chips, so the total falls back to what is in use.
     expect(gpus[1]).toMatchObject({ percent: 8.5, memUsedBytes: 1000, memTotalBytes: 1000 });
+    // Only nvidia-smi reports a GPU temperature.
+    expect(gpus.map((g) => g.tempC)).toEqual([58, null]);
   });
 });

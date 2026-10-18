@@ -598,6 +598,37 @@ export const IPC = {
     // main -> renderer: HealthChangedEvent
     onChanged: 'health:changed',
   },
+  /** Error tracking (E24): Sentry connections, project links and issues. Tokens stay in main. */
+  errorTracking: {
+    // (ErrorTokenCheckInput) -> ErrorTokenCheck, nothing saved
+    checkToken: 'errorTracking:checkToken',
+    // (ErrorConnectInput) -> ErrorConnectionSummary
+    addConnection: 'errorTracking:addConnection',
+    // () -> ErrorConnectionSummary[]
+    listConnections: 'errorTracking:listConnections',
+    // (connectionId) -> void, its links go with it
+    removeConnection: 'errorTracking:removeConnection',
+    // (connectionId, token) -> ErrorConnectionSummary, checked before it replaces the old one
+    replaceToken: 'errorTracking:replaceToken',
+    // (connectionId) -> RemoteProject[]
+    remoteProjects: 'errorTracking:remoteProjects',
+    // ({ projectId? }) -> string[]: environments of the linked provider projects
+    environments: 'errorTracking:environments',
+    // ({ projectId? }) -> ErrorProjectLink[]
+    listLinks: 'errorTracking:listLinks',
+    // (projectId, ErrorProjectLink[]) -> ErrorProjectLink[]: replaces the project's links
+    setLinks: 'errorTracking:setLinks',
+    // (ErrorIssueQuery) -> ErrorIssuePage
+    listIssues: 'errorTracking:listIssues',
+    // (ErrorIssueRef) -> ErrorIssueDetail
+    getIssue: 'errorTracking:getIssue',
+    // (ErrorStatusChange) -> ErrorIssueSummary
+    setIssueStatus: 'errorTracking:setIssueStatus',
+    // (ErrorIssueRef) -> { prompt, copy }: the redacted fix prompt and the plain copy text
+    fixPrompt: 'errorTracking:fixPrompt',
+    // main -> renderer: ErrorTrackingChangedEvent
+    onChanged: 'errorTracking:changed',
+  },
   /** The Android page: the SDK behind it, AVDs, emulators and adb devices. */
   android: {
     sdk: 'android:sdk',
@@ -1028,6 +1059,63 @@ export const IPC = {
     updateConnector: 'deployWordPress:updateConnector',
     /** main -> the main window: the steps of a pull, deploy, rollback or new project. */
     onProgress: 'deployWordPress:onProgress',
+  },
+  /**
+   * FTP and SFTP sites (E23): a local deploy folder sent to a folder on a server, changes
+   * reviewed before they go. A stored password or passphrase never comes back out.
+   */
+  deployFiles: {
+    // () -> FileSite[]
+    list: 'deployFiles:list',
+    // (siteId) -> FileSite | null
+    get: 'deployFiles:get',
+    // (FileSiteInput) -> FileSite
+    create: 'deployFiles:create',
+    // (siteId, FileSiteInput) -> FileSite; a left-out secret keeps the stored one
+    update: 'deployFiles:update',
+    // (siteId) -> void; files on the server are not touched
+    remove: 'deployFiles:remove',
+    // (FilesTestInput) -> FilesTestResult
+    test: 'deployFiles:test',
+    // (FilesBrowseInput) -> FilesBrowseResult
+    browseRemote: 'deployFiles:browseRemote',
+    // (defaultPath | null) -> string | null
+    pickLocalFolder: 'deployFiles:pickLocalFolder',
+    // (patterns: string[]) -> { ok: true } | { ok: false, line, reason }
+    validateIgnore: 'deployFiles:validateIgnore',
+    // (siteId) -> FilesChangesSnapshot; keeps the folder watched for this window until unsubscribe
+    subscribe: 'deployFiles:subscribe',
+    unsubscribe: 'deployFiles:unsubscribe',
+    // (siteId) -> FilesChangesSnapshot, walked again now
+    changes: 'deployFiles:changes',
+    // (FilesPlanInput) -> FilesPlanView, after reading the server
+    plan: 'deployFiles:plan',
+    // (FilesDeployInput) -> FilesRunResult
+    deploy: 'deployFiles:deploy',
+    // (siteId) -> void
+    cancel: 'deployFiles:cancel',
+    // (siteId) -> FilesHistoryEntry[], newest first
+    history: 'deployFiles:history',
+    // (siteId) -> void; the next deploy is a first deploy again
+    forgetBase: 'deployFiles:forgetBase',
+    // (siteId, enabled) -> FileSite
+    setDeployOnSave: 'deployFiles:setDeployOnSave',
+    // (siteId) -> SshHostKeyStatus, for a site with an SFTP login of its own
+    hostKeyStatus: 'deployFiles:hostKeyStatus',
+    // (siteId, fingerprint) -> void; read again from the server before it is stored
+    trustHostKey: 'deployFiles:trustHostKey',
+    // (siteId, fingerprint256) -> void; read again from the server before it is pinned
+    trustCertificate: 'deployFiles:trustCertificate',
+    /** main -> renderer: FilesChangesSnapshot for a subscribed site. */
+    onChanges: 'deployFiles:onChanges',
+    /** main -> renderer: FilesProgressEvent while a deploy runs. */
+    onProgress: 'deployFiles:onProgress',
+    /** main -> renderer: FilesRunResult once a deploy ends, Deploy on save included. */
+    onRunFinished: 'deployFiles:onRunFinished',
+    /** main -> renderer: FilesNeedsReviewEvent when Deploy on save stops for the user, or clears. */
+    onNeedsReview: 'deployFiles:onNeedsReview',
+    /** main -> renderer: FilesSitesChangedEvent after any change to the site list. */
+    onSitesChanged: 'deployFiles:onSitesChanged',
   },
   /** The Deploy section's Cloudflare dialog: the API token, zones, DNS, settings and rules. */
   cloudflare: {

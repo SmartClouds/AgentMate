@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project, WpItemRef } from '@agentmat/core';
 import { wpItemKey, wpItemRoot } from '@agentmat/core';
 import type { DeployWordPressSite } from '@shared/deployWordPressTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -18,7 +18,7 @@ import { ConnectSiteDialog } from '@/components/wordpress/ConnectSiteDialog';
 import { queryKeys } from '@/lib/queryKeys';
 import { findWordPressRun, useWordPressOperationStore } from '@/stores/wordpressOperationStore';
 import { OutcomeBanner, RunError } from './FlowParts';
-import { defaultItemKeys, ItemPicker, toItemRef } from './ItemPicker';
+import { defaultItemKeys, ItemPicker, startingItemKeys, toItemRef } from './ItemPicker';
 import { OperationTimeline } from './OperationTimeline';
 import { SitePicker } from './SitePicker';
 
@@ -26,7 +26,8 @@ import { SitePicker } from './SitePicker';
  * Turns an existing project into a WordPress project: pick a connected site and which of its
  * themes and plugins the project syncs. Items with no folder in the project yet are pulled in;
  * a folder that already holds files is linked as it is, and the first pull compares it with the
- * site. Unlinking from the WordPress section turns it back into a plain project.
+ * site. Unlinking from the WordPress section turns it back into a plain project. Opened from a
+ * site's Deploy page it skips the site step.
  */
 
 type Step = 'site' | 'items' | 'run';
@@ -53,12 +54,18 @@ export function LinkWordPressDialog({
   onOpenChange,
   project,
   onLinked,
+  initialSiteId,
+  initialItems,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   project: Project;
   /** Called once the user leaves the finished dialog for the project's WordPress section. */
   onLinked: () => void;
+  /** Start on the items step with this site picked, as when opened from the site's page. */
+  initialSiteId?: string;
+  /** What to tick for `initialSiteId` instead of its active theme. */
+  initialItems?: WpItemRef[];
 }): React.JSX.Element {
   const queryClient = useQueryClient();
   const linkProject = useWordPressOperationStore((state) => state.linkProject);
@@ -71,6 +78,9 @@ export function LinkWordPressDialog({
   const [operationId, setOperationId] = useState<string | null>(null);
   const [connectOpen, setConnectOpen] = useState(false);
   const preselectedFor = useRef<string | null>(null);
+  // Read when the items load, so a new array with the same items never starts over.
+  const startingItems = useRef(initialItems);
+  startingItems.current = initialItems;
   const run = useWordPressOperationStore((state) =>
     operationId ? (state.runs[operationId] ?? null) : null,
   );
@@ -101,18 +111,22 @@ export function LinkWordPressDialog({
       setStep('run');
       return;
     }
-    setStep('site');
-    setSiteId(null);
+    setStep(initialSiteId ? 'items' : 'site');
+    setSiteId(initialSiteId ?? null);
     setSelected(new Set());
     setOperationId(null);
     preselectedFor.current = null;
-  }, [open, project.id]);
+  }, [open, project.id, initialSiteId]);
 
+  // `open` is here so opening again for the same site, with its items cached, ticks afresh.
   useEffect(() => {
-    if (!siteId || !itemsQuery.data || preselectedFor.current === siteId) return;
+    if (!open || !siteId || !itemsQuery.data || preselectedFor.current === siteId) return;
     preselectedFor.current = siteId;
-    setSelected(defaultItemKeys(itemsQuery.data));
-  }, [siteId, itemsQuery.data]);
+    const wanted = siteId === initialSiteId ? startingItems.current : undefined;
+    setSelected(
+      wanted ? startingItemKeys(itemsQuery.data, wanted) : defaultItemKeys(itemsQuery.data),
+    );
+  }, [open, siteId, itemsQuery.data, initialSiteId]);
 
   const runStatus = run?.status;
   useEffect(() => {

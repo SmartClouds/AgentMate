@@ -15,9 +15,11 @@ import type {
 import { IPC } from '../../shared/ipcChannels';
 import { probeAll } from '../network/pingProbe';
 import { store } from '../store';
+import { readCpuArch } from '../system/cpuArch';
 import { sampleGpus } from '../system/gpuStats';
 import { sampleMemory } from '../system/memoryStats';
 import { asArray, runPowerShellJson } from '../system/processTree';
+import { type CpuTemperature, sampleCpuTemperature } from '../system/temperatureStats';
 
 const execFileAsync = promisify(execFile);
 
@@ -270,6 +272,7 @@ async function sampleNetworkRates(): Promise<
 }
 
 const cpuModel = readCpuModel();
+const cpuArch = readCpuArch();
 
 const TOP_APPS_LIMIT = 10;
 const IGNORED_PROCESS_NAMES = new Set(['idle', '_total', 'system idle process', '(idle)']);
@@ -895,7 +898,7 @@ async function killProcess(pid: number): Promise<KillProcessResult> {
 }
 
 /**
- * Disk and GPU readings each start a PowerShell process on Windows, which costs real CPU and time.
+ * Disk, GPU and temperature readings each start a PowerShell process on Windows, which costs real CPU and time.
  * The bar samples every few seconds, so these are reused for a while and never run twice at once.
  */
 const SLOW_PROBE_TTL_MS = 10_000;
@@ -919,8 +922,32 @@ function cachedProbe<T>(probe: () => Promise<T>): () => Promise<T> {
   };
 }
 
+/**
+ * Like cachedProbe, but the caller never waits: it gets the last reading (or `fallback` before the
+ * first one lands) while a stale or missing one is fetched in the background.
+ */
+function backgroundProbe<T>(probe: () => Promise<T>, fallback: T): () => T {
+  const cached = cachedProbe(probe);
+  let latest = fallback;
+  return () => {
+    cached().then(
+      (fresh) => {
+        latest = fresh;
+      },
+      // A failed reading keeps the last one. The next call tries again.
+      () => undefined,
+    );
+    return latest;
+  };
+}
+
 const sampleDisksCached = cachedProbe(sampleDisks);
 const sampleGpusCached = cachedProbe(sampleGpus);
+// The third PowerShell process on Windows. Its first run must not hold up the first sample.
+const sampleCpuTemperatureCached = backgroundProbe<CpuTemperature>(sampleCpuTemperature, {
+  cpuTempC: null,
+  cpuThermalState: null,
+});
 
 export function registerSystemStatsHandlers(): void {
   ipcMain.handle(IPC.system.topApps, async (_event, resource: TopResourceKind) => {
@@ -935,6 +962,7 @@ export function registerSystemStatsHandlers(): void {
 
   ipcMain.handle(IPC.system.sample, async (): Promise<SystemStatsSample> => {
     const settings = await store.getSettings();
+    const temperature = sampleCpuTemperatureCached();
     const [net, pings, disks, gpus, cpu, memory] = await Promise.all([
       sampleNetworkRates(),
       probeAll(settings),
@@ -947,6 +975,8 @@ export function registerSystemStatsHandlers(): void {
       timestamp: Date.now(),
       cpuModel,
       cpuCoreCount: cpu.cpuCorePercents.length,
+      cpuArch,
+      ...temperature,
       cpuPercent: cpu.cpuPercent,
       cpuCorePercents: cpu.cpuCorePercents,
       ...memory,

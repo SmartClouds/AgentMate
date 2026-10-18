@@ -2,7 +2,7 @@
 import { act, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHookWithProviders } from '../../../test/renderer/renderWithProviders';
-import { useVoiceInput } from './useVoiceInput';
+import { NOTHING_HEARD_MESSAGE, useVoiceInput } from './useVoiceInput';
 
 /**
  * Voice input holds the microphone, so the cases that matter are the ones where something is
@@ -43,6 +43,8 @@ class FakeMediaRecorder {
 
 /** How many samples the decode pipeline hands back, so a test can make it produce silence. */
 let renderedSamples = 16_000;
+/** How loud those samples are. Speech peaks well above the hook's silence floor. */
+let renderedLevel = 0.2;
 
 class FakeAudioContext {
   async decodeAudioData(): Promise<{ duration: number }> {
@@ -59,7 +61,7 @@ class FakeOfflineAudioContext {
     return { buffer: null, connect: () => undefined, start: () => undefined };
   }
   async startRendering() {
-    return { getChannelData: () => new Float32Array(renderedSamples) };
+    return { getChannelData: () => new Float32Array(renderedSamples).fill(renderedLevel) };
   }
 }
 
@@ -97,6 +99,7 @@ function renderVoice(options: VoiceOptions = {}, bridge: Record<string, unknown>
 
 beforeEach(() => {
   renderedSamples = 16_000;
+  renderedLevel = 0.2;
   FakeMediaRecorder.last = null;
   track.stop.mockClear();
   getUserMedia.mockClear();
@@ -133,6 +136,21 @@ describe('useVoiceInput availability', () => {
     act(() => bridge.$emit('speech.onModelProgress', { percent: 42 }));
 
     expect(result.current.downloadPercent).toBe(42);
+  });
+
+  // Every mic on the page hears the broadcast, so a download another one ran can leave 100% here.
+  it('does not carry a finished download from another mic into its own recording', async () => {
+    const { result, bridge } = renderVoice(
+      {},
+      { 'speech.transcribe': () => new Promise(() => undefined) },
+    );
+    act(() => bridge.$emit('speech.onModelProgress', { percent: 100 }));
+
+    await act(async () => result.current.toggle());
+    await act(async () => result.current.toggle());
+
+    await waitFor(() => expect(result.current.status).toBe('transcribing'));
+    expect(result.current.downloadPercent).toBeNull();
   });
 });
 
@@ -210,6 +228,99 @@ describe('useVoiceInput recording', () => {
     await act(async () => result.current.toggle());
 
     expect(getUserMedia).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useVoiceInput silence', () => {
+  // Whisper invents words for silence, so these never reach the model.
+  it('does not send a clip that is too short to hold a word', async () => {
+    renderedSamples = 3_000;
+    const transcribe = vi.fn();
+    const { result, onText } = renderVoice({}, { 'speech.transcribe': transcribe });
+
+    await act(async () => result.current.toggle());
+    await act(async () => result.current.toggle());
+
+    await waitFor(() => expect(result.current.error).toBe(NOTHING_HEARD_MESSAGE));
+    expect(transcribe).not.toHaveBeenCalled();
+    expect(onText).not.toHaveBeenCalled();
+    expect(result.current.status).toBe('idle');
+  });
+
+  it('does not send a recording that stayed quiet all the way through', async () => {
+    renderedLevel = 0.002;
+    const transcribe = vi.fn();
+    const { result, onText } = renderVoice({}, { 'speech.transcribe': transcribe });
+
+    await act(async () => result.current.toggle());
+    await act(async () => result.current.toggle());
+
+    await waitFor(() => expect(result.current.error).toBe(NOTHING_HEARD_MESSAGE));
+    expect(transcribe).not.toHaveBeenCalled();
+    expect(onText).not.toHaveBeenCalled();
+  });
+});
+
+describe('useVoiceInput cancel and timer', () => {
+  it('counts the seconds while recording and resets when it stops', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const { result } = renderVoice(
+        {},
+        { 'speech.transcribe': () => new Promise(() => undefined) },
+      );
+      await act(async () => result.current.toggle());
+      expect(result.current.elapsedSeconds).toBe(0);
+
+      await act(async () => vi.advanceTimersByTime(3_100));
+      expect(result.current.elapsedSeconds).toBe(3);
+
+      await act(async () => result.current.toggle());
+      await waitFor(() => expect(result.current.elapsedSeconds).toBe(0));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('throws a recording away without transcribing it', async () => {
+    const transcribe = vi.fn();
+    const { result, onText } = renderVoice({}, { 'speech.transcribe': transcribe });
+    await act(async () => result.current.toggle());
+
+    act(() => result.current.cancel());
+
+    expect(result.current.status).toBe('idle');
+    expect(track.stop).toHaveBeenCalled();
+    // Give a stray onstop the chance to start a transcription it should not.
+    await act(async () => undefined);
+    expect(transcribe).not.toHaveBeenCalled();
+    expect(onText).not.toHaveBeenCalled();
+  });
+
+  it('drops a transcription that finishes after it was cancelled', async () => {
+    let release: (() => void) | null = null;
+    const { result, onText } = renderVoice(
+      {},
+      {
+        'speech.transcribe': () =>
+          new Promise((resolve) => {
+            release = () => resolve({ ok: true, text: 'too late' });
+          }),
+      },
+    );
+    await act(async () => result.current.toggle());
+    await act(async () => result.current.toggle());
+    await waitFor(() => expect(result.current.status).toBe('transcribing'));
+
+    act(() => result.current.cancel());
+    expect(result.current.status).toBe('idle');
+
+    // A new recording starts before the old answer comes back; the old one must not touch it.
+    await act(async () => result.current.toggle());
+    await act(async () => release?.());
+
+    expect(onText).not.toHaveBeenCalled();
+    expect(result.current.status).toBe('recording');
   });
 });
 

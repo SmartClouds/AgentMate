@@ -16,6 +16,7 @@ import {
   type InstalledCli,
   type ProviderUsage,
 } from '@agentmat/core';
+import type { CpuThermalState, SystemStatsSample } from '@shared/apiTypes';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as CountryFlags from 'country-flag-icons/react/3x2';
 import { motion } from 'framer-motion';
@@ -27,7 +28,7 @@ import { GithubActionsCard } from '@/components/dashboard/GithubActionsCard';
 import { GithubActivityCard } from '@/components/dashboard/GithubActivityCard';
 import { IdleResourcesCard } from '@/components/dashboard/IdleResourcesCard';
 import { ResourceUsageCard } from '@/components/dashboard/ResourceUsageCard';
-import { SparklineChart } from '@/components/dashboard/SparklineChart';
+import { SparklineChart, type SparklineSeries } from '@/components/dashboard/SparklineChart';
 import { TopResourceAppsDialog } from '@/components/dashboard/TopResourceAppsDialog';
 import {
   ArrowRight,
@@ -96,6 +97,7 @@ import { DashboardUsageCard } from '@/components/usage/DashboardUsageCard';
 import { useSystemStatsHistory } from '@/hooks/useSystemStatsHistory';
 import { useUsageSummary } from '@/hooks/useUsageSummary';
 import { useChartColors } from '@/lib/chartColors';
+import { formatCelsius } from '@/lib/format';
 import { openCommandTerminal } from '@/lib/openCommandTerminal';
 import { queryKeys } from '@/lib/queryKeys';
 import { formatCost, formatPercent, formatTokens } from '@/lib/usageFormat';
@@ -153,6 +155,55 @@ function getNetworkQualityInfo(percent: number): {
 function formatBytes(bytes: number): string {
   if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(0)} MB`;
   return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
+}
+
+const ARCH_LABELS: Record<string, string> = { x64: 'x64', x86: 'x86', arm64: 'ARM64', arm: 'ARM' };
+
+/**
+ * "Apple M4 · 10 cores · ARM64". ARM Linux often reports no model name at all, so the
+ * architecture stands in for it there ("ARM64 CPU · 4 cores").
+ */
+function cpuSubtitle(
+  sample: Pick<SystemStatsSample, 'cpuModel' | 'cpuCoreCount' | 'cpuArch'>,
+): string {
+  const arch = ARCH_LABELS[sample.cpuArch] ?? sample.cpuArch;
+  const model = sample.cpuModel.trim();
+  const cores = `${sample.cpuCoreCount} cores`;
+  if (!model || model.toLowerCase() === 'unknown') return `${arch || 'Unknown'} CPU · ${cores}`;
+  return arch ? `${model} · ${cores} · ${arch}` : `${model} · ${cores}`;
+}
+
+const THERMAL_STATES: Record<
+  CpuThermalState,
+  { label: string; tone: 'success' | 'neutral' | 'warning' | 'destructive' }
+> = {
+  nominal: { label: 'Nominal', tone: 'success' },
+  fair: { label: 'Fair', tone: 'neutral' },
+  serious: { label: 'Serious', tone: 'warning' },
+  critical: { label: 'Critical', tone: 'destructive' },
+};
+
+/** A temperature the OS actually reported. Missing ones are null, and a chart gap is NaN. */
+function isReading(value: number | null | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+/**
+ * Temperature shares the 0-100 axis with usage, which fits °C as well, except that a spike past
+ * 100 °C would be clipped, so the ceiling rises to the hottest sample in the window.
+ */
+function chartCeiling(temperatures: number[]): number {
+  return temperatures.length > 0 ? Math.max(100, Math.ceil(Math.max(...temperatures))) : 100;
+}
+
+/** A temperature drawn over a usage chart: dashed, unfilled, and read out in °C. */
+function temperatureSeries(
+  key: string,
+  label: string,
+  color: string,
+  values: number[],
+): SparklineSeries {
+  return { key, label, color, values, formatValue: formatCelsius, dashed: true, area: false };
 }
 
 // Every chart card reserves the same stat/legend/chart layout (see the
@@ -686,6 +737,27 @@ export default function DashboardPage(): React.JSX.Element {
   );
   const avgGpuPercent =
     gpus.length > 0 ? gpus.reduce((sum, g) => sum + g.percent, 0) / gpus.length : 0;
+  // Temperatures ride on the usage charts, and only once the window holds a reading, so a
+  // machine that reports none keeps exactly the charts it had.
+  const cpuTemperatures = statsHistory.map((s) => s.cpuTempC).filter(isReading);
+  const cpuTemperatureSeries =
+    cpuTemperatures.length > 0
+      ? [
+          temperatureSeries(
+            'cpu-temp',
+            'Temperature',
+            chartColors.temperature,
+            statsHistory.map((s) => s.cpuTempC ?? Number.NaN),
+          ),
+        ]
+      : [];
+  const gpuTemperatureSeries = gpus.flatMap((g, i) => {
+    const values = statsHistory.map((s) => s.gpus.find((x) => x.id === g.id)?.tempC ?? Number.NaN);
+    if (!values.some(isReading)) return [];
+    const color = chartColors.categorical[i % chartColors.categorical.length];
+    return [temperatureSeries(`${g.id}-temp`, `${g.label} temp`, color, values)];
+  });
+  const gpuTemperatures = gpuTemperatureSeries.flatMap((s) => s.values).filter(isReading);
   const aliveTargetCount = pings.filter((p) => p.alive).length;
   const historyPingSamples = statsHistory.flatMap((s) => s.pings);
   const pingQualityPercent =
@@ -863,9 +935,19 @@ export default function DashboardPage(): React.JSX.Element {
           {latest ? (
             <>
               <span className="text-2xl font-semibold">{formatPercent(latest.cpuPercent)}</span>
-              <span className="truncate text-xs text-muted-foreground">
-                {latest.cpuModel} · {latest.cpuCoreCount} cores
-              </span>
+              {isReading(latest.cpuTempC) && (
+                <span className="shrink-0 text-sm text-muted-foreground">
+                  {formatCelsius(latest.cpuTempC)}
+                </span>
+              )}
+              {latest.cpuThermalState && (
+                <SimpleTooltip label="Thermal pressure, as macOS reports it">
+                  <Chip tone={THERMAL_STATES[latest.cpuThermalState].tone} className="self-center">
+                    {THERMAL_STATES[latest.cpuThermalState].label}
+                  </Chip>
+                </SimpleTooltip>
+              )}
+              <span className="truncate text-xs text-muted-foreground">{cpuSubtitle(latest)}</span>
             </>
           ) : (
             <>
@@ -898,11 +980,11 @@ export default function DashboardPage(): React.JSX.Element {
             height={CHART_HEIGHT}
             timestamps={timestamps}
             domainMin={0}
-            domainMax={100}
+            domainMax={chartCeiling(cpuTemperatures)}
             formatValue={formatPercent}
             formatTime={formatClockTime}
-            series={
-              cpuView === 'cores'
+            series={[
+              ...(cpuView === 'cores'
                 ? latest.cpuCorePercents.map((_, i) => ({
                     key: `core-${i}`,
                     label: `Core ${i}`,
@@ -916,8 +998,9 @@ export default function DashboardPage(): React.JSX.Element {
                       color: 'hsl(var(--primary))',
                       values: statsHistory.map((s) => s.cpuPercent),
                     },
-                  ]
-            }
+                  ]),
+              ...cpuTemperatureSeries,
+            ]}
           />
         ) : (
           <ChartSkeleton />
@@ -1121,6 +1204,7 @@ export default function DashboardPage(): React.JSX.Element {
               <span className="text-xs text-muted-foreground">
                 {formatPercent(g.percent)} · {formatBytes(g.memUsedBytes)}/
                 {formatBytes(g.memTotalBytes)}
+                {isReading(g.tempC) && ` · ${formatCelsius(g.tempC)}`}
               </span>
             </div>
           ))}
@@ -1134,15 +1218,18 @@ export default function DashboardPage(): React.JSX.Element {
             height={CHART_HEIGHT}
             timestamps={timestamps}
             domainMin={0}
-            domainMax={100}
+            domainMax={chartCeiling(gpuTemperatures)}
             formatValue={formatPercent}
             formatTime={formatClockTime}
-            series={gpus.map((g, i) => ({
-              key: g.id,
-              label: g.label,
-              color: chartColors.categorical[i % chartColors.categorical.length],
-              values: statsHistory.map((s) => s.gpus.find((x) => x.id === g.id)?.percent ?? 0),
-            }))}
+            series={[
+              ...gpus.map((g, i) => ({
+                key: g.id,
+                label: g.label,
+                color: chartColors.categorical[i % chartColors.categorical.length],
+                values: statsHistory.map((s) => s.gpus.find((x) => x.id === g.id)?.percent ?? 0),
+              })),
+              ...gpuTemperatureSeries,
+            ]}
           />
         )}
       </ChartCard>

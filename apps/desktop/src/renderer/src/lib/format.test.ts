@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatBytes, formatPercent } from './format';
+import { formatBytes, formatCelsius, formatPercent } from './format';
 
 describe('formatBytes', () => {
   it('reads nothing as zero bytes', () => {
@@ -55,5 +55,14 @@ describe('formatPercent', () => {
     expect(formatPercent(10)).toBe('10%');
     expect(formatPercent(43.6)).toBe('44%');
     expect(formatPercent(100)).toBe('100%');
+  });
+});
+
+describe('formatCelsius', () => {
+  it('rounds to whole degrees, since sensors are not finer than that', () => {
+    expect(formatCelsius(61)).toBe('61 °C');
+    expect(formatCelsius(52.4)).toBe('52 °C');
+    expect(formatCelsius(52.5)).toBe('53 °C');
+    expect(formatCelsius(105)).toBe('105 °C');
   });
 });

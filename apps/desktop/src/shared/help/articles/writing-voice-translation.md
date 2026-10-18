@@ -108,15 +108,29 @@ The microphone button appears next to **Your request** in two places:
 - the [Prompt Builder](prompt-builder.md) page, labeled **Record voice input**,
 - the **Build Prompt** dialog of a project, labeled **Dictate**.
 
-The button is hidden if your system cannot record audio. The pinned Build Prompt desktop widget has no microphone button.
+The **Build Prompt** dialog also has a second microphone, **Speak prompt**, above **Generated prompt**. It is for when you already know exactly what you want to say: speak in English and your words become the prompt as they are, with nothing generated and nothing translated. It always listens for English, whatever language Dictate is set to.
+
+Only one microphone records at a time; the other one waits until you are done.
+
+The buttons are hidden if your system cannot record audio. The pinned Build Prompt desktop widget has no microphone button.
 
 ### Dictate a request
 
 1. Click the microphone button. The first time, allow microphone access when asked.
-2. Speak. The button turns red and says **Stop recording** (or **Stop** in the dialog).
+2. Speak. The button turns red and says **Stop recording** (in the dialog, **Stop** with a running clock such as **Stop 0:12**).
 3. Click it again. The button shows **Transcribing…**, then your words are added to the end of whatever is already in the box, separated by a space.
 
-The very first use also downloads the speech model, and the button shows **Downloading model… N%** (just the percentage in the dialog). The model is downloaded once and then kept on disk, so later dictation works without internet. Long recordings are processed in 30 second pieces.
+In the dialog you can throw a recording away instead: press `Esc` or click the **×** next to **Stop**. Nothing is transcribed and the dialog stays open.
+
+If the recording is very short or silent, nothing is sent to the speech model and you see "Didn't catch anything. Try again a little closer to the mic." This keeps the model from inventing words for silence.
+
+### Dictation language
+
+In the **Build Prompt** dialog, the chip next to **Dictate** (**EN**, **FA** and so on) shows the language Dictate listens for. Click it to pick another; the choice is saved as your **Spoken language** setting. The speech model has to be told the language up front, so speak the language the chip shows.
+
+If the chip shows a warning sign, the current model is too small for that language. Persian needs **Large v3 Turbo**: the smaller models write Persian as a jumble of half-right words. Open the chip and pick **Use a model that understands Persian** to switch.
+
+The very first use also downloads the speech model, and the button shows **Downloading model… N%** (just the percentage in the dialog). The model is downloaded once and then kept on disk, so later dictation works without internet. Long recordings are processed in 30 second pieces. **Large v3 Turbo** is slower than the others: on a typical laptop processor expect about two seconds of waiting for each second you spoke, and a short extra pause the first time it loads after the app starts.
 
 If the dialog is closed while you are recording, the microphone is stopped and the recording is still transcribed into that project's saved request.
 
@@ -128,8 +142,8 @@ In the **Voice input** card ("Local Whisper transcription for Prompt Builder. Th
 
 | Setting | Options |
 | --- | --- |
-| **Model** | **Tiny** (fastest, about 75 MB), **Base** (balanced, about 145 MB, the default), **Small** (most accurate, about 490 MB). A bigger model understands you better but is slower and takes more disk space. |
-| **Spoken language** | **Auto-detect** (default), English, Persian, Spanish, French, German, Arabic, Chinese, Russian, Hindi or Turkish. Pick the language you speak if auto-detect gets it wrong. |
+| **Model** | **Tiny** (fastest, about 75 MB), **Base** (balanced, about 145 MB, the default), **Small** (about 490 MB), **Large v3 Turbo** (most accurate, about 760 MB, the one to use for Persian). A bigger model understands you better but is slower and takes more disk space. |
+| **Spoken language** | English, Persian, Spanish, French, German, Arabic, Chinese, Russian, Hindi or Turkish. There is no auto-detect: the local model cannot tell languages apart, and left to guess it treats everything as English, which turns Persian speech into made-up English. Settings saved as Auto-detect by older versions now use your system language, or English. |
 
 Switching the **Model** downloads the new one the next time you dictate.
 

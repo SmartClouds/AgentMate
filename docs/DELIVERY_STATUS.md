@@ -50,6 +50,8 @@ Plan: docs/ROADMAP.md
 | E20 | WordPress sites in Deploy | Complete | | Rail group, connect dialog, overview, items, deploys with rollback, access and audit log |
 | E21 | WordPress projects | Complete | | New project flow, WordPress section, pull and deploy reviews with conflicts and the left-out list; `deployWordPress.e2e.ts` passes on the final code (6 of 6, 3.9 minutes; nightly job `wordpress-e2e`). The new-project item step loaded slowly in the e2e window (likely its throttling; unconfirmed in a focused window) |
 | E22 | Project monitoring | Complete | | Core protocol, main (store, probe, scheduler, alerts, auto-diagnosis, IPC) and renderer (Monitoring page, project tab, dialogs, Build with AI) built test-first; `health.e2e.ts` passes (1 of 1, 43 s). AC4 (an agent builds a passing endpoint from the setup prompt alone) not yet tried with a real agent |
+| E23 | FTP and SFTP sites | In progress | | Built test-first by parallel agents against one contract (`shared/deployFilesTypes.ts`, `IPC.deployFiles`, `RemoteFiles`). All tasks done and reviewed; Docker integration 105 of 105, `deployFiles.e2e.ts` 7 of 7 (before the review fixes). Still owed: a full `test:unit` and `test:coverage` run, and the e2e spec again after the review fixes |
+| E24 | Error tracking | Complete | | Sentry issues on the Monitoring page (Uptime and Errors tabs), built test-first by parallel agents against one contract (`shared/errorTrackingTypes.ts`, `IPC.errorTracking`); `errorTracking.e2e.ts` passes (1 of 1) against a fake Sentry. A real sentry.io organization, real GlitchTip and Linux without a keyring not yet tried |
 
 Status values: Not started, In progress, Blocked, Complete.
 

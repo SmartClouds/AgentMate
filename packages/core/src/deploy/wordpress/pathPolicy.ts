@@ -1,5 +1,10 @@
 import type { ProjectWordPressItemKind } from '../../types/index.js';
-import { type DockerignoreMatcher, parseDockerignore } from '../dockerignore.js';
+import {
+  createIgnoreRules,
+  type IgnoreLayer,
+  type IgnoreRules,
+  type IgnoreRulesResult,
+} from '../ignoreRules.js';
 import {
   WP_MAX_PATH_BYTES,
   WP_MAX_SEGMENT_BYTES,
@@ -220,100 +225,15 @@ export function findWpCaseCollisions(paths: readonly string[]): string[][] {
   return [...groups.values()].filter((group) => group.length > 1);
 }
 
-/**
- * Turns one gitignore-like line into dockerignore syntax: a pattern with no slash before its end
- * matches at any depth (so `*.log` also catches `logs/debug.log`), a leading slash anchors it to
- * the item root, and a trailing slash is dropped (dockerignore has no folders-only form). Blank lines and
- * comments become blank lines, so line numbers in errors stay the user's.
- */
-function toDockerignoreLine(raw: string, negations: boolean): string {
-  const line = raw.replace(/\r$/, '').trim();
-  if (line === '' || line.startsWith('#')) return '';
-  const exception = line.startsWith('!');
-  if (exception && !negations) return '';
-  let pattern = exception ? line.slice(1).trim() : line;
-  const anchored = pattern.startsWith('/');
-  if (anchored) pattern = pattern.replace(/^\/+/, '');
-  pattern = pattern.replace(/\/+$/, '');
-  if (pattern === '') return '';
-  if (!anchored && !pattern.includes('/')) pattern = `**/${pattern}`;
-  return `${exception ? '!' : ''}${pattern}`;
-}
-
-export interface WpIgnoreLayer {
-  /** Where the text came from, for error messages: `default`, `.distignore`, `.agentmateignore`. */
-  source: string;
-  text: string;
-  /**
-   * Whether `!` lines count. False for a file that can come from the site (an item's
-   * `.distignore` is pulled with the theme or plugin), so a site can only leave more out, never
-   * put a default-ignored local file back into a deploy. Defaults to true.
-   */
-  negations?: boolean;
-}
-
-export interface WpIgnoreRules {
-  /**
-   * Left out both ways, whatever the site has: the user's `.distignore` and `.agentmateignore`
-   * layers. Paths are relative to the item root.
-   */
-  excluded(path: string): boolean;
-  /**
-   * Left out only while neither the site nor the last sync has the file: the default list, with
-   * the user's layers able to put things back with `!`.
-   */
-  excludedUnlessTracked(path: string): boolean;
-  /** For a walker: true when nothing inside this folder can be put back by a `!` line. */
-  canSkipFolder(path: string): boolean;
-}
-
-function compileLayers(
-  layers: readonly WpIgnoreLayer[],
-):
-  | { ok: true; matcher: DockerignoreMatcher }
-  | { ok: false; source: string; line: number; reason: string } {
-  const lines: string[] = [];
-  for (const layer of layers) {
-    const negations = layer.negations !== false;
-    const converted = layer.text.split('\n').map((line) => toDockerignoreLine(line, negations));
-    const parsed = parseDockerignore(converted.join('\n'));
-    if (!parsed.ok)
-      return { ok: false, source: layer.source, line: parsed.line, reason: parsed.reason };
-    lines.push(...converted);
-  }
-  const parsed = parseDockerignore(lines.join('\n'));
-  // Every layer parsed on its own, so the joined text cannot fail; kept as a guard.
-  if (!parsed.ok)
-    return { ok: false, source: 'combined', line: parsed.line, reason: parsed.reason };
-  return { ok: true, matcher: parsed.matcher };
-}
+/** The ignore layer and rules of E19, the shared ones in ignoreRules.ts. */
+export type WpIgnoreLayer = IgnoreLayer;
+export type WpIgnoreRules = IgnoreRules;
 
 /**
  * Builds the ignore rules for one item from its layers, in order: the user's `.distignore` (from
  * the item root), then `.agentmateignore` from the project root, then `.agentmateignore` from the
  * item root. All of them match paths relative to the item root. The last matching line wins.
  */
-export function createWpIgnoreRules(
-  userLayers: readonly WpIgnoreLayer[],
-):
-  | { ok: true; rules: WpIgnoreRules }
-  | { ok: false; source: string; line: number; reason: string } {
-  const user = compileLayers(userLayers);
-  if (!user.ok) return user;
-  const combined = compileLayers([
-    { source: 'default', text: WP_DEFAULT_IGNORE.join('\n') },
-    ...userLayers,
-  ]);
-  if (!combined.ok) return combined;
-  const userMatcher = user.matcher;
-  const combinedMatcher = combined.matcher;
-  return {
-    ok: true,
-    rules: {
-      excluded: (path) => userMatcher.excludes(path),
-      excludedUnlessTracked: (path) => combinedMatcher.excludes(path),
-      canSkipFolder: (path) =>
-        combinedMatcher.excludes(path) && combinedMatcher.canSkipFolder(path),
-    },
-  };
+export function createWpIgnoreRules(userLayers: readonly WpIgnoreLayer[]): IgnoreRulesResult {
+  return createIgnoreRules(userLayers, WP_DEFAULT_IGNORE);
 }

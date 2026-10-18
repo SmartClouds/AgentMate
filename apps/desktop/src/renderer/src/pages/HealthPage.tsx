@@ -1,15 +1,15 @@
-import { HealthBoard } from '@/components/health/HealthBoard';
+import { MonitoringView } from '@/components/health/MonitoringView';
 import { usePageHeader } from '@/stores/pageHeaderStore';
 
-/** Project health checks (E22): every project's watched endpoints in one place. */
+/** Monitoring: every project's health checks (E22) and the errors Sentry recorded (E24). */
 export default function HealthPage(): React.JSX.Element {
   usePageHeader(
     'Monitoring',
-    'Watch each environment’s health endpoint and see what broke, and why.',
+    'Watch each environment’s health endpoint and the errors your users hit, and see what broke and why.',
   );
   return (
     <div className="p-2">
-      <HealthBoard />
+      <MonitoringView />
     </div>
   );
 }

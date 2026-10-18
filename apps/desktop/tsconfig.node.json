@@ -15,6 +15,7 @@
     "src/test/main/**/*",
     // The Docker SSH test server is shared by the e2e specs and the SSH integration tests.
     "e2e/sshServer.ts",
+    "e2e/ftpServer.ts",
     "e2e/paths.ts",
     "electron.vite.config.ts",
     "vitest.config.mts"

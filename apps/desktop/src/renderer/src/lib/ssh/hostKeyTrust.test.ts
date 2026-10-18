@@ -1,3 +1,4 @@
+import { encodeFilesError } from '@shared/deployFilesErrors';
 import { encodeSshError } from '@shared/sshErrors';
 import type { SshHostKeyStatus } from '@shared/sshHostKey';
 import { describe, expect, it, vi } from 'vitest';
@@ -98,5 +99,93 @@ describe('withHostKeyTrust', () => {
     answerHostKeyPrompt(true);
 
     expect(useHostKeyPromptStore.getState().request).toBeNull();
+  });
+});
+
+describe('withHostKeyTrust with a source of its own', () => {
+  /** An FTP or SFTP site with a login of its own keeps its key itself, not in Remote. */
+  const filesHostKeyChanged = () =>
+    new Error(
+      `Error invoking remote method 'deployFiles:plan': Error: ${encodeFilesError('hostKeyChanged', 'The host key changed.')}`,
+    );
+
+  function source(answer: SshHostKeyStatus = status) {
+    return {
+      status: vi.fn(async () => answer),
+      trust: vi.fn(async (_fingerprint: string) => undefined),
+    };
+  }
+
+  it('passes a successful call straight through without asking the source', async () => {
+    const keys = source();
+    const attempt = vi.fn().mockResolvedValue('planned');
+
+    await expect(withHostKeyTrust(keys, attempt)).resolves.toBe('planned');
+    expect(keys.status).not.toHaveBeenCalled();
+  });
+
+  it('asks, trusts through the source and tries again on a files host key error', async () => {
+    const keys = source();
+    const sshTrust = vi.fn(async () => undefined);
+    installAgentmatBridge({ 'ssh.trustHostKey': sshTrust });
+    const attempt = vi
+      .fn()
+      .mockRejectedValueOnce(filesHostKeyChanged())
+      .mockResolvedValueOnce('planned');
+
+    const result = withHostKeyTrust(keys, attempt);
+    await vi.waitFor(() => expect(useHostKeyPromptStore.getState().request).not.toBeNull());
+    expect(useHostKeyPromptStore.getState().request).toMatchObject(status);
+    answerHostKeyPrompt(true);
+
+    await expect(result).resolves.toBe('planned');
+    expect(keys.trust).toHaveBeenCalledWith(status.presented);
+    expect(sshTrust).not.toHaveBeenCalled();
+    expect(attempt).toHaveBeenCalledTimes(2);
+  });
+
+  it('also answers an SSH-style host key error through the source', async () => {
+    const keys = source();
+    const attempt = vi.fn().mockRejectedValueOnce(hostKeyChanged()).mockResolvedValueOnce('ok');
+
+    const result = withHostKeyTrust(keys, attempt);
+    await vi.waitFor(() => expect(useHostKeyPromptStore.getState().request).not.toBeNull());
+    answerHostKeyPrompt(true);
+
+    await expect(result).resolves.toBe('ok');
+    expect(keys.trust).toHaveBeenCalledWith(status.presented);
+  });
+
+  it('trusts nothing when the user declines', async () => {
+    const keys = source();
+    const attempt = vi.fn().mockRejectedValue(filesHostKeyChanged());
+
+    const result = withHostKeyTrust(keys, attempt);
+    await vi.waitFor(() => expect(useHostKeyPromptStore.getState().request).not.toBeNull());
+    answerHostKeyPrompt(false);
+
+    await expect(result).rejects.toThrow(/prod.*not trusted/);
+    expect(keys.trust).not.toHaveBeenCalled();
+    expect(attempt).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries without asking when the source already has the presented key', async () => {
+    const keys = source({ ...status, stored: status.presented });
+    const attempt = vi
+      .fn()
+      .mockRejectedValueOnce(filesHostKeyChanged())
+      .mockResolvedValueOnce('planned');
+
+    await expect(withHostKeyTrust(keys, attempt)).resolves.toBe('planned');
+    expect(useHostKeyPromptStore.getState().request).toBeNull();
+    expect(keys.trust).not.toHaveBeenCalled();
+  });
+
+  it('rethrows other files failures untouched', async () => {
+    const keys = source();
+    const failure = new Error(encodeFilesError('auth', 'Wrong password.'));
+
+    await expect(withHostKeyTrust(keys, vi.fn().mockRejectedValue(failure))).rejects.toBe(failure);
+    expect(keys.status).not.toHaveBeenCalled();
   });
 });

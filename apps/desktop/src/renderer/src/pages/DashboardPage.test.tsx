@@ -6,7 +6,7 @@ import {
   type UsagePeriod,
 } from '@agentmat/core';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { resolveConfirm, useConfirmStore } from '@/stores/confirmStore';
 import {
   type DashboardItemId,
@@ -67,6 +67,27 @@ vi.mock('framer-motion', async (importOriginal) => {
   };
 });
 
+/**
+ * The history hook keeps its samples in a module level cache that outlives each test, so what a
+ * chart draws depends on every test before it. The temperature tests need to know exactly which
+ * samples are in the window (a lone hot one, a missing one), so they can pin it here. The real
+ * hook still runs underneath, which leaves every other test on the bridge poll as before.
+ */
+const pinnedHistory = vi.hoisted(() => ({ current: null as SystemStatsSample[] | null }));
+vi.mock('@/hooks/useSystemStatsHistory', async (importOriginal) => {
+  const actual = (await importOriginal()) as typeof import('@/hooks/useSystemStatsHistory');
+  return {
+    ...actual,
+    useSystemStatsHistory: (...args: Parameters<typeof actual.useSystemStatsHistory>) => {
+      const polled = actual.useSystemStatsHistory(...args);
+      return pinnedHistory.current ?? polled;
+    },
+  };
+});
+afterEach(() => {
+  pinnedHistory.current = null;
+});
+
 const { default: DashboardPage } = await import('./DashboardPage');
 
 function sample(overrides: Partial<SystemStatsSample> = {}): SystemStatsSample {
@@ -74,6 +95,9 @@ function sample(overrides: Partial<SystemStatsSample> = {}): SystemStatsSample {
     timestamp: 1_760_000_000_000,
     cpuModel: 'Test CPU 9000',
     cpuCoreCount: 4,
+    cpuArch: 'x64',
+    cpuTempC: null,
+    cpuThermalState: null,
     cpuPercent: 42,
     cpuCorePercents: [11, 22, 33, 44],
     memPercent: 61,
@@ -87,6 +111,7 @@ function sample(overrides: Partial<SystemStatsSample> = {}): SystemStatsSample {
         percent: 77,
         memUsedBytes: 2 * 1024 ** 3,
         memTotalBytes: 8 * 1024 ** 3,
+        tempC: null,
       },
     ],
     netRxBytesPerSec: 3 * 1024 * 1024,
@@ -191,7 +216,7 @@ describe('DashboardPage system charts', () => {
 
     const cpu = await waitFor(() => cardFor('CPU Usage'));
     await waitFor(() => expect(within(cpu).getByText('42%')).toBeTruthy());
-    expect(within(cpu).getByText('Test CPU 9000 · 4 cores')).toBeTruthy();
+    expect(within(cpu).getByText('Test CPU 9000 · 4 cores · x64')).toBeTruthy();
 
     const memory = cardFor('Memory Usage');
     expect(within(memory).getByText('61%')).toBeTruthy();
@@ -279,6 +304,189 @@ describe('DashboardPage system charts', () => {
     // The full URL is still there on hover.
     await user.hover(name);
     expect((await screen.findAllByText(url)).length).toBeGreaterThan(0);
+  });
+});
+
+/** Pins the chart window to these samples and serves the last one from the bridge too. */
+function renderHistory(history: SystemStatsSample[]) {
+  pinnedHistory.current = history;
+  return renderPage(withStats({ 'system.sample': async () => history.at(-1) }));
+}
+
+function chartIn(card: HTMLElement): SVGSVGElement {
+  return within(card).getByRole('img', { name: 'Time series chart' }) as unknown as SVGSVGElement;
+}
+
+function pathsIn(card: HTMLElement): SVGPathElement[] {
+  return Array.from(chartIn(card).querySelectorAll('path'));
+}
+
+function dashedPathsIn(card: HTMLElement): SVGPathElement[] {
+  return pathsIn(card).filter((p) => p.getAttribute('stroke-dasharray'));
+}
+
+/** Points at the last sample of a card's chart, which opens its tooltip. */
+function hoverLastSample(card: HTMLElement): void {
+  const svg = chartIn(card);
+  svg.getBoundingClientRect = () => ({ left: 0, width: 300, top: 0, height: 88 }) as DOMRect;
+  fireEvent.pointerMove(svg, { clientX: 300 });
+}
+
+/** The chart tooltip is portaled to the body, apart from the card it describes. */
+function tooltipValue(label: string): string {
+  const tooltip = document.querySelector<HTMLElement>('body > div.fixed.z-50');
+  if (!tooltip) throw new Error('No chart tooltip is showing');
+  return within(tooltip).getByText(label).parentElement?.lastElementChild?.textContent ?? '';
+}
+
+function gpu(overrides: Partial<SystemStatsSample['gpus'][number]> = {}) {
+  return {
+    id: '0',
+    label: 'Test GPU',
+    percent: 77,
+    memUsedBytes: 2 * 1024 ** 3,
+    memTotalBytes: 8 * 1024 ** 3,
+    tempC: null,
+    ...overrides,
+  };
+}
+
+describe('DashboardPage temperatures', () => {
+  it('shows the CPU temperature beside the usage and draws it dashed on the chart', async () => {
+    seedLayout(['cpu']);
+    const { user } = renderHistory([sample({ cpuTempC: 50 }), sample({ cpuTempC: 52 })]);
+    const cpu = await waitFor(() => cardFor('CPU Usage'));
+
+    expect(within(cpu).getByText('52 °C')).toBeTruthy();
+    // CPU keeps its area and line, the temperature adds one dashed line and no area.
+    expect(pathsIn(cpu)).toHaveLength(3);
+    expect(dashedPathsIn(cpu)).toHaveLength(1);
+
+    hoverLastSample(cpu);
+    expect(tooltipValue('Temperature')).toBe('52 °C');
+    expect(tooltipValue('CPU')).toBe('42%');
+
+    await user.click(within(cpu).getByRole('tab', { name: 'Per core' }));
+    // Four cores with an area and a line each, plus the same temperature line.
+    expect(pathsIn(cpu)).toHaveLength(9);
+    expect(dashedPathsIn(cpu)).toHaveLength(1);
+  });
+
+  it('lifts the CPU chart ceiling for a spike past 100 °C and skips a missing sample', async () => {
+    seedLayout(['cpu']);
+    renderHistory([sample({ cpuTempC: null }), sample({ cpuTempC: 105 })]);
+    const cpu = await waitFor(() => cardFor('CPU Usage'));
+
+    expect(pathsIn(cpu).some((p) => p.getAttribute('d')?.includes('NaN'))).toBe(false);
+    // 105 is the top of the scale now, so it sits on the top padding line rather than past it.
+    expect(dashedPathsIn(cpu)[0].getAttribute('d')).toBe('M 300.00 6.00');
+    // And 42% is drawn against that same 105 ceiling.
+    const usageLine = pathsIn(cpu).find(
+      (p) => p.getAttribute('fill') === 'none' && !p.getAttribute('stroke-dasharray'),
+    );
+    expect(usageLine?.getAttribute('d')).toBe('M 0.00 51.60 L 300.00 51.60');
+  });
+
+  it('keeps the CPU chart at 0-100 while the temperature stays under it', async () => {
+    seedLayout(['cpu']);
+    renderHistory([sample({ cpuTempC: null }), sample({ cpuTempC: 50 })]);
+    const cpu = await waitFor(() => cardFor('CPU Usage'));
+
+    expect(pathsIn(cpu).some((p) => p.getAttribute('d')?.includes('NaN'))).toBe(false);
+    const usageLine = pathsIn(cpu).find(
+      (p) => p.getAttribute('fill') === 'none' && !p.getAttribute('stroke-dasharray'),
+    );
+    expect(usageLine?.getAttribute('d')).toBe('M 0.00 50.08 L 300.00 50.08');
+  });
+
+  it('adds nothing to the CPU and GPU cards when no temperature is reported', async () => {
+    seedLayout(['cpu', 'gpu']);
+    const { container, user } = renderHistory([sample(), sample()]);
+    const cpu = await waitFor(() => cardFor('CPU Usage'));
+    const gpuCard = cardFor('GPU Usage');
+
+    expect(pathsIn(cpu)).toHaveLength(2);
+    expect(pathsIn(gpuCard)).toHaveLength(2);
+    expect(dashedPathsIn(cpu)).toHaveLength(0);
+    expect(dashedPathsIn(gpuCard)).toHaveLength(0);
+    expect(within(gpuCard).getByText('77% · 2.0 GB/8.0 GB')).toBeTruthy();
+    expect(container.textContent).not.toMatch(/°C/);
+    for (const state of ['Nominal', 'Fair', 'Serious', 'Critical']) {
+      expect(within(cpu).queryByText(state)).toBeNull();
+    }
+
+    await user.click(within(cpu).getByRole('tab', { name: 'Per core' }));
+    expect(pathsIn(cpu)).toHaveLength(8);
+  });
+
+  it('shows the macOS thermal state as a badge, toned by how serious it is', async () => {
+    seedLayout(['cpu']);
+    const first = renderHistory([sample({ cpuThermalState: 'nominal' })]);
+    const nominal = await waitFor(() => within(cardFor('CPU Usage')).getByText('Nominal'));
+    expect(nominal.className).not.toMatch(/text-(warning|destructive)/);
+    first.unmount();
+
+    const second = renderHistory([sample({ cpuThermalState: 'serious' })]);
+    const serious = await waitFor(() => within(cardFor('CPU Usage')).getByText('Serious'));
+    expect(serious.className).toContain('text-warning');
+    second.unmount();
+
+    renderHistory([sample({ cpuThermalState: 'critical' })]);
+    const critical = await waitFor(() => within(cardFor('CPU Usage')).getByText('Critical'));
+    expect(critical.className).toContain('text-destructive');
+    // macOS gives no reading in degrees, so there is no °C next to the badge.
+    expect(within(cardFor('CPU Usage')).queryByText(/°C/)).toBeNull();
+  });
+
+  it('names the architecture after the core count', async () => {
+    seedLayout(['cpu']);
+    renderHistory([sample({ cpuModel: 'Apple M4', cpuCoreCount: 10, cpuArch: 'arm64' })]);
+
+    expect(
+      await waitFor(() => within(cardFor('CPU Usage')).getByText('Apple M4 · 10 cores · ARM64')),
+    ).toBeTruthy();
+  });
+
+  it('falls back to the architecture when the OS has no CPU model name', async () => {
+    seedLayout(['cpu']);
+    const first = renderHistory([sample({ cpuModel: 'unknown', cpuArch: 'arm' })]);
+    expect(
+      await waitFor(() => within(cardFor('CPU Usage')).getByText('ARM CPU · 4 cores')),
+    ).toBeTruthy();
+    first.unmount();
+
+    renderHistory([sample({ cpuModel: '', cpuArch: 'riscv64' })]);
+    expect(
+      await waitFor(() => within(cardFor('CPU Usage')).getByText('riscv64 CPU · 4 cores')),
+    ).toBeTruthy();
+  });
+
+  it('adds each GPU temperature to its legend and as a dashed line in its colour', async () => {
+    seedLayout(['gpu']);
+    const twoGpus = (hotTemp: number | null) =>
+      sample({
+        gpus: [
+          gpu({ tempC: hotTemp }),
+          gpu({ id: '1', label: 'Other GPU', percent: 10, tempC: null }),
+        ],
+      });
+    renderHistory([twoGpus(null), twoGpus(105)]);
+    const gpuCard = await waitFor(() => cardFor('GPU Usage'));
+
+    expect(within(gpuCard).getByText('77% · 2.0 GB/8.0 GB · 105 °C')).toBeTruthy();
+    expect(within(gpuCard).getByText('10% · 2.0 GB/8.0 GB')).toBeTruthy();
+    // Two GPUs with an area and a line each, and a temperature line only for the one that has it.
+    expect(pathsIn(gpuCard)).toHaveLength(5);
+    const [tempLine] = dashedPathsIn(gpuCard);
+    expect(dashedPathsIn(gpuCard)).toHaveLength(1);
+    const firstGpuLine = pathsIn(gpuCard).filter((p) => p.getAttribute('fill') === 'none')[0];
+    expect(tempLine.getAttribute('stroke')).toBe(firstGpuLine.getAttribute('stroke'));
+    // The spike sets the ceiling, and the missing first sample leaves a gap rather than a NaN.
+    expect(tempLine.getAttribute('d')).toBe('M 300.00 6.00');
+
+    hoverLastSample(gpuCard);
+    expect(tooltipValue('Test GPU temp')).toBe('105 °C');
+    expect(tooltipValue('Test GPU')).toBe('77%');
   });
 });
 

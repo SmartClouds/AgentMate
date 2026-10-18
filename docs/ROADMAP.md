@@ -215,3 +215,5 @@ upload extraction, tunnel, installer verification, firewall guard) get coverage 
 | [E20](epics/20-wordpress-sites-in-deploy.md) | WordPress sites in Deploy | Standalone (Deploy) | E19 |
 | [E21](epics/21-wordpress-projects.md) | WordPress projects | Standalone (Projects) | E19, E20 |
 | [E22](epics/22-health-checks.md) | Project monitoring | Standalone (Ship) | none |
+| [E23](epics/23-ftp-sftp-sites.md) | FTP and SFTP sites | Standalone (Deploy) | E02, E19 patterns |
+| [E24](epics/24-error-tracking.md) | Error tracking | Standalone (Ship) | E22 |

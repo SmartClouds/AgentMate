@@ -9,10 +9,10 @@ interface ProjectPromptBuildEntry {
   targetAI?: TargetAI;
   generated: string;
   /**
-   * What produced `generated`. A translation is not shaped by a prompt type, so sizing it has to
-   * leave the type out. Absent for entries saved before this was recorded.
+   * What produced `generated`. A translation or a spoken prompt is not shaped by a prompt type,
+   * so sizing it has to leave the type out. Absent for entries saved before this was recorded.
    */
-  generatedSource?: 'generate' | 'translate';
+  generatedSource?: 'generate' | 'translate' | 'dictate';
 }
 
 const EMPTY_ENTRY: ProjectPromptBuildEntry = {

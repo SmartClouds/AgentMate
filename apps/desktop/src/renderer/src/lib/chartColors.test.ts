@@ -172,6 +172,21 @@ describe('useChartColors', () => {
     expect(blue).toBe(categorical[1]);
   });
 
+  it('keeps the temperature accent out of the categorical set, per theme', () => {
+    for (const theme of ['light', 'dark'] as const) {
+      useThemeStore.setState({ theme });
+      const { temperature, categorical } = renderHook(() => useChartColors()).result.current;
+      expect(temperature).toMatch(/^#[0-9a-f]{6}$/);
+      // Drawn over the per-core lines, so it must not match any of them.
+      expect(categorical).not.toContain(temperature);
+    }
+    useThemeStore.setState({ theme: 'light' });
+    const light = renderHook(() => useChartColors()).result.current.temperature;
+    useThemeStore.setState({ theme: 'dark' });
+    const dark = renderHook(() => useChartColors()).result.current.temperature;
+    expect(light).not.toBe(dark);
+  });
+
   it('gives a full eight distinct slots, so a chart never repeats a colour', () => {
     for (const theme of ['light', 'dark'] as const) {
       useThemeStore.setState({ theme });

@@ -1,7 +1,9 @@
 import type { AppSettings } from '@agentmat/core';
 import { act, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { progressEvent, runResult, SITE_ID } from '@/components/deploy/files/testing/fixtures';
 import { queryKeys } from '@/lib/queryKeys';
+import { selectSiteRun, useDeployFilesRunStore } from '@/stores/deployFilesRunStore';
 import { useTerminalStore } from '@/stores/terminalStore';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
 
@@ -122,6 +124,26 @@ describe('AppShell main menu position', () => {
     await waitFor(() => expect(sidebar()).not.toBeNull());
     expect(topMenu()).toBeNull();
     expect(bridge.$fn('settings.get')).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * A deploy to an FTP or SFTP site keeps going in main while the user is on another page, so its
+ * events are taken in by the shell, which every page sits in.
+ */
+describe('AppShell FTP and SFTP deploy runs', () => {
+  it('takes in a run that finishes while no Deploy page is open', async () => {
+    const { bridge } = await renderShell('left', '/usage');
+    expect(bridge.$listenerCount('deployFiles.onRunFinished')).toBe(1);
+    expect(bridge.$listenerCount('deployFiles.onProgress')).toBe(1);
+
+    act(() => bridge.$emit('deployFiles.onProgress', progressEvent()));
+    expect(selectSiteRun(SITE_ID)(useDeployFilesRunStore.getState()).progress).not.toBeNull();
+    act(() => bridge.$emit('deployFiles.onRunFinished', runResult()));
+    const run = selectSiteRun(SITE_ID)(useDeployFilesRunStore.getState());
+    expect(run.progress).toBeNull();
+    expect(run.result?.state).toBe('done');
+    expect(toast.success).toHaveBeenCalled();
   });
 });
 

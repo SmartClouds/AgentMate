@@ -20,6 +20,19 @@ export function defaultItemKeys(items: readonly WpItem[]): Set<string> {
   );
 }
 
+/** The keys of the starting items the site still has, leaving out ones the picker never offers. */
+export function startingItemKeys(
+  items: readonly WpItem[],
+  wanted: readonly WpItemRef[],
+): Set<string> {
+  const keys = new Set(wanted.map(wpItemKey));
+  return new Set(
+    items
+      .filter((item) => !item.protected && keys.has(wpItemKey(item)))
+      .map((item) => wpItemKey(item)),
+  );
+}
+
 export function toItemRef(item: WpItemRef): WpItemRef {
   return { kind: item.kind, slug: item.slug };
 }

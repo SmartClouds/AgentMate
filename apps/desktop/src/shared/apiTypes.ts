@@ -2082,7 +2082,18 @@ export interface GpuUsage {
   percent: number;
   memUsedBytes: number;
   memTotalBytes: number;
+  /** Core temperature in °C. Only `nvidia-smi` reports one, so it is null for every other GPU. */
+  tempC: number | null;
 }
+
+/**
+ * The processor architecture of the machine, normalized from `os.machine()`. Other values pass
+ * through as the OS spells them.
+ */
+export type CpuArch = 'x64' | 'x86' | 'arm64' | 'arm' | (string & {});
+
+/** macOS thermal pressure as Electron's powerMonitor reports it. */
+export type CpuThermalState = 'nominal' | 'fair' | 'serious' | 'critical';
 
 /** One app (possibly several processes) in a top-CPU, GPU, memory, or disk listing. */
 export interface TopResourceApp {
@@ -2121,6 +2132,15 @@ export interface SystemStatsSample {
   /** e.g. "Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz". */
   cpuModel: string;
   cpuCoreCount: number;
+  cpuArch: CpuArch;
+  /**
+   * CPU temperature in °C, or null when the OS gives no plausible reading. Linux reads hwmon and
+   * thermal zones, Windows reads ACPI thermal zones (which can be a board sensor rather than the
+   * CPU package), and macOS has no reading without sudo, so it is always null there.
+   */
+  cpuTempC: number | null;
+  /** macOS only (null elsewhere): thermal pressure, shown in place of a temperature. */
+  cpuThermalState: CpuThermalState | null;
   /**
    * Aggregate CPU usage, 0-100. On Windows this is % Processor Time, the
    * same formula Windows 11 Task Manager uses (busy time / elapsed / cores).

@@ -1,3 +1,4 @@
+import type { FileSite } from '@shared/deployFilesTypes';
 import type { DeployServer } from '@shared/deployTypes';
 import type { DeployWordPressSite } from '@shared/deployWordPressTypes';
 import { LayoutGroup, motion, useReducedMotion } from 'framer-motion';
@@ -12,9 +13,13 @@ import { cn } from '@/lib/utils';
 import { useDeploySetupStore } from '@/stores/deploySetupStore';
 import { type ServerState, serverState, useCoreHealth } from './coreHealth';
 import { Notice } from './deployKit';
+import { lastDeployText } from './files/copy';
+import { useCachedFileSiteChanges } from './files/hooks';
+import { siteAddress } from './files/messages';
+import { NotEncryptedChip, ProtocolChip } from './files/parts';
 import { lastSeenText, siteHost } from './wordpress/messages';
 
-/** Servers and sites share one pill, so the selection slides between the two groups. */
+/** Servers and both kinds of site share one pill, so the selection slides between the groups. */
 const PILL_ID = 'deploy-rail-active';
 
 function StatusDot({ state }: { state: ServerState }): React.JSX.Element {
@@ -156,6 +161,52 @@ function SiteRailItem({
   );
 }
 
+function FileSiteRailItem({
+  site,
+  savedName,
+  selected,
+  onSelect,
+}: {
+  site: FileSite;
+  savedName: string | null;
+  selected: boolean;
+  onSelect: (siteId: string) => void;
+}): React.JSX.Element {
+  // Only what a page already watches; the rail never starts a watch of its own.
+  const changes = useCachedFileSiteChanges(site.id);
+  const pending = changes?.state === 'ready' ? changes.files.length : 0;
+  return (
+    <li>
+      <button
+        type="button"
+        aria-current={selected ? 'true' : undefined}
+        onClick={() => onSelect(site.id)}
+        className={cn(rowClass(selected), 'items-start')}
+      >
+        {selected && <ActivePill />}
+        <span className="min-w-0 flex-1">
+          <RowTitle selected={selected}>{site.label}</RowTitle>
+          <span className="block truncate font-mono text-[11px] text-muted-foreground">
+            {siteAddress(site, savedName)}
+          </span>
+          <span className="mt-1 flex flex-wrap items-center gap-1">
+            <ProtocolChip protocol={site.protocol} />
+            {pending > 0 ? (
+              <Chip tone="primary">{pending} to deploy</Chip>
+            ) : (
+              <span className="mx-0.5 text-[11px] text-muted-foreground">
+                {lastDeployText(site.lastDeploy)}
+              </span>
+            )}
+            {site.needsReview && <Chip tone="warning">Needs review</Chip>}
+            {site.protocol === 'ftp' && <NotEncryptedChip />}
+          </span>
+        </span>
+      </button>
+    </li>
+  );
+}
+
 /** A group heading in the rail, with how many entries the group holds. */
 function GroupHeading({ label, count }: { label: string; count?: number }): React.JSX.Element {
   return (
@@ -191,6 +242,14 @@ function SiteGroup({
   onSelectSite: (siteId: string) => void;
   onRetrySites?: () => void;
   onConnectSite?: () => void;
+  /** Left out, the FTP and SFTP group is not shown at all. */
+  fileSites?: FileSite[];
+  fileSitesLoading?: boolean;
+  fileSitesError?: string | null;
+  selectedFileSiteId?: string | null;
+  onSelectFileSite?: (siteId: string) => void;
+  onRetryFileSites?: () => void;
+  onAddFileSite?: () => void;
 }): React.JSX.Element {
   return (
     <div className="mt-3 flex flex-col gap-1">
@@ -231,9 +290,78 @@ function SiteGroup({
   );
 }
 
+/** The FTP and SFTP sites group under the WordPress sites, with its own loading and failure. */
+function FileSiteGroup({
+  sites,
+  servers,
+  loading,
+  error,
+  selectedId,
+  onSelect,
+  onRetry,
+  onAdd,
+}: {
+  sites: FileSite[];
+  servers: DeployServer[];
+  loading: boolean;
+  error: string | null;
+  selectedId: string | null;
+  onSelect: (siteId: string) => void;
+  onRetry?: () => void;
+  onAdd?: () => void;
+}): React.JSX.Element {
+  const names = new Map(servers.map((server) => [server.id, server.nickname]));
+  return (
+    <div className="mt-3 flex flex-col gap-1">
+      <GroupHeading
+        label="FTP and SFTP sites"
+        count={!loading && !error ? sites.length : undefined}
+      />
+      {loading ? (
+        <div className="space-y-1 px-1" aria-busy="true">
+          <Skeleton className="h-14 w-full rounded-lg" />
+        </div>
+      ) : error ? (
+        <Notice role="alert" tone="destructive" className="mx-1 text-xs">
+          <p>The FTP and SFTP sites did not load: {error}</p>
+          {onRetry && (
+            <Button size="sm" variant="soft" className="mt-2" onClick={onRetry}>
+              <RefreshCw /> Try again
+            </Button>
+          )}
+        </Notice>
+      ) : (
+        sites.length > 0 && (
+          <ul aria-label="FTP and SFTP sites" className="flex flex-col gap-px">
+            {sites.map((site) => (
+              <FileSiteRailItem
+                key={site.id}
+                site={site}
+                savedName={
+                  site.connection.kind === 'saved'
+                    ? (names.get(site.connection.sshServerId) ?? null)
+                    : null
+                }
+                selected={site.id === selectedId}
+                onSelect={onSelect}
+              />
+            ))}
+          </ul>
+        )
+      )}
+      {onAdd && (
+        <Button variant="soft" size="sm" className="mx-1 mt-1" onClick={onAdd}>
+          <Plus /> Add an FTP or SFTP site
+        </Button>
+      )}
+    </div>
+  );
+}
+
 /**
  * Every saved server with how its core is doing, so the one that needs a look stands out, and
- * under them the WordPress sites connected through the AgentMate Connector plugin.
+ * under them the WordPress sites connected through the AgentMate Connector plugin and the FTP
+ * and SFTP sites.
  */
 export function ServerRail({
   servers,
@@ -247,6 +375,13 @@ export function ServerRail({
   onRetrySites,
   onConnectSite,
   onOpenCloudflare,
+  fileSites,
+  fileSitesLoading = false,
+  fileSitesError = null,
+  selectedFileSiteId = null,
+  onSelectFileSite,
+  onRetryFileSites,
+  onAddFileSite,
 }: {
   servers: DeployServer[];
   selectedId: string | null;
@@ -261,6 +396,14 @@ export function ServerRail({
   onSelectSite?: (siteId: string) => void;
   onRetrySites?: () => void;
   onConnectSite?: () => void;
+  /** Left out, the FTP and SFTP group is not shown at all. */
+  fileSites?: FileSite[];
+  fileSitesLoading?: boolean;
+  fileSitesError?: string | null;
+  selectedFileSiteId?: string | null;
+  onSelectFileSite?: (siteId: string) => void;
+  onRetryFileSites?: () => void;
+  onAddFileSite?: () => void;
 }): React.JSX.Element {
   return (
     <nav aria-label="Servers" className="flex flex-col gap-1">
@@ -298,6 +441,19 @@ export function ServerRail({
             onConnectSite={onConnectSite}
           />
         )}
+        {(fileSites !== undefined || fileSitesLoading || fileSitesError !== null) &&
+          onSelectFileSite && (
+            <FileSiteGroup
+              sites={fileSites ?? []}
+              servers={servers}
+              loading={fileSitesLoading}
+              error={fileSitesError}
+              selectedId={selectedFileSiteId}
+              onSelect={onSelectFileSite}
+              onRetry={onRetryFileSites}
+              onAdd={onAddFileSite}
+            />
+          )}
       </LayoutGroup>
     </nav>
   );

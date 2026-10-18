@@ -29,6 +29,12 @@ const CATEGORICAL_DARK = [
   '#e66767', // red
 ];
 
+// A single accent for the temperature line drawn over the CPU chart, outside the categorical set
+// above (the per-core view already uses every slot of it). A hot red-orange, dashed where it is
+// drawn, so it still reads apart from the orange and red cores.
+const TEMPERATURE_LIGHT = '#c4320a';
+const TEMPERATURE_DARK = '#ff7f50';
+
 export function useIsDarkMode(): boolean {
   const theme = useThemeStore((s) => s.theme);
   const [systemDark, setSystemDark] = useState(
@@ -45,10 +51,20 @@ export function useIsDarkMode(): boolean {
   return resolveIsDark(theme, systemDark);
 }
 
-export function useChartColors(): { green: string; blue: string; categorical: string[] } {
+export function useChartColors(): {
+  green: string;
+  blue: string;
+  temperature: string;
+  categorical: string[];
+} {
   const isDark = useIsDarkMode();
   const categorical = isDark ? CATEGORICAL_DARK : CATEGORICAL_LIGHT;
-  return { green: categorical[0], blue: categorical[1], categorical };
+  return {
+    green: categorical[0],
+    blue: categorical[1],
+    temperature: isDark ? TEMPERATURE_DARK : TEMPERATURE_LIGHT,
+    categorical,
+  };
 }
 
 /* ------------------------------------------------------------------------ */

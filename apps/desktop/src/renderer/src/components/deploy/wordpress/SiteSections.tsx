@@ -1,12 +1,13 @@
-import { Blocks, History, Key, LayoutDashboard } from '@/components/icons';
+import { Blocks, Folder, History, Key, LayoutDashboard } from '@/components/icons';
 import { SectionStrip } from '../deployKit';
 
 /** The parts of a WordPress site's page under Deploy. */
-export type SiteSection = 'overview' | 'items' | 'deploys' | 'access';
+export type SiteSection = 'overview' | 'items' | 'projects' | 'deploys' | 'access';
 
 const SECTIONS: ReadonlyArray<{ value: SiteSection; label: string; icon?: typeof Blocks }> = [
   { value: 'overview', label: 'Overview', icon: LayoutDashboard },
   { value: 'items', label: 'Themes and plugins', icon: Blocks },
+  { value: 'projects', label: 'Projects', icon: Folder },
   { value: 'deploys', label: 'Deploys', icon: History },
   { value: 'access', label: 'Access', icon: Key },
 ];

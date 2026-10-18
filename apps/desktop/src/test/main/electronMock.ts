@@ -530,6 +530,8 @@ export const powerMonitor = {
   once: (): void => undefined,
   removeAllListeners: (): void => undefined,
   getSystemIdleTime: (): number => 0,
+  /** Electron answers 'unknown' everywhere but macOS. Tests set another value with mockReturnValue. */
+  getCurrentThermalState: vi.fn((): string => 'unknown'),
 };
 
 export const screen = {
@@ -635,6 +637,8 @@ export function resetElectronMock(): void {
   electronState.tempRoot = null;
   nativeTheme.shouldUseDarkColors = true;
   nativeTheme.themeSource = 'system';
+  powerMonitor.getCurrentThermalState.mockReset();
+  powerMonitor.getCurrentThermalState.mockImplementation(() => 'unknown');
   FakeBrowserWindow.instances = [];
   ipcRenderer.invoke.mockClear();
   ipcRenderer.send.mockClear();

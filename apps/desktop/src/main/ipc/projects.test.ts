@@ -153,6 +153,38 @@ describe('projects CRUD', () => {
     expect((await invoke<Project[]>(IPC.projects.list)).map((p) => p.id)).toEqual([keep.id]);
   });
 
+  it('unlinks a deleted project from its FTP and SFTP sites and keeps the sites', async () => {
+    const keep = await create({ name: 'Keep' });
+    const drop = await create({ name: 'Drop' });
+    userData.writeData('deploy-files.json', {
+      version: 1,
+      sites: [
+        {
+          id: 'site-1',
+          label: 'Site',
+          protocol: 'sftp',
+          connection: { kind: 'saved', sshServerId: 'srv-1' },
+          remoteRoot: '/var/www',
+          localFolder: folder.path,
+          projectIds: [drop.id, keep.id],
+          deployOnSave: false,
+          quietSeconds: 5,
+          ignorePatterns: [],
+          capabilities: null,
+          lastDeploy: null,
+          needsReview: null,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      ],
+    });
+    await invoke(IPC.projects.delete, drop.id);
+    const stored = JSON.parse(readFileSync(userData.dataFile('deploy-files.json'), 'utf-8')) as {
+      sites: { id: string; projectIds: string[] }[];
+    };
+    expect(stored.sites.map((site) => [site.id, site.projectIds])).toEqual([['site-1', [keep.id]]]);
+  });
+
   it('reorders by the ids given, and keeps anything the renderer left out', async () => {
     const a = await create({ name: 'A' });
     const b = await create({ name: 'B' });

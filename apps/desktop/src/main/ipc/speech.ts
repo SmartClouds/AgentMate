@@ -1,5 +1,10 @@
 import { join } from 'node:path';
-import { DEFAULT_WHISPER_MODEL, WHISPER_MODELS } from '@agentmat/core';
+import {
+  DEFAULT_WHISPER_MODEL,
+  resolveSpeechLanguage,
+  WHISPER_MODELS,
+  type WhisperModel,
+} from '@agentmat/core';
 import { app, ipcMain } from 'electron';
 import type {
   SpeechModelProgress,
@@ -14,12 +19,12 @@ import { broadcastToWindows } from './send';
 // Whisper ONNX weights, served from the Hugging Face hub the first time and
 // then cached to disk. onnx-community publishes the quantized variants
 // transformers.js expects. The list itself lives in the model catalog.
-function resolveModelId(modelKey: string | undefined): string {
-  const model =
+function resolveModel(modelKey: string | undefined): WhisperModel {
+  return (
     WHISPER_MODELS.find((m) => m.key === modelKey) ??
     WHISPER_MODELS.find((m) => m.key === DEFAULT_WHISPER_MODEL) ??
-    WHISPER_MODELS[0]!;
-  return model.hubId;
+    WHISPER_MODELS[0]!
+  );
 }
 
 // transformers.js is ESM-only for its Node build and pulls in the native
@@ -58,13 +63,23 @@ function broadcastProgress(progress: SpeechModelProgress): void {
   broadcastToWindows(IPC.speech.onModelProgress, progress);
 }
 
-async function getPipeline(modelId: string): Promise<AsrPipeline> {
+async function getPipeline(model: WhisperModel): Promise<AsrPipeline> {
+  const modelId = model.hubId;
   if (pipelinePromise && loadedModelId === modelId) return pipelinePromise;
+
+  // The large model holds over a gigabyte in memory, so the one it replaces is let go first.
+  if (pipelinePromise) {
+    const previous = pipelinePromise;
+    pipelinePromise = null;
+    loadedModelId = null;
+    await previous.then((p) => p.dispose()).catch(() => undefined);
+  }
 
   const { pipeline } = await loadTransformers();
   loadedModelId = modelId;
   pipelinePromise = (
     pipeline('automatic-speech-recognition', modelId, {
+      ...(model.dtype ? { dtype: model.dtype as 'q4' } : {}),
       // transformers.js reports download progress per-file; forward it so the UI
       // can show a "downloading model" state on the very first use.
       progress_callback: (item: unknown) => {
@@ -90,8 +105,7 @@ async function getPipeline(modelId: string): Promise<AsrPipeline> {
 
 async function transcribe(input: TranscribeAudioInput): Promise<string> {
   const settings = await store.getSettings();
-  const modelId = resolveModelId(settings.speechModel);
-  const transcriber = await getPipeline(modelId);
+  const transcriber = await getPipeline(resolveModel(settings.speechModel));
 
   // The pipeline accepts more options than its published types expose (e.g.
   // `task`), so call through a permissive signature.
@@ -101,10 +115,9 @@ async function transcribe(input: TranscribeAudioInput): Promise<string> {
   ) => Promise<{ text?: string } | { text?: string }[]>;
 
   const output = await run(input.samples, {
-    // 'auto' lets Whisper detect the spoken language, matching Prompt Builder's
-    // existing multilingual flow (the description is normalized to English
-    // downstream anyway).
-    language: input.language && input.language !== 'auto' ? input.language : undefined,
+    // Always a real language. Left out, transformers.js does not detect one, it assumes
+    // English, and Persian speech comes back as made-up English words.
+    language: resolveSpeechLanguage(input.language, app.getLocale()),
     task: 'transcribe',
     // Whisper's context window is 30s; chunking lets longer dictation through.
     chunk_length_s: 30,
@@ -134,7 +147,7 @@ export function registerSpeechHandlers(): void {
 
   ipcMain.handle(IPC.speech.getModelState, async (): Promise<SpeechModelState> => {
     const settings = await store.getSettings();
-    const modelId = resolveModelId(settings.speechModel);
+    const modelId = resolveModel(settings.speechModel).hubId;
     return { ready: loadedModelId === modelId && pipelinePromise !== null, modelId };
   });
 }

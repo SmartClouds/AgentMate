@@ -1,4 +1,5 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { createReadStream } from 'node:fs';
 import type { Duplex } from 'node:stream';
 import { StringDecoder } from 'node:string_decoder';
 import {
@@ -8,6 +9,7 @@ import {
   type SFTPWrapper,
   type Stats,
 } from 'ssh2';
+import { filesError } from '../../shared/deployFilesErrors';
 import { buildConnectConfig, friendlyConnectError, type SshEndpoint } from './connectConfig';
 
 /**
@@ -63,6 +65,37 @@ export interface UploadOptions {
   onProgress?: (sentBytes: number, totalBytes: number) => void;
 }
 
+/** What `sftpStat` reports. A link counts as whatever it points at. */
+export interface SftpStat {
+  isDirectory: boolean;
+  isFile: boolean;
+  size: number;
+  mtimeMs: number;
+  /** The permission bits alone, such as 0o644. */
+  mode: number;
+}
+
+export interface UploadFileOptions {
+  /** The SHA-256 the bytes must have. Anything else is never put in place of the target. */
+  expectedSha256: string;
+  /** Default: the mode of the file it replaces, or 0644 for a new one. */
+  mode?: number;
+  signal?: AbortSignal;
+  /** Bytes the server has taken so far. */
+  onProgress?: (sentBytes: number) => void;
+  /** How long one request may go unanswered before the upload is given up on. */
+  stallTimeoutMs?: number;
+}
+
+export interface UploadFileResult {
+  /** What the server reports for the file once it is in place. */
+  stat: SftpStat;
+  /** False when the old file had to be removed before the new one could take its name. */
+  atomic: boolean;
+  /** A file was at `remotePath` before, so this was a replace rather than a new file. */
+  replaced: boolean;
+}
+
 /** SSH's reason code when sshd refuses a channel by policy (RFC 4254, section 5.1). */
 const ADMINISTRATIVELY_PROHIBITED = 1;
 
@@ -106,6 +139,14 @@ const OPEN_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_OUTPUT_BYTES = 4 * 1024 * 1024;
 const UPLOAD_CHUNK_BYTES = 32 * 1024;
 const SFTP_TIMEOUT_MS = 30_000;
+/** Writes `uploadFile` keeps in flight at once, so a slow link is not waited on for every chunk. */
+const UPLOAD_WRITES_IN_FLIGHT = 16;
+/** A big upload on a slow link may take hours, so only a request that gets no answer fails it. */
+const UPLOAD_STALL_MS = 60_000;
+/** A site file the web server can read. */
+const DEFAULT_FILE_MODE = 0o644;
+/** The SFTP status for a path that is not there (SSH_FX_NO_SUCH_FILE). */
+const NO_SUCH_FILE = 2;
 /** What `mktemp -d -t agentmate.XXXXXXXXXX` prints: an absolute path ending in that name. */
 const STAGING_DIRECTORY = /^\/[^\s'"]*\/agentmate\.[A-Za-z0-9]{6,}$/;
 const TRUNCATED = '\n[output truncated]\n';
@@ -168,6 +209,39 @@ function toEntry(name: string, attrs: Stats): SftpEntry {
     // SFTP version 3 only has whole seconds.
     mtimeMs: (attrs.mtime ?? 0) * 1000,
   };
+}
+
+function toStat(attrs: Stats): SftpStat {
+  return {
+    isDirectory: attrs.isDirectory(),
+    isFile: attrs.isFile(),
+    size: attrs.size ?? 0,
+    mtimeMs: (attrs.mtime ?? 0) * 1000,
+    mode: (attrs.mode ?? 0) & 0o7777,
+  };
+}
+
+function isNoSuchFile(error: unknown): boolean {
+  return (error as { code?: unknown } | null)?.code === NO_SUCH_FILE;
+}
+
+/** An SFTP request whose callback carries no value, as a promise. */
+function sftpDone(start: (done: (error?: Error | null) => void) => void): Promise<void> {
+  return sftpCall<void>((done) => start((error) => done(error, undefined)));
+}
+
+/**
+ * An OpenSSH extension request, or false when the server did not advertise it: ssh2 throws at
+ * once in that case instead of calling back.
+ */
+function sftpExtension(start: (done: (error?: Error | null) => void) => void): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    try {
+      start((error) => (error ? reject(error) : resolve(true)));
+    } catch {
+      resolve(false);
+    }
+  });
 }
 
 export class SshConnection {
@@ -473,6 +547,216 @@ export class SshConnection {
     );
   }
 
+  /** Size, mtime and mode of `path`, or null when nothing is there. */
+  sftpStat(path: string, options: SftpOptions = {}): Promise<SftpStat | null> {
+    return this.sftpOp(`Reading ${path}`, options, async (sftp) => {
+      try {
+        return toStat(await sftpCall<Stats>((done) => sftp.stat(path, done)));
+      } catch (error) {
+        if (isNoSuchFile(error)) return null;
+        throw error;
+      }
+    });
+  }
+
+  /** Makes one folder. Fails when it is already there or its parent is missing. */
+  sftpMkdir(path: string, options: SftpOptions & { mode?: number } = {}): Promise<void> {
+    return this.sftpOp(`Creating ${path}`, options, (sftp) =>
+      sftpDone((done) => sftp.mkdir(path, { mode: options.mode ?? 0o755 }, done)),
+    );
+  }
+
+  /** Removes an empty folder. */
+  sftpRmdir(path: string, options: SftpOptions = {}): Promise<void> {
+    return this.sftpOp(`Removing ${path}`, options, (sftp) =>
+      sftpDone((done) => sftp.rmdir(path, done)),
+    );
+  }
+
+  sftpUnlink(path: string, options: SftpOptions = {}): Promise<void> {
+    return this.sftpOp(`Removing ${path}`, options, (sftp) =>
+      sftpDone((done) => sftp.unlink(path, done)),
+    );
+  }
+
+  sftpChmod(path: string, mode: number, options: SftpOptions = {}): Promise<void> {
+    return this.sftpOp(`Changing the mode of ${path}`, options, (sftp) =>
+      sftpDone((done) => sftp.chmod(path, mode, done)),
+    );
+  }
+
+  /** A plain SFTP rename, which most servers refuse when `to` already exists. */
+  sftpRename(from: string, to: string, options: SftpOptions = {}): Promise<void> {
+    return this.sftpOp(`Renaming ${from}`, options, (sftp) =>
+      sftpDone((done) => sftp.rename(from, to, done)),
+    );
+  }
+
+  /**
+   * Whether the server advertised an SFTP extension, such as `posix-rename@openssh.com`. ssh2
+   * keeps what the server's version reply listed and has no public way to ask for it.
+   */
+  sftpSupports(extension: string, options: SftpOptions = {}): Promise<boolean> {
+    return this.sftpOp(`Starting SFTP`, options, async (sftp) => {
+      const listed = (sftp as unknown as { _extensions?: Record<string, unknown> })._extensions;
+      return Boolean(listed && Object.hasOwn(listed, extension));
+    });
+  }
+
+  /**
+   * Sends a local file to `remotePath` for a site deploy (E23). Unlike `upload`, it streams from
+   * disk with several writes in flight, hashes the bytes as they go, and gives a new file the
+   * mode a web server needs. The bytes go to `<name>.agentmate-<8 hex>.part` in the same folder
+   * first and only take the real name when their hash is the one expected, so the target keeps
+   * its old contents after a failure, a cancel or a file edited mid-upload.
+   *
+   * Servers without OpenSSH's posix-rename cannot rename onto an existing file; there the old
+   * file is moved aside to `<name>.agentmate-<8 hex>.old` first, deleted once the new one is in
+   * place (or put back when it cannot be), and the result says the replace was not atomic. Only a request that
+   * goes unanswered for `stallTimeoutMs` fails the upload; the whole of it has no deadline.
+   */
+  async uploadFile(
+    localPath: string,
+    remotePath: string,
+    options: UploadFileOptions,
+  ): Promise<UploadFileResult> {
+    const { signal } = options;
+    const stallMs = options.stallTimeoutMs ?? UPLOAD_STALL_MS;
+    const cancelled = (): Error =>
+      filesError('cancelled', `The upload of ${remotePath} was cancelled.`);
+    if (signal?.aborted) throw cancelled();
+    const sftp = await this.untilClosed(this.sftp());
+
+    let stopListening = (): void => undefined;
+    const aborted = new Promise<never>((_resolve, reject) => {
+      if (!signal) return;
+      const onAbort = (): void => reject(cancelled());
+      signal.addEventListener('abort', onAbort, { once: true });
+      stopListening = () => signal.removeEventListener('abort', onAbort);
+    });
+    aborted.catch(() => undefined);
+    const step = <T>(work: Promise<T>): Promise<T> =>
+      this.withStallTimeout(work, remotePath, stallMs, aborted);
+    const statOrNull = (path: string): Promise<SftpStat | null> =>
+      step(sftpCall<Stats>((done) => sftp.stat(path, done))).then(toStat, (error: unknown) => {
+        if (isNoSuchFile(error)) return null;
+        throw error;
+      });
+
+    const part = `${remotePath}.agentmate-${randomBytes(4).toString('hex')}.part`;
+    let handle: Buffer | null = null;
+    let partExists = false;
+    let existing: SftpStat | null = null;
+    try {
+      existing = await statOrNull(remotePath);
+      const mode = options.mode ?? existing?.mode ?? DEFAULT_FILE_MODE;
+      handle = await step(sftpCall<Buffer>((done) => sftp.open(part, 'w', { mode }, done)));
+      partExists = true;
+      const open = handle;
+
+      const hash = createHash('sha256');
+      const stream = createReadStream(localPath, { highWaterMark: UPLOAD_CHUNK_BYTES });
+      const pending = new Set<Promise<void>>();
+      let failure: unknown = null;
+      let position = 0;
+      let sent = 0;
+      try {
+        for await (const chunk of stream as AsyncIterable<Buffer>) {
+          if (signal?.aborted) throw cancelled();
+          hash.update(chunk);
+          const offset = position;
+          position += chunk.length;
+          const write: Promise<void> = step(
+            sftpDone((done) => sftp.write(open, chunk, 0, chunk.length, offset, done)),
+          ).then(
+            () => {
+              sent += chunk.length;
+              options.onProgress?.(sent);
+            },
+            (error: unknown) => {
+              failure ??= error;
+            },
+          );
+          pending.add(write);
+          void write.then(() => pending.delete(write));
+          while (pending.size >= UPLOAD_WRITES_IN_FLIGHT && !failure) {
+            await Promise.race(pending);
+          }
+          if (failure) throw failure;
+        }
+        await Promise.all(pending);
+        if (failure) throw failure;
+      } finally {
+        stream.destroy();
+      }
+
+      if (hash.digest('hex') !== options.expectedSha256) {
+        throw filesError(
+          'localChanged',
+          `${localPath} changed while it was being sent, so ${remotePath} was left as it was.`,
+        );
+      }
+      await step(sftpExtension((done) => sftp.ext_openssh_fsync(open, done)));
+      handle = null;
+      await step(sftpDone((done) => sftp.close(open, done)));
+      // The server's umask applies to the mode given at open, so set it outright.
+      await step(sftpDone((done) => sftp.chmod(part, mode, done)));
+
+      // The last chance to cancel. Once the rename is sent the server finishes it whatever we do,
+      // so from here the upload runs to the end and is reported: a cancel that gave up on it
+      // would leave a new file on the server that the deploy never recorded.
+      if (signal?.aborted) throw cancelled();
+      const commit = <T>(work: Promise<T>): Promise<T> =>
+        this.withStallTimeout(work, remotePath, stallMs);
+      const statAfter = (path: string): Promise<SftpStat | null> =>
+        commit(sftpCall<Stats>((done) => sftp.stat(path, done))).then(toStat, (error: unknown) => {
+          if (isNoSuchFile(error)) return null;
+          throw error;
+        });
+      let atomic = true;
+      const renamed = await commit(
+        sftpExtension((done) => sftp.ext_openssh_rename(part, remotePath, done)),
+      );
+      if (!renamed) {
+        try {
+          await commit(sftpDone((done) => sftp.rename(part, remotePath, done)));
+        } catch (error) {
+          if (!(await statAfter(remotePath))) throw error;
+          // The old file moves aside rather than going, so it can come back if the part cannot
+          // take its name. A later deploy restores a backup whose file is missing.
+          const backup = `${remotePath}.agentmate-${randomBytes(4).toString('hex')}.old`;
+          await commit(sftpDone((done) => sftp.rename(remotePath, backup, done)));
+          try {
+            await commit(sftpDone((done) => sftp.rename(part, remotePath, done)));
+          } catch (failed) {
+            // Until the old file is back, the part is the only copy of the new one: keep it.
+            partExists = false;
+            await commit(sftpDone((done) => sftp.rename(backup, remotePath, done)));
+            partExists = true;
+            throw failed;
+          }
+          await commit(sftpDone((done) => sftp.unlink(backup, done))).catch(() => undefined);
+          atomic = false;
+        }
+      }
+      partExists = false;
+
+      const stat = await statAfter(remotePath);
+      if (!stat) throw new Error(`${remotePath} was not there right after it was sent.`);
+      return { stat, atomic, replaced: existing !== null };
+    } catch (error) {
+      // Cleaning up must not wait on the cancel that may have caused the failure.
+      const tidy = <T>(work: Promise<T>) =>
+        this.withStallTimeout(work, remotePath, stallMs).catch(() => undefined);
+      const left = handle;
+      if (left && this.isOpen) await tidy(sftpDone((done) => sftp.close(left, done)));
+      if (partExists && this.isOpen) await tidy(sftpDone((done) => sftp.unlink(part, done)));
+      throw error;
+    } finally {
+      stopListening();
+    }
+  }
+
   close(): void {
     if (this.closed) return;
     this.markClosed();
@@ -549,6 +833,36 @@ export class SshConnection {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  /**
+   * One request of a long upload: it fails when the server leaves it unanswered for `stallMs`,
+   * when the connection ends, or when `aborted` rejects.
+   */
+  private withStallTimeout<T>(
+    work: Promise<T>,
+    remotePath: string,
+    stallMs: number,
+    aborted?: Promise<never>,
+  ): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const stalled = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(
+        () =>
+          reject(
+            filesError(
+              'timeout',
+              `Sending ${remotePath}: ${this.endpoint.host} stopped answering for ` +
+                `${seconds(stallMs)}.`,
+            ),
+          ),
+        stallMs,
+      );
+    });
+    const racers = aborted
+      ? [this.untilClosed(work), stalled, aborted]
+      : [this.untilClosed(work), stalled];
+    return Promise.race(racers).finally(() => clearTimeout(timer));
   }
 
   private sftp(): Promise<SFTPWrapper> {

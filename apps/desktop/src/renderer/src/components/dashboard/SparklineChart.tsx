@@ -6,7 +6,13 @@ export interface SparklineSeries {
   key: string;
   label: string;
   color: string;
+  /** A non-finite value (NaN for a missing sample) leaves a gap in the line. */
   values: number[];
+  /** Overrides the chart-level `formatValue` for this series' tooltip row, e.g. °C next to %. */
+  formatValue?: (value: number) => string;
+  dashed?: boolean;
+  /** Fill under the line. Defaults to true. */
+  area?: boolean;
 }
 
 export interface SparklineChartProps {
@@ -48,7 +54,7 @@ export function SparklineChart({
   const [tooltipPos, setTooltipPos] = React.useState<{ left: number; top: number } | null>(null);
 
   const n = timestamps.length;
-  const allValues = series.flatMap((s) => s.values);
+  const allValues = series.flatMap((s) => s.values).filter(Number.isFinite);
   const maxVal = domainMax ?? Math.max(domainMin + 1, ...(allValues.length ? allValues : [1]));
 
   const xAt = (i: number): number => {
@@ -60,15 +66,43 @@ export function SparklineChart({
     return height - PAD_Y - t * (height - PAD_Y * 2);
   };
 
+  // A missing sample ends the current run and the next finite one starts a new run with its own
+  // move, so a gap reads as a gap rather than a dip to zero. Each run is a list of indexes.
+  const finiteRuns = (values: number[]): number[][] => {
+    const runs: number[][] = [];
+    let current: number[] | null = null;
+    values.forEach((v, i) => {
+      if (!Number.isFinite(v)) {
+        current = null;
+        return;
+      }
+      if (!current) {
+        current = [];
+        runs.push(current);
+      }
+      current.push(i);
+    });
+    return runs;
+  };
+
+  const runLine = (values: number[], run: number[]): string =>
+    run
+      .map((i, j) => `${j === 0 ? 'M' : 'L'} ${xAt(i).toFixed(2)} ${yAt(values[i]).toFixed(2)}`)
+      .join(' ');
+
   const linePath = (values: number[]): string =>
-    values
-      .map((v, i) => `${i === 0 ? 'M' : 'L'} ${xAt(i).toFixed(2)} ${yAt(v).toFixed(2)}`)
+    finiteRuns(values)
+      .map((run) => runLine(values, run))
       .join(' ');
 
   const areaPath = (values: number[]): string => {
-    if (values.length === 0) return '';
     const baseline = height - PAD_Y;
-    return `${linePath(values)} L ${xAt(values.length - 1).toFixed(2)} ${baseline} L ${xAt(0).toFixed(2)} ${baseline} Z`;
+    return finiteRuns(values)
+      .map(
+        (run) =>
+          `${runLine(values, run)} L ${xAt(run[run.length - 1]).toFixed(2)} ${baseline} L ${xAt(run[0]).toFixed(2)} ${baseline} Z`,
+      )
+      .join(' ');
   };
 
   function handlePointerMove(event: React.PointerEvent<SVGSVGElement>): void {
@@ -124,15 +158,17 @@ export function SparklineChart({
         onPointerMove={handlePointerMove}
         onPointerLeave={() => setHoverIndex(null)}
       >
-        {series.map((s) => (
-          <path
-            key={`area-${s.key}`}
-            d={areaPath(s.values)}
-            fill={s.color}
-            fillOpacity={0.1}
-            stroke="none"
-          />
-        ))}
+        {series
+          .filter((s) => s.area !== false)
+          .map((s) => (
+            <path
+              key={`area-${s.key}`}
+              d={areaPath(s.values)}
+              fill={s.color}
+              fillOpacity={0.1}
+              stroke="none"
+            />
+          ))}
         {series.map((s) => (
           <path
             key={`line-${s.key}`}
@@ -140,6 +176,7 @@ export function SparklineChart({
             fill="none"
             stroke={s.color}
             strokeWidth={2}
+            strokeDasharray={s.dashed ? '4 3' : undefined}
             strokeLinejoin="round"
             strokeLinecap="round"
             vectorEffect="non-scaling-stroke"
@@ -159,8 +196,10 @@ export function SparklineChart({
       </svg>
       {hovered &&
         series.map((s) => {
+          const value = s.values[hoverIndex] ?? domainMin;
+          if (!Number.isFinite(value)) return null;
           const leftPct = (xAt(hoverIndex) / VIEW_WIDTH) * 100;
-          const topPct = (yAt(s.values[hoverIndex] ?? domainMin) / height) * 100;
+          const topPct = (yAt(value) / height) * 100;
           return (
             <div
               key={`dot-${s.key}`}
@@ -196,18 +235,21 @@ export function SparklineChart({
                 series.length > 4 ? 'grid grid-cols-2 gap-x-2 gap-y-0.5' : 'space-y-0.5',
               )}
             >
-              {series.map((s) => (
-                <div key={s.key} className="flex items-center gap-1.5">
-                  <span
-                    className="inline-block h-0.5 w-3 shrink-0 rounded-full"
-                    style={{ backgroundColor: s.color }}
-                  />
-                  <span className="truncate text-muted-foreground">{s.label}</span>
-                  <span className="ml-auto font-medium text-popover-foreground">
-                    {formatValue(s.values[hoverIndex] ?? domainMin)}
-                  </span>
-                </div>
-              ))}
+              {series.map((s) => {
+                const value = s.values[hoverIndex] ?? domainMin;
+                return (
+                  <div key={s.key} className="flex items-center gap-1.5">
+                    <span
+                      className="inline-block h-0.5 w-3 shrink-0 rounded-full"
+                      style={{ backgroundColor: s.color }}
+                    />
+                    <span className="truncate text-muted-foreground">{s.label}</span>
+                    <span className="ml-auto font-medium text-popover-foreground">
+                      {Number.isFinite(value) ? (s.formatValue ?? formatValue)(value) : 'N/A'}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>,
           document.body,

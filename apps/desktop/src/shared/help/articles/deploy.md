@@ -13,7 +13,7 @@ This article explains the page itself: the server list, the sections of a server
 
 ## Where to find it
 
-Click **Deploy** in the sidebar under Ship, or open the command palette and type Deploy. The page header says "Install the server core on your servers and keep an eye on them."
+Click **Deploy** in the sidebar under Ship, or open the command palette and type Deploy. The page header says "Install the server core on your servers, keep an eye on them, and upload sites over SFTP or FTP."
 
 ## The server rail
 
@@ -32,6 +32,8 @@ Each entry shows the server's nickname and a status line with a status mark:
 Click a server to open it. AgentMate checks each core's health every 30 seconds while the page is open. Under the list there are two shortcuts: **Add or edit servers in Remote** and **Cloudflare: domains and DNS** (see [Cloudflare](cloudflare.md)).
 
 If you have no saved servers at all, the page says **No servers yet** and offers **Open Remote** and **Manage Cloudflare**.
+
+Further down the rail, the **FTP and SFTP sites** group lists folders you deploy to a host over SFTP, FTPS or FTP, without a server core. Click **Add an FTP or SFTP site** to add one. See [FTP and SFTP sites](deploy-ftp-sftp.md).
 
 ## The server header
 
@@ -158,5 +160,6 @@ Some changes (installing every update, rebooting, and sensitive security changes
 - [Deploy: firewall and security](deploy-firewall-security.md)
 - [Deploy: assistant and logs](deploy-assistant-logs.md)
 - [Deploy: registries](deploy-registries.md)
+- [FTP and SFTP sites](deploy-ftp-sftp.md)
 - [Cloudflare](cloudflare.md)
 - [Remote](remote.md)

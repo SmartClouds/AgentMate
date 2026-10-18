@@ -4,6 +4,7 @@ import { SiteDeploysPanel } from './SiteDeploysPanel';
 import { SiteHeader } from './SiteHeader';
 import { SiteItemsPanel } from './SiteItemsPanel';
 import { SiteOverviewPanel } from './SiteOverviewPanel';
+import { SiteProjectsPanel } from './SiteProjectsPanel';
 import { type SiteSection, SiteSections } from './SiteSections';
 
 /** A WordPress site's page under Deploy: its header, the section strip and the section shown. */
@@ -20,6 +21,7 @@ export function SiteView({
 }): React.JSX.Element {
   let content: React.ReactNode;
   if (section === 'items') content = <SiteItemsPanel site={site} />;
+  else if (section === 'projects') content = <SiteProjectsPanel site={site} />;
   else if (section === 'deploys') content = <SiteDeploysPanel site={site} />;
   else if (section === 'access') {
     content = <SiteAccessPanel key={site.id} site={site} onDisconnected={onDisconnected} />;

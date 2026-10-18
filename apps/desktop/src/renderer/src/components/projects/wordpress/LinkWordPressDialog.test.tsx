@@ -1,6 +1,8 @@
+import type { WpItemRef } from '@agentmat/core';
 import type { DeployWordPressLinkProjectResult } from '@shared/deployWordPressTypes';
 import { act, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { useWordPressOperationStore } from '@/stores/wordpressOperationStore';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
 import { LINK_FOLDER_NOTE, LinkWordPressDialog } from './LinkWordPressDialog';
 import { deferred, SITE_ITEMS, wpProject, wpSite } from './testing/fixtures';
@@ -12,14 +14,28 @@ import { deferred, SITE_ITEMS, wpProject, wpSite } from './testing/fixtures';
 
 const PLAIN = wpProject({ id: 'p-plain', name: 'Shop code', wordpress: undefined });
 
-function renderDialog(bridge: Record<string, unknown> = {}) {
+interface StartingPoint {
+  initialSiteId?: string;
+  initialItems?: WpItemRef[];
+}
+
+function renderDialog(bridge: Record<string, unknown> = {}, props: StartingPoint = {}) {
   const onLinked = vi.fn();
   const rendered = renderWithProviders(
-    <LinkWordPressDialog open onOpenChange={() => undefined} project={PLAIN} onLinked={onLinked} />,
+    <LinkWordPressDialog
+      open
+      onOpenChange={() => undefined}
+      project={PLAIN}
+      onLinked={onLinked}
+      {...props}
+    />,
     {
       route: '/projects/p-plain',
       bridge: {
-        'deployWordPress.listSites': [wpSite()],
+        'deployWordPress.listSites': [
+          wpSite(),
+          wpSite({ id: 'site-2', label: 'Blog', siteUrl: 'https://blog.example.com' }),
+        ],
         'deployWordPress.listItems': SITE_ITEMS,
         ...bridge,
       },
@@ -93,5 +109,90 @@ describe('LinkWordPressDialog', () => {
     );
     await user.click(screen.getByRole('button', { name: /^Back$/ }));
     expect(await screen.findByText('Storefront')).toBeTruthy();
+  });
+
+  describe('opened for a site from its Deploy page', () => {
+    it('opens on the items step for that site with its active theme ticked', async () => {
+      const { user, bridge } = renderDialog({}, { initialSiteId: 'site-2' });
+
+      expect(await screen.findByText('Storefront')).toBeTruthy();
+      expect(screen.getByText('Which themes and plugins?')).toBeTruthy();
+      expect(bridge.$fn('deployWordPress.listItems')).toHaveBeenCalledWith('site-2');
+      expect(screen.getByRole('checkbox', { name: /Storefront/ })).toHaveAttribute(
+        'data-state',
+        'checked',
+      );
+
+      await user.click(screen.getByRole('button', { name: /^Link$/ }));
+      await waitFor(() => expect(bridge.$fn('deployWordPress.linkProject')).toHaveBeenCalled());
+      expect(bridge.$fn('deployWordPress.linkProject').mock.calls[0][0]).toMatchObject({
+        siteId: 'site-2',
+        items: [{ kind: 'theme', slug: 'storefront' }],
+      });
+    });
+
+    it('ticks exactly the starting items the site has', async () => {
+      const { user } = renderDialog(
+        {},
+        {
+          initialSiteId: 'site-2',
+          initialItems: [
+            { kind: 'plugin', slug: 'woocommerce' },
+            { kind: 'plugin', slug: 'gone-plugin' },
+          ],
+        },
+      );
+
+      expect(await screen.findByRole('checkbox', { name: /WooCommerce/ })).toHaveAttribute(
+        'data-state',
+        'checked',
+      );
+      expect(screen.getByRole('checkbox', { name: /Storefront/ })).toHaveAttribute(
+        'data-state',
+        'unchecked',
+      );
+
+      // Back on the site step, the site stays picked and another one gets the usual ticks.
+      await user.click(screen.getByRole('button', { name: /^Back$/ }));
+      await user.click(await screen.findByRole('button', { name: /Acme Shop/ }));
+      await user.click(screen.getByRole('button', { name: /Next/ }));
+      expect(await screen.findByRole('checkbox', { name: /Storefront/ })).toHaveAttribute(
+        'data-state',
+        'checked',
+      );
+      expect(screen.getByRole('checkbox', { name: /WooCommerce/ })).toHaveAttribute(
+        'data-state',
+        'unchecked',
+      );
+    });
+
+    it('still shows a link running for the project instead', async () => {
+      useWordPressOperationStore.setState({
+        runs: {
+          'op-1': {
+            operationId: 'op-1',
+            kind: 'items',
+            siteId: 'site-1',
+            projectId: 'p-plain',
+            phases: ['download'],
+            progress: { download: { done: 2, total: 5 } },
+            latest: null,
+            status: 'running',
+            cancelling: false,
+            error: null,
+            errorCode: null,
+            result: null,
+            owned: false,
+            startedAt: 1,
+            finishedAt: null,
+          },
+        },
+      });
+      renderDialog({}, { initialSiteId: 'site-2' });
+
+      expect(await screen.findByRole('list', { name: 'Progress' })).toBeTruthy();
+      expect(screen.getByText('Linking')).toBeTruthy();
+      expect(screen.queryByRole('checkbox')).toBeNull();
+    });
   });
 });

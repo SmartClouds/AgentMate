@@ -1,28 +1,49 @@
 import type { Project, ProjectWordPressItemKind, WpItem, WpItemRef } from '@agentmat/core';
+import { wpItemRoot } from '@agentmat/core';
 import type { DeployWordPressSite, DeployWordPressSiteInfo } from '@shared/deployWordPressTypes';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import {
+  ArrowRight,
   Blocks,
   Bolt,
   CloudDownload,
   CloudUpload,
+  EllipsisVertical,
+  ExternalLink,
   FolderPlus,
+  LinkOff,
   Lock,
+  Plus,
   RefreshCw,
   Sparkles,
+  Spinner,
   TriangleAlert,
+  X,
 } from '@/components/icons';
 import { Chip } from '@/components/pageKit';
+import { NewWordPressProjectDialog } from '@/components/projects/wordpress/NewWordPressProjectDialog';
+import { useUnlinkWordPressProject } from '@/components/projects/wordpress/useUnlinkWordPressProject';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { DeployFlowDialog } from '@/components/wordpress/DeployFlowDialog';
 import { PullFlowDialog } from '@/components/wordpress/PullFlowDialog';
+import { confirmDialog } from '@/stores/confirmStore';
 import { DeployCard, Notice } from '../deployKit';
 import { SetupFailure } from '../SetupFailure';
+import { AddToProjectDialog } from './AddToProjectDialog';
 import { siteProjects, useProjects, useSiteInfo, useSiteItems } from './hooks';
 import { fileChangesStatus, SCOPE_SUMMARY, wpProblem } from './messages';
+import { useItemProjectActions } from './useItemProjectActions';
 
 const GROUPS: ReadonlyArray<{ kind: ProjectWordPressItemKind; title: string; empty: string }> = [
   { kind: 'theme', title: 'Themes', empty: 'No themes on this site.' },
@@ -63,18 +84,96 @@ function linksItem(project: Project, item: WpItemRef): boolean {
 
 type FlowTarget = { kind: 'deploy' | 'pull'; projectId: string; item: WpItemRef };
 
+/** The project dialog open for an item: add it to one, move it, or make a new one with it. */
+type ItemDialog = { kind: 'add' | 'move' | 'new'; item: WpItem; from?: Project };
+
+const KIND_NOUN: Record<ProjectWordPressItemKind, string> = {
+  theme: 'theme',
+  plugin: 'plugin',
+  'mu-plugin': 'must-use plugin',
+};
+
+/** What the rows can do to the projects that hold an item. */
+interface ItemProjectHandlers {
+  onOpenFlow: (target: FlowTarget) => void;
+  onDialog: (dialog: ItemDialog) => void;
+  onOpenProject: (project: Project) => void;
+  onRemove: (project: Project, item: WpItem) => void;
+  onUnlink: (project: Project) => void;
+  /** True while a change to this project's items is running, so its menu waits. */
+  isChanging: (project: Project) => boolean;
+  /** True while any change is running, so a second one can't start alongside it. */
+  changing: boolean;
+}
+
+function ProjectMenu({
+  item,
+  project,
+  handlers,
+}: {
+  item: WpItem;
+  project: Project;
+  handlers: ItemProjectHandlers;
+}): React.JSX.Element {
+  const busy = handlers.isChanging(project);
+  const lastItem = (project.wordpress?.items.length ?? 0) <= 1;
+  return (
+    <DropdownMenu>
+      <SimpleTooltip label="More">
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`More for ${item.name} in ${project.name}`}
+            disabled={busy}
+          >
+            {busy ? <Spinner className="motion-safe:animate-spin" /> : <EllipsisVertical />}
+          </Button>
+        </DropdownMenuTrigger>
+      </SimpleTooltip>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={() => handlers.onOpenProject(project)}>
+          <ExternalLink /> Open project
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={handlers.changing}
+          onSelect={() => handlers.onDialog({ kind: 'move', item, from: project })}
+        >
+          <ArrowRight /> Move to another project…
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {lastItem ? (
+          <DropdownMenuItem
+            tone="danger"
+            disabled={handlers.changing}
+            onSelect={() => handlers.onUnlink(project)}
+          >
+            <LinkOff /> Unlink {project.name} from this site
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem
+            tone="danger"
+            disabled={handlers.changing}
+            onSelect={() => handlers.onRemove(project, item)}
+          >
+            <X /> Remove from this project
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function ItemRow({
   item,
   projects,
   deployBlocked,
-  onOpen,
-  onNewProject,
+  handlers,
 }: {
   item: WpItem;
   projects: Project[];
   deployBlocked: string | null;
-  onOpen: (target: FlowTarget) => void;
-  onNewProject: () => void;
+  handlers: ItemProjectHandlers;
 }): React.JSX.Element {
   const ref: WpItemRef = { kind: item.kind, slug: item.slug };
   return (
@@ -110,38 +209,67 @@ function ItemRow({
         ) : projects.length === 0 ? (
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs text-muted-foreground">Not in a project yet.</span>
-            <Button size="sm" variant="soft" onClick={onNewProject}>
-              <FolderPlus /> Make a WordPress project
+            <Button
+              size="sm"
+              variant="soft"
+              onClick={() => handlers.onDialog({ kind: 'add', item })}
+            >
+              <Plus /> Add to a project
             </Button>
+            <SimpleTooltip label={`New project with this ${KIND_NOUN[item.kind]}`}>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                aria-label={`New project with ${item.name}`}
+                onClick={() => handlers.onDialog({ kind: 'new', item })}
+              >
+                <FolderPlus />
+              </Button>
+            </SimpleTooltip>
           </div>
         ) : (
-          <ul aria-label={`Projects with ${item.name}`} className="space-y-2">
-            {projects.map((project) => (
-              <li key={project.id} className="flex flex-wrap items-center gap-2">
-                <span className="min-w-0 flex-1 truncate text-sm text-foreground">
-                  {project.name}
-                </span>
-                <Button
-                  size="sm"
-                  variant="soft"
-                  aria-label={`Pull ${item.name} into ${project.name}`}
-                  onClick={() => onOpen({ kind: 'pull', projectId: project.id, item: ref })}
-                >
-                  <CloudDownload /> Pull
-                </Button>
-                <SimpleTooltip label={deployBlocked} wrapTrigger>
+          <div className="space-y-1.5">
+            <ul aria-label={`Projects with ${item.name}`} className="space-y-2">
+              {projects.map((project) => (
+                <li key={project.id} className="flex flex-wrap items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate text-sm text-foreground">
+                    {project.name}
+                  </span>
                   <Button
                     size="sm"
-                    disabled={deployBlocked !== null}
-                    aria-label={`Review and deploy ${item.name} from ${project.name}`}
-                    onClick={() => onOpen({ kind: 'deploy', projectId: project.id, item: ref })}
+                    variant="soft"
+                    aria-label={`Pull ${item.name} into ${project.name}`}
+                    onClick={() =>
+                      handlers.onOpenFlow({ kind: 'pull', projectId: project.id, item: ref })
+                    }
                   >
-                    <CloudUpload /> Review and deploy
+                    <CloudDownload /> Pull
                   </Button>
-                </SimpleTooltip>
-              </li>
-            ))}
-          </ul>
+                  <SimpleTooltip label={deployBlocked} wrapTrigger>
+                    <Button
+                      size="sm"
+                      disabled={deployBlocked !== null}
+                      aria-label={`Review and deploy ${item.name} from ${project.name}`}
+                      onClick={() =>
+                        handlers.onOpenFlow({ kind: 'deploy', projectId: project.id, item: ref })
+                      }
+                    >
+                      <CloudUpload /> Review and deploy
+                    </Button>
+                  </SimpleTooltip>
+                  <ProjectMenu item={item} project={project} handlers={handlers} />
+                </li>
+              ))}
+            </ul>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="-ml-2 text-muted-foreground"
+              onClick={() => handlers.onDialog({ kind: 'add', item })}
+            >
+              <Plus /> Add to another project
+            </Button>
+          </div>
         )}
       </div>
     </li>
@@ -150,8 +278,9 @@ function ItemRow({
 
 /**
  * The site's themes, plugins and mu-plugins: which are active, which projects on this computer
- * hold a copy, and from there a pull or a reviewed deploy. Names come from the site, so they are
- * shown as text only.
+ * hold a copy, and from there a pull or a reviewed deploy. Each item can also go into a project
+ * (an existing one or a new one), move to another, or leave one. Names come from the site, so
+ * they are shown as text only.
  */
 export function SiteItemsPanel({ site }: { site: DeployWordPressSite }): React.JSX.Element {
   const navigate = useNavigate();
@@ -160,6 +289,13 @@ export function SiteItemsPanel({ site }: { site: DeployWordPressSite }): React.J
   const projectsQuery = useProjects();
   const [target, setTarget] = useState<FlowTarget | null>(null);
   const [flowOpen, setFlowOpen] = useState(false);
+  // Kept after closing so the dialog can animate out; the key mounts a fresh one per open.
+  const [dialog, setDialog] = useState<(ItemDialog & { key: number }) | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const itemActions = useItemProjectActions(site.id);
+  const unlinker = useUnlinkWordPressProject();
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
 
   const info = infoQuery.data;
   const linked = siteProjects(projectsQuery.data, site.id);
@@ -175,7 +311,49 @@ export function SiteItemsPanel({ site }: { site: DeployWordPressSite }): React.J
     setFlowOpen(true);
   }
 
-  const newProject = () => navigate('/projects?new=wordpress');
+  function openDialog(next: ItemDialog): void {
+    setDialog((current) => ({ ...next, key: (current?.key ?? 0) + 1 }));
+    setDialogOpen(true);
+  }
+
+  async function removeFrom(project: Project, item: WpItem): Promise<void> {
+    const ok = await confirmDialog({
+      title: `Stop syncing ${item.slug} in ${project.name}?`,
+      description: `Its files stay in ${wpItemRoot(item)}, but they won't be pulled or deployed any more.`,
+      confirmLabel: 'Stop syncing',
+    });
+    if (!ok) return;
+    setRemovingId(project.id);
+    try {
+      const outcome = await itemActions.remove(project, { kind: item.kind, slug: item.slug });
+      if (outcome.ok) toast.success(`${item.name} is no longer synced in ${project.name}.`);
+      else toast.error(outcome.error ?? `Couldn't take ${item.slug} out of ${project.name}.`);
+    } finally {
+      // No timeline here, so a failed run is not kept for one.
+      itemActions.reset();
+      setRemovingId(null);
+    }
+  }
+
+  async function unlink(project: Project): Promise<void> {
+    setUnlinkingId(project.id);
+    try {
+      await unlinker.unlink(project);
+    } finally {
+      setUnlinkingId(null);
+    }
+  }
+
+  const handlers: ItemProjectHandlers = {
+    onOpenFlow: open,
+    onDialog: openDialog,
+    onOpenProject: (project) => navigate(`/projects/${project.id}?tab=wordpress`),
+    onRemove: (project, item) => void removeFrom(project, item),
+    onUnlink: (project) => void unlink(project),
+    isChanging: (project) =>
+      project.id === removingId || (unlinker.unlinking && project.id === unlinkingId),
+    changing: removingId !== null || unlinker.unlinking,
+  };
 
   return (
     <div className="flex flex-col gap-2">
@@ -247,8 +425,7 @@ export function SiteItemsPanel({ site }: { site: DeployWordPressSite }): React.J
                       item={item}
                       projects={linked.filter((project) => linksItem(project, item))}
                       deployBlocked={deployBlockedReason(site, info, item)}
-                      onOpen={open}
-                      onNewProject={newProject}
+                      handlers={handlers}
                     />
                   ))}
                 </ul>
@@ -272,6 +449,27 @@ export function SiteItemsPanel({ site }: { site: DeployWordPressSite }): React.J
           projectId={target.projectId}
           siteId={site.id}
           items={[target.item]}
+        />
+      )}
+      {(dialog?.kind === 'add' || dialog?.kind === 'move') && (
+        <AddToProjectDialog
+          key={dialog.key}
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          site={site}
+          item={dialog.item}
+          mode={dialog.kind}
+          from={dialog.from}
+          onNewProject={() => openDialog({ kind: 'new', item: dialog.item })}
+        />
+      )}
+      {dialog?.kind === 'new' && (
+        <NewWordPressProjectDialog
+          key={dialog.key}
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          initialSiteId={site.id}
+          initialItems={[{ kind: dialog.item.kind, slug: dialog.item.slug }]}
         />
       )}
     </div>

@@ -230,15 +230,74 @@ export interface WhisperModel {
   label: string;
   /** Hugging Face repo with the ONNX weights. */
   hubId: string;
+  /**
+   * Which weight files transformers.js loads. Unset means full precision, which is fine for the
+   * small models but over 3 GB for the large one. Its 4-bit weights transcribe Persian almost
+   * word for word, while its 8-bit ones fall into repeating one word forever, so pick by testing.
+   */
+  dtype?: string;
 }
+
+export const WHISPER_MODEL_LARGE_TURBO = 'large-v3-turbo';
 
 export const WHISPER_MODELS: readonly WhisperModel[] = [
   { key: 'tiny', label: 'Tiny (fastest, ~75 MB)', hubId: 'onnx-community/whisper-tiny' },
   { key: 'base', label: 'Base (balanced, ~145 MB)', hubId: 'onnx-community/whisper-base' },
-  { key: 'small', label: 'Small (most accurate, ~490 MB)', hubId: 'onnx-community/whisper-small' },
+  { key: 'small', label: 'Small (~490 MB)', hubId: 'onnx-community/whisper-small' },
+  {
+    key: WHISPER_MODEL_LARGE_TURBO,
+    label: 'Large v3 Turbo (most accurate, best for Persian, ~760 MB)',
+    hubId: 'onnx-community/whisper-large-v3-turbo',
+    dtype: 'q4',
+  },
 ];
-/** `base` is the accuracy and size sweet spot for short dictation. */
+/** `base` is the accuracy and size sweet spot for short English dictation. */
 export const DEFAULT_WHISPER_MODEL = 'base';
+
+export interface SpeechLanguage {
+  /** Whisper language code. */
+  code: string;
+  label: string;
+  /**
+   * The smallest model that transcribes this language well enough to use. The smaller models
+   * write Persian as a jumble of half-right words, so the settings and the mic say so.
+   */
+  recommendedModel?: string;
+}
+
+export const SPEECH_LANGUAGES: readonly SpeechLanguage[] = [
+  { code: 'en', label: 'English' },
+  { code: 'fa', label: 'Persian (فارسی)', recommendedModel: WHISPER_MODEL_LARGE_TURBO },
+  { code: 'es', label: 'Spanish' },
+  { code: 'fr', label: 'French' },
+  { code: 'de', label: 'German' },
+  { code: 'ar', label: 'Arabic' },
+  { code: 'zh', label: 'Chinese' },
+  { code: 'ru', label: 'Russian' },
+  { code: 'hi', label: 'Hindi' },
+  { code: 'tr', label: 'Turkish' },
+];
+
+/**
+ * The language Whisper is told it is hearing. The local Whisper runtime cannot detect a language
+ * (it quietly assumes English, which turns Persian speech into made-up English), so a stored
+ * "auto" from older versions, or anything unknown, becomes the system language when it is one of
+ * ours, else English.
+ */
+export function resolveSpeechLanguage(stored: string | undefined, systemLocale = ''): string {
+  const known = (code: string) => SPEECH_LANGUAGES.some((lang) => lang.code === code);
+  if (stored && known(stored)) return stored;
+  const system = systemLocale.toLowerCase().split(/[-_]/)[0] ?? '';
+  return known(system) ? system : 'en';
+}
+
+/** True when `modelKey` is too small to understand `languageCode` well. */
+export function speechModelTooSmallFor(modelKey: string, languageCode: string): boolean {
+  const wanted = SPEECH_LANGUAGES.find((lang) => lang.code === languageCode)?.recommendedModel;
+  if (!wanted) return false;
+  const rank = (key: string) => WHISPER_MODELS.findIndex((m) => m.key === key);
+  return rank(modelKey) < rank(wanted);
+}
 
 // Prices
 

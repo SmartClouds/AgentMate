@@ -3,7 +3,7 @@ title: Dashboard
 category: Getting started
 order: 40
 summary: The Dashboard shows live CPU, memory, disk, GPU and network charts, Docker and emulator usage with a list of the idle ones, GitHub activity, your installed AI CLIs and projects, and CLI update alerts, in a layout you can rearrange.
-keywords: dashboard, home, overview, system stats, cpu, memory, disk, gpu, network, ping, github activity, github actions, docker usage, emulator usage, idle containers, idle emulators, unused, stop idle, cards, layout, edit layout, speed test, top apps, updates
+keywords: dashboard, home, overview, system stats, cpu, memory, disk, gpu, temperature, thermal, arm64, network, ping, github activity, github actions, docker usage, emulator usage, idle containers, idle emulators, unused, stop idle, cards, layout, edit layout, speed test, top apps, updates
 route: /
 ---
 
@@ -32,14 +32,25 @@ The charts update live. They sample about every two seconds and keep roughly the
 
 | Card | What it shows |
 | --- | --- |
-| **CPU Usage** | Total CPU use as a percentage, with the processor model and number of cores. When the machine has more than one core, **Total** and **Per core** buttons switch the chart between one line and a line for each core. |
+| **CPU Usage** | Total CPU use as a percentage, with the processor model, number of cores and architecture (such as x64 or ARM64). When the machine has more than one core, **Total** and **Per core** buttons switch the chart between one line and a line for each core. When the CPU temperature can be read, it appears next to the percentage and as a dashed line on the same chart. See [Temperature](#temperature). |
 | **Memory Usage** | The percentage of RAM in use, with used and total memory. |
 | **Disk I/O** | Combined read and write speed, and a line for each disk. It says "No disk activity detected." when nothing is reported. |
-| **GPU Usage** | GPU use as a percentage (the average when you have several GPUs), plus each GPU's memory. It reads NVIDIA cards on any system, the integrated GPU on Windows, and every GPU on a Mac, Apple Silicon included. It shows N/A and "No supported GPU detected." when none can be read, for example an AMD or Intel GPU on Linux. |
+| **GPU Usage** | GPU use as a percentage (the average when you have several GPUs), plus each GPU's memory. It reads NVIDIA cards on any system, the integrated GPU on Windows, and every GPU on a Mac, Apple Silicon included. It shows N/A and "No supported GPU detected." when none can be read, for example an AMD or Intel GPU on Linux. An NVIDIA GPU's temperature is shown beside its memory and as a dashed line in the GPU's color. |
 | **Network Throughput** | Download speed as the headline number, with lines for download and upload. |
 | **Network Status** | How many of your ping targets are online, a quality label, and each target's latency. |
 
 Each of CPU, Memory, Disk I/O and GPU has a **Top apps** button (a list icon) in the card's header. It opens a dialog such as **Top CPU apps**, **Top memory apps**, **Top disk apps** or **Top GPU apps**, listing the apps using the most of that resource right now and refreshing every few seconds. Each row shows the app, how much it uses and its process ID. The button at the end of a row, **End** followed by the app name, ends that process after you confirm with **End process**. Be careful: unsaved work in that app can be lost. If your system cannot report per-app GPU or disk use, the dialog says so.
+
+### Temperature
+
+The CPU and GPU charts show temperature as a dashed line on the same chart, measured in °C. Hover the chart to see the temperature at that moment next to the usage. There is no separate temperature card. Where it comes from depends on the system:
+
+- **Linux**: the kernel's own sensors, which covers Intel and AMD processors and ARM boards such as a Raspberry Pi. Some ARM servers report no CPU sensor at all, and then no line is drawn.
+- **Windows**: the system's thermal zones, on x64, x86 and ARM64 PCs. These need no administrator rights, but on many desktops the zone is a sensor on the motherboard rather than in the CPU, and some PCs report none. The reading is refreshed about every ten seconds.
+- **macOS**: macOS does not give apps the temperature without administrator rights, on Apple Silicon or Intel Macs. Instead the CPU card shows the thermal state macOS reports: **Nominal**, **Fair**, **Serious** or **Critical**. Serious and Critical mean the Mac is slowing itself down to cool off.
+- **GPU**: only NVIDIA cards report a temperature (on any system). Other GPUs show usage without one.
+
+When no reading is available the card simply leaves the temperature out.
 
 ### Network Throughput and speed test
 

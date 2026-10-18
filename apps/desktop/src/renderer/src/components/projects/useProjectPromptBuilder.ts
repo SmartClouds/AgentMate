@@ -64,7 +64,7 @@ export function useProjectPromptBuilder(
   const setPromptType = (v: PromptType) => updateEntry(projectId, { promptType: v });
   const setTargetAI = (v: TargetAI) => updateEntry(projectId, { targetAI: v });
   const setGenerated = (v: string) => updateEntry(projectId, { generated: v });
-  const setGeneratedResult = (v: string, source: 'generate' | 'translate') =>
+  const setGeneratedResult = (v: string, source: 'generate' | 'translate' | 'dictate') =>
     updateEntry(projectId, { generated: v, generatedSource: source });
   const clearEntry = useProjectPromptBuildStore((s) => s.clear);
   const jobKey = projectPromptJobKey(projectId);
@@ -96,6 +96,14 @@ export function useProjectPromptBuilder(
   const targetAI = resolvePromptTargetAI(stored?.targetAI, fallbackTargetAI, {
     untouched: !rawInput.trim() && !generated.trim(),
   }) as TargetAI;
+
+  /** A prompt spoken straight into the output box, kept word for word. */
+  const setDictatedPrompt = (v: string) => {
+    cancelRunAssessment(jobKey);
+    setGeneratedResult(v, 'dictate');
+    // Sized like a translation: it was never shaped by the prompt type.
+    if (sizeResults) startRunAssessment(jobKey, { prompt: v, targetAI });
+  };
 
   useEffect(() => {
     if (!enabled || !projectId || projectsQuery.isLoading) return;
@@ -260,6 +268,7 @@ export function useProjectPromptBuilder(
     generated,
     generatedSource,
     setGenerated,
+    setDictatedPrompt,
     isGenerating,
     isTranslating,
     handleGenerate,

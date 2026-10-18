@@ -920,6 +920,73 @@ describe('SettingsPage backup restore', () => {
   });
 });
 
+describe('SettingsPage voice input', () => {
+  const AI = '/settings?tab=ai';
+
+  it('has no auto-detect, which the local model would quietly read as English', async () => {
+    const { user } = renderSettings({}, AI);
+    await screen.findByText('Voice input');
+
+    const picker = screen.getByRole('combobox', { name: 'Spoken language' });
+    // An old "auto" setting shows as the language it really means.
+    expect(picker).not.toHaveTextContent('Auto');
+    await user.click(picker);
+
+    expect(await screen.findByRole('option', { name: 'English' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /Auto/ })).toBeNull();
+  });
+
+  it('saves Persian when it is picked', async () => {
+    const { user, bridge } = renderSettings(
+      { 'settings.get': { ...settings, speechLanguage: 'en', speechModel: 'large-v3-turbo' } },
+      AI,
+    );
+    await screen.findByText('Voice input');
+
+    await user.click(screen.getByRole('combobox', { name: 'Spoken language' }));
+    await user.click(await screen.findByRole('option', { name: 'Persian (فارسی)' }));
+    await user.click(screen.getByRole('button', { name: /Save changes/ }));
+
+    await waitFor(() =>
+      expect(bridge.$fn('settings.update')).toHaveBeenCalledWith({
+        speechModel: 'large-v3-turbo',
+        speechLanguage: 'fa',
+      }),
+    );
+  });
+
+  it('says the small model gets Persian wrong and switches to the large one', async () => {
+    const { user, bridge } = renderSettings(
+      { 'settings.get': { ...settings, speechLanguage: 'fa', speechModel: 'base' } },
+      AI,
+    );
+    await screen.findByText('Voice input');
+
+    const note = await screen.findByRole('note');
+    expect(note).toHaveTextContent('This model often gets Persian (فارسی) wrong.');
+    await user.click(within(note).getByRole('button', { name: 'Use this model' }));
+
+    expect(screen.queryByRole('note')).toBeNull();
+    expect(screen.getByRole('combobox', { name: 'Speech model' })).toHaveTextContent(
+      'Large v3 Turbo',
+    );
+    await user.click(screen.getByRole('button', { name: /Save changes/ }));
+    await waitFor(() =>
+      expect(bridge.$fn('settings.update')).toHaveBeenCalledWith({
+        speechModel: 'large-v3-turbo',
+        speechLanguage: 'fa',
+      }),
+    );
+  });
+
+  it('does not warn for English on the default model', async () => {
+    renderSettings({ 'settings.get': { ...settings, speechLanguage: 'en' } }, AI);
+    await screen.findByText('Voice input');
+
+    expect(screen.queryByRole('note')).toBeNull();
+  });
+});
+
 describe('SettingsPage unsaved changes', () => {
   it('holds an edited projects folder back until it is saved', async () => {
     const { user, bridge } = renderSettings();

@@ -163,6 +163,21 @@ async function failure(promise: Promise<unknown>): Promise<Error> {
   throw new Error('Expected the call to fail.');
 }
 
+function plainProject(overrides: Partial<Project> = {}): Project {
+  const folderPath = folder();
+  mkdirSync(folderPath, { recursive: true });
+  const project = {
+    id: randomUUID(),
+    name: 'Plain',
+    folderPath,
+    prompt: 'Use tabs.',
+    websiteUrl: '',
+    ...overrides,
+  } as Project;
+  projects.set(project.id, project);
+  return project;
+}
+
 async function deployAll(project: Project, force = false) {
   const plan = await service.planDeploy({ projectId: project.id });
   return { plan, result: await service.deploy({ planId: plan.planId, operationId: op(), force }) };
@@ -807,21 +822,6 @@ describe('project items and links', () => {
 });
 
 describe('linkProject', () => {
-  function plainProject(overrides: Partial<Project> = {}): Project {
-    const folderPath = folder();
-    mkdirSync(folderPath, { recursive: true });
-    const project = {
-      id: randomUUID(),
-      name: 'Plain',
-      folderPath,
-      prompt: 'Use tabs.',
-      websiteUrl: '',
-      ...overrides,
-    } as Project;
-    projects.set(project.id, project);
-    return project;
-  }
-
   const link = (project: Project, items: WpItemRef[]) =>
     service.linkProject({ operationId: op(), projectId: project.id, siteId, items });
 
@@ -875,6 +875,95 @@ describe('linkProject', () => {
     expect(unlinked.prompt).toBe('Use tabs.');
     expect(unlinked.wordpress).toBeUndefined();
     expect(local(unlinked, 'wp-content/themes/shop/style.css')).toBe('/* Theme Name: Shop */');
+  });
+});
+
+describe('moving an item between projects', () => {
+  const linkedKeys = (id: string) => projects.get(id)?.wordpress?.items.map(wpItemKey);
+  const baseKeys = async (id: string) => Object.keys((await bases.read(id))?.items ?? {}).sort();
+
+  it('pulls a fresh copy into the other project and keeps the files in the first', async () => {
+    const from = await createShop([THEME, TOOLS]);
+    const to = await createShop([HELLO]);
+    // An edit not yet deployed stays with the first project.
+    write(from, 'wp-content/themes/shop/style.css', 'mine, not deployed');
+
+    const moved = await service.setProjectItems({
+      operationId: op(),
+      projectId: to.id,
+      items: [...(to.wordpress?.items ?? []), THEME],
+    });
+    expect(moved.wordpress?.items.map(wpItemKey)).toEqual(['plugin:hello.php', 'theme:shop']);
+    expect(local(to, 'wp-content/themes/shop/style.css')).toBe('/* Theme Name: Shop */');
+    expect(local(to, 'wp-content/themes/shop/inc/setup.php')).toBe('<?php // setup');
+    expect(await baseKeys(to.id)).toEqual(['plugin:hello.php', 'theme:shop']);
+    expect((await service.planPull({ projectId: to.id })).changes).toEqual([]);
+    // Holding it in the second project does not change the first.
+    expect(linkedKeys(from.id)).toEqual(['theme:shop', 'plugin:tools']);
+    expect(await baseKeys(from.id)).toEqual(['plugin:tools', 'theme:shop']);
+
+    const left = await service.setProjectItems({
+      operationId: op(),
+      projectId: from.id,
+      items: [TOOLS],
+    });
+    expect(left.wordpress?.items.map(wpItemKey)).toEqual(['plugin:tools']);
+    expect(await baseKeys(from.id)).toEqual(['plugin:tools']);
+    expect(local(from, 'wp-content/themes/shop/style.css')).toBe('mine, not deployed');
+    expect(local(from, 'wp-content/themes/shop/inc/setup.php')).toBe('<?php // setup');
+    expect((await service.planDeploy({ projectId: from.id })).changes).toEqual([]);
+    // The second project keeps its copy and its base.
+    expect(linkedKeys(to.id)).toEqual(['plugin:hello.php', 'theme:shop']);
+    expect(await baseKeys(to.id)).toEqual(['plugin:hello.php', 'theme:shop']);
+  });
+
+  it('links a plain project with the item, then unlinks the first when it was its last', async () => {
+    const from = await createShop([THEME]);
+    const { project: to, notPulled } = await service.linkProject({
+      operationId: op(),
+      projectId: plainProject().id,
+      siteId,
+      items: [THEME],
+    });
+    expect(notPulled).toEqual([]);
+    expect(to.wordpress?.siteId).toBe(siteId);
+    expect(to.wordpress?.items.map(wpItemKey)).toEqual(['theme:shop']);
+    expect(local(to, 'wp-content/themes/shop/inc/setup.php')).toBe('<?php // setup');
+    expect(await baseKeys(to.id)).toEqual(['theme:shop']);
+
+    const unlinked = await service.unlinkProject(from.id);
+    expect(unlinked.wordpress).toBeUndefined();
+    expect(projects.get(from.id)?.wordpress).toBeUndefined();
+    expect(await bases.read(from.id)).toBeNull();
+    expect(local(from, 'wp-content/themes/shop/style.css')).toBe('/* Theme Name: Shop */');
+    expect(local(from, 'wp-content/themes/shop/inc/setup.php')).toBe('<?php // setup');
+    expect(linkedKeys(to.id)).toEqual(['theme:shop']);
+    expect((await service.planPull({ projectId: to.id })).changes).toEqual([]);
+  });
+
+  it('refuses to pull over files already at the item path, and leaves the first project alone', async () => {
+    const from = await createShop([THEME, TOOLS]);
+    const to = await createShop([HELLO]);
+    write(to, 'wp-content/themes/shop/mine.txt', 'mine');
+    const fromBase = await bases.read(from.id);
+
+    const error = await failure(
+      service.setProjectItems({
+        operationId: op(),
+        projectId: to.id,
+        items: [...(to.wordpress?.items ?? []), THEME],
+      }),
+    );
+    expect(wordPressErrorCode(error)).toBe('folderNotEmpty');
+    expect(error.message).toContain('wp-content/themes/shop');
+    expect(local(to, 'wp-content/themes/shop/mine.txt')).toBe('mine');
+    expect(local(to, 'wp-content/themes/shop/style.css')).toBeNull();
+    expect(linkedKeys(to.id)).toEqual(['plugin:hello.php']);
+    expect(await baseKeys(to.id)).toEqual(['plugin:hello.php']);
+
+    expect(linkedKeys(from.id)).toEqual(['theme:shop', 'plugin:tools']);
+    expect(await bases.read(from.id)).toEqual(fromBase);
+    expect(local(from, 'wp-content/themes/shop/style.css')).toBe('/* Theme Name: Shop */');
   });
 });
 

@@ -163,7 +163,7 @@ The **AI** tab has API keys, local models, voice input, the Help search model an
 
 ### Voice input
 
-**Voice input** sets the local Whisper model and the spoken language for dictation in Prompt Builder. **Model** is **Tiny** (fastest, about 75 MB), **Base** (balanced, about 145 MB, the default) or **Small** (most accurate, about 490 MB). The model downloads once and stays cached. **Spoken language** is **Auto-detect** or one of English, Persian, Spanish, French, German, Arabic, Chinese, Russian, Hindi or Turkish. This card waits for **Save changes**. See [Writing, voice and translation](writing-voice-translation.md).
+**Voice input** sets the local Whisper model and the spoken language for dictation in Prompt Builder. **Model** is **Tiny** (fastest, about 75 MB), **Base** (balanced, about 145 MB, the default), **Small** (about 490 MB) or **Large v3 Turbo** (most accurate, about 760 MB, needed for Persian). The model downloads once and stays cached. **Spoken language** is one of English, Persian, Spanish, French, German, Arabic, Chinese, Russian, Hindi or Turkish. There is no auto-detect, because the local model cannot tell languages apart and would treat everything as English. When the model is too small for the language (for example Persian on Base), a note says so and **Use this model** switches to one that works. This card waits for **Save changes**. See [Writing, voice and translation](writing-voice-translation.md).
 
 ### Help search
 

@@ -1,0 +1,234 @@
+import { readdir, readFile } from 'node:fs/promises';
+import { powerMonitor } from 'electron';
+import type { CpuArch, CpuThermalState, SystemStatsSample } from '../../shared/apiTypes';
+import { readCpuArch } from './cpuArch';
+import { asArray, runPowerShellJson } from './processTree';
+
+export type CpuTemperature = Pick<SystemStatsSample, 'cpuTempC' | 'cpuThermalState'>;
+
+const NO_TEMPERATURE: CpuTemperature = { cpuTempC: null, cpuThermalState: null };
+
+// Sensors report 0, -273 or a raw register value when they are not wired up. Anything outside this
+// range is not a CPU temperature, and the chart hides the line rather than drawing it.
+const MIN_PLAUSIBLE_C = 1;
+const MAX_PLAUSIBLE_C = 125;
+
+function plausible(celsius: number): number | null {
+  return Number.isFinite(celsius) && celsius >= MIN_PLAUSIBLE_C && celsius <= MAX_PLAUSIBLE_C
+    ? celsius
+    : null;
+}
+
+function hottest(values: (number | null)[]): number | null {
+  const readings = values.filter((value): value is number => value != null);
+  return readings.length > 0 ? Math.max(...readings) : null;
+}
+
+/** One `/sys/class/hwmon/hwmonN` chip: its driver name and the `tempN_*` sensors it exposes. */
+export interface HwmonChip {
+  name: string;
+  sensors: { label?: string; milliC: number }[];
+}
+
+/** One `/sys/class/thermal/thermal_zoneN`. */
+export interface ThermalZone {
+  type: string;
+  milliC: number;
+}
+
+type LinuxSource = { hwmon: RegExp; labels: RegExp[] } | { zone: RegExp };
+
+// ARM boards name their CPU sensors after the CPU or the SoC: cpu_thermal on a Raspberry Pi,
+// cpuss-0-usr on a Snapdragon, mtktscpu on MediaTek, tsens_tz_sensorN on older Qualcomm parts.
+// Anchored at the start so it can never match acpitz or pch_* (board and chipset sensors).
+const ARM_CPU_NAME = /^(cpu|soc|mtktscpu|tsens)/i;
+
+// A laptop exposes a dozen chips (acpitz, pch_*, nvme, iwlwifi, amdgpu), so only the CPU drivers
+// count. coretemp is Intel and k10temp/zenpower are AMD. On older Ryzen parts Tctl carries a fan
+// control offset, so Tdie, when there is one, is the real die temperature.
+const X86_SOURCES: LinuxSource[] = [
+  { hwmon: /^coretemp$/, labels: [/^Package id \d+$/, /^Core \d+$/] },
+  { hwmon: /^(k10temp|zenpower)$/, labels: [/^Tdie$/, /^Tctl$/] },
+  { zone: /^x86_pkg_temp$/ },
+];
+
+// Graviton and Ampere servers usually expose no CPU sensor at all, which ends up as null.
+const ARM_SOURCES: LinuxSource[] = [{ hwmon: ARM_CPU_NAME, labels: [] }, { zone: ARM_CPU_NAME }];
+
+function sourcesFor(arch: CpuArch): LinuxSource[] {
+  if (arch === 'x64' || arch === 'x86') return X86_SOURCES;
+  if (arch === 'arm64' || arch === 'arm') return ARM_SOURCES;
+  return [...X86_SOURCES, ...ARM_SOURCES];
+}
+
+// The first label pattern with a plausible reading wins (the hottest of its matches, so a two
+// socket machine shows its hotter package). A chip whose labels match none uses its hottest sensor.
+function readChip(chip: HwmonChip, labels: RegExp[]): number | null {
+  const readings = chip.sensors.map((sensor) => ({
+    label: sensor.label ?? '',
+    celsius: plausible(sensor.milliC / 1000),
+  }));
+  for (const pattern of labels) {
+    const matched = hottest(readings.filter((r) => pattern.test(r.label)).map((r) => r.celsius));
+    if (matched != null) return matched;
+  }
+  return hottest(readings.map((r) => r.celsius));
+}
+
+function readSource(source: LinuxSource, chips: HwmonChip[], zones: ThermalZone[]): number | null {
+  if ('hwmon' in source) {
+    const { hwmon, labels } = source;
+    return hottest(chips.filter((c) => hwmon.test(c.name)).map((c) => readChip(c, labels)));
+  }
+  return hottest(
+    zones.filter((z) => source.zone.test(z.type)).map((z) => plausible(z.milliC / 1000)),
+  );
+}
+
+/**
+ * The CPU temperature in whole °C out of everything Linux reports, or null when none of the
+ * sensors is the CPU. The architecture decides which driver names count and in what order.
+ */
+export function pickLinuxCpuTemp(
+  chips: HwmonChip[],
+  zones: ThermalZone[],
+  arch: CpuArch,
+): number | null {
+  for (const source of sourcesFor(arch)) {
+    const celsius = readSource(source, chips, zones);
+    if (celsius != null) return Math.round(celsius);
+  }
+  return null;
+}
+
+/** One row of the ThermalZoneInformation counter set. */
+export interface WindowsThermalZone {
+  /** e.g. `\_TZ.TZ00` or `\_TZ.CPUZ`, the ACPI name the firmware gave the zone. */
+  Name?: string;
+  /** Tenths of a kelvin. */
+  HighPrecisionTemperature?: number | null;
+  /** Whole kelvin. */
+  Temperature?: number | null;
+}
+
+function zoneCelsius(zone: WindowsThermalZone): number | null {
+  return (
+    plausible(Number(zone.HighPrecisionTemperature) / 10 - 273.15) ??
+    plausible(Number(zone.Temperature) - 273.15)
+  );
+}
+
+/**
+ * The CPU temperature in whole °C out of Windows' ACPI thermal zones. A zone named for the CPU
+ * wins. Otherwise the hottest one stands in, which on many machines is a board sensor near the CPU
+ * rather than the package itself.
+ */
+export function parseWindowsThermalZones(
+  parsed: WindowsThermalZone | WindowsThermalZone[] | null | undefined,
+): number | null {
+  const readings = asArray(parsed)
+    .filter((zone) => zone != null && typeof zone === 'object')
+    .map((zone) => ({ name: String(zone.Name ?? ''), celsius: zoneCelsius(zone) }))
+    .filter((reading) => reading.celsius != null);
+  const named = readings.filter((reading) => /cpu/i.test(reading.name));
+  const celsius = hottest((named.length > 0 ? named : readings).map((r) => r.celsius));
+  return celsius == null ? null : Math.round(celsius);
+}
+
+const THERMAL_STATES: readonly CpuThermalState[] = ['nominal', 'fair', 'serious', 'critical'];
+
+/** Electron's thermal state, with `'unknown'` (every OS but macOS) as null. */
+export function toThermalState(value: string | undefined): CpuThermalState | null {
+  return THERMAL_STATES.find((state) => state === value) ?? null;
+}
+
+// Perf counters rather than MSAcpi_ThermalZoneTemperature, which needs admin rights.
+const WIN_THERMAL_ZONE_SCRIPT =
+  'Get-CimInstance Win32_PerfFormattedData_Counters_ThermalZoneInformation -ErrorAction SilentlyContinue | Select-Object Name, HighPrecisionTemperature, Temperature | ConvertTo-Json -Compress';
+
+async function readText(path: string): Promise<string | null> {
+  try {
+    return (await readFile(path, 'utf-8')).trim();
+  } catch {
+    return null;
+  }
+}
+
+async function listDir(path: string, pattern: RegExp): Promise<string[]> {
+  try {
+    return (await readdir(path)).filter((name) => pattern.test(name));
+  } catch {
+    return [];
+  }
+}
+
+const HWMON_ROOT = '/sys/class/hwmon';
+const THERMAL_ROOT = '/sys/class/thermal';
+
+// Each sensor is read on its own: some temp*_input files fail with EIO or ENODATA, and one bad
+// sensor must not drop the rest of its chip.
+async function readHwmonChips(): Promise<HwmonChip[]> {
+  const dirs = await listDir(HWMON_ROOT, /^hwmon\d+$/);
+  return Promise.all(
+    dirs.map(async (dir) => {
+      const base = `${HWMON_ROOT}/${dir}`;
+      const [name, inputs] = await Promise.all([
+        readText(`${base}/name`),
+        listDir(base, /^temp\d+_input$/),
+      ]);
+      const sensors = await Promise.all(
+        inputs.map(async (input) => {
+          const prefix = input.slice(0, -'_input'.length);
+          const [raw, label] = await Promise.all([
+            readText(`${base}/${input}`),
+            readText(`${base}/${prefix}_label`),
+          ]);
+          return { label: label ?? undefined, milliC: raw == null ? Number.NaN : Number(raw) };
+        }),
+      );
+      return { name: name ?? '', sensors };
+    }),
+  );
+}
+
+async function readThermalZones(): Promise<ThermalZone[]> {
+  const dirs = await listDir(THERMAL_ROOT, /^thermal_zone\d+$/);
+  return Promise.all(
+    dirs.map(async (dir) => {
+      const base = `${THERMAL_ROOT}/${dir}`;
+      const [type, raw] = await Promise.all([readText(`${base}/type`), readText(`${base}/temp`)]);
+      return { type: type ?? '', milliC: raw == null ? Number.NaN : Number(raw) };
+    }),
+  );
+}
+
+const cpuArch = readCpuArch();
+
+/**
+ * The CPU temperature where the OS gives one without admin rights. Linux reads sysfs (no process),
+ * Windows asks PowerShell for the ACPI thermal zones, and macOS only reports thermal pressure, so
+ * cpuTempC is null there. Never throws: anything that goes wrong is a null reading.
+ */
+export async function sampleCpuTemperature(): Promise<CpuTemperature> {
+  try {
+    if (process.platform === 'darwin') {
+      return {
+        cpuTempC: null,
+        cpuThermalState: toThermalState(powerMonitor.getCurrentThermalState()),
+      };
+    }
+    if (process.platform === 'win32') {
+      const zones = await runPowerShellJson<WindowsThermalZone | WindowsThermalZone[]>(
+        WIN_THERMAL_ZONE_SCRIPT,
+      );
+      return { cpuTempC: parseWindowsThermalZones(zones), cpuThermalState: null };
+    }
+    if (process.platform === 'linux') {
+      const [chips, zones] = await Promise.all([readHwmonChips(), readThermalZones()]);
+      return { cpuTempC: pickLinuxCpuTemp(chips, zones, cpuArch), cpuThermalState: null };
+    }
+  } catch {
+    // Falls through to no reading.
+  }
+  return NO_TEMPERATURE;
+}

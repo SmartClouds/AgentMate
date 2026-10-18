@@ -11,6 +11,7 @@ import {
   Bell,
   Blocks,
   ChartColumn,
+  CloudUpload,
   Copy,
   Docker,
   EllipsisVertical,
@@ -73,6 +74,8 @@ export const PROJECT_SECTION_IDS = [
   'docker',
   // Monitoring of the project's health endpoints (E22).
   'monitoring',
+  // The FTP and SFTP sites attached to the project (E23).
+  'deploy',
   // Only shown for a project linked to a WordPress site (E21).
   'wordpress',
   // Old links: the schedule now lives under Prompts, and the page redirects there.
@@ -106,6 +109,7 @@ const SECTIONS: {
   { id: 'packages', label: 'Packages', icon: Package, group: 'work' },
   { id: 'docker', label: 'Docker', icon: Docker, group: 'work' },
   { id: 'monitoring', label: 'Monitoring', icon: HeartPulse, group: 'work' },
+  { id: 'deploy', label: 'Deploy', icon: CloudUpload, group: 'work' },
   { id: 'wordpress', label: 'WordPress', icon: WordPressSectionIcon, group: 'work' },
   { id: 'terminal', label: 'Terminal', icon: TerminalSquare, group: 'work' },
   { id: 'bootstrap', label: 'Bootstrap', icon: Wand2, group: 'setup' },

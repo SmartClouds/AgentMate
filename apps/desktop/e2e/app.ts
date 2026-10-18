@@ -106,6 +106,8 @@ export async function launchApp(seed: {
   settings?: Record<string, unknown>;
   /** Extra environment for the app, for tests that drive a fake tool through one. */
   env?: Record<string, string>;
+  /** Extra command-line switches, for example Chromium's fake microphone. */
+  args?: string[];
 }): Promise<LaunchedApp> {
   const root = mkdtempSync(join(tmpdir(), 'agentmate-e2e-'));
   const userDataDir = join(root, 'user-data');
@@ -133,6 +135,7 @@ export async function launchApp(seed: {
       `--user-data-dir=${userDataDir}`,
       // Ubuntu runners block the unprivileged user namespaces Chromium's sandbox needs.
       ...(process.env.AGENTMATE_E2E_NO_SANDBOX === '1' ? ['--no-sandbox'] : []),
+      ...(seed.args ?? []),
     ],
     env: {
       ...(process.env as Record<string, string>),

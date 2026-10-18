@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AskAiModal } from '@/components/askAi/AskAiModal';
+import { useFilesRunEvents } from '@/components/deploy/files/hooks';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AnglesLeft, AnglesRight, Bell, MessageSquare, TerminalSquare } from '@/components/icons';
 import { CommandPalette } from '@/components/search/CommandPalette';
@@ -226,6 +227,9 @@ export function AppShell(): React.JSX.Element {
   // Main keeps the page this window is on, so the next launch can open there.
   useRememberRoute();
   useScheduledTaskRunner();
+  // FTP and SFTP deploys run on in main (Deploy on save with nobody on the page), so their
+  // progress and outcome are taken in here, whichever page is open.
+  useFilesRunEvents();
 
   // The window is still hidden behind the startup splash. Once the first page has its data, give
   // React a beat to commit it and tell main to swap them. A timer, not requestAnimationFrame: a

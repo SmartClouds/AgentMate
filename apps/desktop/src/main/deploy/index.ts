@@ -43,6 +43,7 @@ import {
 import { registerCloudflareIpc } from './cloudflare';
 import { DeployDirectTls } from './directTls/service';
 import { DeployDocker } from './docker';
+import { registerDeployFilesIpc } from './files';
 import { DeployFirewall } from './firewall';
 import { DeployHardening } from './hardening';
 import { DockerLinks } from './live/dockerLinks';
@@ -290,6 +291,8 @@ export function registerDeployIpc(): void {
   });
   registerDeployAssistantIpc(service, state, guard);
   registerDeployWordPressIpc({ guard });
+  // FTP and SFTP sites (E23): Deploy on save starts here and stops at quit.
+  registerDeployFilesIpc({ guard });
 }
 
 /** The Deploy AI and the logs center's journal (E09). Approvals are signed with the device key. */

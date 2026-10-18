@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useItemProjectActions } from '@/components/deploy/wordpress/useItemProjectActions';
 import {
   CloudDownload,
   CloudUpload,
@@ -66,6 +67,7 @@ export function WordPressProjectSection({ project }: { project: Project }): Reac
   const [addOpen, setAddOpen] = useState(false);
   const [relinkOpen, setRelinkOpen] = useState(false);
   const { unlinking, unlink: unlinkProject } = useUnlinkWordPressProject();
+  const itemActions = useItemProjectActions(link?.siteId ?? '');
   const [, setSearchParams] = useSearchParams();
 
   const sitesQuery = useQuery({
@@ -140,20 +142,11 @@ export function WordPressProjectSection({ project }: { project: Project }): Reac
       confirmLabel: 'Stop syncing',
     });
     if (!ok) return;
-    const items = link.items.filter((entry) => wpItemKey(entry) !== wpItemKey(item));
-    const store = useWordPressOperationStore.getState();
-    const operationId = crypto.randomUUID();
-    const updated = await store.setProjectItems(
-      { operationId, projectId: project.id, items },
-      link.siteId,
-    );
-    const error = useWordPressOperationStore.getState().runs[operationId]?.error;
-    store.clear(operationId);
-    if (updated) {
-      replaceProject(queryClient, updated);
-      void queryClient.invalidateQueries({ queryKey: changesKey });
-    } else {
-      toast.error(error ?? `Couldn't stop syncing ${item.slug}.`);
+    const outcome = await itemActions.remove(project, item);
+    if (!outcome.ok) {
+      // Nothing here shows the run, so it goes once its reason is in the toast.
+      itemActions.reset();
+      toast.error(outcome.error ?? `Couldn't stop syncing ${item.slug}.`);
     }
   }
 

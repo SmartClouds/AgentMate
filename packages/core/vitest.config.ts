@@ -32,6 +32,8 @@ export default defineConfig({
         'src/deploy/wordpress/**': { lines: 95, branches: 90 },
         // Project health checks (E22): what a report is read as, and what it is scrubbed of.
         'src/health/**': { lines: 95, branches: 85 },
+        // Error tracking (E24): what a provider's JSON is read as, and what it is scrubbed of.
+        'src/errorTracking/**': { lines: 95, branches: 85 },
       },
     },
   },

@@ -1,7 +1,9 @@
 import type { DeployServer } from '@shared/deployTypes';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { queryKeys } from '@/lib/queryKeys';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
+import { fileSite, snapshot } from './files/testing/fixtures';
 import { ServerRail } from './ServerRail';
 import { wpSite } from './wordpress/testing/fixtures';
 
@@ -135,5 +137,109 @@ describe('ServerRail WordPress sites', () => {
     );
 
     expect(screen.queryByText('WordPress sites')).toBeNull();
+  });
+});
+
+describe('ServerRail FTP and SFTP sites', () => {
+  function renderFiles(props: Partial<Parameters<typeof ServerRail>[0]> = {}) {
+    const onSelectFileSite = vi.fn();
+    const onAddFileSite = vi.fn();
+    const view = renderRail({
+      fileSites: [],
+      onSelectFileSite,
+      onAddFileSite,
+      ...props,
+    });
+    return { ...view, onSelectFileSite, onAddFileSite };
+  }
+
+  it('lists each site with its protocol, address and the chips that matter', () => {
+    renderFiles({
+      fileSites: [
+        fileSite(),
+        fileSite({
+          id: 'fs-2',
+          label: 'Old host',
+          protocol: 'ftp',
+          connection: {
+            ...(fileSite().connection as Extract<
+              ReturnType<typeof fileSite>['connection'],
+              { kind: 'custom' }
+            >),
+            host: 'ftp.example',
+            port: 21,
+          },
+          needsReview: { reason: 'conflicts', message: 'x', at: 1 },
+        }),
+      ],
+    });
+
+    const group = screen.getByRole('list', { name: 'FTP and SFTP sites' });
+    const [first, second] = within(group).getAllByRole('button');
+    expect(within(first).getByText('Bakery static')).toBeTruthy();
+    expect(within(first).getByText('deploy@files.example:/var/www/site')).toBeTruthy();
+    expect(within(first).getByText('SFTP')).toBeTruthy();
+    expect(within(first).getByText('Never deployed')).toBeTruthy();
+    expect(within(first).queryByText('Not encrypted')).toBeNull();
+    expect(within(first).queryByText('Needs review')).toBeNull();
+
+    expect(within(second).getByText('FTP')).toBeTruthy();
+    expect(within(second).getByText('Not encrypted')).toBeTruthy();
+    expect(within(second).getByText('Needs review')).toBeTruthy();
+    expect(screen.getByText('FTP and SFTP sites')).toBeTruthy();
+  });
+
+  it('shows how many changes wait, from the snapshot already in the cache', async () => {
+    const { queryClient } = renderFiles({ fileSites: [fileSite()] });
+    const row = within(screen.getByRole('list', { name: 'FTP and SFTP sites' })).getByRole(
+      'button',
+    );
+    expect(within(row).queryByText(/to deploy/)).toBeNull();
+
+    queryClient.setQueryData(queryKeys.deployFilesChanges('fs-1'), snapshot());
+    expect(await within(row).findByText('3 to deploy')).toBeTruthy();
+  });
+
+  it('names a saved server by its nickname', () => {
+    renderFiles({
+      fileSites: [fileSite({ connection: { kind: 'saved', sshServerId: 'srv-1' } })],
+    });
+    expect(screen.getByText('Production:/var/www/site')).toBeTruthy();
+  });
+
+  it('selects a site, marks it, and offers to add one', async () => {
+    const { user, onSelectFileSite, onAddFileSite } = renderFiles({
+      fileSites: [fileSite()],
+      selectedId: null,
+      selectedFileSiteId: 'fs-1',
+    });
+
+    const row = within(screen.getByRole('list', { name: 'FTP and SFTP sites' })).getByRole(
+      'button',
+    );
+    expect(row.getAttribute('aria-current')).toBe('true');
+    await user.click(row);
+    expect(onSelectFileSite).toHaveBeenCalledWith('fs-1');
+    await user.click(screen.getByRole('button', { name: /Add an FTP or SFTP site/ }));
+    expect(onAddFileSite).toHaveBeenCalled();
+  });
+
+  it('shimmers while the sites load and says why they did not', async () => {
+    const { container, unmount } = renderFiles({ fileSites: undefined, fileSitesLoading: true });
+    expect(container.querySelectorAll('[aria-busy="true"] .shimmer').length).toBeGreaterThan(0);
+    unmount();
+
+    const onRetryFileSites = vi.fn();
+    const { user } = renderFiles({ fileSitesError: 'disk is gone', onRetryFileSites });
+    expect(screen.getByRole('alert').textContent).toContain(
+      'The FTP and SFTP sites did not load: disk is gone',
+    );
+    await user.click(screen.getByRole('button', { name: /Try again/ }));
+    expect(onRetryFileSites).toHaveBeenCalled();
+  });
+
+  it('shows no FTP and SFTP group when the page passes none', () => {
+    renderRail();
+    expect(screen.queryByText('FTP and SFTP sites')).toBeNull();
   });
 });

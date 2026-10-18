@@ -9,7 +9,7 @@ route: /remote-files
 
 The Remote files page is a file manager for another computer that runs AgentMate. After you connect to it, you can browse its drives and folders, create folders, rename and delete items, upload a file from your computer into any folder, and download a file from it. Transfers are split into parts, checked with a hash, and resume if the connection drops.
 
-This page works over the same connection as AgentMate's remote control (see [Remote](remote.md)). It is for another AgentMate on your network. It is not an SFTP client for SSH servers.
+This page works over the same connection as AgentMate's remote control (see [Remote](remote.md)). It is for another AgentMate on your network. It is not an SFTP client for SSH servers. To upload a site to an SSH, SFTP or FTP server, use [FTP and SFTP sites](deploy-ftp-sftp.md) in Deploy.
 
 ## Where to find it
 

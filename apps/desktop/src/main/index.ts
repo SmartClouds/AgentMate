@@ -11,7 +11,9 @@ import { stopEmulatorsOnQuit } from './android/runtime';
 import { registerBlueprintFileProtocol } from './blueprintFileStore';
 import { configureBrowserSession, setupBrowserGuests } from './browser/guestSession';
 import { registerDeployIpc } from './deploy';
+import { pruneOrphanFileSites } from './deploy/files/store';
 import { disposeDevSetup } from './devSetup/runtime';
+import { pruneOrphanErrorLinks } from './errorTracking/store';
 import { seedExampleRepositoryIfEmpty } from './exampleSkillRepo';
 import { shutdownLocalServer } from './grammar/localServer';
 import { startHealthScheduler, stopHealthScheduler } from './health/scheduler';
@@ -30,6 +32,7 @@ import { registerCliDetectionHandlers } from './ipc/cliDetection';
 import { registerDevSetupHandlers } from './ipc/devSetup';
 import { registerDockerHandlers } from './ipc/docker';
 import { registerEnvironmentHandlers } from './ipc/environments';
+import { registerErrorTrackingHandlers } from './ipc/errorTracking';
 import { registerExplorerHandlers } from './ipc/explorer';
 import { registerFileSystemHandlers } from './ipc/fileSystem';
 import { registerGitHandlers } from './ipc/git';
@@ -380,6 +383,15 @@ function registerAllIpcHandlers(): void {
       );
     },
   });
+  // Error tracking (E24) holds sealed Sentry tokens, so the same main window guard applies.
+  registerErrorTrackingHandlers({
+    guard: (event) => {
+      const win = getMainWindow();
+      return (
+        !!win && event.sender === win.webContents && event.senderFrame === win.webContents.mainFrame
+      );
+    },
+  });
 }
 
 app.whenReady().then(async () => {
@@ -464,6 +476,8 @@ app.whenReady().then(async () => {
   void pruneOrphanBlueprints();
   void pruneOrphanEnvironments();
   void pruneOrphanHealthTargets();
+  void pruneOrphanErrorLinks();
+  void pruneOrphanFileSites();
   void startHookServer();
   setMainWindowFactory(createMainWindow);
   // Nothing answers a confirmation dialog in a test, so closing must not ask.

@@ -16,6 +16,9 @@ import {
   isPipelineFailureOpen,
   isRunDockerStopMode,
   isStartupPage,
+  resolveSpeechLanguage,
+  SPEECH_LANGUAGES,
+  speechModelTooSmallFor,
   WHISPER_MODELS,
 } from '@agentmat/core';
 import type { OllamaConnectionTest } from '@shared/apiTypes';
@@ -60,6 +63,7 @@ import {
   SettingsIcon,
   Sun,
   TerminalSquare,
+  TriangleAlert,
   Upload,
   Vault,
   VsInfinity,
@@ -119,19 +123,11 @@ const PROMPT_BUILDER_PROVIDER_OPTIONS: { value: AiProvider; label: string }[] = 
   { value: 'ollama', label: 'Ollama' },
 ];
 
-const SPEECH_LANGUAGES: { value: string; label: string }[] = [
-  { value: 'auto', label: 'Auto-detect' },
-  { value: 'en', label: 'English' },
-  { value: 'fa', label: 'Persian (فارسی)' },
-  { value: 'es', label: 'Spanish' },
-  { value: 'fr', label: 'French' },
-  { value: 'de', label: 'German' },
-  { value: 'ar', label: 'Arabic' },
-  { value: 'zh', label: 'Chinese' },
-  { value: 'ru', label: 'Russian' },
-  { value: 'hi', label: 'Hindi' },
-  { value: 'tr', label: 'Turkish' },
-];
+// No auto-detect: the local Whisper runtime cannot detect a language and quietly assumes English.
+const SPEECH_LANGUAGE_OPTIONS = SPEECH_LANGUAGES.map((lang) => ({
+  value: lang.code,
+  label: lang.label,
+}));
 
 const THEME_OPTIONS: { value: ThemeMode; label: string; hint: string; icon: typeof Sun }[] = [
   { value: 'light', label: 'Light', hint: 'Bright canvas', icon: Sun },
@@ -1221,13 +1217,15 @@ export default function SettingsPage(): React.JSX.Element {
     : (settingsQuery.data?.promptBuilderAutoSize ?? true);
 
   const [speechModel, setSpeechModel] = useState(DEFAULT_WHISPER_MODEL);
-  const [speechLanguage, setSpeechLanguage] = useState('auto');
+  const [speechLanguage, setSpeechLanguage] = useState('en');
   const [speechDirty, setSpeechDirty] = useState(false);
 
   useEffect(() => {
     if (!speechDirty && settingsQuery.data) {
       setSpeechModel(settingsQuery.data.speechModel);
-      setSpeechLanguage(settingsQuery.data.speechLanguage);
+      setSpeechLanguage(
+        resolveSpeechLanguage(settingsQuery.data.speechLanguage, navigator.language),
+      );
     }
   }, [settingsQuery.data, speechDirty]);
 
@@ -2419,6 +2417,7 @@ export default function SettingsPage(): React.JSX.Element {
                     <div className="grid max-w-lg grid-cols-1 gap-3 sm:grid-cols-2">
                       <Field label="Model">
                         <Combobox
+                          ariaLabel="Speech model"
                           value={speechModel}
                           onChange={(value) => {
                             setSpeechModel(value);
@@ -2429,15 +2428,24 @@ export default function SettingsPage(): React.JSX.Element {
                       </Field>
                       <Field label="Spoken language">
                         <Combobox
+                          ariaLabel="Spoken language"
                           value={speechLanguage}
                           onChange={(value) => {
                             setSpeechLanguage(value);
                             setSpeechDirty(true);
                           }}
-                          options={SPEECH_LANGUAGES}
+                          options={SPEECH_LANGUAGE_OPTIONS}
                         />
                       </Field>
                     </div>
+                    <SpeechModelHint
+                      modelKey={speechModel}
+                      languageCode={speechLanguage}
+                      onUseModel={(key) => {
+                        setSpeechModel(key);
+                        setSpeechDirty(true);
+                      }}
+                    />
                   </SettingsCard>
                 )}
 
@@ -3062,6 +3070,38 @@ export default function SettingsPage(): React.JSX.Element {
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/** Says when the picked Whisper model is too small for the spoken language, and offers one that is not. */
+function SpeechModelHint({
+  modelKey,
+  languageCode,
+  onUseModel,
+}: {
+  modelKey: string;
+  languageCode: string;
+  onUseModel: (key: string) => void;
+}): React.JSX.Element | null {
+  if (!speechModelTooSmallFor(modelKey, languageCode)) return null;
+  const lang = SPEECH_LANGUAGES.find((l) => l.code === languageCode);
+  const better = WHISPER_MODELS.find((m) => m.key === lang?.recommendedModel);
+  if (!lang || !better) return null;
+  return (
+    <div
+      role="note"
+      className="mt-3 flex max-w-lg items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs"
+    >
+      <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+      <div className="min-w-0 flex-1 space-y-2">
+        <p>
+          This model often gets {lang.label} wrong. {better.label} understands it far better.
+        </p>
+        <Button type="button" variant="outline" size="sm" onClick={() => onUseModel(better.key)}>
+          Use this model
+        </Button>
+      </div>
     </div>
   );
 }

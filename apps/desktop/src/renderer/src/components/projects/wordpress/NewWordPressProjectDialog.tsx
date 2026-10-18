@@ -1,4 +1,4 @@
-import type { AgentType } from '@agentmat/core';
+import type { AgentType, WpItemRef } from '@agentmat/core';
 import { AGENT_TYPES, wpItemKey } from '@agentmat/core';
 import type { DeployWordPressSite } from '@shared/deployWordPressTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -23,7 +23,7 @@ import { ConnectSiteDialog } from '@/components/wordpress/ConnectSiteDialog';
 import { queryKeys } from '@/lib/queryKeys';
 import { findWordPressRun, useWordPressOperationStore } from '@/stores/wordpressOperationStore';
 import { OutcomeBanner, RunError } from './FlowParts';
-import { defaultItemKeys, ItemPicker, toItemRef } from './ItemPicker';
+import { defaultItemKeys, ItemPicker, startingItemKeys, toItemRef } from './ItemPicker';
 import { OperationTimeline } from './OperationTimeline';
 import { SitePicker } from './SitePicker';
 import { joinFolder, slugifyProjectName } from './wordpressCopy';
@@ -31,7 +31,8 @@ import { joinFolder, slugifyProjectName } from './wordpressCopy';
 /**
  * A new project made from a connected WordPress site (E21): pick the site, pick its themes and
  * plugins, name the project and its folder, then pull them in. The pull lives in the operation
- * store, so closing this window mid-way and opening it again shows where it got to.
+ * store, so closing this window mid-way and opening it again shows where it got to. Opened from a
+ * site's Deploy page it skips the site step and ticks what was clicked there.
  */
 
 type Step = 'site' | 'items' | 'details' | 'run';
@@ -58,9 +59,15 @@ const STEP_DESCRIPTION: Record<Step, string> = {
 export function NewWordPressProjectDialog({
   open,
   onOpenChange,
+  initialSiteId,
+  initialItems,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Start on the items step with this site picked, as when opened from the site's page. */
+  initialSiteId?: string;
+  /** What to tick for `initialSiteId` instead of its active theme. */
+  initialItems?: WpItemRef[];
 }): React.JSX.Element {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -82,6 +89,11 @@ export function NewWordPressProjectDialog({
   const [connectOpen, setConnectOpen] = useState(false);
   /** The site whose active theme was last ticked for the user, so a refetch never re-ticks it. */
   const preselectedFor = useRef<string | null>(null);
+  /** The starting site, until its name has been filled in once the sites have loaded. */
+  const nameFromSite = useRef<string | null>(null);
+  // Read when the items load, so a new array with the same items never starts over.
+  const startingItems = useRef(initialItems);
+  startingItems.current = initialItems;
   const run = useWordPressOperationStore((state) =>
     operationId ? (state.runs[operationId] ?? null) : null,
   );
@@ -116,8 +128,8 @@ export function NewWordPressProjectDialog({
       setStep('run');
       return;
     }
-    setStep('site');
-    setSiteId(null);
+    setStep(initialSiteId ? 'items' : 'site');
+    setSiteId(initialSiteId ?? null);
     setSelected(new Set());
     setName('');
     setNameTouched(false);
@@ -126,13 +138,25 @@ export function NewWordPressProjectDialog({
     setAgentType('claude-code');
     setOperationId(null);
     preselectedFor.current = null;
-  }, [open]);
+    nameFromSite.current = initialSiteId ?? null;
+  }, [open, initialSiteId]);
 
+  // `open` is here so opening again for the same site, with its items cached, ticks afresh.
   useEffect(() => {
-    if (!siteId || !itemsQuery.data || preselectedFor.current === siteId) return;
+    if (!open || !siteId || !itemsQuery.data || preselectedFor.current === siteId) return;
     preselectedFor.current = siteId;
-    setSelected(defaultItemKeys(itemsQuery.data));
-  }, [siteId, itemsQuery.data]);
+    const wanted = siteId === initialSiteId ? startingItems.current : undefined;
+    setSelected(
+      wanted ? startingItemKeys(itemsQuery.data, wanted) : defaultItemKeys(itemsQuery.data),
+    );
+  }, [open, siteId, itemsQuery.data, initialSiteId]);
+
+  // A site picked on the way in has no click to name the project from, so do it once it loads.
+  useEffect(() => {
+    if (!site || nameFromSite.current !== site.id) return;
+    nameFromSite.current = null;
+    if (!nameTouched) setName((current) => current || site.label || site.siteName);
+  }, [site, nameTouched]);
 
   const runStatus = run?.status;
   useEffect(() => {
@@ -140,6 +164,7 @@ export function NewWordPressProjectDialog({
   }, [runStatus, queryClient]);
 
   function pickSite(next: DeployWordPressSite): void {
+    nameFromSite.current = null;
     if (next.id !== siteId) {
       setSiteId(next.id);
       setSelected(new Set());

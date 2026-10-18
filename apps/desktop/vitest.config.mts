@@ -92,6 +92,10 @@ export default defineConfig({
         'src/main/deploy/cloudflare/index.ts',
         'src/main/deploy/registry/index.ts',
         'src/main/deploy/wordpress/index.ts',
+        'src/main/deploy/files/index.ts',
+        // FTP and SFTP sites (E23): the contract suite and the in-memory server only serve the tests.
+        'src/main/deploy/files/transport/contract.ts',
+        'src/main/deploy/files/transport/fakeRemote.ts',
         'src/renderer/src/main.tsx',
         'src/main/usage/usageScanWorker.ts',
         'src/main/agents/projectUsageWorker.ts',
@@ -203,6 +207,12 @@ export default defineConfig({
         // Project healthchecks (E22): the probe that holds a key, its scheduler and the IPC.
         'src/main/health/**': { lines: 90, branches: 80 },
         'src/main/ipc/health.ts': { lines: 90, branches: 80 },
+        // Error tracking (E24): the Sentry client that holds a token, its store and the IPC.
+        'src/main/errorTracking/**': { lines: 90, branches: 80 },
+        'src/main/ipc/errorTracking.ts': { lines: 90, branches: 80 },
+        // FTP and SFTP sites (E23): the planner, the run, trust, Deploy on save and the IPC.
+        'src/main/deploy/files/**': { lines: 90, branches: 80 },
+        'src/main/ipc/deployFiles.ts': { lines: 90, branches: 80 },
         'src/renderer/src/components/deploy/appStore/**': {
           lines: 90,
           functions: 80,

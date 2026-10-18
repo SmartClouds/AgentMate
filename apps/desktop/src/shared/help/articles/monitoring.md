@@ -2,8 +2,8 @@
 title: Monitoring
 category: Ship
 order: 20
-summary: Monitoring watches your projects' apps and sites on every environment and server. It calls a private, key-protected health endpoint in your app on its own schedule, shows which services work and which fail with their errors, and hands a failure to AI to diagnose and fix. Build with AI gives Claude Code a prompt to build that endpoint.
-keywords: monitoring, monitor, chart, availability, response time, latency, p95, build with ai, claude, prompt, health, healthcheck, health check, status, uptime, monitor, monitoring, incident, outage, down, service, endpoint, environment, server, interval, schedule, bearer, basic auth, key, token, rotate, sha-256, diagnose, fix with ai, setup prompt, health+json, agentmate health protocol
+summary: Monitoring watches your projects' apps and sites on every environment and server. It calls a private, key-protected health endpoint in your app on its own schedule, shows which services work and which fail with their errors, and hands a failure to AI to diagnose and fix. Build with AI gives Claude Code a prompt to build that endpoint. The Errors tab shows what Sentry recorded for each project, with the stack trace, ready to copy or hand to an agent.
+keywords: monitoring, monitor, chart, availability, response time, latency, p95, build with ai, claude, prompt, health, healthcheck, health check, status, uptime, monitor, monitoring, incident, outage, down, service, endpoint, environment, server, interval, schedule, bearer, basic auth, key, token, rotate, sha-256, diagnose, fix with ai, setup prompt, health+json, agentmate health protocol, errors, error tracking, sentry, glitchtip, issues, exceptions, stack trace, breadcrumbs, resolve, ignore, auth token, scopes
 route: /monitoring
 ---
 
@@ -12,6 +12,8 @@ Monitoring tells you whether the apps and sites behind your projects are working
 ## Where to find it
 
 Click **Monitoring** in the menu, in the Ship group. The menu badge counts the targets that are down right now. Each project also has a **Monitoring** tab that shows only its own targets.
+
+Monitoring has two tabs. **Uptime** is everything below about health checks. **Errors** shows the errors your users hit, as Sentry recorded them, described under Errors further down.
 
 ## How it works
 
@@ -74,6 +76,39 @@ To fix the problem, click **Fix with AI**. It opens the fix prompt (the failing 
 - It never follows a redirect, so a key is never sent to another address.
 - Reports are capped in size and scrubbed of anything that looks like a secret (passwords in connection strings, tokens, keys) before they are stored, shown or put into a prompt. The endpoint should not send secrets in the first place, and the protocol tells your AI so.
 - **Rotate key** makes a new key and the old one stops working at once. Update the hash on the server afterwards.
+
+## Errors
+
+The **Errors** tab shows the issues Sentry recorded for your projects: what broke, where, how often, for how many users, and when it last happened. It works with Sentry.io (US and EU), a self-hosted Sentry, and GlitchTip as a best effort.
+
+### Connect Sentry
+
+1. In Sentry, create a personal auth token (User Settings, then Personal Tokens). Give it the scopes `org:read`, `project:read` and `event:read`. Add `event:write` too if you want to resolve and ignore issues from AgentMate. Sentry cannot add a scope to a token later, so pick them now. The first-use screen has a **Copy scopes** button and a link to the token page.
+2. Click **Connect Sentry** (or **Connections** in the toolbar). Choose where your Sentry is: **Sentry.io (US)**, **Sentry.io (EU)**, or **Self-hosted or GlitchTip** with its server URL. Paste the token and click **Check token**.
+3. AgentMate shows which scopes the token has and which organizations it sees. An organization token (the kind made for uploading releases) cannot read issues, and the dialog says so. Pick the organization and click **Save connection**.
+
+The token is encrypted on this computer, together with your saved servers, and it is never shown again. If your saved servers are locked with a passkey, the Errors tab says so and offers **Unlock**.
+
+### Link your projects
+
+Each AgentMate project is linked to one or more Sentry projects (a web app and its API, say). Under **Link projects**, pick them for each project. A project with no links yet starts with the Sentry projects whose names look like it already picked, so check them and click **Save links**. On a project's own Monitoring tab, a project that is not linked yet shows the same picker just for itself.
+
+### Read the issues
+
+The list shows the unresolved issues of the last 14 days, newest first. Each row has a colored stripe for the level (fatal, error, warning, info), the title, the file or function it came from, the short id, a **New** chip when it first happened inside the period, a small chart of events over time, the event and user counts, and when it was last seen. On the Monitoring page the issues are grouped by project, and the project chips narrow the list to one.
+
+The toolbar searches the issues (the text goes to Sentry's own search), filters by status (**Unresolved**, **Resolved**, **Ignored**, **All**), period (24 hours, 7 or 14 days) and environment, and sorts by last seen, most events, most users or newest. The list reads Sentry again every minute while it is open, and **Refresh** reads it right away. **Load more** gets the next page.
+
+Click an issue to open it. You see its numbers and the latest event: the stack trace with your own code first and the line that failed highlighted (library frames are folded away behind **Show N library frames**, and a chained error shows what caused it), the breadcrumbs that led up to it, the request, and the tags.
+
+### Fix, copy, resolve
+
+- **Fix with AI** opens a fix prompt built from the latest event (the error, your code's frames, the last breadcrumbs, the request and the tags) so you can edit it, then starts an agent tab for the project with it.
+- **Copy for AI** puts the same prompt on the clipboard for any other tool.
+- **Resolve** and **Ignore** (for an hour, for a day, or for good) change the issue in Sentry. A toast offers **Undo**. Both need the `event:write` scope; without it they are turned off and say why.
+- **Open in Sentry** opens the issue's page in your browser.
+
+What leaves Sentry is cleaned first: request headers, cookies and bodies are dropped, query values are masked, the user is kept as an id only, and emails, IP addresses and anything that looks like a secret are removed from messages and breadcrumbs, before anything is shown, stored or put into a prompt.
 
 ## Related
 

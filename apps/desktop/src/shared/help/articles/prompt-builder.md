@@ -128,7 +128,8 @@ The dialog remembers each project's request, type, target and result separately.
 ### Use it
 
 1. Pick the **Type** and **Target** at the top. The target starts as the project's own agent.
-2. Write your request in **Your request**. The counter shows the number of characters. Click **Dictate** to speak it.
+2. Write your request in **Your request**. The counter shows the number of characters. Click **Dictate** to speak it. The small chip next to it (**EN**, **FA** and so on) is the language Dictate listens for; click it to switch.
+   - To skip Generate and Translate entirely, click **Speak prompt** above **Generated prompt** instead. Speak in English, and your words go straight into the result box exactly as you said them, ready to copy or run.
 3. Click **Generate prompt**. If you wrote Persian, the dialog notes that the prompt is still written in English. **Translate** copies your request into English without writing a prompt.
 4. The result appears under **Generated prompt**, where you can still edit it. **Copy** copies it. While a request runs there is a **Cancel** button.
 
@@ -136,7 +137,7 @@ Closing the dialog does not stop a running Generate, Translate or sizing. It car
 
 The **Recommended run** advice shows here as a small chip above the result. Click the chip to open the full panel.
 
-By default the dialog sizes the prompt on its own as soon as **Generate prompt** or **Translate** finishes, and the chip shows the result. To wait until you ask instead, switch off **Build Prompt sizing** under **Settings**, **AI**. With it off, a new prompt is not sized until you click the chip, which opens the panel and starts sizing right away. If you change the prompt or the target after a sizing, the chip keeps the old advice with a warning, and clicking it sizes the new text. The Prompt Builder page is not affected by this switch and always sizes after Generate or Translate.
+By default the dialog sizes the prompt on its own as soon as **Generate prompt**, **Translate** or **Speak prompt** finishes, and the chip shows the result. To wait until you ask instead, switch off **Build Prompt sizing** under **Settings**, **AI**. With it off, a new prompt is not sized until you click the chip, which opens the panel and starts sizing right away. If you change the prompt or the target after a sizing, the chip keeps the old advice with a warning, and clicking it sizes the new text. The Prompt Builder page is not affected by this switch and always sizes after Generate or Translate.
 
 ### Footer actions
 

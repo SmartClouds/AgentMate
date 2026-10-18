@@ -258,6 +258,19 @@ export const queryKeys = {
     ['deploy', 'wordpress', 'site', siteId, 'history'] as const,
   deployWordPressAudit: (siteId: string, filter: object) =>
     ['deploy', 'wordpress', 'site', siteId, 'audit', filter] as const,
+  /**
+   * FTP and SFTP sites (E23). Under `deploy`, so unlocking the Servers vault refreshes them with
+   * everything else.
+   */
+  deployFilesSites: ['deploy', 'files', 'sites'] as const,
+  /** Prefix of everything read for one site. */
+  deployFilesSite: (siteId: string) => ['deploy', 'files', 'site', siteId] as const,
+  /** The live list of pending changes, kept fresh by `deployFiles.onChanges`. */
+  deployFilesChanges: (siteId: string) => ['deploy', 'files', 'site', siteId, 'changes'] as const,
+  deployFilesHistory: (siteId: string) => ['deploy', 'files', 'site', siteId, 'history'] as const,
+  /** One folder of a server, while picking the remote folder. */
+  deployFilesBrowse: (target: string, path: string | null) =>
+    ['deploy', 'files', 'browse', target, path] as const,
   /** How far a WordPress project's folder has moved from its last sync. */
   projectWordPressChanges: (projectId: string) =>
     ['deploy', 'wordpress', 'project', projectId, 'changes'] as const,
@@ -298,4 +311,20 @@ export const queryKeys = {
     projectId ? (['health', 'list', projectId] as const) : (['health', 'list'] as const),
   /** One target's detail panel: last report, incidents and samples. */
   healthTarget: (id: string) => ['health', 'target', id] as const,
+  /** Prefix of everything the Errors tab reads (E24). */
+  errorTracking: ['error-tracking'] as const,
+  errorConnections: ['error-tracking', 'connections'] as const,
+  /** Every link with no project, one project's otherwise. */
+  errorLinks: (projectId?: string) =>
+    projectId
+      ? (['error-tracking', 'links', projectId] as const)
+      : (['error-tracking', 'links'] as const),
+  errorRemoteProjects: (connectionId: string) =>
+    ['error-tracking', 'remote-projects', connectionId] as const,
+  errorEnvironments: (projectId?: string) =>
+    ['error-tracking', 'environments', projectId ?? 'all'] as const,
+  /** The issue list; the query object is part of the key. */
+  errorIssues: (query: unknown) => ['error-tracking', 'issues', query] as const,
+  errorIssue: (connectionId: string, issueId: string) =>
+    ['error-tracking', 'issue', connectionId, issueId] as const,
 };

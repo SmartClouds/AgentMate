@@ -11,20 +11,23 @@ async function sampleNvidiaGpus(): Promise<GpuUsage[]> {
     // standard CLI; other vendors are covered separately by sampleOtherGpu
     // (Windows) and sampleMacGpus (macOS).
     const { stdout } = await execFileAsync('nvidia-smi', [
-      '--query-gpu=index,name,utilization.gpu,memory.used,memory.total',
+      '--query-gpu=index,name,utilization.gpu,memory.used,memory.total,temperature.gpu',
       '--format=csv,noheader,nounits',
     ]);
     return stdout
       .trim()
       .split('\n')
       .map((line) => {
-        const [index, name, util, memUsed, memTotal] = line.split(',').map((v) => v.trim());
+        const [index, name, util, memUsed, memTotal, temp] = line.split(',').map((v) => v.trim());
+        // Data center and some laptop GPUs answer "[N/A]" or "[Not Supported]" here.
+        const tempC = temp ? Number(temp) : Number.NaN;
         return {
           id: `nvidia-${index}`,
           label: name,
           percent: Number(util),
           memUsedBytes: Number(memUsed) * 1024 * 1024,
           memTotalBytes: Number(memTotal) * 1024 * 1024,
+          tempC: Number.isFinite(tempC) ? tempC : null,
         };
       })
       .filter((g) => Number.isFinite(g.percent));
@@ -83,6 +86,8 @@ async function sampleOtherGpu(): Promise<GpuUsage[]> {
         percent: Math.max(0, Math.min(100, parsed.percent)),
         memUsedBytes: parsed.memUsed,
         memTotalBytes: parsed.ram > 0 ? parsed.ram : parsed.memUsed,
+        // Windows has no vendor-neutral GPU temperature counter.
+        tempC: null,
       },
     ];
   } catch {
@@ -165,6 +170,8 @@ export function macAcceleratorsToGpus(
       percent: Math.max(0, Math.min(100, stats[utilKey])),
       memUsedBytes,
       memTotalBytes: hasVram ? vramUsed + vramFree : Math.max(unifiedMemoryBytes, memUsedBytes),
+      // The IORegistry has no GPU temperature, and powermetrics needs sudo.
+      tempC: null,
     });
   }
   return gpus;

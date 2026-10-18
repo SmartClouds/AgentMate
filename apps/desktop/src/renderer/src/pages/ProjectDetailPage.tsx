@@ -29,7 +29,7 @@ import { toast } from 'sonner';
 import { CliLogo, cliOptionIcon } from '@/components/cliLogos';
 import { MonacoEditor } from '@/components/editor/MonacoEditor';
 import { GrammarTextarea } from '@/components/grammar/GrammarTextarea';
-import { HealthBoard } from '@/components/health/HealthBoard';
+import { MonitoringView } from '@/components/health/MonitoringView';
 import { useProjectHealthBadge } from '@/components/health/useProjectHealthBadge';
 import {
   ArrowDown,
@@ -90,6 +90,7 @@ import { GitActionsCard } from '@/components/projects/GitActionsCard';
 import { GitBranchHistoryDialog } from '@/components/projects/GitBranchHistoryDialog';
 import { GitSetupWizard } from '@/components/projects/GitSetupWizard';
 import { PackagesTab } from '@/components/projects/PackagesTab';
+import { ProjectDeploySection } from '@/components/projects/ProjectDeploySection';
 import {
   AGENT_TYPE_LABELS,
   isProjectSectionId,
@@ -111,6 +112,7 @@ import { ProjectPromptDialog } from '@/components/projects/ProjectPromptDialog';
 import { ProjectPrompts } from '@/components/projects/prompts/ProjectPrompts';
 import { SecurityTab } from '@/components/projects/security/SecurityTab';
 import { ProjectUsageTab } from '@/components/projects/usage/ProjectUsageTab';
+import { useProjectDeployBadge } from '@/components/projects/useProjectDeployBadge';
 import { useProjectRun } from '@/components/projects/useProjectRun';
 import {
   fileDecision,
@@ -646,9 +648,11 @@ export default function ProjectDetailPage(): React.JSX.Element {
 
   const skillUpdateCount = (skillUpdatesQuery.data ?? []).filter((u) => u.hasUpdate).length;
   const healthBadge = useProjectHealthBadge(projectId);
+  const deployBadge = useProjectDeployBadge(projectId);
   const sectionBadges = useMemo((): Partial<Record<ProjectSectionId, SectionBadge>> => {
     const badges: Partial<Record<ProjectSectionId, SectionBadge>> = {};
     if (healthBadge) badges.monitoring = healthBadge;
+    if (deployBadge) badges.deploy = deployBadge;
     const skillCount = installedSkillsQuery.data?.length ?? 0;
     const mcpCount = installedMcpServersQuery.data?.length ?? 0;
     const promptCount = openDraftCount + missedTaskCount;
@@ -663,6 +667,7 @@ export default function ProjectDetailPage(): React.JSX.Element {
     return badges;
   }, [
     healthBadge,
+    deployBadge,
     installedMcpServersQuery.data,
     installedSkillsQuery.data,
     latestSecurityScanQuery.data,
@@ -1183,7 +1188,9 @@ export default function ProjectDetailPage(): React.JSX.Element {
 
           {section === 'docker' && <DockerTab project={project} />}
 
-          {section === 'monitoring' && <HealthBoard key={project.id} projectId={project.id} />}
+          {section === 'monitoring' && <MonitoringView key={project.id} projectId={project.id} />}
+
+          {section === 'deploy' && <ProjectDeploySection key={project.id} project={project} />}
 
           {section === 'wordpress' && project.wordpress && (
             <WordPressProjectSection project={project} />

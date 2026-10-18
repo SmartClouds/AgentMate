@@ -8,6 +8,13 @@ export type VoiceStatus = 'idle' | 'requesting' | 'recording' | 'transcribing';
 // other audio tool out of the packaged app.
 const WHISPER_SAMPLE_RATE = 16000;
 
+// Whisper makes up words for silence ("Thank you.", "Bye."), so a clip this short, or this quiet
+// all the way through, is never sent. A peak under 0.01 is below -40 dBFS, quieter than speech
+// reaches even from across a room with the browser's automatic gain on.
+const MIN_SPEECH_SECONDS = 0.4;
+const MIN_SPEECH_PEAK = 0.01;
+export const NOTHING_HEARD_MESSAGE = "Didn't catch anything. Try again a little closer to the mic.";
+
 interface UseVoiceInputOptions {
   /** Whisper language code ("en", "fa", …) or "auto". */
   language: string;
@@ -20,9 +27,22 @@ interface UseVoiceInput {
   /** 0–100 while the model downloads on first use, otherwise null. */
   downloadPercent: number | null;
   error: string | null;
+  /** Whole seconds since recording started, 0 when not recording. */
+  elapsedSeconds: number;
   /** Start recording if idle, stop-and-transcribe if recording. */
   toggle: () => void;
+  /** Stop without transcribing, or drop a transcription that is still running. */
+  cancel: () => void;
   supported: boolean;
+}
+
+/** True when the clip has something in it worth handing to Whisper. */
+export function hasSpeech(samples: Float32Array): boolean {
+  if (samples.length < MIN_SPEECH_SECONDS * WHISPER_SAMPLE_RATE) return false;
+  for (let i = 0; i < samples.length; i++) {
+    if (Math.abs(samples[i]!) >= MIN_SPEECH_PEAK) return true;
+  }
+  return false;
 }
 
 async function blobToWhisperSamples(blob: Blob): Promise<Float32Array> {
@@ -55,10 +75,14 @@ export function useVoiceInput({ language, onText }: UseVoiceInputOptions): UseVo
   const [status, setStatus] = useState<VoiceStatus>('idle');
   const [downloadPercent, setDownloadPercent] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+  // Bumped by cancel(). A recording or transcription started under an older number is dropped
+  // when it finishes, so it can neither fill the box nor reset a newer recording's state.
+  const generationRef = useRef(0);
 
   const supported =
     typeof navigator !== 'undefined' &&
@@ -80,24 +104,30 @@ export function useVoiceInput({ language, onText }: UseVoiceInputOptions): UseVo
 
   const transcribe = useCallback(
     async (blob: Blob) => {
+      const generation = generationRef.current;
+      const current = () => generation === generationRef.current;
       setStatus('transcribing');
       try {
         const samples = await blobToWhisperSamples(blob);
-        if (samples.length === 0) {
-          setStatus('idle');
+        if (samples.length === 0) return;
+        if (!hasSpeech(samples)) {
+          if (current()) setError(NOTHING_HEARD_MESSAGE);
           return;
         }
         const result = await window.agentmat.speech.transcribe({ samples, language });
+        if (!current()) return;
         if (result.ok) {
           if (result.text) onText(result.text);
         } else {
           setError(result.error || 'Transcription failed.');
         }
       } catch (err) {
-        setError((err as Error).message || 'Could not process the recording.');
+        if (current()) setError((err as Error).message || 'Could not process the recording.');
       } finally {
-        setDownloadPercent(null);
-        setStatus('idle');
+        if (current()) {
+          setDownloadPercent(null);
+          setStatus('idle');
+        }
       }
     },
     [language, onText],
@@ -105,6 +135,9 @@ export function useVoiceInput({ language, onText }: UseVoiceInputOptions): UseVo
 
   const start = useCallback(async () => {
     setError(null);
+    // Progress is broadcast to every mic on the page, so a download another one started can
+    // leave a finished percentage here. A fresh recording starts without it.
+    setDownloadPercent(null);
     setStatus('requesting');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -114,8 +147,10 @@ export function useVoiceInput({ language, onText }: UseVoiceInputOptions): UseVo
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) chunksRef.current.push(event.data);
       };
+      const generation = generationRef.current;
       recorder.onstop = () => {
         stopTracks();
+        if (generation !== generationRef.current) return;
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' });
         void transcribe(blob);
       };
@@ -147,6 +182,27 @@ export function useVoiceInput({ language, onText }: UseVoiceInputOptions): UseVo
     else if (status === 'idle') void start();
   }, [status, start, stop]);
 
+  const cancel = useCallback(() => {
+    generationRef.current += 1;
+    recorderRef.current?.stop();
+    recorderRef.current = null;
+    stopTracks();
+    setDownloadPercent(null);
+    setStatus('idle');
+  }, [stopTracks]);
+
+  useEffect(() => {
+    if (status !== 'recording') {
+      setElapsedSeconds(0);
+      return;
+    }
+    const startedAt = Date.now();
+    const timer = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
+    }, 250);
+    return () => clearInterval(timer);
+  }, [status]);
+
   // Release the mic if the component unmounts mid-recording.
   useEffect(() => {
     return () => {
@@ -155,5 +211,5 @@ export function useVoiceInput({ language, onText }: UseVoiceInputOptions): UseVo
     };
   }, [stopTracks]);
 
-  return { status, downloadPercent, error, toggle, supported };
+  return { status, downloadPercent, error, elapsedSeconds, toggle, cancel, supported };
 }

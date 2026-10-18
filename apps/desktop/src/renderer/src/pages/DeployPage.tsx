@@ -11,6 +11,10 @@ import { AppsPanel } from '@/components/deploy/apps/AppsPanel';
 import { AssistantLauncher } from '@/components/deploy/assistant/AssistantLauncher';
 import { ContainersPanel } from '@/components/deploy/containers/ContainersPanel';
 import { Notice } from '@/components/deploy/deployKit';
+import { FileSiteView, fileSectionFromView } from '@/components/deploy/files/FileSiteView';
+import { useFileSiteListUpdate, useFileSites } from '@/components/deploy/files/hooks';
+import { filesProblem } from '@/components/deploy/files/messages';
+import { SiteFormDialog } from '@/components/deploy/files/SiteFormDialog';
 import { FirewallPanel } from '@/components/deploy/firewall/FirewallPanel';
 import { InstallPanel } from '@/components/deploy/InstallPanel';
 import { LogsPanel } from '@/components/deploy/logs/LogsPanel';
@@ -28,7 +32,7 @@ import { useSiteListUpdate, useWordPressSites } from '@/components/deploy/wordpr
 import { wpProblem } from '@/components/deploy/wordpress/messages';
 import { siteSectionFromView } from '@/components/deploy/wordpress/SiteSections';
 import { SiteView } from '@/components/deploy/wordpress/SiteView';
-import { Lock, RefreshCw, Server } from '@/components/icons';
+import { CloudUpload, Lock, RefreshCw, Server } from '@/components/icons';
 import { Chip, EmptyState, GLASS_CARD, GLASS_PANEL } from '@/components/pageKit';
 import { SshVaultUnlockDialog } from '@/components/remote/SshVaultUnlockDialog';
 import { Button } from '@/components/ui/button';
@@ -36,6 +40,7 @@ import { ResizeHandle } from '@/components/ui/ResizeHandle';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ConnectSiteDialog } from '@/components/wordpress/ConnectSiteDialog';
 import { WordPressMark } from '@/components/wordpress/WordPressMark';
+import { resolveSelection, waitForRail } from '@/lib/deploy/railSelection';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { confirmDialog } from '@/stores/confirmStore';
@@ -230,7 +235,10 @@ function useFinishedRuns(onFinished: (serverId: string) => void): void {
 }
 
 export default function DeployPage(): React.JSX.Element {
-  usePageHeader('Deploy', 'Install the server core on your servers and keep an eye on them.');
+  usePageHeader(
+    'Deploy',
+    'Install the server core on your servers, keep an eye on them, and upload sites over SFTP or FTP.',
+  );
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const [updating, setUpdating] = useState<string | null>(null);
@@ -250,6 +258,13 @@ export default function DeployPage(): React.JSX.Element {
   const sitesQuery = useWordPressSites();
   const updateSiteList = useSiteListUpdate();
   const [connectOpen, setConnectOpen] = useState(false);
+  const fileSitesQuery = useFileSites();
+  const updateFileSiteList = useFileSiteListUpdate();
+  // The add and edit dialog for FTP and SFTP sites: adding when `siteId` is null.
+  const [fileForm, setFileForm] = useState<{ open: boolean; siteId: string | null }>({
+    open: false,
+    siteId: null,
+  });
   useConnectionUpdates();
   useFinishedRuns((serverId) => setUpdating((current) => (current === serverId ? null : current)));
   // The Cloudflare dialog lives in the address. A link out of Deploy (point a domain, then add its
@@ -267,12 +282,19 @@ export default function DeployPage(): React.JSX.Element {
     );
   }
 
-  const siteParam = params.get('site');
   // A site asked for by the address, or no servers to fall back on: wait for the sites rather
   // than flash a server (and start its health checks) or an empty state.
   if (
     serversQuery.isPending ||
-    (sitesQuery.isPending && (siteParam !== null || serversQuery.data?.length === 0))
+    waitForRail(
+      params,
+      {
+        servers: serversQuery.isPending,
+        wpSites: sitesQuery.isPending,
+        fileSites: fileSitesQuery.isPending,
+      },
+      { servers: serversQuery.data?.length ?? 0, wpSites: sitesQuery.data?.length ?? 0 },
+    )
   ) {
     return <DeployPageSkeleton />;
   }
@@ -288,6 +310,23 @@ export default function DeployPage(): React.JSX.Element {
 
   const servers = serversQuery.data;
   const sites = sitesQuery.data ?? [];
+  const fileSites = fileSitesQuery.data ?? [];
+  const fileFormSite = fileForm.siteId
+    ? (fileSites.find((site) => site.id === fileForm.siteId) ?? null)
+    : null;
+  const fileFormDialog = (
+    <SiteFormDialog
+      open={fileForm.open}
+      onOpenChange={(open) => setFileForm((current) => ({ ...current, open }))}
+      site={fileFormSite}
+      onSaved={(site) => {
+        updateFileSiteList(site);
+        // A new site opens; an edited one stays where it was.
+        if (!fileForm.siteId) setParams({ files: site.id }, { replace: true });
+      }}
+    />
+  );
+  const openAddFileSite = () => setFileForm({ open: true, siteId: null });
   const connectDialog = (
     <ConnectSiteDialog
       open={connectOpen}
@@ -313,7 +352,7 @@ export default function DeployPage(): React.JSX.Element {
     <CloudflareDialog open={cloudflareOpen} onOpenChange={setCloudflareOpen} />
   );
 
-  if (servers.length === 0 && sitesQuery.isError) {
+  if (servers.length === 0 && sitesQuery.isError && fileSites.length === 0) {
     return (
       <PageFailure message={wpProblem(sitesQuery.error)} onRetry={() => void sitesQuery.refetch()}>
         {unlockDialog}
@@ -321,7 +360,18 @@ export default function DeployPage(): React.JSX.Element {
     );
   }
 
-  if (servers.length === 0 && sites.length === 0) {
+  if (servers.length === 0 && sites.length === 0 && fileSitesQuery.isError) {
+    return (
+      <PageFailure
+        message={filesProblem(fileSitesQuery.error)}
+        onRetry={() => void fileSitesQuery.refetch()}
+      >
+        {unlockDialog}
+      </PageFailure>
+    );
+  }
+
+  if (servers.length === 0 && sites.length === 0 && fileSites.length === 0) {
     return (
       <div className="flex flex-1 flex-col gap-2 p-2">
         <EmptyState
@@ -329,7 +379,7 @@ export default function DeployPage(): React.JSX.Element {
           size="lg"
           icon={Server}
           title="No servers yet"
-          description="Deploy works with the servers you save in Remote, and with WordPress sites that run the AgentMate Connector plugin. Add a server in Remote, or connect a site."
+          description="Deploy works with the servers you save in Remote, with WordPress sites that run the AgentMate Connector plugin, and with any host that offers FTP or SFTP. Add a server in Remote, or connect a site."
           action={
             <div className="flex flex-wrap justify-center gap-2">
               <Button onClick={() => navigate('/remote')}>
@@ -337,6 +387,9 @@ export default function DeployPage(): React.JSX.Element {
               </Button>
               <Button variant="soft" onClick={() => setConnectOpen(true)}>
                 <WordPressMark className="h-3.5 w-3.5" /> Connect a WordPress site
+              </Button>
+              <Button variant="soft" onClick={openAddFileSite}>
+                <CloudUpload className="h-3.5 w-3.5" /> Add an FTP or SFTP site
               </Button>
               <Button variant="soft" onClick={() => setCloudflareOpen(true)}>
                 <CloudflareMark className="h-3.5 w-3.5" /> Manage Cloudflare
@@ -347,6 +400,7 @@ export default function DeployPage(): React.JSX.Element {
         <ConnectorDownloadCard />
         {connectDialog}
         {cloudflareDialog}
+        {fileFormDialog}
       </div>
     );
   }
@@ -362,11 +416,51 @@ export default function DeployPage(): React.JSX.Element {
     onRetrySites: () => void sitesQuery.refetch(),
     onConnectSite: () => setConnectOpen(true),
     onOpenCloudflare: () => setCloudflareOpen(true),
+    fileSites,
+    fileSitesLoading: fileSitesQuery.isPending,
+    fileSitesError: fileSitesQuery.isError ? filesProblem(fileSitesQuery.error) : null,
+    onSelectFileSite: (siteId: string) => setParams({ files: siteId }, { replace: true }),
+    onRetryFileSites: () => void fileSitesQuery.refetch(),
+    onAddFileSite: openAddFileSite,
   };
 
-  const selectedSite =
-    sites.find((site) => site.id === siteParam) ?? (servers.length === 0 ? sites[0] : undefined);
-  if (selectedSite) {
+  const selection = resolveSelection(params, servers, sites, fileSites);
+  if (selection.kind === 'files') {
+    const fileSite = selection.site;
+    // No Deploy AI here either: the assistant works on a server's core.
+    return (
+      <DeployLayout
+        rail={<ServerRail {...railProps} selectedId={null} selectedFileSiteId={fileSite.id} />}
+      >
+        {locked && (
+          <VaultLockedBanner onUnlock={() => setUnlockOpen(true)}>
+            Your saved servers and site logins are locked with a passkey. Unlock them to deploy to
+            this site.
+          </VaultLockedBanner>
+        )}
+        <FileSiteView
+          key={fileSite.id}
+          site={fileSite}
+          section={fileSectionFromView(params.get('view'))}
+          onSectionChange={(next) =>
+            setParams(
+              next === 'changes' ? { files: fileSite.id } : { files: fileSite.id, view: next },
+              { replace: true },
+            )
+          }
+          onEdit={() => setFileForm({ open: true, siteId: fileSite.id })}
+          onRemoved={() => setParams({}, { replace: true })}
+        />
+        {connectDialog}
+        {unlockDialog}
+        {cloudflareDialog}
+        {fileFormDialog}
+      </DeployLayout>
+    );
+  }
+
+  if (selection.kind === 'wordpress') {
+    const selectedSite = selection.site;
     // No Deploy AI here: the assistant works on a server's core, which a WordPress site has not.
     return (
       <DeployLayout
@@ -395,11 +489,14 @@ export default function DeployPage(): React.JSX.Element {
         {connectDialog}
         {unlockDialog}
         {cloudflareDialog}
+        {fileFormDialog}
       </DeployLayout>
     );
   }
 
-  const selected = servers.find((server) => server.id === params.get('server')) ?? servers[0];
+  // With every list empty the page showed the empty state above, so this is a server.
+  if (selection.kind !== 'server') return <DeployPageSkeleton />;
+  const selected = selection.server;
   const run = runs[selected.id];
   const section = sectionFromView(params.get('view'));
 
@@ -495,6 +592,7 @@ export default function DeployPage(): React.JSX.Element {
       {connectDialog}
       {unlockDialog}
       {cloudflareDialog}
+      {fileFormDialog}
     </>
   );
 }

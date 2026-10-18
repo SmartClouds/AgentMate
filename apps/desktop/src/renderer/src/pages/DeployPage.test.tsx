@@ -11,6 +11,8 @@ import { screen, waitFor, within } from '@testing-library/react';
 import { useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConfirmDialogHost } from '@/components/ConfirmDialog';
+import { useFilesRunEvents } from '@/components/deploy/files/hooks';
+import { fileSite, snapshot } from '@/components/deploy/files/testing/fixtures';
 import { useDeploySetupStore } from '@/stores/deploySetupStore';
 import { renderWithProviders } from '../../../test/renderer/renderWithProviders';
 
@@ -31,6 +33,41 @@ const toast = vi.hoisted(() =>
   }),
 );
 vi.mock('sonner', () => ({ toast }));
+
+// The add and edit dialog for FTP and SFTP sites has its own tests; here it only has to open with
+// the right site and hand a saved one back.
+const siteForm = vi.hoisted(() => ({
+  saved: null as unknown,
+  last: null as null | { site: unknown; initialProjectId?: string | null },
+}));
+vi.mock('@/components/deploy/files/SiteFormDialog', () => ({
+  SiteFormDialog: (props: {
+    open: boolean;
+    site: { label: string } | null;
+    initialProjectId?: string | null;
+    onOpenChange: (open: boolean) => void;
+    onSaved: (site: unknown) => void;
+  }) => {
+    siteForm.last = { site: props.site, initialProjectId: props.initialProjectId };
+    if (!props.open) return null;
+    return (
+      <div
+        role="dialog"
+        aria-label={props.site ? `Edit ${props.site.label}` : 'Add an FTP or SFTP site'}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            props.onSaved(siteForm.saved);
+            props.onOpenChange(false);
+          }}
+        >
+          Save the site
+        </button>
+      </div>
+    );
+  },
+}));
 
 // A WordPress site's deploy review shows diffs; the real editor needs Monaco's web workers.
 vi.mock('@/components/editor/MonacoDiffEditor', () => ({
@@ -111,9 +148,16 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
+/** The app shell's listener for FTP and SFTP runs, which the page itself no longer mounts. */
+function FilesRunEvents(): null {
+  useFilesRunEvents();
+  return null;
+}
+
 function renderPage(bridge: Record<string, unknown> = {}, route = '/deploy') {
   return renderWithProviders(
     <>
+      <FilesRunEvents />
       <DeployPage />
       <ConfirmDialogHost />
       <LocationProbe />
@@ -973,5 +1017,216 @@ describe('DeployPage WordPress sites', () => {
 
     expect(await screen.findByRole('heading', { name: 'Production' })).toBeTruthy();
     expect(await screen.findByText(/The WordPress sites did not load/)).toBeTruthy();
+  });
+});
+
+describe('DeployPage FTP and SFTP sites', () => {
+  const FILES = {
+    'deployFiles.subscribe': snapshot(),
+    'deployFiles.changes': snapshot(),
+  };
+
+  it('offers an FTP or SFTP site from the empty state and opens the new site once saved', async () => {
+    siteForm.saved = fileSite({ id: 'fs-new', label: 'New static site' });
+    const { user, bridge } = renderPage({
+      'deploy.listServers': async () => [],
+      'deployWordPress.listSites': async () => [],
+      'deployFiles.list': async () => [],
+      ...FILES,
+    });
+
+    expect(await screen.findByText('No servers yet')).toBeTruthy();
+    expect(screen.getByText(/any host that offers FTP or SFTP/)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /Add an FTP or SFTP site/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'Add an FTP or SFTP site' });
+    bridge.$set('deployFiles.list', async () => [siteForm.saved]);
+    await user.click(within(dialog).getByRole('button', { name: 'Save the site' }));
+
+    expect(await screen.findByRole('heading', { name: 'New static site' })).toBeTruthy();
+    expect(screen.getByTestId('path').textContent).toBe('/deploy?files=fs-new');
+  });
+
+  it('shows the first FTP or SFTP site when there is nothing else', async () => {
+    renderPage({
+      'deploy.listServers': async () => [],
+      'deployFiles.list': async () => [fileSite()],
+      ...FILES,
+    });
+
+    expect(await screen.findByRole('heading', { name: 'Bakery static' })).toBeTruthy();
+    expect(screen.queryByText('No servers yet')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Deploy AI/ })).toBeNull();
+    const list = screen.getByRole('list', { name: 'FTP and SFTP sites' });
+    expect(within(list).getByRole('button').getAttribute('aria-current')).toBe('true');
+  });
+
+  it('opens a site and its section from the address, and keeps the section in it', async () => {
+    const { user } = renderPage(
+      {
+        'deploy.listServers': async () => [server({ core: CORE })],
+        'deployFiles.list': async () => [fileSite()],
+        'deployFiles.history': async () => [],
+        ...FILES,
+      },
+      '/deploy?files=fs-1&view=history',
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Bakery static' })).toBeTruthy();
+    expect(await screen.findByText('No deploys yet')).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Production' })).toBeNull();
+    const sections = screen.getByRole('navigation', { name: 'Site sections' });
+    await user.click(within(sections).getByRole('button', { name: /Settings/ }));
+    expect(screen.getByTestId('path').textContent).toBe('/deploy?files=fs-1&view=settings');
+    await user.click(within(sections).getByRole('button', { name: /Changes/ }));
+    expect(screen.getByTestId('path').textContent).toBe('/deploy?files=fs-1');
+  });
+
+  it('switches between a server and an FTP or SFTP site from the rail', async () => {
+    const { user } = renderPage({
+      'deploy.listServers': async () => [server({ core: CORE })],
+      'deployFiles.list': async () => [fileSite()],
+      ...FILES,
+    });
+
+    const list = await screen.findByRole('list', { name: 'FTP and SFTP sites' });
+    await user.click(within(list).getByRole('button', { name: /Bakery static/ }));
+    expect(await screen.findByRole('heading', { name: 'Bakery static' })).toBeTruthy();
+    expect(screen.getByTestId('path').textContent).toBe('/deploy?files=fs-1');
+
+    const rail = screen.getByRole('navigation', { name: 'Servers' });
+    await user.click(within(rail).getByRole('button', { name: /Production/ }));
+    expect(await screen.findByRole('heading', { name: 'Production' })).toBeTruthy();
+  });
+
+  it('shimmers instead of flashing a server while a linked FTP or SFTP site loads', () => {
+    const { container } = renderPage(
+      {
+        'deploy.listServers': async () => [server({ core: CORE })],
+        'deployFiles.list': () => new Promise(() => undefined),
+      },
+      '/deploy?files=fs-1',
+    );
+    expect(container.querySelector('[aria-busy="true"] .shimmer')).not.toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Production' })).toBeNull();
+  });
+
+  it('adds a site from the rail with servers around, and edits one from its Settings', async () => {
+    const second = fileSite({ id: 'fs-2', label: 'Second site' });
+    siteForm.saved = second;
+    const { user, bridge } = renderPage(
+      {
+        'deploy.listServers': async () => [server({ core: CORE })],
+        'deployFiles.list': async () => [fileSite()],
+        ...FILES,
+      },
+      '/deploy?files=fs-1&view=settings',
+    );
+
+    await user.click(await screen.findByRole('button', { name: /Add an FTP or SFTP site/ }));
+    const add = await screen.findByRole('dialog', { name: 'Add an FTP or SFTP site' });
+    expect(siteForm.last?.site).toBeNull();
+    bridge.$set('deployFiles.list', async () => [fileSite(), second]);
+    await user.click(within(add).getByRole('button', { name: 'Save the site' }));
+    expect(await screen.findByRole('heading', { name: 'Second site' })).toBeTruthy();
+    await waitFor(() => expect(screen.getByTestId('path').textContent).toBe('/deploy?files=fs-2'));
+
+    const sections = screen.getByRole('navigation', { name: 'Site sections' });
+    await user.click(within(sections).getByRole('button', { name: /Settings/ }));
+    const connection = await screen.findByRole('region', { name: 'Connection' });
+    await user.click(within(connection).getByRole('button', { name: /Edit/ }));
+    const edit = await screen.findByRole('dialog', { name: 'Edit Second site' });
+    expect((siteForm.last?.site as { id: string } | undefined)?.id).toBe('fs-2');
+    const renamed = { ...second, label: 'Renamed' };
+    siteForm.saved = renamed;
+    bridge.$set('deployFiles.list', async () => [fileSite(), renamed]);
+    await user.click(within(edit).getByRole('button', { name: 'Save the site' }));
+    expect(await screen.findByRole('heading', { name: 'Renamed' })).toBeTruthy();
+    expect(screen.getByTestId('path').textContent).toBe('/deploy?files=fs-2&view=settings');
+  });
+
+  it('leaves the site once it is removed', async () => {
+    const { user, bridge } = renderPage(
+      {
+        'deploy.listServers': async () => [server({ core: CORE })],
+        'deployFiles.list': async () => [fileSite()],
+        ...FILES,
+      },
+      '/deploy?files=fs-1&view=settings',
+    );
+    await user.click(await screen.findByRole('button', { name: 'Remove site' }));
+    bridge.$set('deployFiles.list', async () => []);
+    const dialog = await screen.findByRole('dialog', { name: 'Remove Bakery static?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Remove site' }));
+    expect(await screen.findByRole('heading', { name: 'Production' })).toBeTruthy();
+    await waitFor(() => expect(screen.getByTestId('path').textContent).toBe('/deploy'));
+  });
+
+  it('asks to unlock the vault for an FTP or SFTP site too', async () => {
+    renderPage(
+      {
+        'deploy.listServers': async () => [],
+        'deployFiles.list': async () => [fileSite()],
+        'ssh.vaultStatus': async () => ({ hasPasskey: true, unlocked: false }),
+        ...FILES,
+      },
+      '/deploy?files=fs-1',
+    );
+    expect(await screen.findByText(/site logins are locked with a passkey/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Unlock' })).toBeTruthy();
+  });
+
+  it('says why the FTP and SFTP sites did not load, in the rail or on their own', async () => {
+    const failing = async () => {
+      throw new Error('[files:vaultLocked] locked');
+    };
+    const { unmount } = renderPage({
+      'deploy.listServers': async () => [server({ core: CORE })],
+      'deployFiles.list': failing,
+    });
+    expect(await screen.findByRole('heading', { name: 'Production' })).toBeTruthy();
+    expect(await screen.findByText(/The FTP and SFTP sites did not load/)).toBeTruthy();
+    unmount();
+
+    const again = renderPage({
+      'deploy.listServers': async () => [],
+      'deployWordPress.listSites': async () => [],
+      'deployFiles.list': failing,
+    });
+    expect(
+      await screen.findByText(/locked with a passkey, and this site's login with them/),
+    ).toBeTruthy();
+    again.bridge.$set('deployFiles.list', async () => [fileSite()]);
+    again.bridge.$set('deployFiles.subscribe', snapshot());
+    await again.user.click(screen.getByRole('button', { name: /Try again/ }));
+    expect(await screen.findByRole('heading', { name: 'Bakery static' })).toBeTruthy();
+  });
+
+  it('takes a run that finishes while the page is open', async () => {
+    const { bridge } = renderPage({
+      'deploy.listServers': async () => [],
+      'deployFiles.list': async () => [fileSite()],
+      ...FILES,
+    });
+    await screen.findByRole('heading', { name: 'Bakery static' });
+    bridge.$emit('deployFiles.onRunFinished', {
+      runId: 'r1',
+      siteId: 'fs-1',
+      trigger: 'deployOnSave',
+      state: 'done',
+      startedAt: Date.now() - 1000,
+      finishedAt: Date.now(),
+      uploaded: 1,
+      deleted: 0,
+      adopted: 0,
+      skipped: 0,
+      bytes: 10,
+      failed: [],
+      atomic: true,
+      error: null,
+    });
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith('Deployed Bakery static: 1 uploaded.'),
+    );
+    expect(await screen.findByRole('region', { name: 'Last deploy' })).toBeTruthy();
   });
 });

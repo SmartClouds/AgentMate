@@ -2,6 +2,7 @@ import { posix } from 'node:path';
 import type { SshConversationsResult } from '../../shared/apiTypes';
 import type { SshConnection } from '../ssh/connection';
 import { getSshPool } from '../ssh/sharedPool';
+import { limiter } from '../util/limiter';
 import { collectHistory, type HistoryFs } from './sessionHistory';
 
 // Conversations from every supported CLI stored on a saved server. One command finds the
@@ -156,22 +157,6 @@ export async function probeRemote(connection: HistoryConnection): Promise<Remote
   } catch {
     return NOTHING_FOUND;
   }
-}
-
-/** Runs at most `max` calls at once; the rest wait their turn. */
-function limiter(max: number): <T>(work: () => Promise<T>) => Promise<T> {
-  let active = 0;
-  const waiting: (() => void)[] = [];
-  return async (work) => {
-    while (active >= max) await new Promise<void>((resolve) => waiting.push(resolve));
-    active += 1;
-    try {
-      return await work();
-    } finally {
-      active -= 1;
-      waiting.shift()?.();
-    }
-  };
 }
 
 /** The history reader's view of a saved server, over SFTP as the login user. */

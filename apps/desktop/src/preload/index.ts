@@ -460,7 +460,9 @@ import { createDeployDirectTls } from './deployDirectTls';
 import { createDeployDocker } from './deployDocker';
 import { createDeployHardening } from './deployHardening';
 import { createDeployRegistry } from './deployRegistry';
+import { createDeployFiles } from './deployFiles';
 import { createDeployWordPress } from './deployWordPress';
+import { createErrorTracking } from './errorTracking';
 import { createHealth } from './health';
 
 interface TerminalDataPayload {
@@ -1803,6 +1805,9 @@ const deployHardening = createDeployHardening(subscribe);
 /** WordPress sites through the AgentMate Connector plugin, and WordPress projects (E19 to E21). */
 const deployWordPress = createDeployWordPress(subscribe);
 
+/** FTP and SFTP sites: a local deploy folder sent to a folder on a server (E23). */
+const deployFiles = createDeployFiles(subscribe);
+
 /** The Deploy AI and the logs center's journal (E09). */
 const deployAssistant = createDeployAssistant(subscribe);
 const deployLogs = createDeployLogs(subscribe);
@@ -1862,6 +1867,7 @@ const deployAppStore = {
 /** Private registries (E08): sign-ins on this computer and credentials stored on a server. */
 const deployRegistry = createDeployRegistry();
 const health = createHealth();
+const errorTracking = createErrorTracking();
 
 /** A server core's alerts: disk pressure, failed jobs, a reboot waiting. */
 const deployAlerts = {
@@ -2662,6 +2668,7 @@ const agentmatApi = {
   deploySecurity,
   deployHardening,
   deployWordPress,
+  deployFiles,
   deployFirewall,
   deploySystem,
   deployJobs,
@@ -2676,6 +2683,7 @@ const agentmatApi = {
   deployAppStore,
   deployRegistry,
   health,
+  errorTracking,
   cloudflare,
   cloudflareServer,
   pullRequests,
