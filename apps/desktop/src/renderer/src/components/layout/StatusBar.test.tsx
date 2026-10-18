@@ -400,12 +400,17 @@ describe('the project runs entry', () => {
     it('resumes a paused run', async () => {
       runs([DEV]);
       useRunPauseStore.setState({ paused: { dev: { reason: 'user', pausedAt: 1 } }, pending: {} });
-      const { user, bridge } = setupRuns([status('dev', { paused: true, pauseReason: 'user', pausedAt: 1 })], {
-        'terminal.resume': pauseResult({ paused: false, reason: null, pausedAt: null }),
-      });
+      const { user, bridge } = setupRuns(
+        [status('dev', { paused: true, pauseReason: 'user', pausedAt: 1 })],
+        {
+          'terminal.resume': pauseResult({ paused: false, reason: null, pausedAt: null }),
+        },
+      );
 
       await user.click(await screen.findByRole('button', { name: 'Apollo: Dev, paused' }));
-      await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Resume Dev' }));
+      await user.click(
+        within(await screen.findByRole('dialog')).getByRole('button', { name: 'Resume Dev' }),
+      );
 
       expect(bridge.$fn('terminal.resume')).toHaveBeenCalledWith('dev');
       expect(await screen.findByRole('button', { name: 'Apollo: Dev' })).toBeInTheDocument();
@@ -438,7 +443,9 @@ describe('the project runs entry', () => {
     it('says when the agent paused it', async () => {
       runs([DEV]);
       useRunPauseStore.setState({ paused: { dev: { reason: 'agent', pausedAt: 1 } }, pending: {} });
-      const { user } = setupRuns([status('dev', { paused: true, pauseReason: 'agent', pausedAt: 1 })]);
+      const { user } = setupRuns([
+        status('dev', { paused: true, pauseReason: 'agent', pausedAt: 1 }),
+      ]);
 
       await user.click(await screen.findByRole('button', { name: 'Apollo: Dev, paused' }));
       expect(
@@ -451,7 +458,9 @@ describe('the project runs entry', () => {
       const { user } = setupRuns([status('dev', { processCount: 1 })]);
 
       const chip = await screen.findByRole('button', { name: 'Apollo: Dev' });
-      await waitFor(() => expect(chip.querySelector('[data-state-dot="idle"]')).toBeInTheDocument());
+      await waitFor(() =>
+        expect(chip.querySelector('[data-state-dot="idle"]')).toBeInTheDocument(),
+      );
       await user.click(chip);
       const panel = await screen.findByRole('dialog');
       expect(within(panel).queryByRole('button', { name: 'Pause Dev' })).not.toBeInTheDocument();

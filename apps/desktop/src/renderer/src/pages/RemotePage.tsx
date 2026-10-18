@@ -34,10 +34,7 @@ export default function RemotePage(): React.JSX.Element {
   const connection = useRemoteStore((s) => s.state?.connection);
   const [activeTab, setActiveTab] = useState<RemoteTab>('host');
 
-  usePageHeader(
-    'Remote',
-    'Control another AgentMate over your local network, over WebSockets.',
-  );
+  usePageHeader('Remote', 'Control another AgentMate over your local network, over WebSockets.');
 
   const connected = connection?.status === 'connected';
   const connecting = connection?.status === 'connecting';

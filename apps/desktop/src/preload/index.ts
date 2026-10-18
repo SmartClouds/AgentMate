@@ -49,6 +49,7 @@ import type {
   ResourceActivitySnapshot,
   ResourceRef,
   ResourceStopOutcome,
+  RunPauseReason,
   SaveVaultEntryInput,
   ScannerPreflight,
   ScheduledTask,
@@ -78,7 +79,6 @@ import type {
   WidgetSize,
   WidgetStyle,
   WorktreeInfo,
-  RunPauseReason,
 } from '@agentmat/core';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import type {

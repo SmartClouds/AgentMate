@@ -33,7 +33,14 @@ function agentTab(cwd: string) {
     a: {
       root: { type: 'group', id: 'g1', tabIds: ['claude', 'shell'], activeTabId: 'claude' },
       tabs: {
-        claude: { kind: 'terminal', id: 'claude', title: 'Claude', cliId: 'claude-code', cwd, createdAt: 1 },
+        claude: {
+          kind: 'terminal',
+          id: 'claude',
+          title: 'Claude',
+          cliId: 'claude-code',
+          cwd,
+          createdAt: 1,
+        },
         shell: { kind: 'terminal', id: 'shell', title: 'Shell', cwd, createdAt: 1 },
       },
     },
@@ -59,7 +66,13 @@ beforeEach(() => {
         title: 'Shop',
         cwd: 'E:\\shop',
         projectId: 'a',
-        run: { commandId: 'dev', label: 'Dev', command: 'pnpm dev', kind: 'web', startedAt: Date.now() },
+        run: {
+          commandId: 'dev',
+          label: 'Dev',
+          command: 'pnpm dev',
+          kind: 'web',
+          startedAt: Date.now(),
+        },
       },
     ],
   });

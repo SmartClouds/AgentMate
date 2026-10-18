@@ -179,7 +179,11 @@ describe('RunPauseRegistry', () => {
 
     const outcome = await runs.resume('s1');
 
-    expect(outcome).toMatchObject({ ok: false, paused: true, error: 'powershell exited with code 1' });
+    expect(outcome).toMatchObject({
+      ok: false,
+      paused: true,
+      error: 'powershell exited with code 1',
+    });
     expect(runs.get('s1')).toBeDefined();
   });
 

@@ -22,8 +22,7 @@ export function PauseProjectRunsButton({
 }): React.JSX.Element | null {
   const rows = useRunRows().filter(
     (row) =>
-      isPausable(row) &&
-      (row.session.projectId === scopeId || row.session.projectId === projectId),
+      isPausable(row) && (row.session.projectId === scopeId || row.session.projectId === projectId),
   );
   const pending = useRunPauseStore((s) => rows.some((row) => s.pending[row.session.id]));
   const shortcut = useShortcutLabel('terminal.togglePauseRun');
@@ -33,7 +32,9 @@ export function PauseProjectRunsButton({
   const ids = rows.map((row) => row.session.id);
   const verb = allPaused ? 'Resume' : 'Pause';
   const label =
-    rows.length === 1 ? `${verb} ${rows[0].session.run.label}` : `${verb} ${rows.length} runs of ${projectName}`;
+    rows.length === 1
+      ? `${verb} ${rows[0].session.run.label}`
+      : `${verb} ${rows.length} runs of ${projectName}`;
   const detail = allPaused
     ? 'Thaw the processes; they pick up where they were'
     : 'Freeze the processes so they use no CPU';

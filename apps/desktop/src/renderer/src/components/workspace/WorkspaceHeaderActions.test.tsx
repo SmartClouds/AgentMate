@@ -323,7 +323,13 @@ describe('WorkspaceHeaderActions pause', () => {
       id,
       title: projectId.toUpperCase(),
       projectId,
-      run: { commandId: id, label, command: 'pnpm dev', kind: 'web' as const, startedAt: Date.now() },
+      run: {
+        commandId: id,
+        label,
+        command: 'pnpm dev',
+        kind: 'web' as const,
+        startedAt: Date.now(),
+      },
     };
   }
 

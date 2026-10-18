@@ -1,8 +1,8 @@
 import type {
   HealthAuthMode,
   HealthDayBucket,
-  HealthLatencyPoint,
   HealthIncident,
+  HealthLatencyPoint,
   HealthReport,
   HealthSample,
   HealthState,
