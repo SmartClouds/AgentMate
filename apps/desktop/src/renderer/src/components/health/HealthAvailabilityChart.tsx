@@ -163,7 +163,11 @@ export function HealthAvailabilityChart({
       </div>
 
       {loading ? (
-        <div role="status" aria-label="Loading availability" className="flex h-16 items-end gap-1.5">
+        <div
+          role="status"
+          aria-label="Loading availability"
+          className="flex h-16 items-end gap-1.5"
+        >
           {Array.from({ length: 14 }, (_, i) => (
             <Skeleton
               key={i}

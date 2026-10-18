@@ -25,6 +25,7 @@ import type {
   ProxyMode,
   PullRequestInfo,
   RunAssessment,
+  RunPauseReason,
   ScanPhase,
   ScheduledTask,
   ScheduledTaskRunMode,
@@ -36,7 +37,6 @@ import type {
   VaultEntryType,
   VaultImportFormat,
   WorktreeInfo,
-  RunPauseReason,
 } from '@agentmat/core';
 import type { GuestShortcut } from './browserGuest';
 

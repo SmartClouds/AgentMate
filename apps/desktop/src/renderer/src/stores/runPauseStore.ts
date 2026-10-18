@@ -1,9 +1,5 @@
 import type { RunPauseReason } from '@agentmat/core';
-import type {
-  TerminalPauseChange,
-  TerminalPauseResult,
-  TerminalRunStatus,
-} from '@shared/apiTypes';
+import type { TerminalPauseChange, TerminalPauseResult, TerminalRunStatus } from '@shared/apiTypes';
 import { toast } from 'sonner';
 import { create } from 'zustand';
 import { pickRunToStop } from '@/stores/runSessionStore';
@@ -109,8 +105,7 @@ export async function pauseRuns(
 ): Promise<void> {
   const { paused, pending } = useRunPauseStore.getState();
   const ids = sessionIds.filter(
-    (id) =>
-      !pending[id] && (!paused[id] || (reason === 'user' && paused[id].reason === 'agent')),
+    (id) => !pending[id] && (!paused[id] || (reason === 'user' && paused[id].reason === 'agent')),
   );
   if (ids.length === 0) return;
   setPending(ids, 'pausing');
@@ -150,7 +145,10 @@ export async function pauseRuns(
     });
     return;
   }
-  toast.success(title, { description: note ?? 'It uses no CPU until you resume it.', action: resume });
+  toast.success(title, {
+    description: note ?? 'It uses no CPU until you resume it.',
+    action: resume,
+  });
 }
 
 export async function resumeRuns(

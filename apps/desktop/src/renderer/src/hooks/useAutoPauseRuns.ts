@@ -61,8 +61,7 @@ export function useAutoPauseRuns(): void {
     if (plan.resume.length > 0) void resumeRuns(plan.resume, { quiet: true });
 
     const waiting =
-      enabled &&
-      (runs.some((run) => run.paused === 'agent') || plan.memory.overridden.length > 0);
+      enabled && (runs.some((run) => run.paused === 'agent') || plan.memory.overridden.length > 0);
     if (!waiting) return;
     const timer = setTimeout(() => setTick((value) => value + 1), RECHECK_MS);
     return () => clearTimeout(timer);

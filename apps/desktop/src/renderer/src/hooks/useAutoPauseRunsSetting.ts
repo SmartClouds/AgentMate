@@ -29,9 +29,7 @@ export function useAutoPauseRunsSetting(): {
   return {
     loaded: saved !== undefined,
     // While a save is in flight the switch shows the value being saved, so it does not jump back.
-    enabled: mutation.isPending
-      ? mutation.variables
-      : saved?.autoPauseRunsWhileAgentWorks === true,
+    enabled: mutation.isPending ? mutation.variables : saved?.autoPauseRunsWhileAgentWorks === true,
     setEnabled: (value) => mutation.mutate(value),
   };
 }

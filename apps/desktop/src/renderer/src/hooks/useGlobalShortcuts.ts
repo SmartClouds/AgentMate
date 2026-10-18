@@ -6,8 +6,8 @@ import {
   type WorkspaceShortcutCommandId,
 } from '@/lib/shortcuts';
 import { isWorkspacePath, workspaceCommands } from '@/lib/workspace/commands';
-import { stopActiveRun } from '@/stores/runSessionStore';
 import { togglePauseActiveRun } from '@/stores/runPauseStore';
+import { stopActiveRun } from '@/stores/runSessionStore';
 import { useSearchStore } from '@/stores/searchStore';
 import { commandForEvent, useShortcutStore } from '@/stores/shortcutStore';
 import { useTerminalStore } from '@/stores/terminalStore';

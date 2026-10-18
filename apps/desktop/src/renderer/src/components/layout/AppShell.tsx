@@ -23,12 +23,12 @@ import { useScheduledTaskRunner } from '@/hooks/useScheduledTaskRunner';
 import { useVaultEvents } from '@/hooks/useVaultEvents';
 import { queryKeys } from '@/lib/queryKeys';
 import { startRunSessionFeed } from '@/lib/terminal/runSessionFeed';
-import { initRunPauses } from '@/stores/runPauseStore';
 import { cn } from '@/lib/utils';
 import { isWorkspacePath } from '@/lib/workspace/commands';
 import { initAgentStatus } from '@/stores/agentStatusStore';
 import { useAskAiStore } from '@/stores/askAiStore';
 import { usePageHeaderStore } from '@/stores/pageHeaderStore';
+import { initRunPauses } from '@/stores/runPauseStore';
 import { useShortcutLabel } from '@/stores/shortcutStore';
 import {
   initSshAgentStatus,

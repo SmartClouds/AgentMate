@@ -30,12 +30,24 @@ interface SavedFile {
   runs: PausedRun[];
 }
 
-const SHELL_NAMES = new Set(['bash', 'zsh', 'sh', 'dash', 'fish', 'nu', 'cmd', 'powershell', 'pwsh']);
+const SHELL_NAMES = new Set([
+  'bash',
+  'zsh',
+  'sh',
+  'dash',
+  'fish',
+  'nu',
+  'cmd',
+  'powershell',
+  'pwsh',
+]);
 const DOCKER_CLIENTS = /^(docker|docker-compose|com\.docker\.cli)$/i;
 
 /** True when everything frozen besides the shell is a Docker client, so no real work stopped. */
 function onlyDockerClients(names: readonly string[]): boolean {
-  const work = names.map((name) => name.replace(/\.exe$/i, '')).filter((name) => !SHELL_NAMES.has(name.toLowerCase()));
+  const work = names
+    .map((name) => name.replace(/\.exe$/i, ''))
+    .filter((name) => !SHELL_NAMES.has(name.toLowerCase()));
   return work.length > 0 && work.every((name) => DOCKER_CLIENTS.test(name));
 }
 
@@ -105,7 +117,10 @@ export class RunPauseRegistry {
       this.runs.set(sessionId, run);
       this.changed(run);
       return {
-        ...this.outcome(run, { processCount: result.pids.length, failedCount: result.failed.length }),
+        ...this.outcome(run, {
+          processCount: result.pids.length,
+          failedCount: result.failed.length,
+        }),
         containersOnly: onlyDockerClients(result.names),
       };
     });
@@ -159,7 +174,8 @@ export class RunPauseRegistry {
     const pidOf = new Map(alive.map((session) => [session.sessionId, session.pid]));
     const runs = (saved as SavedFile | null)?.runs;
     for (const run of Array.isArray(runs) ? runs : []) {
-      if (isPausedRun(run) && pidOf.get(run.sessionId) === run.pid) this.runs.set(run.sessionId, run);
+      if (isPausedRun(run) && pidOf.get(run.sessionId) === run.pid)
+        this.runs.set(run.sessionId, run);
     }
     this.save();
   }
@@ -177,9 +193,11 @@ export class RunPauseRegistry {
     const previous = this.queues.get(sessionId) ?? Promise.resolve();
     const next = previous.catch(() => undefined).then(task);
     this.queues.set(sessionId, next);
-    void next.finally(() => {
-      if (this.queues.get(sessionId) === next) this.queues.delete(sessionId);
-    }).catch(() => undefined);
+    void next
+      .finally(() => {
+        if (this.queues.get(sessionId) === next) this.queues.delete(sessionId);
+      })
+      .catch(() => undefined);
     return next;
   }
 

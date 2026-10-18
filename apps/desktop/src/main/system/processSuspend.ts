@@ -1,8 +1,8 @@
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { descendantPids, type ProcessRow } from '@agentmat/core';
-import { listProcesses } from './processTree';
 import { callScript, compileScript, helperAssemblyPath } from './processSuspendWindows';
+import { listProcesses } from './processTree';
 
 /**
  * Freezes a run's shell and everything it started, and thaws them again. Frozen processes use
@@ -60,7 +60,9 @@ function runPowerShell(script: string): Promise<string> {
       { timeout: POWERSHELL_TIMEOUT_MS, windowsHide: true, maxBuffer: 4 * 1024 * 1024 },
       (error, stdout, stderr) => {
         if (error) {
-          const detail = String(stderr || '').trim().split(/\r?\n/)[0];
+          const detail = String(stderr || '')
+            .trim()
+            .split(/\r?\n/)[0];
           reject(new Error(detail || error.message));
         } else {
           resolve(String(stdout));
@@ -103,7 +105,9 @@ function parseHelperOutput(stdout: string): TreeSignalResult | null {
   }
 }
 
-export function createProcessSuspender(overrides: Partial<ProcessSuspenderDeps> = {}): ProcessSuspender {
+export function createProcessSuspender(
+  overrides: Partial<ProcessSuspenderDeps> = {},
+): ProcessSuspender {
   const deps: ProcessSuspenderDeps = {
     platform: process.platform,
     listProcesses,
@@ -183,7 +187,9 @@ export function createProcessSuspender(overrides: Partial<ProcessSuspenderDeps> 
     const assembly = await helperAssembly();
     try {
       const parsed = parseHelperOutput(await deps.powershell(callScript(call, assembly)));
-      return parsed ?? { ...empty(), failed: [{ pid: subject, reason: 'unexpected helper output' }] };
+      return (
+        parsed ?? { ...empty(), failed: [{ pid: subject, reason: 'unexpected helper output' }] }
+      );
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       return { ...empty(), failed: [{ pid: subject, reason }] };

@@ -14,7 +14,13 @@ function row(pid: number, ppid: number, name = `p${pid}`): ProcessRow {
 }
 
 // shell 100 -> pnpm 200 -> node 300, and an unrelated process 900.
-const TREE = [row(1, 0), row(100, 1, 'bash'), row(200, 100, 'pnpm'), row(300, 200, 'node'), row(900, 1)];
+const TREE = [
+  row(1, 0),
+  row(100, 1, 'bash'),
+  row(200, 100, 'pnpm'),
+  row(300, 200, 'node'),
+  row(900, 1),
+];
 
 function errno(code: string): NodeJS.ErrnoException {
   return Object.assign(new Error(code), { code });

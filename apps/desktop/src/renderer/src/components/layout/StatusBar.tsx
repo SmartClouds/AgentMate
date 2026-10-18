@@ -1100,13 +1100,7 @@ function PauseRunButton({
         disabled={pending !== null}
         onClick={() => void togglePauseRun(row.session.id)}
       >
-        {pending ? (
-          <Spinner className="motion-safe:animate-spin" />
-        ) : paused ? (
-          <Play />
-        ) : (
-          <Pause />
-        )}
+        {pending ? <Spinner className="motion-safe:animate-spin" /> : paused ? <Play /> : <Pause />}
         {pending === 'pausing' ? 'Pausing' : pending === 'resuming' ? 'Resuming' : verb}
       </Button>
     </SimpleTooltip>
@@ -1137,7 +1131,12 @@ function RunDetail({
         <span className="min-w-0 flex-1 truncate text-xs font-medium">{session.title}</span>
         <SimpleTooltip label="Show terminal" side="top">
           <PopoverPrimitive.Close asChild>
-            <Button variant="ghost" size="icon-xs" aria-label="Show terminal" onClick={openTerminal}>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Show terminal"
+              onClick={openTerminal}
+            >
               <TerminalSquare />
             </Button>
           </PopoverPrimitive.Close>
@@ -1329,7 +1328,11 @@ function RunSegments(): React.JSX.Element | null {
         </>
       ) : (
         <>
-          {allPaused ? <Pause className="h-2.5 w-2.5 text-warning" /> : <Play className="h-2.5 w-2.5" />}
+          {allPaused ? (
+            <Pause className="h-2.5 w-2.5 text-warning" />
+          ) : (
+            <Play className="h-2.5 w-2.5" />
+          )}
           <span className="tabular-nums">{rows.length} runs</span>
           {pausedCount > 0 && !allPaused ? (
             <span className="tabular-nums text-warning">{pausedCount} paused</span>
