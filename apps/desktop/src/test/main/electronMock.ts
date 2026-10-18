@@ -59,6 +59,8 @@ export interface ElectronState {
   openedPaths: string[];
   notifications: { title?: string; body?: string }[];
   proxyConfigs: unknown[];
+  /** What app.setProxy was given, the route for requests a utility process makes. */
+  appProxyConfigs: unknown[];
   registeredSchemes: unknown[];
   quitCalls: number;
   relaunchCalls: number;
@@ -89,6 +91,7 @@ function freshState(): ElectronState {
     openedPaths: [],
     notifications: [],
     proxyConfigs: [],
+    appProxyConfigs: [],
     registeredSchemes: [],
     quitCalls: 0,
     relaunchCalls: 0,
@@ -319,6 +322,9 @@ export const app = {
     return electronState.isPackaged;
   },
   isReady: (): boolean => true,
+  setProxy: async (config: unknown): Promise<void> => {
+    electronState.appProxyConfigs.push(config);
+  },
   whenReady: (): Promise<void> => Promise.resolve(),
   on: (event: string, listener: (...args: unknown[]) => void) => {
     const existing = electronState.appEvents.get(event) ?? [];
@@ -627,6 +633,7 @@ export function resetElectronMock(): void {
   electronState.openedPaths = [];
   electronState.notifications = [];
   electronState.proxyConfigs = [];
+  electronState.appProxyConfigs = [];
   electronState.registeredSchemes = [];
   electronState.quitCalls = 0;
   electronState.relaunchCalls = 0;

@@ -16,6 +16,8 @@ const probes = vi.hoisted(() => ({
   sampleCpuTemperature: vi.fn(
     async (): Promise<CpuTemperature> => ({ cpuTempC: null, cpuThermalState: null }),
   ),
+  sampleMemoryTemperature: vi.fn(async (): Promise<number | null> => null),
+  sampleDiskTemperatures: vi.fn(async (): Promise<Record<string, number>> => ({})),
   sampleGpus: vi.fn(async (): Promise<GpuUsage[]> => []),
   sampleMemory: vi.fn(async () => ({ memPercent: 50, memUsedBytes: 4, memTotalBytes: 8 })),
   readCpuArch: vi.fn(() => 'arm64'),
@@ -25,6 +27,8 @@ const probes = vi.hoisted(() => ({
 
 vi.mock('../system/temperatureStats', () => ({
   sampleCpuTemperature: probes.sampleCpuTemperature,
+  sampleMemoryTemperature: probes.sampleMemoryTemperature,
+  sampleDiskTemperatures: probes.sampleDiskTemperatures,
 }));
 vi.mock('../system/gpuStats', () => ({ sampleGpus: probes.sampleGpus }));
 vi.mock('../system/memoryStats', () => ({ sampleMemory: probes.sampleMemory }));
@@ -40,13 +44,25 @@ vi.mock('../system/processTree', () => ({
 
 // Disk and network rates are read inside the module. On Windows they ask netstat and PowerShell,
 // which these answer so the sample stays offline and fast on any machine.
+const disks = vi.hoisted(() => ({ rows: [] as { Name: string }[] }));
 vi.mock('node:child_process', () => ({
-  execFile: (command: string, _args: string[], ...rest: unknown[]) => {
+  execFile: (command: string, args: string[], ...rest: unknown[]) => {
     const callback = rest.at(-1) as (
       error: Error | null,
       result?: { stdout: string; stderr: string },
     ) => void;
-    const stdout = command === 'netstat' ? 'Bytes    1000    2000\n' : '[]';
+    const stdout =
+      command === 'netstat'
+        ? 'Bytes    1000    2000\n'
+        : args.join(' ').includes('PerfDisk_PhysicalDisk')
+          ? JSON.stringify(
+              disks.rows.map((row) => ({
+                ...row,
+                DiskReadBytesPersec: 0,
+                DiskWriteBytesPersec: 0,
+              })),
+            )
+          : '[]';
     callback(null, { stdout, stderr: '' });
   },
 }));
@@ -58,6 +74,11 @@ beforeEach(async () => {
   probes.sampleCpuTemperature.mockResolvedValue({ cpuTempC: null, cpuThermalState: null });
   probes.sampleGpus.mockReset();
   probes.sampleGpus.mockResolvedValue([]);
+  probes.sampleMemoryTemperature.mockReset();
+  probes.sampleMemoryTemperature.mockResolvedValue(null);
+  probes.sampleDiskTemperatures.mockReset();
+  probes.sampleDiskTemperatures.mockResolvedValue({});
+  disks.rows = [];
   await loadIpc(
     () => import('./systemStats'),
     (module) => module.registerSystemStatsHandlers(),
@@ -139,6 +160,38 @@ describe('system:sample', () => {
     await sample();
 
     expect(probes.sampleCpuTemperature).toHaveBeenCalledTimes(1);
+  });
+
+  it('carries the memory temperature once it has been read', async () => {
+    probes.sampleMemoryTemperature.mockResolvedValue(44);
+
+    expect((await sample()).memTempC).toBeNull();
+    await settle();
+
+    expect((await sample()).memTempC).toBe(44);
+  });
+
+  it('puts each drive temperature on the disk it belongs to', async () => {
+    // Windows names a physical disk by its number and the drive letters on it.
+    disks.rows = [{ Name: '0 D: E:' }, { Name: '1 C:' }, { Name: '2 F:' }];
+    probes.sampleDiskTemperatures.mockResolvedValue({ '0': 59, '1': 54 });
+
+    await sample();
+    await settle();
+    const later = await sample();
+
+    expect(later.disks.map((d) => [d.id, d.tempC])).toEqual([
+      ['0 D: E:', 59],
+      ['1 C:', 54],
+      ['2 F:', null],
+    ]);
+  });
+
+  it('gives every disk a null temperature before the first drive reading', async () => {
+    disks.rows = [{ Name: '0 C:' }];
+    probes.sampleDiskTemperatures.mockReturnValue(new Promise(() => undefined));
+
+    expect((await sample()).disks).toEqual([expect.objectContaining({ id: '0 C:', tempC: null })]);
   });
 
   it('keeps sampling when the temperature probe fails', async () => {

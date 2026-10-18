@@ -457,7 +457,10 @@ export interface CreateProjectInput {
   iconColor?: string | null;
   /** Site this project lives at; the favicon fetch reads it. */
   websiteUrl?: string;
-  /** Git repository the code lives in, stored as a link only. */
+  /**
+   * Git repository the code lives in. A GitHub address is cloned on create, and the Git tab
+   * offers to clone it later when the folder isn't a repo yet.
+   */
   repoUrl?: string;
   /** Optional: the create/edit form doesn't collect it; the Prompt dialog defines it later. */
   prompt?: string;
@@ -1054,8 +1057,10 @@ export interface TranscribeAudioInput {
    * process never needs ffmpeg or any other audio tool.
    */
   samples: Float32Array;
-  /** BCP-47-ish Whisper language code, or 'auto' to let the model detect it. */
+  /** Whisper language code. An old 'auto' is read as the system language, or English. */
   language: string;
+  /** Names this recording so speech.cancel can drop it while it is still being transcribed. */
+  requestId?: string;
 }
 
 export interface TranscribeAudioResult {
@@ -2008,6 +2013,22 @@ export interface CloneIntoResult extends GitOpResult {
   skipped?: boolean;
 }
 
+/** The Git tab's Clone from GitHub, for a project whose folder isn't a repo yet. */
+export interface CloneProjectInput {
+  projectId: string;
+  /** Address to clone; the project's stored `repoUrl` when omitted. */
+  repoUrl?: string;
+  /** The folder has files and the user agreed to connect it in place, keeping them. */
+  attach?: boolean;
+}
+
+export interface CloneProjectResult extends GitOpResult {
+  /** cloned: fresh checkout. attached: existing files connected. skipped: already a repo. */
+  mode?: 'cloned' | 'attached' | 'skipped';
+  /** The folder has files, so nothing ran; call again with `attach: true` once confirmed. */
+  needsAttachConfirm?: boolean;
+}
+
 export type PackageManagerEcosystem = 'node' | 'dotnet' | 'dart';
 export type PackageManagerKind = 'npm' | 'yarn' | 'pnpm' | 'bun' | 'nuget' | 'pub';
 
@@ -2073,6 +2094,11 @@ export interface DiskUsage {
   label: string;
   readBytesPerSec: number;
   writeBytesPerSec: number;
+  /**
+   * Drive temperature in °C, or null when the drive reports none. Windows asks the storage driver
+   * and Linux reads the drive's hwmon sensor (NVMe, or SATA with drivetemp loaded). macOS has none.
+   */
+  tempC: number | null;
 }
 
 export interface GpuUsage {
@@ -2152,6 +2178,11 @@ export interface SystemStatsSample {
   memPercent: number;
   memUsedBytes: number;
   memTotalBytes: number;
+  /**
+   * Hottest memory module in °C. Only Linux can read it, and only for modules with a sensor
+   * (DDR5, or server and ECC DDR4), so it is null on most machines and always on Windows and macOS.
+   */
+  memTempC: number | null;
   /** Empty when no fixed disk could be queried. */
   disks: DiskUsage[];
   /**

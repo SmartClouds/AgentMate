@@ -88,6 +88,7 @@ import { DockerTab } from '@/components/projects/DockerTab';
 import { EnvironmentsTab } from '@/components/projects/environments/EnvironmentsTab';
 import { GitActionsCard } from '@/components/projects/GitActionsCard';
 import { GitBranchHistoryDialog } from '@/components/projects/GitBranchHistoryDialog';
+import { GitCloneEmptyState } from '@/components/projects/GitCloneEmptyState';
 import { GitSetupWizard } from '@/components/projects/GitSetupWizard';
 import { PackagesTab } from '@/components/projects/PackagesTab';
 import { ProjectDeploySection } from '@/components/projects/ProjectDeploySection';
@@ -1203,6 +1204,7 @@ export default function ProjectDetailPage(): React.JSX.Element {
               key={project.id}
               projectId={project.id}
               folderPath={project.folderPath}
+              repoUrl={project.repoUrl ?? ''}
               mutedActions={project.githubActionsMuted ?? []}
               diffrayInstalled={diffrayInstalled}
               onReviewWithDiffray={() => setSection('review')}
@@ -1938,12 +1940,14 @@ function GitTabSkeleton(): React.JSX.Element {
 function GitTab({
   projectId,
   folderPath,
+  repoUrl,
   mutedActions,
   diffrayInstalled,
   onReviewWithDiffray,
 }: {
   projectId: string;
   folderPath: string;
+  repoUrl: string;
   mutedActions: ProjectGithubAction[];
   diffrayInstalled: boolean;
   onReviewWithDiffray: () => void;
@@ -2149,15 +2153,10 @@ function GitTab({
   if (!statusQuery.data?.isRepo) {
     return (
       <>
-        <SectionEmptyState
-          icon={GitBranch}
-          title="This folder isn't a git repository yet"
-          description="Start one on a master branch, then publish it to a GitHub account or organization without leaving the app."
-          action={
-            <Button onClick={() => setSetupOpen(true)}>
-              <GitBranch className="h-4 w-4" /> Initialize repository
-            </Button>
-          }
+        <GitCloneEmptyState
+          projectId={projectId}
+          repoUrl={repoUrl}
+          onInitialize={() => setSetupOpen(true)}
         />
 
         <GitSetupWizard

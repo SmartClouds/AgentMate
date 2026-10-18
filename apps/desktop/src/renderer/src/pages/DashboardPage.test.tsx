@@ -103,7 +103,16 @@ function sample(overrides: Partial<SystemStatsSample> = {}): SystemStatsSample {
     memPercent: 61,
     memUsedBytes: 8 * 1024 ** 3,
     memTotalBytes: 16 * 1024 ** 3,
-    disks: [{ id: 'C:', label: 'C:', readBytesPerSec: 1024 * 1024, writeBytesPerSec: 1024 * 1024 }],
+    memTempC: null,
+    disks: [
+      {
+        id: 'C:',
+        label: 'C:',
+        readBytesPerSec: 1024 * 1024,
+        writeBytesPerSec: 1024 * 1024,
+        tempC: null,
+      },
+    ],
     gpus: [
       {
         id: '0',
@@ -351,46 +360,81 @@ function gpu(overrides: Partial<SystemStatsSample['gpus'][number]> = {}) {
   };
 }
 
+/** True when `later` comes after `earlier` in the document, i.e. reads to its right on one line. */
+function follows(earlier: Element, later: Element): boolean {
+  return Boolean(earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING);
+}
+
 describe('DashboardPage temperatures', () => {
-  it('shows the CPU temperature beside the usage and draws it dashed on the chart', async () => {
+  it('shows the CPU temperature at the end of the name and draws it only while hovered', async () => {
     seedLayout(['cpu']);
     const { user } = renderHistory([sample({ cpuTempC: 50 }), sample({ cpuTempC: 52 })]);
     const cpu = await waitFor(() => cardFor('CPU Usage'));
 
-    expect(within(cpu).getByText('52 °C')).toBeTruthy();
+    const reading = within(cpu).getByText('52 °C');
+    const name = within(cpu).getByText('Test CPU 9000 · 4 cores · x64');
+    expect(follows(within(cpu).getByText('42%'), name)).toBe(true);
+    expect(follows(name, reading)).toBe(true);
+    // Until the reading is hovered the chart is the usage alone: one area and one line.
+    expect(pathsIn(cpu)).toHaveLength(2);
+    expect(dashedPathsIn(cpu)).toHaveLength(0);
+
+    await user.hover(reading);
     // CPU keeps its area and line, the temperature adds one dashed line and no area.
     expect(pathsIn(cpu)).toHaveLength(3);
     expect(dashedPathsIn(cpu)).toHaveLength(1);
-
     hoverLastSample(cpu);
     expect(tooltipValue('Temperature')).toBe('52 °C');
     expect(tooltipValue('CPU')).toBe('42%');
 
+    await user.unhover(reading);
+    expect(dashedPathsIn(cpu)).toHaveLength(0);
+
     await user.click(within(cpu).getByRole('tab', { name: 'Per core' }));
+    expect(dashedPathsIn(cpu)).toHaveLength(0);
+    await user.hover(within(cpu).getByText('52 °C'));
     // Four cores with an area and a line each, plus the same temperature line.
     expect(pathsIn(cpu)).toHaveLength(9);
     expect(dashedPathsIn(cpu)).toHaveLength(1);
   });
 
+  it('shows the temperature line to keyboard users while the reading has focus', async () => {
+    seedLayout(['cpu']);
+    renderHistory([sample({ cpuTempC: 52 })]);
+    const cpu = await waitFor(() => cardFor('CPU Usage'));
+
+    fireEvent.focus(within(cpu).getByText('52 °C'));
+    expect(dashedPathsIn(cpu)).toHaveLength(1);
+    fireEvent.blur(within(cpu).getByText('52 °C'));
+    expect(dashedPathsIn(cpu)).toHaveLength(0);
+  });
+
   it('lifts the CPU chart ceiling for a spike past 100 °C and skips a missing sample', async () => {
     seedLayout(['cpu']);
-    renderHistory([sample({ cpuTempC: null }), sample({ cpuTempC: 105 })]);
+    const { user } = renderHistory([sample({ cpuTempC: null }), sample({ cpuTempC: 105 })]);
     const cpu = await waitFor(() => cardFor('CPU Usage'));
+    const usageLineD = () =>
+      pathsIn(cpu)
+        .find((p) => p.getAttribute('fill') === 'none' && !p.getAttribute('stroke-dasharray'))
+        ?.getAttribute('d');
+
+    // A hidden temperature does not rescale the usage chart.
+    expect(usageLineD()).toBe('M 0.00 50.08 L 300.00 50.08');
+    await user.hover(within(cpu).getByText('105 °C'));
 
     expect(pathsIn(cpu).some((p) => p.getAttribute('d')?.includes('NaN'))).toBe(false);
     // 105 is the top of the scale now, so it sits on the top padding line rather than past it.
     expect(dashedPathsIn(cpu)[0].getAttribute('d')).toBe('M 300.00 6.00');
     // And 42% is drawn against that same 105 ceiling.
-    const usageLine = pathsIn(cpu).find(
-      (p) => p.getAttribute('fill') === 'none' && !p.getAttribute('stroke-dasharray'),
-    );
-    expect(usageLine?.getAttribute('d')).toBe('M 0.00 51.60 L 300.00 51.60');
+    expect(usageLineD()).toBe('M 0.00 51.60 L 300.00 51.60');
   });
 
   it('keeps the CPU chart at 0-100 while the temperature stays under it', async () => {
     seedLayout(['cpu']);
-    renderHistory([sample({ cpuTempC: null }), sample({ cpuTempC: 50 })]);
+    const { user } = renderHistory([sample({ cpuTempC: null }), sample({ cpuTempC: 50 })]);
     const cpu = await waitFor(() => cardFor('CPU Usage'));
+    await user.hover(within(cpu).getByText('50 °C'));
+    expect(dashedPathsIn(cpu)).toHaveLength(1);
 
     expect(pathsIn(cpu).some((p) => p.getAttribute('d')?.includes('NaN'))).toBe(false);
     const usageLine = pathsIn(cpu).find(
@@ -434,6 +478,10 @@ describe('DashboardPage temperatures', () => {
     renderHistory([sample({ cpuThermalState: 'critical' })]);
     const critical = await waitFor(() => within(cardFor('CPU Usage')).getByText('Critical'));
     expect(critical.className).toContain('text-destructive');
+    // It stands where a temperature would, at the end of the processor name.
+    expect(
+      follows(within(cardFor('CPU Usage')).getByText('Test CPU 9000 · 4 cores · x64'), critical),
+    ).toBe(true);
     // macOS gives no reading in degrees, so there is no °C next to the badge.
     expect(within(cardFor('CPU Usage')).queryByText(/°C/)).toBeNull();
   });
@@ -461,7 +509,7 @@ describe('DashboardPage temperatures', () => {
     ).toBeTruthy();
   });
 
-  it('adds each GPU temperature to its legend and as a dashed line in its colour', async () => {
+  it('adds each GPU temperature to its legend and draws it in its colour while hovered', async () => {
     seedLayout(['gpu']);
     const twoGpus = (hotTemp: number | null) =>
       sample({
@@ -470,12 +518,19 @@ describe('DashboardPage temperatures', () => {
           gpu({ id: '1', label: 'Other GPU', percent: 10, tempC: null }),
         ],
       });
-    renderHistory([twoGpus(null), twoGpus(105)]);
+    const { user } = renderHistory([twoGpus(null), twoGpus(105)]);
     const gpuCard = await waitFor(() => cardFor('GPU Usage'));
 
-    expect(within(gpuCard).getByText('77% · 2.0 GB/8.0 GB · 105 °C')).toBeTruthy();
+    const reading = within(gpuCard).getByText('105 °C');
+    expect(follows(within(gpuCard).getByText('77% · 2.0 GB/8.0 GB'), reading)).toBe(true);
     expect(within(gpuCard).getByText('10% · 2.0 GB/8.0 GB')).toBeTruthy();
-    // Two GPUs with an area and a line each, and a temperature line only for the one that has it.
+    expect(within(gpuCard).getAllByText(/°C/)).toHaveLength(1);
+    // Two GPUs with an area and a line each, and no temperature line until it is asked for.
+    expect(pathsIn(gpuCard)).toHaveLength(4);
+    expect(dashedPathsIn(gpuCard)).toHaveLength(0);
+
+    await user.hover(reading);
+    // Plus a temperature line only for the GPU that has one.
     expect(pathsIn(gpuCard)).toHaveLength(5);
     const [tempLine] = dashedPathsIn(gpuCard);
     expect(dashedPathsIn(gpuCard)).toHaveLength(1);
@@ -487,6 +542,72 @@ describe('DashboardPage temperatures', () => {
     hoverLastSample(gpuCard);
     expect(tooltipValue('Test GPU temp')).toBe('105 °C');
     expect(tooltipValue('Test GPU')).toBe('77%');
+
+    await user.unhover(reading);
+    expect(dashedPathsIn(gpuCard)).toHaveLength(0);
+  });
+
+  it('shows the memory temperature after the used memory and draws it while hovered', async () => {
+    seedLayout(['memory']);
+    const { user } = renderHistory([sample({ memTempC: 43 }), sample({ memTempC: 45 })]);
+    const memory = await waitFor(() => cardFor('Memory Usage'));
+
+    const reading = within(memory).getByText('45 °C');
+    expect(follows(within(memory).getByText('8.0 GB / 16.0 GB'), reading)).toBe(true);
+    expect(pathsIn(memory)).toHaveLength(2);
+    expect(dashedPathsIn(memory)).toHaveLength(0);
+
+    await user.hover(reading);
+    expect(pathsIn(memory)).toHaveLength(3);
+    expect(dashedPathsIn(memory)).toHaveLength(1);
+    hoverLastSample(memory);
+    expect(tooltipValue('Temperature')).toBe('45 °C');
+    expect(tooltipValue('Memory')).toBe('61%');
+
+    await user.unhover(reading);
+    expect(dashedPathsIn(memory)).toHaveLength(0);
+  });
+
+  it('shows each drive temperature in the disk legend and draws it on a °C scale', async () => {
+    seedLayout(['disk']);
+    const drive = (tempC: number | null) => ({
+      id: '0 C:',
+      label: 'Disk 0',
+      readBytesPerSec: 3 * 1024 * 1024,
+      writeBytesPerSec: 1024 * 1024,
+      tempC,
+    });
+    const { user } = renderHistory([
+      sample({ disks: [drive(57)] }),
+      sample({ disks: [drive(59)] }),
+    ]);
+    const disk = await waitFor(() => cardFor('Disk I/O'));
+
+    const reading = within(disk).getByText('59 °C');
+    const legendRate = within(disk).getAllByText('4.0 MB/s').at(-1) as HTMLElement;
+    expect(follows(legendRate, reading)).toBe(true);
+    expect(dashedPathsIn(disk)).toHaveLength(0);
+
+    await user.hover(reading);
+    const [tempLine] = dashedPathsIn(disk);
+    expect(dashedPathsIn(disk)).toHaveLength(1);
+    // Bytes per second and degrees do not share an axis: 59 °C sits on a 0-100 °C scale.
+    expect(tempLine.getAttribute('d')).toBe('M 0.00 38.68 L 300.00 37.16');
+    hoverLastSample(disk);
+    expect(tooltipValue('Disk 0 temp')).toBe('59 °C');
+
+    await user.unhover(reading);
+    expect(dashedPathsIn(disk)).toHaveLength(0);
+  });
+
+  it('adds no temperature to the memory and disk cards when none is reported', async () => {
+    seedLayout(['memory', 'disk']);
+    const { container } = renderHistory([sample(), sample()]);
+    await waitFor(() => cardFor('Memory Usage'));
+
+    expect(dashedPathsIn(cardFor('Memory Usage'))).toHaveLength(0);
+    expect(dashedPathsIn(cardFor('Disk I/O'))).toHaveLength(0);
+    expect(container.textContent).not.toMatch(/°C/);
   });
 });
 

@@ -19,7 +19,13 @@ import { readCpuArch } from '../system/cpuArch';
 import { sampleGpus } from '../system/gpuStats';
 import { sampleMemory } from '../system/memoryStats';
 import { asArray, runPowerShellJson } from '../system/processTree';
-import { type CpuTemperature, sampleCpuTemperature } from '../system/temperatureStats';
+import {
+  type CpuTemperature,
+  sampleCpuTemperature,
+  sampleDiskTemperatures,
+  sampleMemoryTemperature,
+  WHOLE_DISK_NAME,
+} from '../system/temperatureStats';
 
 const execFileAsync = promisify(execFile);
 
@@ -98,9 +104,12 @@ interface DiskIoSnapshot {
 
 let lastDiskIoSnapshots = new Map<string, DiskIoSnapshot>();
 
+/** A disk's throughput. Its temperature comes from a slower probe and is added to the sample. */
+type DiskRates = Omit<DiskUsage, 'tempC'>;
+
 // Enumerates every physical disk's live read/write throughput (not capacity)
 // so the dashboard can chart I/O activity for all of them at once.
-async function sampleDisks(): Promise<DiskUsage[]> {
+async function sampleDisks(): Promise<DiskRates[]> {
   try {
     if (process.platform === 'win32') {
       // PhysicalDisk (not LogicalDisk): a single physical disk can host
@@ -143,13 +152,13 @@ async function sampleDisks(): Promise<DiskUsage[]> {
       const timestamp = Date.now();
       const previous = lastDiskIoSnapshots;
       const next = new Map<string, DiskIoSnapshot>();
-      const results: DiskUsage[] = [];
+      const results: DiskRates[] = [];
       for (const line of data.split('\n')) {
         const cols = line.trim().split(/\s+/);
         if (cols.length < 14) continue;
         const name = cols[2];
         // Whole disks only (sda, nvme0n1, vda, etc), skips partitions, loop and ram devices.
-        if (!/^(sd[a-z]+|nvme\d+n\d+|vd[a-z]+|xvd[a-z]+|hd[a-z]+)$/.test(name)) continue;
+        if (!WHOLE_DISK_NAME.test(name)) continue;
         const readBytes = Number(cols[5]) * 512;
         const writeBytes = Number(cols[9]) * 512;
         next.set(name, { readBytes, writeBytes, timestamp });
@@ -177,7 +186,7 @@ async function sampleDisks(): Promise<DiskUsage[]> {
       if (lines.length < 4) return [];
       const diskNames = lines[0].trim().split(/\s+/);
       const lastRow = (lines.at(-1) ?? '').trim().split(/\s+/).map(Number);
-      const results: DiskUsage[] = [];
+      const results: DiskRates[] = [];
       diskNames.forEach((name, i) => {
         const mbPerSec = lastRow[i * 3 + 2];
         if (!Number.isFinite(mbPerSec)) return;
@@ -902,13 +911,15 @@ async function killProcess(pid: number): Promise<KillProcessResult> {
  * The bar samples every few seconds, so these are reused for a while and never run twice at once.
  */
 const SLOW_PROBE_TTL_MS = 10_000;
+// Drive temperature compiles a little C# on every run, and a drive warms up over minutes, not seconds.
+const DISK_TEMPERATURE_TTL_MS = 60_000;
 
-function cachedProbe<T>(probe: () => Promise<T>): () => Promise<T> {
+function cachedProbe<T>(probe: () => Promise<T>, ttlMs = SLOW_PROBE_TTL_MS): () => Promise<T> {
   let value: T | undefined;
   let at = 0;
   let inFlight: Promise<T> | null = null;
   return () => {
-    if (value !== undefined && Date.now() - at < SLOW_PROBE_TTL_MS) return Promise.resolve(value);
+    if (value !== undefined && Date.now() - at < ttlMs) return Promise.resolve(value);
     inFlight ??= probe()
       .then((fresh) => {
         value = fresh;
@@ -926,8 +937,8 @@ function cachedProbe<T>(probe: () => Promise<T>): () => Promise<T> {
  * Like cachedProbe, but the caller never waits: it gets the last reading (or `fallback` before the
  * first one lands) while a stale or missing one is fetched in the background.
  */
-function backgroundProbe<T>(probe: () => Promise<T>, fallback: T): () => T {
-  const cached = cachedProbe(probe);
+function backgroundProbe<T>(probe: () => Promise<T>, fallback: T, ttlMs?: number): () => T {
+  const cached = cachedProbe(probe, ttlMs);
   let latest = fallback;
   return () => {
     cached().then(
@@ -948,6 +959,18 @@ const sampleCpuTemperatureCached = backgroundProbe<CpuTemperature>(sampleCpuTemp
   cpuTempC: null,
   cpuThermalState: null,
 });
+const sampleMemoryTemperatureCached = backgroundProbe(sampleMemoryTemperature, null);
+const sampleDiskTemperaturesCached = backgroundProbe<Record<string, number>>(
+  sampleDiskTemperatures,
+  {},
+  DISK_TEMPERATURE_TTL_MS,
+);
+
+// Windows names a disk "1 D: E:", its physical disk number then its drive letters, and the drive
+// temperatures are keyed by that number. Linux names both by the block device.
+function diskTemperatureKey(id: string): string {
+  return process.platform === 'win32' ? (id.match(/^\d+/)?.[0] ?? id) : id;
+}
 
 export function registerSystemStatsHandlers(): void {
   ipcMain.handle(IPC.system.topApps, async (_event, resource: TopResourceKind) => {
@@ -963,7 +986,9 @@ export function registerSystemStatsHandlers(): void {
   ipcMain.handle(IPC.system.sample, async (): Promise<SystemStatsSample> => {
     const settings = await store.getSettings();
     const temperature = sampleCpuTemperatureCached();
-    const [net, pings, disks, gpus, cpu, memory] = await Promise.all([
+    const memTempC = sampleMemoryTemperatureCached();
+    const diskTemps = sampleDiskTemperaturesCached();
+    const [net, pings, diskRates, gpus, cpu, memory] = await Promise.all([
       sampleNetworkRates(),
       probeAll(settings),
       sampleDisksCached(),
@@ -980,7 +1005,11 @@ export function registerSystemStatsHandlers(): void {
       cpuPercent: cpu.cpuPercent,
       cpuCorePercents: cpu.cpuCorePercents,
       ...memory,
-      disks,
+      memTempC,
+      disks: diskRates.map((disk) => ({
+        ...disk,
+        tempC: diskTemps[diskTemperatureKey(disk.id)] ?? null,
+      })),
       gpus,
       ...net,
       pings,

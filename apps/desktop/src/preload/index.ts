@@ -124,6 +124,8 @@ import type {
   CleanupAfterMergeInput,
   CloneIntoInput,
   CloneIntoResult,
+  CloneProjectInput,
+  CloneProjectResult,
   CommandPrerequisite,
   ConfirmationForwardedPayload,
   ConnectRemoteInput,
@@ -458,9 +460,9 @@ import { cloudflareServer } from './cloudflareServer';
 import { createDeployAssistant, createDeployLogs } from './deployAssistant';
 import { createDeployDirectTls } from './deployDirectTls';
 import { createDeployDocker } from './deployDocker';
+import { createDeployFiles } from './deployFiles';
 import { createDeployHardening } from './deployHardening';
 import { createDeployRegistry } from './deployRegistry';
-import { createDeployFiles } from './deployFiles';
 import { createDeployWordPress } from './deployWordPress';
 import { createErrorTracking } from './errorTracking';
 import { createHealth } from './health';
@@ -1309,6 +1311,7 @@ const help = {
 const speech = {
   transcribe: (input: TranscribeAudioInput): Promise<TranscribeAudioResult> =>
     ipcRenderer.invoke(IPC.speech.transcribe, input),
+  cancel: (requestId: string): Promise<void> => ipcRenderer.invoke(IPC.speech.cancel, requestId),
   getModelState: (): Promise<SpeechModelState> => ipcRenderer.invoke(IPC.speech.getModelState),
   onModelProgress: (callback: (progress: SpeechModelProgress) => void): (() => void) =>
     subscribe(IPC.speech.onModelProgress, callback),
@@ -1555,9 +1558,12 @@ const git = {
   /** Origin's URL for a folder path, as a browsable link. Null when there isn't one. */
   detectRemote: (folderPath: string): Promise<string | null> =>
     ipcRenderer.invoke(IPC.git.detectRemote, folderPath),
-  /** Clones a public GitHub repo into the New Project folder. Never throws: check `ok`. */
+  /** Clones a GitHub repo into the New Project folder. Never throws: check `ok`. */
   cloneInto: (input: CloneIntoInput): Promise<CloneIntoResult> =>
     ipcRenderer.invoke(IPC.git.cloneInto, input),
+  /** Clones the project's repo into its folder, or attaches a folder that has files. Never throws. */
+  cloneProject: (input: CloneProjectInput): Promise<CloneProjectResult> =>
+    ipcRenderer.invoke(IPC.git.cloneProject, input),
   /** Asks main to watch this project's `.git`, so outside commits reach the open Git tab. */
   watchRepo: (projectId: string): Promise<void> => ipcRenderer.invoke(IPC.git.watchRepo, projectId),
   unwatchRepo: (projectId: string): Promise<void> =>

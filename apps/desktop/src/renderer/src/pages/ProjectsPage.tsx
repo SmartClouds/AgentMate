@@ -4,6 +4,7 @@ import {
   AGENT_TYPE_LABELS,
   configuredRunCommands,
   DIFFRAY_TOOL_ID,
+  isClonableGithubUrl,
   projectRunCommandHint,
 } from '@agentmat/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -147,37 +148,41 @@ export default function ProjectsPage(): React.JSX.Element {
   const createMutation = useMutation({
     mutationFn: async (
       values: ProjectFormValues,
-    ): Promise<{ project: Project; cloned: boolean }> => {
+    ): Promise<{ project: Project; cloned: boolean; cloneError: string | null }> => {
       let cloned = false;
+      let cloneError: string | null = null;
       const repo = values.repoUrl?.trim();
-      // Auto-clone ("Clone into Folder"): a public GitHub address is cloned into
-      // the chosen folder before the record is created. A failed clone never
-      // blocks creation: the address is kept as a link and the error is shown.
-      if (repo) {
+      // Auto-clone ("Clone into Folder"): a GitHub address is cloned into the chosen
+      // folder before the record is created. A failed clone never blocks creation: the
+      // address is kept, and the Git tab offers Clone from GitHub to retry.
+      if (repo && isClonableGithubUrl(repo)) {
         try {
           const result = await window.agentmat.git.cloneInto({
             folderPath: values.folderPath,
             repoUrl: repo,
           });
-          if (result.ok) {
-            cloned = !result.skipped;
-            if (!result.skipped) toast.success('Repository cloned.');
-          } else {
-            toast.error(result.message);
-          }
+          if (result.ok) cloned = !result.skipped;
+          else cloneError = result.message;
         } catch (error) {
-          toast.error(error instanceof Error ? error.message : 'Clone failed.');
+          cloneError = error instanceof Error ? error.message : 'Clone failed.';
         }
       }
       const project = await window.agentmat.projects.create(values);
-      return { project, cloned };
+      return { project, cloned, cloneError };
     },
-    onSuccess: ({ project, cloned }) => {
-      toast.success(cloned ? 'Project created — repo cloned.' : 'Project created.');
+    onSuccess: ({ project, cloned, cloneError }) => {
+      if (cloneError) {
+        toast.error(`Project created, but the clone failed: ${cloneError}`, {
+          description: 'Use Clone from GitHub on the Git tab to try again.',
+        });
+      } else {
+        toast.success(cloned ? 'Project created and repository cloned.' : 'Project created.');
+      }
       setDialogOpen(false);
       void queryClient.invalidateQueries({ queryKey: queryKeys.projects });
-      // Land on the Git tab after a clone so Fetch/Pull are one click away.
-      if (cloned) navigate(`/projects/${project.id}?tab=git`);
+      // Land on the Git tab after a clone so Fetch and Pull are one click away, and after a
+      // failed one so the retry is right there instead of in a toast that has gone.
+      if (cloned || cloneError) navigate(`/projects/${project.id}?tab=git`);
     },
   });
 

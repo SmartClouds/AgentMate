@@ -62,7 +62,7 @@ import { registerSecurityHandlers } from './ipc/security';
 import { registerSettingsHandlers } from './ipc/settings';
 import { registerShellHandlers } from './ipc/shell';
 import { registerSkillHandlers } from './ipc/skills';
-import { registerSpeechHandlers } from './ipc/speech';
+import { registerSpeechHandlers, shutdownSpeech } from './ipc/speech';
 import { killAllSshSessions, registerSshHandlers } from './ipc/ssh';
 import { registerSshAgentHandlers } from './ipc/sshAgent';
 import { registerSystemStatsHandlers } from './ipc/systemStats';
@@ -563,4 +563,5 @@ app.on('before-quit', (event) => {
   lockVault();
   void getVaultService().shutdown();
   shutdownApiClient();
+  shutdownSpeech();
 });

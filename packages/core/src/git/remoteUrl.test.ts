@@ -148,6 +148,24 @@ describe('normalizeCloneUrl / isClonableGithubUrl', () => {
     expect(isClonableGithubUrl('github.com/me/my-app')).toBe(true);
   });
 
+  it('keeps only owner/repo from a link deeper into the repo', () => {
+    expect(normalizeCloneUrl('https://github.com/me/my-app/tree/main')).toBe(
+      'https://github.com/me/my-app',
+    );
+    expect(normalizeCloneUrl('https://github.com/me/my-app/blob/main/src/index.ts')).toBe(
+      'https://github.com/me/my-app',
+    );
+    expect(normalizeCloneUrl('github.com/me/my-app/pulls?q=is%3Aopen')).toBe(
+      'https://github.com/me/my-app',
+    );
+    expect(normalizeCloneUrl('https://github.com/me/my-app#readme')).toBe(
+      'https://github.com/me/my-app',
+    );
+    expect(normalizeCloneUrl('https://www.github.com/me/my-app')).toBe(
+      'https://github.com/me/my-app',
+    );
+  });
+
   it('strips embedded credentials before normalizing', () => {
     expect(normalizeCloneUrl('https://user:ghp_secret@github.com/me/my-app.git')).toBe(
       'https://github.com/me/my-app',
@@ -166,6 +184,8 @@ describe('normalizeCloneUrl / isClonableGithubUrl', () => {
       'https://gitlab.com/me/app',
       'git@gitlab.com:me/app.git',
       'https://github.com/only-owner',
+      'github.com/only-owner/',
+      'https://notgithub.com/me/app',
       'not a url at all',
     ]) {
       expect(normalizeCloneUrl(input), input).toBeNull();

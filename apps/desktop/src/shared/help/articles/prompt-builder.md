@@ -23,7 +23,7 @@ The page has two halves. The left half is where you describe the task, the right
 
 ### Fill in the left half
 
-1. In **Your request**, describe what you want, for example "Add a login form with email/password validation". Any language works. You can also click the microphone button (**Record voice input**) to dictate, see the Voice input section below.
+1. In **Your request**, describe what you want, for example "Add a login form with email/password validation". Any language works. You can also click **Dictate** to speak it, see the Voice input section below.
 2. Choose a **Prompt Type**. The options are Frontend, Backend, Full Stack (the default), UI Design, UX Review, Product, API, Database, Testing, Security, Performance, DevOps, Documentation, Refactoring, Bug Fix, Code Review, Architecture, Mobile, Electron, React, Next.js, Node.js, .NET, Flutter, Python, AI Agent and Custom.
 3. Choose a **Target AI**. The list holds every AI CLI AgentMate knows (Claude Code, Gemini, OpenCode, OpenClaude, Codex, Grok, Cursor, Copilot, FreeBuff, Qwen, Aider, Goose, Cline, Continue, Pi and Muse Code). The prompt is shaped for the agent you pick.
 4. Optionally choose a **Project**. The box starts as "No project". If you choose one, **Target AI** switches to that project's agent. A project is needed to save a draft or a scheduled series.
@@ -89,7 +89,7 @@ Other controls:
 
 ## Voice input
 
-Next to **Your request** the microphone button says **Record voice input**. Click it, speak, and click it again (**Stop recording**) to have your words transcribed and added to the end of the box. The first use downloads a speech model (**Downloading model… N%**), then it works offline. Choose the model size and spoken language under **Settings**, **AI**, **Voice input**. See [Writing check, voice input and translation](writing-voice-translation.md) for details. The button is hidden when your system cannot record.
+Under **Your request**, click **Dictate**, speak, and click it again (**Stop 0:12**, with the time so far) to have your words transcribed and added to the end of the box. The chip next to it (**EN**, **FA** and so on) is the language Dictate listens for; click it to switch. To skip Generate and Translate entirely, click **Speak prompt** above **Generated prompt** instead: speak in English, and your words become the prompt exactly as you said them, sized like a translation. `Esc` or the **×** next to either button throws away a recording or a transcription that is taking too long. The first use downloads a speech model (the button shows the percentage), then it works offline. Choose the model size and spoken language under **Settings**, **AI**, **Voice input**. See [Writing check, voice input and translation](writing-voice-translation.md) for details. The button is hidden when your system cannot record.
 
 ## Prompt history
 

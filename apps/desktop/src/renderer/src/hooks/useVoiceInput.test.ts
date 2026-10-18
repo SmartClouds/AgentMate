@@ -284,7 +284,11 @@ describe('useVoiceInput cancel and timer', () => {
 
   it('throws a recording away without transcribing it', async () => {
     const transcribe = vi.fn();
-    const { result, onText } = renderVoice({}, { 'speech.transcribe': transcribe });
+    const cancel = vi.fn(async () => undefined);
+    const { result, onText } = renderVoice(
+      {},
+      { 'speech.transcribe': transcribe, 'speech.cancel': cancel },
+    );
     await act(async () => result.current.toggle());
 
     act(() => result.current.cancel());
@@ -295,18 +299,22 @@ describe('useVoiceInput cancel and timer', () => {
     await act(async () => undefined);
     expect(transcribe).not.toHaveBeenCalled();
     expect(onText).not.toHaveBeenCalled();
+    // Nothing reached main, so there is nothing there to stop.
+    expect(cancel).not.toHaveBeenCalled();
   });
 
   it('drops a transcription that finishes after it was cancelled', async () => {
     let release: (() => void) | null = null;
+    const transcribe = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve({ ok: true, text: 'too late' });
+        }),
+    );
+    const cancel = vi.fn(async () => undefined);
     const { result, onText } = renderVoice(
       {},
-      {
-        'speech.transcribe': () =>
-          new Promise((resolve) => {
-            release = () => resolve({ ok: true, text: 'too late' });
-          }),
-      },
+      { 'speech.transcribe': transcribe, 'speech.cancel': cancel },
     );
     await act(async () => result.current.toggle());
     await act(async () => result.current.toggle());
@@ -314,6 +322,10 @@ describe('useVoiceInput cancel and timer', () => {
 
     act(() => result.current.cancel());
     expect(result.current.status).toBe('idle');
+    // The work is stopped in main too, so it neither keeps the CPU busy nor holds up the next one.
+    const [[request]] = transcribe.mock.calls as unknown as [[{ requestId: string }]];
+    expect(request.requestId).toEqual(expect.any(String));
+    expect(cancel).toHaveBeenCalledWith(request.requestId);
 
     // A new recording starts before the old answer comes back; the old one must not touch it.
     await act(async () => result.current.toggle());

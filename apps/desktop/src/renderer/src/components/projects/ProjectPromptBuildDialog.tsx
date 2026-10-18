@@ -1,15 +1,10 @@
 import type { Project, PromptType, TargetAI } from '@agentmat/core';
 import {
   cliIdForTargetAI,
-  DEFAULT_WHISPER_MODEL,
   EFFORT_LABELS,
   getCliDefinition,
   PROMPT_TYPES,
-  resolveSpeechLanguage,
-  SPEECH_LANGUAGES,
-  speechModelTooSmallFor,
   TARGET_AIS,
-  WHISPER_MODELS,
 } from '@agentmat/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
@@ -24,18 +19,14 @@ import {
   Copy,
   History,
   Languages,
-  Microphone,
   Pin,
   Save,
   Sparkles,
   Spinner,
-  StopCircle,
   TerminalSquare,
   Trash2,
-  TriangleAlert,
   WindowMaximize,
   WindowRestore,
-  X,
 } from '@/components/icons';
 import { ProjectIcon } from '@/components/projects/ProjectIcon';
 import {
@@ -46,6 +37,14 @@ import {
   RunRecommendationChip,
   useRunRecommendation,
 } from '@/components/promptBuilder/RunRecommendation';
+import {
+  cancelBusyMics,
+  OTHER_MIC_BUSY,
+  SPEAK_PROMPT_LABEL,
+  SpeechLanguageChip,
+  useSpeechSettings,
+  VoiceRecordButton,
+} from '@/components/promptBuilder/VoiceControls';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
 import {
@@ -61,8 +60,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -170,11 +167,11 @@ export function ProjectPromptBuildDialog({
   // render that started it, so it reads the latest request through a ref.
   const rawInputRef = useRef(rawInput);
   rawInputRef.current = rawInput;
-  const speechLanguage = resolveSpeechLanguage(
-    settingsQuery.data?.speechLanguage,
-    navigator.language,
-  );
-  const speechModel = settingsQuery.data?.speechModel ?? DEFAULT_WHISPER_MODEL;
+  const {
+    language: speechLanguage,
+    model: speechModel,
+    save: saveVoiceSettings,
+  } = useSpeechSettings(settingsQuery.data);
   const voice = useVoiceInput({
     language: speechLanguage,
     onText: (text) => {
@@ -207,14 +204,6 @@ export function ProjectPromptBuildDialog({
   }, [promptVoice.error]);
 
   const queryClient = useQueryClient();
-  const saveVoiceSettings = useMutation({
-    mutationFn: (patch: { speechLanguage?: string; speechModel?: string }) =>
-      window.agentmat.settings.update(patch),
-    onSuccess: (next) => {
-      queryClient.setQueryData(queryKeys.settings, next);
-    },
-    onError: () => toast.error('Could not save the voice input setting.'),
-  });
   const overrides = useShortcutStore((s) => s.overrides);
   const generateKeys = useShortcutLabelList('prompt.generate');
   const generateKey = useShortcutLabel('prompt.generate');
@@ -390,14 +379,10 @@ export function ProjectPromptBuildDialog({
             void onCopy();
           }
         }}
-        // Escape while talking throws the recording away instead of closing the dialog.
+        // Escape while a mic is recording or transcribing throws that away instead of closing
+        // the dialog.
         onEscapeKeyDown={(event) => {
-          for (const mic of [voice, promptVoice]) {
-            if (mic.status === 'recording') {
-              event.preventDefault();
-              mic.cancel();
-            }
-          }
+          if (cancelBusyMics([voice, promptVoice])) event.preventDefault();
         }}
       >
         {!isMaximized && (
@@ -503,9 +488,7 @@ export function ProjectPromptBuildDialog({
                         voice={voice}
                         idleText="Dictate"
                         idleLabel="Dictate your request"
-                        blockedReason={
-                          promptVoice.status !== 'idle' ? 'Finish the other recording first' : null
-                        }
+                        blockedReason={promptVoice.status !== 'idle' ? OTHER_MIC_BUSY : null}
                       />
                     </>
                   )}
@@ -585,10 +568,10 @@ export function ProjectPromptBuildDialog({
                   <VoiceRecordButton
                     voice={promptVoice}
                     idleText="Speak prompt"
-                    idleLabel="Speak in English. Your words become the prompt as they are, with nothing generated or translated."
+                    idleLabel={SPEAK_PROMPT_LABEL}
                     blockedReason={
                       voice.status !== 'idle'
-                        ? 'Finish the other recording first'
+                        ? OTHER_MIC_BUSY
                         : isBusy
                           ? 'Wait for the prompt to finish'
                           : null
@@ -835,166 +818,4 @@ function hasTextSelection(): boolean {
     return true;
   }
   return (window.getSelection()?.toString().length ?? 0) > 0;
-}
-
-type VoiceInput = ReturnType<typeof useVoiceInput>;
-
-function formatElapsed(seconds: number): string {
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-}
-
-/**
- * One microphone button: idle, starting, recording with a running clock and a discard button,
- * then transcribing. Both mics in the dialog share it, so they look and behave the same.
- */
-function VoiceRecordButton({
-  voice,
-  idleText,
-  idleLabel,
-  blockedReason,
-}: {
-  voice: VoiceInput;
-  idleText: string;
-  idleLabel: string;
-  /** Why the button cannot start a recording right now, or null when it can. */
-  blockedReason: string | null;
-}): React.JSX.Element {
-  const busy = voice.status === 'requesting' || voice.status === 'transcribing';
-  const recording = voice.status === 'recording';
-  const blocked = voice.status === 'idle' && blockedReason !== null;
-  const label = recording
-    ? 'Stop and transcribe'
-    : voice.status === 'transcribing'
-      ? voice.downloadPercent !== null
-        ? `Downloading speech model… ${voice.downloadPercent}%`
-        : 'Transcribing…'
-      : voice.status === 'requesting'
-        ? 'Starting microphone…'
-        : idleLabel;
-
-  return (
-    <div className="flex items-center gap-1">
-      <SimpleTooltip label={blocked ? blockedReason : label} wrapTrigger={busy || blocked}>
-        <Button
-          type="button"
-          variant={recording ? 'destructive' : 'ghost'}
-          size="sm"
-          className="gap-1.5 px-2.5"
-          onClick={voice.toggle}
-          disabled={busy || blocked}
-          aria-label={recording ? label : voice.status === 'idle' ? idleText : label}
-        >
-          {busy ? (
-            <Spinner className="animate-spin" />
-          ) : recording ? (
-            <StopCircle />
-          ) : (
-            <Microphone />
-          )}
-          <span className="tabular-nums">
-            {recording
-              ? `Stop ${formatElapsed(voice.elapsedSeconds)}`
-              : voice.status === 'transcribing'
-                ? voice.downloadPercent !== null
-                  ? `${voice.downloadPercent}%`
-                  : 'Transcribing…'
-                : idleText}
-          </span>
-        </Button>
-      </SimpleTooltip>
-      {recording && (
-        <SimpleTooltip label="Discard recording (Esc)">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={voice.cancel}
-            aria-label="Discard recording"
-          >
-            <X />
-          </Button>
-        </SimpleTooltip>
-      )}
-    </div>
-  );
-}
-
-/**
- * The language Dictate listens for, switchable without leaving the dialog. Whisper has to be told
- * the language up front, and the smaller models garble Persian, so the chip also says when the
- * chosen model is too small and offers the one that works.
- */
-function SpeechLanguageChip({
-  language,
-  modelKey,
-  disabled,
-  onLanguageChange,
-  onModelChange,
-}: {
-  language: string;
-  modelKey: string;
-  disabled: boolean;
-  onLanguageChange: (code: string) => void;
-  onModelChange: (key: string) => void;
-}): React.JSX.Element {
-  const current = SPEECH_LANGUAGES.find((lang) => lang.code === language);
-  const tooSmall = speechModelTooSmallFor(modelKey, language);
-  const better = WHISPER_MODELS.find((m) => m.key === current?.recommendedModel);
-  const name = current?.label ?? language;
-
-  return (
-    <DropdownMenu>
-      <SimpleTooltip
-        label={
-          tooSmall
-            ? `The current speech model often gets ${name} wrong. Click to switch to a better one.`
-            : `Dictate listens for ${name}. Click to change.`
-        }
-        wrapTrigger={disabled}
-      >
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className={cn(
-              'h-8 gap-1 px-2 text-xs font-semibold uppercase tracking-wide',
-              tooSmall && 'text-amber-600 dark:text-amber-400',
-            )}
-            disabled={disabled}
-            aria-label={`Dictation language: ${name}`}
-          >
-            {tooSmall && <TriangleAlert className="h-3.5 w-3.5" />}
-            {language}
-            <ChevronDown className="h-3 w-3 opacity-60" />
-          </Button>
-        </DropdownMenuTrigger>
-      </SimpleTooltip>
-      <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuLabel>Dictate in</DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={language} onValueChange={onLanguageChange}>
-          {SPEECH_LANGUAGES.map((lang) => (
-            <DropdownMenuRadioItem key={lang.code} value={lang.code}>
-              {lang.label}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-        {tooSmall && better ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => onModelChange(better.key)}>
-              <TriangleAlert className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              <span className="min-w-0 flex-1">
-                <span className="block">Use a model that understands {name}</span>
-                <span className="block text-[11px] leading-snug text-muted-foreground">
-                  {better.label}. Downloads once, the next time you dictate.
-                </span>
-              </span>
-            </DropdownMenuItem>
-          </>
-        ) : null}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
 }

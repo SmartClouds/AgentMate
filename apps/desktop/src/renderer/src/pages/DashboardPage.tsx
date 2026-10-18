@@ -206,6 +206,42 @@ function temperatureSeries(
   return { key, label, color, values, formatValue: formatCelsius, dashed: true, area: false };
 }
 
+/** Which temperature line is showing. A GPU and a disk can share an id, so each kind has a prefix. */
+const CPU_TEMPERATURE = 'cpu-temperature';
+const MEMORY_TEMPERATURE = 'memory-temperature';
+const gpuTemperatureId = (id: string): string => `gpu:${id}`;
+const diskTemperatureId = (id: string): string => `disk:${id}`;
+
+/**
+ * The latest °C reading in a card's header or legend. Hovering or focusing it draws that
+ * temperature's line on the chart below, which stays usage only otherwise.
+ */
+function TemperatureReading({
+  celsius,
+  active,
+  onActiveChange,
+}: {
+  celsius: number;
+  active: boolean;
+  onActiveChange: (active: boolean) => void;
+}): React.JSX.Element {
+  return (
+    <button
+      type="button"
+      className={cn(
+        'shrink-0 cursor-default rounded-sm text-xs underline decoration-dotted underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+        active ? 'text-foreground' : 'text-muted-foreground',
+      )}
+      onMouseEnter={() => onActiveChange(true)}
+      onMouseLeave={() => onActiveChange(false)}
+      onFocus={() => onActiveChange(true)}
+      onBlur={() => onActiveChange(false)}
+    >
+      {formatCelsius(celsius)}
+    </button>
+  );
+}
+
 // Every chart card reserves the same stat/legend/chart layout (see the
 // `h-8`/`h-6`/CHART_HEIGHT slots below) so cards are the same height no
 // matter which ones end up paired in the grid after a reorder.
@@ -737,11 +773,17 @@ export default function DashboardPage(): React.JSX.Element {
   );
   const avgGpuPercent =
     gpus.length > 0 ? gpus.reduce((sum, g) => sum + g.percent, 0) / gpus.length : 0;
-  // Temperatures ride on the usage charts, and only once the window holds a reading, so a
-  // machine that reports none keeps exactly the charts it had.
-  const cpuTemperatures = statsHistory.map((s) => s.cpuTempC).filter(isReading);
+  // A temperature line is drawn over its usage chart only while its °C reading is hovered or
+  // focused, so the charts normally show usage alone. Holds CPU_TEMPERATURE, MEMORY_TEMPERATURE,
+  // or a GPU or disk key (see gpuTemperatureId and diskTemperatureId).
+  const [shownTemperature, setShownTemperature] = useState<string | null>(null);
+  const temperatureHover = (id: string) => ({
+    active: shownTemperature === id,
+    onActiveChange: (active: boolean) =>
+      setShownTemperature((current) => (active ? id : current === id ? null : current)),
+  });
   const cpuTemperatureSeries =
-    cpuTemperatures.length > 0
+    shownTemperature === CPU_TEMPERATURE && statsHistory.some((s) => isReading(s.cpuTempC))
       ? [
           temperatureSeries(
             'cpu-temp',
@@ -751,12 +793,41 @@ export default function DashboardPage(): React.JSX.Element {
           ),
         ]
       : [];
+  const memTemperatureSeries =
+    shownTemperature === MEMORY_TEMPERATURE && statsHistory.some((s) => isReading(s.memTempC))
+      ? [
+          temperatureSeries(
+            'mem-temp',
+            'Temperature',
+            chartColors.temperature,
+            statsHistory.map((s) => s.memTempC ?? Number.NaN),
+          ),
+        ]
+      : [];
+  // The disk chart is in bytes per second, so a drive temperature gets its own °C scale.
+  const diskTemperatureSeries = disks.flatMap((d, i) => {
+    if (shownTemperature !== diskTemperatureId(d.id)) return [];
+    const values = statsHistory.map((s) => s.disks.find((x) => x.id === d.id)?.tempC ?? Number.NaN);
+    if (!values.some(isReading)) return [];
+    const color = chartColors.categorical[i % chartColors.categorical.length];
+    return [
+      {
+        ...temperatureSeries(`${d.id}-temp`, `${d.label} temp`, color, values),
+        scale: { min: 0, max: chartCeiling(values.filter(isReading)) },
+      },
+    ];
+  });
   const gpuTemperatureSeries = gpus.flatMap((g, i) => {
+    if (shownTemperature !== gpuTemperatureId(g.id)) return [];
     const values = statsHistory.map((s) => s.gpus.find((x) => x.id === g.id)?.tempC ?? Number.NaN);
     if (!values.some(isReading)) return [];
     const color = chartColors.categorical[i % chartColors.categorical.length];
     return [temperatureSeries(`${g.id}-temp`, `${g.label} temp`, color, values)];
   });
+  // Only a line that is showing can lift the ceiling, so hovering past 100 °C rescales the chart
+  // and leaving it puts the usage back on 0-100.
+  const cpuTemperatures = cpuTemperatureSeries.flatMap((s) => s.values).filter(isReading);
+  const memTemperatures = memTemperatureSeries.flatMap((s) => s.values).filter(isReading);
   const gpuTemperatures = gpuTemperatureSeries.flatMap((s) => s.values).filter(isReading);
   const aliveTargetCount = pings.filter((p) => p.alive).length;
   const historyPingSamples = statsHistory.flatMap((s) => s.pings);
@@ -935,11 +1006,19 @@ export default function DashboardPage(): React.JSX.Element {
           {latest ? (
             <>
               <span className="text-2xl font-semibold">{formatPercent(latest.cpuPercent)}</span>
-              {isReading(latest.cpuTempC) && (
-                <span className="shrink-0 text-sm text-muted-foreground">
-                  {formatCelsius(latest.cpuTempC)}
-                </span>
-              )}
+              {/* A long model name truncates, the temperature after it stays in view. */}
+              <span className="flex min-w-0 items-baseline gap-1 text-xs text-muted-foreground">
+                <span className="truncate">{cpuSubtitle(latest)}</span>
+                {isReading(latest.cpuTempC) && (
+                  <>
+                    <span className="shrink-0">·</span>
+                    <TemperatureReading
+                      celsius={latest.cpuTempC}
+                      {...temperatureHover(CPU_TEMPERATURE)}
+                    />
+                  </>
+                )}
+              </span>
               {latest.cpuThermalState && (
                 <SimpleTooltip label="Thermal pressure, as macOS reports it">
                   <Chip tone={THERMAL_STATES[latest.cpuThermalState].tone} className="self-center">
@@ -947,7 +1026,6 @@ export default function DashboardPage(): React.JSX.Element {
                   </Chip>
                 </SimpleTooltip>
               )}
-              <span className="truncate text-xs text-muted-foreground">{cpuSubtitle(latest)}</span>
             </>
           ) : (
             <>
@@ -1036,8 +1114,19 @@ export default function DashboardPage(): React.JSX.Element {
           {latest ? (
             <>
               <span className="text-2xl font-semibold">{formatPercent(latest.memPercent)}</span>
-              <span className="text-xs text-muted-foreground">
-                {formatBytes(latest.memUsedBytes)} / {formatBytes(latest.memTotalBytes)}
+              <span className="flex items-baseline gap-1 text-xs text-muted-foreground">
+                <span>
+                  {formatBytes(latest.memUsedBytes)} / {formatBytes(latest.memTotalBytes)}
+                </span>
+                {isReading(latest.memTempC) && (
+                  <>
+                    <span>·</span>
+                    <TemperatureReading
+                      celsius={latest.memTempC}
+                      {...temperatureHover(MEMORY_TEMPERATURE)}
+                    />
+                  </>
+                )}
               </span>
             </>
           ) : (
@@ -1053,7 +1142,7 @@ export default function DashboardPage(): React.JSX.Element {
             height={CHART_HEIGHT}
             timestamps={timestamps}
             domainMin={0}
-            domainMax={100}
+            domainMax={chartCeiling(memTemperatures)}
             formatValue={formatPercent}
             formatTime={formatClockTime}
             series={[
@@ -1063,6 +1152,7 @@ export default function DashboardPage(): React.JSX.Element {
                 color: 'hsl(var(--primary))',
                 values: statsHistory.map((s) => s.memPercent),
               },
+              ...memTemperatureSeries,
             ]}
           />
         ) : (
@@ -1124,6 +1214,15 @@ export default function DashboardPage(): React.JSX.Element {
               <span className="text-xs text-muted-foreground">
                 {formatBytesPerSec(d.readBytesPerSec + d.writeBytesPerSec)}
               </span>
+              {isReading(d.tempC) && (
+                <span className="flex items-baseline gap-1 text-xs text-muted-foreground">
+                  <span>·</span>
+                  <TemperatureReading
+                    celsius={d.tempC}
+                    {...temperatureHover(diskTemperatureId(d.id))}
+                  />
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -1138,15 +1237,18 @@ export default function DashboardPage(): React.JSX.Element {
             domainMin={0}
             formatValue={formatBytesPerSec}
             formatTime={formatClockTime}
-            series={disks.map((d, i) => ({
-              key: d.id,
-              label: d.label,
-              color: chartColors.categorical[i % chartColors.categorical.length],
-              values: statsHistory.map((s) => {
-                const found = s.disks.find((x) => x.id === d.id);
-                return found ? found.readBytesPerSec + found.writeBytesPerSec : 0;
-              }),
-            }))}
+            series={[
+              ...disks.map((d, i) => ({
+                key: d.id,
+                label: d.label,
+                color: chartColors.categorical[i % chartColors.categorical.length],
+                values: statsHistory.map((s) => {
+                  const found = s.disks.find((x) => x.id === d.id);
+                  return found ? found.readBytesPerSec + found.writeBytesPerSec : 0;
+                }),
+              })),
+              ...diskTemperatureSeries,
+            ]}
           />
         )}
       </ChartCard>
@@ -1204,8 +1306,16 @@ export default function DashboardPage(): React.JSX.Element {
               <span className="text-xs text-muted-foreground">
                 {formatPercent(g.percent)} · {formatBytes(g.memUsedBytes)}/
                 {formatBytes(g.memTotalBytes)}
-                {isReading(g.tempC) && ` · ${formatCelsius(g.tempC)}`}
               </span>
+              {isReading(g.tempC) && (
+                <span className="flex items-baseline gap-1 text-xs text-muted-foreground">
+                  <span>·</span>
+                  <TemperatureReading
+                    celsius={g.tempC}
+                    {...temperatureHover(gpuTemperatureId(g.id))}
+                  />
+                </span>
+              )}
             </div>
           ))}
         </div>

@@ -83,6 +83,8 @@ export function useVoiceInput({ language, onText }: UseVoiceInputOptions): UseVo
   // Bumped by cancel(). A recording or transcription started under an older number is dropped
   // when it finishes, so it can neither fill the box nor reset a newer recording's state.
   const generationRef = useRef(0);
+  // The transcription main is working on for this mic, so cancel() can stop it there too.
+  const requestIdRef = useRef<string | null>(null);
 
   const supported =
     typeof navigator !== 'undefined' &&
@@ -114,7 +116,10 @@ export function useVoiceInput({ language, onText }: UseVoiceInputOptions): UseVo
           if (current()) setError(NOTHING_HEARD_MESSAGE);
           return;
         }
-        const result = await window.agentmat.speech.transcribe({ samples, language });
+        const requestId = crypto.randomUUID();
+        requestIdRef.current = requestId;
+        const result = await window.agentmat.speech.transcribe({ samples, language, requestId });
+        if (requestIdRef.current === requestId) requestIdRef.current = null;
         if (!current()) return;
         if (result.ok) {
           if (result.text) onText(result.text);
@@ -184,6 +189,11 @@ export function useVoiceInput({ language, onText }: UseVoiceInputOptions): UseVo
 
   const cancel = useCallback(() => {
     generationRef.current += 1;
+    // A long transcription keeps the CPU busy and holds up the next one, so it is stopped, not
+    // just ignored.
+    const requestId = requestIdRef.current;
+    requestIdRef.current = null;
+    if (requestId) void window.agentmat.speech.cancel(requestId).catch(() => undefined);
     recorderRef.current?.stop();
     recorderRef.current = null;
     stopTracks();

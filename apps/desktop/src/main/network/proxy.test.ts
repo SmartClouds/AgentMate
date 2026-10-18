@@ -127,6 +127,19 @@ describe('applyProxySettings', () => {
     expect(proxyConfigs()[1]).toEqual(proxyConfigs()[0]);
   });
 
+  it('routes utility process requests the same way', async () => {
+    const { applyProxySettings } = await loadProxy();
+
+    await applyProxySettings(manual());
+    await applyProxySettings({ ...defaultProxySettings(), mode: 'direct' });
+
+    // The speech model downloads from a utility process, which no session covers.
+    expect(electronState.appProxyConfigs).toEqual([
+      { proxyRules: 'http://10.0.0.1:8080', proxyBypassRules: '<local>' },
+      { mode: 'direct' },
+    ]);
+  });
+
   it('leaves the bypass key out when the list is empty', async () => {
     const { applyProxySettings } = await loadProxy();
 

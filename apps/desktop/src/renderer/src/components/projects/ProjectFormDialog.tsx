@@ -96,8 +96,8 @@ export interface ProjectFormValues {
   iconColor: string | null;
   websiteUrl: string;
   /**
-   * Git repository the code lives in. New projects auto-clone a public GitHub
-   * address into the folder on Create; otherwise it is just a link to open.
+   * Git repository the code lives in. New projects auto-clone a GitHub address into
+   * the folder on Create, and the Git tab can clone it later; otherwise it is a link to open.
    */
   repoUrl: string;
 }
@@ -381,7 +381,7 @@ export function ProjectFormDialog({
 
   const canSubmit = name.trim().length > 0 && folderPath.length > 0;
 
-  // New projects auto-clone a public GitHub address into the folder on Create
+  // New projects auto-clone a GitHub address into the folder on Create
   // ("Clone into Folder"). Editing never clones: the field stays a plain link.
   const willClone = !initial && repoUrl.trim().length > 0 && isClonableGithubUrl(repoUrl);
 
@@ -587,7 +587,7 @@ export function ProjectFormDialog({
                 {willClone && (
                   <p className="text-xs leading-relaxed text-muted-foreground">
                     {folderPath.trim()
-                      ? `Will clone into ${folderPath.trim()} on Create (folder must be empty). Fetch and pull afterwards from the project's Git tab.`
+                      ? `Will clone into ${folderPath.trim()} on Create (folder must be empty). A private repo needs the GitHub CLI signed in (gh auth login). If the folder already has files or the clone fails, use Clone from GitHub on the project's Git tab.`
                       : 'Choose a folder above: the repo will be cloned into it on Create.'}
                   </p>
                 )}

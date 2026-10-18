@@ -167,6 +167,13 @@ export async function applyProxySettings(settings: ProxySettings): Promise<void>
       }
     }),
   );
+  // Requests from a utility process (the speech model download) belong to no session and
+  // follow this one instead.
+  try {
+    await app.setProxy(config);
+  } catch {
+    // Same as a session that refuses it: everything else is still configured.
+  }
 
   if (current.mode === 'manual') {
     const url = proxyEnvUrl(current);

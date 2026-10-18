@@ -64,8 +64,16 @@ vi.mock('node:fs/promises', () => ({
 // The Linux sensor order depends on the architecture. Pinned, so an ARM runner reads the same.
 vi.mock('./cpuArch', () => ({ readCpuArch: () => 'x64', normalizeArch: (raw: string) => raw }));
 
-const { parseWindowsThermalZones, pickLinuxCpuTemp, sampleCpuTemperature, toThermalState } =
-  await import('./temperatureStats');
+const {
+  parseWindowsDiskTemps,
+  parseWindowsThermalZones,
+  pickLinuxCpuTemp,
+  pickLinuxMemoryTemp,
+  sampleCpuTemperature,
+  sampleDiskTemperatures,
+  sampleMemoryTemperature,
+  toThermalState,
+} = await import('./temperatureStats');
 
 beforeEach(() => {
   calls.length = 0;
@@ -431,5 +439,126 @@ describe('sampleCpuTemperature', () => {
     });
 
     await expect(withPlatform('darwin', () => sampleCpuTemperature())).resolves.toEqual(NONE);
+  });
+});
+
+describe('pickLinuxMemoryTemp', () => {
+  it('reads the hottest DDR4 module sensor', () => {
+    const chips = [
+      ...INTEL_LAPTOP_HWMON,
+      chip('jc42', [[undefined, 41000]]),
+      chip('jc42', [[undefined, 44250]]),
+    ];
+    expect(pickLinuxMemoryTemp(chips)).toBe(44);
+  });
+
+  it('reads DDR5 modules, whose sensor driver is spd5118', () => {
+    expect(pickLinuxMemoryTemp([chip('spd5118', [[undefined, 39500]])])).toBe(40);
+  });
+
+  it('gives null when no memory module has a sensor, which is most desktops and laptops', () => {
+    expect(pickLinuxMemoryTemp(INTEL_LAPTOP_HWMON)).toBeNull();
+  });
+
+  it('filters a module that reports nothing plausible', () => {
+    expect(pickLinuxMemoryTemp([chip('jc42', [[undefined, 0]])])).toBeNull();
+  });
+});
+
+describe('parseWindowsDiskTemps', () => {
+  it('keys each reading by the physical disk number', () => {
+    expect(
+      parseWindowsDiskTemps([
+        { Disk: 0, Celsius: 59 },
+        { Disk: 1, Celsius: 54 },
+      ]),
+    ).toEqual({ '0': 59, '1': 54 });
+  });
+
+  it('reads a single disk, which ConvertTo-Json prints as an object', () => {
+    expect(parseWindowsDiskTemps({ Disk: 2, Celsius: 38 })).toEqual({ '2': 38 });
+  });
+
+  it('drops readings that are not a temperature', () => {
+    expect(
+      parseWindowsDiskTemps([
+        { Disk: 0, Celsius: 0 },
+        { Disk: 1, Celsius: -1 },
+        { Disk: 2, Celsius: 3000 },
+        { Disk: 3, Celsius: null },
+      ]),
+    ).toEqual({});
+  });
+
+  it('gives no readings when PowerShell printed nothing', () => {
+    expect(parseWindowsDiskTemps(null)).toEqual({});
+  });
+});
+
+describe('sampleMemoryTemperature', () => {
+  it('reads the memory module sensors on Linux and starts no process', async () => {
+    writeLaptopSysfs();
+    sysfs.files['/sys/class/hwmon/hwmon9/name'] = 'jc42\n';
+    sysfs.files['/sys/class/hwmon/hwmon9/temp1_input'] = '43000\n';
+
+    await expect(withPlatform('linux', () => sampleMemoryTemperature())).resolves.toBe(43);
+    expect(calls).toEqual([]);
+  });
+
+  it('gives null on Windows and macOS without reading anything', async () => {
+    for (const platform of ['win32', 'darwin'] as const) {
+      await expect(withPlatform(platform, () => sampleMemoryTemperature())).resolves.toBeNull();
+    }
+    expect(calls).toEqual([]);
+    expect(sysfs.reads).toEqual([]);
+  });
+});
+
+describe('sampleDiskTemperatures', () => {
+  it('asks each physical drive for its temperature with one PowerShell call on Windows', async () => {
+    answers.byCommand.powershell = {
+      stdout: JSON.stringify([
+        { Disk: 0, Celsius: 59 },
+        { Disk: 1, Celsius: 54 },
+      ]),
+    };
+
+    const result = await withPlatform('win32', () => sampleDiskTemperatures());
+
+    expect(result).toEqual({ '0': 59, '1': 54 });
+    expect(calls).toHaveLength(1);
+    const script = calls[0].args.join(' ');
+    // The storage driver's own temperature query, which needs no administrator rights, unlike
+    // Get-StorageReliabilityCounter.
+    expect(script).toContain(String.raw`@"\\.\PhysicalDrive"`);
+    expect(script).toContain('0x2D1400');
+    expect(script).not.toContain('Get-StorageReliabilityCounter');
+  });
+
+  it('gives no readings when PowerShell fails', async () => {
+    answers.byCommand.powershell = { error: new Error('Add-Type failed') };
+    await expect(withPlatform('win32', () => sampleDiskTemperatures())).resolves.toEqual({});
+  });
+
+  it('reads NVMe and SATA drive sensors from sysfs on Linux', async () => {
+    // An NVMe controller holds its sensor directly, a SATA disk (with drivetemp loaded) under hwmon/.
+    sysfs.files['/sys/block/nvme0n1/device/hwmon3/name'] = 'nvme\n';
+    sysfs.files['/sys/block/nvme0n1/device/hwmon3/temp1_input'] = '41850\n';
+    sysfs.files['/sys/block/sda/device/hwmon/hwmon5/name'] = 'drivetemp\n';
+    sysfs.files['/sys/block/sda/device/hwmon/hwmon5/temp1_input'] = '33000\n';
+    // A SATA disk without drivetemp, and a loop device that is not a disk at all.
+    sysfs.files['/sys/block/sdb/device/model'] = 'WDC WD40EFRX\n';
+    sysfs.files['/sys/block/loop0/device/hwmon1/temp1_input'] = '50000\n';
+
+    const result = await withPlatform('linux', () => sampleDiskTemperatures());
+
+    expect(result).toEqual({ nvme0n1: 42, sda: 33 });
+    expect(calls).toEqual([]);
+  });
+
+  it('gives no readings on macOS without reading anything', async () => {
+    await expect(withPlatform('darwin', () => sampleDiskTemperatures())).resolves.toEqual({});
+    expect(calls).toEqual([]);
+    expect(sysfs.reads).toEqual([]);
   });
 });

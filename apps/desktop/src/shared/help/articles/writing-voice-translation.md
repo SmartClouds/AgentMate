@@ -103,12 +103,10 @@ Voice input lets you dictate a request instead of typing it. The speech model (W
 
 ### Where you can dictate
 
-The microphone button appears next to **Your request** in two places:
+The [Prompt Builder](prompt-builder.md) page and the **Build Prompt** dialog of a project have the same two microphones:
 
-- the [Prompt Builder](prompt-builder.md) page, labeled **Record voice input**,
-- the **Build Prompt** dialog of a project, labeled **Dictate**.
-
-The **Build Prompt** dialog also has a second microphone, **Speak prompt**, above **Generated prompt**. It is for when you already know exactly what you want to say: speak in English and your words become the prompt as they are, with nothing generated and nothing translated. It always listens for English, whatever language Dictate is set to.
+- **Dictate**, next to **Your request**, adds what you say to your request.
+- **Speak prompt**, above **Generated prompt**, is for when you already know exactly what you want to say: speak in English and your words become the prompt as they are, with nothing generated and nothing translated. It always listens for English, whatever language Dictate is set to.
 
 Only one microphone records at a time; the other one waits until you are done.
 
@@ -117,20 +115,22 @@ The buttons are hidden if your system cannot record audio. The pinned Build Prom
 ### Dictate a request
 
 1. Click the microphone button. The first time, allow microphone access when asked.
-2. Speak. The button turns red and says **Stop recording** (in the dialog, **Stop** with a running clock such as **Stop 0:12**).
+2. Speak. The button turns red and says **Stop** with a running clock, such as **Stop 0:12**.
 3. Click it again. The button shows **Transcribing…**, then your words are added to the end of whatever is already in the box, separated by a space.
 
-In the dialog you can throw a recording away instead: press `Esc` or click the **×** next to **Stop**. Nothing is transcribed and the dialog stays open.
+You can throw a recording away instead: press `Esc` or click the **×** next to **Stop**. Nothing is transcribed, and in the dialog, the dialog stays open.
+
+A long recording on a big model can take a while to transcribe. The rest of the app keeps working in the meantime, because the speech model runs in a process of its own. To give up on it, press `Esc` or click the **×** next to **Transcribing…** (for Speak prompt, the **Cancel** button over the prompt works too). If the speech model ever stops answering, AgentMate stops it after a generous wait and says the transcription took too long.
 
 If the recording is very short or silent, nothing is sent to the speech model and you see "Didn't catch anything. Try again a little closer to the mic." This keeps the model from inventing words for silence.
 
 ### Dictation language
 
-In the **Build Prompt** dialog, the chip next to **Dictate** (**EN**, **FA** and so on) shows the language Dictate listens for. Click it to pick another; the choice is saved as your **Spoken language** setting. The speech model has to be told the language up front, so speak the language the chip shows.
+The chip next to **Dictate** (**EN**, **FA** and so on) shows the language Dictate listens for. Click it to pick another; the choice is saved as your **Spoken language** setting. The speech model has to be told the language up front, so speak the language the chip shows.
 
 If the chip shows a warning sign, the current model is too small for that language. Persian needs **Large v3 Turbo**: the smaller models write Persian as a jumble of half-right words. Open the chip and pick **Use a model that understands Persian** to switch.
 
-The very first use also downloads the speech model, and the button shows **Downloading model… N%** (just the percentage in the dialog). The model is downloaded once and then kept on disk, so later dictation works without internet. Long recordings are processed in 30 second pieces. **Large v3 Turbo** is slower than the others: on a typical laptop processor expect about two seconds of waiting for each second you spoke, and a short extra pause the first time it loads after the app starts.
+The very first use also downloads the speech model, and the button shows the percentage downloaded. The download goes through the proxy set under **Settings**, **Network**, if there is one. If it fails partway, the message says so ("Could not download the speech model"); files that finished downloading are kept, so the next try only fetches the ones still missing. The model is downloaded once and then kept on disk, so later dictation works without internet. Long recordings are processed in 30 second pieces. **Large v3 Turbo** is slower than the others: on a typical laptop processor expect about two seconds of waiting for each second you spoke, and a short extra pause the first time it loads after the app starts.
 
 If the dialog is closed while you are recording, the microphone is stopped and the recording is still transcribed into that project's saved request.
 

@@ -1,6 +1,3 @@
-import { execFile } from 'node:child_process';
-import { mkdir, readdir } from 'node:fs/promises';
-import { promisify } from 'node:util';
 import type { GitChangeEntry, Project } from '@agentmat/core';
 import {
   browsableRepoUrl,
@@ -14,6 +11,8 @@ import type {
   ApplyVersionResult,
   CloneIntoInput,
   CloneIntoResult,
+  CloneProjectInput,
+  CloneProjectResult,
   ConnectRemoteInput,
   CreateGithubRepoInput,
   CreateGithubRepoResult,
@@ -54,6 +53,7 @@ import {
   readConflictedText,
   resolutionSummary,
 } from '../git/aiConflict';
+import { cloneIntoFolder, cloneOrAttach } from '../git/cloneRepo';
 import {
   GITHUB_NAME_PATTERN,
   type GithubApiRepo,
@@ -168,6 +168,8 @@ const CONFLICT_RESOLVE_TIMEOUT_MS = 600000;
  * are nothing to hand a browser, so the project's repository link stays empty.
  */
 const LOCAL_REMOTE_PATTERN = /^([a-z]:[\\/]|\\\\|\/|\.{1,2}[\\/]|file:)/i;
+
+const NOT_CLONABLE_MESSAGE = 'That address cannot be cloned. Use a github.com/owner/repo link.';
 
 /** The project, or for a worktree's workspace (a scope id) the project pointed at the worktree. */
 async function getProject(projectId: string): Promise<Project> {
@@ -389,11 +391,10 @@ function registerRepoHandlers(): void {
   );
 
   /**
-   * Clones a public GitHub repo into the folder picked in New Project ("Clone
-   * into Folder"). Blocks on a non-empty folder, skips when the folder already
-   * holds a repo, and maps git stderr to friendly errors (private repos surface
-   * a gh-auth hint). Never throws: the renderer still creates the project link
-   * when the clone fails.
+   * Clones a public or (with gh signed in) private GitHub repo into the folder picked in
+   * New Project. Blocks on a non-empty folder and skips when the folder already holds a
+   * repo. Never throws: the renderer still creates the project when the clone fails, and
+   * the Git tab's Clone from GitHub picks it up from there.
    */
   ipcMain.handle(
     IPC.git.cloneInto,
@@ -401,72 +402,29 @@ function registerRepoHandlers(): void {
       const folder = input?.folderPath?.trim() ?? '';
       if (!folder) return { ok: false, message: 'Pick a folder to clone into.' };
       const normalized = normalizeCloneUrl(input?.repoUrl ?? '');
-      if (!normalized) {
-        return {
-          ok: false,
-          message: 'That address cannot be cloned. Use a public github.com/owner/repo link.',
-        };
-      }
+      if (!normalized) return { ok: false, message: NOT_CLONABLE_MESSAGE };
       try {
-        await mkdir(folder, { recursive: true });
-        if (await isGitRepo(folder)) {
-          return { ok: true, message: 'Folder is already a git repository.', skipped: true };
-        }
-        const entries = await readdir(folder);
-        const meaningful = entries.filter(
-          (entry) => entry !== '.DS_Store' && entry !== 'Thumbs.db',
-        );
-        if (meaningful.length > 0) {
-          return {
-            ok: false,
-            message: 'Folder is not empty. Choose an empty folder to clone into.',
-          };
-        }
-        const execFileAsync = promisify(execFile);
-        try {
-          await execFileAsync('git', ['clone', normalized, folder], {
-            timeout: 120000,
-            windowsHide: true,
-            maxBuffer: 10 * 1024 * 1024,
-            env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
-          });
-        } catch (error) {
-          const stderr = String(
-            (error as { stderr?: string })?.stderr ?? (error as Error)?.message ?? '',
-          );
-          if (/repository not found|not found|404/i.test(stderr)) {
-            return {
-              ok: false,
-              message:
-                'Repository not found. Check the address, or sign in with "gh auth login" for a private repo.',
-            };
-          }
-          if (
-            /authentication|permission denied|401|403|askpass|could not read username/i.test(stderr)
-          ) {
-            return {
-              ok: false,
-              message:
-                'GitHub asked for sign-in. This looks like a private repo — run "gh auth login" (or use SSH) and try Fetch after creating.',
-            };
-          }
-          if (/already exists and is not an empty directory/i.test(stderr)) {
-            return {
-              ok: false,
-              message: 'Folder is not empty. Choose an empty folder to clone into.',
-            };
-          }
-          const firstLine = stderr
-            .split('\n')
-            .map((l) => l.trim())
-            .filter(Boolean)[0];
-          return {
-            ok: false,
-            message: firstLine || 'Clone failed. Check the address and try again.',
-          };
-        }
-        // Clone writes the checkout straight into folder, nothing more to move.
-        return { ok: true, message: `Cloned ${stripRemoteCredentials(normalized)}.` };
+        const outcome = await cloneIntoFolder(folder, normalized);
+        return { ok: outcome.ok, message: outcome.message, skipped: outcome.mode === 'skipped' };
+      } catch (error) {
+        return { ok: false, message: (error as Error)?.message || 'Clone failed.' };
+      }
+    },
+  );
+
+  /**
+   * Gets an existing project's GitHub repo onto this computer: a clone for an empty or
+   * missing folder, or for a folder that already has files, attaching it in place once the
+   * user has confirmed. This is how a clone that failed at create time is retried.
+   */
+  ipcMain.handle(
+    IPC.git.cloneProject,
+    async (_event, input: CloneProjectInput): Promise<CloneProjectResult> => {
+      const project = await getProject(input.projectId);
+      const normalized = normalizeCloneUrl(input.repoUrl?.trim() || project.repoUrl || '');
+      if (!normalized) return { ok: false, message: NOT_CLONABLE_MESSAGE };
+      try {
+        return await cloneOrAttach(project.folderPath, normalized, input.attach === true);
       } catch (error) {
         return { ok: false, message: (error as Error)?.message || 'Clone failed.' };
       }

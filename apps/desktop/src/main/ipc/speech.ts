@@ -1,18 +1,19 @@
-import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { join, sep } from 'node:path';
 import {
   DEFAULT_WHISPER_MODEL,
   resolveSpeechLanguage,
   WHISPER_MODELS,
   type WhisperModel,
 } from '@agentmat/core';
-import { app, ipcMain } from 'electron';
+import { app, ipcMain, utilityProcess } from 'electron';
 import type {
-  SpeechModelProgress,
   SpeechModelState,
   TranscribeAudioInput,
   TranscribeAudioResult,
 } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';
+import { createSpeechHost, type SpeechHost } from '../speech/speechHostClient';
 import { store } from '../store';
 import { broadcastToWindows } from './send';
 
@@ -27,105 +28,32 @@ function resolveModel(modelKey: string | undefined): WhisperModel {
   );
 }
 
-// transformers.js is ESM-only for its Node build and pulls in the native
-// onnxruntime-node addon, so it's loaded lazily on first use rather than at
-// startup. That keeps app launch fast and avoids paying the cost for users
-// who never touch voice input.
-type TransformersModule = typeof import('@huggingface/transformers');
-// pipeline() is typed to return a union of every pipeline class, which isn't
-// callable. Narrow to the ASR pipeline instance, which is what
-// 'automatic-speech-recognition' actually produces.
-type AsrPipeline = InstanceType<TransformersModule['AutomaticSpeechRecognitionPipeline']>;
+function entryPath(): string {
+  // Loaded from inside the archive in packaged builds: unlike a worker thread, a utility process
+  // reads asar, and staying inside it is what lets the runtime find its node_modules.
+  const bundled = join(__dirname, 'speechHost.mjs');
+  return bundled.replace(`app.asar.unpacked${sep}`, `app.asar${sep}`);
+}
 
-let transformersPromise: Promise<TransformersModule> | null = null;
-async function loadTransformers(): Promise<TransformersModule> {
-  if (!transformersPromise) {
-    transformersPromise = import('@huggingface/transformers').then((mod) => {
-      // Models are cached under userData so they survive app updates and never
-      // land inside the read-only asar. Local-only lookups are disabled: the
-      // first run must be allowed to fetch from the hub.
-      mod.env.cacheDir = join(app.getPath('userData'), 'whisper-models');
-      mod.env.allowLocalModels = false;
-      mod.env.allowRemoteModels = true;
-      return mod;
+function spawnSpeechHost() {
+  return utilityProcess.fork(entryPath(), [], {
+    serviceName: 'AgentMate Speech',
+    // A proxy that wants a password asks main, which already answers for the windows.
+    respondToAuthRequestsFromMainProcess: true,
+    stdio: 'ignore',
+  });
+}
+
+let speechHost: SpeechHost | null = null;
+
+function host(): SpeechHost {
+  if (!speechHost) {
+    speechHost = createSpeechHost({
+      spawn: spawnSpeechHost,
+      onProgress: (progress) => broadcastToWindows(IPC.speech.onModelProgress, progress),
     });
   }
-  return transformersPromise;
-}
-
-// One pipeline instance is kept alive per model id. Building it loads the
-// weights into memory, which is expensive, so reusing it makes every
-// transcription after the first one fast.
-let pipelinePromise: Promise<AsrPipeline> | null = null;
-let loadedModelId: string | null = null;
-
-function broadcastProgress(progress: SpeechModelProgress): void {
-  broadcastToWindows(IPC.speech.onModelProgress, progress);
-}
-
-async function getPipeline(model: WhisperModel): Promise<AsrPipeline> {
-  const modelId = model.hubId;
-  if (pipelinePromise && loadedModelId === modelId) return pipelinePromise;
-
-  // The large model holds over a gigabyte in memory, so the one it replaces is let go first.
-  if (pipelinePromise) {
-    const previous = pipelinePromise;
-    pipelinePromise = null;
-    loadedModelId = null;
-    await previous.then((p) => p.dispose()).catch(() => undefined);
-  }
-
-  const { pipeline } = await loadTransformers();
-  loadedModelId = modelId;
-  pipelinePromise = (
-    pipeline('automatic-speech-recognition', modelId, {
-      ...(model.dtype ? { dtype: model.dtype as 'q4' } : {}),
-      // transformers.js reports download progress per-file; forward it so the UI
-      // can show a "downloading model" state on the very first use.
-      progress_callback: (item: unknown) => {
-        const p = item as { status?: string; file?: string; progress?: number };
-        if (p.status === 'progress' || p.status === 'download') {
-          broadcastProgress({
-            percent: typeof p.progress === 'number' ? Math.round(p.progress) : null,
-            file: p.file ?? '',
-          });
-        }
-      },
-    }) as Promise<AsrPipeline>
-  ).catch((error) => {
-    // Reset so a later attempt can retry instead of resolving the cached
-    // rejected promise forever.
-    pipelinePromise = null;
-    loadedModelId = null;
-    throw error;
-  });
-
-  return pipelinePromise;
-}
-
-async function transcribe(input: TranscribeAudioInput): Promise<string> {
-  const settings = await store.getSettings();
-  const transcriber = await getPipeline(resolveModel(settings.speechModel));
-
-  // The pipeline accepts more options than its published types expose (e.g.
-  // `task`), so call through a permissive signature.
-  const run = transcriber as unknown as (
-    audio: Float32Array,
-    options: Record<string, unknown>,
-  ) => Promise<{ text?: string } | { text?: string }[]>;
-
-  const output = await run(input.samples, {
-    // Always a real language. Left out, transformers.js does not detect one, it assumes
-    // English, and Persian speech comes back as made-up English words.
-    language: resolveSpeechLanguage(input.language, app.getLocale()),
-    task: 'transcribe',
-    // Whisper's context window is 30s; chunking lets longer dictation through.
-    chunk_length_s: 30,
-    stride_length_s: 5,
-  });
-
-  const text = Array.isArray(output) ? (output[0]?.text ?? '') : (output.text ?? '');
-  return text.trim();
+  return speechHost;
 }
 
 export function registerSpeechHandlers(): void {
@@ -133,8 +61,16 @@ export function registerSpeechHandlers(): void {
     IPC.speech.transcribe,
     async (_event, input: TranscribeAudioInput): Promise<TranscribeAudioResult> => {
       try {
-        const text = await transcribe(input);
-        return { ok: true, text };
+        const settings = await store.getSettings();
+        const model = resolveModel(settings.speechModel);
+        return await host().transcribe(input.requestId || randomUUID(), {
+          samples: input.samples,
+          // Always a real language. Left out, transformers.js does not detect one, it assumes
+          // English, and Persian speech comes back as made-up English words.
+          language: resolveSpeechLanguage(input.language, app.getLocale()),
+          model: { hubId: model.hubId, ...(model.dtype ? { dtype: model.dtype } : {}) },
+          cacheDir: join(app.getPath('userData'), 'whisper-models'),
+        });
       } catch (error) {
         return {
           ok: false,
@@ -145,9 +81,17 @@ export function registerSpeechHandlers(): void {
     },
   );
 
+  ipcMain.handle(IPC.speech.cancel, (_event, requestId: unknown) => {
+    if (typeof requestId === 'string' && requestId) speechHost?.cancel(requestId);
+  });
+
   ipcMain.handle(IPC.speech.getModelState, async (): Promise<SpeechModelState> => {
     const settings = await store.getSettings();
     const modelId = resolveModel(settings.speechModel).hubId;
-    return { ready: loadedModelId === modelId && pipelinePromise !== null, modelId };
+    return { ready: speechHost?.isModelLoaded(modelId) ?? false, modelId };
   });
+}
+
+export function shutdownSpeech(): void {
+  speechHost?.shutdown();
 }

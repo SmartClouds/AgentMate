@@ -908,8 +908,9 @@ export interface Project {
   websiteUrl: string;
   /**
    * Where the project's code is hosted, e.g. "https://github.com/me/my-app". Filled in
-   * on the create form (detected from the folder's origin remote when there is one),
-   * and only ever a label to open: nothing here runs git. Empty when unset.
+   * on the create form (detected from the folder's origin remote when there is one).
+   * A GitHub address is cloned into the folder on create, and while the folder isn't a
+   * repo the Git tab offers to clone it from here. Empty when unset.
    */
   repoUrl: string;
   /**

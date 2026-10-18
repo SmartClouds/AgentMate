@@ -202,6 +202,133 @@ async function readThermalZones(): Promise<ThermalZone[]> {
   );
 }
 
+// Memory modules only carry a sensor on DDR5 and on some (mostly server and ECC) DDR4 sticks.
+// jc42 is the DDR4 thermal sensor driver and spd5118 the DDR5 one.
+const MEMORY_CHIP = /^(jc42|spd5118)$/;
+
+/** The hottest memory module in whole °C, or null when no module has a sensor. */
+export function pickLinuxMemoryTemp(chips: HwmonChip[]): number | null {
+  const celsius = hottest(
+    chips.filter((c) => MEMORY_CHIP.test(c.name)).map((c) => readChip(c, [])),
+  );
+  return celsius == null ? null : Math.round(celsius);
+}
+
+/** One drive's reading as the Windows drive script prints it. */
+export interface WindowsDiskTemp {
+  /** The physical disk number, the same one PerfDisk puts at the start of its instance names. */
+  Disk: number;
+  Celsius: number | null;
+}
+
+/** Drive temperatures in whole °C keyed by physical disk number. Implausible readings are dropped. */
+export function parseWindowsDiskTemps(
+  parsed: WindowsDiskTemp | WindowsDiskTemp[] | null | undefined,
+): Record<string, number> {
+  const temps: Record<string, number> = {};
+  for (const reading of asArray(parsed)) {
+    const celsius = plausible(Number(reading?.Celsius));
+    if (celsius != null) temps[String(reading.Disk)] = Math.round(celsius);
+  }
+  return temps;
+}
+
+// Get-StorageReliabilityCounter has the drive temperature too but needs admin rights. The storage
+// driver answers IOCTL_STORAGE_QUERY_PROPERTY (0x2D1400) for StorageDeviceTemperatureProperty (52)
+// on a handle opened with no access rights at all, which any user may do. The reply is a
+// STORAGE_TEMPERATURE_DATA_DESCRIPTOR: InfoCount at byte 12, and the first sensor (the drive's
+// composite temperature) as a signed °C at byte 26. Disk numbers past the last drive fail to open
+// and are skipped. Raw, so the C# backslashes reach PowerShell as written.
+const WIN_DISK_TEMP_SCRIPT = String.raw`
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
+public static class AgentMateDiskTemp {
+  [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+  static extern SafeFileHandle CreateFile(string name, uint access, uint share, IntPtr security, uint disposition, uint flags, IntPtr template);
+  [DllImport("kernel32.dll", SetLastError = true)]
+  static extern bool DeviceIoControl(SafeFileHandle device, uint code, byte[] input, int inputSize, byte[] output, int outputSize, out int returned, IntPtr overlapped);
+  public static int Read(int disk) {
+    using (var device = CreateFile(@"\\.\PhysicalDrive" + disk, 0, 3, IntPtr.Zero, 3, 0, IntPtr.Zero)) {
+      if (device.IsInvalid) return int.MinValue;
+      var query = new byte[12];
+      BitConverter.GetBytes(52).CopyTo(query, 0);
+      var output = new byte[512];
+      int returned;
+      if (!DeviceIoControl(device, 0x2D1400, query, query.Length, output, output.Length, out returned, IntPtr.Zero)) return int.MinValue;
+      if (BitConverter.ToUInt16(output, 12) == 0) return int.MinValue;
+      return BitConverter.ToInt16(output, 26);
+    }
+  }
+}
+'@
+$readings = foreach ($disk in 0..31) { $c = [AgentMateDiskTemp]::Read($disk); if ($c -ne [int]::MinValue) { [PSCustomObject]@{ Disk = $disk; Celsius = $c } } }
+if ($readings) { @($readings) | ConvertTo-Json -Compress }
+`;
+
+/** Whole disks (sda, nvme0n1, vda and so on), the same names /proc/diskstats charts. */
+export const WHOLE_DISK_NAME = /^(sd[a-z]+|nvme\d+n\d+|vd[a-z]+|xvd[a-z]+|hd[a-z]+)$/;
+
+const BLOCK_ROOT = '/sys/block';
+
+// An NVMe controller holds its hwmonN folder directly. A SATA disk has one under hwmon/, and only
+// when the drivetemp module is loaded. temp1 is the drive's own (composite) temperature.
+async function readLinuxDiskTemp(disk: string): Promise<number | null> {
+  const device = `${BLOCK_ROOT}/${disk}/device`;
+  const [direct, nested] = await Promise.all([
+    listDir(device, /^hwmon\d+$/),
+    listDir(`${device}/hwmon`, /^hwmon\d+$/),
+  ]);
+  const dirs = [
+    ...direct.map((d) => `${device}/${d}`),
+    ...nested.map((d) => `${device}/hwmon/${d}`),
+  ];
+  for (const dir of dirs) {
+    const celsius = plausible(Number(await readText(`${dir}/temp1_input`)) / 1000);
+    if (celsius != null) return Math.round(celsius);
+  }
+  return null;
+}
+
+/**
+ * Drive temperatures in whole °C, keyed the way the disk chart names drives: the physical disk
+ * number on Windows, the block device name on Linux. A drive without a reading is left out, and
+ * macOS has none.
+ */
+export async function sampleDiskTemperatures(): Promise<Record<string, number>> {
+  try {
+    if (process.platform === 'win32') {
+      return parseWindowsDiskTemps(
+        await runPowerShellJson<WindowsDiskTemp | WindowsDiskTemp[]>(WIN_DISK_TEMP_SCRIPT),
+      );
+    }
+    if (process.platform === 'linux') {
+      const disks = await listDir(BLOCK_ROOT, WHOLE_DISK_NAME);
+      const temps: Record<string, number> = {};
+      const readings = await Promise.all(disks.map(readLinuxDiskTemp));
+      disks.forEach((disk, i) => {
+        const celsius = readings[i];
+        if (celsius != null) temps[disk] = celsius;
+      });
+      return temps;
+    }
+  } catch {
+    // Falls through to no readings.
+  }
+  return {};
+}
+
+/** The hottest memory module in °C. Linux only: Windows and macOS give apps no way to read it. */
+export async function sampleMemoryTemperature(): Promise<number | null> {
+  if (process.platform !== 'linux') return null;
+  try {
+    return pickLinuxMemoryTemp(await readHwmonChips());
+  } catch {
+    return null;
+  }
+}
+
 const cpuArch = readCpuArch();
 
 /**

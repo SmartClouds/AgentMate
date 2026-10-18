@@ -3,52 +3,18 @@ import type { AppSettings, Project } from '@agentmat/core';
 import { screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  installFakeMicrophone,
+  fakeMicTrack as track,
+} from '../../../../test/renderer/fakeMicrophone';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
 import { ProjectPromptBuildDialog } from './ProjectPromptBuildDialog';
 
 /**
  * The two microphones in Build Prompt. Dictate adds to the request in the language the chip
  * shows; Speak prompt writes straight into the generated prompt, always as English, and never
- * goes near Generate or Translate. jsdom has no MediaRecorder or Web Audio, so both are stood up
- * here the same way the hook's own tests do it.
+ * goes near Generate or Translate. The microphone is the shared fake one.
  */
-
-const track = { stop: vi.fn() };
-const stream = { getTracks: () => [track] } as unknown as MediaStream;
-
-class FakeMediaRecorder {
-  ondataavailable: ((event: { data: Blob }) => void) | null = null;
-  onstop: (() => void) | null = null;
-  readonly mimeType = 'audio/webm';
-  constructor(readonly source: MediaStream) {}
-  start(): void {
-    // Nothing to start; stop() hands over the recording.
-  }
-  stop(): void {
-    this.ondataavailable?.({ data: new Blob(['audio'], { type: 'audio/webm' }) });
-    this.onstop?.();
-  }
-}
-
-class FakeAudioContext {
-  async decodeAudioData(): Promise<{ duration: number }> {
-    return { duration: 1 };
-  }
-  async close(): Promise<void> {
-    return undefined;
-  }
-}
-
-class FakeOfflineAudioContext {
-  readonly destination = {};
-  createBufferSource() {
-    return { buffer: null, connect: () => undefined, start: () => undefined };
-  }
-  async startRendering() {
-    // One second of something louder than the hook's silence floor.
-    return { getChannelData: () => new Float32Array(16_000).fill(0.2) };
-  }
-}
 
 const project = {
   id: 'p1',
@@ -114,14 +80,7 @@ const dictateButton = () => screen.getByRole('button', { name: 'Dictate' });
 const stopButton = () => screen.getByRole('button', { name: 'Stop and transcribe' });
 
 beforeEach(() => {
-  track.stop.mockClear();
-  vi.stubGlobal('MediaRecorder', FakeMediaRecorder);
-  vi.stubGlobal('AudioContext', FakeAudioContext);
-  vi.stubGlobal('OfflineAudioContext', FakeOfflineAudioContext);
-  Object.defineProperty(navigator, 'mediaDevices', {
-    configurable: true,
-    value: { getUserMedia: vi.fn(async () => stream) },
-  });
+  installFakeMicrophone();
 });
 
 describe('Speak prompt', () => {
@@ -194,6 +153,47 @@ describe('Speak prompt', () => {
 
     expect(speakButton()).toBeEnabled();
     expect(transcribe).not.toHaveBeenCalled();
+  });
+});
+
+describe('a transcription that takes a long time', () => {
+  // The large model can take minutes on a long recording. The user is never stuck waiting.
+  function slowBridge() {
+    const cancel = vi.fn(async () => undefined);
+    return {
+      cancel,
+      bridge: {
+        'speech.transcribe': vi.fn(() => new Promise(() => undefined)),
+        'speech.cancel': cancel,
+      },
+    };
+  }
+
+  it('can be cancelled from next to the mic, which stops the work in main', async () => {
+    const { cancel, bridge } = slowBridge();
+    const { user } = renderDialog(baseSettings(), bridge);
+
+    await user.click(await screen.findByRole('button', { name: 'Dictate' }));
+    await user.click(stopButton());
+    await user.click(await screen.findByRole('button', { name: 'Cancel transcription' }));
+
+    expect(dictateButton()).toBeEnabled();
+    expect(cancel).toHaveBeenCalledWith(expect.any(String));
+  });
+
+  it('can be cancelled with Escape, and the dialog stays open', async () => {
+    const onOpenChange = vi.fn();
+    const { cancel, bridge } = slowBridge();
+    const { user } = renderDialog(baseSettings(), bridge, onOpenChange);
+
+    await user.click(await screen.findByRole('button', { name: 'Speak prompt' }));
+    await user.click(stopButton());
+    await screen.findByText('Writing down what you said…');
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => expect(speakButton()).toBeEnabled());
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).not.toHaveBeenCalled();
   });
 });
 

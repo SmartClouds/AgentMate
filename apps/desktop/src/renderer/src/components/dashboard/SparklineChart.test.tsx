@@ -157,4 +157,29 @@ describe('SparklineChart', () => {
     // 50 is the finite max, so it sits on the top padding line (PAD_Y = 6).
     expect(d).toContain('150.00 6.00');
   });
+
+  it('draws a series with its own scale against that scale, apart from the shared one', () => {
+    const { container } = renderChart([
+      { key: 'disk', label: 'Disk', color: '#000', values: [0, 4_000_000, 2_000_000] },
+      {
+        key: 'temp',
+        label: 'Disk temp',
+        color: '#f00',
+        values: [50, 100, 25],
+        formatValue: celsius,
+        scale: { min: 0, max: 100 },
+      },
+    ]);
+
+    // The bytes still set the shared auto domain: 4 MB/s is the top, not 100.
+    expect(linePaths()[0].getAttribute('d')).toBe('M 0.00 94.00 L 150.00 6.00 L 300.00 50.00');
+    // 50 °C sits halfway up its own 0-100 scale and 100 °C at the top, whatever the bytes did.
+    expect(linePaths()[1].getAttribute('d')).toBe('M 0.00 50.00 L 150.00 6.00 L 300.00 72.00');
+
+    hover(1, 3);
+    // The tooltip still reads the real value, and the dot lands on the series' own line.
+    expect(tooltipValue('Disk temp')).toBe('100 °C');
+    const dots = Array.from(container.querySelectorAll<HTMLElement>('div.rounded-full.border-2'));
+    expect(dots.map((dot) => dot.style.top)).toEqual(['6%', '6%']);
+  });
 });

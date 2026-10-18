@@ -349,6 +349,7 @@ export const IPC = {
   },
   speech: {
     transcribe: 'speech:transcribe',
+    cancel: 'speech:cancel',
     getModelState: 'speech:getModelState',
     // main -> renderer: first-run model download progress
     onModelProgress: 'speech:onModelProgress',
@@ -1237,6 +1238,7 @@ export const IPC = {
     connectRemote: 'git:connectRemote',
     detectRemote: 'git:detectRemote',
     cloneInto: 'git:cloneInto',
+    cloneProject: 'git:cloneProject',
     watchRepo: 'git:watchRepo',
     unwatchRepo: 'git:unwatchRepo',
     // main -> renderer: the repo moved on disk (commit, checkout, merge, fetch, stage)

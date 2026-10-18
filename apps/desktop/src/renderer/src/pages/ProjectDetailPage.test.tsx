@@ -891,3 +891,93 @@ describe('ProjectDetailPage Deploy section', () => {
     expect(await screen.findByText('2 changes, 30 B since the last deploy')).toBeTruthy();
   });
 });
+
+describe('ProjectDetailPage Git tab without a repository', () => {
+  function renderGitTab(overrides: Partial<Project>, bridge: Overrides = {}) {
+    return renderWithProviders(<ProjectDetailPage />, {
+      route: '/projects/p1?tab=git',
+      path: 'projects/:projectId',
+      bridge: { 'projects.list': [project(overrides)], ...bridge },
+    });
+  }
+
+  it('offers to clone the saved GitHub repository instead of only starting a new one', async () => {
+    const { user, bridge } = renderGitTab(
+      { repoUrl: 'https://github.com/me/my-app' },
+      { 'git.cloneProject': async () => ({ ok: true, message: 'Cloned.', mode: 'cloned' }) },
+    );
+
+    expect(
+      await screen.findByText("This project's GitHub repository isn't on this computer yet"),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Initialize a new repository/ })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /Clone me\/my-app/ }));
+
+    await waitFor(() =>
+      expect(bridge.$fn('git.cloneProject')).toHaveBeenCalledWith({
+        projectId: 'p1',
+        repoUrl: 'https://github.com/me/my-app',
+        attach: false,
+      }),
+    );
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Cloned.'));
+  });
+
+  it('asks before connecting a folder that already has files, then attaches it', async () => {
+    const cloneProject = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, needsAttachConfirm: true, message: 'Has files.' })
+      .mockResolvedValueOnce({ ok: true, message: 'Connected.', mode: 'attached' });
+    const { user } = renderGitTab(
+      { repoUrl: 'https://github.com/me/my-app' },
+      { 'git.cloneProject': cloneProject },
+    );
+
+    await user.click(await screen.findByRole('button', { name: /Clone me\/my-app/ }));
+
+    await waitFor(() =>
+      expect(confirm.confirmDialog).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Connect this folder to me/my-app?' }),
+      ),
+    );
+    await waitFor(() =>
+      expect(cloneProject).toHaveBeenLastCalledWith({
+        projectId: 'p1',
+        repoUrl: 'https://github.com/me/my-app',
+        attach: true,
+      }),
+    );
+    expect(toast.error).not.toHaveBeenCalledWith('Has files.');
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Connected.'));
+  });
+
+  it('clones a typed address when the project has none, and saves it as the repo link', async () => {
+    const { user, bridge } = renderGitTab(
+      {},
+      {
+        'git.cloneProject': async () => ({ ok: true, message: 'Cloned.', mode: 'cloned' }),
+        'projects.update': async () => project({ repoUrl: 'https://github.com/me/other' }),
+      },
+    );
+
+    await user.click(await screen.findByRole('button', { name: /Clone from GitHub/ }));
+    const dialog = await screen.findByRole('dialog');
+    const clone = within(dialog).getByRole('button', { name: /^Clone$/ }) as HTMLButtonElement;
+    expect(clone.disabled).toBe(true);
+    await user.type(within(dialog).getByLabelText('Repository address'), 'github.com/me/other');
+    await user.click(clone);
+
+    await waitFor(() =>
+      expect(bridge.$fn('git.cloneProject')).toHaveBeenCalledWith({
+        projectId: 'p1',
+        repoUrl: 'github.com/me/other',
+        attach: false,
+      }),
+    );
+    await waitFor(() =>
+      expect(bridge.$fn('projects.update')).toHaveBeenCalledWith('p1', {
+        repoUrl: 'https://github.com/me/other',
+      }),
+    );
+  });
+});

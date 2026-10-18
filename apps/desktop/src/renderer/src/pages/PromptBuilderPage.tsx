@@ -31,13 +31,11 @@ import {
   FileText,
   History,
   Languages,
-  Microphone,
   Plus,
   Save,
   Search,
   Sparkles,
   Spinner,
-  StopCircle,
   TerminalSquare,
   Trash2,
 } from '@/components/icons';
@@ -46,6 +44,14 @@ import {
   RunRecommendationPanel,
   useRunRecommendation,
 } from '@/components/promptBuilder/RunRecommendation';
+import {
+  cancelBusyMics,
+  OTHER_MIC_BUSY,
+  SPEAK_PROMPT_LABEL,
+  SpeechLanguageChip,
+  useSpeechSettings,
+  VoiceRecordButton,
+} from '@/components/promptBuilder/VoiceControls';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
 import {
@@ -206,25 +212,18 @@ export default function PromptBuilderPage(): React.JSX.Element {
     rawInputRef.current = rawInput;
   }, [rawInput]);
 
+  const {
+    language: speechLanguage,
+    model: speechModel,
+    save: saveVoiceSettings,
+  } = useSpeechSettings(settingsQuery.data);
   const voice = useVoiceInput({
-    language: settingsQuery.data?.speechLanguage ?? 'auto',
+    language: speechLanguage,
     onText: (text) => {
       const existing = rawInputRef.current.trim();
       setRawInput(existing ? `${existing} ${text}` : text);
     },
   });
-
-  const voiceBusy = voice.status === 'requesting' || voice.status === 'transcribing';
-  const voiceLabel =
-    voice.status === 'recording'
-      ? 'Stop recording'
-      : voice.status === 'transcribing'
-        ? voice.downloadPercent !== null
-          ? `Downloading model… ${voice.downloadPercent}%`
-          : 'Transcribing…'
-        : voice.status === 'requesting'
-          ? 'Starting microphone…'
-          : 'Record voice input';
 
   useEffect(() => {
     if (voice.error) toast.error(voice.error);
@@ -318,6 +317,44 @@ export default function PromptBuilderPage(): React.JSX.Element {
     promptType,
     targetAI,
   });
+
+  // Speak prompt skips Generate and Translate, so it is always heard as English: the words land
+  // in the prompt exactly as spoken, never translated. Like a translation, the result was not
+  // shaped by a prompt type, so it is sized without one.
+  const generatedRef = useRef(generated);
+  generatedRef.current = generated;
+  const runRecommendationRef = useRef(runRecommendation);
+  runRecommendationRef.current = runRecommendation;
+  const promptVoice = useVoiceInput({
+    language: 'en',
+    onText: (text) => {
+      const existing = generatedRef.current.trim();
+      const next = existing ? `${existing} ${text}` : text;
+      setGenerated(next);
+      runRecommendationRef.current.analyze({ prompt: next, isTranslation: true });
+    },
+  });
+  const promptTranscribing = promptVoice.status === 'transcribing';
+
+  useEffect(() => {
+    if (promptVoice.error) toast.error(promptVoice.error);
+  }, [promptVoice.error]);
+
+  // Escape throws away what a mic is recording or transcribing. It is only listened for while
+  // one is busy, so the rest of the time Escape does what it always did.
+  const micsRef = useRef([voice, promptVoice]);
+  micsRef.current = [voice, promptVoice];
+  const anyMicBusy = [voice, promptVoice].some(
+    (mic) => mic.status === 'recording' || mic.status === 'transcribing',
+  );
+  useEffect(() => {
+    if (!anyMicBusy) return;
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape' && cancelBusyMics(micsRef.current)) event.preventDefault();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [anyMicBusy]);
 
   const cliForSendTo = useMemo(() => {
     const cliId = defaultCliId ?? cliIdForTargetAI(targetAI);
@@ -509,31 +546,23 @@ export default function PromptBuilderPage(): React.JSX.Element {
               />
               <div className="flex items-center gap-1.5 p-2 pl-2.5">
                 {voice.supported && (
-                  <SimpleTooltip label={voiceLabel} wrapTrigger={voiceBusy}>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className={cn(
-                        'gap-1.5 px-2.5',
-                        voice.status === 'recording'
-                          ? 'bg-destructive/12 text-destructive hover:bg-destructive/20 hover:text-destructive'
-                          : 'text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground',
-                      )}
-                      onClick={voice.toggle}
-                      disabled={voiceBusy}
-                      aria-label={voiceLabel}
-                    >
-                      {voiceBusy ? (
-                        <Spinner className="animate-spin" />
-                      ) : voice.status === 'recording' ? (
-                        <StopCircle />
-                      ) : (
-                        <Microphone />
-                      )}
-                      {/* Idle, the mic speaks for itself; busy, it says what it is doing. */}
-                      {voice.status === 'idle' ? null : <span>{voiceLabel}</span>}
-                    </Button>
-                  </SimpleTooltip>
+                  <>
+                    <VoiceRecordButton
+                      voice={voice}
+                      idleText="Dictate"
+                      idleLabel="Dictate your request"
+                      blockedReason={promptVoice.status !== 'idle' ? OTHER_MIC_BUSY : null}
+                    />
+                    <SpeechLanguageChip
+                      language={speechLanguage}
+                      modelKey={speechModel}
+                      disabled={voice.status !== 'idle' || saveVoiceSettings.isPending}
+                      onLanguageChange={(code) =>
+                        saveVoiceSettings.mutate({ speechLanguage: code })
+                      }
+                      onModelChange={(key) => saveVoiceSettings.mutate({ speechModel: key })}
+                    />
+                  </>
                 )}
                 <span className="hidden truncate text-[11px] text-muted-foreground/70 sm:inline">
                   {generateShortcut} to generate
@@ -777,6 +806,22 @@ export default function PromptBuilderPage(): React.JSX.Element {
       >
         <div className="flex h-10 shrink-0 items-center justify-between gap-2 pl-4 pr-2">
           <h2 className={SECTION_HEADING}>Generated prompt</h2>
+          {promptVoice.supported && (
+            <div className="ml-auto">
+              <VoiceRecordButton
+                voice={promptVoice}
+                idleText="Speak prompt"
+                idleLabel={SPEAK_PROMPT_LABEL}
+                blockedReason={
+                  voice.status !== 'idle'
+                    ? OTHER_MIC_BUSY
+                    : isGenerating || isTranslating
+                      ? 'Wait for the prompt to finish'
+                      : null
+                }
+              />
+            </div>
+          )}
           <SimpleTooltip label="Browse previously generated prompts">
             <Button
               variant="ghost"
@@ -809,6 +854,28 @@ export default function PromptBuilderPage(): React.JSX.Element {
                 <Skeleton className="h-3 w-2/3" />
                 <Skeleton className="h-3 w-1/2" />
               </div>
+            ) : promptTranscribing ? (
+              <div
+                role="status"
+                aria-label="Writing down what you said"
+                className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-xl bg-background/80 backdrop-blur-[2px]"
+              >
+                <Spinner className="h-5 w-5 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">
+                  {promptVoice.downloadPercent !== null
+                    ? `Downloading speech model… ${promptVoice.downloadPercent}%`
+                    : 'Writing down what you said…'}
+                </p>
+                <Button
+                  type="button"
+                  variant="soft"
+                  size="sm"
+                  className="mt-1"
+                  onClick={promptVoice.cancel}
+                >
+                  Cancel
+                </Button>
+              </div>
             ) : !generated ? (
               // Clicks fall through, so the editor stays usable for pasting a prompt by hand.
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
@@ -818,7 +885,8 @@ export default function PromptBuilderPage(): React.JSX.Element {
                 <div className="space-y-1">
                   <p className="text-sm font-medium">Your prompt shows up here</p>
                   <p className="text-xs text-muted-foreground">
-                    Describe the task on the left and press Generate, or translate it.
+                    Describe the task on the left and press Generate or Translate, or speak the
+                    prompt itself in English.
                   </p>
                 </div>
               </div>

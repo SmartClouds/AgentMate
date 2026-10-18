@@ -32,10 +32,10 @@ The charts update live. They sample about every two seconds and keep roughly the
 
 | Card | What it shows |
 | --- | --- |
-| **CPU Usage** | Total CPU use as a percentage, with the processor model, number of cores and architecture (such as x64 or ARM64). When the machine has more than one core, **Total** and **Per core** buttons switch the chart between one line and a line for each core. When the CPU temperature can be read, it appears next to the percentage and as a dashed line on the same chart. See [Temperature](#temperature). |
-| **Memory Usage** | The percentage of RAM in use, with used and total memory. |
-| **Disk I/O** | Combined read and write speed, and a line for each disk. It says "No disk activity detected." when nothing is reported. |
-| **GPU Usage** | GPU use as a percentage (the average when you have several GPUs), plus each GPU's memory. It reads NVIDIA cards on any system, the integrated GPU on Windows, and every GPU on a Mac, Apple Silicon included. It shows N/A and "No supported GPU detected." when none can be read, for example an AMD or Intel GPU on Linux. An NVIDIA GPU's temperature is shown beside its memory and as a dashed line in the GPU's color. |
+| **CPU Usage** | Total CPU use as a percentage, with the processor model, number of cores and architecture (such as x64 or ARM64). When the machine has more than one core, **Total** and **Per core** buttons switch the chart between one line and a line for each core. When the CPU temperature can be read, it appears at the end of that line. See [Temperature](#temperature). |
+| **Memory Usage** | The percentage of RAM in use, with used and total memory, and the memory temperature where it can be read. |
+| **Disk I/O** | Combined read and write speed, and a line for each disk, with each drive's temperature where it can be read. It says "No disk activity detected." when nothing is reported. |
+| **GPU Usage** | GPU use as a percentage (the average when you have several GPUs), plus each GPU's memory. It reads NVIDIA cards on any system, the integrated GPU on Windows, and every GPU on a Mac, Apple Silicon included. It shows N/A and "No supported GPU detected." when none can be read, for example an AMD or Intel GPU on Linux. An NVIDIA GPU's temperature is shown after its memory. |
 | **Network Throughput** | Download speed as the headline number, with lines for download and upload. |
 | **Network Status** | How many of your ping targets are online, a quality label, and each target's latency. |
 
@@ -43,11 +43,13 @@ Each of CPU, Memory, Disk I/O and GPU has a **Top apps** button (a list icon) in
 
 ### Temperature
 
-The CPU and GPU charts show temperature as a dashed line on the same chart, measured in °C. Hover the chart to see the temperature at that moment next to the usage. There is no separate temperature card. Where it comes from depends on the system:
+Temperatures appear in °C next to the figures they belong to: at the end of the processor name on the CPU card, after used and total memory on the Memory card, after each drive's speed on the Disk I/O card, and after each GPU's memory on the GPU card. The charts show usage only. Point at a temperature (or move to it with `Tab`) and its history is drawn as a dashed line on the same chart, over the last two minutes. The line goes away when you move off. On the Disk I/O chart the line has its own scale in degrees, since the chart itself is in MB/s. There is no separate temperature card. Where each reading comes from depends on the system:
 
-- **Linux**: the kernel's own sensors, which covers Intel and AMD processors and ARM boards such as a Raspberry Pi. Some ARM servers report no CPU sensor at all, and then no line is drawn.
-- **Windows**: the system's thermal zones, on x64, x86 and ARM64 PCs. These need no administrator rights, but on many desktops the zone is a sensor on the motherboard rather than in the CPU, and some PCs report none. The reading is refreshed about every ten seconds.
-- **macOS**: macOS does not give apps the temperature without administrator rights, on Apple Silicon or Intel Macs. Instead the CPU card shows the thermal state macOS reports: **Nominal**, **Fair**, **Serious** or **Critical**. Serious and Critical mean the Mac is slowing itself down to cool off.
+- **CPU on Linux**: the kernel's own sensors, which covers Intel and AMD processors and ARM boards such as a Raspberry Pi. Some ARM servers report no CPU sensor at all, and then no temperature is shown.
+- **CPU on Windows**: the system's thermal zones, on x64, x86 and ARM64 PCs. These need no administrator rights, but on many desktops the zone is a sensor on the motherboard rather than in the CPU, and some PCs report none. The reading is refreshed about every ten seconds.
+- **CPU on macOS**: macOS does not give apps the temperature without administrator rights, on Apple Silicon or Intel Macs. Instead the CPU card shows the thermal state macOS reports: **Nominal**, **Fair**, **Serious** or **Critical**. Serious and Critical mean the Mac is slowing itself down to cool off.
+- **Memory**: only on Linux, and only for memory modules that have a sensor (DDR5, and some server and ECC DDR4). Most desktop and laptop memory has none, and Windows and macOS give apps no way to read it, so the Memory card usually shows no temperature.
+- **Drives**: on Windows, each drive's own sensor, asked through the storage driver without administrator rights (NVMe drives and most SATA SSDs). On Linux, NVMe drives always, and SATA drives when the `drivetemp` kernel module is loaded. macOS reports none. Drive temperatures are refreshed about once a minute.
 - **GPU**: only NVIDIA cards report a temperature (on any system). Other GPUs show usage without one.
 
 When no reading is available the card simply leaves the temperature out.

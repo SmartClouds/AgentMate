@@ -13,6 +13,11 @@ export interface SparklineSeries {
   dashed?: boolean;
   /** Fill under the line. Defaults to true. */
   area?: boolean;
+  /**
+   * Its own vertical range, for a series in another unit than the rest of the chart (°C over
+   * MB/s). It is drawn against this range and left out of the shared one.
+   */
+  scale?: { min: number; max: number };
 }
 
 export interface SparklineChartProps {
@@ -54,15 +59,20 @@ export function SparklineChart({
   const [tooltipPos, setTooltipPos] = React.useState<{ left: number; top: number } | null>(null);
 
   const n = timestamps.length;
-  const allValues = series.flatMap((s) => s.values).filter(Number.isFinite);
+  const allValues = series
+    .filter((s) => !s.scale)
+    .flatMap((s) => s.values)
+    .filter(Number.isFinite);
   const maxVal = domainMax ?? Math.max(domainMin + 1, ...(allValues.length ? allValues : [1]));
 
   const xAt = (i: number): number => {
     if (xDomainMax != null) return Math.min(1, timestamps[i] / xDomainMax) * VIEW_WIDTH;
     return n <= 1 ? VIEW_WIDTH : (i / (n - 1)) * VIEW_WIDTH;
   };
-  const yAt = (v: number): number => {
-    const t = (v - domainMin) / (maxVal - domainMin || 1);
+  const yAt = (v: number, scale?: SparklineSeries['scale']): number => {
+    const min = scale?.min ?? domainMin;
+    const max = scale?.max ?? maxVal;
+    const t = (v - min) / (max - min || 1);
     return height - PAD_Y - t * (height - PAD_Y * 2);
   };
 
@@ -85,22 +95,25 @@ export function SparklineChart({
     return runs;
   };
 
-  const runLine = (values: number[], run: number[]): string =>
+  const runLine = (s: SparklineSeries, run: number[]): string =>
     run
-      .map((i, j) => `${j === 0 ? 'M' : 'L'} ${xAt(i).toFixed(2)} ${yAt(values[i]).toFixed(2)}`)
+      .map(
+        (i, j) =>
+          `${j === 0 ? 'M' : 'L'} ${xAt(i).toFixed(2)} ${yAt(s.values[i], s.scale).toFixed(2)}`,
+      )
       .join(' ');
 
-  const linePath = (values: number[]): string =>
-    finiteRuns(values)
-      .map((run) => runLine(values, run))
+  const linePath = (s: SparklineSeries): string =>
+    finiteRuns(s.values)
+      .map((run) => runLine(s, run))
       .join(' ');
 
-  const areaPath = (values: number[]): string => {
+  const areaPath = (s: SparklineSeries): string => {
     const baseline = height - PAD_Y;
-    return finiteRuns(values)
+    return finiteRuns(s.values)
       .map(
         (run) =>
-          `${runLine(values, run)} L ${xAt(run[run.length - 1]).toFixed(2)} ${baseline} L ${xAt(run[0]).toFixed(2)} ${baseline} Z`,
+          `${runLine(s, run)} L ${xAt(run[run.length - 1]).toFixed(2)} ${baseline} L ${xAt(run[0]).toFixed(2)} ${baseline} Z`,
       )
       .join(' ');
   };
@@ -163,7 +176,7 @@ export function SparklineChart({
           .map((s) => (
             <path
               key={`area-${s.key}`}
-              d={areaPath(s.values)}
+              d={areaPath(s)}
               fill={s.color}
               fillOpacity={0.1}
               stroke="none"
@@ -172,7 +185,7 @@ export function SparklineChart({
         {series.map((s) => (
           <path
             key={`line-${s.key}`}
-            d={linePath(s.values)}
+            d={linePath(s)}
             fill="none"
             stroke={s.color}
             strokeWidth={2}
@@ -199,7 +212,7 @@ export function SparklineChart({
           const value = s.values[hoverIndex] ?? domainMin;
           if (!Number.isFinite(value)) return null;
           const leftPct = (xAt(hoverIndex) / VIEW_WIDTH) * 100;
-          const topPct = (yAt(value) / height) * 100;
+          const topPct = (yAt(value, s.scale) / height) * 100;
           return (
             <div
               key={`dot-${s.key}`}

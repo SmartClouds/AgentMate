@@ -71,6 +71,9 @@ export default defineConfig({
           // The API Client runs requests and their scripts in a utility process of its own, so a
           // runaway script from an imported collection cannot freeze main. Started by path.
           apiRunnerHost: resolve(__dirname, 'src/main/apiClient/runnerHost.ts'),
+          // Whisper loads and decodes synchronously, for minutes with the large model, so it runs
+          // in a utility process of its own instead of freezing main. Started by path.
+          speechHost: resolve(__dirname, 'src/main/speech/speechHost.ts'),
         },
       },
     },

@@ -416,15 +416,17 @@ describe('ProjectsPage GitHub auto-clone', () => {
       expect.objectContaining({ repoUrl: 'https://github.com/me/my-app' }),
     );
     await waitFor(() =>
-      expect(toast.success).toHaveBeenCalledWith('Project created — repo cloned.'),
+      expect(toast.success).toHaveBeenCalledWith('Project created and repository cloned.'),
     );
     // A successful clone lands on the Git tab so Fetch/Pull are one click away.
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Apollo' })).toBeNull());
   });
 
-  it('still creates the project as a link when the clone fails', async () => {
-    const created = project({ id: 'p10' });
+  it('still creates the project when the clone fails, and lands on the Git tab to retry', async () => {
+    const created = project({ id: 'p10', name: 'Apollo' });
     const { user, bridge } = renderWithProviders(<ProjectsPage />, {
+      route: '/projects',
+      path: 'projects',
       bridge: {
         'projects.pickFolder': async () => 'C:\\code\\apollo',
         'git.cloneInto': async () => ({
@@ -449,11 +451,14 @@ describe('ProjectsPage GitHub auto-clone', () => {
     await waitFor(() => expect(bridge.$fn('git.cloneInto')).toHaveBeenCalled());
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
-        'Folder is not empty. Choose an empty folder to clone into.',
+        'Project created, but the clone failed: Folder is not empty. Choose an empty folder to clone into.',
+        { description: 'Use Clone from GitHub on the Git tab to try again.' },
       ),
     );
     expect(bridge.$fn('projects.create')).toHaveBeenCalled();
-    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Project created.'));
+    expect(toast.success).not.toHaveBeenCalledWith('Project created.');
+    // The retry lives on the Git tab, so a failed clone lands there too.
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Apollo' })).toBeNull());
   });
 });
 

@@ -37,12 +37,34 @@ export function browsableRepoUrl(address: string): string {
   return `https://${url}`;
 }
 
+/** True for github.com, with or without the www a browser address bar may show. */
+function isGithubHost(host: string): boolean {
+  return /^(www\.)?github\.com$/i.test(host);
+}
+
 /**
- * v1 clone scope: public GitHub repos only. Accepts the forms users paste
- * (https URL with or without .git, bare host/owner/repo, scp-style
- * git@github.com:owner/repo, ssh://git@github.com/owner/repo), and rejects
- * local paths, file:// URLs and non-GitHub hosts so Add Project never clones
- * from an unexpected place. Returns null when the address is not clonable.
+ * `owner/repo` from the path part of a GitHub address, or null without both. Anything after
+ * the repo is dropped, so a link copied from a file or branch page (`owner/repo/tree/main`)
+ * still clones the repo instead of handing git an address it can't use.
+ */
+function githubRepoPath(path: string): string | null {
+  const segments = path
+    .replace(/[?#].*$/, '')
+    .split('/')
+    .filter(Boolean);
+  if (segments.length < 2) return null;
+  const owner = segments[0];
+  const repo = segments[1].replace(/\.git$/i, '');
+  if (!owner || !repo) return null;
+  return `${owner}/${repo}`;
+}
+
+/**
+ * Clone scope: GitHub repos only. Accepts the forms users paste (https URL with or without
+ * .git, bare host/owner/repo, scp-style git@github.com:owner/repo,
+ * ssh://git@github.com/owner/repo, or a browser link deeper into the repo), and rejects local
+ * paths, file:// URLs and non-GitHub hosts so a project never clones from an unexpected place.
+ * Returns the https address to clone, or null when the address is not clonable.
  */
 export function normalizeCloneUrl(address: string): string | null {
   const raw = stripRemoteCredentials(address.trim().replace(/\.git$/i, ''));
@@ -51,38 +73,20 @@ export function normalizeCloneUrl(address: string): string | null {
 
   // scp-style: git@github.com:owner/repo (optionally user@host)
   const scp = /^[^@\s/]+@([^:\s/]+):(.+)$/.exec(raw);
-  if (scp) {
-    if (scp[1].toLowerCase() !== 'github.com') return null;
-    const path = scp[2].replace(/^\/+|\/+$/g, '');
-    if (!/^[^/]+\/[^/]+(\/[^/]+)*$/.test(path)) return null;
-    return `https://github.com/${path}`;
-  }
-
   const ssh = /^ssh:\/\/(?:[^@/]+@)?([^/:]+)(?::\d+)?\/(.+)$/i.exec(raw);
-  if (ssh) {
-    if (ssh[1].toLowerCase() !== 'github.com') return null;
-    const path = ssh[2].replace(/^\/+|\/+$/g, '');
-    if (!/^[^/]+\/[^/]+(\/[^/]+)*$/.test(path)) return null;
-    return `https://github.com/${path}`;
-  }
+  const https = /^https?:\/\/([^/]+)\/(.+)$/i.exec(raw);
+  // bare host/owner/repo copied from the address bar
+  const bare = /^((?:www\.)?github\.com)\/(.+)$/i.exec(raw);
+  const match = scp ?? ssh ?? https ?? bare;
+  if (!match) return null;
+  const [, host, path] = match;
+  if (!isGithubHost(host)) return null;
 
-  let path: string;
-  const https = /^(https?:\/\/)([^/]+)\/(.+)$/i.exec(raw);
-  if (https) {
-    if (https[2].toLowerCase() !== 'github.com') return null;
-    path = https[3];
-  } else {
-    // bare host/owner/repo copied from the address bar
-    const bare = /^github\.com\/(.+)$/i.exec(raw);
-    if (!bare) return null;
-    path = bare[1];
-  }
-  path = path.replace(/^\/+|\/+$/g, '');
-  if (!/^[^/]+\/[^/]+(\/[^/]+)*$/.test(path)) return null;
-  return `https://github.com/${path}`;
+  const repoPath = githubRepoPath(path);
+  return repoPath ? `https://github.com/${repoPath}` : null;
 }
 
-/** True when Add Project can auto-clone the address in v1. */
+/** True when the address is one a project can clone. */
 export function isClonableGithubUrl(address: string): boolean {
   return normalizeCloneUrl(address) !== null;
 }
