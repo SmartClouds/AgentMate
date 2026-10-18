@@ -120,6 +120,7 @@ import {
   pruneOrphanEnvironments,
   store,
 } from './store';
+import { showRosettaNotice } from './system/rosettaNotice';
 import { isE2E, keepWindowsHidden } from './testMode';
 import { startToolUpdateWatcher, stopToolUpdateWatcher } from './toolUpdates/watcher';
 import { startHourlyUpdateChecks } from './updater';
@@ -468,7 +469,9 @@ app.whenReady().then(async () => {
   // Nothing answers a confirmation dialog in a test, so closing must not ask.
   if (isE2E) allowQuit();
   setSplashStatus('Loading your workspace...');
-  createMainWindow();
+  const mainWin = createMainWindow();
+  // The Intel build on an Apple Silicon Mac can't run git, so say so once the window is up.
+  if (!isE2E) mainWin.once('show', () => void showRosettaNotice(mainWin));
   registerNotificationActivation();
   void widgetManager.restoreAll();
   void promptBuildWidgetManager.restoreAll();

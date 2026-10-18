@@ -25,19 +25,19 @@ describe('pickMacZip', () => {
     '/v1.2.3/AgentMate-1.2.3-mac.zip',
   ];
 
-  it('gives an arm64 build the arm64 zip', () => {
+  it('gives an Apple Silicon Mac the arm64 zip', () => {
     expect(pickMacZip(both, true)).toBe('/v1.2.3/AgentMate-1.2.3-arm64-mac.zip');
   });
 
-  it('gives an Intel build the x64 zip, even under Rosetta', () => {
+  it('gives an Intel Mac the x64 zip', () => {
     expect(pickMacZip(both, false)).toBe('/v1.2.3/AgentMate-1.2.3-mac.zip');
   });
 
-  it('never gives an Intel build an arm64 zip, even when it is the only one', () => {
+  it('never gives an Intel Mac an arm64 zip, even when it is the only one', () => {
     expect(pickMacZip(['/AgentMate-1.2.3-arm64-mac.zip'], false)).toBeNull();
   });
 
-  it('lets an arm64 build fall back to the Intel zip under Rosetta', () => {
+  it('lets an Apple Silicon Mac fall back to the Intel zip, which runs under Rosetta', () => {
     expect(pickMacZip(['/AgentMate-1.2.3-mac.zip'], true)).toBe('/AgentMate-1.2.3-mac.zip');
   });
 

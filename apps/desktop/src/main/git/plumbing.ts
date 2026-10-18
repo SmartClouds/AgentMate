@@ -12,6 +12,7 @@ import type {
   GitStatus,
   GitTagInfo,
 } from '../../shared/apiTypes';
+import { isRunningUnderRosetta, isXcrunArchMismatch, ROSETTA_GIT_MESSAGE } from '../system/rosetta';
 import { ghApi, isGhCliAvailable, parseGithubRemote } from './githubCli';
 import { splitTagPrefix, tagHasPrefix } from './versioning';
 
@@ -80,6 +81,10 @@ export async function git(
       });
       return stdout;
     } catch (error) {
+      const stderr = (error as { stderr?: string } | null)?.stderr ?? '';
+      if (isXcrunArchMismatch(stderr) && isRunningUnderRosetta()) {
+        throw new Error(ROSETTA_GIT_MESSAGE);
+      }
       // git checks for the lock before it changes anything, so trying again is always safe.
       const delay = LOCK_RETRY_DELAYS_MS[attempt];
       if (delay === undefined || !isGitLockBusy(error)) throw error;

@@ -11,6 +11,7 @@ import { IPC } from '../shared/ipcChannels';
 import { broadcastToWindows } from './ipc/send';
 import { preserveTerminalsOnQuit } from './ipc/terminal';
 import { allowQuit } from './quitGuard';
+import { isRunningUnderRosetta } from './system/rosetta';
 import { isE2E } from './testMode';
 import {
   launchMacInstall,
@@ -306,12 +307,13 @@ function wireEvents(): void {
 }
 
 /**
- * Updates keep the arch of the build that is running, not the hardware's: an Intel build
- * under Rosetta on Apple Silicon stays Intel, so an update never swaps in a build the user
- * hasn't already seen launch on this Mac.
+ * Updates go by the hardware, not the build that is running: an Intel build under Rosetta on
+ * Apple Silicon moves to the arm64 build, because under Rosetta git and every other xcrun tool
+ * fails (see system/rosetta.ts). The arm64 zip is ad-hoc signed and CD checks the signature, so
+ * it launches after the swap.
  */
-function isArmBuild(): boolean {
-  return process.arch === 'arm64';
+function wantsAppleSiliconBuild(): boolean {
+  return process.arch === 'arm64' || isRunningUnderRosetta();
 }
 
 async function resolveAsset(info: UpdateInfo): Promise<ResolvedAsset> {
@@ -327,12 +329,12 @@ async function resolveAsset(info: UpdateInfo): Promise<ResolvedAsset> {
     if (process.platform === 'darwin') {
       const picked = pickMacZip(
         files.map((file) => file.url.pathname),
-        isArmBuild(),
+        wantsAppleSiliconBuild(),
       );
       match = files.find((file) => file.url.pathname === picked);
       if (!match) {
         throw new DownloadFatalError(
-          `This release has no ${isArmBuild() ? 'Apple Silicon' : 'Intel'} build to update to. Download it from the releases page instead.`,
+          `This release has no ${wantsAppleSiliconBuild() ? 'Apple Silicon' : 'Intel'} build to update to. Download it from the releases page instead.`,
         );
       }
     } else {
