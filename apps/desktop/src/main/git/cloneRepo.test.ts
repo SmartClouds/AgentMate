@@ -33,7 +33,8 @@ describe('describeCloneError', () => {
     expect(describeCloneError({ stderr: 'remote: Repository not found.' })).toMatch(/not found/i);
     expect(
       describeCloneError({
-        stderr: "fatal: could not read Username for 'https://github.com': terminal prompts disabled",
+        stderr:
+          "fatal: could not read Username for 'https://github.com': terminal prompts disabled",
       }),
     ).toMatch(/gh auth login/);
     expect(describeCloneError({ killed: true, stderr: "Cloning into '.'...\n" })).toMatch(
@@ -44,16 +45,17 @@ describe('describeCloneError', () => {
   it('skips git\'s "Cloning into" banner and reports the actual reason', () => {
     expect(
       describeCloneError({
-        stderr: "Cloning into '.'...\nfatal: unable to access 'x': Could not resolve host: github.com\n",
+        stderr:
+          "Cloning into '.'...\nfatal: unable to access 'x': Could not resolve host: github.com\n",
       }),
     ).toBe("fatal: unable to access 'x': Could not resolve host: github.com");
     expect(describeCloneError({ stderr: "Cloning into '.'...\n" })).toMatch(/Clone failed/);
   });
 
   it('points an ssh key failure at the sign-in fix too', () => {
-    expect(describeCloneError({ stderr: 'git@github.com: Permission denied (publickey).' })).toMatch(
-      /gh auth login/,
-    );
+    expect(
+      describeCloneError({ stderr: 'git@github.com: Permission denied (publickey).' }),
+    ).toMatch(/gh auth login/);
   });
 });
 

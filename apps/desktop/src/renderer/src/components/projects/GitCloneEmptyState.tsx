@@ -102,7 +102,10 @@ export function GitCloneEmptyState({
   }
 
   const cloneSaved = (
-    <Button disabled={pending} onClick={() => cloneMutation.mutate({ url: repoUrl, attach: false })}>
+    <Button
+      disabled={pending}
+      onClick={() => cloneMutation.mutate({ url: repoUrl, attach: false })}
+    >
       {pending ? (
         <Spinner className="h-4 w-4 animate-spin" />
       ) : (
@@ -154,8 +157,8 @@ export function GitCloneEmptyState({
           <DialogHeader>
             <DialogTitle>Clone from GitHub</DialogTitle>
             <DialogDescription>
-              The repository is cloned into this project's folder. If the folder already has
-              files, you'll be asked before they are connected to it.
+              The repository is cloned into this project's folder. If the folder already has files,
+              you'll be asked before they are connected to it.
             </DialogDescription>
           </DialogHeader>
           <form

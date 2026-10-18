@@ -129,7 +129,13 @@ export async function cloneIntoFolder(folder: string, url: string): Promise<Clon
 
 /** The remote's default branch, read from its HEAD, with main and master as fallbacks. */
 async function remoteDefaultBranch(folder: string, credentials: string[]): Promise<string | null> {
-  const symref = await gitOrNull(folder, [...credentials, 'ls-remote', '--symref', 'origin', 'HEAD']);
+  const symref = await gitOrNull(folder, [
+    ...credentials,
+    'ls-remote',
+    '--symref',
+    'origin',
+    'HEAD',
+  ]);
   const advertised = /^ref:\s+refs\/heads\/(\S+)\s+HEAD/m.exec(symref ?? '')?.[1];
   // An empty remote can still advertise an unborn HEAD, so only a branch that was fetched counts.
   for (const candidate of [advertised, 'main', 'master']) {
