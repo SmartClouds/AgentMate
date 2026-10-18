@@ -369,10 +369,25 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           # The self-hosted runner keeps what it installed, so only reach for apt when needed.
-          packages="xvfb libnss3 libgbm1 libasound2t64 libxss1 libxtst6"
-          if ! dpkg -s $packages > /dev/null 2>&1; then
+          missing=""
+          for p in xvfb libnss3 libgbm1 libxss1 libxtst6; do
+            dpkg -s "$p" > /dev/null 2>&1 || missing="$missing $p"
+          done
+          # Ubuntu 24.04 renamed the ALSA library to libasound2t64. 22.04 only has libasound2.
+          if ! dpkg -s libasound2t64 > /dev/null 2>&1 && ! dpkg -s libasound2 > /dev/null 2>&1; then
+            if apt-cache show libasound2t64 > /dev/null 2>&1; then
+              missing="$missing libasound2t64"
+            else
+              missing="$missing libasound2"
+            fi
+          fi
+          if [ -n "$missing" ]; then
+            if ! sudo -n true 2> /dev/null; then
+              echo "::error::Missing system packages:$missing. This runner has no passwordless sudo, so install them on the runner host: sudo apt-get install -y$missing"
+              exit 1
+            fi
             sudo apt-get update
-            sudo apt-get install -y $packages
+            sudo apt-get install -y $missing
           fi
           # Ubuntu blocks the unprivileged user namespaces Chromium's sandbox needs, which makes
           # Electron refuse to start. The fixture can fall back to --no-sandbox if this fails.
