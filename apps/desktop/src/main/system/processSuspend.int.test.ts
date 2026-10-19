@@ -93,6 +93,7 @@ describe('pausing a real process tree', () => {
     await control.warm();
     const started = Date.now();
     const paused = await control.suspendTree(ticker.pid as number);
+    // biome-ignore lint/suspicious/noConsole: the pause time is the number worth watching in the CI log
     console.info(`paused ${paused.pids.length} processes in ${Date.now() - started} ms`);
 
     expect(paused.failed).toEqual([]);
@@ -128,6 +129,7 @@ describe('pausing a real process tree', () => {
         const started = Date.now();
         const paused = await control.suspendTree(busy.pid as number);
         const elapsed = Date.now() - started;
+        // biome-ignore lint/suspicious/noConsole: the pause time under load is the point of this test
         console.info(`under load: paused ${paused.pids.length} processes in ${elapsed} ms`);
         expect(paused.pids).toHaveLength(2);
         await control.resumePids(paused.pids);

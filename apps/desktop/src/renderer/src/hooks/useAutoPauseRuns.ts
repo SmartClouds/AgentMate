@@ -45,7 +45,6 @@ export function useAutoPauseRuns(): void {
   // A signature, so the effect runs when what the rules see changes, not on every render.
   const signature = JSON.stringify([enabled, runs, agents]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the signature stands for runs and agents, and tick asks for a fresh look
   useEffect(() => {
     // Before the setting loads, "off" would resume runs the agent paused before a reload.
     if (!loaded) return;
