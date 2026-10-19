@@ -165,6 +165,63 @@ describe('buildLimitChips', () => {
   });
 });
 
+describe('buildLimitChips read time and estimates', () => {
+  const ANSWERED_AT = '2026-03-01T11:56:00.000Z';
+
+  function estimate(windows: SubscriptionWindow[], over: Partial<ProviderUsage> = {}) {
+    return usage('claude-code', {
+      subscription: {
+        mode: 'subscription',
+        plan: null,
+        windows,
+        source: 'estimate',
+        estimateReason: 'signed out of the CLI',
+      },
+      ...over,
+    });
+  }
+
+  it('dates a chip from when the limits were read, not from when the snapshot was built', () => {
+    const read = usage('claude-code', withLimits([limit(12)]));
+    if (read.subscription) read.subscription.readAt = ANSWERED_AT;
+
+    const [chip] = buildLimitChips([read], undefined);
+
+    expect(chip).toMatchObject({ state: 'ok', asOf: ANSWERED_AT });
+  });
+
+  it('falls back to the snapshot time when the read time is not known', () => {
+    const [chip] = buildLimitChips([usage('claude-code', withLimits([limit(12)]))], undefined);
+
+    expect(chip.asOf).toBe(READ_AT);
+  });
+
+  it('marks windows estimated from local logs, with the reason the account was not read', () => {
+    const [chip] = buildLimitChips([estimate([limit(5)])], undefined);
+
+    expect(chip).toMatchObject({
+      state: 'estimate',
+      windows: [limit(5)],
+      asOf: READ_AT,
+      problem: 'signed out of the CLI',
+    });
+  });
+
+  it("shows the account's last reading rather than an estimate, as out of date", () => {
+    const lastLimits = { plan: PRO_PLUS, windows: [limit(30)], readAt: ANSWERED_AT };
+
+    const [chip] = buildLimitChips([estimate([limit(5)], { lastLimits })], undefined);
+
+    expect(chip).toMatchObject({
+      state: 'stale',
+      plan: 'Pro+',
+      windows: [limit(30)],
+      asOf: ANSWERED_AT,
+      problem: 'signed out of the CLI',
+    });
+  });
+});
+
 describe('mergeProviderUsage', () => {
   it('swaps in one provider without touching the others', () => {
     const list = [usage('cursor'), usage('codex')];

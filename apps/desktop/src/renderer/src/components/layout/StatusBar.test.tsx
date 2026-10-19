@@ -857,3 +857,134 @@ describe('the plan limits entries when a read fails', () => {
     expect(screen.getByRole('button', { name: CHIP })).toBeInTheDocument();
   });
 });
+
+/**
+ * The panel says how old its numbers are. That has to be when the limits were read, not when the
+ * usage list was put together: the list is rebuilt on every poll, so going by it the panel always
+ * said "Updated just now", even over numbers that were minutes or hours old, or only guessed.
+ */
+describe('how old the plan limits entry says its numbers are', () => {
+  const MINUTE = 60_000;
+  const inHours = (hours: number): string => new Date(Date.now() + hours * 3_600_000).toISOString();
+  const ago = (ms: number): string => new Date(Date.now() - ms).toISOString();
+
+  function claude(subscription: Record<string, unknown>, over: Record<string, unknown> = {}) {
+    return {
+      providerId: 'claude-code',
+      status: 'ok',
+      updatedAt: new Date().toISOString(),
+      subscription: {
+        mode: 'subscription',
+        plan: { id: 'max20x', label: 'Max 20×' },
+        windows: [{ key: 'session', label: 'Session (5h)', percent: 12, resetAt: inHours(3) }],
+        source: 'account',
+        ...subscription,
+      },
+      ...over,
+    };
+  }
+
+  function usageBar(list: unknown[]) {
+    return setup({ 'android.sdk': NO_SDK, 'usage.list': list, 'settings.get': {} });
+  }
+
+  it('dates the numbers from when the account answered, not from the latest poll', async () => {
+    const { user } = usageBar([claude({ readAt: ago(4 * MINUTE) })]);
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Claude Code: Session (5h) limit' }),
+    );
+
+    const panel = await screen.findByRole('dialog');
+    expect(within(panel).getByText('Updated 4m ago')).toBeInTheDocument();
+    expect(within(panel).queryByText('Updated just now')).not.toBeInTheDocument();
+  });
+
+  it('dates Codex limits from the Codex turn that reported them', async () => {
+    const { user } = usageBar([
+      {
+        providerId: 'codex',
+        status: 'ok',
+        updatedAt: new Date().toISOString(),
+        subscription: {
+          mode: 'subscription',
+          plan: { id: 'plus', label: 'Plus' },
+          windows: [{ key: 'week', label: 'Weekly', percent: 9, resetAt: inHours(90) }],
+          source: 'account',
+          readAt: ago(3 * 60 * MINUTE),
+        },
+      },
+    ]);
+
+    await user.click(await screen.findByRole('button', { name: 'Codex: Weekly limit' }));
+
+    expect(
+      within(await screen.findByRole('dialog')).getByText('Updated 3h ago'),
+    ).toBeInTheDocument();
+  });
+
+  it('marks numbers estimated from local logs instead of passing them off as current', async () => {
+    const { user } = usageBar([
+      claude({ source: 'estimate', estimateReason: 'account unreachable' }),
+    ]);
+
+    const chip = await screen.findByRole('button', {
+      name: 'Claude Code: Session (5h) limit, estimated from local logs',
+    });
+    expect(within(chip).getByText('~12%')).toBeInTheDocument();
+
+    await user.click(chip);
+    const panel = await screen.findByRole('dialog');
+    expect(
+      within(panel).getByText('Estimated from local logs: account unreachable.'),
+    ).toBeInTheDocument();
+    expect(within(panel).getByText('Estimated just now')).toBeInTheDocument();
+    expect(within(panel).queryByText(/^Updated/)).not.toBeInTheDocument();
+  });
+
+  it("prefers the account's last reading over an estimate, marked as out of date", async () => {
+    const { user } = usageBar([
+      claude(
+        { source: 'estimate', estimateReason: 'account unreachable' },
+        {
+          lastLimits: {
+            plan: { id: 'max20x', label: 'Max 20×' },
+            windows: [{ key: 'session', label: 'Session (5h)', percent: 30, resetAt: inHours(3) }],
+            readAt: ago(12 * MINUTE),
+          },
+        },
+      ),
+    ]);
+
+    const chip = await screen.findByRole('button', {
+      name: 'Claude Code: Session (5h) limit, may be out of date',
+    });
+    expect(within(chip).getByText('30%')).toBeInTheDocument();
+
+    await user.click(chip);
+    const panel = await screen.findByRole('dialog');
+    expect(within(panel).getByText("Couldn't refresh: account unreachable")).toBeInTheDocument();
+    expect(within(panel).getByText('Last read 12m ago')).toBeInTheDocument();
+  });
+
+  it('keeps the age moving while no new numbers arrive', async () => {
+    // Only the clock the panel redraws on is faked, so the queries and the waits run as usual.
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
+    try {
+      const { user } = usageBar([claude({ readAt: new Date().toISOString() })]);
+      await user.click(
+        await screen.findByRole('button', { name: 'Claude Code: Session (5h) limit' }),
+      );
+      const panel = await screen.findByRole('dialog');
+      expect(within(panel).getByText('Updated just now')).toBeInTheDocument();
+
+      await act(async () => {
+        vi.advanceTimersByTime(3 * MINUTE);
+      });
+
+      expect(within(panel).getByText('Updated 3m ago')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

@@ -193,3 +193,77 @@ describe('the last known limits', () => {
     expect(out.lastLimits?.windows).toEqual([limit(41)]);
   });
 });
+
+/**
+ * When the Claude account does not answer, the scan still hands back windows, worked out from local
+ * logs. Those are a guess: they must not be remembered as the account's numbers, and the numbers the
+ * account last gave must still reach the status bar alongside them.
+ */
+describe('the last known limits next to an estimate', () => {
+  function claude(over: Partial<ProviderUsage> = {}): ProviderUsage {
+    return snapshot({ providerId: 'claude-code', ...over });
+  }
+
+  function estimate(windows: SubscriptionWindow[]): Partial<ProviderUsage> {
+    return {
+      subscription: {
+        mode: 'subscription',
+        plan: PLAN,
+        windows,
+        source: 'estimate',
+        estimateReason: 'account unreachable',
+      },
+    };
+  }
+
+  it("hands an estimate the account's last reading", () => {
+    const memory = createLimitsMemory();
+    memory.observe('claude-code', claude(withLimits([limit(30, at(3 * HOUR), 'session')])), NOW);
+
+    const out = memory.attach(
+      'claude-code',
+      claude({ ...estimate([limit(5, at(3 * HOUR), 'session')]), updatedAt: at(60_000) }),
+      NOW + 60_000,
+    );
+
+    expect(out.lastLimits).toEqual({
+      plan: PLAN,
+      windows: [limit(30, at(3 * HOUR), 'session')],
+      readAt: at(0),
+    });
+    // The estimate itself is left as it was, for the Usage page to show as estimated.
+    expect(out.subscription?.source).toBe('estimate');
+  });
+
+  it('never remembers an estimate in place of a real reading', () => {
+    const memory = createLimitsMemory();
+    memory.observe('claude-code', claude(withLimits([limit(30, at(3 * HOUR), 'session')])), NOW);
+    memory.observe(
+      'claude-code',
+      claude({ ...estimate([limit(5, at(3 * HOUR), 'session')]), updatedAt: at(60_000) }),
+      NOW + 60_000,
+    );
+
+    const out = memory.attach('claude-code', failed({ providerId: 'claude-code' }), NOW + 120_000);
+
+    expect(out.lastLimits?.windows).toEqual([limit(30, at(3 * HOUR), 'session')]);
+  });
+
+  it('remembers when the account answered, not when the scan carrying the answer ran', () => {
+    const memory = createLimitsMemory();
+    const read = claude({
+      subscription: {
+        mode: 'subscription',
+        plan: PLAN,
+        windows: [limit(30, at(3 * HOUR), 'session')],
+        source: 'account',
+        readAt: at(-40_000),
+      },
+    });
+    memory.observe('claude-code', read, NOW);
+
+    const out = memory.attach('claude-code', failed({ providerId: 'claude-code' }), NOW);
+
+    expect(out.lastLimits?.readAt).toBe(at(-40_000));
+  });
+});

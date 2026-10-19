@@ -34,6 +34,8 @@ describe('codexSubscription', () => {
         { key: 'week', label: 'Weekly', percent: 41, resetAt: later(50) },
       ],
       source: 'account',
+      // As of the turn that reported them an hour ago, so the status bar does not call them new.
+      readAt: new Date(now - HOUR_MS).toISOString(),
     });
   });
 

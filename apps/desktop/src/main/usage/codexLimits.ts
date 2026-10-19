@@ -58,5 +58,7 @@ export function codexSubscription(
     plan: planId ? { id: planId, label: planLabel(planId) } : null,
     windows,
     source: 'account',
+    // As of the Codex turn that reported them, not this scan.
+    readAt: new Date(limits.at).toISOString(),
   };
 }

@@ -15,6 +15,7 @@ import { SparklineChart } from '@/components/dashboard/SparklineChart';
 import {
   Android,
   Check,
+  CircleInfo,
   Copy,
   Cpu,
   Docker,
@@ -319,14 +320,24 @@ function soonestWindow(windows: SubscriptionWindow[]): SubscriptionWindow | unde
   );
 }
 
+// The countdowns and the "Updated 3m ago" line are worked out at render, so they are redrawn on
+// this beat as well as when new numbers arrive. Without it they freeze at whatever they said last.
+const LIMIT_CLOCK_MS = 30_000;
+
 /**
  * One provider's item in the bar: the limit that resets soonest, a countdown to it and the panel
  * behind it. A read that failed keeps the item. With its last limits it dims and carries a warning,
- * and with none it shows only the warning, so its refresh button stays one click away.
+ * and with none it shows only the warning, so its refresh button stays one click away. Numbers
+ * estimated from local logs are marked with a "~" and say so in the panel.
  */
 function ProviderLimitSegment({ chip }: { chip: LimitChip }): React.JSX.Element {
   const navigate = useNavigate();
   const refresh = useRefreshProviderUsage(chip.providerId);
+  const [, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), LIMIT_CLOCK_MS);
+    return () => clearInterval(timer);
+  }, []);
   const next = soonestWindow(chip.windows);
   const countdown = formatCountdown(next?.resetAt);
   const pending = refresh.isPending;
@@ -339,9 +350,17 @@ function ProviderLimitSegment({ chip }: { chip: LimitChip }): React.JSX.Element 
   const runRefresh = (): void => {
     if (!pending) refresh.mutate();
   };
+  const estimated = chip.state === 'estimate';
+  const qualifier = {
+    ok: '',
+    estimate: ', estimated from local logs',
+    stale: ', may be out of date',
+    unavailable: '',
+  };
   const label = next
-    ? `${chip.name}: ${next.label} limit${chip.state === 'stale' ? ', may be out of date' : ''}`
+    ? `${chip.name}: ${next.label} limit${qualifier[chip.state]}`
     : `${chip.name}: usage unavailable`;
+  const asOfPrefix = { ok: 'Updated', estimate: 'Estimated', stale: 'Last read', unavailable: '' };
 
   return (
     <PopSegment
@@ -374,7 +393,12 @@ function ProviderLimitSegment({ chip }: { chip: LimitChip }): React.JSX.Element 
               </SimpleTooltip>
             }
           />
-          {chip.state !== 'ok' ? (
+          {estimated ? (
+            <p className="mb-2 flex items-start gap-1.5 text-[10px] text-muted-foreground">
+              <CircleInfo className="mt-px h-3 w-3 shrink-0" />
+              <span>Estimated from local logs: {chip.problem}.</span>
+            </p>
+          ) : chip.state !== 'ok' ? (
             <p className="mb-2 flex items-start gap-1.5 text-[10px] text-muted-foreground">
               <TriangleAlert className="mt-px h-3 w-3 shrink-0 text-warning" />
               <span>
@@ -392,6 +416,7 @@ function ProviderLimitSegment({ chip }: { chip: LimitChip }): React.JSX.Element 
                   </span>
                   <Meter percent={w.percent} />
                   <span className="w-8 shrink-0 text-right text-[10px] tabular-nums">
+                    {estimated ? '~' : ''}
                     {Math.round(w.percent)}%
                   </span>
                   <span className="min-w-0 flex-1 truncate text-right text-[10px] text-muted-foreground">
@@ -409,7 +434,7 @@ function ProviderLimitSegment({ chip }: { chip: LimitChip }): React.JSX.Element 
             </PopoverPrimitive.Close>
             {asOf ? (
               <span className="tabular-nums">
-                {chip.state === 'stale' ? 'Last read' : 'Updated'} {asOf}
+                {asOfPrefix[chip.state]} {asOf}
               </span>
             ) : null}
           </div>
@@ -419,13 +444,18 @@ function ProviderLimitSegment({ chip }: { chip: LimitChip }): React.JSX.Element 
       <ProviderLogo providerId={chip.providerId} className="h-3 w-3 shrink-0" />
       {next ? (
         <>
-          <span className="tabular-nums">{Math.round(next.percent)}%</span>
+          <span className="tabular-nums">
+            {estimated ? '~' : ''}
+            {Math.round(next.percent)}%
+          </span>
           {countdown ? (
             <span className="tabular-nums text-muted-foreground/80">{countdown}</span>
           ) : null}
         </>
       ) : null}
-      {chip.state !== 'ok' ? <TriangleAlert className="h-3 w-3 shrink-0" /> : null}
+      {chip.state === 'stale' || chip.state === 'unavailable' ? (
+        <TriangleAlert className="h-3 w-3 shrink-0" />
+      ) : null}
     </PopSegment>
   );
 }

@@ -13,9 +13,13 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 
 const paths = vi.hoisted(() => ({ userData: '' }));
 vi.mock('electron', () => ({ app: { getPath: () => paths.userData } }));
+const claude = vi.hoisted(() => ({
+  account: { mode: 'api' } as Record<string, unknown>,
+  live: null as unknown,
+}));
 vi.mock('./claudeAccount', () => ({
-  readClaudeAccount: async () => ({ mode: 'api' }),
-  getLiveWindows: async () => null,
+  readClaudeAccount: async () => claude.account,
+  getLiveWindows: async () => claude.live,
 }));
 
 const HOUR_MS = 3_600_000;
@@ -44,9 +48,13 @@ function writeRollout(lines: string[]): string {
 
 /** A fresh module graph each time, since the scan cache is loaded once per process. */
 async function scanCodex() {
+  return scan('codex');
+}
+
+async function scan(provider: 'codex' | 'claude-code') {
   vi.resetModules();
   const { scanLocalProvider } = await import('./localScanner');
-  return scanLocalProvider('codex');
+  return scanLocalProvider(provider);
 }
 
 // The first import of the scanner loads the whole usage module graph cold, which can take longer
@@ -68,6 +76,8 @@ beforeEach(() => {
   vi.stubEnv('USERPROFILE', join(root, 'home'));
   // The missing worker is reported once per scan; it is expected here.
   vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  claude.account = { mode: 'api' };
+  claude.live = null;
 });
 
 afterEach(() => {
@@ -109,6 +119,8 @@ describe('scanLocalProvider for Codex', () => {
         },
       ],
       source: 'account',
+      // As of the Codex turn an hour ago, not this scan.
+      readAt: new Date(now - HOUR_MS).toISOString(),
     });
     // The token view's quota bar still reads the primary window, as it did before.
     expect(usage.window).toMatchObject({ label: 'Quota', percent: 22 });
@@ -154,5 +166,54 @@ describe('scanLocalProvider for Codex', () => {
     const saved = JSON.parse(readFileSync(join(paths.userData, 'usage-scan-cache.json'), 'utf-8'));
     expect(saved.version).toBe(4);
     expect(saved.providers.codex[file].limits.planType).toBe('free');
+  });
+});
+
+/**
+ * Claude Code's plan limits come from the account, and its answer is held for a while between
+ * reads. The card has to say when the account answered, or the status bar calls a cached answer new.
+ */
+describe('scanLocalProvider for Claude Code', () => {
+  const PLAN = { id: 'max20x', label: 'Max 20×' };
+  const SESSION = {
+    key: 'session',
+    label: 'Session (5h)',
+    percent: 12,
+    resetAt: new Date(Date.UTC(2026, 9, 5, 15, 0, 0)).toISOString(),
+  };
+
+  function signedIn(): void {
+    claude.account = {
+      mode: 'subscription',
+      plan: PLAN,
+      accessToken: 'token',
+      tokenExpired: false,
+      weeklyAnchor: null,
+    };
+  }
+
+  it('carries the time the account answered with its limits', async () => {
+    signedIn();
+    const answeredAt = new Date(now - 40_000).toISOString();
+    claude.live = { windows: [SESSION], readAt: answeredAt };
+
+    const usage = await scan('claude-code');
+
+    expect(usage.subscription).toMatchObject({
+      source: 'account',
+      windows: [SESSION],
+      readAt: answeredAt,
+    });
+  });
+
+  it('falls back to an estimate, marked as one, when the account does not answer', async () => {
+    signedIn();
+
+    const usage = await scan('claude-code');
+
+    expect(usage.subscription).toMatchObject({
+      source: 'estimate',
+      estimateReason: 'account unreachable',
+    });
   });
 });

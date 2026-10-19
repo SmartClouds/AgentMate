@@ -160,6 +160,12 @@ export interface SubscriptionUsage {
   source: 'account' | 'estimate';
   /** Why the authoritative fetch was skipped/failed, for the estimate footnote. */
   estimateReason?: string;
+  /**
+   * ISO datetime the windows were read, when that is not the snapshot's `updatedAt`. An account
+   * answer is held for a while between reads, and Codex reports its limits only on its own turns,
+   * so the numbers can be older than the scan that carries them.
+   */
+  readAt?: string;
 }
 
 /** Plan limits read on an earlier attempt, kept while the provider cannot be read now. */
@@ -212,7 +218,8 @@ export interface ProviderUsage {
   subscription?: SubscriptionUsage;
   /**
    * The plan limits this provider last reported, attached only when this snapshot has no current
-   * ones because the read failed. Kept apart from `subscription` so nothing that treats limits as
+   * ones because the read failed, or has only an estimate from local logs because the account did
+   * not answer. Kept apart from `subscription` so nothing that treats limits as
    * current (the Usage page, widgets, the alert watchers) mistakes them for fresh numbers.
    */
   lastLimits?: LastKnownLimits;

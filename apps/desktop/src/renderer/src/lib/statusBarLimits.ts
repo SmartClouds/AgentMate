@@ -5,7 +5,11 @@ import {
   type SubscriptionWindow,
 } from '@agentmat/core';
 
-export type LimitState = 'ok' | 'stale' | 'unavailable';
+/**
+ * ok: the account's own numbers. estimate: worked out from local logs because the account did not
+ * answer. stale: the last numbers the account gave, from an earlier read. unavailable: nothing to show.
+ */
+export type LimitState = 'ok' | 'estimate' | 'stale' | 'unavailable';
 
 /** One provider's item in the status bar, worked out from its usage snapshot. */
 export interface LimitChip {
@@ -17,7 +21,7 @@ export interface LimitChip {
   windows: SubscriptionWindow[];
   /** ISO time the drawn limits were read, when known. */
   asOf: string | null;
-  /** What went wrong, for the panel. Null when the numbers are current. */
+  /** What went wrong, for the panel. Null when the numbers are the account's own and current. */
   problem: string | null;
 }
 
@@ -45,6 +49,36 @@ export function buildLimitChips(
     const name = getUsageProvider(providerId)?.name ?? providerId;
     const plan = usage.subscription?.plan?.label ?? null;
     const live = liveWindows(usage);
+    const estimated = usage.subscription?.source === 'estimate';
+
+    // An estimate is a guess from local logs. The last reading the account itself gave is closer to
+    // the truth, so it wins while it lasts, marked as out of date.
+    if (estimated && usage.lastLimits) {
+      chips.push({
+        providerId,
+        name,
+        plan: usage.lastLimits.plan?.label ?? plan,
+        state: 'stale',
+        windows: usage.lastLimits.windows,
+        asOf: usage.lastLimits.readAt,
+        problem: usage.subscription?.estimateReason ?? 'account unreachable',
+      });
+      continue;
+    }
+
+    if (estimated && live.length > 0) {
+      chips.push({
+        providerId,
+        name,
+        plan,
+        state: 'estimate',
+        windows: live,
+        asOf: usage.subscription?.readAt ?? usage.updatedAt,
+        problem: usage.subscription?.estimateReason ?? 'account unreachable',
+      });
+      continue;
+    }
+
     if (live.length > 0) {
       chips.push({
         providerId,
@@ -52,7 +86,9 @@ export function buildLimitChips(
         plan,
         state: 'ok',
         windows: live,
-        asOf: usage.updatedAt,
+        // When the limits were read, not when the snapshot was put together: the account's answer
+        // is held between reads, and Codex only reports on its own turns.
+        asOf: usage.subscription?.readAt ?? usage.updatedAt,
         problem: null,
       });
       continue;

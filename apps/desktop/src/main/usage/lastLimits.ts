@@ -9,8 +9,10 @@ import type { LastKnownLimits, ProviderUsage, SubscriptionWindow } from '@agentm
 //   fresh    live windows came back: remember them.
 //   none     the plan has no limits right now (unlimited, API billed, a Codex window between
 //            resets) or the account is signed out: forget what was remembered.
-//   unknown  the limits could not be read (`limitsError`, or an error with no subscription): hand
-//            back the remembered windows that have not reset yet.
+//   unknown  the limits could not be read (`limitsError`, an error with no subscription, or windows
+//            estimated from local logs because the account did not answer): hand back the
+//            remembered windows that have not reset yet. An estimate is never remembered, so it
+//            cannot replace numbers the account really reported.
 
 type ReadKind = 'fresh' | 'none' | 'unknown';
 
@@ -20,6 +22,7 @@ function liveWindows(usage: ProviderUsage): SubscriptionWindow[] {
 }
 
 function readKind(usage: ProviderUsage): ReadKind {
+  if (usage.subscription?.source === 'estimate') return 'unknown';
   if (liveWindows(usage).length > 0) return 'fresh';
   if (usage.status === 'connect') return 'none';
   // An error that still carries a subscription means the limits were read and came back empty,
@@ -56,7 +59,9 @@ export function createLimitsMemory(): LimitsMemory {
       const kind = readKind(usage);
       if (kind === 'unknown') return;
       const prior = remembered.get(providerId);
-      const readMs = Date.parse(usage.updatedAt) || now;
+      // When the windows were read, which can be before the scan that carries them.
+      const readAt = usage.subscription?.readAt ?? usage.updatedAt;
+      const readMs = Date.parse(readAt) || now;
       // Lists and refreshes race, so a read that finishes late must not overwrite a newer one.
       if (prior && readMs < prior.readMs) return;
       if (kind === 'none') {
@@ -66,7 +71,7 @@ export function createLimitsMemory(): LimitsMemory {
       remembered.set(providerId, {
         plan: usage.subscription?.plan ?? null,
         windows: liveWindows(usage),
-        readAt: usage.updatedAt,
+        readAt,
         readMs,
       });
     },

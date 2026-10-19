@@ -411,16 +411,34 @@ function collectWindows(payload: unknown, fableWeek: boolean): SubscriptionWindo
   });
 }
 
+/** The account's windows and the ISO time the account reported them. */
+export interface LiveWindows {
+  windows: SubscriptionWindow[];
+  readAt: string;
+}
+
+type LiveFetch =
+  | { ok: true; windows: SubscriptionWindow[] }
+  | { ok: false; rateLimited: boolean; retryAfterMs: number | null };
+
+/** `Retry-After` in ms, from either of its two forms: seconds or an HTTP date. */
+function parseRetryAfter(raw: string | null, now: number): number | null {
+  if (!raw) return null;
+  const seconds = Number(raw);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+  const date = Date.parse(raw);
+  return Number.isNaN(date) ? null : Math.max(0, date - now);
+}
+
 /**
- * Authoritative window state for the signed-in account, or null when it can't
- * be had (offline, expired grant, endpoint moved). Never throws: the caller
- * falls back to the local estimate, and a quota widget that silently degrades
- * beats one that shows an error.
+ * Authoritative window state for the signed-in account, or a failure when it
+ * can't be had (offline, expired grant, endpoint moved, rate limited). Never
+ * throws: the caller falls back to the last reading or the local estimate.
  */
 async function fetchLiveWindows(
   accessToken: string,
   plan: SubscriptionPlan | null,
-): Promise<SubscriptionWindow[] | null> {
+): Promise<LiveFetch> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
@@ -433,34 +451,77 @@ async function fetchLiveWindows(
       },
       signal: controller.signal,
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      return {
+        ok: false,
+        rateLimited: res.status === 429,
+        retryAfterMs: parseRetryAfter(res.headers.get('retry-after'), Date.now()),
+      };
+    }
     const windows = collectWindows(await res.json(), metersFableWeekly(plan));
-    return windows.length > 0 ? windows : null;
+    return windows.length > 0
+      ? { ok: true, windows }
+      : { ok: false, rateLimited: false, retryAfterMs: null };
   } catch {
-    return null;
+    return { ok: false, rateLimited: false, retryAfterMs: null };
   } finally {
     clearTimeout(timer);
   }
 }
 
-// Several widgets plus the Usage page all refresh independently, and a failing
-// endpoint shouldn't be retried on every one of those ticks, so successes are
-// held briefly and failures are backed off much harder.
+// Several widgets plus the Usage page all refresh independently, so an answer
+// is held for a minute rather than fetched on every one of their ticks. A
+// failure is not retried on every tick either, but how long it waits depends on
+// why it failed: a timeout or a 5xx is worth trying again at the next poll,
+// while a 429 means hammering makes it worse, so that one honours Retry-After
+// and otherwise waits a good while.
 const LIVE_TTL_OK_MS = 60_000;
-const LIVE_TTL_FAIL_MS = 300_000;
+const LIVE_TTL_FAIL_MS = 60_000;
+const LIVE_TTL_RATE_LIMITED_MS = 300_000;
+const LIVE_RETRY_AFTER_MAX_MS = 900_000;
 
-let liveCache: { at: number; windows: SubscriptionWindow[] | null } | null = null;
+interface LiveCache {
+  at: number;
+  /** The grant the answer belongs to. A new login or a refreshed grant is read straight away. */
+  accessToken: string;
+  live: LiveWindows | null;
+  /** How long this entry may be reused, counted from `at`. */
+  ttl: number;
+}
 
-/** Cached wrapper around {@link fetchLiveWindows}. */
+let liveCache: LiveCache | null = null;
+
+function failureTtl(result: Extract<LiveFetch, { ok: false }>): number {
+  if (result.retryAfterMs !== null) {
+    return Math.min(LIVE_RETRY_AFTER_MAX_MS, Math.max(LIVE_TTL_FAIL_MS, result.retryAfterMs));
+  }
+  return result.rateLimited ? LIVE_TTL_RATE_LIMITED_MS : LIVE_TTL_FAIL_MS;
+}
+
+/**
+ * Cached wrapper around {@link fetchLiveWindows}. The windows come back with the
+ * time the account reported them, which is earlier than now when the answer is
+ * served from the cache.
+ */
 export async function getLiveWindows(
   accessToken: string,
   plan: SubscriptionPlan | null,
-): Promise<SubscriptionWindow[] | null> {
-  const ttl = liveCache?.windows ? LIVE_TTL_OK_MS : LIVE_TTL_FAIL_MS;
-  if (liveCache && Date.now() - liveCache.at < ttl) return liveCache.windows;
-  const windows = await fetchLiveWindows(accessToken, plan);
-  liveCache = { at: Date.now(), windows };
-  return windows;
+): Promise<LiveWindows | null> {
+  const cached = liveCache;
+  if (cached && cached.accessToken === accessToken && Date.now() - cached.at < cached.ttl) {
+    return cached.live;
+  }
+  const result = await fetchLiveWindows(accessToken, plan);
+  const at = Date.now();
+  liveCache = result.ok
+    ? {
+        at,
+        accessToken,
+        live: { windows: result.windows, readAt: new Date(at).toISOString() },
+        ttl: LIVE_TTL_OK_MS,
+      }
+    : { at, accessToken, live: null, ttl: failureTtl(result) };
+  return liveCache.live;
 }
 
 /** Drop the cached quota so an explicit Refresh re-hits the account. */
