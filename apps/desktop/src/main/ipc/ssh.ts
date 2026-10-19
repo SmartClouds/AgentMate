@@ -15,6 +15,7 @@ import { IPC } from '../../shared/ipcChannels';
 import { encodeSshError } from '../../shared/sshErrors';
 import { isHostKeyFingerprint, type SshHostKeyStatus } from '../../shared/sshHostKey';
 import { listRemoteAgentHistory } from '../agents/remoteSessionHistory';
+import { endsWithPasswordPrompt } from '../agents/shellCommand';
 import { keepAwake } from '../power/keepAwake';
 import { probeHostKey } from '../ssh/connectConfig';
 import { findSavedServer, updateSshServer } from '../ssh/savedServers';
@@ -33,8 +34,12 @@ import { sendToContents } from './send';
 const SESSION_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 
 const manager = new SshSessionManager();
-/** The session id -> saved server it belongs to, for the last-connected/host-key writebacks. */
-const sessions = new Map<string, { serverId: string }>();
+/**
+ * The session id -> saved server it belongs to, for the last-connected/host-key writebacks.
+ * `hasPassword` is set when the server logs in with a saved password, which is what the
+ * "Enter saved password" button types into a sudo prompt.
+ */
+const sessions = new Map<string, { serverId: string; hasPassword: boolean }>();
 /** The window currently showing each session. Output goes there. */
 const owners = new Map<string, WebContents>();
 
@@ -46,6 +51,11 @@ const outputSubscribers = new Map<string, Set<(data: string) => void>>();
 const exitSubscribers = new Map<string, Set<() => void>>();
 /** Sessions whose output the AI task runner draws itself, through `writeToSshDisplay`. */
 const capturedDisplays = new Set<string>();
+/** The last stretch of each session's output, enough to see whether it ends on a password prompt. */
+const outputTails = new Map<string, string>();
+/** Sessions whose terminal currently shows the "Enter saved password" button. */
+const promptingSessions = new Set<string>();
+const OUTPUT_TAIL_LENGTH = 512;
 
 function syncPowerSaveBlocker(): void {
   keepAwake.setBusy('ssh', sessions.size > 0);
@@ -55,9 +65,37 @@ function sendToOwner(sessionId: string, data: string): void {
   sendToContents(owners.get(sessionId), IPC.ssh.onData, { sessionId, data });
 }
 
+function setPasswordPrompt(sessionId: string, prompting: boolean): void {
+  if (promptingSessions.has(sessionId) === prompting) return;
+  if (prompting) promptingSessions.add(sessionId);
+  else promptingSessions.delete(sessionId);
+  sendToContents(owners.get(sessionId), IPC.ssh.onPasswordPrompt, { sessionId, prompting });
+}
+
+/**
+ * Watches for a password prompt (sudo, su, ...) in a session the user is typing into, so the pane
+ * can offer to type the saved password. An AI task answers its own prompts, so it's skipped then.
+ */
+function trackPasswordPrompt(sessionId: string, data: string): void {
+  if (!sessions.get(sessionId)?.hasPassword || capturedDisplays.has(sessionId)) {
+    outputTails.delete(sessionId);
+    setPasswordPrompt(sessionId, false);
+    return;
+  }
+  const tail = ((outputTails.get(sessionId) ?? '') + data).slice(-OUTPUT_TAIL_LENGTH);
+  outputTails.set(sessionId, tail);
+  setPasswordPrompt(sessionId, endsWithPasswordPrompt(tail));
+}
+
 function forwardData(sessionId: string, data: string): void {
   if (!capturedDisplays.has(sessionId)) sendToOwner(sessionId, data);
+  trackPasswordPrompt(sessionId, data);
   for (const listener of outputSubscribers.get(sessionId) ?? []) listener(data);
+}
+
+function forgetPasswordPrompt(sessionId: string): void {
+  outputTails.delete(sessionId);
+  promptingSessions.delete(sessionId);
 }
 
 function forwardExit(sessionId: string, error?: string): void {
@@ -65,6 +103,7 @@ function forwardExit(sessionId: string, error?: string): void {
   owners.delete(sessionId);
   sessions.delete(sessionId);
   capturedDisplays.delete(sessionId);
+  forgetPasswordPrompt(sessionId);
   syncPowerSaveBlocker();
   for (const listener of exitSubscribers.get(sessionId) ?? []) listener();
   outputSubscribers.delete(sessionId);
@@ -280,7 +319,10 @@ export function registerSshHandlers(): void {
         throw error;
       }
 
-      sessions.set(sessionId, { serverId: server.id });
+      sessions.set(sessionId, {
+        serverId: server.id,
+        hasPassword: server.authMethod === 'password' && server.secretEnvelope != null,
+      });
       syncPowerSaveBlocker();
       void updateSshServer(server.id, (s) => ({ ...s, lastConnectedAt: Date.now() }));
       return { sessionId };
@@ -345,6 +387,16 @@ export function registerSshHandlers(): void {
     manager.write(sessionId, data);
   });
 
+  ipcMain.handle(IPC.ssh.typePassword, async (_event, sessionId: string): Promise<boolean> => {
+    const password = await getSshSessionPassword(sessionId);
+    if (password === null) return false;
+    // Cleared right away so a second click can't type it twice; the next prompt brings it back.
+    outputTails.delete(sessionId);
+    setPasswordPrompt(sessionId, false);
+    manager.write(sessionId, `${password}\n`);
+    return true;
+  });
+
   ipcMain.handle(IPC.ssh.resize, (_event, sessionId: string, cols: number, rows: number): void => {
     manager.resize(sessionId, cols, rows);
   });
@@ -353,6 +405,7 @@ export function registerSshHandlers(): void {
     manager.kill(sessionId);
     owners.delete(sessionId);
     sessions.delete(sessionId);
+    forgetPasswordPrompt(sessionId);
     syncPowerSaveBlocker();
   });
 }
@@ -367,5 +420,7 @@ export function killAllSshSessions(): void {
   manager.killAll();
   sessions.clear();
   owners.clear();
+  outputTails.clear();
+  promptingSessions.clear();
   syncPowerSaveBlocker();
 }

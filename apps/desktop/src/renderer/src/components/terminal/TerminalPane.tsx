@@ -16,6 +16,7 @@ import {
 } from '@/lib/terminal/xtermFactory';
 import type { TerminalSessionMeta } from '@/stores/terminalStore';
 import { useThemeStore } from '@/stores/themeStore';
+import { SshPasswordButton } from './SshPasswordButton';
 
 export interface TerminalPaneProps {
   meta: TerminalSessionMeta;
@@ -235,6 +236,9 @@ export function TerminalPane({ meta, active, onExit }: TerminalPaneProps): React
   return (
     <div ref={paneRef} className={active ? 'terminal-pane absolute inset-0' : 'hidden'}>
       <div ref={containerRef} className="h-full w-full overflow-hidden" />
+      {meta.kind === 'ssh' && (
+        <SshPasswordButton sessionId={meta.id} onTyped={() => termRef.current?.focus()} />
+      )}
     </div>
   );
 }

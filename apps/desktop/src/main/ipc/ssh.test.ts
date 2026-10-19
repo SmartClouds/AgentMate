@@ -211,3 +211,75 @@ describe('ssh:conversations', () => {
     );
   });
 });
+
+describe('ssh:typePassword', () => {
+  const PASSWORD = 'correct horse battery staple';
+
+  async function openPasswordSession(): Promise<ReturnType<typeof fakeWebContents>> {
+    const vault = await import('../ssh/vault');
+    userData.writeData('ssh-servers.json', [
+      saved({ secretEnvelope: await vault.encryptSecret(PASSWORD) }),
+    ]);
+    const sender = fakeWebContents();
+    await invokeFrom(sender, IPC.ssh.create, { sessionId: 'tab-1', savedServerId: 'srv-1' });
+    await vi.waitFor(() => expect(server.shells).toHaveLength(1));
+    return sender;
+  }
+
+  function promptEvents(sender: ReturnType<typeof fakeWebContents>): boolean[] {
+    return sender
+      .sentOn(IPC.ssh.onPasswordPrompt)
+      .map((args) => (args[0] as { prompting: boolean }).prompting);
+  }
+
+  it('offers the button on a sudo prompt and types the saved password into it', async () => {
+    const sender = await openPasswordSession();
+    const received: string[] = [];
+    server.shells[0].on('data', (data: Buffer) => received.push(data.toString()));
+
+    server.shells[0].write('[sudo] password for deploy: ');
+    await vi.waitFor(() => expect(promptEvents(sender)).toEqual([true]));
+
+    await expect(invoke(IPC.ssh.typePassword, 'tab-1')).resolves.toBe(true);
+
+    expect(promptEvents(sender)).toEqual([true, false]);
+    await vi.waitFor(() => expect(received.join('')).toBe(`${PASSWORD}\n`));
+  });
+
+  it('takes the button away once the prompt is answered some other way', async () => {
+    const sender = await openPasswordSession();
+
+    server.shells[0].write('Password: ');
+    await vi.waitFor(() => expect(promptEvents(sender)).toEqual([true]));
+    server.shells[0].write('\r\nsu: Authentication failure\r\n$ ');
+
+    await vi.waitFor(() => expect(promptEvents(sender)).toEqual([true, false]));
+  });
+
+  it('never offers it to a key login, which has no password to type', async () => {
+    const key = generateClientKey();
+    await server.close();
+    server = await startFakeSshServer({ authorizedKey: key.publicKey });
+    const keyPath = join(tempDir(), 'id_ed25519');
+    writeFileSync(keyPath, key.privateKey);
+    userData.writeData('ssh-servers.json', [
+      saved({ authMethod: 'privateKey', privateKeyPath: keyPath }),
+    ]);
+    const sender = fakeWebContents();
+    await invokeFrom(sender, IPC.ssh.create, { sessionId: 'tab-1', savedServerId: 'srv-1' });
+    await vi.waitFor(() => expect(server.shells).toHaveLength(1));
+
+    server.shells[0].write('[sudo] password for deploy: ');
+    await vi.waitFor(() =>
+      expect(
+        sender
+          .sentOn(IPC.ssh.onData)
+          .map((args) => (args[0] as { data: string }).data)
+          .join(''),
+      ).toContain('password for deploy'),
+    );
+
+    expect(promptEvents(sender)).toEqual([]);
+    await expect(invoke(IPC.ssh.typePassword, 'tab-1')).resolves.toBe(false);
+  });
+});

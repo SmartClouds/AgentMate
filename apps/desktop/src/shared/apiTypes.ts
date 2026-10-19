@@ -2673,6 +2673,12 @@ export interface SshExitPayload {
   error?: string;
 }
 
+/** Sent when a session's output starts or stops ending on a password prompt it can answer. */
+export interface SshPasswordPromptPayload {
+  sessionId: string;
+  prompting: boolean;
+}
+
 /**
  * How much control the user keeps over an AI-driven terminal task (SSH or local) before a
  * command actually runs.

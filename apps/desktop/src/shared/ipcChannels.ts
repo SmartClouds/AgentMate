@@ -81,8 +81,12 @@ export const IPC = {
     trustHostKey: 'ssh:trustHostKey',
     // (serverId) -> SshConversationsResult: every supported CLI conversation on the server
     conversations: 'ssh:conversations',
+    // (sessionId) -> boolean: types the server's saved login password into the shell
+    typePassword: 'ssh:typePassword',
     onData: 'ssh:onData',
     onExit: 'ssh:onExit',
+    // SshPasswordPromptPayload: the output now ends (or no longer ends) on a password prompt
+    onPasswordPrompt: 'ssh:onPasswordPrompt',
   },
   environments: {
     list: 'environments:list',

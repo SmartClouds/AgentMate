@@ -275,6 +275,7 @@ import type {
   SshConversationsResult,
   SshDataPayload,
   SshExitPayload,
+  SshPasswordPromptPayload,
   SshSavedServer,
   SshVaultStatus,
   StartHostInput,
@@ -616,6 +617,15 @@ const ssh = {
       callback(payload);
     ipcRenderer.on(IPC.ssh.onExit, listener);
     return () => ipcRenderer.removeListener(IPC.ssh.onExit, listener);
+  },
+  /** Types the saved login password into the shell. False when there is none to type. */
+  typePassword: (sessionId: string): Promise<boolean> =>
+    ipcRenderer.invoke(IPC.ssh.typePassword, sessionId),
+  onPasswordPrompt: (callback: (payload: SshPasswordPromptPayload) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: SshPasswordPromptPayload): void =>
+      callback(payload);
+    ipcRenderer.on(IPC.ssh.onPasswordPrompt, listener);
+    return () => ipcRenderer.removeListener(IPC.ssh.onPasswordPrompt, listener);
   },
 };
 
