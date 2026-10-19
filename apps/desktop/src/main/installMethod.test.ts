@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { tempDir, writeTree } from '../test/main/fixtures';
 import {
+  grokInstalledWithNpm,
   installManagerOf,
   resolveExecutable,
   uninstallCommandFor,
@@ -78,6 +79,23 @@ describe('resolveExecutable', () => {
     vi.stubEnv(pathKey(), join(tempDir(), 'empty'));
 
     await expect(resolveExecutable(['not-a-real-cli'])).resolves.toBeNull();
+  });
+});
+
+describe('grokInstalledWithNpm', () => {
+  it('reads the installer npm wrote into config.toml', async () => {
+    const home = tempDir();
+    writeFileSync(join(home, 'config.toml'), '[cli]\ninstaller = "npm"\n\n[ui]\nyolo = false\n');
+
+    await expect(grokInstalledWithNpm(home)).resolves.toBe(true);
+  });
+
+  it('is false for a script install or when there is no config yet', async () => {
+    const home = tempDir();
+    await expect(grokInstalledWithNpm(home)).resolves.toBe(false);
+
+    writeFileSync(join(home, 'config.toml'), '[cli]\ninstaller = "script"\n');
+    await expect(grokInstalledWithNpm(home)).resolves.toBe(false);
   });
 });
 

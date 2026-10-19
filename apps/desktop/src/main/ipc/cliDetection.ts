@@ -15,7 +15,12 @@ import { ipcMain } from 'electron';
 import type { CommandPrerequisite } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';
 import { checkCommandPrerequisite } from '../commandPrerequisite';
-import { installManagerOf, resolveExecutable, updateCommandFor } from '../installMethod';
+import {
+  grokInstalledWithNpm,
+  installManagerOf,
+  resolveExecutable,
+  updateCommandFor,
+} from '../installMethod';
 import { mapWithConcurrency } from '../packageManagers/execUtils';
 import { compareVersions, fetchLatestVersion } from '../registryVersions';
 import { killProcessTree } from '../security/exec';
@@ -204,6 +209,14 @@ export function registerCliDetectionHandlers(): void {
       const cli = getCliDefinition(cliId);
       if (!cli) return null;
       const catalogCommand = getUpdateCommandForCurrentOS(cli, process.platform as SupportedOS);
+      if (
+        cli.id === 'grok-cli' &&
+        process.platform === 'win32' &&
+        cli.updateCheck?.type === 'npm' &&
+        (await grokInstalledWithNpm())
+      ) {
+        return `npm install -g ${cli.updateCheck.package}@latest`;
+      }
       // The copy being run may be an old npm or Homebrew install rather than the vendor's, and the
       // vendor's installer would put a second copy next to it instead of updating it.
       const detected = (await detectAllClis(false)).find((one) => one.id === cli.id);

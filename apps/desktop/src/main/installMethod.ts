@@ -1,5 +1,6 @@
 import { constants, existsSync } from 'node:fs';
 import { access, readFile, realpath, stat } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { basename, delimiter, dirname, extname, join } from 'node:path';
 import { getExtraToolPathDirs, pythonScriptDirs } from './toolPaths';
 import { pathKey } from './windowsPath';
@@ -120,6 +121,23 @@ export async function installManagerOf(executablePath: string): Promise<InstallM
     return { kind: 'pip' };
   }
   return null;
+}
+
+/**
+ * Whether Grok was installed with npm. Its npm package copies the real binary into ~/.grok/bin
+ * (or $GROK_HOME/bin), so the copy on PATH looks native and only `installer = "npm"` in Grok's
+ * config.toml tells. That matters on Windows: `grok update` then runs `npm view`, but npm is
+ * npm.cmd there and Grok's updater can't start it, so it fails with "program not found".
+ */
+export async function grokInstalledWithNpm(
+  grokHome = process.env.GROK_HOME || join(homedir(), '.grok'),
+): Promise<boolean> {
+  try {
+    const config = await readFile(join(grokHome, 'config.toml'), 'utf-8');
+    return /^\s*installer\s*=\s*["']npm["']/m.test(config);
+  } catch {
+    return false;
+  }
 }
 
 /**

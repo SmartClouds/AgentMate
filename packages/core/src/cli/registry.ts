@@ -283,6 +283,8 @@ export const CLI_REGISTRY: CliDefinition[] = [
       darwin: 'curl -fsSL https://x.ai/cli/install.sh | bash',
       linux: 'curl -fsSL https://x.ai/cli/install.sh | bash',
     },
+    // On Windows an npm-installed Grok can't run its own updater, so the desktop app swaps in
+    // `npm install -g` for that case (see grokInstalledWithNpm).
     updateCommand: {
       win32: 'grok update',
       darwin: 'grok update',
