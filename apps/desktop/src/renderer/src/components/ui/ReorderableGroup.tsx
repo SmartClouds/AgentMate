@@ -94,8 +94,11 @@ function swallowClickAfterDrag(): void {
     event.stopPropagation();
     event.preventDefault();
   };
-  window.addEventListener('click', swallow, { capture: true, once: true });
-  window.setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 300);
+  // The timer keeps its own handle on the window: under test the global can be gone (environment
+  // torn down) by the time it fires.
+  const view = window;
+  view.addEventListener('click', swallow, { capture: true, once: true });
+  view.setTimeout(() => view.removeEventListener('click', swallow, { capture: true }), 300);
 }
 
 /**
