@@ -461,7 +461,11 @@ export function HealthBoard({ projectId }: { projectId?: string }): React.JSX.El
         open={building}
         onOpenChange={setBuilding}
         projects={projects}
-        defaultProjectId={projectId ?? projectFilter ?? projects[0]?.id}
+        // Only a project the user is already looking at, or the only one there is. Guessing
+        // (the newest, say) sent the agent to a project nobody picked.
+        defaultProjectId={
+          projectId ?? projectFilter ?? (projects.length === 1 ? projects[0]?.id : undefined)
+        }
         lockProject={scoped}
         onAddTarget={(id) => {
           setAddingFor(id);

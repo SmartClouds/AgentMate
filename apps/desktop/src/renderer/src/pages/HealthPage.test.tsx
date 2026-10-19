@@ -99,9 +99,27 @@ describe('HealthPage', () => {
     await screen.findByRole('article', { name: 'API' });
     await user.click(screen.getByRole('button', { name: 'Build with AI' }));
     const dialog = await screen.findByRole('dialog', { name: 'Build the endpoint with AI' });
-    expect(within(dialog).getByRole('region', { name: 'Prompt for your agent' })).toHaveTextContent(
-      'AgentMate Health Protocol',
+    // With more than one project nothing is picked for the user: the prompt waits for a choice.
+    expect(within(dialog).getByRole('combobox', { name: 'Project' })).toHaveTextContent(
+      'Pick a project',
     );
+    expect(within(dialog).queryByRole('region', { name: 'Prompt for your agent' })).toBeNull();
+    const choices = within(dialog).getByRole('list', {
+      name: 'Which project is the endpoint for?',
+    });
+    await user.click(within(choices).getByRole('button', { name: /Admin/ }));
+    expect(within(dialog).getByRole('region', { name: 'Prompt for your agent' })).toHaveTextContent(
+      'Add a healthcheck endpoint to Admin',
+    );
+  });
+
+  it('starts Build with AI on the project the filter shows, or the only project', async () => {
+    const { user } = renderPage();
+    await screen.findByRole('article', { name: 'API' });
+    await user.click(screen.getByRole('button', { name: 'Admin' }));
+    await user.click(screen.getByRole('button', { name: 'Build with AI' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Build the endpoint with AI' });
+    expect(within(dialog).getByRole('combobox', { name: 'Project' })).toHaveTextContent('Admin');
   });
 
   it('charts availability by day for the targets in view, following the project filter', async () => {

@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { Plus, Sparkles, TerminalSquare } from '@/components/icons';
 import { FOOTER_HAIRLINE, SECTION_WELL, SEGMENT_TRACK, segmentClass } from '@/components/pageKit';
+import { ProjectIcon } from '@/components/projects/ProjectIcon';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
 import {
@@ -46,6 +47,75 @@ function cleanPath(value: string): string {
   const trimmed = value.trim();
   if (!trimmed) return HEALTH_DEFAULT_PATH;
   return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+}
+
+function projectIcon(project: Project, size: 'sm' | 'md'): React.ReactNode {
+  return (
+    <ProjectIcon
+      iconDataUrl={project.iconDataUrl ?? null}
+      bgColor={project.iconBgColor}
+      iconColor={project.iconColor}
+      className={size === 'sm' ? 'h-5 w-5 rounded' : 'h-8 w-8 rounded-lg'}
+      glyphClassName={size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5'}
+    />
+  );
+}
+
+/** Stands in for the prompt until a project is picked, so the choice is the first thing seen. */
+function ProjectChoices({
+  projects,
+  onPick,
+}: {
+  projects: readonly Project[];
+  onPick: (projectId: string) => void;
+}): React.JSX.Element {
+  const headingId = useId();
+  if (projects.length === 0) {
+    return (
+      <div
+        className={cn(
+          SECTION_WELL,
+          'flex min-h-40 items-center justify-center text-sm text-muted-foreground',
+        )}
+      >
+        No projects yet. Add one on the Projects page first.
+      </div>
+    );
+  }
+  return (
+    <div className={cn(SECTION_WELL, 'space-y-3')}>
+      <div className="space-y-0.5 px-1">
+        <p id={headingId} className="text-sm font-medium">
+          Which project is the endpoint for?
+        </p>
+        <p className="text-xs text-muted-foreground">
+          The prompt is written for it, and its agent starts in its folder.
+        </p>
+      </div>
+      <ul
+        aria-labelledby={headingId}
+        className="rail-scroll max-h-[40vh] space-y-0.5 overflow-y-auto"
+      >
+        {projects.map((one) => (
+          <li key={one.id}>
+            <button
+              type="button"
+              onClick={() => onPick(one.id)}
+              className="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-foreground/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {projectIcon(one, 'md')}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">{one.name}</span>
+                <span className="block truncate font-mono text-[10px] text-muted-foreground">
+                  {one.folderPath}
+                </span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 export function HealthBuildDialog({
@@ -116,6 +186,11 @@ export function HealthBuildDialog({
     if (prompt && agent.send(prompt)) onOpenChange(false);
   }
 
+  function pickProject(value: string): void {
+    if (value !== projectId) setEnvironmentId('');
+    setProjectId(value);
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90vh] w-[min(56rem,calc(100vw-2rem))] max-w-none flex-col gap-0 p-0">
@@ -141,11 +216,13 @@ export function HealthBuildDialog({
                 placeholder="Pick a project"
                 searchPlaceholder="Search projects…"
                 emptyText="No project matches."
-                onChange={(value) => {
-                  if (value !== projectId) setEnvironmentId('');
-                  setProjectId(value);
-                }}
-                options={projects.map((one) => ({ value: one.id, label: one.name }))}
+                onChange={pickProject}
+                options={projects.map((one) => ({
+                  value: one.id,
+                  label: one.name,
+                  keywords: [one.folderPath],
+                  icon: projectIcon(one, 'sm'),
+                }))}
               />
             </Field>
             <Field id={id('environment')} label="Environment" optional>
@@ -224,14 +301,7 @@ export function HealthBuildDialog({
                   label="Prompt for your agent"
                 />
               ) : (
-                <div
-                  className={cn(
-                    SECTION_WELL,
-                    'flex min-h-40 items-center justify-center text-sm text-muted-foreground',
-                  )}
-                >
-                  Pick a project to see its prompt.
-                </div>
+                <ProjectChoices projects={projects} onPick={pickProject} />
               )}
             </TabsContent>
             <TabsContent value="spec" className="mt-3">
@@ -258,10 +328,21 @@ export function HealthBuildDialog({
             <Plus />
             Add target
           </Button>
-          <Button size="sm" disabled={!prompt} onClick={send}>
-            <TerminalSquare />
-            Send to {agent.cliName ?? 'agent'}
-          </Button>
+          <div className="flex min-w-0 items-center gap-3">
+            <p className="min-w-0 truncate text-xs text-muted-foreground">
+              {project ? (
+                <>
+                  Opens in <span className="font-medium text-foreground">{project.name}</span>
+                </>
+              ) : (
+                'Pick a project first'
+              )}
+            </p>
+            <Button size="sm" disabled={!prompt} onClick={send} className="shrink-0">
+              <TerminalSquare />
+              Send to {agent.cliName ?? 'agent'}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -117,11 +117,28 @@ describe('HealthBuildDialog', () => {
     expect(screen.getByRole('combobox', { name: 'Project' })).toBeDisabled();
   });
 
-  it('asks for a project before it can build a prompt', async () => {
-    renderDialog({ defaultProjectId: '' });
-    await screen.findByRole('dialog', { name: 'Build the endpoint with AI' });
-    expect(screen.getByText('Pick a project to see its prompt.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Send to/ })).toBeDisabled();
-    expect(screen.queryByRole('button', { name: 'Copy prompt' })).toBeNull();
+  it('asks for a project before it can build a prompt, and sends to the one picked', async () => {
+    const { user } = renderDialog({ defaultProjectId: '' });
+    const dialog = await screen.findByRole('dialog', { name: 'Build the endpoint with AI' });
+    expect(within(dialog).getByText('Pick a project first')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /Send to/ })).toBeDisabled();
+    expect(within(dialog).queryByRole('button', { name: 'Copy prompt' })).toBeNull();
+
+    const choices = within(dialog).getByRole('list', {
+      name: 'Which project is the endpoint for?',
+    });
+    expect(within(choices).getByRole('button', { name: /Storefront/ })).toHaveTextContent(
+      'C:\\work\\storefront',
+    );
+    await user.click(within(choices).getByRole('button', { name: /Admin/ }));
+    expect(prompt()).toContain('Add a healthcheck endpoint to Admin');
+    expect(within(dialog).getByText(/Opens in/)).toHaveTextContent('Opens in Admin');
+
+    await user.click(within(dialog).getByRole('button', { name: 'Send to Claude Code' }));
+    expect(launchPromptTab).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: 'p2' }),
+      expect.anything(),
+    );
+    expect(navigate).toHaveBeenLastCalledWith('/workspace/p2');
   });
 });
