@@ -4,6 +4,10 @@ import { defineConfig } from 'vitest/config';
 
 const path = (relative: string): string => fileURLToPath(new URL(relative, import.meta.url));
 
+// CI splits this suite across jobs with --shard and merges their blob reports afterwards. One
+// shard covers only part of the code, so the thresholds are left to the merge run.
+const sharded = process.argv.some((arg) => arg.startsWith('--shard'));
+
 /**
  * Two suites in one run.
  *
@@ -110,163 +114,173 @@ export default defineConfig({
       reporter: ['text-summary', 'text', 'lcov', 'json-summary'],
       // A floor that holds the line at what is covered today, not a target. Raise it as the
       // renderer components get their tests, rather than leaving it where it is.
-      thresholds: {
-        lines: 44,
-        statements: 43,
-        functions: 42,
-        branches: 36,
-        'src/main/**': { lines: 49, statements: 48, functions: 48, branches: 42 },
-        'src/renderer/**': { lines: 37, statements: 36, functions: 34, branches: 32 },
-        'src/shared/**': { lines: 95, statements: 95, functions: 95, branches: 90 },
-        'src/preload/**': { lines: 90, statements: 90, functions: 90, branches: 65 },
-        // The Vault was built test-first and holds its own bar.
-        'src/main/vault/**': { lines: 90, statements: 90, functions: 90, branches: 80 },
-        'src/main/ipc/vault.ts': { lines: 90, statements: 90, functions: 90, branches: 80 },
-        // The write side of this one runs during a real backup, which the e2e suite covers.
-        'src/main/backup/vaultSection.ts': {
-          lines: 90,
-          statements: 90,
-          functions: 70,
-          branches: 45,
-        },
-        'src/renderer/src/components/vault/**': { lines: 80, functions: 75, branches: 70 },
-        'src/renderer/src/lib/vault/**': { lines: 80, functions: 75, branches: 70 },
-        'src/renderer/src/stores/vaultStore.ts': { lines: 80, functions: 75, branches: 45 },
-        'src/renderer/src/pages/VaultPage.tsx': { lines: 80, functions: 75, branches: 70 },
-        // The security-sensitive modules, where a silent mistake matters most.
-        'src/main/crypto/**': { lines: 90, branches: 85 },
-        'src/main/backup/envelope.ts': { lines: 85, branches: 75 },
-        'src/main/pathGuard.ts': { lines: 95, branches: 90 },
-        'src/main/ptyHost/protocol.ts': { lines: 90, branches: 80 },
-        'src/main/remote/tokens.ts': { lines: 90, branches: 80 },
-        'src/main/usage/logParsers.ts': { lines: 80, branches: 70 },
-        'src/main/rdp/rdcleanpath.ts': { lines: 85, branches: 75 },
-        // How the app logs in to servers, runs root commands and tunnels to the server core.
-        'src/main/ssh/connectConfig.ts': { lines: 95, branches: 85 },
-        'src/main/ssh/connection.ts': { lines: 90, branches: 75 },
-        'src/main/ssh/sudo.ts': { lines: 95, branches: 90 },
-        'src/main/ssh/pool.ts': { lines: 90, branches: 75 },
-        'src/main/ssh/savedServers.ts': { lines: 90, branches: 75 },
-        // What runs as root on a user's server, and how the app reaches the core it installed.
-        'src/main/deploy/bootstrap/**': { lines: 95, branches: 80 },
-        'src/main/deploy/connection/**': { lines: 90, branches: 80 },
-        // What leaves this computer for a server when a stack is built there.
-        'src/main/deploy/stacks/**': { lines: 90, branches: 80 },
-        // This computer's key on a core and the sessions it signs for.
-        'src/main/deploy/auth/**': { lines: 95, branches: 85 },
-        'src/main/deploy/service.ts': { lines: 95, branches: 80 },
-        'src/main/deploy/state.ts': { lines: 90, branches: 85 },
-        'src/main/ipc/deploy.ts': { lines: 95, branches: 90 },
-        // Who can reach a core and what it recorded: users, devices, sessions, codes, the audit.
-        'src/main/deploy/security.ts': { lines: 95, branches: 85 },
-        'src/main/deploy/auditExport.ts': { lines: 95, branches: 90 },
-        'src/main/ipc/deploySecurity.ts': { lines: 95, branches: 90 },
-        // The Security center (E15): SSH fixes that cannot lock the app out, backups, restores.
-        'src/main/deploy/hardening.ts': { lines: 95, branches: 85 },
-        'src/main/deploy/backups.ts': { lines: 95, branches: 85 },
-        'src/main/ipc/deployHardening.ts': { lines: 95, branches: 90 },
-        'src/renderer/src/components/deploy/security/**': {
-          lines: 90,
-          functions: 85,
-          branches: 80,
-        },
-        // Each server's lasting connection, its live streams, the Overview's calls and alerts.
-        'src/main/deploy/live/**': { lines: 90, branches: 80 },
-        'src/main/deploy/system.ts': { lines: 95, branches: 80 },
-        'src/main/deploy/watcher.ts': { lines: 95, branches: 80 },
-        'src/main/ipc/deploySystem.ts': { lines: 95, branches: 90 },
-        'src/renderer/src/components/deploy/**': { lines: 85, functions: 75, branches: 75 },
-        // A server's Overview: the pulse, the charts, updates, reboot and the live feeds.
-        'src/renderer/src/components/deploy/overview/**': {
-          lines: 90,
-          functions: 85,
-          branches: 80,
-        },
-        // A server's websites and certificates: nginx, sites, applying, site logs, Let's Encrypt.
-        'src/main/deploy/sites/**': { lines: 95, branches: 85 },
-        'src/main/ipc/deploySites.ts': { lines: 95, branches: 90 },
-        'src/main/ipc/deploySitesInput.ts': { lines: 95, branches: 90 },
-        'src/renderer/src/components/deploy/sites/**': { lines: 90, functions: 80, branches: 80 },
-        'src/renderer/src/lib/deploy/sites/**': { lines: 95, branches: 90 },
-        'src/renderer/src/pages/DeployPage.tsx': { lines: 85, functions: 75, branches: 75 },
-        // The firewall (E13): safe apply, the rule checks and its screen.
-        'src/main/deploy/firewall.ts': { lines: 95, branches: 85 },
-        'src/main/ipc/deployFirewall.ts': { lines: 95, branches: 90 },
-        'src/shared/deploy/firewallValidation.ts': { lines: 95, branches: 90 },
-        'src/renderer/src/components/deploy/firewall/**': {
-          lines: 90,
-          functions: 85,
-          branches: 80,
-        },
-        // The App Store (E12): installs rendered again in main, updates, the install sheet and card.
-        'src/main/deploy/appStore/**': { lines: 95, branches: 85 },
-        'src/main/ipc/deployAppStore.ts': { lines: 95, branches: 90 },
-        // WordPress sites (E19): the signed client, pairing, the sync engine and their IPC.
-        'src/main/deploy/wordpress/**': { lines: 90, branches: 80 },
-        'src/main/ipc/deployWordPress.ts': { lines: 90, branches: 80 },
-        // Project healthchecks (E22): the probe that holds a key, its scheduler and the IPC.
-        'src/main/health/**': { lines: 90, branches: 80 },
-        'src/main/ipc/health.ts': { lines: 90, branches: 80 },
-        // Error tracking (E24): the Sentry client that holds a token, its store and the IPC.
-        'src/main/errorTracking/**': { lines: 90, branches: 80 },
-        'src/main/ipc/errorTracking.ts': { lines: 90, branches: 80 },
-        // FTP and SFTP sites (E23): the planner, the run, trust, Deploy on save and the IPC.
-        'src/main/deploy/files/**': { lines: 90, branches: 80 },
-        'src/main/ipc/deployFiles.ts': { lines: 90, branches: 80 },
-        'src/renderer/src/components/deploy/appStore/**': {
-          lines: 90,
-          functions: 80,
-          branches: 80,
-        },
-        'src/renderer/src/stores/deploySetupStore.ts': { lines: 95, branches: 85 },
-        'src/renderer/src/lib/deploy/**': { lines: 95, branches: 90 },
-        // Docker on a server (E06): its calls, live streams and consoles, and the Containers screen.
-        'src/main/deploy/docker.ts': { lines: 95, branches: 85 },
-        'src/main/deploy/coreCalls.ts': { lines: 95, branches: 90 },
-        'src/main/ipc/deployDocker.ts': { lines: 95, branches: 90 },
-        'src/renderer/src/components/deploy/containers/**': {
-          lines: 90,
-          functions: 85,
-          branches: 80,
-        },
-        'src/renderer/src/lib/terminal/containerConsoleAdapter.ts': { lines: 95, branches: 85 },
-        // The Deploy AI and the logs center (E09): what it runs, the approvals it signs, its screens.
-        'src/main/deploy/assistant/**': { lines: 95, branches: 85 },
-        'src/main/deploy/logs/**': { lines: 95, branches: 85 },
-        'src/main/ipc/deployAssistant.ts': { lines: 95, branches: 90 },
-        'src/renderer/src/components/deploy/assistant/**': {
-          lines: 90,
-          functions: 80,
-          branches: 80,
-        },
-        'src/renderer/src/components/deploy/logs/**': { lines: 90, functions: 80, branches: 80 },
-        'src/renderer/src/stores/deployAssistantStore.ts': { lines: 95, branches: 85 },
-        // The Cloudflare token lives here, and every call made with it.
-        'src/main/deploy/cloudflare/**': { lines: 95, branches: 85 },
-        'src/main/ipc/cloudflare.ts': { lines: 95, branches: 90 },
-        'src/main/ipc/cloudflareServer.ts': { lines: 95, branches: 90 },
-        'src/shared/cloudflare/dns01.ts': { lines: 95, branches: 90 },
-        'src/renderer/src/components/cloudflare/**': { lines: 85, functions: 75, branches: 75 },
-        'src/renderer/src/lib/cloudflare/**': { lines: 95, branches: 90 },
-        // Registry sign-ins (E08): sealed here, sent with each deploy, never shown again.
-        'src/main/deploy/registry/**': { lines: 95, branches: 85 },
-        'src/main/ipc/deployRegistry.ts': { lines: 95, branches: 85 },
-        'src/shared/deploy/registries.ts': { lines: 95, branches: 90 },
-        'src/renderer/src/components/deploy/registries/**': {
-          lines: 85,
-          functions: 80,
-          branches: 70,
-        },
-        // Direct TLS (E16): client certificates, the pin check, the fallback and its screen.
-        'src/main/deploy/directTls/**': { lines: 95, branches: 85 },
-        'src/main/ipc/deployDirectTls.ts': { lines: 95, branches: 90 },
-        'src/shared/deploy/directTlsValidation.ts': { lines: 95, branches: 90 },
-        'src/renderer/src/components/deploy/security/directTls/**': {
-          lines: 90,
-          functions: 80,
-          branches: 75,
-        },
-      },
+      thresholds: sharded
+        ? undefined
+        : {
+            lines: 44,
+            statements: 43,
+            functions: 42,
+            branches: 36,
+            'src/main/**': { lines: 49, statements: 48, functions: 48, branches: 42 },
+            'src/renderer/**': { lines: 37, statements: 36, functions: 34, branches: 32 },
+            'src/shared/**': { lines: 95, statements: 95, functions: 95, branches: 90 },
+            'src/preload/**': { lines: 90, statements: 90, functions: 90, branches: 65 },
+            // The Vault was built test-first and holds its own bar.
+            'src/main/vault/**': { lines: 90, statements: 90, functions: 90, branches: 80 },
+            'src/main/ipc/vault.ts': { lines: 90, statements: 90, functions: 90, branches: 80 },
+            // The write side of this one runs during a real backup, which the e2e suite covers.
+            'src/main/backup/vaultSection.ts': {
+              lines: 90,
+              statements: 90,
+              functions: 70,
+              branches: 45,
+            },
+            'src/renderer/src/components/vault/**': { lines: 80, functions: 75, branches: 70 },
+            'src/renderer/src/lib/vault/**': { lines: 80, functions: 75, branches: 70 },
+            'src/renderer/src/stores/vaultStore.ts': { lines: 80, functions: 75, branches: 45 },
+            'src/renderer/src/pages/VaultPage.tsx': { lines: 80, functions: 75, branches: 70 },
+            // The security-sensitive modules, where a silent mistake matters most.
+            'src/main/crypto/**': { lines: 90, branches: 85 },
+            'src/main/backup/envelope.ts': { lines: 85, branches: 75 },
+            'src/main/pathGuard.ts': { lines: 95, branches: 90 },
+            'src/main/ptyHost/protocol.ts': { lines: 90, branches: 80 },
+            'src/main/remote/tokens.ts': { lines: 90, branches: 80 },
+            'src/main/usage/logParsers.ts': { lines: 80, branches: 70 },
+            'src/main/rdp/rdcleanpath.ts': { lines: 85, branches: 75 },
+            // How the app logs in to servers, runs root commands and tunnels to the server core.
+            'src/main/ssh/connectConfig.ts': { lines: 95, branches: 85 },
+            'src/main/ssh/connection.ts': { lines: 90, branches: 75 },
+            'src/main/ssh/sudo.ts': { lines: 95, branches: 90 },
+            'src/main/ssh/pool.ts': { lines: 90, branches: 75 },
+            'src/main/ssh/savedServers.ts': { lines: 90, branches: 75 },
+            // What runs as root on a user's server, and how the app reaches the core it installed.
+            'src/main/deploy/bootstrap/**': { lines: 95, branches: 80 },
+            'src/main/deploy/connection/**': { lines: 90, branches: 80 },
+            // What leaves this computer for a server when a stack is built there.
+            'src/main/deploy/stacks/**': { lines: 90, branches: 80 },
+            // This computer's key on a core and the sessions it signs for.
+            'src/main/deploy/auth/**': { lines: 95, branches: 85 },
+            'src/main/deploy/service.ts': { lines: 95, branches: 80 },
+            'src/main/deploy/state.ts': { lines: 90, branches: 85 },
+            'src/main/ipc/deploy.ts': { lines: 95, branches: 90 },
+            // Who can reach a core and what it recorded: users, devices, sessions, codes, the audit.
+            'src/main/deploy/security.ts': { lines: 95, branches: 85 },
+            'src/main/deploy/auditExport.ts': { lines: 95, branches: 90 },
+            'src/main/ipc/deploySecurity.ts': { lines: 95, branches: 90 },
+            // The Security center (E15): SSH fixes that cannot lock the app out, backups, restores.
+            'src/main/deploy/hardening.ts': { lines: 95, branches: 85 },
+            'src/main/deploy/backups.ts': { lines: 95, branches: 85 },
+            'src/main/ipc/deployHardening.ts': { lines: 95, branches: 90 },
+            'src/renderer/src/components/deploy/security/**': {
+              lines: 90,
+              functions: 85,
+              branches: 80,
+            },
+            // Each server's lasting connection, its live streams, the Overview's calls and alerts.
+            'src/main/deploy/live/**': { lines: 90, branches: 80 },
+            'src/main/deploy/system.ts': { lines: 95, branches: 80 },
+            'src/main/deploy/watcher.ts': { lines: 95, branches: 80 },
+            'src/main/ipc/deploySystem.ts': { lines: 95, branches: 90 },
+            'src/renderer/src/components/deploy/**': { lines: 85, functions: 75, branches: 75 },
+            // A server's Overview: the pulse, the charts, updates, reboot and the live feeds.
+            'src/renderer/src/components/deploy/overview/**': {
+              lines: 90,
+              functions: 85,
+              branches: 80,
+            },
+            // A server's websites and certificates: nginx, sites, applying, site logs, Let's Encrypt.
+            'src/main/deploy/sites/**': { lines: 95, branches: 85 },
+            'src/main/ipc/deploySites.ts': { lines: 95, branches: 90 },
+            'src/main/ipc/deploySitesInput.ts': { lines: 95, branches: 90 },
+            'src/renderer/src/components/deploy/sites/**': {
+              lines: 90,
+              functions: 80,
+              branches: 80,
+            },
+            'src/renderer/src/lib/deploy/sites/**': { lines: 95, branches: 90 },
+            'src/renderer/src/pages/DeployPage.tsx': { lines: 85, functions: 75, branches: 75 },
+            // The firewall (E13): safe apply, the rule checks and its screen.
+            'src/main/deploy/firewall.ts': { lines: 95, branches: 85 },
+            'src/main/ipc/deployFirewall.ts': { lines: 95, branches: 90 },
+            'src/shared/deploy/firewallValidation.ts': { lines: 95, branches: 90 },
+            'src/renderer/src/components/deploy/firewall/**': {
+              lines: 90,
+              functions: 85,
+              branches: 80,
+            },
+            // The App Store (E12): installs rendered again in main, updates, the install sheet and card.
+            'src/main/deploy/appStore/**': { lines: 95, branches: 85 },
+            'src/main/ipc/deployAppStore.ts': { lines: 95, branches: 90 },
+            // WordPress sites (E19): the signed client, pairing, the sync engine and their IPC.
+            'src/main/deploy/wordpress/**': { lines: 90, branches: 80 },
+            'src/main/ipc/deployWordPress.ts': { lines: 90, branches: 80 },
+            // Project healthchecks (E22): the probe that holds a key, its scheduler and the IPC.
+            'src/main/health/**': { lines: 90, branches: 80 },
+            'src/main/ipc/health.ts': { lines: 90, branches: 80 },
+            // Error tracking (E24): the Sentry client that holds a token, its store and the IPC.
+            'src/main/errorTracking/**': { lines: 90, branches: 80 },
+            'src/main/ipc/errorTracking.ts': { lines: 90, branches: 80 },
+            // FTP and SFTP sites (E23): the planner, the run, trust, Deploy on save and the IPC.
+            'src/main/deploy/files/**': { lines: 90, branches: 80 },
+            'src/main/ipc/deployFiles.ts': { lines: 90, branches: 80 },
+            'src/renderer/src/components/deploy/appStore/**': {
+              lines: 90,
+              functions: 80,
+              branches: 80,
+            },
+            'src/renderer/src/stores/deploySetupStore.ts': { lines: 95, branches: 85 },
+            'src/renderer/src/lib/deploy/**': { lines: 95, branches: 90 },
+            // Docker on a server (E06): its calls, live streams and consoles, and the Containers screen.
+            'src/main/deploy/docker.ts': { lines: 95, branches: 85 },
+            'src/main/deploy/coreCalls.ts': { lines: 95, branches: 90 },
+            'src/main/ipc/deployDocker.ts': { lines: 95, branches: 90 },
+            'src/renderer/src/components/deploy/containers/**': {
+              lines: 90,
+              functions: 85,
+              branches: 80,
+            },
+            'src/renderer/src/lib/terminal/containerConsoleAdapter.ts': { lines: 95, branches: 85 },
+            // The Deploy AI and the logs center (E09): what it runs, the approvals it signs, its screens.
+            'src/main/deploy/assistant/**': { lines: 95, branches: 85 },
+            'src/main/deploy/logs/**': { lines: 95, branches: 85 },
+            'src/main/ipc/deployAssistant.ts': { lines: 95, branches: 90 },
+            'src/renderer/src/components/deploy/assistant/**': {
+              lines: 90,
+              functions: 80,
+              branches: 80,
+            },
+            'src/renderer/src/components/deploy/logs/**': {
+              lines: 90,
+              functions: 80,
+              branches: 80,
+            },
+            'src/renderer/src/stores/deployAssistantStore.ts': { lines: 95, branches: 85 },
+            // The Cloudflare token lives here, and every call made with it.
+            'src/main/deploy/cloudflare/**': { lines: 95, branches: 85 },
+            'src/main/ipc/cloudflare.ts': { lines: 95, branches: 90 },
+            'src/main/ipc/cloudflareServer.ts': { lines: 95, branches: 90 },
+            'src/shared/cloudflare/dns01.ts': { lines: 95, branches: 90 },
+            'src/renderer/src/components/cloudflare/**': { lines: 85, functions: 75, branches: 75 },
+            'src/renderer/src/lib/cloudflare/**': { lines: 95, branches: 90 },
+            // Registry sign-ins (E08): sealed here, sent with each deploy, never shown again.
+            'src/main/deploy/registry/**': { lines: 95, branches: 85 },
+            'src/main/ipc/deployRegistry.ts': { lines: 95, branches: 85 },
+            'src/shared/deploy/registries.ts': { lines: 95, branches: 90 },
+            'src/renderer/src/components/deploy/registries/**': {
+              lines: 85,
+              functions: 80,
+              branches: 70,
+            },
+            // Direct TLS (E16): client certificates, the pin check, the fallback and its screen.
+            'src/main/deploy/directTls/**': { lines: 95, branches: 85 },
+            'src/main/ipc/deployDirectTls.ts': { lines: 95, branches: 90 },
+            'src/shared/deploy/directTlsValidation.ts': { lines: 95, branches: 90 },
+            'src/renderer/src/components/deploy/security/directTls/**': {
+              lines: 90,
+              functions: 80,
+              branches: 75,
+            },
+          },
     },
   },
 });

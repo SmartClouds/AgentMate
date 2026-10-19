@@ -14,6 +14,8 @@ apps/desktop/build/server-core-manifest.json
 *.tsbuildinfo
 .vite/
 coverage/
+# Vitest blob reports from sharded runs (CI merges them)
+.vitest/
 
 # Desktop e2e build and Playwright output
 apps/desktop/out-e2e/

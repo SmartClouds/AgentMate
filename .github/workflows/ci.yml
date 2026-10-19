@@ -9,6 +9,10 @@ name: CI
 # for CD only, which also covers what needs Windows or macOS: packaging, and
 # the end-to-end tests on those two (see test.yml).
 #
+# The jobs do not wait for each other, and the desktop unit and end-to-end
+# suites are split into shards, so a run is only as fast as the number of
+# runners online allows. With one runner every job queues behind the last.
+#
 # The repository is public, and a pull request from a fork would run its own
 # code on our machine, so pull requests only run here from branches of this
 # repository. Fork pull requests get no CI until a maintainer pushes the
@@ -40,11 +44,12 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
 
+      # No cache: pnpm here. The self-hosted runner keeps its pnpm store between
+      # jobs, and a round trip through GitHub's cache only cost time.
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: "22"
-          cache: pnpm
 
       # --frozen-lockfile also fails the build when package.json and
       # pnpm-lock.yaml have drifted apart.

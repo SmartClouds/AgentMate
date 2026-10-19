@@ -6,6 +6,14 @@ name: Tests
 # CI runs everything on our self-hosted Linux runner. CD runs on GitHub's hosted runners only
 # (github-hosted: true), which is also the one place the end-to-end tests run on Windows and
 # macOS, since we have no self-hosted runner for either.
+#
+# Every job here is independent of the others (only the merge and WordPress sync jobs wait for
+# another), so they all start at once when there are enough runners. The slow suites are split
+# into shards for the same reason.
+#
+# The pnpm and NuGet caches only go through GitHub's cache on hosted runners. A self-hosted runner
+# keeps its pnpm store and ~/.nuget between jobs, and uploading and downloading them through
+# GitHub took about a minute and a half per job there.
 
 on:
   workflow_call:
@@ -34,7 +42,7 @@ permissions:
 
 jobs:
   unit:
-    name: Unit and integration
+    name: Unit and integration (core, protocol)
     runs-on: ${{ inputs.github-hosted && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","X64"]') }}
     timeout-minutes: 30
     steps:
@@ -48,7 +56,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "22"
-          cache: pnpm
+          cache: ${{ inputs.github-hosted && 'pnpm' || '' }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -61,20 +69,15 @@ jobs:
           git config --global user.email "ci@agentmate.invalid"
           git config --global init.defaultBranch main
 
-      # The desktop tests import @agentmat/core and @agentmat/protocol from their build output.
       - name: Build workspace packages
         run: pnpm build:packages
 
       - name: Core and protocol
         run: pnpm --filter @agentmat/core --filter @agentmat/protocol test:coverage
 
-      - name: Desktop main and renderer
-        if: ${{ !cancelled() }}
-        run: pnpm --filter @agentmat/desktop test:coverage
-
       - name: Coverage summary
         if: ${{ !cancelled() }}
-        run: node scripts/coverage-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+        run: node scripts/coverage-summary.mjs packages/core packages/protocol >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage
         if: ${{ !cancelled() }}
@@ -88,6 +91,111 @@ jobs:
             packages/core/test-results
             packages/protocol/coverage
             packages/protocol/test-results
+
+  # The desktop suite is the slowest one, so it runs in shards on as many runners as are free.
+  # Each shard leaves a blob report with its share of the coverage, and desktop-unit below merges
+  # them. The coverage thresholds are checked only there (vitest.config.mts skips them in a shard).
+  desktop-unit-shard:
+    name: Desktop unit (${{ matrix.shard }}/3)
+    runs-on: ${{ inputs.github-hosted && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","X64"]') }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: ${{ inputs.github-hosted && 'pnpm' || '' }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Git identity for fixtures
+        run: |
+          git config --global user.name "AgentMate CI"
+          git config --global user.email "ci@agentmate.invalid"
+          git config --global init.defaultBranch main
+
+      # The desktop tests import @agentmat/core and @agentmat/protocol from their build output.
+      - name: Build workspace packages
+        run: pnpm build:packages
+
+      # Failing tests are annotated by the merge job, which runs the config's reporters.
+      - name: Desktop main and renderer
+        working-directory: apps/desktop
+        run: pnpm exec vitest run --coverage --shard=${{ matrix.shard }}/3 --reporter=blob
+
+      - name: Upload blob report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-blob-${{ matrix.shard }}
+          retention-days: 1
+          include-hidden-files: true
+          path: apps/desktop/.vitest/blob
+
+  desktop-unit:
+    name: Desktop unit (merge and coverage)
+    if: ${{ !cancelled() }}
+    needs: desktop-unit-shard
+    runs-on: ${{ inputs.github-hosted && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","X64"]') }}
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: ${{ inputs.github-hosted && 'pnpm' || '' }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download blob reports
+        uses: actions/download-artifact@v8
+        with:
+          pattern: desktop-blob-*
+          merge-multiple: true
+          path: apps/desktop/.vitest/blob
+
+      # Fails when a shard had a failing test, or when the merged coverage is under a threshold.
+      # A shard that never finished leaves no blob, so the count is checked first.
+      - name: Merge reports and check coverage
+        working-directory: apps/desktop
+        run: |
+          count="$(find .vitest/blob -name 'blob-*.json' | wc -l)"
+          if [ "$count" -ne 3 ]; then
+            echo "::error title=Missing shard::Expected 3 desktop blob reports, found $count."
+            exit 1
+          fi
+          pnpm exec vitest run --merge-reports --coverage
+
+      - name: Coverage summary
+        if: ${{ !cancelled() }}
+        run: node scripts/coverage-summary.mjs apps/desktop >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-desktop
+          retention-days: 14
+          if-no-files-found: ignore
+          path: |
             apps/desktop/coverage
             apps/desktop/test-results
 
@@ -144,7 +252,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "22"
-          cache: pnpm
+          cache: ${{ inputs.github-hosted && 'pnpm' || '' }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -179,7 +287,7 @@ jobs:
           DOTNET_INSTALL_DIR: ${{ runner.tool_cache }}/dotnet
         with:
           dotnet-version: 10.0.4xx
-          cache: true
+          cache: ${{ inputs.github-hosted }}
           cache-dependency-path: apps/server-core/**/packages.lock.json
 
       - name: Setup Node.js
@@ -241,7 +349,7 @@ jobs:
           DOTNET_INSTALL_DIR: ${{ runner.tool_cache }}/dotnet
         with:
           dotnet-version: 10.0.4xx
-          cache: true
+          cache: ${{ inputs.github-hosted }}
           cache-dependency-path: apps/server-core/**/packages.lock.json
 
       - name: Setup pnpm
@@ -251,7 +359,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "22"
-          cache: pnpm
+          cache: ${{ inputs.github-hosted && 'pnpm' || '' }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -279,37 +387,30 @@ jobs:
             docker build -q -t "agentmate-test-server:$image" "apps/server-core/test-servers/$image"
           done
 
-      - name: Install on test servers
+      # One vitest run, two files at a time. Every test server is its own container with a unique
+      # name and a random SSH port, so the files cannot see each other. The install file alone takes
+      # about as long as the other four together, so two workers is about half the time of running
+      # them one by one, without loading the runner with five sets of containers at once.
+      #
+      # deploy: the install itself, on Ubuntu and Rocky, as root and as a sudo user.
+      # firewall: ufw and firewalld, live IPv4 and IPv6 rulesets, the SSH lockout guard, confirming
+      #   over a new SSH connection, and a rollback by the systemd timer with the core killed.
+      # registries: a private registry:2 with htpasswd; a deploy pulls with a per-deploy token, and
+      #   after a success and a failure the whole filesystem holds no trace of it (E08).
+      # directTls: direct TLS (E16) behind ufw, mutual TLS with the device key, strangers, a wrong
+      #   pin and a revoked device refused, and the port and rule gone when it is off.
+      # deployExec: the Deploy AI's shell (E09), an allowlisted check in a real transient unit, an
+      #   unapproved command refused, a signed one run once and its replay refused, the journal.
+      - name: System tests on test servers
         env:
           AGENTMATE_SYSTEM_TESTS: "1"
-        run: pnpm --filter @agentmat/desktop exec vitest run src/main/deploy/deploy.int.test.ts
-
-      # ufw and firewalld on the test servers: live IPv4 and IPv6 rulesets, the SSH lockout guard,
-      # confirming over a new SSH connection, and a rollback by the systemd timer with the core killed.
-      - name: Firewall on test servers
-        env:
-          AGENTMATE_SYSTEM_TESTS: "1"
-        run: pnpm --filter @agentmat/desktop exec vitest run src/main/deploy/firewall.int.test.ts
-
-      # A private registry:2 with htpasswd on the test server: a deploy pulls with a per-deploy
-      # token, and after a success and a failure the whole filesystem holds no trace of it (E08).
-      - name: Private registries on test servers
-        env:
-          AGENTMATE_SYSTEM_TESTS: "1"
-        run: pnpm --filter @agentmat/desktop exec vitest run src/main/deploy/registries.int.test.ts
-      # Direct TLS (E16) behind ufw: the port opened by a change set, mutual TLS with the device key,
-      # strangers, a wrong pin and a revoked device refused, and the port and rule gone when it is off.
-      - name: Direct TLS on a test server
-        env:
-          AGENTMATE_SYSTEM_TESTS: "1"
-        run: pnpm --filter @agentmat/desktop exec vitest run src/main/deploy/directTls.int.test.ts
-      # The Deploy AI's shell (E09): an allowlisted check in a real transient unit, an unapproved
-      # command refused, a signed one run once and its replay refused, a stopped command's whole
-      # unit gone, and the journal from journalctl.
-      - name: Exec and journal on test servers
-        env:
-          AGENTMATE_SYSTEM_TESTS: "1"
-        run: pnpm --filter @agentmat/desktop exec vitest run src/main/deploy/deployExec.int.test.ts
+        run: >-
+          pnpm --filter @agentmat/desktop exec vitest run --maxWorkers=2
+          src/main/deploy/deploy.int.test.ts
+          src/main/deploy/firewall.int.test.ts
+          src/main/deploy/registries.int.test.ts
+          src/main/deploy/directTls.int.test.ts
+          src/main/deploy/deployExec.int.test.ts
 
   mobile:
     name: Mobile
@@ -326,7 +427,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "22"
-          cache: pnpm
+          cache: ${{ inputs.github-hosted && 'pnpm' || '' }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -349,8 +450,11 @@ jobs:
 
   # On the self-hosted runner this is Linux only. Windows and macOS run only when CD calls this on
   # GitHub's hosted runners.
+  #
+  # The specs run one Electron at a time (see e2e/playwright.config.ts), so the suite is split into
+  # shards by spec file instead, each on its own runner.
   e2e:
-    name: E2E (${{ matrix.target.name }})
+    name: E2E (${{ matrix.target.name }}, ${{ matrix.shard }}/3)
     if: ${{ inputs.e2e }}
     runs-on: ${{ matrix.target.runner }}
     timeout-minutes: 45
@@ -358,6 +462,7 @@ jobs:
       fail-fast: false
       matrix:
         target: ${{ fromJSON(inputs.github-hosted && '[{"name":"ubuntu-latest","runner":"ubuntu-latest"},{"name":"windows-latest","runner":"windows-latest"},{"name":"macos-latest","runner":"macos-latest"}]' || '[{"name":"linux","runner":["self-hosted","Linux","X64"]}]') }}
+        shard: [1, 2, 3]
     env:
       # One cache location on every OS, so the Electron zip can be restored between runs.
       electron_config_cache: ${{ github.workspace }}/.cache/electron
@@ -404,7 +509,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "22"
-          cache: pnpm
+          cache: ${{ inputs.github-hosted && 'pnpm' || '' }}
 
       - name: Cache Electron binary
         uses: actions/cache@v6
@@ -450,7 +555,7 @@ jobs:
           DOTNET_INSTALL_DIR: ${{ runner.tool_cache }}/dotnet
         with:
           dotnet-version: 10.0.4xx
-          cache: true
+          cache: ${{ inputs.github-hosted }}
           cache-dependency-path: apps/server-core/**/packages.lock.json
 
       # Electron needs a display server. Playwright itself needs no browser download here,
@@ -461,17 +566,17 @@ jobs:
         # launcher drops it here rather than having Electron refuse to start.
         env:
           AGENTMATE_E2E_NO_SANDBOX: "1"
-        run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" pnpm --filter @agentmat/desktop test:e2e
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" pnpm --filter @agentmat/desktop test:e2e --shard=${{ matrix.shard }}/3
 
       - name: Playwright
         if: runner.os != 'Linux'
-        run: pnpm --filter @agentmat/desktop test:e2e
+        run: pnpm --filter @agentmat/desktop test:e2e --shard=${{ matrix.shard }}/3
 
       - name: Upload report and traces
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: e2e-${{ matrix.target.name }}
+          name: e2e-${{ matrix.target.name }}-${{ matrix.shard }}
           retention-days: 14
           if-no-files-found: ignore
           path: |
