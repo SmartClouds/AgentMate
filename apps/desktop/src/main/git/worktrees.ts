@@ -8,7 +8,14 @@ import {
   type WorktreeStatus,
 } from '@agentmat/core';
 import type { WorktreeMergePreflight, WorktreeMergeResult } from '../../shared/apiTypes';
-import { currentBranch, git, gitOrNull, parseStatusPorcelain, safeBranchName } from './plumbing';
+import {
+  currentBranch,
+  git,
+  gitOrNull,
+  parseStatusPorcelain,
+  safeBranchName,
+  worktreeListPorcelain,
+} from './plumbing';
 
 /**
  * `git worktree` for the Workspace: every worktree is a folder of its own on its own branch,
@@ -56,7 +63,7 @@ export function samePath(a: string, b: string): boolean {
 }
 
 export async function listWorktrees(cwd: string): Promise<GitWorktreeEntry[]> {
-  const output = await git(cwd, ['worktree', 'list', '--porcelain', '-z']);
+  const output = await worktreeListPorcelain(cwd);
   return parseWorktreeList(output).map(withNativePath);
 }
 

@@ -150,15 +150,20 @@ describe('the shell startup file', () => {
 
 describe("this app's own PATH", () => {
   it('gains the folder, once, and keeps what it had', async () => {
-    process.env[pathKey] = 'C:\\Existing';
+    // Folders the way this OS spells them: off Windows the colon in C:\ is the PATH separator.
+    const onWindows = process.platform === 'win32';
+    const existing = onWindows ? 'C:\\Existing' : '/existing';
+    process.env[pathKey] = existing;
     const d = await deps();
 
-    d.addToProcessPath('C:\\New\\bin');
-    d.addToProcessPath('C:\\New\\bin');
-    d.addToProcessPath('c:\\new\\bin\\');
+    const added = onWindows
+      ? ['C:\\New\\bin', 'C:\\New\\bin', 'c:\\new\\bin\\']
+      : ['/new/bin', '/new/bin', '/new/bin/'];
+    for (const dir of added) d.addToProcessPath(dir);
 
-    const entries = (process.env[pathKey] ?? '').split(process.platform === 'win32' ? ';' : ':');
-    expect(entries.filter((entry) => entry.toLowerCase().startsWith('c:\\new')).length).toBe(1);
-    expect(entries).toContain('C:\\Existing');
+    const entries = (process.env[pathKey] ?? '').split(onWindows ? ';' : ':');
+    const prefix = onWindows ? 'c:\\new' : '/new';
+    expect(entries.filter((entry) => entry.toLowerCase().startsWith(prefix)).length).toBe(1);
+    expect(entries).toContain(existing);
   });
 });

@@ -267,16 +267,20 @@ describe('ssh:typePassword', () => {
     ]);
     const sender = fakeWebContents();
     await invokeFrom(sender, IPC.ssh.create, { sessionId: 'tab-1', savedServerId: 'srv-1' });
-    await vi.waitFor(() => expect(server.shells).toHaveLength(1));
+    // A key login's handshake is the slow one, and under a full parallel run it outlasts the
+    // default second of vi.waitFor.
+    await vi.waitFor(() => expect(server.shells).toHaveLength(1), { timeout: 10_000 });
 
     server.shells[0].write('[sudo] password for deploy: ');
-    await vi.waitFor(() =>
-      expect(
-        sender
-          .sentOn(IPC.ssh.onData)
-          .map((args) => (args[0] as { data: string }).data)
-          .join(''),
-      ).toContain('password for deploy'),
+    await vi.waitFor(
+      () =>
+        expect(
+          sender
+            .sentOn(IPC.ssh.onData)
+            .map((args) => (args[0] as { data: string }).data)
+            .join(''),
+        ).toContain('password for deploy'),
+      { timeout: 10_000 },
     );
 
     expect(promptEvents(sender)).toEqual([]);

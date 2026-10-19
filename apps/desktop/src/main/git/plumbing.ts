@@ -101,6 +101,20 @@ export async function gitOrNull(cwd: string, args: string[]): Promise<string | n
   return git(cwd, args).catch(() => null);
 }
 
+/**
+ * `git worktree list --porcelain`, NUL separated where git can do that. `-z` arrived in git 2.36,
+ * and Ubuntu 22.04 still ships 2.34, which refuses the switch. parseWorktreeList reads either form.
+ */
+export async function worktreeListPorcelain(cwd: string): Promise<string> {
+  try {
+    return await git(cwd, ['worktree', 'list', '--porcelain', '-z']);
+  } catch (error) {
+    const stderr = String((error as { stderr?: unknown } | null)?.stderr ?? '');
+    if (!/unknown switch [`']z'/.test(stderr)) throw error;
+    return git(cwd, ['worktree', 'list', '--porcelain']);
+  }
+}
+
 export async function isGitRepo(cwd: string): Promise<boolean> {
   const out = await gitOrNull(cwd, ['rev-parse', '--is-inside-work-tree']);
   return out?.trim() === 'true';
@@ -152,7 +166,7 @@ async function branchesInOtherWorktrees(
   cwd: string,
   current: string,
 ): Promise<Map<string, string>> {
-  const output = (await gitOrNull(cwd, ['worktree', 'list', '--porcelain', '-z'])) ?? '';
+  const output = await worktreeListPorcelain(cwd).catch(() => '');
   const held = new Map<string, string>();
   for (const entry of parseWorktreeList(output)) {
     if (entry.branch && entry.branch !== current) held.set(entry.branch, normalize(entry.path));

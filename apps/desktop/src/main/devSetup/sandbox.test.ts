@@ -115,7 +115,7 @@ describe('resolveDevSetupSandbox', () => {
     expect(base).toEqual(REAL_ENV);
   });
 
-  it('works the same off Windows, with the usual system folders', () => {
+  it('works the same off Windows, with nothing but its own folder on PATH', () => {
     const sandbox = resolveDevSetupSandbox({
       isE2E: true,
       folder: '/tmp/sandbox',
@@ -123,7 +123,7 @@ describe('resolveDevSetupSandbox', () => {
       os: 'darwin',
     });
 
-    expect(sandbox?.env.PATH).toBe('/tmp/sandbox/bin:/usr/bin:/bin');
+    expect(sandbox?.env.PATH).toBe('/tmp/sandbox/bin');
     expect(sandbox?.home).toBe('/tmp/sandbox/home');
     expect(sandbox?.env.HOME).toBe('/tmp/sandbox/home');
   });

@@ -23,8 +23,6 @@ import type { FilesService } from '../deploy/files/service';
  * whose message holds its `[files:code]`; one without a code gets `server`.
  */
 
-const C = IPC.deployFiles;
-
 const id = z.string().min(1).max(128);
 const fingerprint = z.string().max(200).nullable();
 const path = z.string().max(4096);
@@ -132,19 +130,21 @@ export function registerDeployFilesHandlers(deps: DeployFilesHandlerDeps): void 
     });
   };
 
-  handle(C.list, () => service.list());
-  handle(C.get, (_event, value) => service.get(siteId(value)));
-  handle(C.create, (_event, value) => service.create(parse(siteSchema, value, 'site')));
-  handle(C.update, (_event, value, input) =>
+  handle(IPC.deployFiles.list, () => service.list());
+  handle(IPC.deployFiles.get, (_event, value) => service.get(siteId(value)));
+  handle(IPC.deployFiles.create, (_event, value) =>
+    service.create(parse(siteSchema, value, 'site')),
+  );
+  handle(IPC.deployFiles.update, (_event, value, input) =>
     service.update(siteId(value), parse(siteSchema, input, 'site')),
   );
-  handle(C.remove, (_event, value) => service.remove(siteId(value)));
-  handle(C.test, (_event, value) => service.test(parse(testSchema, value, 'test')));
-  handle(C.browseRemote, (_event, value) =>
+  handle(IPC.deployFiles.remove, (_event, value) => service.remove(siteId(value)));
+  handle(IPC.deployFiles.test, (_event, value) => service.test(parse(testSchema, value, 'test')));
+  handle(IPC.deployFiles.browseRemote, (_event, value) =>
     service.browseRemote(parse(browseSchema, value, 'folder request')),
   );
 
-  handle(C.pickLocalFolder, async (event, value) => {
+  handle(IPC.deployFiles.pickLocalFolder, async (event, value) => {
     const start = parse(path.nullable(), value ?? null, 'folder');
     const options: OpenDialogOptions = {
       title: 'Pick the deploy folder',
@@ -158,30 +158,34 @@ export function registerDeployFilesHandlers(deps: DeployFilesHandlerDeps): void 
     return result.canceled ? null : (result.filePaths[0] ?? null);
   });
 
-  handle(C.validateIgnore, (_event, value) =>
+  handle(IPC.deployFiles.validateIgnore, (_event, value) =>
     service.validateIgnore(parse(ignoreSchema, value, 'list of ignore lines')),
   );
 
-  handle(C.subscribe, (event, value) =>
+  handle(IPC.deployFiles.subscribe, (event, value) =>
     service.subscribe(siteId(value), subscriberOf(event.sender)),
   );
-  handle(C.unsubscribe, (event, value) => {
+  handle(IPC.deployFiles.unsubscribe, (event, value) => {
     service.unsubscribe(siteId(value), String(event.sender.id));
   });
-  handle(C.changes, (_event, value) => service.changes(siteId(value)));
-  handle(C.plan, (_event, value) => service.plan(parse(planSchema, value, 'plan').siteId));
-  handle(C.deploy, (_event, value) => service.deploy(parse(deploySchema, value, 'deploy')));
-  handle(C.cancel, (_event, value) => service.cancel(siteId(value)));
-  handle(C.history, (_event, value) => service.history(siteId(value)));
-  handle(C.forgetBase, (_event, value) => service.forgetBase(siteId(value)));
-  handle(C.setDeployOnSave, (_event, value, enabled) =>
+  handle(IPC.deployFiles.changes, (_event, value) => service.changes(siteId(value)));
+  handle(IPC.deployFiles.plan, (_event, value) =>
+    service.plan(parse(planSchema, value, 'plan').siteId),
+  );
+  handle(IPC.deployFiles.deploy, (_event, value) =>
+    service.deploy(parse(deploySchema, value, 'deploy')),
+  );
+  handle(IPC.deployFiles.cancel, (_event, value) => service.cancel(siteId(value)));
+  handle(IPC.deployFiles.history, (_event, value) => service.history(siteId(value)));
+  handle(IPC.deployFiles.forgetBase, (_event, value) => service.forgetBase(siteId(value)));
+  handle(IPC.deployFiles.setDeployOnSave, (_event, value, enabled) =>
     service.setDeployOnSave(siteId(value), parse(z.boolean(), enabled, 'switch')),
   );
-  handle(C.hostKeyStatus, (_event, value) => service.hostKeyStatus(siteId(value)));
-  handle(C.trustHostKey, (_event, value, key) =>
+  handle(IPC.deployFiles.hostKeyStatus, (_event, value) => service.hostKeyStatus(siteId(value)));
+  handle(IPC.deployFiles.trustHostKey, (_event, value, key) =>
     service.trustHostKey(siteId(value), parse(z.string().max(200), key, 'fingerprint')),
   );
-  handle(C.trustCertificate, (_event, value, key) =>
+  handle(IPC.deployFiles.trustCertificate, (_event, value, key) =>
     service.trustCertificate(siteId(value), parse(z.string().max(200), key, 'fingerprint')),
   );
 }

@@ -43,9 +43,12 @@ describe('SshServersPanel', () => {
 
     await user.click(await screen.findByRole('button', { name: 'AI history on this server' }));
 
-    expect(await screen.findByRole('dialog', { name: 'prod' })).toBeInTheDocument();
+    // Under a full parallel run the dialog can take longer than the default second to appear.
     expect(
-      await screen.findByText('No agent conversations on this server yet.'),
+      await screen.findByRole('dialog', { name: 'prod' }, { timeout: 5_000 }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText('No agent conversations on this server yet.', {}, { timeout: 5_000 }),
     ).toBeInTheDocument();
     expect(bridge.$fn('ssh.conversations')).toHaveBeenCalledWith(server.id);
     expect(useTerminalStore.getState().sessions).toHaveLength(0);

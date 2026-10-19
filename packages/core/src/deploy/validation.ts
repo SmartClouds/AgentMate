@@ -116,7 +116,9 @@ export function validateDomain(
 
   const needsIdna = [...name].some((char) => char > '\u007f') || /(^|\.)xn--/i.test(name);
   const ascii = needsIdna ? toAscii(name) : name.toLowerCase();
-  if (ascii === null) return refuse("That isn't a valid international domain name.");
+  if (ascii === null || !ascii.split('.').every(isDecodableLabel)) {
+    return refuse("That isn't a valid international domain name.");
+  }
   const problem = domainProblem(ascii);
   return problem ? refuse(problem) : pass(wildcard + ascii);
 }
@@ -127,6 +129,66 @@ function toAscii(name: string): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * An `xn--` label has to be real punycode. Older URL parsers refuse one that is not, but newer
+ * ones (Node 24's among them) pass `xn--zz` through untouched, so it is decoded here as well.
+ */
+function isDecodableLabel(label: string): boolean {
+  if (!label.startsWith('xn--')) return true;
+  const decoded = decodePunycode(label.slice(4));
+  return decoded !== null && decoded.length > 0;
+}
+
+/** RFC 3492 decoding, returning the code points, or null for input that is not punycode. */
+function decodePunycode(input: string): number[] | null {
+  const base = 36;
+  const tMin = 1;
+  const tMax = 26;
+  const adapt = (delta: number, points: number, first: boolean): number => {
+    let d = first ? Math.floor(delta / 700) : Math.floor(delta / 2);
+    d += Math.floor(d / points);
+    let k = 0;
+    while (d > ((base - tMin) * tMax) >> 1) {
+      d = Math.floor(d / (base - tMin));
+      k += base;
+    }
+    return k + Math.floor(((base - tMin + 1) * d) / (d + 38));
+  };
+  const digit = (code: number): number => {
+    if (code >= 0x30 && code <= 0x39) return code - 22;
+    if (code >= 0x61 && code <= 0x7a) return code - 0x61;
+    return -1;
+  };
+
+  const delimiter = input.lastIndexOf('-');
+  const output: number[] = [];
+  for (let j = 0; j < delimiter; j++) output.push(input.charCodeAt(j));
+  let n = 128;
+  let bias = 72;
+  let i = 0;
+  for (let pos = delimiter > 0 ? delimiter + 1 : 0; pos < input.length; ) {
+    const before = i;
+    let weight = 1;
+    for (let k = base; ; k += base) {
+      if (pos >= input.length) return null;
+      const value = digit(input.charCodeAt(pos++));
+      if (value < 0) return null;
+      i += value * weight;
+      const t = k <= bias ? tMin : k >= bias + tMax ? tMax : k - bias;
+      if (value < t) break;
+      weight *= base - t;
+      if (i > 0x7fffffff || weight > 0x7fffffff) return null;
+    }
+    bias = adapt(i - before, output.length + 1, before === 0);
+    n += Math.floor(i / (output.length + 1));
+    i %= output.length + 1;
+    if (n > 0x10ffff) return null;
+    output.splice(i, 0, n);
+    i++;
+  }
+  return output;
 }
 
 /** The label rules, applied to the ASCII form (RFC 1035, RFC 1123, RFC 5891). */

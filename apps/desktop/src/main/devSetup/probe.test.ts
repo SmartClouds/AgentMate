@@ -6,9 +6,10 @@ import { tempDir } from '../../test/main/fixtures';
 // The real withToolPath would start Python to look for script folders. These tests care about the
 // probe, so the environment passes through untouched.
 vi.mock('../toolPaths', () => ({
-  withToolPath: async (env?: NodeJS.ProcessEnv) => ({ ...(env ?? process.env) }),
+  withToolPath: vi.fn(async (env?: NodeJS.ProcessEnv) => ({ ...(env ?? process.env) })),
 }));
 
+import { withToolPath } from '../toolPaths';
 import { cleanProbeText, findExecutable, runProbe } from './probe';
 
 /**
@@ -52,6 +53,18 @@ afterEach(() => {
 });
 
 describe('runProbe', () => {
+  it('uses a given environment as it is, without the extra tool folders', async () => {
+    // The e2e sandbox hands over a private PATH. The extra folders are this machine's real ones
+    // (~/.local/bin, Homebrew), where a tool the test means to be missing may well be installed.
+    writeTool(binDir, 'faketool', ['echo faketool 1.2.3'], ['echo "faketool 1.2.3"']);
+    vi.mocked(withToolPath).mockClear();
+
+    const result = await runProbe('faketool', ['--version'], { env: envWithPath(binDir) });
+
+    expect(result.ok).toBe(true);
+    expect(withToolPath).not.toHaveBeenCalled();
+  });
+
   it('returns what a tool prints and that it succeeded', async () => {
     writeTool(binDir, 'faketool', ['echo faketool 1.2.3'], ['echo "faketool 1.2.3"']);
 

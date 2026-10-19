@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { join } from 'node:path';
+import { win32 } from 'node:path';
 
 /**
  * Windows has no SIGSTOP. `NtSuspendProcess` freezes every thread of a process (what Process
@@ -222,7 +222,7 @@ public static class AgentMateProcessTree {
 /** Named after the source, so a changed helper is built afresh instead of loading a stale one. */
 export function helperAssemblyPath(helperDir: string): string {
   const hash = createHash('sha256').update(PROCESS_TREE_HELPER_SOURCE).digest('hex').slice(0, 12);
-  return join(helperDir, `agentmate-proc-${hash}.dll`);
+  return win32.join(helperDir, `agentmate-proc-${hash}.dll`);
 }
 
 function literal(path: string): string {

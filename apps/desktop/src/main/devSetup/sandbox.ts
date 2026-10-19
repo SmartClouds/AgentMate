@@ -51,7 +51,10 @@ export function resolveDevSetupSandbox(input: SandboxInput): DevSetupSandbox | n
   const home = path.join(folder, 'home');
   const nowhere = path.join(folder, 'none');
 
-  let systemDirs = ['/usr/bin', '/bin'];
+  // Off Windows the test's tools are /bin/sh scripts, which name their shell by its full path, so
+  // the system folders stay off PATH. They are where apt and Homebrew put real tools (`gh` above
+  // all), and the test needs those to be missing.
+  let systemDirs: string[] = [];
   if (input.os === 'win32') {
     const root = input.baseEnv[keyOf(input.baseEnv, 'SystemRoot') ?? 'SystemRoot'] ?? 'C:\\Windows';
     systemDirs = [

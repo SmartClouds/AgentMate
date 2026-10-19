@@ -129,10 +129,11 @@ jobs:
       - name: Build workspace packages
         run: pnpm build:packages
 
-      # Failing tests are annotated by the merge job, which runs the config's reporters.
+      # The blob reporter alone prints nothing about a failure, so dot is added for the log: one
+      # character per test, then every failure in full. The merge job adds the annotations.
       - name: Desktop main and renderer
         working-directory: apps/desktop
-        run: pnpm exec vitest run --coverage --shard=${{ matrix.shard }}/3 --reporter=blob
+        run: pnpm exec vitest run --coverage --shard=${{ matrix.shard }}/3 --reporter=blob --reporter=dot
 
       - name: Upload blob report
         if: ${{ !cancelled() }}

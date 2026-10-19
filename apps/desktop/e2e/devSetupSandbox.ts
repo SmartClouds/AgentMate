@@ -56,6 +56,12 @@ export function createDevSetupSandbox(): DevSetupSandbox {
   writeTool(bin, 'node', ['echo v22.12.0'], ['echo "v22.12.0"']);
   writeTool(bin, 'npm', ['echo 10.9.0'], ['echo "10.9.0"']);
 
+  // The package manager the GitHub CLI's one-click install goes through on Linux. The sandbox's
+  // PATH has no system folders, so without this the row would only offer the manual steps.
+  if (process.platform === 'linux') {
+    writeTool(bin, 'apt-get', [], ['echo "apt 2.7.14 (amd64)"']);
+  }
+
   if (onWindows) {
     writeTool(
       bin,

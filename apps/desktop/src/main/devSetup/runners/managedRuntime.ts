@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { join, win32 } from 'node:path';
 import {
   androidPackagesFor,
   type DevArch,
@@ -44,7 +44,7 @@ export function createDockerDesktopLauncher(
   return async () => {
     if (deps.os === 'win32') {
       const programFiles = deps.env.ProgramFiles ?? 'C:\\Program Files';
-      const exe = join(programFiles, 'Docker', 'Docker', 'Docker Desktop.exe');
+      const exe = win32.join(programFiles, 'Docker', 'Docker', 'Docker Desktop.exe');
       if (!deps.exists(exe)) {
         return { ok: false, message: 'Docker Desktop was not found. Install it first.' };
       }

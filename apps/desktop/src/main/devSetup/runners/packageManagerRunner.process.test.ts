@@ -129,10 +129,12 @@ describe('the runner with a real process', () => {
       env: environmentWith(bin),
     }).run(WINGET, 'install', h.hooks);
 
+    // A POSIX exit status is one byte, so the fake's 1603 arrives there as 67.
+    const code = process.platform === 'win32' ? 1603 : 1603 % 256;
     expect(result).toMatchObject({
       ok: false,
-      code: 1603,
-      message: 'winget could not finish (code 1603).',
+      code,
+      message: `winget could not finish (code ${code}).`,
     });
     expect(h.lines.map((line) => line.trim())).toContain('Installer failed with exit code 1603');
   });

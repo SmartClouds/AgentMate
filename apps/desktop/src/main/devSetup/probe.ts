@@ -32,7 +32,11 @@ export interface ProbeResult {
 
 export interface ProbeOptions {
   timeoutMs?: number;
-  /** Defaults to the app's environment plus the extra tool folders. */
+  /**
+   * Defaults to the app's environment plus the extra tool folders. One that is given is used as it
+   * is: the e2e sandbox passes its private PATH, and the extra folders would lead back to the
+   * tools this machine really has.
+   */
   env?: NodeJS.ProcessEnv;
 }
 
@@ -74,7 +78,7 @@ export async function runProbe(
   // a missing tool does. Callers run probes without a catch, so it must come back as a result.
   if (!command.trim()) return emptyResult({ notFound: true });
 
-  const env = await withToolPath(options.env);
+  const env = options.env ? { ...options.env } : await withToolPath();
   const onWindows = process.platform === 'win32';
 
   let commandLine = '';
