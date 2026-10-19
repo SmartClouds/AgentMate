@@ -186,7 +186,7 @@ const denyFrom = (source: string): FirewallChange => ({
  */
 async function unconfirmedChangeRevertsWithTheCoreKilled(
   core: Awaited<ReturnType<typeof installCore>>,
-  isOpen: () => boolean,
+  openIn: () => { v4: boolean; v6: boolean },
 ) {
   const { server } = core;
   const before = await core.connect(newPool(server));
@@ -195,14 +195,18 @@ async function unconfirmedChangeRevertsWithTheCoreKilled(
     sshConnection: before.sshConnection,
   });
   expect(change.state).toBe('awaitingConfirmation');
-  expect(isOpen()).toBe(true);
+  expect(openIn()).toEqual({ v4: true, v6: true });
   await before.stop();
 
   server.run('systemctl kill -s KILL agentmate-core; systemctl stop agentmate-core');
   expect(server.run('systemctl is-active agentmate-core || true')).not.toBe('active');
   expect(server.run('systemctl list-timers --all --no-legend')).toContain('agentmate-fwrevert');
 
-  await waitFor('the timer to put the old rules back', () => !isOpen());
+  // ufw reloads the IPv4 tables before the IPv6 ones, so a check can land between the two.
+  await waitFor('the timer to put the old rules back', () => {
+    const { v4, v6 } = openIn();
+    return !v4 && !v6;
+  });
   expect(server.run('systemctl is-active agentmate-core || true')).not.toBe('active');
 
   server.run('systemctl start agentmate-core');
@@ -333,13 +337,10 @@ describe.skipIf(!enabled)('the firewall on real servers', () => {
       await first.stop();
       await second.stop();
 
-      await unconfirmedChangeRevertsWithTheCoreKilled(core, () => {
-        const v4now = server.run('iptables-save');
-        const v6now = server.run('ip6tables-save');
-        const open = v4now.includes('--dport 7070 -j ACCEPT');
-        expect(v6now.includes('--dport 7071 -j ACCEPT')).toBe(open);
-        return open;
-      });
+      await unconfirmedChangeRevertsWithTheCoreKilled(core, () => ({
+        v4: server.run('iptables-save').includes('--dport 7070 -j ACCEPT'),
+        v6: server.run('ip6tables-save').includes('--dport 7071 -j ACCEPT'),
+      }));
       // What was confirmed before stays.
       expect(server.run('iptables-save')).toMatch(/--dport 8080 -j ACCEPT/);
     },
@@ -403,9 +404,10 @@ describe.skipIf(!enabled)('the firewall on real servers', () => {
 
       await unconfirmedChangeRevertsWithTheCoreKilled(core, () => {
         const nftNow = server.run('nft list ruleset');
-        const open = /tcp dport 7070 accept/.test(nftNow);
-        expect(/ip6 saddr 2001:db8:7::\/48 tcp dport 7071 accept/.test(nftNow)).toBe(open);
-        return open;
+        return {
+          v4: /tcp dport 7070 accept/.test(nftNow),
+          v6: /ip6 saddr 2001:db8:7::\/48 tcp dport 7071 accept/.test(nftNow),
+        };
       });
       expect(server.run('firewall-cmd --zone=public --list-ports')).toContain('8080/tcp');
     },

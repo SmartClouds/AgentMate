@@ -769,10 +769,13 @@ describe('ProjectDetailPage WordPress section', () => {
       bridge: { 'projects.list': [project()] },
     });
 
+    // The hop to Overview is a second render that mounts the whole Overview section, which can take
+    // longer than the default second on a busy CI runner with coverage on.
     expect(
       await within(await screen.findByRole('navigation', { name: 'Project sections' })).findByRole(
         'button',
         { name: /^Overview/, current: 'page' },
+        { timeout: 5_000 },
       ),
     ).toBeTruthy();
   });
