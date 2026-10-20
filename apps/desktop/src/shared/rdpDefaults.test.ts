@@ -82,7 +82,7 @@ describe('defaults', () => {
     expect(DEFAULT_RDP_OPTIONS).toEqual({
       resolution: 'fitWindow',
       fullscreenOnConnect: false,
-      maximizeOnConnect: true,
+      maximizeOnConnect: false,
       clipboard: true,
       fileTransfer: true,
       nla: true,

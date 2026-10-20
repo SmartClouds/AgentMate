@@ -5,7 +5,7 @@ export const DEFAULT_RDP_PORT = 3389;
 export const DEFAULT_RDP_OPTIONS: RdpServerOptions = {
   resolution: 'fitWindow',
   fullscreenOnConnect: false,
-  maximizeOnConnect: true,
+  maximizeOnConnect: false,
   clipboard: true,
   fileTransfer: true,
   nla: true,
