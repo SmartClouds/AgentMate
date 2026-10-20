@@ -107,6 +107,7 @@ import {
 } from './resourceActivity/runtime';
 import { startScheduledTaskRunner, stopScheduledTaskRunner } from './scheduledTasks/scheduler';
 import { cancelAllSecurityScans, sweepOrphanScanContainers } from './security/scanRunner';
+import { closeAllSftpSessions, registerSftpIpc } from './sftp';
 import { refreshShellPath } from './shellPath';
 import { configureSpellChecker, registerSpellcheckHandlers } from './spellcheck';
 import {
@@ -392,6 +393,15 @@ function registerAllIpcHandlers(): void {
       );
     },
   });
+  // The SFTP file manager (E25) logs in with saved servers' secrets: main window only, too.
+  registerSftpIpc({
+    guard: (event) => {
+      const win = getMainWindow();
+      return (
+        !!win && event.sender === win.webContents && event.senderFrame === win.webContents.mainFrame
+      );
+    },
+  });
 }
 
 app.whenReady().then(async () => {
@@ -559,6 +569,7 @@ app.on('before-quit', (event) => {
   stopAllSshTasks();
   stopAllRdpTasks();
   killAllSshSessions();
+  closeAllSftpSessions();
   closeAllRdpSessions();
   lockVault();
   void getVaultService().shutdown();

@@ -97,6 +97,7 @@ export default defineConfig({
         'src/main/deploy/registry/index.ts',
         'src/main/deploy/wordpress/index.ts',
         'src/main/deploy/files/index.ts',
+        'src/main/sftp/index.ts',
         // FTP and SFTP sites (E23): the contract suite and the in-memory server only serve the tests.
         'src/main/deploy/files/transport/contract.ts',
         'src/main/deploy/files/transport/fakeRemote.ts',
@@ -108,6 +109,7 @@ export default defineConfig({
         'src/main/ptyHost/hostEntry.ts',
         // Interface declarations with no runtime code of their own.
         'src/main/vault/ports.ts',
+        'src/main/sftp/client.ts',
         // Generated from the server core's C# contracts (pnpm server-core:contracts).
         'src/shared/deploy/protocol/generated/**',
       ],
@@ -223,6 +225,13 @@ export default defineConfig({
             // FTP and SFTP sites (E23): the planner, the run, trust, Deploy on save and the IPC.
             'src/main/deploy/files/**': { lines: 90, branches: 80 },
             'src/main/ipc/deployFiles.ts': { lines: 90, branches: 80 },
+            // The SSH file manager (E25): transfers, remote and local file ops, the IPC and its screens.
+            'src/main/sftp/**': { lines: 90, branches: 80 },
+            'src/main/ipc/sftp.ts': { lines: 95, branches: 90 },
+            'src/renderer/src/components/sftp/**': { lines: 85, functions: 75, branches: 75 },
+            'src/renderer/src/lib/sftp/**': { lines: 95, branches: 90 },
+            'src/renderer/src/stores/sftpStore.ts': { lines: 90, branches: 80 },
+            'src/renderer/src/pages/SshFilesPage.tsx': { lines: 85, functions: 75, branches: 75 },
             'src/renderer/src/components/deploy/appStore/**': {
               lines: 90,
               functions: 80,

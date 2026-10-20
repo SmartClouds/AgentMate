@@ -239,6 +239,31 @@ describe('CommandPalette selection', () => {
     await waitFor(() => expect(pathname()).toBe('/vault'));
   });
 
+  it('opens the SFTP file manager of a saved server found by its host', async () => {
+    const { user } = renderPalette({
+      'ssh.listServers': [
+        {
+          id: 'srv-9',
+          nickname: 'web',
+          host: 'web.example.net',
+          port: 22,
+          username: 'dev',
+          authMethod: 'password',
+          hasSecret: true,
+          createdAt: 0,
+          lastConnectedAt: null,
+        },
+      ],
+    });
+    await user.keyboard('{Control>}k{/Control}');
+    await user.keyboard('web.example');
+
+    await user.click(await screen.findByRole('option', { name: /Open SFTP files: web/ }));
+
+    await waitFor(() => expect(pathname()).toBe('/ssh-files/srv-9'));
+    expect(useSearchStore.getState().open).toBe(false);
+  });
+
   it('lists the unlocked vault entries and opens the one that is picked', async () => {
     const { user } = renderPalette({
       'vault.status': async () => ({ state: 'unlocked' }),

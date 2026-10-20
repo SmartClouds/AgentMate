@@ -112,6 +112,7 @@ Each row shows `user@host:port`, the sign-in method and when you last connected.
 | --- | --- |
 | **AI history on this server** (clock icon) | Opens a side sheet with the agent CLI conversations stored on that server. |
 | **Connect** | Opens an SSH terminal tab for the server. |
+| **Files** | Opens the server in the SFTP file manager, to upload, download and edit files (see [SSH files](ssh-files.md)). |
 | **Edit this server** | Opens the edit form. |
 | **Remove this server** | Removes it after you confirm. You can add it again with the same details. |
 

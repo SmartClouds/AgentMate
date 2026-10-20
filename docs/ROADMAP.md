@@ -217,3 +217,4 @@ upload extraction, tunnel, installer verification, firewall guard) get coverage 
 | [E22](epics/22-health-checks.md) | Project monitoring | Standalone (Ship) | none |
 | [E23](epics/23-ftp-sftp-sites.md) | FTP and SFTP sites | Standalone (Deploy) | E02, E19 patterns |
 | [E24](epics/24-error-tracking.md) | Error tracking | Standalone (Ship) | E22 |
+| [E25](epics/25-ssh-sftp-file-manager.md) | SSH SFTP file manager | Standalone (Remote) | E23 |

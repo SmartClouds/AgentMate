@@ -38,6 +38,14 @@ export type FilesErrorCode =
   | 'siteUnknown'
   | 'projectUnknown'
   | 'invalidInput'
+  /** SFTP file manager (E25): a file or folder of that name is already there. */
+  | 'exists'
+  /** SFTP file manager (E25): the file on the server changed since it was read. */
+  | 'changedOnServer'
+  /** SFTP file manager (E25): the file is over the size the action allows (editing, say). */
+  | 'tooLarge'
+  /** SFTP file manager (E25): the file is not UTF-8 text, so it cannot be edited here. */
+  | 'notText'
   /** The server answered with an error that fits none of the above. */
   | 'server';
 
@@ -64,6 +72,10 @@ const CODES: ReadonlySet<string> = new Set<FilesErrorCode>([
   'siteUnknown',
   'projectUnknown',
   'invalidInput',
+  'exists',
+  'changedOnServer',
+  'tooLarge',
+  'notText',
   'server',
 ]);
 const CODE = /\[files:([A-Za-z]+)\]\s*/;

@@ -41,6 +41,11 @@ const PROBLEMS: Record<FilesErrorCode, string> = {
   siteUnknown: "AgentMate doesn't know this site anymore. It may have been removed.",
   projectUnknown: 'One of the attached projects no longer exists.',
   invalidInput: 'Some of the details are not valid. Check the highlighted fields.',
+  exists: 'Something with that name is already there. Pick another name.',
+  changedOnServer:
+    'The file changed on the server since it was opened. Reload it, or overwrite the newer copy.',
+  tooLarge: 'The file is too large for this.',
+  notText: "The file isn't plain text, so it can't be edited here.",
   server: 'The server refused the request.',
 };
 

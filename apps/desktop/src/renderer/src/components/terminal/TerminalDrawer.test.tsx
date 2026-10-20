@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { type TerminalSessionMeta, useTerminalStore } from '@/stores/terminalStore';
@@ -26,11 +27,20 @@ const sessions: TerminalSessionMeta[] = [
   { id: 's2', kind: 'local', title: 'Command Prompt' },
 ];
 
+let pathname = '';
+function LocationProbe(): null {
+  pathname = useLocation().pathname;
+  return null;
+}
+
 function renderDrawer(props: React.ComponentProps<typeof TerminalDrawer> = {}) {
   const view = render(
-    <TooltipProvider>
-      <TerminalDrawer {...props} />
-    </TooltipProvider>,
+    <MemoryRouter initialEntries={['/projects']}>
+      <TooltipProvider>
+        <TerminalDrawer {...props} />
+      </TooltipProvider>
+      <LocationProbe />
+    </MemoryRouter>,
   );
   const shell = (): HTMLElement => screen.getByRole('region', { name: 'Terminal', hidden: true });
   // The island is the frame's last child: the resize grip sits before it, in the gap above.
@@ -182,5 +192,31 @@ describe('TerminalDrawer shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Maximize terminal' }));
 
     expect(shell()).toHaveClass('absolute', 'inset-1.5');
+  });
+});
+
+describe('TerminalDrawer SFTP files button', () => {
+  it('opens the file manager of the server behind an SSH tab', () => {
+    useTerminalStore.setState({
+      sessions: [{ id: 'ssh1', kind: 'ssh', title: 'prod', sshServerId: 'srv-7' }],
+      activeSessionId: 'ssh1',
+    });
+    renderDrawer();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Browse files over SFTP' }));
+    expect(pathname).toBe('/ssh-files/srv-7');
+  });
+
+  it('is not offered on a local tab or an SSH tab with no saved server', () => {
+    const view = renderDrawer();
+    expect(screen.queryByRole('button', { name: 'Browse files over SFTP' })).toBeNull();
+    view.unmount();
+
+    useTerminalStore.setState({
+      sessions: [{ id: 'ssh2', kind: 'ssh', title: 'typed by hand' }],
+      activeSessionId: 'ssh2',
+    });
+    renderDrawer();
+    expect(screen.queryByRole('button', { name: 'Browse files over SFTP' })).toBeNull();
   });
 });

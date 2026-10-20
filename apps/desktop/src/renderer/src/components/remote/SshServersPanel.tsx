@@ -1,7 +1,8 @@
 import type { SshSavedServer } from '@shared/apiTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { History, Link, Pencil, Plus, Server, Trash2 } from '@/components/icons';
+import { useNavigate } from 'react-router-dom';
+import { FolderOpen, History, Link, Pencil, Plus, Server, Trash2 } from '@/components/icons';
 import { EmptyState, FOOTER_HAIRLINE } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
 import { SimpleTooltip } from '@/components/ui/tooltip';
@@ -15,7 +16,7 @@ import { SshHistoryPanel } from './SshHistoryPanel';
 import { SshServerFormDialog } from './SshServerFormDialog';
 import { SshVaultUnlockDialog } from './SshVaultUnlockDialog';
 
-type ServerAction = 'connect' | 'history';
+type ServerAction = 'connect' | 'history' | 'files';
 
 function authMethodLabel(server: SshSavedServer): string {
   return server.authMethod === 'password' ? 'Password' : 'Private key';
@@ -25,12 +26,15 @@ function SavedSshServerRow({
   server,
   onConnect,
   onHistory,
+  onFiles,
   onEdit,
   onRemoved,
 }: {
   server: SshSavedServer;
   onConnect: (server: SshSavedServer) => Promise<void>;
   onHistory: (server: SshSavedServer) => Promise<void>;
+  /** Opens the SFTP file manager on this server (E25). */
+  onFiles: (server: SshSavedServer) => Promise<void>;
   onEdit: (server: SshSavedServer) => void;
   onRemoved: () => void;
 }): React.JSX.Element {
@@ -119,7 +123,12 @@ function SavedSshServerRow({
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </SimpleTooltip>
-        <Button className="ml-1" onClick={() => void connect()} disabled={connecting}>
+        <SimpleTooltip label="Browse files over SFTP">
+          <Button variant="soft" className="ml-1" onClick={() => void onFiles(server)}>
+            <FolderOpen className="h-3.5 w-3.5" /> Files
+          </Button>
+        </SimpleTooltip>
+        <Button onClick={() => void connect()} disabled={connecting}>
           <Link className="h-3.5 w-3.5" /> {connecting ? 'Connecting…' : 'Connect'}
         </Button>
       </div>
@@ -130,6 +139,7 @@ function SavedSshServerRow({
 export function SshServersPanel(): React.JSX.Element {
   const queryClient = useQueryClient();
   const openSshSession = useTerminalStore((s) => s.openSshSession);
+  const navigate = useNavigate();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<SshSavedServer | undefined>(undefined);
   const [unlockOpen, setUnlockOpen] = useState(false);
@@ -168,6 +178,11 @@ export function SshServersPanel(): React.JSX.Element {
       openSshSession(server);
       return;
     }
+    if (action === 'files') {
+      // The page opens the session itself, host key prompt included; this only goes there.
+      navigate(`/ssh-files/${server.id}`);
+      return;
+    }
     setHistoryServer(server);
     // Coming back from an unlock the panel may hold a vault-locked error; read again.
     void queryClient.invalidateQueries({ queryKey: queryKeys.sshConversations(server.id) });
@@ -179,7 +194,7 @@ export function SshServersPanel(): React.JSX.Element {
     setUnlockOpen(true);
   }
 
-  /** Both actions read the server's stored secret, so a locked vault asks for its passkey first. */
+  /** Every action reads the server's stored secret, so a locked vault asks for its passkey first. */
   async function withUnlockedVault(server: SshSavedServer, action: ServerAction): Promise<void> {
     const status = await window.agentmat.ssh.vaultStatus();
     if (status.hasPasskey && !status.unlocked) {
@@ -243,6 +258,7 @@ export function SshServersPanel(): React.JSX.Element {
                   server={server}
                   onConnect={(s) => withUnlockedVault(s, 'connect')}
                   onHistory={(s) => withUnlockedVault(s, 'history')}
+                  onFiles={(s) => withUnlockedVault(s, 'files')}
                   onEdit={openEdit}
                   onRemoved={() => void refreshServers()}
                 />

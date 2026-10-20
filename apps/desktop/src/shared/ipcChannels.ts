@@ -88,6 +88,62 @@ export const IPC = {
     // SshPasswordPromptPayload: the output now ends (or no longer ends) on a password prompt
     onPasswordPrompt: 'ssh:onPasswordPrompt',
   },
+  /**
+   * The SFTP file manager for saved SSH servers (E25). Types are in shared/sftpTypes.ts and the
+   * renderer side is `SftpBridge`. Failures carry `[files:code]` or `[ssh:code]` tags.
+   */
+  sftp: {
+    // (serverId) -> SftpSessionInfo; the same window and server get the session they already have
+    open: 'sftp:open',
+    // (sessionId) -> void; cancels its transfers and releases its connections
+    close: 'sftp:close',
+    // (sessionId, path: absolute, `~` or relative to home) -> SftpListing<SftpRemoteEntry>
+    list: 'sftp:list',
+    // (sessionId, path) -> SftpRemoteEntry | null
+    stat: 'sftp:stat',
+    // (sessionId, parentDir, name) -> string, the new folder's path
+    mkdir: 'sftp:mkdir',
+    // (sessionId, path, newName) -> string, the new path
+    rename: 'sftp:rename',
+    // (sessionId, paths) -> { batchId }; recursive, links are removed and never followed
+    remove: 'sftp:remove',
+    // (sessionId, SftpChmodInput) -> { batchId }
+    chmod: 'sftp:chmod',
+    // (sessionId, SftpUploadInput) -> { batchId }
+    upload: 'sftp:upload',
+    // (sessionId, SftpDownloadInput) -> { batchId }; localDir must be a folder the local pane listed
+    download: 'sftp:download',
+    // (sessionId, conflictId, SftpConflictDecision) -> void
+    resolveConflict: 'sftp:resolveConflict',
+    // (sessionId, SftpTarget?) -> void; no target means everything
+    cancel: 'sftp:cancel',
+    // (sessionId, SftpTarget?) -> void; failed and cancelled items go back in the queue
+    retry: 'sftp:retry',
+    // (sessionId) -> void; drops the batches that are over
+    clearFinished: 'sftp:clearFinished',
+    // (sessionId) -> SftpQueueSnapshot, for a page that comes back after a reload
+    queue: 'sftp:queue',
+    // (sessionId, path) -> SftpTextFile
+    readText: 'sftp:readText',
+    // (sessionId, SftpWriteTextInput) -> SftpRemoteEntry
+    writeText: 'sftp:writeText',
+    // () -> SftpLocalPlace[]
+    localPlaces: 'sftp:localPlaces',
+    // (path) -> SftpListing<SftpLocalEntry>; the folder becomes one the local pane may write to
+    localList: 'sftp:localList',
+    // (parentDir, name) -> string, the new folder's path
+    localMkdir: 'sftp:localMkdir',
+    // (path, newName) -> string, the new path
+    localRename: 'sftp:localRename',
+    // (paths, { permanent }) -> void; to the Trash unless permanent
+    localDelete: 'sftp:localDelete',
+    /** main -> the owner window: SftpQueueSnapshot, coalesced to about one per 100 ms. */
+    onQueue: 'sftp:onQueue',
+    /** main -> the owner window: SftpBatchFinished, so the pane it changed can refresh. */
+    onBatchFinished: 'sftp:onBatchFinished',
+    /** main -> the owner window: SftpSessionClosed. */
+    onSessionClosed: 'sftp:onSessionClosed',
+  },
   environments: {
     list: 'environments:list',
     save: 'environments:save',

@@ -133,6 +133,7 @@ function fakeConnection(options: { posixRename?: boolean; delayMs?: number } = {
           stat: statOf(nodes.get(remotePath) as Node),
           atomic: !existing || options.posixRename !== false,
           replaced: Boolean(existing),
+          sha256: createHash('sha256').update(bytes).digest('hex'),
         };
       }),
   };

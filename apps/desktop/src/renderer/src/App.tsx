@@ -58,6 +58,8 @@ const DeployPage = lazy(() => import('./pages/DeployPage'));
 const HealthPage = lazy(() => import('./pages/HealthPage'));
 /** Carries the IronRDP WebAssembly engine, which only Remote Desktop session windows need. */
 const RdpSessionRoute = lazy(() => import('./components/rdp/RdpSessionRoute'));
+/** The SFTP file manager for saved SSH servers (E25), loaded on first visit. */
+const SshFilesPage = lazy(() => import('./pages/SshFilesPage'));
 
 /* Glass toasts: richColors is off on purpose. It paints an opaque per-type
    background that would defeat the frosted surface. The type accents live in
@@ -225,6 +227,18 @@ export default function App(): React.JSX.Element {
                 <Route path="ask-ai" element={<AskAiPage />} />
                 <Route path="remote" element={<RemotePage />} />
                 <Route path="remote-files" element={<RemoteFileManagerPage />} />
+                <Route
+                  path="ssh-files/:serverId"
+                  element={
+                    <Suspense
+                      fallback={
+                        <div className="p-6 text-sm text-muted-foreground">Loading files…</div>
+                      }
+                    >
+                      <SshFilesPage />
+                    </Suspense>
+                  }
+                />
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="help" element={<HelpPage />} />
                 <Route path="help/:slug" element={<HelpPage />} />

@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { existsSync } from 'node:fs';
 import { mkdir, readdir, rename, rm, stat } from 'node:fs/promises';
-import { homedir, platform } from 'node:os';
+import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { WebSocket } from 'ws';
 import type { RemoteControlMessage, RemoteFileEntry } from '../../shared/remoteProtocol';
+import { listLocalRoots } from '../fs/localRoots';
 
 const REQUEST_TIMEOUT_MS = 15_000;
 
@@ -244,18 +244,11 @@ function ackOrThrow(reply: Reply): void {
 }
 
 async function listRoots(): Promise<RemoteFileEntry[]> {
-  if (platform() === 'win32') {
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const roots: RemoteFileEntry[] = [];
-    for (const letter of letters) {
-      const path = `${letter}:\\`;
-      if (existsSync(path))
-        roots.push({ name: path, path, isDirectory: true, size: 0, mtimeMs: 0 });
-    }
-    return roots;
-  }
-  return [
-    { name: 'Home', path: homedir(), isDirectory: true, size: 0, mtimeMs: 0 },
-    { name: '/', path: '/', isDirectory: true, size: 0, mtimeMs: 0 },
-  ];
+  return listLocalRoots().map(({ name, path }) => ({
+    name,
+    path,
+    isDirectory: true,
+    size: 0,
+    mtimeMs: 0,
+  }));
 }
