@@ -46,6 +46,18 @@ Remote, from the terminal drawer of an SSH tab, and from the command palette.
 - [x] T9 Integration, e2e, docs and coverage: the contract suite and round trips against real
   OpenSSH in Docker, `sshFiles.e2e.ts`, the Help article, this file and the status rows, and the
   coverage floors.
+- [x] T10 Status bar: `SftpTransfersSegment` with the count, percent, direction and the "Needs
+  your answer" state, its panel (rows with progress and cancel, Answer, Open file manager, Show in
+  panel), the `transferSummary` helpers, and "file transfers" as a keep-awake reason.
+- [x] T11 Dock: the `'sftp'` kind of terminal drawer tab (`sftpServerId`), `lib/sftp/dock.ts`
+  (one tab per server, the drawer raised to a usable height), `SftpDockPane` with the "Shown on
+  the page" placeholder, and the compact variant of the view.
+- [x] T12 Pop-out window: `main/sftp/window.ts`, the `popOut`, `backToMain` and window control
+  channels with their sender checks, the `#/sftp-window` route with its own title bar and hosts,
+  and the view switch buttons.
+- [x] T13 Multi-owner sessions: `owners` as a set of webContents ids, `addOwner`, `removeOwner`,
+  `adoptSessions` and `dropOwner`, events to every live owner, and `SftpConflictHost` once per
+  window instead of a dialog in the queue.
 
 ## Acceptance criteria
 
@@ -64,7 +76,9 @@ Remote, from the terminal drawer of an SSH tab, and from the command palette.
   A file that changed on the server is never silently overwritten.
 - AC7 No secret reaches the renderer. Every channel validates its input and answers only the main
   window. Recursive operations never follow links. Names from the server cannot write outside the
-  chosen local folder.
+  chosen local folder. Since the follow-up, a registered SFTP pop-out window is answered too.
+- AC8 Transfers stay visible and controllable from any page, from the dock and from a separate
+  window, and switching between the page, the dock and the window never interrupts them.
 
 ## Implementation notes
 
@@ -77,7 +91,7 @@ Remote, from the terminal drawer of an SSH tab, and from the command palette.
 - Sessions outlive the page and a reload. The renderer store is global and keyed by server, `open`
   for the same window and server returns the session it already has, and `queue` hands back the
   snapshot, so a pending conflict comes back after a reload. A session closes on Disconnect, when
-  its window goes away or crashes, when its server is removed, or at quit.
+  its last window goes away or crashes, when its server is removed, or at quit.
 - `sftpListDetailed` is new (mode, link flag, broken links, longname). `sftpList` keeps its shape,
   since Deploy depends on it.
 - The upload hash is optional now and the result carries the hash. The engine compares the local
@@ -119,6 +133,65 @@ Remote, from the terminal drawer of an SSH tab, and from the command palette.
 - Built test-first by parallel agents in one worktree against one contract
   (`shared/sftpTypes.ts`, `IPC.sftp`, `components/sftp/contracts.ts`).
 
+## Use it from anywhere (follow-up)
+
+A big transfer can take a long time, so the file manager had to be usable without sitting on its
+page. Leaving the page never disconnected (sessions and the engine live in main), so the gap was
+seeing and steering transfers from elsewhere. Three ways were built: a status bar item, a dock in
+the terminal drawer and a pop-out window.
+
+- F1 One session, many views. A session holds `owners: Set<number>` (webContents ids) instead of
+  one owner. `own()` passes for any member, queue and finished events go to every live member, and
+  `open(owner, server)` returns the session when the caller is already a member. `dropOwner(id)`
+  takes one window out and disposes a session only when its set is empty. The page, the dock and
+  the pop-out are views of the same session, and Disconnect from any of them ends it for all.
+- F2 Pop-out like the RDP session windows. `sftp:popOut(sessionId)`, main window only, opens or
+  focuses one `BrowserWindow` per session in `main/sftp/window.ts`. The window is added as an owner
+  right after it is created and before its page loads, so the page's own `open` gets the same
+  session back. On `close` its sessions are handed to the main window with `adoptSessions`, then
+  on `closed` it is dropped as an owner. `backToMain` does the same hand-over, focuses the main
+  window on `/ssh-files/<id>` and closes the pop-out. Window controls (minimize, maximize, close)
+  and the maximized state go through channels that act on the asking pop-out only. The pop-outs
+  close with the main window and at quit.
+- F3 The view is pulled out. `components/sftp/SshFilesView.tsx` takes `serverId`, `variant`
+  (`'page' | 'dock' | 'window'`) and a `viewActions` slot drawn in the server pane's title row
+  before Disconnect. `SshFilesPage` is a thin wrapper with the header.
+- F4 One conflict host per window. `SftpConflictHost` is mounted once in the app shell and once in
+  the pop-out route, and `QueueArea` no longer renders the dialog. It asks about the server the
+  user picked with `requestAnswer` (the status bar's Answer button), else the first one waiting,
+  so a page plus a dock on the same server never stack two modals. The dialog names the server
+  ("On <name>"). With the main window and a pop-out on one session, both can show the question;
+  the first answer counts, and a late one gets "That conflict is no longer waiting for an answer."
+- F5 Status bar item. `SftpTransfersSegment` sits between the run and terminal items, built on
+  `PopSegment` like the Docker item, and is hidden while nothing runs and nothing waits. The bar
+  shows the direction, "N transfers" and the percent of bytes, or "Needs your answer" in the
+  warning tone with a pulsing dot. Queue snapshots land every 100 ms with fresh objects, so both
+  selectors return a JSON string of what is drawn and an unchanged bar does not render again. The
+  panel lists each active batch per server (label, bar, progress, rate, cancel), an Answer button
+  for a waiting conflict, and the "Open file manager" and "Show in panel" links. `BUSY_LABEL`
+  gained `sftp: 'file transfers'`.
+- F6 Dock as a terminal drawer tab of kind `'sftp'` with `sftpServerId`. One tab per server
+  (docking again focuses it), titled with the nickname. `openSftpDock` raises the drawer to 45% of
+  the window, at least 380 px and never above the drawer's maximum, and a taller drawer keeps its
+  height. The tab has no shell: closing it just closes the view and the session stays, it is not
+  persisted, and the Terminals count leaves it out. The compact variant has a one-row pane toolbar,
+  tighter rows, no Permissions or Owner columns, and the Transfers card folded to one line. While
+  the route is `/ssh-files/<same server>` the tab shows "Shown on the page" with a "Show the page"
+  button instead of a second copy of the view.
+- F7 View switch buttons (`SftpViewSwitch`) in the server pane's title row. The page has "Show in
+  panel" and "Open in a new window", and both then go back to where the user was (Remote when the
+  page was the first entry). The dock has "Open as page" and "Open in a new window", and both close
+  the tab. The window has "Back to main window"; once the session there is gone the title bar
+  offers it instead, since the pane's title row goes with the session.
+- F8 Pop-out route `#/sftp-window?server=<id>&theme=<mode>`, outside the app shell next to
+  `rdp-session`. It mounts its own toaster, confirm host, host key dialog host and conflict host
+  (the vault unlock comes with the view), and draws a title bar with the server's name, its login
+  and the window controls. The theme comes from the hash and is applied once. The IPC guard lets
+  a registered SFTP window through as well as the main window; `popOut` itself answers only the
+  main window, so a pop-out cannot pop out again, and its own channels answer only pop-outs.
+- F9 Entry points stay as they were: the Files button, the drawer button of SSH tabs and the
+  palette open the page, and the page offers the switch.
+
 ## Known limits and follow-ups
 
 - About 512 KB is in flight per round trip. On high-latency links `DOWNLOAD_READS_IN_FLIGHT` may
@@ -134,3 +207,16 @@ Remote, from the terminal drawer of an SSH tab, and from the command palette.
   SFTP-only accounts have no shell.
 - The changed-on-server check misses a change made within the same second that keeps the size.
 - Dragging files out of the app onto the OS desktop is out of scope.
+- The main window and its pop-outs join one session per server, but only once it is open. Two of
+  them connecting to the same server at the very same moment can still end up with two sessions.
+  When the pop-out then closes, a busy session is handed to the main window anyway (nothing
+  running is lost) and an idle one ends.
+- The "transfer finished" toast is decided per window: watching a transfer in the pop-out, the
+  toast can still appear in the main window, which shows no view of that server.
+- A main window reloaded while a pop-out is open only hears about sessions handed back to it once
+  its store has connected to some server again.
+- A pop-out keeps the theme it opened with. Changing the theme in the main window does not reach
+  it until it is opened again.
+- The pop-out has no status bar of its own, and it cannot pop out again.
+- The dock leaves out the Permissions and Owner columns; Properties in the context menu still
+  shows them.

@@ -15,6 +15,7 @@ import { sftpBridge } from '@/lib/sftp/bridge';
 import { editRefusal } from '@/lib/sftp/messages';
 import { isMacPlatform } from '@/lib/shortcuts';
 import { confirmDialog } from '@/stores/confirmStore';
+import { editorDraftKey, useSftpEditorDraftStore } from '@/stores/sftpEditorDraftStore';
 import type { RemoteEditorDialogProps } from './contracts';
 
 /**
@@ -41,6 +42,7 @@ function baseName(path: string): string {
 export function RemoteEditorDialog({
   open,
   sessionId,
+  serverId,
   path,
   initialFile,
   onOpenChange,
@@ -61,6 +63,7 @@ export function RemoteEditorDialog({
           // A new file starts from nothing: no draft, no notice.
           key={`${sessionId}\n${path}`}
           sessionId={sessionId}
+          draftKey={serverId ? editorDraftKey(serverId, path) : null}
           path={path}
           initialFile={initialFile?.path === path ? initialFile : undefined}
           onOpenChange={onOpenChange}
@@ -76,22 +79,34 @@ export default RemoteEditorDialog;
 
 function EditorBody({
   sessionId,
+  draftKey,
   path,
   initialFile,
   onOpenChange,
   onSaved,
   requestCloseRef,
-}: Omit<RemoteEditorDialogProps, 'open' | 'path'> & {
+}: Omit<RemoteEditorDialogProps, 'open' | 'path' | 'serverId'> & {
+  /** Where the unsaved draft is kept across an unmount; null keeps it in here only. */
+  draftKey: string | null;
   path: string;
   requestCloseRef: React.MutableRefObject<() => void>;
 }): React.JSX.Element {
-  const [load, setLoad] = useState<Load>(() =>
-    initialFile ? { status: 'ready', file: initialFile } : { status: 'loading' },
+  // A draft left unsaved when this editor last unmounted (its dock tab was hidden, say) comes
+  // back with the file it was read as, so the save still checks for a change on the server.
+  const [kept] = useState(() =>
+    draftKey ? useSftpEditorDraftStore.getState().drafts[draftKey] : undefined,
   );
-  const [draft, setDraftState] = useState<string | null>(null);
+  const [load, setLoad] = useState<Load>(() =>
+    kept
+      ? { status: 'ready', file: kept.base }
+      : initialFile
+        ? { status: 'ready', file: initialFile }
+        : { status: 'loading' },
+  );
+  const [draft, setDraftState] = useState<string | null>(kept?.content ?? null);
   // Monaco reports edits outside React, so a Ctrl+S can land before the render that holds the
   // last keystrokes. Saving reads this ref, which every edit updates at once.
-  const draftRef = useRef<string | null>(null);
+  const draftRef = useRef<string | null>(kept?.content ?? null);
   const setDraft = useCallback((next: string | null | ((now: string | null) => string | null)) => {
     const value = typeof next === 'function' ? next(draftRef.current) : next;
     draftRef.current = value;
@@ -117,6 +132,14 @@ function EditorBody({
   const file = load.status === 'ready' ? load.file : null;
   const dirty = file !== null && draft !== null && draft !== file.content;
 
+  // Kept while unsaved, gone once saved, reloaded or typed back to what the file says.
+  useEffect(() => {
+    if (!draftKey) return;
+    const drafts = useSftpEditorDraftStore.getState();
+    if (dirty && file && draft !== null) drafts.setDraft(draftKey, { content: draft, base: file });
+    else drafts.clearDraft(draftKey);
+  }, [draftKey, dirty, draft, file]);
+
   const read = useCallback(async (): Promise<void> => {
     setLoad({ status: 'loading' });
     try {
@@ -139,8 +162,8 @@ function EditorBody({
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: read once per file; the key remounts for another
   useEffect(() => {
-    // The page already read it; only Reload and Try again read again.
-    if (!initialFile) void read();
+    // The page already read it (or a kept draft has it); only Reload and Try again read again.
+    if (!initialFile && !kept) void read();
   }, []);
 
   async function save(force: boolean): Promise<void> {
@@ -188,6 +211,7 @@ function EditorBody({
       });
       closingRef.current = false;
       if (!discard) return;
+      if (draftKey) useSftpEditorDraftStore.getState().clearDraft(draftKey);
     }
     onOpenChange(false);
   }

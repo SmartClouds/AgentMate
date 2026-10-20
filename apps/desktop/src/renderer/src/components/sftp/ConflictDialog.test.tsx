@@ -52,6 +52,19 @@ describe('ConflictDialog', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
+  it('says which server asks, since it can open on any page', () => {
+    renderDialog(conflict(), { serverName: 'Production' });
+    const dialog = screen.getByRole('dialog', { name: 'This file already exists' });
+    expect(within(dialog).getByText('On Production')).toBeInTheDocument();
+    expect(dialog).toHaveAccessibleDescription(expect.stringContaining('On Production'));
+  });
+
+  it('names no server when it is not told one', () => {
+    renderDialog(conflict());
+    const dialog = screen.getByRole('dialog', { name: 'This file already exists' });
+    expect(dialog).toHaveAccessibleDescription(/^report\.pdf is already in/);
+  });
+
   it('names the file and where it is, and marks the newer copy', () => {
     renderDialog(conflict());
     const dialog = screen.getByRole('dialog', { name: 'This file already exists' });

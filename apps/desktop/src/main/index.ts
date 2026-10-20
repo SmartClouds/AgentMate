@@ -60,6 +60,7 @@ import { registerRunProposalHandlers } from './ipc/runProposals';
 import { registerScheduledTaskHandlers } from './ipc/scheduledTasks';
 import { registerSecurityHandlers } from './ipc/security';
 import { registerSettingsHandlers } from './ipc/settings';
+import { sftpSenderAllowed } from './ipc/sftp';
 import { registerShellHandlers } from './ipc/shell';
 import { registerSkillHandlers } from './ipc/skills';
 import { registerSpeechHandlers, shutdownSpeech } from './ipc/speech';
@@ -108,6 +109,7 @@ import {
 import { startScheduledTaskRunner, stopScheduledTaskRunner } from './scheduledTasks/scheduler';
 import { cancelAllSecurityScans, sweepOrphanScanContainers } from './security/scanRunner';
 import { closeAllSftpSessions, registerSftpIpc } from './sftp';
+import { isSftpWindow } from './sftp/window';
 import { refreshShellPath } from './shellPath';
 import { configureSpellChecker, registerSpellcheckHandlers } from './spellcheck';
 import {
@@ -393,14 +395,10 @@ function registerAllIpcHandlers(): void {
       );
     },
   });
-  // The SFTP file manager (E25) logs in with saved servers' secrets: main window only, too.
+  // The SFTP file manager (E25) logs in with saved servers' secrets: the main window and the
+  // file manager's own pop-out windows only, each from its top frame.
   registerSftpIpc({
-    guard: (event) => {
-      const win = getMainWindow();
-      return (
-        !!win && event.sender === win.webContents && event.senderFrame === win.webContents.mainFrame
-      );
-    },
+    guard: (event) => sftpSenderAllowed(event, getMainWindow(), isSftpWindow),
   });
 }
 

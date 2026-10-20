@@ -153,6 +153,17 @@ describe('themeFromSearch', () => {
     expect(themeFromSearch('?glass=mica')).toBeUndefined();
     expect(themeFromSearch('?theme=solarized')).toBeUndefined();
   });
+
+  it('reads the query inside the hash, where a pop-out window carries its theme', () => {
+    expect(themeFromSearch('', '#/sftp-window?server=srv-1&theme=dark')).toBe('dark');
+    expect(themeFromSearch('', '#/sftp-window?server=srv-1')).toBeUndefined();
+    expect(themeFromSearch('', '#/remote')).toBeUndefined();
+  });
+
+  it('prefers the real query, the way the main window has always had it', () => {
+    expect(themeFromSearch('?theme=light', '#/sftp-window?theme=dark')).toBe('light');
+    expect(themeFromSearch('?glass=mica', '#/x?theme=vs2026')).toBe('vs2026');
+  });
 });
 
 describe('applyInitialTheme', () => {
@@ -161,6 +172,12 @@ describe('applyInitialTheme', () => {
     installAgentmatBridge({ 'settings.get': () => new Promise(() => undefined) });
     void initTheme();
     applyInitialTheme('?glass=mica&theme=dark');
+    expect(classes()).toEqual(['dark']);
+    expect(useThemeStore.getState().theme).toBe('dark');
+  });
+
+  it('paints the theme of a window that carries it in the hash', () => {
+    applyInitialTheme('', '#/sftp-window?server=srv-1&theme=dark');
     expect(classes()).toEqual(['dark']);
     expect(useThemeStore.getState().theme).toBe('dark');
   });

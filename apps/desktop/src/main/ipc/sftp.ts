@@ -1,5 +1,5 @@
 import { isAbsolute } from 'node:path';
-import { type IpcMainInvokeEvent, ipcMain, type WebContents } from 'electron';
+import { type BrowserWindow, type IpcMainInvokeEvent, ipcMain, type WebContents } from 'electron';
 import { z } from 'zod';
 import { filesError } from '../../shared/deployFilesErrors';
 import { IPC } from '../../shared/ipcChannels';
@@ -9,6 +9,10 @@ import {
   SFTP_LOCAL_PATH_MAX,
   SFTP_MAX_PATHS_PER_CALL,
   SFTP_REMOTE_PATH_MAX,
+  type SftpPopOutView,
+  type SftpSessionInfo,
+  type SftpWindowAction,
+  type SftpWindowState,
 } from '../../shared/sftpTypes';
 import { toCodedError, toLocalCodedError } from '../sftp/errors';
 import type { LocalBrowseRegistry } from '../sftp/localBrowse';
@@ -16,15 +20,21 @@ import { localDelete, localList, localMkdir, localPlaces, localRename } from '..
 import type { SftpService } from '../sftp/service';
 
 /**
- * The SFTP file manager channels (E25). Like Deploy's they answer only the main window's own
- * frame, and every argument is checked here before the service sees it. A refusal names the
- * field that was wrong and never its value, since paths and file contents are the user's.
+ * The SFTP file manager channels (E25). They answer only the top frame of the main window or of
+ * a file manager pop-out (`sftpSenderAllowed`), and every argument is checked here before the
+ * service sees it. A refusal names the field that was wrong and never its value, since paths and
+ * file contents are the user's.
  *
- * The calling window is the owner: a session answers only the window that opened it, and the
- * local writes (new folder, rename, delete) must land inside a folder that window's pane listed
- * (D13, see main/sftp/localBrowse.ts). A window that is destroyed or whose renderer goes away
- * takes its sessions and its listed folders with it; a reload does not, so a page that comes
- * back finds its transfers still running (D3).
+ * The calling window is the owner: a session answers only the windows that own it (the one that
+ * opened it, and its pop-out; the main window and the pop-outs share one session per server), and
+ * the local writes (new folder, rename, delete) must land inside
+ * a folder that window's pane listed (D13, see main/sftp/localBrowse.ts). A window that is
+ * destroyed or whose renderer goes away leaves its sessions (ending those nobody else owns) and
+ * takes its listed folders with it; a reload does not, so a page that comes back finds its
+ * transfers still running (D3).
+ *
+ * Popping a session out is for the main window only, and the pop-out's window controls answer
+ * the pop-out alone, acting on itself (main/sftp/window.ts).
  *
  * Electron only carries an error's message across, so every failure leaves as a plain Error
  * whose message holds its `[files:code]` or `[ssh:code]` tag.
@@ -82,6 +92,11 @@ const writeTextSchema = z.object({
   force: z.boolean(),
 });
 const deleteOptions = z.object({ permanent: z.boolean() });
+const windowAction = z.enum(['minimize', 'maximize', 'close']);
+/** The folders a pop-out opens at, which ride on its URL. */
+const popOutViewSchema = z
+  .object({ remotePath: remotePath.optional(), localPath: localPath.optional() })
+  .optional();
 
 function parse<T>(schema: z.ZodType<T>, value: unknown, what: string): T {
   const parsed = schema.safeParse(value);
@@ -96,15 +111,45 @@ const remote = (value: unknown) => parse(remotePath, value, 'remote path');
 const localArg = (value: unknown) => parse(localPath, value, 'local path');
 const entryName = (value: unknown) => parse(name, value, 'name');
 
+/** The pop-out windows (main/sftp/window.ts), passed in so the channels can be tested alone. */
+export interface SftpWindowHandlers {
+  isSftpWindow(contents: WebContents): boolean;
+  /** The webContents ids of the main window and the pop-outs, which share one session per server. */
+  linkedOwners(): number[];
+  /** Opens the session's window at the folders of `view`, or focuses it. */
+  open(info: SftpSessionInfo, view: SftpPopOutView): void;
+  control(contents: WebContents, action: SftpWindowAction): void;
+  state(contents: WebContents): SftpWindowState;
+  backToMain(contents: WebContents): void;
+}
+
 export interface SftpHandlerDeps {
   service: SftpService;
   localBrowse: LocalBrowseRegistry;
-  /** True for the windows that may use these channels (the main window, in the app). */
+  windows: SftpWindowHandlers;
+  /** True for the windows that may use these channels (see `sftpSenderAllowed`, in the app). */
   guard?: (event: IpcMainInvokeEvent) => boolean;
 }
 
+/**
+ * The app's guard for these channels: the main window or a file manager pop-out, and only from
+ * that window's own top frame.
+ */
+export function sftpSenderAllowed(
+  event: IpcMainInvokeEvent,
+  mainWindow: BrowserWindow | null,
+  isSftpWindow: (contents: WebContents) => boolean,
+): boolean {
+  const fromMain = !!mainWindow && event.sender === mainWindow.webContents;
+  if (!fromMain && !isSftpWindow(event.sender)) return false;
+  return event.senderFrame === event.sender.mainFrame;
+}
+
+/** Which windows a channel answers, within those the guard lets in. */
+type From = 'any' | 'main' | 'popOut';
+
 export function registerSftpHandlers(deps: SftpHandlerDeps): void {
-  const { service, localBrowse } = deps;
+  const { service, localBrowse, windows } = deps;
   /** Windows already known, so their going away is listened for once. */
   const known = new WeakSet<WebContents>();
 
@@ -126,24 +171,51 @@ export function registerSftpHandlers(deps: SftpHandlerDeps): void {
   /** Local channels code their failures as this computer's, never as the server's. */
   const local = (error: unknown) => toLocalCodedError(error);
 
-  const handle = (
-    channel: string,
-    listener: (ownerId: number, ...args: unknown[]) => unknown,
-    code: (error: unknown) => Error = (error) => toCodedError(error),
-  ): void => {
-    ipcMain.handle(channel, async (event, ...args) => {
+  /**
+   * Wraps a listener in the guard, the channel's own rule about which window may call it, and
+   * the error coding. The guard admits only the main window and the pop-outs, so a sender that is
+   * not a pop-out is the main window.
+   */
+  const guarded =
+    (
+      from: From,
+      listener: (sender: WebContents, ...args: unknown[]) => unknown,
+      code: (error: unknown) => Error = (error) => toCodedError(error),
+    ) =>
+    async (event: IpcMainInvokeEvent, ...args: unknown[]): Promise<unknown> => {
       if (deps.guard && !deps.guard(event)) {
-        throw new Error('The SFTP file manager answers only the main window.');
+        throw new Error('The SFTP file manager answers only the main window and its own windows.');
       }
       try {
-        return await listener(ownerOf(event.sender), ...args);
+        const popOut = windows.isSftpWindow(event.sender);
+        if (from === 'main' && popOut) {
+          throw filesError('invalidInput', 'Only the main window can open a file manager window.');
+        }
+        if (from === 'popOut' && !popOut) {
+          throw filesError('invalidInput', "Only the file manager's own window can do that.");
+        }
+        return await listener(event.sender, ...args);
       } catch (error) {
         throw new Error(code(error).message);
       }
-    });
+    };
+
+  const handle = (
+    channel: string,
+    listener: (ownerId: number, ...args: unknown[]) => unknown,
+    code?: (error: unknown) => Error,
+  ): void => {
+    ipcMain.handle(
+      channel,
+      guarded('any', (sender, ...args) => listener(ownerOf(sender), ...args), code),
+    );
   };
 
-  handle(IPC.sftp.open, (owner, id) => service.open(owner, parse(serverId, id, 'server id')));
+  handle(IPC.sftp.open, (owner, id) => {
+    const linked = windows.linkedOwners();
+    const peers = linked.includes(owner) ? linked : [];
+    return service.open(owner, parse(serverId, id, 'server id'), { peers });
+  });
   handle(IPC.sftp.close, (owner, id) => service.close(owner, session(id)));
   handle(IPC.sftp.list, (owner, id, path) =>
     service.list(owner, session(id), parse(remoteInput, path, 'path')),
@@ -188,6 +260,30 @@ export function registerSftpHandlers(deps: SftpHandlerDeps): void {
   );
   handle(IPC.sftp.writeText, (owner, id, input) =>
     service.writeText(owner, session(id), parse(writeTextSchema, input, 'save')),
+  );
+
+  // The pop-out window. The main window pops out a session it owns; the pop-out's controls act on
+  // the pop-out itself.
+  ipcMain.handle(
+    IPC.sftp.popOut,
+    guarded('main', (sender, id, view) => {
+      const info = service.info(ownerOf(sender), session(id));
+      windows.open(info, parse(popOutViewSchema, view, 'folder to open at') ?? {});
+    }),
+  );
+  ipcMain.handle(
+    IPC.sftp.windowControl,
+    guarded('popOut', (sender, action) =>
+      windows.control(sender, parse(windowAction, action, 'window action')),
+    ),
+  );
+  ipcMain.handle(
+    IPC.sftp.windowState,
+    guarded('popOut', (sender) => windows.state(sender)),
+  );
+  ipcMain.handle(
+    IPC.sftp.backToMain,
+    guarded('popOut', (sender) => windows.backToMain(sender)),
   );
 
   // Each change is judged by the folder its entry is in, so a listed folder itself cannot be

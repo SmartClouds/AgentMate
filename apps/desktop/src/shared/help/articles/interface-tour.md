@@ -64,7 +64,7 @@ Under the title bar (and under the top menu, if you use it) each page shows its 
 
 At the right end of the header are buttons that work on every page:
 
-- **Toggle terminal** opens or closes the general terminal drawer, a shell for running your app, installs and so on. It shows a dot when terminals are open, and a pulsing amber dot when an AI task in a terminal is waiting for you. The shortcut is `Ctrl+T` or `` Ctrl+` `` (`Cmd` on macOS).
+- **Toggle terminal** opens or closes the general terminal drawer, a shell for running your app, installs and so on. It shows a dot when terminals are open, and a pulsing amber dot when an AI task in a terminal is waiting for you. The shortcut is `Ctrl+T` or `` Ctrl+` `` (`Cmd` on macOS). Besides terminals, the drawer can hold a tab with a server's SFTP files, so a long transfer stays in view on every page. See [SSH files](ssh-files.md#show-the-files-in-the-bottom-panel).
 - **Recent messages** (the bell) opens the message history. See below.
 - **Ask AI** opens the Ask AI chat as a pop-up. See [Ask AI](ask-ai.md).
 - On the Workspace page, extra buttons for the project on screen appear here too. See [Workspace](workspace.md).
@@ -84,6 +84,7 @@ The strip along the bottom of the window shows what is running. The left side is
 | Item | What it shows |
 | --- | --- |
 | Project runs | Projects started with **Run**. A single run shows its name and the port it listens on (or the device it went to), plus its CPU and memory. More than one collapses into a count such as "2 runs". The panel lists each run with **Show terminal** and **Stop** buttons. |
+| File transfers | Uploads and downloads in the [SSH file manager](ssh-files.md#the-status-bar), like "2 transfers 48%", or **Needs your answer** when a file already exists at the target. The panel lists each transfer with a cancel button, an **Answer** button for a waiting question, and **Open file manager** and **Show in panel** for each server. Hidden while nothing moves and nothing waits. |
 | Terminals | The number of open terminals, for example "3 terminals". Click it to open the **Running CLIs** dialog, which shows CPU and memory for every terminal. |
 | Plan limits | One item each for Claude Code, Codex and Cursor when the account reports plan limits, showing the percentage used of the next limit to reset and a countdown. If a read fails, the item stays, dimmed with a warning icon, until the limits can be read again. The panel lists that provider's limits, has a **Refresh** button for it, and **Open Token Usage** goes to [Token Usage](token-usage.md). Each one can be turned off under **Status bar limits** in [Settings](settings.md#status-bar-limits). |
 | Docker | "N running" containers. The panel lists up to eight, and **Open the Docker page** goes to [Docker](docker.md). Hidden when Docker is not available. |
@@ -100,7 +101,7 @@ The network figure comes from the ping targets you can edit under Settings, Netw
 Click the **Keep computer awake** item and choose one of three modes:
 
 - **On** keeps the computer awake all the time.
-- **Agent** keeps it awake while an agent or a command is running. The panel says what is holding it awake, such as an agent at work, a command in a terminal or an SSH session.
+- **Agent** keeps it awake while an agent or a command is running. The panel says what is holding it awake, such as an agent at work, a command in a terminal, an SSH session or file transfers.
 - **Off** allows normal sleep.
 
 ## Version, about card and updates

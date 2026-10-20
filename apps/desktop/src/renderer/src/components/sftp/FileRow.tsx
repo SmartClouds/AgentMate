@@ -23,6 +23,8 @@ export const NAME_FIELD =
 
 /** Every row is this tall, so the list can be drawn a screenful at a time. */
 export const ROW_HEIGHT = 28;
+/** The rows of the compact pane in the terminal drawer, which is short. */
+export const COMPACT_ROW_HEIGHT = 24;
 
 /** The columns after the name, shared by the header and the rows so they line up. */
 export const COLUMN = {
@@ -44,6 +46,11 @@ export interface FileRowProps {
   focused: boolean;
   dropTarget: boolean;
   renaming: boolean;
+  /**
+   * The docked pane's row: shorter, with Name, Size and Modified only. The drawer is wide, so
+   * the pane width alone would keep Permissions and Owner.
+   */
+  compact?: boolean;
   onRowClick: (event: React.MouseEvent, entry: PaneEntry) => void;
   onRowDoubleClick: (entry: PaneEntry) => void;
   onRowContextMenu: (entry: PaneEntry) => void;
@@ -145,6 +152,7 @@ export const FileRow = memo(function FileRow({
   focused,
   dropTarget,
   renaming,
+  compact = false,
   onRowClick,
   onRowDoubleClick,
   onRowContextMenu,
@@ -174,7 +182,7 @@ export const FileRow = memo(function FileRow({
       onDragStart={(event) => onRowDragStart(event, entry)}
       onDragOver={(event) => onRowDragOver(event, entry)}
       onDrop={(event) => onRowDrop(event, entry)}
-      style={{ height: ROW_HEIGHT }}
+      style={{ height: compact ? COMPACT_ROW_HEIGHT : ROW_HEIGHT }}
       className={cn(
         'relative mx-1.5 flex cursor-default select-none items-center gap-3 rounded-lg pl-2.5 pr-2 text-[13px] transition-colors motion-reduce:transition-none',
         selected
@@ -218,7 +226,7 @@ export const FileRow = memo(function FileRow({
           </SimpleTooltip>
         ) : null}
       </div>
-      {remote && remoteEntry ? (
+      {remote && remoteEntry && !compact ? (
         <>
           <div role="gridcell" className={cn(COLUMN.mode, 'text-muted-foreground')}>
             <SimpleTooltip label={`Octal ${formatOctal(remoteEntry.mode)}`}>

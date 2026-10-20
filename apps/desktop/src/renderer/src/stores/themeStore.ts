@@ -42,13 +42,20 @@ function applyThemeClass(theme: ThemeMode): void {
   if (next) root.classList.add(...next.split(' '));
 }
 
-/**
- * The theme main put on the main window's URL (see mainWindowQuery in src/main/windowGlass.ts).
- * Other windows load without it.
- */
-export function themeFromSearch(search: string): ThemeMode | undefined {
-  const theme = new URLSearchParams(search).get('theme');
+function themeIn(query: string): ThemeMode | undefined {
+  const theme = new URLSearchParams(query).get('theme');
   return isThemeMode(theme) ? theme : undefined;
+}
+
+/**
+ * The theme main put on the window's URL. The main window has it in the real query (see
+ * mainWindowQuery in src/main/windowGlass.ts); a window that opens on a route, like the SFTP
+ * pop-out (`#/sftp-window?...&theme=`), has it in the query inside the hash. Other windows load
+ * without one.
+ */
+export function themeFromSearch(search: string, hash = ''): ThemeMode | undefined {
+  const inHash = hash.indexOf('?');
+  return themeIn(search) ?? (inHash >= 0 ? themeIn(hash.slice(inHash)) : undefined);
 }
 
 /**
@@ -56,8 +63,8 @@ export function themeFromSearch(search: string): ThemeMode | undefined {
  * window's native tint. initTheme still runs afterwards and re-applies the same classes from
  * settings, which changes nothing on screen.
  */
-export function applyInitialTheme(search: string): void {
-  const theme = themeFromSearch(search);
+export function applyInitialTheme(search: string, hash = ''): void {
+  const theme = themeFromSearch(search, hash);
   if (!theme) return;
   applyThemeClass(theme);
   useThemeStore.setState({ theme });

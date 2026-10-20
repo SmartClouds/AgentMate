@@ -31,9 +31,12 @@ import { readText, writeText } from './textFile';
 import { remoteEntryOf } from './walk';
 
 /**
- * The SFTP sessions of the file manager (E25). A session belongs to one window (its owner, the
- * `webContents` id) and one saved server, and every call names both: a session id from another
- * window is refused as if it did not exist.
+ * The SFTP sessions of the file manager (E25). A session is opened by one window (its first
+ * owner, the `webContents` id) on one saved server, and every call names both: a session id from
+ * a window that does not own it is refused as if it did not exist. More windows can own the same
+ * session (`addOwner`, for the pop-out window): they are views of it, and each hears its events.
+ * Windows linked that way (the main window and its pop-outs, `peers` on `open`) share one
+ * session per server: opening a server a peer has a session on joins that session.
  *
  * Browsing (D1, D2) runs on the server's shared connection, `pool.acquire`, the one the terminal
  * and Deploy use too. `withBrowse` heals it: a lease whose connection has closed is swapped for a
@@ -43,11 +46,13 @@ import { remoteEntryOf } from './walk';
  *
  * Transfers, deletes and chmods go to the session's `TransferEngine`, which opens a connection of
  * its own (`pool.openSeparate`) when it has work and hands it back once idle. Its snapshots and
- * finished events go to the owner only. Keep-awake is held while any session's engine is busy.
+ * finished events go to every owner. Keep-awake is held while any session's engine is busy.
  *
- * Sessions outlive a reload of the page (D3): `open` for the same window and server answers the
- * session it already has. They end on `close`, when the window goes (`dropOwner`), when the
- * server is removed (`closeServer`) and at quit (`closeAll`); the last two tell the window.
+ * Sessions outlive a reload of the page (D3): `open` from a window that already owns a session on
+ * the server answers that session. They end on `close` from any owner (the others are told it
+ * was `disconnected`), once the last owner has gone (`dropOwner`, `removeOwner`), when the server
+ * is removed (`closeServer`) and at quit (`closeAll`); the last two tell every owner. A window
+ * about to go can hand its sessions to another first (`adoptSessions`), which is told.
  *
  * Failures come out coded (`[files:*]`, or `[ssh:*]` for the vault and host key flows).
  */
@@ -90,7 +95,8 @@ export interface SftpServiceDeps {
 
 interface Session {
   info: SftpSessionInfo;
-  ownerId: number;
+  /** The windows that may use the session and hear its events. Never empty while it is open. */
+  owners: Set<number>;
   engine: TransferEngine;
   /** The browse lease, or null while none is held. */
   lease: ClientLease | null;
@@ -181,12 +187,27 @@ export class SftpService {
 
   // Sessions.
 
-  /** The window's session on the server, opened now unless it already has one. */
-  open(ownerId: number, serverId: string): Promise<SftpSessionInfo> {
+  /**
+   * The window's session on the server, opened now unless it already owns one. With `peers` (the
+   * windows linked to this one, itself included or not), a session a peer has on the server is
+   * joined instead of opening a second one.
+   */
+  open(
+    ownerId: number,
+    serverId: string,
+    options: { peers?: readonly number[] } = {},
+  ): Promise<SftpSessionInfo> {
     for (const session of this.sessions.values()) {
-      if (session.ownerId === ownerId && session.info.serverId === serverId) {
+      if (session.owners.has(ownerId) && session.info.serverId === serverId) {
         return Promise.resolve(session.info);
       }
+    }
+    const peers = new Set(options.peers);
+    for (const session of this.sessions.values()) {
+      if (session.info.serverId !== serverId) continue;
+      if (![...session.owners].some((owner) => peers.has(owner))) continue;
+      session.owners.add(ownerId);
+      return Promise.resolve(session.info);
     }
     const key = `${ownerId}\n${serverId}`;
     const existing = this.pending.get(key)?.promise;
@@ -217,6 +238,8 @@ export class SftpService {
       if (pending.cancelled) throw closedWhileOpening();
       // The server may have been removed while this logged in; its sessions are already closed.
       if (!(await this.deps.findServer(serverId))) throw serverGone();
+      // And the window may have gone during that last look.
+      if (pending.cancelled) throw closedWhileOpening();
     } catch (error) {
       lease.release();
       throw toCodedError(error, 'the home folder');
@@ -246,8 +269,8 @@ export class SftpService {
         session.transferLease?.release();
         session.transferLease = null;
       },
-      emit: (snapshot) => this.deps.send(ownerId, IPC.sftp.onQueue, snapshot),
-      finished: (event) => this.deps.send(ownerId, IPC.sftp.onBatchFinished, event),
+      emit: (snapshot) => this.sendAll(session, IPC.sftp.onQueue, snapshot),
+      finished: (event) => this.sendAll(session, IPC.sftp.onBatchFinished, event),
       busy: (running) => {
         session.busy = running;
         this.updateAwake();
@@ -255,7 +278,7 @@ export class SftpService {
     });
     const session: Session = {
       info,
-      ownerId,
+      owners: new Set([ownerId]),
       engine,
       lease,
       leasing: null,
@@ -270,21 +293,82 @@ export class SftpService {
     return info;
   }
 
-  /** Ends the window's session. A session that is already gone is fine. */
+  /**
+   * Ends the session for every owner (Disconnect, from any view of it). The other owners are told
+   * with reason `disconnected`; the caller asked for it. A session that is already gone is fine.
+   */
   async close(ownerId: number, sessionId: string): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session) return;
-    if (session.ownerId !== ownerId) throw unknownSession();
+    if (!session.owners.has(ownerId)) throw unknownSession();
+    const event: SftpSessionClosed = {
+      sessionId,
+      serverId: session.info.serverId,
+      reason: 'disconnected',
+    };
+    for (const other of session.owners) {
+      if (other !== ownerId) this.deps.send(other, IPC.sftp.onSessionClosed, event);
+    }
     await this.dispose(session);
   }
 
-  /** Ends a window's sessions without telling it, for a window that has gone. */
+  /** The session as `open` answered it, for a window that owns it. */
+  info(ownerId: number, sessionId: string): SftpSessionInfo {
+    return this.own(ownerId, sessionId).info;
+  }
+
+  /** Lets another window into the session (the pop-out): it may use it and hears its events. */
+  addOwner(sessionId: string, ownerId: number): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) throw unknownSession();
+    session.owners.add(ownerId);
+  }
+
+  /**
+   * Makes `toOwner` an owner of every session `fromOwner` has, for a pop-out about to close: its
+   * sessions carry on, transfers included, and `toOwner` is sent `onSessionAdopted` for each so
+   * its page shows it. Linked windows share one session per server (`open` with `peers`), so
+   * `toOwner` should have none of its own on those servers. Should it have one anyway, its own
+   * stays the one `open` answers: an idle session of `fromOwner` there is left to end, and a
+   * busy one is kept quietly so nothing running is lost.
+   */
+  adoptSessions(fromOwner: number, toOwner: number): void {
+    const served = new Set<string>();
+    for (const session of this.sessions.values()) {
+      if (session.owners.has(toOwner)) served.add(session.info.serverId);
+    }
+    for (const session of this.sessions.values()) {
+      if (!session.owners.has(fromOwner) || session.owners.has(toOwner)) continue;
+      if (served.has(session.info.serverId)) {
+        if (session.engine.activeCount() > 0) session.owners.add(toOwner);
+        continue;
+      }
+      session.owners.add(toOwner);
+      served.add(session.info.serverId);
+      this.deps.send(toOwner, IPC.sftp.onSessionAdopted, session.info);
+    }
+  }
+
+  /**
+   * Takes a window out of the session without telling anyone, and ends the session when it was
+   * the last owner. A session that is already gone, or a window that was not in it, is fine.
+   */
+  async removeOwner(sessionId: string, ownerId: number): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session?.owners.delete(ownerId)) return;
+    if (session.owners.size === 0) await this.dispose(session);
+  }
+
+  /**
+   * Takes a window that has gone out of every session it owned, ending those it was the last
+   * owner of, and drops what it was still opening. Nobody is told.
+   */
   async dropOwner(ownerId: number): Promise<void> {
     for (const pending of this.pending.values()) {
       if (pending.ownerId === ownerId) pending.cancelled = true;
     }
-    const mine = [...this.sessions.values()].filter((session) => session.ownerId === ownerId);
-    await Promise.all(mine.map((session) => this.dispose(session)));
+    const mine = [...this.sessions.values()].filter((session) => session.owners.has(ownerId));
+    await Promise.all(mine.map((session) => this.removeOwner(session.info.sessionId, ownerId)));
   }
 
   /** Ends every session on the server and tells each window why. */
@@ -319,8 +403,12 @@ export class SftpService {
       serverId: session.info.serverId,
       reason,
     };
-    this.deps.send(session.ownerId, IPC.sftp.onSessionClosed, event);
+    this.sendAll(session, IPC.sftp.onSessionClosed, event);
     return this.dispose(session);
+  }
+
+  private sendAll(session: Session, channel: string, payload: unknown): void {
+    for (const ownerId of session.owners) this.deps.send(ownerId, channel, payload);
   }
 
   private async dispose(session: Session): Promise<void> {
@@ -338,7 +426,7 @@ export class SftpService {
 
   private own(ownerId: number, sessionId: string): Session {
     const session = this.sessions.get(sessionId);
-    if (!session || session.ownerId !== ownerId) throw unknownSession();
+    if (!session?.owners.has(ownerId)) throw unknownSession();
     return session;
   }
 

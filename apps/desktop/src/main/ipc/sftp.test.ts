@@ -31,10 +31,11 @@ import type { SftpService } from '../sftp/service';
 import { FakeSftpServer } from '../sftp/testing/fakeSftpClient';
 
 /**
- * The SFTP file manager channels (E25): only the main window is answered, every argument is
- * checked before the service sees it (and a refusal names the field, never the value), sessions
- * belong to the window that opened them, local writes stay inside folders that window listed,
- * events go to the owner alone, and a window that goes away takes its sessions with it.
+ * The SFTP file manager channels (E25): only the main window and the file manager's pop-outs are
+ * answered, every argument is checked before the service sees it (and a refusal names the field,
+ * never the value), sessions belong to the windows that own them, local writes stay inside
+ * folders that window listed, events go to the owners alone, and a window that goes away takes
+ * its sessions with it. Popping out is for the main window, window controls for the pop-out.
  */
 
 useTempUserData();
@@ -43,6 +44,8 @@ expectChannelsCovered(IPC.sftp, [
   IPC.sftp.onQueue,
   IPC.sftp.onBatchFinished,
   IPC.sftp.onSessionClosed,
+  IPC.sftp.onSessionAdopted,
+  IPC.sftp.onWindowState,
 ]);
 
 const C = IPC.sftp;
@@ -55,6 +58,16 @@ let allowed = true;
 let contents: Map<number, Sender>;
 let win: Sender;
 let local = '';
+/** The webContents ids main/sftp/window.ts would know as pop-outs. */
+let popOuts: Set<number>;
+let windows: {
+  isSftpWindow: (contents: { id: number }) => boolean;
+  linkedOwners: () => number[];
+  open: ReturnType<typeof vi.fn>;
+  control: ReturnType<typeof vi.fn>;
+  state: ReturnType<typeof vi.fn>;
+  backToMain: ReturnType<typeof vi.fn>;
+};
 
 /** A window whose `on` and `once` listeners can be fired, and that hears what the service sends. */
 function sender(): Sender {
@@ -78,6 +91,15 @@ function sender(): Sender {
 beforeEach(async () => {
   allowed = true;
   contents = new Map();
+  popOuts = new Set();
+  windows = {
+    isSftpWindow: (one) => popOuts.has(one.id),
+    linkedOwners: () => [win.id, ...popOuts],
+    open: vi.fn(),
+    control: vi.fn(),
+    state: vi.fn(() => ({ isMaximized: true })),
+    backToMain: vi.fn(),
+  };
   local = realpathSync(tempDir('agentmate-ipc-sftp-'));
   server = new FakeSftpServer({ home: '/home/deploy' });
   server.dir('/srv/site/assets').file('/srv/site/index.html', '<h1>hi</h1>');
@@ -100,7 +122,12 @@ beforeEach(async () => {
         localBrowse,
         engine: { platform: 'linux' },
       });
-      ipc.registerSftpHandlers({ service, localBrowse, guard: () => allowed });
+      ipc.registerSftpHandlers({
+        service,
+        localBrowse,
+        windows: windows as never,
+        guard: () => allowed,
+      });
     },
   );
   win = sender();
@@ -150,7 +177,161 @@ describe('the window guard', () => {
 
     await expect(invoke(C.open, 'srv-1')).rejects.toThrow(/only the main window/);
     await expect(invoke(C.localPlaces)).rejects.toThrow(/only the main window/);
+    await expect(invoke(C.popOut, 'sess-1')).rejects.toThrow(/only the main window/);
     expect(server.pool.acquired).toBe(0);
+    expect(windows.open).not.toHaveBeenCalled();
+  });
+
+  it('lets in the main window and a registered pop-out, each from its own top frame', async () => {
+    const { sftpSenderAllowed } = await import('./sftp');
+    const page = (base: Sender) => ({ ...base, mainFrame: { url: 'app://renderer' } });
+    const mainContents = page(sender());
+    const popOut = page(sender());
+    const stranger = page(sender());
+    popOuts.add(popOut.id);
+    const mainWindow = { webContents: mainContents } as never;
+    const isPopOut = windows.isSftpWindow as never;
+    const from = (one: ReturnType<typeof page>, frame: unknown = one.mainFrame) =>
+      ({ sender: one, senderFrame: frame }) as never;
+
+    expect(sftpSenderAllowed(from(mainContents), mainWindow, isPopOut)).toBe(true);
+    expect(sftpSenderAllowed(from(popOut), mainWindow, isPopOut)).toBe(true);
+    expect(sftpSenderAllowed(from(popOut), null, isPopOut)).toBe(true);
+    expect(sftpSenderAllowed(from(stranger), mainWindow, isPopOut)).toBe(false);
+    expect(sftpSenderAllowed(from(stranger), null, isPopOut)).toBe(false);
+    // A frame inside either page is not the page.
+    expect(sftpSenderAllowed(from(mainContents, { url: 'x' }), mainWindow, isPopOut)).toBe(false);
+    expect(sftpSenderAllowed(from(popOut, null), mainWindow, isPopOut)).toBe(false);
+  });
+});
+
+describe('the pop-out window', () => {
+  /** A pop-out of `sessionId`, let into it the way main/sftp/window.ts does before the page loads. */
+  function popOutOf(sessionId: string): Sender {
+    const made = sender();
+    popOuts.add(made.id);
+    service.addOwner(sessionId, made.id);
+    return made;
+  }
+
+  it("opens the session's window for the main window that owns it", async () => {
+    const info = await call<SftpSessionInfo>(C.open, 'srv-1');
+
+    await call(C.popOut, info.sessionId);
+
+    expect(windows.open).toHaveBeenCalledWith(info, {});
+  });
+
+  it('passes on the folders the window should open at', async () => {
+    const info = await call<SftpSessionInfo>(C.open, 'srv-1');
+
+    await call(C.popOut, info.sessionId, { remotePath: '/srv/site', localPath: local });
+    await call(C.popOut, info.sessionId, { remotePath: '/srv/site' });
+
+    expect(windows.open).toHaveBeenNthCalledWith(1, info, {
+      remotePath: '/srv/site',
+      localPath: local,
+    });
+    expect(windows.open).toHaveBeenNthCalledWith(2, info, { remotePath: '/srv/site' });
+  });
+
+  it('refuses folders that are not plain absolute paths, without echoing them', async () => {
+    const sessionId = await open();
+    const bad: [Record<string, unknown>, string][] = [
+      [{ remotePath: 'srv/secret-rel' }, 'secret-rel'],
+      [{ remotePath: '/srv/secret-nul\0x' }, 'secret-nul'],
+      [{ remotePath: `/secret-long/${'a'.repeat(4096)}` }, 'secret-long'],
+      [{ localPath: 'secret-local-rel' }, 'secret-local-rel'],
+      [{ localPath: '\\\\?\\C:\\secret-device' }, 'secret-device'],
+      [{ localPath: `${local}/secret-local-long/${'a'.repeat(32_767)}` }, 'secret-local-long'],
+      [{ localPath: `${local}/secret-local-nul\0` }, 'secret-local-nul'],
+    ];
+    for (const [view, value] of bad) {
+      const error = await refused(call(C.popOut, sessionId, view), value);
+      expect(error.message).toContain('folder');
+    }
+    await refused(call(C.popOut, sessionId, 'not a view'));
+    expect(windows.open).not.toHaveBeenCalled();
+  });
+
+  it("refuses a bad session id, another window's session, and a pop-out popping out", async () => {
+    const sessionId = await open();
+    const popOut = popOutOf(sessionId);
+
+    await refused(call(C.popOut, 'bad id; rm -rf'), 'rm -rf');
+    const unknown = await refused(invokeFrom(sender(), C.popOut, sessionId));
+    expect(unknown.message).toContain('Unknown session');
+    const again = await refused(invokeFrom(popOut, C.popOut, sessionId));
+    expect(again.message).toContain('Only the main window');
+    expect(windows.open).not.toHaveBeenCalled();
+  });
+
+  it('lets the pop-out use the session it was let into, and hear its events', async () => {
+    const sessionId = await open();
+    const popOut = popOutOf(sessionId);
+
+    await expect(invokeFrom(popOut, C.queue, sessionId)).resolves.toMatchObject({ sessionId });
+    const listing = await invokeFrom<SftpListing<SftpRemoteEntry>>(popOut, C.list, sessionId, '~');
+    expect(listing.path).toBe('/home/deploy');
+    // Its open answers the shared session rather than a second one.
+    const info = await invokeFrom<SftpSessionInfo>(popOut, C.open, 'srv-1');
+    expect(info.sessionId).toBe(sessionId);
+
+    await invokeFrom(popOut, C.close, sessionId);
+    expect(win.sentOn(C.onSessionClosed)).toEqual([
+      [{ sessionId, serverId: 'srv-1', reason: 'disconnected' } satisfies SftpSessionClosed],
+    ]);
+    expect(popOut.sentOn(C.onSessionClosed)).toEqual([]);
+  });
+
+  it('joins the main window and its pop-outs to one session per server', async () => {
+    const sessionId = await open();
+    const popOut = sender();
+    popOuts.add(popOut.id);
+
+    // A pop-out that is not in the session yet (it disconnected and connects again) joins it.
+    const joined = await invokeFrom<SftpSessionInfo>(popOut, C.open, 'srv-1');
+    // A window that is neither gets a session of its own.
+    const apart = await invokeFrom<SftpSessionInfo>(sender(), C.open, 'srv-1');
+
+    expect(joined.sessionId).toBe(sessionId);
+    expect(apart.sessionId).not.toBe(sessionId);
+    win.fire('destroyed');
+    await expect(invokeFrom(popOut, C.queue, sessionId)).resolves.toBeTruthy();
+  });
+
+  it('keeps the session when the main window goes and the pop-out stays', async () => {
+    const sessionId = await open();
+    const popOut = popOutOf(sessionId);
+
+    win.fire('destroyed');
+
+    await refused(call(C.queue, sessionId));
+
+    await expect(invokeFrom(popOut, C.queue, sessionId)).resolves.toBeTruthy();
+    expect(server.pool.outstanding).toBe(1);
+  });
+
+  it('runs window controls for the pop-out on itself, and refuses the main window', async () => {
+    const sessionId = await open();
+    const popOut = popOutOf(sessionId);
+
+    await invokeFrom(popOut, C.windowControl, 'maximize');
+    await expect(invokeFrom(popOut, C.windowState)).resolves.toEqual({ isMaximized: true });
+    await invokeFrom(popOut, C.backToMain);
+
+    expect(windows.control).toHaveBeenCalledWith(popOut, 'maximize');
+    expect(windows.state).toHaveBeenCalledWith(popOut);
+    expect(windows.backToMain).toHaveBeenCalledWith(popOut);
+
+    await refused(invokeFrom(popOut, C.windowControl, 'fullscreen'), 'fullscreen');
+    for (const channel of [C.windowControl, C.windowState, C.backToMain]) {
+      const error = await refused(call(channel, 'close'));
+      expect(error.message).toContain("file manager's own window");
+    }
+    expect(windows.control).toHaveBeenCalledOnce();
+    expect(windows.state).toHaveBeenCalledOnce();
+    expect(windows.backToMain).toHaveBeenCalledOnce();
   });
 });
 

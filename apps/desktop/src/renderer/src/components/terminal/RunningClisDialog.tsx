@@ -210,6 +210,8 @@ export function RunningClisDialog(): React.JSX.Element {
       });
     }
     for (const session of drawerSessions) {
+      // A file manager tab (E25) has no shell, so it is not a running CLI of any kind.
+      if (session.kind === 'sftp') continue;
       seen.add(session.id);
       const ssh = session.kind === 'ssh';
       const sessionUsage = ssh ? undefined : usageById.get(session.id);

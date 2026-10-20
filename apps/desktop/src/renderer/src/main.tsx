@@ -12,8 +12,9 @@ import { applyInitialTheme } from './stores/themeStore';
 
 // Before React renders, so the first frame already lets the native material show through.
 applyWindowGlass(document.documentElement, window.location.search);
-// Same for the theme: waiting on the settings call left a light page on a dark window.
-applyInitialTheme(window.location.search);
+// Same for the theme: waiting on the settings call left a light page on a dark window. A window
+// opened on a route (the SFTP pop-out) carries it in the hash instead.
+applyInitialTheme(window.location.search, window.location.hash);
 trackWindowFocus(document.documentElement, window.agentmat?.window);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

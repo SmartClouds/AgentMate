@@ -144,6 +144,24 @@ export const IPC = {
     onBatchFinished: 'sftp:onBatchFinished',
     /** main -> the owner window: SftpSessionClosed. */
     onSessionClosed: 'sftp:onSessionClosed',
+    /** main -> the main window: SftpSessionInfo of a session handed to it by a closing pop-out. */
+    onSessionAdopted: 'sftp:onSessionAdopted',
+    // The file manager in a window of its own. One window per session; the pop-out is another
+    // view of the same session, not a second one.
+    // (sessionId) -> void; main window only. Opens the session's window, or focuses it when open
+    popOut: 'sftp:popOut',
+    // (SftpWindowAction) -> void; from the pop-out itself, acts on the sender's window only.
+    // One channel with an action, unlike rdpWindow's one per control: the pop-out has no full
+    // screen, so three near-empty handlers would buy nothing.
+    windowControl: 'sftp:windowControl',
+    // () -> SftpWindowState; the sender's pop-out, for the title bar's Maximize or Restore glyph
+    windowState: 'sftp:windowState',
+    /** main -> the pop-out: SftpWindowState, whenever it is maximized or restored. */
+    onWindowState: 'sftp:onWindowState',
+    // () -> void; from the pop-out. Main focuses the main window, sends it to the server's page
+    // through focusMainWindow(`/ssh-files/<serverId>`) (the app.onNavigate route AppShell
+    // follows), then closes the pop-out. No sftp event of its own is needed for that.
+    backToMain: 'sftp:backToMain',
   },
   environments: {
     list: 'environments:list',

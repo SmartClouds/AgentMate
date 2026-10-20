@@ -38,6 +38,10 @@ vi.mock('@/components/terminal/TerminalDrawer', () => ({
     <section aria-label="Terminal" data-placement={placement} />
   ),
 }));
+// The window's one SFTP conflict dialog; the host has tests of its own.
+vi.mock('@/components/sftp/SftpConflictHost', () => ({
+  SftpConflictHost: () => <div data-testid="sftp-conflict-host" />,
+}));
 vi.mock('@/components/toast/ToastHistoryPanel', () => ({ ToastHistoryPanel: () => null }));
 vi.mock('@/components/UpdateManager', () => ({ UpdateStatusChip: () => null }));
 vi.mock('@/components/workspace/WorkspaceHeaderActions', () => ({
@@ -152,6 +156,13 @@ describe('AppShell FTP and SFTP deploy runs', () => {
  * flush edge to edge on the Workspace (where the island is a plain box). It is now a sibling of
  * the page in the same page area, so it is one more island on every route.
  */
+describe('AppShell SFTP conflicts', () => {
+  it('mounts the one conflict dialog host of the window, whatever page is open', async () => {
+    await renderShell('left', '/usage');
+    expect(screen.getAllByTestId('sftp-conflict-host')).toHaveLength(1);
+  });
+});
+
 describe('AppShell terminal drawer', () => {
   const drawer = (): HTMLElement => screen.getByRole('region', { name: 'Terminal' });
 

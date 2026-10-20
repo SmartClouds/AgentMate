@@ -25,7 +25,7 @@ import {
 import { cn } from '@/lib/utils';
 import { confirmDialog } from '@/stores/confirmStore';
 import { type PaneSide, type PaneState, serverFiles, useSftpStore } from '@/stores/sftpStore';
-import { COLUMN, FileRow, NAME_FIELD, PANE_CARD, ROW_HEIGHT } from './FileRow';
+import { COLUMN, COMPACT_ROW_HEIGHT, FileRow, NAME_FIELD, PANE_CARD, ROW_HEIGHT } from './FileRow';
 import { PaneContextMenu } from './PaneContextMenu';
 import { PaneToolbar } from './PaneToolbar';
 import { PathBar } from './PathBar';
@@ -38,6 +38,8 @@ export interface FilePaneProps {
   side: PaneSide;
   /** Controls at the end of the title row (the remote pane's Disconnect). */
   actions?: React.ReactNode;
+  /** The docked pane: shorter rows and footer, no Permissions or Owner column. */
+  compact?: boolean;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -101,9 +103,11 @@ function HeaderCell({
 }
 
 function NewFolderRow({
+  height,
   onSubmit,
   onCancel,
 }: {
+  height: number;
   onSubmit: (name: string) => Promise<boolean>;
   onCancel: () => void;
 }): React.JSX.Element {
@@ -131,11 +135,7 @@ function NewFolderRow({
   }
 
   return (
-    <div
-      role="row"
-      className="mx-1.5 flex items-center gap-2 pl-2.5 pr-2"
-      style={{ height: ROW_HEIGHT }}
-    >
+    <div role="row" className="mx-1.5 flex items-center gap-2 pl-2.5 pr-2" style={{ height }}>
       <div role="gridcell" className="flex min-w-0 flex-1 items-center gap-2">
         <FolderOpen aria-hidden className="h-3.5 w-3.5 shrink-0 text-primary/80" />
         <input
@@ -174,9 +174,11 @@ export function FilePane({
   serverId,
   side,
   actions,
+  compact = false,
   className,
   style,
 }: FilePaneProps): React.JSX.Element {
+  const rowHeight = compact ? COMPACT_ROW_HEIGHT : ROW_HEIGHT;
   const otherSide: PaneSide = side === 'local' ? 'remote' : 'local';
   // Narrow reads: the queue snapshot (every 100 ms while something moves) must not redraw this.
   const pane = useSftpStore((state) => serverFiles(state, serverId)[side]) as PaneState<PaneEntry>;
@@ -219,7 +221,7 @@ export function FilePane({
 
   const { containerRef, onScroll, start, end, padTop, padBottom, scrollToIndex } = useVirtualRows(
     visible.length,
-    ROW_HEIGHT,
+    rowHeight,
   );
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const setBody = useCallback(
@@ -600,7 +602,10 @@ export function FilePane({
               <div
                 role="row"
                 aria-rowindex={1}
-                className="mx-1.5 flex items-center gap-3 pb-1 pl-2.5 pr-2 pt-2"
+                className={cn(
+                  'mx-1.5 flex items-center gap-3 pb-1 pl-2.5 pr-2',
+                  compact ? 'pt-1' : 'pt-2',
+                )}
               >
                 <HeaderCell
                   label="Name"
@@ -623,7 +628,7 @@ export function FilePane({
                   onSort={(key) => store().sortBy(serverId, side, key)}
                   className={COLUMN.mtime}
                 />
-                {remote ? (
+                {remote && !compact ? (
                   <>
                     <HeaderCell
                       label="Permissions"
@@ -657,6 +662,7 @@ export function FilePane({
             >
               {creating ? (
                 <NewFolderRow
+                  height={rowHeight}
                   onSubmit={(name) => store().mkdir(serverId, side, name)}
                   onCancel={() => {
                     setCreating(false);
@@ -678,6 +684,7 @@ export function FilePane({
                     focused={index === focusIndex}
                     dropTarget={dropTarget === entry.name}
                     renaming={renaming === entry.name}
+                    compact={compact}
                     {...rowHandlers}
                   />
                 );
@@ -708,6 +715,7 @@ export function FilePane({
     <section
       aria-label={remote ? `Server ${nickname}` : 'This computer'}
       data-drop-target={dropTarget === '' ? 'pane' : undefined}
+      data-compact={compact || undefined}
       style={style}
       className={cn(
         PANE_CARD,
@@ -719,6 +727,7 @@ export function FilePane({
     >
       <PaneToolbar
         side={side}
+        compact={compact}
         heading={heading}
         actions={actions}
         canGoUp={pane.parent !== null && hasListing}
@@ -758,7 +767,10 @@ export function FilePane({
       {body}
       <div
         aria-live="polite"
-        className="flex h-7 shrink-0 items-center px-3.5 text-[11px] tabular-nums text-muted-foreground shadow-[inset_0_1px_0_hsl(var(--foreground)/0.08)]"
+        className={cn(
+          'flex shrink-0 items-center px-3.5 text-[11px] tabular-nums text-muted-foreground shadow-[inset_0_1px_0_hsl(var(--foreground)/0.08)]',
+          compact ? 'h-6' : 'h-7',
+        )}
       >
         {hasListing ? selectionSummary(visible, selectedSet) : ''}
       </div>

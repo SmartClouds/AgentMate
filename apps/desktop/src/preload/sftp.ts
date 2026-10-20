@@ -39,5 +39,11 @@ export function createSftp(subscribe: Subscribe): SftpBridge {
     onQueue: (callback) => subscribe(IPC.sftp.onQueue, callback),
     onBatchFinished: (callback) => subscribe(IPC.sftp.onBatchFinished, callback),
     onSessionClosed: (callback) => subscribe(IPC.sftp.onSessionClosed, callback),
+    onSessionAdopted: (callback) => subscribe(IPC.sftp.onSessionAdopted, callback),
+    popOut: (sessionId, view) => ipcRenderer.invoke(IPC.sftp.popOut, sessionId, view),
+    windowControl: (action) => ipcRenderer.invoke(IPC.sftp.windowControl, action),
+    windowState: () => ipcRenderer.invoke(IPC.sftp.windowState),
+    onWindowState: (callback) => subscribe(IPC.sftp.onWindowState, callback),
+    backToMain: () => ipcRenderer.invoke(IPC.sftp.backToMain),
   };
 }

@@ -7,6 +7,7 @@ import type {
   SftpBatchFinished,
   SftpQueueSnapshot,
   SftpSessionClosed,
+  SftpSessionInfo,
 } from '../../shared/sftpTypes';
 import { sshErrorCode } from '../../shared/sshErrors';
 import { tempDir } from '../../test/main/fixtures';
@@ -25,7 +26,8 @@ import { FakeSftpServer, SFTP_STATUS } from './testing/fakeSftpClient';
 /**
  * The SFTP sessions behind the file manager (E25): one per window and saved server, browsing on
  * the shared connection (healed when it drops, handed back when idle), transfers on an engine of
- * their own, and every call refused unless it comes from the window that opened the session.
+ * their own, and every call refused unless it comes from a window that owns the session (the one
+ * that opened it, or a pop-out let in with `addOwner`).
  *
  * Timers and Date are faked; the fake server answers on microtasks and local files are real, so
  * `until` spins the real event loop.
@@ -60,6 +62,15 @@ async function until(
 async function failure(work: Promise<unknown>): Promise<Error> {
   try {
     await work;
+  } catch (error) {
+    return error as Error;
+  }
+  throw new Error('expected a failure');
+}
+
+function failureOf(work: () => unknown): Error {
+  try {
+    work();
   } catch (error) {
     return error as Error;
   }
@@ -559,6 +570,30 @@ describe('owners', () => {
     expect(filesErrorCode(error)).toBe('invalidInput');
     expect(h.server.pool.outstanding).toBe(0);
   });
+  it('a window gone during the last look at the server leaves no session', async () => {
+    let looks = 0;
+    let carryOn: () => void = () => undefined;
+    const h = setup({
+      findServer: async (serverId) => {
+        looks += 1;
+        if (looks === 2) await new Promise<void>((resolve) => (carryOn = resolve));
+        return SERVERS[serverId] ?? null;
+      },
+    });
+    const opening = h.service.open(OWNER, 'srv-1');
+    await until(() => looks === 2, 'the second look');
+
+    await h.service.dropOwner(OWNER);
+    carryOn();
+
+    expect(filesErrorCode(await failure(opening))).toBe('invalidInput');
+    expect(h.server.pool.outstanding).toBe(0);
+    expect(h.service.runningTransfers()).toBe(0);
+    // The next open logs in afresh rather than finding a session left behind.
+    expect((await h.service.open(OWNER, 'srv-1')).sessionId).toBeTruthy();
+    expect(h.server.pool.acquired).toBe(2);
+  });
+
   it('a server removed while a session opens on it leaves no session', async () => {
     const h = setup();
     const gate = h.server.gate('acquire');
@@ -585,6 +620,244 @@ describe('owners', () => {
 
     expect(filesErrorCode(await failure(listing))).toBe('invalidInput');
     expect(h.server.pool.outstanding).toBe(0);
+  });
+});
+
+describe('many owners', () => {
+  /** The pop-out window of a session (F2): another owner of the same session. */
+  const POPOUT = 3;
+
+  it('lets a second window into the session, where open answers that same session', async () => {
+    const h = setup();
+    const info = await h.service.open(OWNER, 'srv-1');
+
+    h.service.addOwner(info.sessionId, POPOUT);
+
+    await expect(h.service.list(POPOUT, info.sessionId, '~')).resolves.toBeTruthy();
+    expect(h.service.info(POPOUT, info.sessionId)).toEqual(info);
+    await expect(h.service.open(POPOUT, 'srv-1')).resolves.toEqual(info);
+    // A window that was never let in still gets a session of its own.
+    expect((await h.service.open(OTHER, 'srv-1')).sessionId).not.toBe(info.sessionId);
+    expect(filesErrorCode(failureOf(() => h.service.info(OTHER, info.sessionId)))).toBe(
+      'invalidInput',
+    );
+  });
+
+  it('refuses to add a window to a session that is not there', () => {
+    const h = setup();
+
+    const error = failureOf(() => h.service.addOwner('no-such-session', POPOUT));
+
+    expect(filesErrorCode(error)).toBe('invalidInput');
+    expect(error.message).toContain('Unknown session');
+  });
+
+  it('sends the queue and the finished event to every owner', async () => {
+    const h = setup();
+    const { sessionId } = await h.service.open(OWNER, 'srv-1');
+    h.service.addOwner(sessionId, POPOUT);
+    await h.service.open(OTHER, 'srv-1');
+    const source = join(h.local, 'app.css');
+    writeFileSync(source, 'body{}');
+
+    const { batchId } = await h.service.upload(POPOUT, sessionId, {
+      localPaths: [source],
+      remoteDir: '/srv/site',
+    });
+    await h.done(batchId, OWNER);
+    await h.done(batchId, POPOUT);
+    await vi.advanceTimersByTimeAsync(200);
+
+    expect(h.sentOn(IPC.sftp.onQueue, OWNER).length).toBeGreaterThan(0);
+    expect(h.sentOn(IPC.sftp.onQueue, POPOUT)).toEqual(h.sentOn(IPC.sftp.onQueue, OWNER));
+    expect(h.sent.filter((one) => one.ownerId === OTHER)).toEqual([]);
+  });
+
+  it('keeps the session while any owner is left, and ends it with the last', async () => {
+    const h = setup();
+    const { sessionId } = await h.service.open(OWNER, 'srv-1');
+    h.service.addOwner(sessionId, POPOUT);
+
+    await h.service.dropOwner(OWNER);
+
+    expect(filesErrorCode(await failure(h.service.queue(OWNER, sessionId)))).toBe('invalidInput');
+    await expect(h.service.queue(POPOUT, sessionId)).resolves.toBeTruthy();
+    expect(h.server.pool.outstanding).toBe(1);
+
+    await h.service.removeOwner(sessionId, POPOUT);
+
+    expect(h.server.pool.outstanding).toBe(0);
+    expect(filesErrorCode(await failure(h.service.queue(POPOUT, sessionId)))).toBe('invalidInput');
+    expect(h.sent.filter((one) => one.channel === IPC.sftp.onSessionClosed)).toEqual([]);
+  });
+
+  it('removeOwner leaves the others alone, and a session already gone is fine', async () => {
+    const h = setup();
+    const { sessionId } = await h.service.open(OWNER, 'srv-1');
+    h.service.addOwner(sessionId, POPOUT);
+
+    await h.service.removeOwner(sessionId, POPOUT);
+    // A window that was never an owner changes nothing.
+    await h.service.removeOwner(sessionId, OTHER);
+
+    await expect(h.service.queue(OWNER, sessionId)).resolves.toBeTruthy();
+    expect(filesErrorCode(await failure(h.service.queue(POPOUT, sessionId)))).toBe('invalidInput');
+    // At quit the sessions go first and the windows' closed events come after.
+    await h.service.closeAll();
+    await expect(h.service.removeOwner(sessionId, OWNER)).resolves.toBeUndefined();
+    await expect(h.service.removeOwner('no-such-session', OWNER)).resolves.toBeUndefined();
+  });
+
+  it('a disconnect from one owner ends the session for all and tells the others', async () => {
+    const h = setup();
+    const { sessionId } = await h.service.open(OWNER, 'srv-1');
+    h.service.addOwner(sessionId, POPOUT);
+
+    await h.service.close(POPOUT, sessionId);
+
+    const closed: SftpSessionClosed = { sessionId, serverId: 'srv-1', reason: 'disconnected' };
+    expect(h.sentOn<SftpSessionClosed>(IPC.sftp.onSessionClosed, OWNER)).toEqual([closed]);
+    expect(h.sentOn(IPC.sftp.onSessionClosed, POPOUT)).toEqual([]);
+    expect(h.server.pool.outstanding).toBe(0);
+    expect(filesErrorCode(await failure(h.service.queue(OWNER, sessionId)))).toBe('invalidInput');
+  });
+
+  it('tells every owner when the server is removed', async () => {
+    const h = setup();
+    const { sessionId } = await h.service.open(OWNER, 'srv-1');
+    h.service.addOwner(sessionId, POPOUT);
+
+    await h.service.closeServer('srv-1', 'removed');
+
+    const removed: SftpSessionClosed = { sessionId, serverId: 'srv-1', reason: 'removed' };
+    expect(h.sentOn(IPC.sftp.onSessionClosed, OWNER)).toEqual([removed]);
+    expect(h.sentOn(IPC.sftp.onSessionClosed, POPOUT)).toEqual([removed]);
+  });
+
+  it('hands the sessions of a window that goes to another, transfers still running', async () => {
+    const h = setup();
+    // The main window disconnected, and the pop-out connected again on its own.
+    const own = await h.service.open(POPOUT, 'srv-1');
+    const gate = h.server.gate('sftpUnlink');
+    const { batchId } = await h.service.remove(POPOUT, own.sessionId, ['/srv/site/index.html']);
+    await gate.waitFor();
+
+    h.service.adoptSessions(POPOUT, OWNER);
+    await h.service.dropOwner(POPOUT);
+    gate.open();
+
+    // The main window's page is told, so it shows the session and its queue.
+    expect(h.sentOn<SftpSessionInfo>(IPC.sftp.onSessionAdopted, OWNER)).toEqual([own]);
+    await expect(h.service.open(OWNER, 'srv-1')).resolves.toEqual(own);
+    expect((await h.done(batchId, OWNER)).ok).toBe(true);
+    expect(h.server.pool.outstanding).toBeGreaterThan(0);
+  });
+
+  it('joins a session a linked window has on the server instead of opening another', async () => {
+    const h = setup();
+    const shown = await h.service.open(OWNER, 'srv-1');
+    await h.service.open(OWNER, 'srv-2');
+    const peers = [OWNER, POPOUT];
+
+    await expect(h.service.open(POPOUT, 'srv-1', { peers })).resolves.toEqual(shown);
+    // A server no linked window has a session on gets one of its own.
+    const fresh = await h.service.open(POPOUT, 'srv-2', { peers: [POPOUT] });
+    // A window that is not linked is not joined to anything.
+    const apart = await h.service.open(OTHER, 'srv-1');
+
+    expect(apart.sessionId).not.toBe(shown.sessionId);
+    expect(fresh.sessionId).toBeTruthy();
+    expect(h.server.pool.acquired).toBe(4);
+    await h.service.dropOwner(OWNER);
+    await expect(h.service.queue(POPOUT, shown.sessionId)).resolves.toBeTruthy();
+  });
+
+  it('keeps one session per server across a disconnect in one window and a reconnect in each', async () => {
+    const h = setup();
+    const peers = [OWNER, POPOUT];
+    // S1 is popped out, then disconnected from the pop-out: the main window goes idle.
+    const s1 = await h.service.open(OWNER, 'srv-1');
+    h.service.addOwner(s1.sessionId, POPOUT);
+    await h.service.close(POPOUT, s1.sessionId);
+    // The pop-out connects again; no linked window has a session, so it opens S2.
+    const s2 = await h.service.open(POPOUT, 'srv-1', { peers });
+    expect(s2.sessionId).not.toBe(s1.sessionId);
+    const source = join(h.local, 'big.bin');
+    writeFileSync(source, 'x'.repeat(1000));
+    const gate = h.server.gate('uploadFile');
+    const { batchId } = await h.service.upload(POPOUT, s2.sessionId, {
+      localPaths: [source],
+      remoteDir: '/srv/site',
+    });
+    await gate.waitFor();
+
+    // The main window connects again and joins S2 rather than opening S3.
+    await expect(h.service.open(OWNER, 'srv-1', { peers })).resolves.toEqual(s2);
+    expect((await h.service.queue(OWNER, s2.sessionId)).batches).toHaveLength(1);
+
+    // Closing the pop-out keeps the upload, and the main window already shows it.
+    h.service.adoptSessions(POPOUT, OWNER);
+    await h.service.dropOwner(POPOUT);
+    gate.open();
+
+    expect((await h.done(batchId, OWNER)).ok).toBe(true);
+    expect(h.sentOn(IPC.sftp.onSessionAdopted, OWNER)).toEqual([]);
+    expect(h.server.read('/srv/site/big.bin')?.length).toBe(1000);
+  });
+
+  it('leaves an idle session to end when the other window has its own on that server', async () => {
+    const h = setup();
+    const mine = await h.service.open(OWNER, 'srv-1');
+    const theirs = await h.service.open(POPOUT, 'srv-1');
+    const shared = await h.service.open(OWNER, 'srv-2');
+    h.service.addOwner(shared.sessionId, POPOUT);
+    const other = await h.service.open(POPOUT, 'srv-2');
+
+    h.service.adoptSessions(POPOUT, OWNER);
+    await h.service.dropOwner(POPOUT);
+
+    // The window keeps the session it shows; the one it never saw is not slipped in beside it.
+    await expect(h.service.open(OWNER, 'srv-1')).resolves.toEqual(mine);
+    expect(filesErrorCode(await failure(h.service.queue(OWNER, theirs.sessionId)))).toBe(
+      'invalidInput',
+    );
+    expect(other).toEqual(shared);
+    await expect(h.service.queue(OWNER, shared.sessionId)).resolves.toBeTruthy();
+    expect(h.sentOn(IPC.sftp.onSessionAdopted, OWNER)).toEqual([]);
+  });
+
+  it('still keeps a busy session when the other window has its own on that server', async () => {
+    const h = setup();
+    const mine = await h.service.open(OWNER, 'srv-1');
+    const theirs = await h.service.open(POPOUT, 'srv-1');
+    const gate = h.server.gate('sftpUnlink');
+    const { batchId } = await h.service.remove(POPOUT, theirs.sessionId, ['/srv/site/index.html']);
+    await gate.waitFor();
+
+    h.service.adoptSessions(POPOUT, OWNER);
+    await h.service.dropOwner(POPOUT);
+    gate.open();
+
+    // Nothing running is lost; the window's own session stays the one it is shown.
+    expect((await h.done(batchId, OWNER)).ok).toBe(true);
+    await expect(h.service.open(OWNER, 'srv-1')).resolves.toEqual(mine);
+    expect(h.sentOn(IPC.sftp.onSessionAdopted, OWNER)).toEqual([]);
+  });
+
+  it('refuses a download whose window left the session while the folder was checked', async () => {
+    const h = setup();
+    const { sessionId } = await h.service.open(OWNER, 'srv-1');
+    h.service.addOwner(sessionId, POPOUT);
+    h.localBrowse.record(POPOUT, h.local);
+
+    const download = h.service.download(POPOUT, sessionId, {
+      remotePaths: ['/srv/site/index.html'],
+      localDir: h.local,
+    });
+    void h.service.removeOwner(sessionId, POPOUT);
+
+    expect(filesErrorCode(await failure(download))).toBe('invalidInput');
+    expect((await h.service.queue(OWNER, sessionId)).batches).toEqual([]);
   });
 });
 

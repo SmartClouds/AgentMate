@@ -1517,31 +1517,48 @@ describe('finished batches', () => {
 
   it('builds a snapshot without walking every item of finished batches', async () => {
     vi.useRealTimers();
-    const server = new FakeSftpServer();
-    server.dir('/srv');
-    let finished = 0;
-    const engine = createTransferEngine({
-      sessionId: 's',
-      transferClient: async () => server.connect(),
-      releaseTransferClient: () => undefined,
-      emit: () => undefined,
-      finished: () => {
-        finished += 1;
-      },
-      busy: () => undefined,
-      concurrency: 50,
-    });
-    // Each batch holds a failure at its very end, behind 20,000 done items.
-    const paths = Array.from({ length: 20_000 }, (_, index) => `/srv/missing-${index}`);
-    paths.push('/');
-    for (let batch = 0; batch < 4; batch += 1) engine.enqueueDelete(paths);
-    await until(() => finished === 4, 'the deletes');
-    const started = performance.now();
-    for (let round = 0; round < 20; round += 1) engine.snapshot();
-    const each = (performance.now() - started) / 20;
-    expect(engine.snapshot().batches.map((view) => view.failures.length)).toEqual([1, 1, 1, 1]);
-    expect(each).toBeLessThan(0.5);
-    await engine.dispose();
+    // Four finished batches, each with one failure behind `size` done items.
+    async function finishedEngine(size: number) {
+      const server = new FakeSftpServer();
+      server.dir('/srv');
+      let finished = 0;
+      const engine = createTransferEngine({
+        sessionId: 's',
+        transferClient: async () => server.connect(),
+        releaseTransferClient: () => undefined,
+        emit: () => undefined,
+        finished: () => {
+          finished += 1;
+        },
+        busy: () => undefined,
+        concurrency: 50,
+      });
+      const paths = Array.from({ length: size }, (_, index) => `/srv/missing-${index}`);
+      paths.push('/');
+      for (let batch = 0; batch < 4; batch += 1) engine.enqueueDelete(paths);
+      await until(() => finished === 4, 'the deletes');
+      return engine;
+    }
+    const big = await finishedEngine(20_000);
+    const small = await finishedEngine(1);
+    // The cheapest of several rounds, taken in turns, so a busy machine slows both alike.
+    const cost = (engine: TransferEngine) => {
+      const started = performance.now();
+      for (let round = 0; round < 20; round += 1) engine.snapshot();
+      return (performance.now() - started) / 20;
+    };
+    let bigBest = Number.POSITIVE_INFINITY;
+    let smallBest = Number.POSITIVE_INFINITY;
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      bigBest = Math.min(bigBest, cost(big));
+      smallBest = Math.min(smallBest, cost(small));
+    }
+    expect(big.snapshot().batches.map((view) => view.failures.length)).toEqual([1, 1, 1, 1]);
+    // Walking 80,000 items costs hundreds of times the small engine; skipping them costs about
+    // the same. The floor keeps a near-zero baseline from turning timer noise into a failure.
+    expect(bigBest).toBeLessThan(Math.max(smallBest * 20, 0.2));
+    await big.dispose();
+    await small.dispose();
   }, 60_000);
 });
 

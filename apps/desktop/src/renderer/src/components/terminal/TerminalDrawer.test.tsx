@@ -16,11 +16,29 @@ vi.mock('./TerminalPane', () => ({
     <div data-testid="terminal-pane">{meta.id}</div>
   ),
 }));
-vi.mock('./SshAskAiDialog', () => ({ SshAskAiDialog: () => null }));
-vi.mock('./SshAgentHistoryDialog', () => ({ SshAgentHistoryDialog: () => null }));
-vi.mock('./SshAgentStatusBar', () => ({ SshAgentStatusBar: () => null }));
+vi.mock('./SshAskAiDialog', () => ({
+  SshAskAiDialog: ({ sessionId }: { sessionId: string }) => (
+    <div data-testid="ask-ai-dialog">{sessionId}</div>
+  ),
+}));
+vi.mock('./SshAgentHistoryDialog', () => ({
+  SshAgentHistoryDialog: ({ sessionId }: { sessionId: string }) => (
+    <div data-testid="history-dialog">{sessionId}</div>
+  ),
+}));
+vi.mock('./SshAgentStatusBar', () => ({
+  SshAgentStatusBar: ({ sessionId }: { sessionId: string }) => (
+    <div data-testid="agent-status">{sessionId}</div>
+  ),
+}));
+vi.mock('@/components/sftp/SftpDockPane', () => ({
+  SftpDockPane: ({ serverId, active }: { serverId: string; active: boolean }) => (
+    <div data-testid="sftp-dock" data-server={serverId} data-active={String(active)} />
+  ),
+}));
 
 const { TerminalDrawer } = await import('./TerminalDrawer');
+const { openSftpDock } = await import('@/lib/sftp/dock');
 
 const sessions: TerminalSessionMeta[] = [
   { id: 's1', kind: 'local', title: 'PowerShell' },
@@ -218,5 +236,95 @@ describe('TerminalDrawer SFTP files button', () => {
     });
     renderDrawer();
     expect(screen.queryByRole('button', { name: 'Browse files over SFTP' })).toBeNull();
+  });
+});
+
+describe('TerminalDrawer file manager tab', () => {
+  const files: TerminalSessionMeta = {
+    id: 'f1',
+    kind: 'sftp',
+    title: 'prod',
+    sftpServerId: 'srv-7',
+  };
+
+  it('shows the server files instead of a terminal, with nothing that needs a shell', () => {
+    useTerminalStore.setState({ sessions: [files], activeSessionId: 'f1' });
+    const { island } = renderDrawer();
+
+    const tab = screen.getByRole('tab', { name: /prod/ });
+    expect(tab.querySelector('[data-sftp-tab]')).not.toBeNull();
+    const dock = screen.getByTestId('sftp-dock');
+    expect(dock).toHaveAttribute('data-server', 'srv-7');
+    expect(dock).toHaveAttribute('data-active', 'true');
+    expect(screen.queryByTestId('terminal-pane')).toBeNull();
+
+    for (const name of ['Ask AI to run a task here', 'AI task history', 'Browse files over SFTP']) {
+      expect(screen.queryByRole('button', { name })).toBeNull();
+    }
+    expect(screen.queryByTestId('ask-ai-dialog')).toBeNull();
+    expect(screen.queryByTestId('history-dialog')).toBeNull();
+    expect(screen.queryByTestId('agent-status')).toBeNull();
+    expect(screen.getByText('SFTP')).toBeInTheDocument();
+    // The glass panes sit on the island, not on the dark terminal fill.
+    expect(island().querySelector('.terminal-well')).toBeNull();
+    // A new terminal is still one click away.
+    expect(screen.getByRole('button', { name: /^New Terminal/ })).toBeInTheDocument();
+  });
+
+  it('keeps the files mounted but not on screen behind a shell tab or a shut drawer', () => {
+    useTerminalStore.setState({ sessions: [sessions[0] as TerminalSessionMeta, files] });
+    useTerminalStore.setState({ activeSessionId: 's1' });
+    renderDrawer();
+
+    expect(screen.getAllByTestId('terminal-pane')).toHaveLength(1);
+    expect(screen.getByTestId('sftp-dock')).toHaveAttribute('data-active', 'false');
+    expect(screen.getByTestId('ask-ai-dialog')).toHaveTextContent('s1');
+    expect(screen.queryByText('SFTP')).toBeNull();
+
+    act(() => useTerminalStore.getState().setActiveSession('f1'));
+    expect(screen.getByTestId('sftp-dock')).toHaveAttribute('data-active', 'true');
+
+    act(() => useTerminalStore.getState().closeDrawer());
+    expect(screen.getByTestId('sftp-dock')).toHaveAttribute('data-active', 'false');
+  });
+
+  it('closes without ending anything: the SFTP session stays for the page and the window', async () => {
+    const runningForProject = vi.fn(async () => []);
+    const bridge = installAgentmatBridge({ 'docker.runningForProject': runningForProject });
+    useTerminalStore.setState({ sessions: [files], activeSessionId: 'f1' });
+    renderDrawer();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close prod' }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(useTerminalStore.getState().sessions).toEqual([]);
+    expect(() => bridge.$fn('terminal.kill')).toThrow();
+    expect(() => bridge.$fn('ssh.kill')).toThrow();
+    expect(runningForProject).not.toHaveBeenCalled();
+  });
+
+  it("names the files tab apart from the same server's SSH tab", () => {
+    useTerminalStore.setState({ sessions: [], activeSessionId: null });
+    useTerminalStore.getState().openSshSession({ id: 'srv-7', nickname: 'prod' } as never);
+    openSftpDock('srv-7', 'prod');
+    renderDrawer();
+
+    expect(screen.getByRole('tab', { name: 'prod' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Files: prod' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Close Files: prod' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close prod' })).toBeInTheDocument();
+  });
+
+  it('draws nothing for a file manager tab with no server', () => {
+    useTerminalStore.setState({
+      sessions: [{ id: 'f2', kind: 'sftp', title: 'lost' }],
+      activeSessionId: 'f2',
+    });
+    renderDrawer();
+    expect(screen.queryByTestId('sftp-dock')).toBeNull();
+    expect(screen.queryByTestId('terminal-pane')).toBeNull();
   });
 });

@@ -6,6 +6,7 @@ import { useFilesRunEvents } from '@/components/deploy/files/hooks';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AnglesLeft, AnglesRight, Bell, MessageSquare, TerminalSquare } from '@/components/icons';
 import { CommandPalette } from '@/components/search/CommandPalette';
+import { SftpConflictHost } from '@/components/sftp/SftpConflictHost';
 import { RunningClisDialog } from '@/components/terminal/RunningClisDialog';
 import { TerminalDrawer } from '@/components/terminal/TerminalDrawer';
 import { ToastHistoryPanel } from '@/components/toast/ToastHistoryPanel';
@@ -281,6 +282,8 @@ export function AppShell(): React.JSX.Element {
       <ToastHistoryPanel />
       <RunningClisDialog />
       <AboutDialog />
+      {/* The SSH file manager's conflict question, asked wherever the user is (E25). */}
+      <SftpConflictHost />
       {menuOnTop && <TopMenu />}
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {!menuOnTop && <Sidebar />}

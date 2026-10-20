@@ -30,6 +30,11 @@ export interface ConflictDialogProps {
   onResolve: (decision: SftpConflictDecision) => void | Promise<void>;
   /** "Cancel this transfer": cancels the whole batch `conflict.batchId`. */
   onCancelBatch: (batchId: string) => void | Promise<void>;
+  /**
+   * The server that asks, shown as "On <name>" under the title. The dialog opens on whatever
+   * page the user is on, so it says which server the question is about.
+   */
+  serverName?: string;
 }
 
 /** PropertiesDialog.tsx: details and permissions of the selected remote entries. */
@@ -55,6 +60,11 @@ export interface RemoteEditorDialogProps {
   open: boolean;
   /** The session to read and save through (`window.agentmat.sftp.readText` and `writeText`). */
   sessionId: string;
+  /**
+   * The saved server the file is on. When given, unsaved edits are kept under it and the path
+   * (sftpEditorDraftStore), so they come back if the dialog unmounts before a save or discard.
+   */
+  serverId?: string;
   /**
    * The file to edit; null while closed. The dialog reads it when it opens. A file that is
    * `tooLarge` or `notText` gets a toast and the dialog closes itself through `onOpenChange(false)`.
@@ -82,5 +92,7 @@ export interface TransferQueueProps {
   onRetry: (target: SftpTarget) => void | Promise<void>;
   /** "Clear finished": drops the batches that are over. */
   onClearFinished: () => void | Promise<void>;
+  /** Whether the list starts shown. Defaults to true; the dock starts with the summary line. */
+  defaultOpen?: boolean;
   className?: string;
 }

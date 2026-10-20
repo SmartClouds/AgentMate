@@ -31,6 +31,7 @@ import {
   samePath,
 } from '@/lib/sftp/paths';
 import { EMPTY_SELECTION, reconcileSelection, type Selection } from '@/lib/sftp/selection';
+import { isBatchActive } from '@/lib/sftp/transferSummary';
 import { withHostKeyTrust } from '@/lib/ssh/hostKeyTrust';
 
 /**
@@ -106,6 +107,12 @@ interface SftpState {
   servers: Record<string, ServerFiles>;
   /** The local Places menu; null until read. */
   places: SftpLocalPlace[] | null;
+  /**
+   * The server whose conflict the user asked to answer (the status bar's Answer), so the
+   * window's one conflict dialog asks about it first when several servers wait. It lets go once
+   * that server has no conflict left.
+   */
+  conflictFocus: string | null;
 
   connect: (serverId: string) => Promise<void>;
   disconnect: (serverId: string) => Promise<void>;
@@ -171,6 +178,9 @@ interface SftpState {
   closeEditor: (serverId: string) => void;
   openProperties: (serverId: string, paths: string[]) => void;
   closeProperties: (serverId: string) => void;
+
+  /** Points the conflict dialog at this server. Does nothing when it has no conflict waiting. */
+  requestAnswer: (serverId: string) => void;
 }
 
 function emptyPane<E extends SftpLocalEntry | SftpRemoteEntry>(): PaneState<E> {
@@ -185,6 +195,20 @@ function emptyPane<E extends SftpLocalEntry | SftpRemoteEntry>(): PaneState<E> {
     sort: DEFAULT_SORT,
     filter: '',
     showHidden: false,
+  };
+}
+
+/** A server after Disconnect, from this view or another: the gate offers Connect again. */
+function disconnected(): Partial<ServerFiles> {
+  return {
+    session: null,
+    status: 'idle',
+    error: null,
+    queue: null,
+    editingPath: null,
+    editingFile: null,
+    propertiesPaths: null,
+    remote: emptyPane(),
   };
 }
 
@@ -220,11 +244,24 @@ export function serverFiles(state: Pick<SftpState, 'servers'>, serverId: string)
   return empty;
 }
 
-const RUNNING_STATES = new Set(['expanding', 'queued', 'running', 'waiting']);
-
 /** Whether any batch of the queue is still going (a conflict waiting counts). */
 export function hasRunningTransfers(queue: SftpQueueSnapshot | null): boolean {
-  return (queue?.batches ?? []).some((batch) => RUNNING_STATES.has(batch.state));
+  return (queue?.batches ?? []).some((batch) => isBatchActive(batch.state));
+}
+
+/**
+ * The server whose conflict the window's one dialog asks about: the one the user picked to answer
+ * while it still has a conflict, else the first by id that has one. Null when none waits.
+ */
+export function conflictServerId(
+  state: Pick<SftpState, 'servers' | 'conflictFocus'>,
+): string | null {
+  const focus = state.conflictFocus;
+  if (focus && state.servers[focus]?.queue?.conflict) return focus;
+  const waiting = Object.keys(state.servers)
+    .filter((id) => state.servers[id]?.queue?.conflict)
+    .sort();
+  return waiting[0] ?? null;
 }
 
 /** How long a read for the editor may take before a loading toast says it is coming. */
@@ -252,9 +289,15 @@ let unsubscribers: Array<() => void> = [];
 
 export const useSftpStore = create<SftpState>()((set, get) => {
   function patch(serverId: string, change: Partial<ServerFiles>): void {
-    set((state) => ({
-      servers: { ...state.servers, [serverId]: { ...serverFiles(state, serverId), ...change } },
-    }));
+    set((state) => {
+      // The conflict asked about is answered once the server's queue holds none (or is gone).
+      const answered =
+        state.conflictFocus === serverId && 'queue' in change && !change.queue?.conflict;
+      return {
+        servers: { ...state.servers, [serverId]: { ...serverFiles(state, serverId), ...change } },
+        ...(answered ? { conflictFocus: null } : {}),
+      };
+    });
   }
 
   function patchPane(serverId: string, side: PaneSide, change: Partial<PaneState<never>>): void {
@@ -415,7 +458,10 @@ export const useSftpStore = create<SftpState>()((set, get) => {
     const entry = get().servers[serverId];
     if (!entry || entry.session?.sessionId !== event.sessionId) return;
     const name = nickname(serverId);
-    if (event.reason === 'removed') {
+    if (event.reason === 'disconnected') {
+      // Another view of the session asked for it: the same as this view's own Disconnect.
+      patch(serverId, disconnected());
+    } else if (event.reason === 'removed') {
       patch(serverId, {
         session: null,
         queue: null,
@@ -440,6 +486,36 @@ export const useSftpStore = create<SftpState>()((set, get) => {
     }
   }
 
+  /** A session handed over by a pop-out that closed. A server showing its own keeps that one. */
+  function onSessionAdopted(info: SftpSessionInfo): void {
+    if (files(info.serverId).session) return;
+    void attach(info.serverId, info);
+  }
+
+  /** Shows `session` as connected: its remote folder and the queue as main has it. */
+  async function attach(serverId: string, session: SftpSessionInfo): Promise<void> {
+    patch(serverId, {
+      session,
+      status: 'ready',
+      error: null,
+      server: {
+        nickname: session.nickname,
+        host: session.host,
+        port: session.port,
+        username: session.username,
+      },
+    });
+    // A reconnect goes back to the folder it showed; a first visit starts at home.
+    void load(serverId, 'remote', files(serverId).remote.path ?? session.home);
+    // The queue as main has it, so a conflict left open before a reload comes back (D3).
+    try {
+      const queue = await sftpBridge().queue(session.sessionId);
+      if (files(serverId).session?.sessionId === session.sessionId) patch(serverId, { queue });
+    } catch {
+      // The next snapshot brings it.
+    }
+  }
+
   function ensureSubscribed(): void {
     const bridge = sftpBridge();
     if (subscribedTo === bridge) return;
@@ -449,6 +525,7 @@ export const useSftpStore = create<SftpState>()((set, get) => {
       bridge.onQueue(onQueue),
       bridge.onBatchFinished(onBatchFinished),
       bridge.onSessionClosed(onSessionClosed),
+      bridge.onSessionAdopted(onSessionAdopted),
     ];
   }
 
@@ -484,6 +561,7 @@ export const useSftpStore = create<SftpState>()((set, get) => {
   return {
     servers: {},
     places: null,
+    conflictFocus: null,
 
     async connect(serverId) {
       const entry = files(serverId);
@@ -529,40 +607,12 @@ export const useSftpStore = create<SftpState>()((set, get) => {
         return;
       }
 
-      patch(serverId, {
-        session,
-        status: 'ready',
-        error: null,
-        server: {
-          nickname: session.nickname,
-          host: session.host,
-          port: session.port,
-          username: session.username,
-        },
-      });
-      // A reconnect goes back to the folder it showed; a first visit starts at home.
-      void load(serverId, 'remote', files(serverId).remote.path ?? session.home);
-      // The queue as main has it, so a conflict left open before a reload comes back (D3).
-      try {
-        const queue = await sftpBridge().queue(session.sessionId);
-        if (files(serverId).session?.sessionId === session.sessionId) patch(serverId, { queue });
-      } catch {
-        // The next snapshot brings it.
-      }
+      await attach(serverId, session);
     },
 
     async disconnect(serverId) {
       const session = files(serverId).session;
-      patch(serverId, {
-        session: null,
-        status: 'idle',
-        error: null,
-        queue: null,
-        editingPath: null,
-        editingFile: null,
-        propertiesPaths: null,
-        remote: emptyPane(),
-      });
+      patch(serverId, disconnected());
       if (!session) return;
       await guarded('Could not disconnect', () => sftpBridge().close(session.sessionId));
     },
@@ -837,6 +887,10 @@ export const useSftpStore = create<SftpState>()((set, get) => {
     closeProperties(serverId) {
       patch(serverId, { propertiesPaths: null });
     },
+
+    requestAnswer(serverId) {
+      if (files(serverId).queue?.conflict) set({ conflictFocus: serverId });
+    },
   };
 });
 
@@ -848,5 +902,5 @@ export function resetSftpStore(): void {
   navTokens.clear();
   navInFlight.clear();
   refreshTokens.clear();
-  useSftpStore.setState({ servers: {}, places: null });
+  useSftpStore.setState({ servers: {}, places: null, conflictFocus: null });
 }

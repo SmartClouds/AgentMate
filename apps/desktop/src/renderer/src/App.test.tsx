@@ -21,7 +21,8 @@ const toast = vi.hoisted(() =>
     dismiss: vi.fn(),
   }),
 );
-vi.mock('sonner', () => ({ toast, Toaster: () => null }));
+/** The toaster stands for the app chrome: it is drawn only around the shell's pages. */
+vi.mock('sonner', () => ({ toast, Toaster: () => <div data-testid="app-toaster" /> }));
 
 /** A stand-in page that just says which route rendered it. */
 function stub(name: string) {
@@ -52,6 +53,7 @@ vi.mock('./components/projects/PromptBuildWidgetRoute', () => stub('Prompt Build
 vi.mock('./components/pet/DesktopPetRoute', () => stub('Desktop Pet'));
 vi.mock('./components/remote/RemoteSessionRoute', () => stub('Remote Session'));
 vi.mock('./components/rdp/RdpSessionRoute', () => stub('RDP Session'));
+vi.mock('./components/sftp/SftpWindowRoute', () => stub('SFTP Window'));
 
 /** The shell, reduced to what a routing test needs: a marker and the slot the page goes in. */
 vi.mock('./components/layout/AppShell', async () => {
@@ -186,6 +188,7 @@ describe('App standalone windows', () => {
     ['/desktop-pet', 'Desktop Pet'],
     ['/remote-session', 'Remote Session'],
     ['/rdp-session', 'RDP Session'],
+    ['/sftp-window', 'SFTP Window'],
   ];
 
   for (const [path, page] of routes) {
@@ -194,6 +197,16 @@ describe('App standalone windows', () => {
       expect(screen.queryByTestId('shell')).toBeNull();
     });
   }
+
+  it('leaves the app chrome to the file manager window, which mounts its own', async () => {
+    expect(await pageAt('/sftp-window?server=srv-1&theme=dark')).toBe('SFTP Window');
+    expect(screen.queryByTestId('app-toaster')).toBeNull();
+  });
+
+  it('draws the app chrome around the shell pages', async () => {
+    expect(await pageAt('/remote')).toBe('Remote');
+    expect(screen.getByTestId('app-toaster')).toBeTruthy();
+  });
 });
 
 describe('App wiring', () => {
