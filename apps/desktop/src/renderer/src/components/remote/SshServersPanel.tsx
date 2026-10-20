@@ -80,7 +80,6 @@ function SavedSshServerRow({
 
   return (
     <li {...motion.itemProps} className={serverRowClass(motion.dragging)}>
-      <ServerDragGrip motion={motion} />
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-foreground/[0.06] text-muted-foreground">
         <Server className="h-4 w-4" />
       </span>
@@ -101,6 +100,7 @@ function SavedSshServerRow({
         </p>
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-1">
+        <ServerDragGrip motion={motion} />
         <SimpleTooltip label="AI history on this server">
           <Button
             size="icon"

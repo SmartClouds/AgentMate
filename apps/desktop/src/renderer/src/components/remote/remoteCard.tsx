@@ -73,11 +73,11 @@ export function RemoteRow({
 
 /**
  * A saved server's row. A held row lifts off the card while the rows around it slide out of its
- * way, the same motion the Projects list has.
+ * way, the same motion the Projects list has. The `group` is what reveals the row's drag grip.
  */
 export function serverRowClass(dragging: boolean): string {
   return cn(
-    'relative flex flex-wrap items-center gap-x-3 gap-y-2 py-3 pl-2.5 pr-5',
+    'group relative flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3',
     dragging
       ? 'z-10 rounded-lg bg-popover shadow-lg ring-1 ring-foreground/10 transition-none'
       : 'transition-transform duration-200 ease-out motion-reduce:transition-none',
@@ -86,7 +86,9 @@ export function serverRowClass(dragging: boolean): string {
 
 /**
  * The only draggable part of a saved server's row, so pressing its buttons is never mistaken for
- * the start of a reorder.
+ * the start of a reorder. It shows while the row is hovered or focused, and stays up for as long
+ * as the row is held, even once the pointer has moved off it. It goes first among the row's icon
+ * buttons and is the same size, so it keeps its place and nothing shifts when it appears.
  */
 export function ServerDragGrip({ motion }: { motion: ReorderMotion }): React.JSX.Element {
   return (
@@ -94,7 +96,12 @@ export function ServerDragGrip({ motion }: { motion: ReorderMotion }): React.JSX
       <span
         data-drag-grip
         onPointerDown={motion.onGripPointerDown}
-        className="flex h-8 w-5 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground/50 transition-colors hover:bg-foreground/[0.08] hover:text-foreground active:cursor-grabbing"
+        className={cn(
+          'flex h-9 w-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-full text-muted-foreground transition-[opacity,background-color,color] hover:bg-accent hover:text-accent-foreground active:cursor-grabbing',
+          motion.dragging
+            ? 'opacity-100'
+            : 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100',
+        )}
       >
         <GripVertical className="h-3.5 w-3.5" />
       </span>
@@ -107,9 +114,7 @@ export function ServerRowsSkeleton(): React.JSX.Element {
   return (
     <div role="status" aria-label="Loading servers" className="settings-rows">
       {Array.from({ length: 2 }, (_, index) => (
-        <div key={index} className="flex items-center gap-3 py-3 pl-2.5 pr-5">
-          {/* Where a loaded row keeps its drag grip, so the rows don't shift when they arrive. */}
-          <span aria-hidden className="w-5 shrink-0" />
+        <div key={index} className="flex items-center gap-3 px-5 py-3">
           <Skeleton className="h-8 w-8 rounded-lg" />
           <div className="min-w-0 flex-1 space-y-1.5">
             <Skeleton className="h-3.5 w-32" />

@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { type AddressInfo, createServer as createNetServer, type Socket } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -342,6 +343,53 @@ describe('SshConnection lifecycle', () => {
 
     await expect(connection.exec('true')).rejects.toThrow(/closed/);
   });
+});
+
+describe('SshConnection.open against something that is not an SSH server', () => {
+  /** Accepts connections and ends them the way `end` says, before any SSH banner is sent. */
+  async function listenAndDrop(
+    end: 'reset' | 'close',
+  ): Promise<{ port: number; stop: () => void }> {
+    const sockets = new Set<Socket>();
+    const dropper = createNetServer((socket) => {
+      sockets.add(socket);
+      socket.on('error', () => undefined);
+      if (end === 'reset') socket.resetAndDestroy();
+      else socket.destroy();
+    });
+    await new Promise<void>((resolve) => dropper.listen(0, '127.0.0.1', resolve));
+    return {
+      port: (dropper.address() as AddressInfo).port,
+      stop: () => {
+        for (const socket of sockets) socket.destroy();
+        dropper.close();
+      },
+    };
+  }
+
+  it.each(['reset', 'close'] as const)(
+    'rejects with a readable error when the connection is %s before the handshake',
+    async (end) => {
+      const { port, stop } = await listenAndDrop(end);
+      try {
+        const failure = SshConnection.open({
+          host: '127.0.0.1',
+          port,
+          username: 'deploy',
+          authMethod: 'password',
+          password: PASSWORD,
+        });
+
+        await expect(failure).rejects.toThrow(
+          /^The connection to 127\.0\.0\.1:\d+ was closed by the other end while connecting/,
+        );
+        // ssh2 can emit a second 'error' on close; nothing may be left to throw it uncaught.
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      } finally {
+        stop();
+      }
+    },
+  );
 });
 
 describe('SshConnection.sftpList', () => {

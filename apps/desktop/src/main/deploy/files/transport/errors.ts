@@ -92,7 +92,11 @@ export function mapSshConnectError(error: unknown): FilesTransportError {
   if (code === 'ENOENT' || code === 'EACCES') {
     return new FilesTransportError('auth', `The private key could not be read: ${message}`);
   }
-  if (code === 'ECONNREFUSED' || code === 'ENOTFOUND' || /could not reach/i.test(message)) {
+  if (
+    code === 'ECONNREFUSED' ||
+    code === 'ENOTFOUND' ||
+    /could not reach|closed by the other end|does not look like an SSH server/i.test(message)
+  ) {
     return new FilesTransportError('unreachable', message);
   }
   if (code === 'ETIMEDOUT' || TIMED_OUT.test(message)) {

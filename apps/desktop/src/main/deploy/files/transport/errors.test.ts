@@ -58,6 +58,17 @@ describe('mapSshConnectError', () => {
     [new Error('Could not reach example.com:22.'), 'unreachable'],
     [Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' }), 'unreachable'],
     [Object.assign(new Error('getaddrinfo ENOTFOUND'), { code: 'ENOTFOUND' }), 'unreachable'],
+    [
+      new Error(
+        'The connection to example.com:22 was closed by the other end while connecting. ' +
+          'Check that the host and port belong to an SSH server.',
+      ),
+      'unreachable',
+    ],
+    [
+      new Error('example.com:22 does not look like an SSH server. Check the host and port.'),
+      'unreachable',
+    ],
     [new Error('Connection to example.com:22 timed out.'), 'timeout'],
     [Object.assign(new Error('no key'), { code: 'ENOENT', path: '/k' }), 'auth'],
     [filesError('cancelled', 'stop'), 'cancelled'],

@@ -284,6 +284,11 @@ export class SshConnection {
       keepaliveCountMax: KEEPALIVE_COUNT_MAX,
     });
     const client = new Client();
+    // One failed connect can raise 'error' twice (a socket reset, then "Connection lost before
+    // handshake" when the socket closes). A listener removed after the first would let the second
+    // throw in the main process, so this one stays. After the handshake, a failure ends the
+    // connection and 'close' reports it.
+    client.on('error', () => undefined);
     await new Promise<void>((resolve, reject) => {
       const onError = (error: Error): void => {
         client.end();
@@ -298,8 +303,6 @@ export class SshConnection {
     });
 
     const connection = new SshConnection(client, endpoint);
-    // After the handshake, a failure ends the connection and 'close' reports it.
-    client.on('error', () => undefined);
     client.on('close', () => {
       connection.markClosed();
       hooks.onClose?.();

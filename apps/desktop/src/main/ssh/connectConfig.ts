@@ -48,6 +48,13 @@ export class HostKeyChangedError extends Error {
 }
 
 const READY_TIMEOUT_MS = 15_000;
+const UNREACHABLE: ReadonlySet<string> = new Set([
+  'ENOTFOUND',
+  'ECONNREFUSED',
+  'EHOSTUNREACH',
+  'ENETUNREACH',
+]);
+const HUNG_UP: ReadonlySet<string> = new Set(['ECONNRESET', 'ECONNABORTED', 'EPIPE']);
 
 export async function buildConnectConfig(
   endpoint: SshEndpoint,
@@ -93,8 +100,22 @@ export function friendlyConnectError(
   if (error.level === 'client-authentication') {
     return new Error('Authentication failed. Check the username, password, or private key.');
   }
-  if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+  if (UNREACHABLE.has(error.code ?? '')) {
     return new Error(`Could not reach ${host}:${port}.`);
+  }
+  // A wrong port, or a service that is not SSH, tends to hang up on the handshake or answer in
+  // something else. ssh2 words both as protocol errors.
+  if (HUNG_UP.has(error.code ?? '') || error.message === 'Connection lost before handshake') {
+    return new Error(
+      `The connection to ${host}:${port} was closed by the other end while connecting. ` +
+        'Check that the host and port belong to an SSH server.',
+    );
+  }
+  if (
+    error.message === 'Invalid identification string' ||
+    /^Bad packet length/.test(error.message)
+  ) {
+    return new Error(`${host}:${port} does not look like an SSH server. Check the host and port.`);
   }
   // ssh2's own deadline (`readyTimeout`) for a server that connects but never finishes the login.
   if (error.code === 'ETIMEDOUT' || error.level === 'client-timeout') {

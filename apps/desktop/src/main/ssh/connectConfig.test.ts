@@ -131,11 +131,39 @@ describe('friendlyConnectError', () => {
   it.each([
     ['ENOTFOUND', 'Could not reach example.test:2222.'],
     ['ECONNREFUSED', 'Could not reach example.test:2222.'],
+    ['EHOSTUNREACH', 'Could not reach example.test:2222.'],
+    ['ENETUNREACH', 'Could not reach example.test:2222.'],
     ['ETIMEDOUT', 'Connection to example.test:2222 timed out.'],
   ])('explains %s', (code, message) => {
     const failure = Object.assign(new Error(code), { code });
 
     expect(friendlyConnectError(failure, endpoint, noVerdict).message).toBe(message);
+  });
+
+  it.each([
+    ['a reset socket', Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' })],
+    ['an aborted socket', Object.assign(new Error('aborted'), { code: 'ECONNABORTED' })],
+    [
+      'a hang up before the handshake',
+      Object.assign(new Error('Connection lost before handshake'), { level: 'protocol' }),
+    ],
+  ])('explains %s as the other end closing the connection', (_name, failure) => {
+    expect(friendlyConnectError(failure, endpoint, noVerdict).message).toBe(
+      'The connection to example.test:2222 was closed by the other end while connecting. ' +
+        'Check that the host and port belong to an SSH server.',
+    );
+  });
+
+  it.each([
+    ['Invalid identification string'],
+    ['Bad packet length'],
+    ['Bad packet length: 1213486160'],
+  ])('explains "%s" as a service that is not SSH', (message) => {
+    const failure = Object.assign(new Error(message), { level: 'protocol' });
+
+    expect(friendlyConnectError(failure, endpoint, noVerdict).message).toBe(
+      'example.test:2222 does not look like an SSH server. Check the host and port.',
+    );
   });
 
   it("explains ssh2's own handshake deadline the same way as a timed out socket", () => {
