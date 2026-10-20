@@ -1,5 +1,6 @@
 import type { SshSavedServer } from '@shared/apiTypes';
 import { screen, within } from '@testing-library/react';
+import { useLocation } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
 import { useTerminalStore } from '../../stores/terminalStore';
@@ -24,17 +25,30 @@ const server: SshSavedServer = {
 
 const emptyHistory = { sessions: [], home: '/home/dev', clis: { claude: true, codex: true } };
 
+let pathname = '';
+function LocationProbe(): null {
+  pathname = useLocation().pathname;
+  return null;
+}
+
 function renderPanel(vault: { hasPasskey: boolean; unlocked: boolean }) {
-  return renderWithProviders(<SshServersPanel />, {
-    bridge: {
-      'ssh.listServers': [server],
-      'ssh.vaultStatus': vault,
-      // A primitive answer reads as a value on the fake bridge; a call needs a function.
-      'ssh.unlockVault': async () => true,
-      'ssh.conversations': emptyHistory,
-      'sshAgent.serverHistory': async () => [],
+  pathname = '';
+  return renderWithProviders(
+    <>
+      <SshServersPanel />
+      <LocationProbe />
+    </>,
+    {
+      bridge: {
+        'ssh.listServers': [server],
+        'ssh.vaultStatus': vault,
+        // A primitive answer reads as a value on the fake bridge; a call needs a function.
+        'ssh.unlockVault': async () => true,
+        'ssh.conversations': emptyHistory,
+        'sshAgent.serverHistory': async () => [],
+      },
     },
-  });
+  );
 }
 
 describe('SshServersPanel', () => {
@@ -116,5 +130,47 @@ describe('SshServersPanel', () => {
     expect(sessions).toHaveLength(1);
     expect(sessions[0]).toMatchObject({ kind: 'ssh', sshServerId: server.id });
     expect(screen.queryByRole('dialog', { name: 'prod' })).not.toBeInTheDocument();
+  });
+
+  it('opens the SFTP file manager of a server from its Files button', async () => {
+    const { user } = renderPanel({ hasPasskey: false, unlocked: false });
+
+    await user.click(await screen.findByRole('button', { name: 'Files' }));
+
+    await vi.waitFor(() => expect(pathname).toBe('/ssh-files/srv-1'));
+    expect(useTerminalStore.getState().sessions).toHaveLength(0);
+  });
+
+  it('names the Files button by its visible text, with the longer hint in a tooltip', async () => {
+    const { user } = renderPanel({ hasPasskey: false, unlocked: false });
+    const files = await screen.findByRole('button', { name: 'Files' });
+    expect(files).not.toHaveAttribute('aria-label');
+    await user.hover(files);
+    expect((await screen.findByRole('tooltip')).textContent).toMatch('Browse files over SFTP');
+  });
+
+  it('asks for the vault passkey before opening the file manager', async () => {
+    const { user, bridge } = renderPanel({ hasPasskey: true, unlocked: false });
+
+    await user.click(await screen.findByRole('button', { name: 'Files' }));
+    const unlock = await screen.findByRole('dialog', { name: /Unlock the vault/ });
+    expect(pathname).toBe('/');
+
+    await user.type(within(unlock).getByLabelText('Passkey'), 'secret');
+    await user.click(within(unlock).getByRole('button', { name: 'Unlock' }));
+
+    await vi.waitFor(() => expect(pathname).toBe('/ssh-files/srv-1'));
+    expect(bridge.$fn('ssh.unlockVault')).toHaveBeenCalledWith('secret');
+  });
+
+  it('stays put when the passkey prompt is dismissed', async () => {
+    const { user } = renderPanel({ hasPasskey: true, unlocked: false });
+
+    await user.click(await screen.findByRole('button', { name: 'Files' }));
+    await screen.findByRole('dialog', { name: /Unlock the vault/ });
+    await user.keyboard('{Escape}');
+
+    await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(pathname).toBe('/');
   });
 });

@@ -25,6 +25,10 @@ describe('FTP and SFTP site error codes', () => {
       'vaultLocked',
       'localChanged',
       'server',
+      'exists',
+      'changedOnServer',
+      'tooLarge',
+      'notText',
     ] as const) {
       expect(filesErrorCode(filesError(code, 'No.'))).toBe(code);
       expect(isFilesErrorCode(code)).toBe(true);

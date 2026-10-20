@@ -9,7 +9,7 @@ route: /remote-files
 
 The Remote files page is a file manager for another computer that runs AgentMate. After you connect to it, you can browse its drives and folders, create folders, rename and delete items, upload a file from your computer into any folder, and download a file from it. Transfers are split into parts, checked with a hash, and resume if the connection drops.
 
-This page works over the same connection as AgentMate's remote control (see [Remote](remote.md)). It is for another AgentMate on your network. It is not an SFTP client for SSH servers. To upload a site to an SSH, SFTP or FTP server, use [FTP and SFTP sites](deploy-ftp-sftp.md) in Deploy.
+This page works over the same connection as AgentMate's remote control (see [Remote](remote.md)). It is for another AgentMate on your network. For a server you reach over SSH, use [SSH files (SFTP)](ssh-files.md) instead, which opens a saved SSH server in a two-pane file manager. To deploy a site to an SSH, SFTP or FTP server, use [FTP and SFTP sites](deploy-ftp-sftp.md) in Deploy.
 
 ## Where to find it
 
@@ -78,10 +78,11 @@ Anyone who can pair with the host can browse its whole filesystem, because the c
 
 - To send a single file quickly without browsing, use **Send file** on the Host or remote window instead.
 - Folders cannot be downloaded or uploaded as a whole. Transfer files one at a time.
-- For files on an SSH server, use a terminal tab and your usual tools (`scp`, `rsync`).
+- For files on an SSH server, click **Files** on its row in Remote, SSH. See [SSH files (SFTP)](ssh-files.md).
 
 ## Related
 
 - [Remote](remote.md)
 - [Remote Desktop](remote-desktop.md)
+- [SSH files (SFTP)](ssh-files.md)
 - [Troubleshooting](troubleshooting.md)

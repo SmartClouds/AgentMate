@@ -1,5 +1,6 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
+import { type FileHandle, lstat, open as openLocal, rename, rm, utimes } from 'node:fs/promises';
 import type { Duplex } from 'node:stream';
 import { StringDecoder } from 'node:string_decoder';
 import {
@@ -10,7 +11,11 @@ import {
   type Stats,
 } from 'ssh2';
 import { filesError } from '../../shared/deployFilesErrors';
+import type { DownloadFileOptions, DownloadFileResult, SftpDetailedEntry } from '../sftp/client';
 import { buildConnectConfig, friendlyConnectError, type SshEndpoint } from './connectConfig';
+
+// The SFTP file manager's shapes live with its client contract (main/sftp/client.ts).
+export type { DownloadFileOptions, DownloadFileResult, SftpDetailedEntry };
 
 /**
  * A non-interactive SSH connection: commands with real exit codes, stdin for anything secret,
@@ -76,8 +81,11 @@ export interface SftpStat {
 }
 
 export interface UploadFileOptions {
-  /** The SHA-256 the bytes must have. Anything else is never put in place of the target. */
-  expectedSha256: string;
+  /**
+   * The SHA-256 the bytes must have. Anything else is never put in place of the target. Without
+   * it the bytes go in place whatever they hash to (the file manager does not know it ahead).
+   */
+  expectedSha256?: string;
   /** Default: the mode of the file it replaces, or 0644 for a new one. */
   mode?: number;
   signal?: AbortSignal;
@@ -94,6 +102,8 @@ export interface UploadFileResult {
   atomic: boolean;
   /** A file was at `remotePath` before, so this was a replace rather than a new file. */
   replaced: boolean;
+  /** SHA-256 of the bytes sent, hex. */
+  sha256: string;
 }
 
 /** SSH's reason code when sshd refuses a channel by policy (RFC 4254, section 5.1). */
@@ -143,6 +153,9 @@ const SFTP_TIMEOUT_MS = 30_000;
 const UPLOAD_WRITES_IN_FLIGHT = 16;
 /** A big upload on a slow link may take hours, so only a request that gets no answer fails it. */
 const UPLOAD_STALL_MS = 60_000;
+/** Bytes one download read asks for, and how many of those `downloadFile` keeps in flight. */
+const DOWNLOAD_CHUNK_BYTES = 32 * 1024;
+const DOWNLOAD_READS_IN_FLIGHT = 16;
 /** A site file the web server can read. */
 const DEFAULT_FILE_MODE = 0o644;
 /** The SFTP status for a path that is not there (SSH_FX_NO_SUCH_FILE). */
@@ -506,6 +519,44 @@ export class SshConnection {
   }
 
   /**
+   * A folder's entries for the file manager (E25): like `sftpList`, but with the permission bits,
+   * the server's `ls -l` line, and links marked. A working link counts as its target; a broken
+   * one is kept, flagged, with the link's own size, mtime and mode. Rejects when the folder is
+   * missing.
+   */
+  sftpListDetailed(dir: string, options: SftpOptions = {}): Promise<SftpDetailedEntry[]> {
+    return this.sftpOp(`Listing ${dir}`, options, async (sftp) => {
+      const list = await sftpCall<FileEntryWithStats[]>((done) => sftp.readdir(dir, done));
+      const base = dir.replace(/\/+$/, '');
+      return Promise.all(
+        list.map(async ({ filename, longname, attrs }): Promise<SftpDetailedEntry> => {
+          const own: SftpDetailedEntry = {
+            ...toEntry(filename, attrs),
+            isSymlink: false,
+            brokenLink: false,
+            mode: (attrs.mode ?? 0) & 0o7777,
+            longname,
+          };
+          if (!attrs.isSymbolicLink()) return own;
+          try {
+            const target = await sftpCall<Stats>((done) => sftp.stat(`${base}/${filename}`, done));
+            return {
+              ...toEntry(filename, target),
+              isSymlink: true,
+              brokenLink: false,
+              mode: (target.mode ?? 0) & 0o7777,
+              longname,
+            };
+          } catch {
+            // Missing or unreadable, a link that leads nowhere the user can go.
+            return { ...own, isDirectory: false, isFile: false, isSymlink: true, brokenLink: true };
+          }
+        }),
+      );
+    });
+  }
+
+  /**
    * Up to `length` bytes of a file from `start`. Fewer come back when the file ends sooner,
    * including a file that shrank since it was listed.
    */
@@ -607,8 +658,9 @@ export class SshConnection {
    * Sends a local file to `remotePath` for a site deploy (E23). Unlike `upload`, it streams from
    * disk with several writes in flight, hashes the bytes as they go, and gives a new file the
    * mode a web server needs. The bytes go to `<name>.agentmate-<8 hex>.part` in the same folder
-   * first and only take the real name when their hash is the one expected, so the target keeps
-   * its old contents after a failure, a cancel or a file edited mid-upload.
+   * first and only take the real name when their hash is the one expected (if one was given), so
+   * the target keeps its old contents after a failure, a cancel or a file edited mid-upload. The
+   * result carries the hash of what was sent.
    *
    * Servers without OpenSSH's posix-rename cannot rename onto an existing file; there the old
    * file is moved aside to `<name>.agentmate-<8 hex>.old` first, deleted once the new one is in
@@ -618,7 +670,7 @@ export class SshConnection {
   async uploadFile(
     localPath: string,
     remotePath: string,
-    options: UploadFileOptions,
+    options: UploadFileOptions = {},
   ): Promise<UploadFileResult> {
     const { signal } = options;
     const stallMs = options.stallTimeoutMs ?? UPLOAD_STALL_MS;
@@ -636,7 +688,7 @@ export class SshConnection {
     });
     aborted.catch(() => undefined);
     const step = <T>(work: Promise<T>): Promise<T> =>
-      this.withStallTimeout(work, remotePath, stallMs, aborted);
+      this.withStallTimeout(work, `Sending ${remotePath}`, stallMs, aborted);
     const statOrNull = (path: string): Promise<SftpStat | null> =>
       step(sftpCall<Stats>((done) => sftp.stat(path, done))).then(toStat, (error: unknown) => {
         if (isNoSuchFile(error)) return null;
@@ -690,7 +742,8 @@ export class SshConnection {
         stream.destroy();
       }
 
-      if (hash.digest('hex') !== options.expectedSha256) {
+      const sha256 = hash.digest('hex');
+      if (options.expectedSha256 !== undefined && sha256 !== options.expectedSha256) {
         throw filesError(
           'localChanged',
           `${localPath} changed while it was being sent, so ${remotePath} was left as it was.`,
@@ -707,7 +760,7 @@ export class SshConnection {
       // would leave a new file on the server that the deploy never recorded.
       if (signal?.aborted) throw cancelled();
       const commit = <T>(work: Promise<T>): Promise<T> =>
-        this.withStallTimeout(work, remotePath, stallMs);
+        this.withStallTimeout(work, `Sending ${remotePath}`, stallMs);
       const statAfter = (path: string): Promise<SftpStat | null> =>
         commit(sftpCall<Stats>((done) => sftp.stat(path, done))).then(toStat, (error: unknown) => {
           if (isNoSuchFile(error)) return null;
@@ -743,14 +796,156 @@ export class SshConnection {
 
       const stat = await statAfter(remotePath);
       if (!stat) throw new Error(`${remotePath} was not there right after it was sent.`);
-      return { stat, atomic, replaced: existing !== null };
+      return { stat, atomic, replaced: existing !== null, sha256 };
     } catch (error) {
       // Cleaning up must not wait on the cancel that may have caused the failure.
       const tidy = <T>(work: Promise<T>) =>
-        this.withStallTimeout(work, remotePath, stallMs).catch(() => undefined);
+        this.withStallTimeout(work, `Sending ${remotePath}`, stallMs).catch(() => undefined);
       const left = handle;
       if (left && this.isOpen) await tidy(sftpDone((done) => sftp.close(left, done)));
       if (partExists && this.isOpen) await tidy(sftpDone((done) => sftp.unlink(part, done)));
+      throw error;
+    } finally {
+      stopListening();
+    }
+  }
+
+  /**
+   * Fetches `remotePath` into `localPath` for the file manager (E25), the way `uploadFile` sends:
+   * positional reads with several in flight, written to `<localPath>.agentmate-<8 hex>.part`
+   * beside the target, which only takes the target's place once every byte is in and on disk.
+   * So the target is left as it was after a failure, a cancel, or a remote file that ended early
+   * or grew while it was read (`changedOnServer`). The local file gets the remote mtime unless
+   * `preserveMtime` is false. Only a request that goes unanswered for `stallTimeoutMs` fails the
+   * download; the whole of it has no deadline.
+   */
+  async downloadFile(
+    remotePath: string,
+    localPath: string,
+    options: DownloadFileOptions = {},
+  ): Promise<DownloadFileResult> {
+    const { signal } = options;
+    const stallMs = options.stallTimeoutMs ?? UPLOAD_STALL_MS;
+    const what = `Fetching ${remotePath}`;
+    const cancelled = (): Error =>
+      filesError('cancelled', `The download of ${remotePath} was cancelled.`);
+    const changed = (): Error =>
+      filesError(
+        'changedOnServer',
+        `${remotePath} changed on ${this.endpoint.host} while it was being fetched, so ` +
+          `${localPath} was left as it was.`,
+      );
+    if (signal?.aborted) throw cancelled();
+    const sftp = await this.untilClosed(this.sftp());
+
+    let stopListening = (): void => undefined;
+    const aborted = new Promise<never>((_resolve, reject) => {
+      if (!signal) return;
+      const onAbort = (): void => reject(cancelled());
+      signal.addEventListener('abort', onAbort, { once: true });
+      stopListening = () => signal.removeEventListener('abort', onAbort);
+    });
+    aborted.catch(() => undefined);
+    const step = <T>(work: Promise<T>): Promise<T> =>
+      this.withStallTimeout(work, what, stallMs, aborted);
+
+    const part = `${localPath}.agentmate-${randomBytes(4).toString('hex')}.part`;
+    let remote: Buffer | null = null;
+    let local: FileHandle | null = null;
+    let partExists = false;
+    const pending = new Set<Promise<void>>();
+    try {
+      remote = await step(sftpCall<Buffer>((done) => sftp.open(remotePath, 'r', done)));
+      const handle = remote;
+      const attrs = await step(sftpCall<Stats>((done) => sftp.fstat(handle, done)));
+      const size = attrs.size ?? 0;
+      const mtime = attrs.mtime ?? 0;
+      local = await openLocal(part, 'wx');
+      partExists = true;
+      const file = local;
+
+      // ssh2 splits a read bigger than the server's limit and answers the end of the file with
+      // zero bytes, so a short answer means "go on from here" and an empty one that it ended.
+      const readChunk = async (position: number, length: number): Promise<Buffer> => {
+        const buffer = Buffer.alloc(length);
+        let filled = 0;
+        while (filled < length) {
+          const bytes = await step(
+            sftpCall<number>((done) =>
+              sftp.read(handle, buffer, filled, length - filled, position + filled, done),
+            ),
+          );
+          if (!bytes) throw changed();
+          filled += bytes;
+        }
+        return buffer;
+      };
+
+      let failure: unknown = null;
+      let received = 0;
+      for (let position = 0; position < size && !failure; position += DOWNLOAD_CHUNK_BYTES) {
+        if (signal?.aborted) throw cancelled();
+        const offset = position;
+        const length = Math.min(DOWNLOAD_CHUNK_BYTES, size - offset);
+        const chunk: Promise<void> = readChunk(offset, length)
+          .then((buffer) => file.write(buffer, 0, length, offset))
+          .then(
+            () => {
+              received += length;
+              options.onProgress?.(received, size);
+            },
+            (error: unknown) => {
+              failure ??= error;
+            },
+          );
+        pending.add(chunk);
+        void chunk.then(() => pending.delete(chunk));
+        while (pending.size >= DOWNLOAD_READS_IN_FLIGHT && !failure) {
+          await Promise.race(pending);
+        }
+      }
+      await Promise.all(pending);
+      if (failure) throw failure;
+      // Anything past the size fstat gave means the file grew while it was read.
+      const probe = Buffer.alloc(1);
+      const extra = await step(
+        sftpCall<number>((done) => sftp.read(handle, probe, 0, 1, size, done)),
+      );
+      if (extra) throw changed();
+
+      remote = null;
+      await this.withStallTimeout(
+        sftpDone((done) => sftp.close(handle, done)),
+        what,
+        stallMs,
+      ).catch(() => undefined);
+      await file.sync();
+      local = null;
+      await file.close();
+      // Before the rename, so the target never shows the download's own time.
+      if (options.preserveMtime !== false) await utimes(part, attrs.atime ?? mtime, mtime);
+      if (signal?.aborted) throw cancelled();
+      const replaced = await lstat(localPath).then(
+        () => true,
+        () => false,
+      );
+      await rename(part, localPath);
+      partExists = false;
+      return { size, mtimeMs: mtime * 1000, replaced };
+    } catch (error) {
+      // Every read still out ends soon (it is answered, stalls, or the cancel rejects it), and on
+      // Windows the part cannot go while a write to it is open.
+      await Promise.allSettled(pending);
+      const left = remote;
+      if (left && this.isOpen) {
+        await this.withStallTimeout(
+          sftpDone((done) => sftp.close(left, done)),
+          what,
+          stallMs,
+        ).catch(() => undefined);
+      }
+      await local?.close().catch(() => undefined);
+      if (partExists) await rm(part, { force: true }).catch(() => undefined);
       throw error;
     } finally {
       stopListening();
@@ -836,12 +1031,12 @@ export class SshConnection {
   }
 
   /**
-   * One request of a long upload: it fails when the server leaves it unanswered for `stallMs`,
-   * when the connection ends, or when `aborted` rejects.
+   * One request of a long transfer: it fails when the server leaves it unanswered for `stallMs`,
+   * when the connection ends, or when `aborted` rejects. `what` names the transfer in the error.
    */
   private withStallTimeout<T>(
     work: Promise<T>,
-    remotePath: string,
+    what: string,
     stallMs: number,
     aborted?: Promise<never>,
   ): Promise<T> {
@@ -852,8 +1047,7 @@ export class SshConnection {
           reject(
             filesError(
               'timeout',
-              `Sending ${remotePath}: ${this.endpoint.host} stopped answering for ` +
-                `${seconds(stallMs)}.`,
+              `${what}: ${this.endpoint.host} stopped answering for ` + `${seconds(stallMs)}.`,
             ),
           ),
         stallMs,

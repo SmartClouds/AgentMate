@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowRight,
   Folder,
+  FolderOpen,
   History,
   Pause,
   Plus,
@@ -296,6 +298,7 @@ export function TerminalDrawer({
   const activeSessionId = useTerminalStore((s) => s.activeSessionId);
   const setActiveSession = useTerminalStore((s) => s.setActiveSession);
   const forgetSession = useTerminalStore((s) => s.forgetSession);
+  const navigate = useNavigate();
   const openDefaultSession = useTerminalStore((s) => s.openDefaultSession);
   const closeDrawer = useTerminalStore((s) => s.closeDrawer);
   const toggleShortcut = useShortcutLabel('terminal.toggle');
@@ -431,6 +434,14 @@ export function TerminalDrawer({
           )}
           {sessions.length === 0 && <div className="flex-1" />}
           <div className="flex shrink-0 items-center gap-0.5">
+            {activeSession?.kind === 'ssh' && activeSession.sshServerId ? (
+              <IconButton
+                label="Browse files over SFTP"
+                onClick={() => navigate(`/ssh-files/${activeSession.sshServerId}`)}
+              >
+                <FolderOpen className="h-3.5 w-3.5" />
+              </IconButton>
+            ) : null}
             {activeSession && (
               <IconButton label="Ask AI to run a task here" onClick={() => setAskAiOpen(true)}>
                 <Robot className="h-3.5 w-3.5" />

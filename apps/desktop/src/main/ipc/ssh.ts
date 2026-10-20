@@ -17,6 +17,7 @@ import { isHostKeyFingerprint, type SshHostKeyStatus } from '../../shared/sshHos
 import { listRemoteAgentHistory } from '../agents/remoteSessionHistory';
 import { endsWithPasswordPrompt } from '../agents/shellCommand';
 import { keepAwake } from '../power/keepAwake';
+import { closeSftpSessionsForServer } from '../sftp';
 import { probeHostKey } from '../ssh/connectConfig';
 import { findSavedServer, updateSshServer } from '../ssh/savedServers';
 import { SshSessionManager } from '../ssh/sessionManager';
@@ -240,6 +241,8 @@ export function registerSshHandlers(): void {
     }
     const servers = await store.getSshServers();
     await store.setSshServers(servers.filter((s) => s.id !== id));
+    // After the write, so an SFTP open racing the removal no longer finds the server.
+    closeSftpSessionsForServer(id);
   });
 
   ipcMain.handle(IPC.ssh.pickPrivateKeyFile, async (): Promise<string | null> => {

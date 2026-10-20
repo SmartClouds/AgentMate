@@ -17,6 +17,7 @@ export const PANEL_WIDTHS = {
   vaultList: { min: 260, max: 520, default: 340 },
   pipelinesFilters: { min: 196, max: 360, default: 232 },
   remoteFilesPlaces: { min: 180, max: 360, default: 220 },
+  sftpLocalPane: { min: 260, max: 1200, default: 520 },
 } as const;
 
 export type PanelId = keyof typeof PANEL_WIDTHS;

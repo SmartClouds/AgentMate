@@ -1,12 +1,15 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { readdirSync, readFileSync } from 'node:fs';
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { filesErrorCode } from '../../shared/deployFilesErrors';
 import { sshErrorCode } from '../../shared/sshErrors';
+import type { SftpFileClient } from '../sftp/client';
 import type { SshEndpoint } from './connectConfig';
 import { SshConnection, TunnelRefusedError } from './connection';
+import { type FakeSftpOptions, fakeSftp, useSftp } from './testing/fakeSftpSession';
 import {
   echoStream,
   type FakeSshServer,
@@ -341,119 +344,6 @@ describe('SshConnection lifecycle', () => {
   });
 });
 
-/**
- * The fake server has no SFTP subsystem, so these hand the connection a stand-in session in its
- * place. Real SFTP is covered against OpenSSH in sshRemote.int.test.ts.
- */
-interface FakeStats {
-  mode: number;
-  size?: number;
-  mtime?: number;
-  isDirectory: () => boolean;
-  isFile: () => boolean;
-  isSymbolicLink: () => boolean;
-}
-
-type FakeNode =
-  | { kind: 'dir'; mtime?: number }
-  | { kind: 'file'; content: string; mtime?: number }
-  | { kind: 'link'; target: string };
-
-function stats(node: FakeNode): FakeStats {
-  return {
-    mode: 0,
-    size: node.kind === 'file' ? Buffer.byteLength(node.content) : 4096,
-    mtime: node.kind === 'link' ? 0 : node.mtime,
-    isDirectory: () => node.kind === 'dir',
-    isFile: () => node.kind === 'file',
-    isSymbolicLink: () => node.kind === 'link',
-  };
-}
-
-interface FakeSftpOptions {
-  /** Most bytes one read hands back, like a server with a small packet size. */
-  maxRead?: number;
-  failRead?: boolean;
-  /** Requests of these kinds are never answered. */
-  hang?: ReadonlySet<string>;
-}
-
-function fakeSftp(tree: Record<string, FakeNode>, options: FakeSftpOptions = {}) {
-  const handles = new Map<string, string>();
-  const closed: string[] = [];
-  const resolve = (path: string): FakeNode | undefined => {
-    const node = tree[path];
-    return node?.kind === 'link' ? tree[node.target] : node;
-  };
-  const answer = (kind: string, reply: () => void): void => {
-    if (!options.hang?.has(kind)) setImmediate(reply);
-  };
-  const session = {
-    readdir: (dir: string, cb: (error: Error | undefined, list?: unknown[]) => void) =>
-      answer('readdir', () => {
-        if (tree[dir]?.kind !== 'dir') return cb(new Error('No such file'));
-        const prefix = dir.endsWith('/') ? dir : `${dir}/`;
-        const list = Object.entries(tree)
-          .filter(([path]) => path.startsWith(prefix) && !path.slice(prefix.length).includes('/'))
-          .map(([path, node]) => ({
-            filename: path.slice(prefix.length),
-            longname: '',
-            attrs: stats(node),
-          }));
-        cb(undefined, list);
-      }),
-    stat: (path: string, cb: (error: Error | undefined, attrs?: FakeStats) => void) =>
-      answer('stat', () => {
-        const node = resolve(path);
-        if (!node) return cb(new Error('No such file'));
-        cb(undefined, stats(node));
-      }),
-    realpath: (path: string, cb: (error: Error | undefined, real?: string) => void) =>
-      answer('realpath', () => cb(undefined, path === '.' ? '/home/deploy' : path)),
-    open: (path: string, _flags: string, cb: (error: Error | undefined, h?: Buffer) => void) =>
-      answer('open', () => {
-        const node = resolve(path);
-        if (node?.kind !== 'file') return cb(new Error('No such file'));
-        const handle = `h${handles.size}`;
-        handles.set(handle, node.content);
-        cb(undefined, Buffer.from(handle));
-      }),
-    read: (
-      handle: Buffer,
-      buffer: Buffer,
-      offset: number,
-      length: number,
-      position: number,
-      cb: (error: Error | undefined, bytesRead?: number) => void,
-    ) =>
-      answer('read', () => {
-        if (options.failRead) return cb(new Error('Failure'));
-        const data = Buffer.from(handles.get(handle.toString()) ?? '');
-        const size = Math.min(length, options.maxRead ?? length);
-        const chunk = data.subarray(position, position + size);
-        chunk.copy(buffer, offset);
-        cb(undefined, chunk.length);
-      }),
-    close: (handle: Buffer, cb: (error?: Error) => void) => {
-      closed.push(handle.toString());
-      setImmediate(() => cb());
-    },
-  };
-  return { session, closed };
-}
-
-/** Makes the connection's SFTP session `session`, failing the first `failures` starts. */
-function useSftp(connection: SshConnection, session: unknown, failures = 0) {
-  const client = (connection as unknown as { client: { sftp: (cb: unknown) => void } }).client;
-  let attempts = 0;
-  return vi.spyOn(client, 'sftp').mockImplementation((cb: unknown) => {
-    attempts += 1;
-    const done = cb as (error: Error | undefined, session?: unknown) => void;
-    if (attempts <= failures) setImmediate(() => done(new Error('Unable to start subsystem')));
-    else setImmediate(() => done(undefined, session));
-  });
-}
-
 describe('SshConnection.sftpList', () => {
   it('lists folders and files with their size and mtime in milliseconds', async () => {
     const { connection } = await connect();
@@ -511,6 +401,130 @@ describe('SshConnection.sftpList', () => {
     await expect(connection.sftpList('/srv')).rejects.toThrow(/subsystem/);
     await expect(connection.sftpList('/srv')).resolves.toEqual([]);
     expect(spy).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('SshConnection.sftpListDetailed', () => {
+  const INDEX_LINE = '-rw-r-----    1 deploy   www-data        5 Nov 14  2023 index.html';
+
+  it('lists entries with their permission bits and the line the server sent', async () => {
+    const { connection } = await connect();
+    const { session } = fakeSftp({
+      '/srv': { kind: 'dir' },
+      '/srv/site': { kind: 'dir', mode: 0o2750, mtime: 50 },
+      '/srv/index.html': {
+        kind: 'file',
+        content: 'hello',
+        mode: 0o640,
+        mtime: 1_700_000_000,
+        longname: INDEX_LINE,
+      },
+    });
+    useSftp(connection, session);
+
+    const entries = await connection.sftpListDetailed('/srv');
+
+    expect(entries.sort((a, b) => a.name.localeCompare(b.name))).toEqual([
+      {
+        name: 'index.html',
+        isDirectory: false,
+        isFile: true,
+        size: 5,
+        mtimeMs: 1_700_000_000_000,
+        isSymlink: false,
+        brokenLink: false,
+        mode: 0o640,
+        longname: INDEX_LINE,
+      },
+      {
+        name: 'site',
+        isDirectory: true,
+        isFile: false,
+        size: 4096,
+        mtimeMs: 50_000,
+        isSymlink: false,
+        brokenLink: false,
+        mode: 0o2750,
+        longname: expect.stringMatching(/^d.* site$/),
+      },
+    ]);
+  });
+
+  it('counts a working link as its target and keeps a broken one, marked', async () => {
+    const { connection } = await connect();
+    const fake = fakeSftp({
+      '/data': { kind: 'dir', mode: 0o750, mtime: 4 },
+      '/data/real.txt': { kind: 'file', content: 'abc', mode: 0o600, mtime: 7 },
+      '/srv': { kind: 'dir' },
+      '/srv/to-dir': { kind: 'link', target: '/data' },
+      '/srv/to-file': { kind: 'link', target: '/data/real.txt' },
+      '/srv/gone': { kind: 'link', target: '/data/nowhere', mtime: 3 },
+    });
+    useSftp(connection, fake.session);
+
+    const entries = await connection.sftpListDetailed('/srv/');
+    const byName = (name: string) => entries.find((entry) => entry.name === name);
+
+    expect(byName('to-dir')).toMatchObject({
+      isDirectory: true,
+      isFile: false,
+      isSymlink: true,
+      brokenLink: false,
+      mode: 0o750,
+      mtimeMs: 4000,
+    });
+    expect(byName('to-file')).toMatchObject({
+      isDirectory: false,
+      isFile: true,
+      isSymlink: true,
+      brokenLink: false,
+      size: 3,
+      mtimeMs: 7000,
+      mode: 0o600,
+    });
+    expect(byName('gone')).toEqual({
+      name: 'gone',
+      isDirectory: false,
+      isFile: false,
+      isSymlink: true,
+      brokenLink: true,
+      size: '/data/nowhere'.length,
+      mtimeMs: 3000,
+      mode: 0o777,
+      longname: expect.stringMatching(/^lrwxrwxrwx.* gone$/),
+    });
+    expect(fake.ops).toContain('stat /srv/to-dir');
+    expect(fake.ops).not.toContain('stat /srv//to-dir');
+  });
+
+  it('rejects for a folder that is not there, with the SFTP status', async () => {
+    const { connection } = await connect();
+    useSftp(connection, fakeSftp({}).session);
+
+    await expect(connection.sftpListDetailed('/nope')).rejects.toMatchObject({ code: 2 });
+  });
+
+  it('gives up on a server that never answers', async () => {
+    const { connection } = await connect();
+    const { session } = fakeSftp({ '/srv': { kind: 'dir' } }, { hang: new Set(['readdir']) });
+    useSftp(connection, session);
+
+    await expect(connection.sftpListDetailed('/srv', { timeoutMs: 50 })).rejects.toThrow(
+      /Listing \/srv .*did not answer/,
+    );
+  });
+
+  it('counts a link whose target never answers against the same deadline', async () => {
+    const { connection } = await connect();
+    const { session } = fakeSftp(
+      { '/srv': { kind: 'dir' }, '/srv/l': { kind: 'link', target: '/srv' } },
+      { hang: new Set(['stat']) },
+    );
+    useSftp(connection, session);
+
+    await expect(connection.sftpListDetailed('/srv', { timeoutMs: 50 })).rejects.toThrow(
+      /did not answer/,
+    );
   });
 });
 
@@ -869,6 +883,7 @@ describe('SshConnection.uploadFile', () => {
       },
       atomic: true,
       replaced: false,
+      sha256: file.sha256,
     });
     expect(fake.parts()).toEqual([]);
     const opened = fake.ops.find((op) => op.startsWith('open '));
@@ -929,6 +944,21 @@ describe('SshConnection.uploadFile', () => {
 
     expect(result.stat.size).toBe(0);
     expect(fake.text('/srv/.keep')).toBe('');
+  });
+
+  it('sends a file without an expected hash and reports the one it computed', async () => {
+    const { connection } = await connect();
+    const fake = writableSftp();
+    fake.dir('/srv');
+    fake.file('/srv/notes.txt', 'old');
+    useSftp(connection, fake.session);
+    const file = await local('edited in the file manager');
+
+    const result = await connection.uploadFile(file.path, '/srv/notes.txt');
+
+    expect(result).toMatchObject({ replaced: true, atomic: true, sha256: file.sha256 });
+    expect(fake.text('/srv/notes.txt')).toBe('edited in the file manager');
+    expect(fake.parts()).toEqual([]);
   });
 
   it('refuses to put bytes in place that do not match the plan', async () => {
@@ -1191,5 +1221,277 @@ describe('SshConnection.upload', () => {
       /does not support/,
     );
     expect([...fake.nodes.keys()]).toEqual(['/', '/etc']);
+  });
+});
+
+describe('SshConnection.downloadFile', () => {
+  let scratch = '';
+  beforeAll(async () => {
+    scratch = await mkdtemp(join(tmpdir(), 'agentmate-download-file-'));
+  });
+  afterAll(async () => {
+    await rm(scratch, { recursive: true, force: true });
+  });
+
+  const MTIME = 1_700_000_000;
+  let counter = 0;
+  const target = (): string => {
+    counter += 1;
+    return join(scratch, `target-${counter}.bin`);
+  };
+  const parts = async (): Promise<string[]> =>
+    (await readdir(scratch)).filter((name) => name.endsWith('.part'));
+  const sha = (bytes: Buffer): string => createHash('sha256').update(bytes).digest('hex');
+
+  async function serve(content: Buffer | string, options: FakeSftpOptions = {}) {
+    const { connection } = await connect();
+    const fake = fakeSftp(
+      { '/srv': { kind: 'dir' }, '/srv/f.bin': { kind: 'file', content, mtime: MTIME } },
+      options,
+    );
+    useSftp(connection, fake.session);
+    return { connection, fake };
+  }
+
+  it('fetches a big file across short reads with several in flight', async () => {
+    const bytes = randomBytes(1024 * 1024);
+    const { connection, fake } = await serve(bytes, { maxRead: 4000 });
+    const local = target();
+
+    const result = await connection.downloadFile('/srv/f.bin', local);
+
+    expect(result).toEqual({ size: bytes.length, mtimeMs: MTIME * 1000, replaced: false });
+    expect(sha(await readFile(local))).toBe(sha(bytes));
+    expect(fake.peak('read')).toBeGreaterThan(1);
+    expect(fake.peak('read')).toBeLessThanOrEqual(16);
+    expect(fake.openHandles()).toEqual([]);
+    expect(await parts()).toEqual([]);
+  });
+
+  it('reports progress that only goes up and ends at the size', async () => {
+    const bytes = randomBytes(300_000);
+    const { connection } = await serve(bytes, { maxRead: 10_000 });
+    const progress: [number, number][] = [];
+
+    await connection.downloadFile('/srv/f.bin', target(), {
+      onProgress: (received, total) => progress.push([received, total]),
+    });
+
+    const received = progress.map(([got]) => got);
+    expect(received).toEqual([...received].sort((a, b) => a - b));
+    expect(progress.at(-1)).toEqual([bytes.length, bytes.length]);
+    expect(progress.every(([, total]) => total === bytes.length)).toBe(true);
+  });
+
+  it('writes to a part file first and only then replaces the target', async () => {
+    const { connection } = await serve('new contents');
+    const local = target();
+    await writeFile(local, 'old local');
+    const seen: { parts: string[]; target: string }[] = [];
+
+    const result = await connection.downloadFile('/srv/f.bin', local, {
+      onProgress: () =>
+        seen.push({
+          parts: readdirSync(scratch).filter((name) => name.endsWith('.part')),
+          target: readFileSync(local, 'utf-8'),
+        }),
+    });
+
+    expect(seen.length).toBeGreaterThan(0);
+    for (const moment of seen) {
+      expect(moment.target).toBe('old local');
+      expect(moment.parts).toHaveLength(1);
+      expect(moment.parts[0]).toMatch(/^target-\d+\.bin\.agentmate-[0-9a-f]{8}\.part$/);
+    }
+    expect(result.replaced).toBe(true);
+    await expect(readFile(local, 'utf-8')).resolves.toBe('new contents');
+    expect(await parts()).toEqual([]);
+  });
+
+  it('fetches an empty file', async () => {
+    const { connection } = await serve('');
+    const local = target();
+
+    const result = await connection.downloadFile('/srv/f.bin', local);
+
+    expect(result.size).toBe(0);
+    await expect(readFile(local, 'utf-8')).resolves.toBe('');
+  });
+
+  it('gives the local file the remote mtime unless told not to', async () => {
+    const { connection } = await serve('dated');
+    const kept = target();
+    const fresh = target();
+
+    await connection.downloadFile('/srv/f.bin', kept);
+    await connection.downloadFile('/srv/f.bin', fresh, { preserveMtime: false });
+
+    expect((await stat(kept)).mtimeMs).toBe(MTIME * 1000);
+    expect((await stat(fresh)).mtimeMs).toBeGreaterThan(Date.now() - 60_000);
+  });
+
+  it('leaves the target alone and removes the part file when a read fails', async () => {
+    const { connection, fake } = await serve(randomBytes(100_000));
+    fake.failOn('read', '/srv/f.bin');
+    const local = target();
+    await writeFile(local, 'old local');
+
+    await expect(connection.downloadFile('/srv/f.bin', local)).rejects.toMatchObject({ code: 4 });
+
+    await expect(readFile(local, 'utf-8')).resolves.toBe('old local');
+    expect(await parts()).toEqual([]);
+    expect(fake.openHandles()).toEqual([]);
+  });
+
+  it('passes on a remote file that is not there without creating anything', async () => {
+    const { connection } = await serve('x');
+    const local = target();
+
+    await expect(connection.downloadFile('/srv/missing', local)).rejects.toMatchObject({
+      code: 2,
+    });
+
+    expect(await parts()).toEqual([]);
+    await expect(stat(local)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('closes the remote file when the local folder is missing', async () => {
+    const { connection, fake } = await serve('x');
+
+    await expect(
+      connection.downloadFile('/srv/f.bin', join(scratch, 'no-such-dir', 'f.bin')),
+    ).rejects.toMatchObject({ code: 'ENOENT' });
+
+    expect(fake.closed).toEqual(['h0']);
+  });
+
+  it('removes the part file and keeps the target when cancelled', async () => {
+    const controller = new AbortController();
+    const { connection } = await serve(randomBytes(200_000), {
+      onRequest: (kind) => {
+        if (kind === 'read') controller.abort();
+      },
+    });
+    const local = target();
+    await writeFile(local, 'old local');
+
+    const failure = await connection
+      .downloadFile('/srv/f.bin', local, { signal: controller.signal })
+      .catch((error: unknown) => error);
+
+    expect(filesErrorCode(failure)).toBe('cancelled');
+    await expect(readFile(local, 'utf-8')).resolves.toBe('old local');
+    expect(await parts()).toEqual([]);
+  });
+
+  it('still stops when cancelled after the last byte, before the target is replaced', async () => {
+    const controller = new AbortController();
+    const { connection } = await serve('new contents', {
+      onRequest: (kind) => {
+        if (kind === 'close') controller.abort();
+      },
+    });
+    const local = target();
+    await writeFile(local, 'old local');
+
+    const failure = await connection
+      .downloadFile('/srv/f.bin', local, { signal: controller.signal })
+      .catch((error: unknown) => error);
+
+    expect(filesErrorCode(failure)).toBe('cancelled');
+    await expect(readFile(local, 'utf-8')).resolves.toBe('old local');
+    expect(await parts()).toEqual([]);
+  });
+
+  it('removes the part file when it cannot take the target name', async () => {
+    const { connection } = await serve('x');
+    const local = target();
+    await mkdir(join(local, 'inside'), { recursive: true });
+
+    await expect(connection.downloadFile('/srv/f.bin', local)).rejects.toThrow();
+
+    expect(await parts()).toEqual([]);
+    expect((await stat(local)).isDirectory()).toBe(true);
+  });
+
+  it('refuses to start when already cancelled', async () => {
+    const { connection, fake } = await serve('x');
+
+    const failure = await connection
+      .downloadFile('/srv/f.bin', target(), { signal: AbortSignal.abort() })
+      .catch((error: unknown) => error);
+
+    expect(filesErrorCode(failure)).toBe('cancelled');
+    expect(fake.ops).toEqual([]);
+  });
+
+  it('gives up on a read that stalls', async () => {
+    const { connection, fake } = await serve('stuck');
+    fake.hang('read');
+
+    const failure = await connection
+      .downloadFile('/srv/f.bin', target(), { stallTimeoutMs: 50 })
+      .catch((error: unknown) => error);
+
+    expect(filesErrorCode(failure)).toBe('timeout');
+    expect(String(failure)).toMatch(/Fetching \/srv\/f\.bin: .* stopped answering/);
+    expect(await parts()).toEqual([]);
+  });
+
+  it('fails a file that shrinks while it is read, and keeps the target', async () => {
+    const { connection } = await serve(randomBytes(200_000), {
+      maxRead: 8000,
+      truncateAt: { path: '/srv/f.bin', size: 50_000 },
+    });
+    const local = target();
+    await writeFile(local, 'old local');
+
+    const failure = await connection
+      .downloadFile('/srv/f.bin', local)
+      .catch((error: unknown) => error);
+
+    expect(filesErrorCode(failure)).toBe('changedOnServer');
+    await expect(readFile(local, 'utf-8')).resolves.toBe('old local');
+    expect(await parts()).toEqual([]);
+  });
+
+  it('fails a file that grows while it is read', async () => {
+    let grown = false;
+    const { connection, fake } = await serve('short', {
+      onRequest: (kind) => {
+        if (kind !== 'read' || grown) return;
+        grown = true;
+        const node = fake.nodes.get('/srv/f.bin');
+        if (node?.kind === 'file') node.content = 'short and then some';
+      },
+    });
+
+    const failure = await connection
+      .downloadFile('/srv/f.bin', target())
+      .catch((error: unknown) => error);
+
+    expect(filesErrorCode(failure)).toBe('changedOnServer');
+    expect(await parts()).toEqual([]);
+  });
+
+  it('fails and cleans up when the connection ends mid-download', async () => {
+    const { connection, fake } = await serve('x');
+    fake.hang('read');
+    const local = target();
+    const download = connection.downloadFile('/srv/f.bin', local);
+    await vi.waitFor(() => expect(fake.ops.some((op) => op.startsWith('read'))).toBe(true));
+    connection.close();
+
+    await expect(download).rejects.toThrow(/closed/);
+    expect(await parts()).toEqual([]);
+    await expect(stat(local)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+});
+
+describe('SshConnection as the file manager client', () => {
+  it('has the shape main/sftp is written against', () => {
+    // Fails to compile when SshConnection and SftpFileClient drift apart.
+    const asClient = (connection: SshConnection): SftpFileClient => connection;
+    expect(asClient).toBeTypeOf('function');
   });
 });

@@ -20,6 +20,9 @@ import {
  * can never store a key the user did not see.
  */
 
+// The SFTP file manager's sessions are main/sftp's own business; here only the hook is checked.
+vi.mock('../sftp', () => ({ closeSftpSessionsForServer: vi.fn() }));
+
 const userData = useTempUserData();
 let server: FakeSshServer;
 let ssh: typeof import('./ssh');
@@ -53,6 +56,25 @@ beforeEach(async () => {
 afterEach(async () => {
   ssh.killAllSshSessions();
   await server.close();
+});
+
+describe('ssh:removeServer', () => {
+  it('forgets the server and closes its SFTP sessions', async () => {
+    userData.writeData('ssh-servers.json', [saved(), saved({ id: 'srv-2', nickname: 'stage' })]);
+    // Imported after loadIpc, so this is the mock ssh.ts was given.
+    const sftp = await import('../sftp');
+    let storedWhenClosed: string[] = [];
+    vi.mocked(sftp.closeSftpSessionsForServer).mockImplementation(() => {
+      storedWhenClosed = storedServers().map((one) => one.id);
+    });
+
+    await invoke(IPC.ssh.removeServer, 'srv-1');
+
+    expect(sftp.closeSftpSessionsForServer).toHaveBeenCalledWith('srv-1');
+    expect(storedServers().map((one) => one.id)).toEqual(['srv-2']);
+    // The server is gone from the store first, so an open racing the removal cannot find it.
+    expect(storedWhenClosed).toEqual(['srv-2']);
+  });
 });
 
 describe('ssh:hostKeyStatus', () => {

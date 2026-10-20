@@ -467,6 +467,7 @@ import { createDeployRegistry } from './deployRegistry';
 import { createDeployWordPress } from './deployWordPress';
 import { createErrorTracking } from './errorTracking';
 import { createHealth } from './health';
+import { createSftp } from './sftp';
 
 interface TerminalDataPayload {
   sessionId: string;
@@ -2685,6 +2686,7 @@ const agentmatApi = {
   deployHardening,
   deployWordPress,
   deployFiles,
+  sftp: createSftp(subscribe),
   deployFirewall,
   deploySystem,
   deployJobs,

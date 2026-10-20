@@ -16,6 +16,7 @@ import {
   Workspace,
 } from '@/components/icons';
 import { NAV_ITEMS } from '@/components/layout/Sidebar';
+import { SshFilesPaletteGroup } from '@/components/sftp/SshFilesPaletteGroup';
 import { VaultPaletteGroup } from '@/components/vault/VaultPaletteGroup';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
@@ -228,6 +229,8 @@ export function CommandPalette(): React.JSX.Element {
               </CommandPrimitive.Group>
 
               <VaultPaletteGroup enabled={open} onDone={() => setOpen(false)} />
+
+              <SshFilesPaletteGroup enabled={open} query={query} onDone={() => setOpen(false)} />
 
               {(projectsQuery.data?.length ?? 0) > 0 && (
                 <CommandPrimitive.Group
