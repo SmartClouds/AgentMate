@@ -44,6 +44,7 @@ import {
   SpeechLanguageChip,
   useSpeechSettings,
   VoiceRecordButton,
+  VoiceRecordingStrip,
 } from '@/components/promptBuilder/VoiceControls';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
@@ -468,29 +469,38 @@ export function ProjectPromptBuildDialog({
           <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-2">
             <div className="flex min-h-0 flex-col gap-2 border-b border-border/70 p-5 md:border-b-0 md:border-r">
               <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="prompt-build-request">Your request</Label>
+                <Label htmlFor="prompt-build-request" className="shrink-0">
+                  Your request
+                </Label>
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] tabular-nums text-muted-foreground">
-                    {rawInput.length === 0 ? 'Empty' : `${rawInput.length} chars`}
-                  </span>
-                  {voice.supported && (
+                  {/* A recording takes the counter's and the language chip's room, so the row keeps its height. */}
+                  {voice.status === 'recording' ? (
+                    <VoiceRecordingStrip voice={voice} />
+                  ) : (
                     <>
-                      <SpeechLanguageChip
-                        language={speechLanguage}
-                        modelKey={speechModel}
-                        disabled={voice.status !== 'idle' || saveVoiceSettings.isPending}
-                        onLanguageChange={(code) =>
-                          saveVoiceSettings.mutate({ speechLanguage: code })
-                        }
-                        onModelChange={(key) => saveVoiceSettings.mutate({ speechModel: key })}
-                      />
-                      <VoiceRecordButton
-                        voice={voice}
-                        idleText="Dictate"
-                        idleLabel="Dictate your request"
-                        blockedReason={promptVoice.status !== 'idle' ? OTHER_MIC_BUSY : null}
-                      />
+                      <span className="text-[11px] tabular-nums text-muted-foreground">
+                        {rawInput.length === 0 ? 'Empty' : `${rawInput.length} chars`}
+                      </span>
+                      {voice.supported && (
+                        <SpeechLanguageChip
+                          language={speechLanguage}
+                          modelKey={speechModel}
+                          disabled={voice.status !== 'idle' || saveVoiceSettings.isPending}
+                          onLanguageChange={(code) =>
+                            saveVoiceSettings.mutate({ speechLanguage: code })
+                          }
+                          onModelChange={(key) => saveVoiceSettings.mutate({ speechModel: key })}
+                        />
+                      )}
                     </>
+                  )}
+                  {voice.supported && (
+                    <VoiceRecordButton
+                      voice={voice}
+                      idleText="Dictate"
+                      idleLabel="Dictate your request"
+                      blockedReason={promptVoice.status !== 'idle' ? OTHER_MIC_BUSY : null}
+                    />
                   )}
                 </div>
               </div>
@@ -557,16 +567,22 @@ export function ProjectPromptBuildDialog({
             <div className="relative flex min-h-0 flex-col gap-2 p-5">
               <div className="flex items-start justify-between gap-2">
                 {/* The chip wraps under the title when the column is narrow, so its model name is
-                    never squeezed away to make room for the buttons. */}
+                    never squeezed away to make room for the buttons. While Speak prompt records,
+                    the recording strip sits where the chip is, and the mic button turns into the
+                    stop button without changing size, so no row grows and the text box stays put. */}
                 <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-1">
                   <Label htmlFor="prompt-build-output" className="flex h-8 shrink-0 items-center">
                     Generated prompt
                   </Label>
-                  <RunRecommendationChip
-                    state={runRecommendation}
-                    className="max-w-full"
-                    sizeOnOpen={!autoSize}
-                  />
+                  {promptVoice.status === 'recording' ? (
+                    <VoiceRecordingStrip voice={promptVoice} />
+                  ) : (
+                    <RunRecommendationChip
+                      state={runRecommendation}
+                      className="max-w-full"
+                      sizeOnOpen={!autoSize}
+                    />
+                  )}
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
                   {promptVoice.supported && (

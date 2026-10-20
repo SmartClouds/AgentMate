@@ -9,15 +9,20 @@ const hook = vi.hoisted(() => ({
   phase: { kind: 'connecting' } as RdpPhase,
   reconnect: vi.fn(),
   reviewCertificate: vi.fn(),
+  saveRemoteFiles: vi.fn(),
+  options: null as null | { clipboard: boolean; fileTransfer: boolean; resolution: string },
+  remoteFiles: [] as { name: string; size: number; lastModified: number }[],
+  remoteClipboard: 'idle' as 'idle' | 'copying' | 'ready',
 }));
 
 vi.mock('./useRdpSession', () => ({
   useRdpSession: () => ({
     phase: hook.phase,
     nickname: 'Office PC',
-    options: null,
+    options: hook.options,
     certificate: null,
-    remoteFiles: [],
+    remoteFiles: hook.remoteFiles,
+    remoteClipboard: hook.remoteClipboard,
     transfers: [],
     notice: null,
     scale: 'fit',
@@ -33,7 +38,7 @@ vi.mock('./useRdpSession', () => ({
     getRemoteElement: () => null,
     pickAndSendFiles: vi.fn(),
     dropFiles: vi.fn(),
-    saveRemoteFiles: vi.fn(),
+    saveRemoteFiles: hook.saveRemoteFiles,
   }),
 }));
 
@@ -52,6 +57,10 @@ beforeEach(() => {
   hook.phase = { kind: 'connecting' };
   hook.reconnect.mockClear();
   hook.reviewCertificate.mockClear();
+  hook.saveRemoteFiles.mockClear();
+  hook.options = null;
+  hook.remoteFiles = [];
+  hook.remoteClipboard = 'idle';
 });
 
 describe('RdpSessionRoute Ask AI', () => {
@@ -161,5 +170,62 @@ describe('RdpSessionRoute when the connection fails', () => {
 
     expect(screen.getByText('Connecting to Office PC…')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reconnect' })).not.toBeInTheDocument();
+  });
+});
+
+describe('RdpSessionRoute Save files', () => {
+  const report = { name: 'report.pdf', size: 5, lastModified: 0 };
+
+  beforeEach(() => {
+    hook.phase = { kind: 'connected' };
+    hook.options = { clipboard: true, fileTransfer: true, resolution: 'fitWindow' };
+  });
+
+  async function hoverSaveFiles(): Promise<HTMLElement> {
+    const { user } = renderRoute();
+    const button = screen.getByRole('button', { name: /Save files/ });
+    // A disabled button can't be hovered, so its tooltip hangs off the wrapper around it.
+    await user.hover(button.hasAttribute('disabled') ? (button.parentElement ?? button) : button);
+    return screen.findByRole('tooltip');
+  }
+
+  it('is not shown when file copy is off', () => {
+    hook.options = { clipboard: true, fileTransfer: false, resolution: 'fitWindow' };
+    renderRoute();
+    expect(screen.queryByRole('button', { name: /Save files/ })).not.toBeInTheDocument();
+  });
+
+  it('tells you to copy on the server and paste here before anything is copied', async () => {
+    expect(await hoverSaveFiles()).toHaveTextContent(/paste them here with Ctrl\+V/);
+  });
+
+  it('says the files are on the way to the clipboard while they download', async () => {
+    hook.remoteFiles = [report];
+    hook.remoteClipboard = 'copying';
+    expect(await hoverSaveFiles()).toHaveTextContent(/Copying the files you copied on the server/);
+  });
+
+  it('says Ctrl+V pastes them once they are on the clipboard', async () => {
+    hook.remoteFiles = [report];
+    hook.remoteClipboard = 'ready';
+    expect(await hoverSaveFiles()).toHaveTextContent(/on your clipboard, so Ctrl\+V pastes them/);
+  });
+
+  it('only offers saving when the files could not be put on the clipboard', async () => {
+    hook.remoteFiles = [report];
+    hook.remoteClipboard = 'idle';
+    const tip = await hoverSaveFiles();
+    expect(tip).toHaveTextContent('Save the files you copied on the server to this computer');
+    expect(tip).not.toHaveTextContent(/clipboard/);
+  });
+
+  it('saves to a folder when clicked, whatever the clipboard did', async () => {
+    hook.remoteFiles = [report];
+    hook.remoteClipboard = 'ready';
+    const { user } = renderRoute();
+
+    await user.click(screen.getByRole('button', { name: /Save files/ }));
+
+    expect(hook.saveRemoteFiles).toHaveBeenCalledOnce();
   });
 });

@@ -1,13 +1,17 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   RdpCertificateCheckResult,
   RdpCertificateInfo,
   RdpFailureInfo,
+  RdpStageResult,
+  RdpStageStart,
   StoredRdpServer,
 } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';
 import { FakeBrowserWindow } from '../../test/main/electronMock';
+import { tempDir } from '../../test/main/fixtures';
 import { invoke, invokeFrom, loadIpc, useTempUserData } from '../../test/main/ipcHarness';
 import { type HandshakeDeps, RdpHandshakeError } from '../rdp/handshake';
 import type { RdpProxyHooks, RdpProxyTarget } from '../rdp/proxy';
@@ -23,9 +27,23 @@ const fakes = vi.hoisted(() => ({
   fetchServerCertificate: vi.fn(),
   hooks: null as null | RdpProxyHooks,
   proxyDeps: undefined as HandshakeDeps | undefined,
+  /** The OS boundary of the files copied on the server: the folder and the Windows clipboard. */
+  staging: { supported: true, folder: '' },
+  putFilesOnClipboard: vi.fn(),
 }));
 
 vi.mock('../agents/rdpTaskRunner', () => ({ stopRdpTask: fakes.stopRdpTask }));
+vi.mock('../rdp/remoteClipboard', () => ({
+  MAX_STAGED_BYTES: 1000,
+  stagingSupported: () => fakes.staging.supported,
+  prepareStagingFolder: async () => fakes.staging.folder,
+  putFilesOnClipboard: fakes.putFilesOnClipboard,
+  sweepStaleStaging: async () => undefined,
+}));
+vi.mock('../rdp/clipboardFiles', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../rdp/clipboardFiles')>()),
+  rawSignature: () => 'signature-of-staged-files',
+}));
 vi.mock('../rdp/sessionWindows', async () => {
   const { FakeBrowserWindow: Window } = await import('../../test/main/electronMock');
   return {
@@ -547,5 +565,161 @@ describe('editing a saved server', () => {
     await expect(invoke(IPC.rdp.trustCertificate, 'server-1', 'AA:11:22')).rejects.toThrow(
       'out of date',
     );
+  });
+});
+
+describe('files copied on the server', () => {
+  async function openWindow(): Promise<{
+    sessionId: string;
+    window: FakeBrowserWindow;
+  }> {
+    const sessionId = await invoke<string>(IPC.rdp.openSession, 'server-1');
+    return { sessionId, window: FakeBrowserWindow.instances[0] };
+  }
+
+  /** What the session window does for each file: ask for a slot, write the bytes, finish it. */
+  async function download(
+    window: FakeBrowserWindow,
+    downloadId: string,
+    index: number,
+    entry: { name: string; path?: string; isDirectory: boolean },
+    contents = '',
+  ): Promise<void> {
+    await invokeFrom(window.webContents, IPC.rdp.prepareDownloadEntry, downloadId, index, entry);
+    if (entry.isDirectory) return;
+    await invokeFrom(
+      window.webContents,
+      IPC.rdp.writeDownloadChunk,
+      downloadId,
+      index,
+      Buffer.from(contents),
+    );
+    await invokeFrom(window.webContents, IPC.rdp.finishDownloadFile, downloadId, index, true);
+  }
+
+  beforeEach(() => {
+    fakes.staging = { supported: true, folder: tempDir('agentmate-staging-') };
+    fakes.putFilesOnClipboard.mockReset();
+    fakes.putFilesOnClipboard.mockResolvedValue(undefined);
+  });
+
+  it('puts what was downloaded on the clipboard, one entry per thing that was copied', async () => {
+    const { sessionId, window } = await openWindow();
+
+    const start = await invokeFrom<RdpStageStart>(
+      window.webContents,
+      IPC.rdp.beginStaging,
+      sessionId,
+      12,
+    );
+    if (!start.ok) throw new Error('staging should have started');
+    await download(window, start.downloadId, 0, { name: 'photos', isDirectory: true });
+    await download(
+      window,
+      start.downloadId,
+      1,
+      { name: 'a.jpg', path: 'photos', isDirectory: false },
+      'jpg',
+    );
+    await download(window, start.downloadId, 2, { name: 'notes.txt', isDirectory: false }, 'notes');
+    const result = await invokeFrom<RdpStageResult>(
+      window.webContents,
+      IPC.rdp.finishStaging,
+      sessionId,
+      start.downloadId,
+    );
+
+    expect(result).toEqual({ ok: true, count: 2, signature: 'signature-of-staged-files' });
+    expect(fakes.putFilesOnClipboard).toHaveBeenCalledTimes(1);
+    expect([...fakes.putFilesOnClipboard.mock.calls[0][0]].sort()).toEqual(
+      [join(fakes.staging.folder, 'notes.txt'), join(fakes.staging.folder, 'photos')].sort(),
+    );
+    expect(existsSync(join(fakes.staging.folder, 'photos', 'a.jpg'))).toBe(true);
+  });
+
+  it('does not start when the copy is more than the clipboard should carry', async () => {
+    const { sessionId, window } = await openWindow();
+
+    const start = await invokeFrom<RdpStageStart>(
+      window.webContents,
+      IPC.rdp.beginStaging,
+      sessionId,
+      1001,
+    );
+
+    expect(start).toEqual({ ok: false, reason: 'tooLarge', limitBytes: 1000 });
+  });
+
+  it('does not start where the OS has no way to hold a file list', async () => {
+    fakes.staging.supported = false;
+    const { sessionId, window } = await openWindow();
+
+    const start = await invokeFrom<RdpStageStart>(
+      window.webContents,
+      IPC.rdp.beginStaging,
+      sessionId,
+      10,
+    );
+
+    expect(start).toEqual({ ok: false, reason: 'unsupported' });
+  });
+
+  it('reports a clipboard that would not take the files as data', async () => {
+    fakes.putFilesOnClipboard.mockRejectedValue(new Error('Windows would not take them.'));
+    const { sessionId, window } = await openWindow();
+    const start = await invokeFrom<RdpStageStart>(
+      window.webContents,
+      IPC.rdp.beginStaging,
+      sessionId,
+      5,
+    );
+    if (!start.ok) throw new Error('staging should have started');
+    await download(window, start.downloadId, 0, { name: 'a.txt', isDirectory: false }, 'a');
+
+    const result = await invokeFrom<RdpStageResult>(
+      window.webContents,
+      IPC.rdp.finishStaging,
+      sessionId,
+      start.downloadId,
+    );
+
+    expect(result).toEqual({ ok: false, error: 'Windows would not take them.' });
+  });
+
+  it('has nothing to copy when no file made it to disk', async () => {
+    const { sessionId, window } = await openWindow();
+    const start = await invokeFrom<RdpStageStart>(
+      window.webContents,
+      IPC.rdp.beginStaging,
+      sessionId,
+      5,
+    );
+    if (!start.ok) throw new Error('staging should have started');
+    await invokeFrom(window.webContents, IPC.rdp.prepareDownloadEntry, start.downloadId, 0, {
+      name: 'half.txt',
+      isDirectory: false,
+    });
+    await invokeFrom(window.webContents, IPC.rdp.finishDownloadFile, start.downloadId, 0, false);
+
+    const result = await invokeFrom<RdpStageResult>(
+      window.webContents,
+      IPC.rdp.finishStaging,
+      sessionId,
+      start.downloadId,
+    );
+
+    expect(result).toEqual({ ok: false, error: 'Nothing was copied from the server.' });
+    expect(fakes.putFilesOnClipboard).not.toHaveBeenCalled();
+  });
+
+  it('refuses a session that has ended', async () => {
+    const { window } = await openWindow();
+
+    await expect(
+      invokeFrom(window.webContents, IPC.rdp.beginStaging, 'not-a-session', 5),
+    ).rejects.toThrow('This session has ended.');
+    await expect(
+      invokeFrom(window.webContents, IPC.rdp.finishStaging, 'not-a-session', 'x'),
+    ).rejects.toThrow('This session has ended.');
   });
 });

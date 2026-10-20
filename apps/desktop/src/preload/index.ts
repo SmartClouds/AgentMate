@@ -232,6 +232,8 @@ import type {
   RdpDownloadTarget,
   RdpProxyErrorPayload,
   RdpSavedServer,
+  RdpStageResult,
+  RdpStageStart,
   RdpWindowState,
   RecordUiProInstallInput,
   RemoteFileManagerEntry,
@@ -2539,6 +2541,15 @@ const rdp = {
     ipcRenderer.invoke(IPC.rdp.finishDownloadFile, downloadId, index, ok),
   openDownloadFolder: (downloadId: string): Promise<void> =>
     ipcRenderer.invoke(IPC.rdp.openDownloadFolder, downloadId),
+  /**
+   * Starts a download into a private folder instead of one the person picks, for files copied on
+   * the server that are then put on this computer's clipboard. Fill it with the same
+   * prepareDownloadEntry / writeDownloadChunk / finishDownloadFile calls, then `finishStaging`.
+   */
+  beginStaging: (sessionId: string, totalBytes: number): Promise<RdpStageStart> =>
+    ipcRenderer.invoke(IPC.rdp.beginStaging, sessionId, totalBytes),
+  finishStaging: (sessionId: string, downloadId: string): Promise<RdpStageResult> =>
+    ipcRenderer.invoke(IPC.rdp.finishStaging, sessionId, downloadId),
   onCertificatePrompt: (callback: (prompt: RdpCertificatePrompt) => void): (() => void) =>
     subscribe(IPC.rdp.onCertificatePrompt, callback),
   onProxyError: (callback: (payload: RdpProxyErrorPayload) => void): (() => void) =>

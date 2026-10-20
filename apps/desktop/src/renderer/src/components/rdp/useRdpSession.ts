@@ -39,6 +39,13 @@ export interface RdpTransfer {
   error?: string;
 }
 
+/**
+ * Where the files last copied on the server are on their way to this computer's clipboard:
+ * `copying` while they download, `ready` once Ctrl+V pastes them, `idle` when they aren't going
+ * there (nothing copied, too large, a failure, or an OS that can't do it).
+ */
+export type RemoteClipboardState = 'idle' | 'copying' | 'ready';
+
 export interface RdpNotice {
   message: string;
   tone: 'info' | 'warning';
@@ -71,6 +78,7 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
   const [options, setOptions] = useState<RdpServerOptions | null>(null);
   const [certificate, setCertificate] = useState<RdpCertificatePrompt | null>(null);
   const [remoteFiles, setRemoteFiles] = useState<FileInfo[]>([]);
+  const [remoteClipboard, setRemoteClipboard] = useState<RemoteClipboardState>('idle');
   const [transfers, setTransfers] = useState<RdpTransfer[]>([]);
   const [notice, setNotice] = useState<RdpNotice | null>(null);
   const [scale, setScaleState] = useState<RdpScale>('fit');
@@ -82,6 +90,10 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
   // Kept after the dialog closes, so "Review certificate" on the failure screen can reopen it.
   const lastCertificateRef = useRef<RdpCertificatePrompt | null>(null);
   const clipboardSignatureRef = useRef<string | null>(null);
+  // Counts the server's copies, so an older one stops once a newer one arrives; the chain runs
+  // them one at a time.
+  const stagingGenerationRef = useRef(0);
+  const stagingChainRef = useRef<Promise<void>>(Promise.resolve());
   const connectedRef = useRef(false);
   // What an AI task works through: the engine's session, the backend it came from, and the
   // canvas the remote screen is drawn on.
@@ -221,6 +233,133 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
     [uploadFiles],
   );
 
+  /**
+   * Downloads `files` from the server into the folder of download `downloadId`, one by one, and
+   * says how many failed. Stops early (counting nothing more) once `superseded()` is true.
+   */
+  const downloadInto = useCallback(
+    async (
+      provider: RdpFileTransferProvider,
+      downloadId: string,
+      files: FileInfo[],
+      superseded: () => boolean = () => false,
+    ): Promise<number> => {
+      let failed = 0;
+      for (let index = 0; index < files.length; index++) {
+        if (superseded()) return failed;
+        const file = files[index];
+        try {
+          await window.agentmat.rdp.prepareDownloadEntry(downloadId, index, {
+            name: file.name,
+            path: file.path,
+            isDirectory: file.isDirectory === true,
+          });
+        } catch (error) {
+          failed++;
+          upsertTransfer(`${downloadId}:${index}`, {
+            name: file.name,
+            direction: 'download',
+            state: 'failed',
+            error: error instanceof Error ? error.message : String(error),
+          });
+          continue;
+        }
+        if (file.isDirectory) continue;
+
+        const handle = provider.downloadFile(file, index);
+        const key = `download:${handle.transferId}`;
+        upsertTransfer(key, { name: file.name, direction: 'download', total: file.size });
+        try {
+          const blob = await handle.completion;
+          for (let offset = 0; offset < blob.size; offset += WRITE_CHUNK_BYTES) {
+            const chunk = new Uint8Array(
+              await blob.slice(offset, offset + WRITE_CHUNK_BYTES).arrayBuffer(),
+            );
+            await window.agentmat.rdp.writeDownloadChunk(downloadId, index, chunk);
+          }
+          await window.agentmat.rdp.finishDownloadFile(downloadId, index, true);
+          upsertTransfer(key, { state: 'done', transferred: blob.size, total: blob.size });
+        } catch (error) {
+          failed++;
+          await window.agentmat.rdp
+            .finishDownloadFile(downloadId, index, false)
+            .catch(() => undefined);
+          upsertTransfer(key, {
+            state: 'failed',
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+      return failed;
+    },
+    [upsertTransfer],
+  );
+
+  /**
+   * Brings files just copied on the server over and onto this computer's clipboard, so Ctrl+V
+   * in Explorer pastes them. Only the latest copy is worth finishing: a newer one cancels the
+   * run before it, and the runs go one at a time so they never share the staging folder.
+   */
+  const putRemoteFilesOnClipboard = useCallback(
+    (provider: RdpFileTransferProvider, files: FileInfo[]) => {
+      const generation = ++stagingGenerationRef.current;
+      const superseded = (): boolean =>
+        stagingGenerationRef.current !== generation || providerRef.current !== provider;
+      const wanted = files.length > 0;
+      setRemoteClipboard(wanted ? 'copying' : 'idle');
+      if (!wanted) return;
+
+      const run = async (): Promise<void> => {
+        if (superseded()) return;
+        const totalBytes = files.reduce((sum, file) => sum + (file.isDirectory ? 0 : file.size), 0);
+        const start = await window.agentmat.rdp.beginStaging(sessionId, totalBytes);
+        if (superseded()) return;
+        if (!start.ok) {
+          setRemoteClipboard('idle');
+          if (start.reason === 'tooLarge') {
+            setNotice({
+              tone: 'warning',
+              message: `The files you copied add up to ${formatBytes(totalBytes)}, too much to put on your clipboard (up to ${formatBytes(start.limitBytes)}). Use Save files to get them.`,
+            });
+          }
+          return;
+        }
+
+        const failed = await downloadInto(provider, start.downloadId, files, superseded);
+        if (superseded()) return;
+        if (failed > 0) {
+          setRemoteClipboard('idle');
+          setNotice({
+            tone: 'warning',
+            message: `Couldn't put the files you copied on your clipboard. Use Save files to get them.`,
+          });
+          return;
+        }
+
+        const result = await window.agentmat.rdp.finishStaging(sessionId, start.downloadId);
+        if (superseded()) return;
+        if (!result.ok) {
+          setRemoteClipboard('idle');
+          setNotice({ tone: 'warning', message: result.error });
+          return;
+        }
+        // They are copied here now, so the focus sync must not offer them back to the server.
+        clipboardSignatureRef.current = result.signature;
+        setRemoteClipboard('ready');
+      };
+
+      stagingChainRef.current = stagingChainRef.current.then(run).catch((error: unknown) => {
+        if (superseded()) return;
+        setRemoteClipboard('idle');
+        setNotice({
+          tone: 'warning',
+          message: `Couldn't put the files you copied on your clipboard: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      });
+    },
+    [sessionId, downloadInto],
+  );
+
   const saveRemoteFiles = useCallback(async () => {
     const provider = providerRef.current;
     const files = remoteFiles;
@@ -228,51 +367,7 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
     const target = await window.agentmat.rdp.beginDownload(sessionId);
     if (!target) return;
 
-    let failed = 0;
-    for (let index = 0; index < files.length; index++) {
-      const file = files[index];
-      try {
-        await window.agentmat.rdp.prepareDownloadEntry(target.downloadId, index, {
-          name: file.name,
-          path: file.path,
-          isDirectory: file.isDirectory === true,
-        });
-      } catch (error) {
-        failed++;
-        upsertTransfer(`${target.downloadId}:${index}`, {
-          name: file.name,
-          direction: 'download',
-          state: 'failed',
-          error: error instanceof Error ? error.message : String(error),
-        });
-        continue;
-      }
-      if (file.isDirectory) continue;
-
-      const handle = provider.downloadFile(file, index);
-      const key = `download:${handle.transferId}`;
-      upsertTransfer(key, { name: file.name, direction: 'download', total: file.size });
-      try {
-        const blob = await handle.completion;
-        for (let offset = 0; offset < blob.size; offset += WRITE_CHUNK_BYTES) {
-          const chunk = new Uint8Array(
-            await blob.slice(offset, offset + WRITE_CHUNK_BYTES).arrayBuffer(),
-          );
-          await window.agentmat.rdp.writeDownloadChunk(target.downloadId, index, chunk);
-        }
-        await window.agentmat.rdp.finishDownloadFile(target.downloadId, index, true);
-        upsertTransfer(key, { state: 'done', transferred: blob.size, total: blob.size });
-      } catch (error) {
-        failed++;
-        await window.agentmat.rdp
-          .finishDownloadFile(target.downloadId, index, false)
-          .catch(() => undefined);
-        upsertTransfer(key, {
-          state: 'failed',
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
+    const failed = await downloadInto(provider, target.downloadId, files);
 
     setNotice({
       tone: failed > 0 ? 'warning' : 'info',
@@ -285,7 +380,7 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
         run: () => void window.agentmat.rdp.openDownloadFolder(target.downloadId),
       },
     });
-  }, [remoteFiles, sessionId, upsertTransfer]);
+  }, [remoteFiles, sessionId, downloadInto]);
 
   // One connection attempt per `attempt`.
   useEffect(() => {
@@ -297,6 +392,7 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
 
     setPhase({ kind: 'connecting' });
     setRemoteFiles([]);
+    setRemoteClipboard('idle');
     proxyFailureRef.current = null;
     lastCertificateRef.current = null;
     clipboardSignatureRef.current = null;
@@ -343,7 +439,10 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
             provider as unknown as Parameters<UserInteraction['enableFileTransfer']>[0],
           );
           providerRef.current = provider;
-          provider.on('files-available', (files) => setRemoteFiles(files));
+          provider.on('files-available', (files) => {
+            setRemoteFiles(files);
+            putRemoteFilesOnClipboard(provider, files);
+          });
           provider.on('upload-batch-started', (ids, files) => {
             for (const [index, transferId] of ids) {
               const file = files[index];
@@ -505,6 +604,7 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
     options,
     certificate,
     remoteFiles,
+    remoteClipboard,
     transfers,
     notice,
     scale,

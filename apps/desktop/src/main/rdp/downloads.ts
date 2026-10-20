@@ -151,6 +151,21 @@ export function downloadFolder(downloadId: string, ownerId: number): string {
   return get(downloadId, ownerId).folder;
 }
 
+/**
+ * The top-level files and folders a download has put (or is putting) in its folder, under the
+ * names they ended up with. What gets copied to the clipboard when the download is a staging one.
+ */
+export function downloadRoots(downloadId: string, ownerId: number): string[] {
+  const download = get(downloadId, ownerId);
+  return [...download.rootNames.values()].map((name) => join(download.folder, name));
+}
+
+/** Drops a finished download's bookkeeping. The files on disk stay where they are. */
+export function forgetDownload(downloadId: string, ownerId: number): void {
+  get(downloadId, ownerId);
+  downloads.delete(downloadId);
+}
+
 /** Closes and removes unfinished files of every download a closed window owned. */
 export async function abandonDownloads(ownerId: number): Promise<void> {
   for (const [downloadId, download] of downloads) {

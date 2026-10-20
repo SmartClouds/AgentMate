@@ -51,6 +51,7 @@ import {
   SpeechLanguageChip,
   useSpeechSettings,
   VoiceRecordButton,
+  VoiceRecordingStrip,
 } from '@/components/promptBuilder/VoiceControls';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
@@ -546,27 +547,34 @@ export default function PromptBuilderPage(): React.JSX.Element {
               />
               <div className="flex items-center gap-1.5 p-2 pl-2.5">
                 {voice.supported && (
+                  <VoiceRecordButton
+                    voice={voice}
+                    idleText="Dictate"
+                    idleLabel="Dictate your request"
+                    blockedReason={promptVoice.status !== 'idle' ? OTHER_MIC_BUSY : null}
+                  />
+                )}
+                {/* A recording takes the language chip's and the hint's room, so the row keeps its height. */}
+                {voice.status === 'recording' ? (
+                  <VoiceRecordingStrip voice={voice} />
+                ) : (
                   <>
-                    <VoiceRecordButton
-                      voice={voice}
-                      idleText="Dictate"
-                      idleLabel="Dictate your request"
-                      blockedReason={promptVoice.status !== 'idle' ? OTHER_MIC_BUSY : null}
-                    />
-                    <SpeechLanguageChip
-                      language={speechLanguage}
-                      modelKey={speechModel}
-                      disabled={voice.status !== 'idle' || saveVoiceSettings.isPending}
-                      onLanguageChange={(code) =>
-                        saveVoiceSettings.mutate({ speechLanguage: code })
-                      }
-                      onModelChange={(key) => saveVoiceSettings.mutate({ speechModel: key })}
-                    />
+                    {voice.supported && (
+                      <SpeechLanguageChip
+                        language={speechLanguage}
+                        modelKey={speechModel}
+                        disabled={voice.status !== 'idle' || saveVoiceSettings.isPending}
+                        onLanguageChange={(code) =>
+                          saveVoiceSettings.mutate({ speechLanguage: code })
+                        }
+                        onModelChange={(key) => saveVoiceSettings.mutate({ speechModel: key })}
+                      />
+                    )}
+                    <span className="hidden truncate text-[11px] text-muted-foreground/70 sm:inline">
+                      {generateShortcut} to generate
+                    </span>
                   </>
                 )}
-                <span className="hidden truncate text-[11px] text-muted-foreground/70 sm:inline">
-                  {generateShortcut} to generate
-                </span>
                 <Button
                   className="ml-auto shrink-0"
                   onClick={() => void handleGenerate()}
@@ -805,9 +813,10 @@ export default function PromptBuilderPage(): React.JSX.Element {
         className={cn(PANEL, '@container/output lg:min-h-0 lg:flex-1')}
       >
         <div className="flex h-10 shrink-0 items-center justify-between gap-2 pl-4 pr-2">
-          <h2 className={SECTION_HEADING}>Generated prompt</h2>
+          <h2 className={cn(SECTION_HEADING, 'shrink-0 whitespace-nowrap')}>Generated prompt</h2>
           {promptVoice.supported && (
-            <div className="ml-auto">
+            <div className="ml-auto flex min-w-0 items-center gap-1.5">
+              {promptVoice.status === 'recording' && <VoiceRecordingStrip voice={promptVoice} />}
               <VoiceRecordButton
                 voice={promptVoice}
                 idleText="Speak prompt"

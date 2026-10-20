@@ -207,6 +207,8 @@ export const IPC = {
     writeDownloadChunk: 'rdp:writeDownloadChunk',
     finishDownloadFile: 'rdp:finishDownloadFile',
     openDownloadFolder: 'rdp:openDownloadFolder',
+    beginStaging: 'rdp:beginStaging',
+    finishStaging: 'rdp:finishStaging',
     onCertificatePrompt: 'rdp:onCertificatePrompt',
     onProxyError: 'rdp:onProxyError',
   },

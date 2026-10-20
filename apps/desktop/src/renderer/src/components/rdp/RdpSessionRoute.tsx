@@ -243,9 +243,13 @@ export default function RdpSessionRoute(): React.JSX.Element {
           </ToolbarButton>
           <ToolbarButton
             label={
-              session.remoteFiles.length > 0
-                ? 'Save the files you copied on the server to this computer'
-                : 'Copy files on the server (Ctrl+C) to save them here'
+              session.remoteFiles.length === 0
+                ? 'Copy files on the server (Ctrl+C) to paste them here with Ctrl+V, or save them with this button'
+                : session.remoteClipboard === 'copying'
+                  ? 'Copying the files you copied on the server to your clipboard. You can also save them to a folder with this button.'
+                  : session.remoteClipboard === 'ready'
+                    ? 'The files you copied on the server are on your clipboard, so Ctrl+V pastes them in any folder. This button saves them to a folder you pick.'
+                    : 'Save the files you copied on the server to this computer'
             }
             disabled={!connected || session.remoteFiles.length === 0}
             active={session.remoteFiles.length > 0}

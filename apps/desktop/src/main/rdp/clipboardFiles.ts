@@ -21,8 +21,11 @@ export interface ClipboardFileSet {
   sources: (string | null)[];
 }
 
-/** A cheap marker of what's copied, so the full listing only runs when it changes. */
-function rawSignature(): string {
+/**
+ * A cheap marker of what's copied, so the full listing only runs when it changes. Empty when
+ * the clipboard holds no files.
+ */
+export function rawSignature(): string {
   try {
     switch (process.platform) {
       case 'win32':

@@ -2662,6 +2662,20 @@ export interface RdpDownloadTarget {
   folder: string;
 }
 
+/**
+ * The answer to `rdp:beginStaging`: where to download the files copied on the server so they can
+ * be put on this computer's clipboard, or why that is not going to happen.
+ */
+export type RdpStageStart =
+  | { ok: true; downloadId: string }
+  | { ok: false; reason: 'unsupported' }
+  | { ok: false; reason: 'tooLarge'; limitBytes: number };
+
+/** The answer to `rdp:finishStaging`; a failure comes back as data so its text stays clean. */
+export type RdpStageResult =
+  /** `signature` is what `rdp:readClipboardFiles` will see for these files, so they aren't sent back. */
+  { ok: true; count: number; signature: string } | { ok: false; error: string };
+
 export interface RdpWindowState {
   isMaximized: boolean;
   isFullScreen: boolean;

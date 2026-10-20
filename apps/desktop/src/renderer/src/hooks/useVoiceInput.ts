@@ -15,6 +15,12 @@ const MIN_SPEECH_SECONDS = 0.4;
 const MIN_SPEECH_PEAK = 0.01;
 export const NOTHING_HEARD_MESSAGE = "Didn't catch anything. Try again a little closer to the mic.";
 
+// The level meter maps this range of loudness onto 0 to 1. Room noise sits under the floor and
+// ordinary speech lands around the middle, so the bars move for a voice and stay low for a fan.
+const METER_FFT_SIZE = 512;
+const METER_FLOOR_DB = -60;
+const METER_CEILING_DB = -10;
+
 interface UseVoiceInputOptions {
   /** Whisper language code ("en", "fa", …) or "auto". */
   language: string;
@@ -29,6 +35,11 @@ interface UseVoiceInput {
   error: string | null;
   /** Whole seconds since recording started, 0 when not recording. */
   elapsedSeconds: number;
+  /**
+   * How loud the microphone is right now, 0 to 1, or 0 when nothing is recording. Not state:
+   * read it from an animation frame, so a meter never re-renders the component that owns the mic.
+   */
+  getLevel: () => number;
   /** Start recording if idle, stop-and-transcribe if recording. */
   toggle: () => void;
   /** Stop without transcribing, or drop a transcription that is still running. */
@@ -43,6 +54,16 @@ export function hasSpeech(samples: Float32Array): boolean {
     if (Math.abs(samples[i]!) >= MIN_SPEECH_PEAK) return true;
   }
   return false;
+}
+
+/** How loud a slice of microphone audio is on a level meter's scale: 0 for quiet, 1 for loud. */
+export function levelFromSamples(samples: Float32Array): number {
+  if (samples.length === 0) return 0;
+  let sumOfSquares = 0;
+  for (let i = 0; i < samples.length; i++) sumOfSquares += samples[i]! * samples[i]!;
+  const rms = Math.sqrt(sumOfSquares / samples.length);
+  const db = 20 * Math.log10(Math.max(rms, 1e-6));
+  return Math.min(1, Math.max(0, (db - METER_FLOOR_DB) / (METER_CEILING_DB - METER_FLOOR_DB)));
 }
 
 async function blobToWhisperSamples(blob: Blob): Promise<Float32Array> {
@@ -80,6 +101,11 @@ export function useVoiceInput({ language, onText }: UseVoiceInputOptions): UseVo
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+  const meterRef = useRef<{
+    context: AudioContext;
+    analyser: AnalyserNode;
+    samples: Float32Array<ArrayBuffer>;
+  } | null>(null);
   // Bumped by cancel(). A recording or transcription started under an older number is dropped
   // when it finishes, so it can neither fill the box nor reset a newer recording's state.
   const generationRef = useRef(0);
@@ -99,9 +125,34 @@ export function useVoiceInput({ language, onText }: UseVoiceInputOptions): UseVo
     return unsubscribe;
   }, []);
 
+  // The analyser only listens: it is never connected to the speakers, so nothing plays back.
+  const openMeter = useCallback((stream: MediaStream) => {
+    let context: AudioContext | null = null;
+    try {
+      context = new AudioContext();
+      const analyser = context.createAnalyser();
+      analyser.fftSize = METER_FFT_SIZE;
+      context.createMediaStreamSource(stream).connect(analyser);
+      meterRef.current = { context, analyser, samples: new Float32Array(analyser.fftSize) };
+    } catch {
+      // The level bars are a nicety. Recording carries on without them.
+      void context?.close().catch(() => undefined);
+    }
+  }, []);
+
   const stopTracks = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
+    const meter = meterRef.current;
+    meterRef.current = null;
+    void meter?.context.close().catch(() => undefined);
+  }, []);
+
+  const getLevel = useCallback((): number => {
+    const meter = meterRef.current;
+    if (!meter) return 0;
+    meter.analyser.getFloatTimeDomainData(meter.samples);
+    return levelFromSamples(meter.samples);
   }, []);
 
   const transcribe = useCallback(
@@ -161,6 +212,7 @@ export function useVoiceInput({ language, onText }: UseVoiceInputOptions): UseVo
       };
       recorder.start();
       recorderRef.current = recorder;
+      openMeter(stream);
       setStatus('recording');
     } catch (err) {
       stopTracks();
@@ -174,7 +226,7 @@ export function useVoiceInput({ language, onText }: UseVoiceInputOptions): UseVo
             : (err as Error).message || 'Could not start recording.',
       );
     }
-  }, [stopTracks, transcribe]);
+  }, [openMeter, stopTracks, transcribe]);
 
   const stop = useCallback(() => {
     // The recorder's onstop handler kicks off transcription.
@@ -221,5 +273,5 @@ export function useVoiceInput({ language, onText }: UseVoiceInputOptions): UseVo
     };
   }, [stopTracks]);
 
-  return { status, downloadPercent, error, elapsedSeconds, toggle, cancel, supported };
+  return { status, downloadPercent, error, elapsedSeconds, getLevel, toggle, cancel, supported };
 }

@@ -6,8 +6,17 @@ import {
   WHISPER_MODELS,
 } from '@agentmat/core';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { ChevronDown, Microphone, Spinner, StopCircle, TriangleAlert, X } from '@/components/icons';
+import {
+  ChevronDown,
+  Microphone,
+  Spinner,
+  StopCircle,
+  Trash2,
+  TriangleAlert,
+  X,
+} from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -26,7 +35,8 @@ import { cn } from '@/lib/utils';
 
 /**
  * The voice controls the Build Prompt dialog and the Prompt Builder page share: a microphone
- * button with a clock and a way out, and the chip that picks the language Dictate listens for.
+ * button, the strip that shows a recording (clock, level bars, discard), and the chip that picks
+ * the language Dictate listens for.
  */
 
 type VoiceInput = ReturnType<typeof useVoiceInput>;
@@ -75,9 +85,12 @@ export function useSpeechSettings(
 }
 
 /**
- * One microphone button: idle, starting, recording with a running clock, then transcribing.
- * Next to it while recording or transcribing sits a button that throws the work away, so a slow
- * transcription never leaves the user stuck waiting on it.
+ * One microphone button: idle, starting, recording, then transcribing. While recording it turns
+ * into the stop button right where it was clicked and stays the same size, so nothing around it
+ * moves. The clock, the level bars and the way to throw the recording away live in a
+ * VoiceRecordingStrip, which the caller shows in whatever room its row has. Next to the button
+ * while transcribing sits a button that drops the work, so a slow transcription never leaves the
+ * user stuck waiting on it.
  */
 export function VoiceRecordButton({
   voice,
@@ -94,8 +107,8 @@ export function VoiceRecordButton({
   blockedReason: string | null;
   /**
    * Leaves out the words next to the microphone, for headers that share a row with other
-   * controls. The recording clock and a download percentage still show, since they carry
-   * information the icon cannot. The name for screen readers and the tooltip stay as they are.
+   * controls. A download percentage still shows, since it carries information the icon cannot.
+   * The name for screen readers and the tooltip stay as they are.
    */
   iconOnly?: boolean;
   className?: string;
@@ -113,9 +126,10 @@ export function VoiceRecordButton({
       : voice.status === 'requesting'
         ? 'Starting microphone…'
         : idleLabel;
-  const discardLabel = recording ? 'Discard recording' : 'Cancel transcription';
   const text = recording
-    ? `Stop ${formatElapsed(voice.elapsedSeconds)}`
+    ? iconOnly
+      ? null
+      : 'Stop'
     : transcribing
       ? voice.downloadPercent !== null
         ? `${voice.downloadPercent}%`
@@ -148,20 +162,134 @@ export function VoiceRecordButton({
           {text !== null && <span className="tabular-nums">{text}</span>}
         </Button>
       </SimpleTooltip>
-      {(recording || transcribing) && (
-        <SimpleTooltip label={`${discardLabel} (Esc)`}>
+      {transcribing && (
+        <SimpleTooltip label="Cancel transcription (Esc)">
           <Button
             type="button"
             variant="ghost"
             size="icon"
             className="h-8 w-8"
             onClick={voice.cancel}
-            aria-label={discardLabel}
+            aria-label="Cancel transcription"
           >
             <X />
           </Button>
         </SimpleTooltip>
       )}
+    </div>
+  );
+}
+
+// One bar per sample, newest on the right. At this size and gap the row is about 160px wide,
+// and a narrower strip clips the oldest bars rather than squeezing the newest. They fade out
+// toward the left edge, so a half-clipped bar never shows as a stray line.
+const LEVEL_BAR_COUNT = 32;
+const LEVEL_SAMPLE_MS = 55;
+// A silent bar is a short dot instead of nothing, so the row reads as "listening" before anyone
+// speaks. This is the share of the full height it keeps.
+const LEVEL_BAR_REST = 0.16;
+
+/**
+ * Live bars for the microphone, scrolling left like a voice message being recorded. The level is
+ * read from an animation frame and written straight to the bars, so the dialog that owns the
+ * mic never re-renders for it.
+ */
+function VoiceLevelBars({
+  getLevel,
+  className,
+}: {
+  getLevel: () => number;
+  className?: string;
+}): React.JSX.Element {
+  const bars = useRef<(HTMLSpanElement | null)[]>([]);
+
+  useEffect(() => {
+    const levels = new Array<number>(LEVEL_BAR_COUNT).fill(0);
+    const paint = () => {
+      bars.current.forEach((bar, i) => {
+        if (bar)
+          bar.style.transform = `scaleY(${LEVEL_BAR_REST + (1 - LEVEL_BAR_REST) * levels[i]!})`;
+      });
+    };
+    let lastSample = 0;
+    let frame = 0;
+    const tick = (now: number) => {
+      if (now - lastSample >= LEVEL_SAMPLE_MS) {
+        lastSample = now;
+        levels.shift();
+        levels.push(getLevel());
+        paint();
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    paint();
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [getLevel]);
+
+  return (
+    <div
+      aria-hidden="true"
+      className={cn(
+        'flex h-5 min-w-0 items-center justify-end gap-[2px] overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_20px)]',
+        className,
+      )}
+    >
+      {Array.from({ length: LEVEL_BAR_COUNT }, (_, i) => (
+        <span
+          key={i}
+          ref={(el) => {
+            bars.current[i] = el;
+          }}
+          className="h-full w-[3px] shrink-0 rounded-full bg-destructive/80 transition-transform duration-100 ease-out motion-reduce:transition-none"
+          style={{ transform: `scaleY(${LEVEL_BAR_REST})` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * What a recording shows for itself: a way to throw it away, a clock, and level bars that move
+ * with the voice. It takes the place of whatever shares the row, such as the Size chip, so
+ * starting a recording does not push the text box below down. Stopping stays on the mic button.
+ */
+export function VoiceRecordingStrip({
+  voice,
+  className,
+}: {
+  voice: VoiceInput;
+  className?: string;
+}): React.JSX.Element {
+  return (
+    <div
+      role="group"
+      aria-label="Recording"
+      className={cn(
+        'flex h-8 min-w-[9.5rem] max-w-[17rem] flex-1 basis-0 items-center gap-1.5 rounded-full bg-destructive/10 pl-1 pr-3 ring-1 ring-destructive/20 duration-150 animate-in fade-in-0 motion-reduce:animate-none',
+        className,
+      )}
+    >
+      <SimpleTooltip label="Discard recording (Esc)">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 shrink-0 rounded-full text-muted-foreground hover:text-destructive"
+          onClick={voice.cancel}
+          aria-label="Discard recording"
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      </SimpleTooltip>
+      <span
+        aria-hidden="true"
+        className="h-2 w-2 shrink-0 rounded-full bg-destructive motion-safe:animate-pulse"
+      />
+      <span role="timer" className="shrink-0 text-xs font-medium tabular-nums">
+        {formatElapsed(voice.elapsedSeconds)}
+      </span>
+      <VoiceLevelBars getLevel={voice.getLevel} className="flex-1" />
     </div>
   );
 }

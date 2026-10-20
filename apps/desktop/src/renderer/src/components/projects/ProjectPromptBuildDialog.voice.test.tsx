@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import type { AppSettings, Project } from '@agentmat/core';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -141,12 +141,37 @@ describe('Speak prompt', () => {
     expect(dictateButton()).toBeDisabled();
   });
 
+  // Recording used to widen the buttons until the size chip dropped to its own line and pushed
+  // the text box down. Now the strip takes the chip's place and the mic stays one icon wide.
+  it('shows the recording where the size chip was, and the mic stays an icon', async () => {
+    const { user } = renderDialog(baseSettings());
+    const idleChip = await screen.findByRole('button', { name: 'Size run' });
+    const label = screen.getByText('Generated prompt', { selector: 'label' });
+    expect(label.parentElement).toContainElement(idleChip);
+
+    await user.click(speakButton());
+
+    expect(screen.queryByRole('button', { name: 'Size run' })).not.toBeInTheDocument();
+    const strip = screen.getByRole('group', { name: 'Recording' });
+    expect(label.parentElement).toContainElement(strip);
+    expect(within(strip).getByRole('timer')).toHaveTextContent('0:00');
+    expect(within(strip).getByRole('button', { name: 'Discard recording' })).toBeEnabled();
+    // Stop is the button that was clicked, with no clock or word added to it.
+    expect(stopButton().textContent).toBe('');
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument();
+
+    await user.click(stopButton());
+    await waitFor(() => expect(output()).toHaveValue(SPOKEN));
+    expect(screen.queryByRole('group', { name: 'Recording' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Size run' })).toBeInTheDocument();
+  });
+
   it('shows the clock and can be thrown away with Escape without closing the dialog', async () => {
     const onOpenChange = vi.fn();
     const { user, transcribe } = renderDialog(baseSettings(), {}, onOpenChange);
 
     await user.click(await screen.findByRole('button', { name: 'Speak prompt' }));
-    expect(screen.getByText('Stop 0:00')).toBeInTheDocument();
+    expect(screen.getByRole('timer')).toHaveTextContent('0:00');
     await user.keyboard('{Escape}');
 
     await waitFor(() => expect(speakButton()).toBeEnabled());

@@ -89,7 +89,7 @@ In a normal window, a bar at the top shows the server name, a status badge (Conn
 | **Ask AI** | Starts an AI task on this desktop (see below). Disabled while the AI is already working. |
 | **Ctrl+Alt+Del** | Sends `Ctrl+Alt+Del` to the server. |
 | **Send files** | Opens a file picker to send files to the server. Shown when file copy is on. |
-| **Save files** | Saves files you copied on the server to this computer. Shows a count when files are waiting. Shown when file copy is on. |
+| **Save files** | Saves files you copied on the server into a folder you pick. Shows a count when files are waiting. Shown when file copy is on. |
 | **1:1** / **Fit** | Switches between actual size and scaling to fit the window. Shown when the server uses a fixed resolution. |
 | **Transfers** | Opens the list of file transfers with progress. Click **Clear finished** to tidy it. |
 | Full screen icon | Enters or leaves full screen. |
@@ -122,11 +122,21 @@ Choose one of these:
 
 A note at the top says "Ready on the server. Press Ctrl+V in a folder there to paste it." If the files you copied add up to too much for the clipboard, AgentMate tells you and asks you to drag them into the window instead.
 
-### Save files from the server
+### Get files from the server
+
+On Windows, files you copy on the server land on your clipboard:
+
+1. On the server, select files and copy them (`Ctrl+C`).
+2. Wait a moment while AgentMate brings them over. The tooltip on **Save files** says when they are on your clipboard.
+3. Press `Ctrl+V` in a folder on your computer.
+
+Copies of up to 256 MB are brought over this way. For anything bigger a note says so, and on macOS and Linux nothing is placed on the clipboard. In both cases use the **Save files** button instead:
 
 1. On the server, select files and copy them (`Ctrl+C`).
 2. In the session window, the **Save files** button shows how many are waiting. Click it.
 3. Pick a folder. The files are saved there, and a note says "Saved to (folder)" with an **Open folder** button. If some failed, it says how many.
+
+The files brought over for the clipboard are kept in a temporary folder, so a paste still works after the session window is closed. They are deleted the next time AgentMate starts.
 
 ## Ask AI on the remote desktop
 

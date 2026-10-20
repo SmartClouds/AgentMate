@@ -138,12 +138,26 @@ describe('Speak prompt on the Prompt Builder page', () => {
     const { user, transcribe } = renderPage(baseSettings());
 
     await user.click(await screen.findByRole('button', { name: 'Speak prompt' }));
-    expect(screen.getByText('Stop 0:00')).toBeInTheDocument();
+    expect(screen.getByRole('timer')).toHaveTextContent('0:00');
     await user.keyboard('{Escape}');
 
     await waitFor(() => expect(speakButton()).toBeEnabled());
     expect(transcribe).not.toHaveBeenCalled();
     expect(output()).toHaveValue('');
+  });
+
+  it('can be thrown away from the strip, and the language chip comes back after', async () => {
+    const { user, transcribe } = renderPage(baseSettings());
+
+    await user.click(await screen.findByRole('button', { name: 'Dictate' }));
+    // The strip takes the language chip's room while the mic is open.
+    expect(screen.getByRole('group', { name: 'Recording' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Dictation language/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Discard recording' }));
+
+    expect(screen.queryByRole('group', { name: 'Recording' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Dictation language/ })).toBeInTheDocument();
+    expect(transcribe).not.toHaveBeenCalled();
   });
 
   it('can stop a slow transcription, which stops the work in main too', async () => {

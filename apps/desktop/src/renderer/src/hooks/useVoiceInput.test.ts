@@ -2,7 +2,7 @@
 import { act, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHookWithProviders } from '../../../test/renderer/renderWithProviders';
-import { NOTHING_HEARD_MESSAGE, useVoiceInput } from './useVoiceInput';
+import { levelFromSamples, NOTHING_HEARD_MESSAGE, useVoiceInput } from './useVoiceInput';
 
 /**
  * Voice input holds the microphone, so the cases that matter are the ones where something is
@@ -228,6 +228,103 @@ describe('useVoiceInput recording', () => {
     await act(async () => result.current.toggle());
 
     expect(getUserMedia).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('levelFromSamples', () => {
+  const steady = (amplitude: number) => new Float32Array(512).fill(amplitude);
+
+  it('is 0 for silence, room noise and nothing at all', () => {
+    expect(levelFromSamples(new Float32Array(0))).toBe(0);
+    expect(levelFromSamples(steady(0))).toBe(0);
+    // -66 dBFS, under the floor.
+    expect(levelFromSamples(steady(0.0005))).toBe(0);
+  });
+
+  it('rises with the voice and tops out at 1', () => {
+    const quiet = levelFromSamples(steady(0.01));
+    const speech = levelFromSamples(steady(0.1));
+    const loud = levelFromSamples(steady(0.5));
+
+    expect(quiet).toBeGreaterThan(0);
+    expect(speech).toBeGreaterThan(quiet);
+    expect(loud).toBeGreaterThan(speech);
+    expect(levelFromSamples(steady(1))).toBe(1);
+  });
+
+  it('ignores which way the wave swings', () => {
+    expect(levelFromSamples(steady(-0.1))).toBe(levelFromSamples(steady(0.1)));
+  });
+});
+
+describe('useVoiceInput level meter', () => {
+  /** An AudioContext whose analyser hears a constant tone, remembering every context made. */
+  function installMeter(amplitude: number) {
+    const contexts: { close: ReturnType<typeof vi.fn> }[] = [];
+    vi.stubGlobal(
+      'AudioContext',
+      class {
+        readonly close = vi.fn(async () => undefined);
+        constructor() {
+          contexts.push(this);
+        }
+        createAnalyser() {
+          return {
+            fftSize: 0,
+            getFloatTimeDomainData: (into: Float32Array) => into.fill(amplitude),
+          };
+        }
+        createMediaStreamSource() {
+          return { connect: () => undefined };
+        }
+        async decodeAudioData(): Promise<{ duration: number }> {
+          return { duration: 1 };
+        }
+      },
+    );
+    return contexts;
+  }
+
+  it('reads the loudness of the microphone while recording and closes the meter after', async () => {
+    const contexts = installMeter(0.1);
+    const { result } = renderVoice(
+      {},
+      { 'speech.transcribe': async () => ({ ok: true, text: '' }) },
+    );
+    expect(result.current.getLevel()).toBe(0);
+
+    await act(async () => result.current.toggle());
+
+    const heard = result.current.getLevel();
+    expect(heard).toBeGreaterThan(0.3);
+    expect(heard).toBeLessThanOrEqual(1);
+
+    await act(async () => result.current.toggle());
+    await waitFor(() => expect(result.current.status).toBe('idle'));
+    // The first context is the meter's; the microphone is no longer being listened to.
+    expect(contexts[0]!.close).toHaveBeenCalled();
+    expect(result.current.getLevel()).toBe(0);
+  });
+
+  it('lets go of the meter when a recording is thrown away', async () => {
+    const contexts = installMeter(0.1);
+    const { result } = renderVoice();
+    await act(async () => result.current.toggle());
+
+    act(() => result.current.cancel());
+
+    expect(contexts[0]!.close).toHaveBeenCalled();
+    expect(result.current.getLevel()).toBe(0);
+  });
+
+  it('records without bars where the browser cannot build a meter', async () => {
+    // The default fake context has no analyser at all.
+    const { result } = renderVoice();
+
+    await act(async () => result.current.toggle());
+
+    expect(result.current.status).toBe('recording');
+    expect(result.current.getLevel()).toBe(0);
   });
 });
 

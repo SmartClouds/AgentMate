@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { app, dialog, type IpcMainInvokeEvent, ipcMain, shell, type WebContents } from 'electron';
 import type {
   RdpCertificateCheckResult,
@@ -9,6 +9,8 @@ import type {
   RdpConnectTicket,
   RdpDownloadTarget,
   RdpSavedServer,
+  RdpStageResult,
+  RdpStageStart,
   SaveRdpServerInput,
   StoredRdpServer,
 } from '../../shared/apiTypes';
@@ -18,12 +20,14 @@ import { withRdpDefaults } from '../../shared/rdpDefaults';
 import { stopRdpTask } from '../agents/rdpTaskRunner';
 import { resolveTunnelRoute } from '../network/proxy';
 import { keepAwake } from '../power/keepAwake';
-import { type ClipboardFileSet, readClipboardFiles } from '../rdp/clipboardFiles';
+import { type ClipboardFileSet, rawSignature, readClipboardFiles } from '../rdp/clipboardFiles';
 import {
   abandonDownloads,
   beginDownload,
   downloadFolder,
+  downloadRoots,
   finishFile,
+  forgetDownload,
   prepareEntry,
   writeChunk,
 } from '../rdp/downloads';
@@ -35,6 +39,13 @@ import {
 } from '../rdp/handshake';
 import { RdpProxy, type RdpProxyTarget } from '../rdp/proxy';
 import { formatDestination } from '../rdp/rdcleanpath';
+import {
+  MAX_STAGED_BYTES,
+  prepareStagingFolder,
+  putFilesOnClipboard,
+  stagingSupported,
+  sweepStaleStaging,
+} from '../rdp/remoteClipboard';
 import { closeAllRdpWindows, openRdpWindow } from '../rdp/sessionWindows';
 import { decryptSecret, encryptSecret, getVaultStatus } from '../ssh/vault';
 import { store } from '../store';
@@ -173,6 +184,9 @@ function syncPowerSaveBlocker(): void {
 }
 
 export function registerRdpHandlers(): void {
+  // Files staged for the clipboard by an earlier run stay on disk until now.
+  void sweepStaleStaging();
+
   ipcMain.handle(
     IPC.rdp.listServers,
     async (): Promise<RdpSavedServer[]> => (await store.getRdpServers()).map(toPublicServer),
@@ -445,6 +459,42 @@ export function registerRdpHandlers(): void {
   ipcMain.handle(IPC.rdp.openDownloadFolder, async (event, downloadId: string): Promise<void> => {
     await shell.openPath(downloadFolder(downloadId, event.sender.id));
   });
+
+  // Files copied on the server are downloaded into a folder of ours as soon as they are copied,
+  // then put on this computer's clipboard, so Ctrl+V in Explorer pastes them without a trip
+  // through "Save files". The window fills the folder with the download calls above.
+  ipcMain.handle(
+    IPC.rdp.beginStaging,
+    async (event, sessionId: string, totalBytes: number): Promise<RdpStageStart> => {
+      sessionFor(event, sessionId);
+      if (!stagingSupported()) return { ok: false, reason: 'unsupported' };
+      if (!(totalBytes <= MAX_STAGED_BYTES)) {
+        return { ok: false, reason: 'tooLarge', limitBytes: MAX_STAGED_BYTES };
+      }
+      const folder = await prepareStagingFolder(sessionId);
+      return { ok: true, downloadId: beginDownload(event.sender.id, folder) };
+    },
+  );
+
+  ipcMain.handle(
+    IPC.rdp.finishStaging,
+    async (event, sessionId: string, downloadId: string): Promise<RdpStageResult> => {
+      sessionFor(event, sessionId);
+      const staged = downloadRoots(downloadId, event.sender.id);
+      forgetDownload(downloadId, event.sender.id);
+      const present: string[] = [];
+      for (const path of staged) {
+        if (await stat(path).catch(() => null)) present.push(path);
+      }
+      if (present.length === 0) return { ok: false, error: 'Nothing was copied from the server.' };
+      try {
+        await putFilesOnClipboard(present);
+      } catch (error) {
+        return { ok: false, error: error instanceof Error ? error.message : String(error) };
+      }
+      return { ok: true, count: present.length, signature: rawSignature() };
+    },
+  );
 }
 
 /** How many Remote Desktop sessions are open, for the confirmation shown before the app closes. */

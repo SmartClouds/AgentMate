@@ -6,7 +6,9 @@ import {
   abandonDownloads,
   beginDownload,
   downloadFolder,
+  downloadRoots,
   finishFile,
+  forgetDownload,
   prepareEntry,
   safeComponent,
   safeRelativePath,
@@ -290,6 +292,62 @@ describe('download ownership', () => {
     // The window can send the completion twice; the second one must not throw on a closed handle.
     await expect(finishFile(id, ownerId, 0, true)).resolves.toBeUndefined();
     expect(await tree(folder)).toEqual(['notes.txt']);
+  });
+});
+
+describe('downloadRoots', () => {
+  it('lists the top-level files and folders under the names they got', async () => {
+    const folder = tempDir('agentmate-dl-');
+    const ownerId = owner();
+    const id = beginDownload(ownerId, folder);
+    await prepareEntry(id, ownerId, 0, { name: 'photos', isDirectory: true });
+    await prepareEntry(id, ownerId, 1, { name: 'a.jpg', path: 'photos', isDirectory: false });
+    await prepareEntry(id, ownerId, 2, { name: 'notes.txt', isDirectory: false });
+    await finishFile(id, ownerId, 1, true);
+    await finishFile(id, ownerId, 2, true);
+
+    // The nested file is inside photos, so only the two things a person copied are roots.
+    expect(downloadRoots(id, ownerId).sort()).toEqual(
+      [join(folder, 'notes.txt'), join(folder, 'photos')].sort(),
+    );
+  });
+
+  it('uses the collision-free name when the folder already holds one with that name', async () => {
+    const folder = tempDir('agentmate-dl-');
+    await writeFile(join(folder, 'report.txt'), 'older');
+    const ownerId = owner();
+    const id = beginDownload(ownerId, folder);
+    await prepareEntry(id, ownerId, 0, { name: 'report.txt', isDirectory: false });
+
+    expect(downloadRoots(id, ownerId)).toEqual([join(folder, 'report (1).txt')]);
+  });
+
+  it('refuses a download that belongs to another window', () => {
+    const id = beginDownload(owner(), tempDir('agentmate-dl-'));
+    expect(() => downloadRoots(id, owner())).toThrow(/Unknown download/);
+  });
+});
+
+describe('forgetDownload', () => {
+  it('drops the bookkeeping and keeps the files', async () => {
+    const folder = tempDir('agentmate-dl-');
+    const ownerId = owner();
+    const id = beginDownload(ownerId, folder);
+    await prepareEntry(id, ownerId, 0, { name: 'kept.txt', isDirectory: false });
+    await writeChunk(id, ownerId, 0, Buffer.from('data', 'utf-8'));
+    await finishFile(id, ownerId, 0, true);
+
+    forgetDownload(id, ownerId);
+
+    expect(() => downloadFolder(id, ownerId)).toThrow(/Unknown download/);
+    expect(await readFile(join(folder, 'kept.txt'), 'utf-8')).toBe('data');
+  });
+
+  it('refuses a download that belongs to another window', () => {
+    const mine = owner();
+    const id = beginDownload(mine, tempDir('agentmate-dl-'));
+    expect(() => forgetDownload(id, owner())).toThrow(/Unknown download/);
+    expect(() => downloadFolder(id, mine)).not.toThrow();
   });
 });
 
