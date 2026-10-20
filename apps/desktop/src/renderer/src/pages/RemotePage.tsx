@@ -13,6 +13,18 @@ import { useRemoteStore } from '@/stores/remoteStore';
 
 type RemoteTab = 'host' | 'connect' | 'ssh' | 'rdp';
 
+const TAB_STORAGE_KEY = 'agentmate.remote.tab';
+const REMOTE_TABS: readonly RemoteTab[] = ['host', 'connect', 'ssh', 'rdp'];
+
+function readStoredTab(): RemoteTab {
+  try {
+    const stored = localStorage.getItem(TAB_STORAGE_KEY);
+    return REMOTE_TABS.find((tab) => tab === stored) ?? 'host';
+  } catch {
+    return 'host';
+  }
+}
+
 const LOG_DOT = {
   info: 'bg-muted-foreground/50',
   success: 'bg-success',
@@ -32,12 +44,21 @@ export default function RemotePage(): React.JSX.Element {
   const transfers = useRemoteStore((s) => s.transfers);
   const hosting = useRemoteStore((s) => s.state?.hosting ?? false);
   const connection = useRemoteStore((s) => s.state?.connection);
-  const [activeTab, setActiveTab] = useState<RemoteTab>('host');
+  const [activeTab, setActiveTab] = useState<RemoteTab>(readStoredTab);
 
   usePageHeader('Remote', 'Control another AgentMate over your local network, over WebSockets.');
 
   const connected = connection?.status === 'connected';
   const connecting = connection?.status === 'connecting';
+
+  function openTab(tab: RemoteTab): void {
+    setActiveTab(tab);
+    try {
+      localStorage.setItem(TAB_STORAGE_KEY, tab);
+    } catch {
+      // Private mode and quota errors shouldn't block switching views.
+    }
+  }
 
   return (
     // Activity and transfers sit in a rail beside the view on a wide island, and below it on a
@@ -48,7 +69,7 @@ export default function RemotePage(): React.JSX.Element {
           id="remote-views"
           label="Remote views"
           value={activeTab}
-          onChange={setActiveTab}
+          onChange={openTab}
           items={[
             { value: 'host', label: 'Host', icon: <Broadcast /> },
             { value: 'connect', label: 'Connect', icon: <Link /> },

@@ -130,6 +130,32 @@ describe('RemotePage views', () => {
     ).toBeInTheDocument();
   });
 
+  it('reopens on the view that was open last time', async () => {
+    const first = renderWithProviders(<RemotePage />, { route: '/remote' });
+    await openView(first.user, 'SSH');
+    first.unmount();
+
+    renderWithProviders(<RemotePage />, { route: '/remote' });
+
+    expect(within(viewSwitcher()).getByRole('button', { name: 'SSH' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+    expect(
+      await screen.findByText('Connect over SSH with one click, no terminal typing.'),
+    ).toBeInTheDocument();
+  });
+
+  it('falls back to Host when the remembered view is not one it knows', () => {
+    localStorage.setItem('agentmate.remote.tab', 'telnet');
+    renderWithProviders(<RemotePage />, { route: '/remote' });
+
+    expect(within(viewSwitcher()).getByRole('button', { name: 'Host' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+  });
+
   it('says who this machine is connected to, whichever view is open', async () => {
     useRemoteStore.setState({
       state: remoteState({
