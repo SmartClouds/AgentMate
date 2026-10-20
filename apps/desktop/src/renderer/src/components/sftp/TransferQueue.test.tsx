@@ -305,6 +305,19 @@ describe('TransferQueue', () => {
     expect(screen.getByText('site (1,204 files)')).toBeInTheDocument();
   });
 
+  it('can start as its one-line header, as the dock draws it', async () => {
+    const { user } = renderQueue(snap([batch()]), { defaultOpen: false });
+    expect(screen.getByRole('button', { name: 'Show transfers' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    expect(screen.queryByText('site (1,204 files)')).toBeNull();
+    expect(screen.getByText('1 running')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Show transfers' }));
+    expect(screen.getByText('site (1,204 files)')).toBeInTheDocument();
+  });
+
   it('lists the files on their way in a multi-file batch', () => {
     renderQueue(
       snap([

@@ -34,7 +34,6 @@ import {
 } from '@/components/icons';
 import { ProviderLogo } from '@/components/providerLogos';
 import { Button } from '@/components/ui/button';
-import { OVERLAY_MOTION, OVERLAY_SURFACE } from '@/components/ui/overlay';
 import { Switch } from '@/components/ui/switch';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { AGENT_STATUS_LABEL, AgentStatusDot } from '@/components/workspace/AgentStatusDot';
@@ -55,6 +54,8 @@ import { stopRun } from '@/stores/runSessionStore';
 import { useShortcutLabel } from '@/stores/shortcutStore';
 import { useTerminalStore } from '@/stores/terminalStore';
 import { terminalTabLabel, useWorkspaceStore } from '@/stores/workspaceStore';
+import { SftpTransfersSegment } from './SftpTransfersSegment';
+import { focusPanel, PANEL_SURFACE, PanelTitle, PopSegment, segmentClass } from './statusBarKit';
 
 /** Sampling shells out to the OS, so the status bar asks less often than the dashboard. */
 const SAMPLE_INTERVAL_MS = 4000;
@@ -73,10 +74,6 @@ function formatBytes(bytes: number): string {
   const gb = bytes / 1024 ** 3;
   return gb >= 10 ? `${gb.toFixed(0)} GB` : `${gb.toFixed(1)} GB`;
 }
-
-// whitespace-nowrap, because a squeezed segment would wrap and show only its middle line.
-const segmentClass =
-  'flex h-full items-center gap-1.5 whitespace-nowrap rounded px-2 transition-colors hover:bg-foreground/[0.07] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring data-[state=open]:bg-foreground/[0.07] data-[state=open]:text-foreground';
 
 function Segment({
   children,
@@ -102,55 +99,6 @@ function Segment({
   );
 }
 
-/** The glass every status bar panel opens as, the same as the app's menus and popovers. */
-const PANEL_SURFACE = cn(
-  OVERLAY_SURFACE,
-  OVERLAY_MOTION,
-  'z-50 overflow-hidden p-3 origin-[var(--radix-popover-content-transform-origin)]',
-);
-
-/** A status bar item that opens a panel with the detail behind its number. */
-function PopSegment({
-  label,
-  children,
-  panel,
-  className,
-  width = 'w-72',
-  onOpenAutoFocus,
-}: {
-  label: string;
-  children: React.ReactNode;
-  panel: React.ReactNode;
-  className?: string;
-  width?: string;
-  onOpenAutoFocus?: (event: Event) => void;
-}): React.JSX.Element {
-  const [open, setOpen] = useState(false);
-  return (
-    <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
-      <SimpleTooltip label={open ? null : label} side="top" delayDuration={250}>
-        <PopoverPrimitive.Trigger asChild>
-          <button type="button" aria-label={label} className={cn(segmentClass, className)}>
-            {children}
-          </button>
-        </PopoverPrimitive.Trigger>
-      </SimpleTooltip>
-      <PopoverPrimitive.Portal>
-        <PopoverPrimitive.Content
-          side="top"
-          align="center"
-          sideOffset={8}
-          collisionPadding={8}
-          className={cn(PANEL_SURFACE, width)}
-          onOpenAutoFocus={onOpenAutoFocus}
-        >
-          {panel}
-        </PopoverPrimitive.Content>
-      </PopoverPrimitive.Portal>
-    </PopoverPrimitive.Root>
-  );
-}
-
 /** A thin meter under a number, filled to `percent`. */
 function Meter({ percent }: { percent: number }): React.JSX.Element {
   const tone = percent >= 90 ? 'bg-destructive' : percent >= 70 ? 'bg-warning' : 'bg-primary';
@@ -164,32 +112,6 @@ function Meter({ percent }: { percent: number }): React.JSX.Element {
         style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
       />
     </span>
-  );
-}
-
-/** A panel opens on its own container, not on its first button, so a refresh tooltip stays shut. */
-function focusPanel(event: Event): void {
-  event.preventDefault();
-  (event.currentTarget as HTMLElement | null)?.focus();
-}
-
-function PanelTitle({
-  title,
-  detail,
-  action,
-}: {
-  title: string;
-  detail?: string | null;
-  action?: React.ReactNode;
-}): React.JSX.Element {
-  return (
-    <div className="mb-2 flex items-center gap-2">
-      <div className="flex min-w-0 flex-1 items-baseline justify-between gap-2">
-        <p className="text-xs font-semibold">{title}</p>
-        {detail ? <p className="truncate text-[10px] text-muted-foreground">{detail}</p> : null}
-      </div>
-      {action}
-    </div>
   );
 }
 
@@ -968,6 +890,7 @@ const BUSY_LABEL: Record<string, string> = {
   agents: 'an agent at work',
   terminals: 'a command in a terminal',
   ssh: 'an SSH session',
+  sftp: 'file transfers',
 };
 
 /** Whether the machine may sleep while AgentMate runs, and what is holding it awake. */
@@ -1391,7 +1314,10 @@ function TerminalsSegment(): React.JSX.Element | null {
       0,
     ),
   );
-  const drawerCount = useTerminalStore((s) => s.sessions.length);
+  // A docked file manager is a drawer tab but not a terminal.
+  const drawerCount = useTerminalStore(
+    (s) => s.sessions.filter((session) => session.kind !== 'sftp').length,
+  );
   const count = workspaceCount + drawerCount;
   if (count === 0) return null;
   return (
@@ -1419,6 +1345,7 @@ export function StatusBar(): React.JSX.Element {
       </div>
       <div className="flex h-full shrink-0 items-center">
         <RunSegments />
+        <SftpTransfersSegment />
         <TerminalsSegment />
         <UsageLimitSegments />
         <DockerSegment />

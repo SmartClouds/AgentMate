@@ -15,6 +15,7 @@ import {
   WindowRestore,
   X,
 } from '@/components/icons';
+import { SftpDockPane } from '@/components/sftp/SftpDockPane';
 import { Button } from '@/components/ui/button';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,7 @@ import {
   defaultNewSession,
   TERMINAL_MIN_HEIGHT,
   type TerminalSessionMeta,
+  terminalMaxHeight,
   useTerminalStore,
 } from '@/stores/terminalStore';
 import { PausedRunBanner } from './PausedRunBanner';
@@ -137,6 +139,9 @@ function SessionTab({
             />
           )}
           {session.kind === 'ssh' && <Server className="h-3 w-3 shrink-0 opacity-70" />}
+          {session.kind === 'sftp' && (
+            <FolderOpen data-sftp-tab className="h-3 w-3 shrink-0 opacity-70" />
+          )}
           <span className="truncate">{session.title}</span>
           {paused ? <span className="sr-only">, paused</span> : null}
         </span>
@@ -312,6 +317,9 @@ export function TerminalDrawer({
   const shellRef = useRef<HTMLElement>(null);
 
   const activeSession = sessions.find((s) => s.id === activeSessionId) ?? sessions.at(-1) ?? null;
+  // A file manager tab has no shell, so nothing that talks to one is offered on it.
+  const onFiles = activeSession?.kind === 'sftp';
+  const shellSession = onFiles ? null : activeSession;
 
   function handleCloseDrawer(): void {
     setIsMaximized(false);
@@ -325,7 +333,7 @@ export function TerminalDrawer({
     const startHeight = drawerRef.current?.offsetHeight ?? drawerHeight;
     // The room to share is the page area the drawer stacks under, not the drawer's own frame.
     const parentHeight = shellRef.current?.parentElement?.clientHeight ?? window.innerHeight;
-    const maxHeight = Math.max(TERMINAL_MIN_HEIGHT, parentHeight - 240);
+    const maxHeight = terminalMaxHeight(parentHeight);
     setIsResizing(true);
     document.body.style.cursor = 'ns-resize';
     document.body.style.userSelect = 'none';
@@ -372,6 +380,8 @@ export function TerminalDrawer({
     <section
       ref={shellRef}
       aria-label="Terminal"
+      // Found by the docked file manager, which sizes the drawer from the page area around it.
+      data-terminal-drawer
       className={cn(
         'relative z-20 flex shrink-0 flex-col',
         isMaximized
@@ -434,20 +444,20 @@ export function TerminalDrawer({
           )}
           {sessions.length === 0 && <div className="flex-1" />}
           <div className="flex shrink-0 items-center gap-0.5">
-            {activeSession?.kind === 'ssh' && activeSession.sshServerId ? (
+            {shellSession?.kind === 'ssh' && shellSession.sshServerId ? (
               <IconButton
                 label="Browse files over SFTP"
-                onClick={() => navigate(`/ssh-files/${activeSession.sshServerId}`)}
+                onClick={() => navigate(`/ssh-files/${shellSession.sshServerId}`)}
               >
                 <FolderOpen className="h-3.5 w-3.5" />
               </IconButton>
             ) : null}
-            {activeSession && (
+            {shellSession && (
               <IconButton label="Ask AI to run a task here" onClick={() => setAskAiOpen(true)}>
                 <Robot className="h-3.5 w-3.5" />
               </IconButton>
             )}
-            {activeSession && (
+            {shellSession && (
               <IconButton label="AI task history" onClick={() => setHistoryOpen(true)}>
                 <History className="h-3.5 w-3.5" />
               </IconButton>
@@ -479,14 +489,15 @@ export function TerminalDrawer({
         </div>
 
         {activeSession?.run ? <PausedRunBanner sessionId={activeSession.id} /> : null}
-        {activeSession && (
+        {shellSession && (
           <SshAgentStatusBar
-            sessionId={activeSession.id}
+            sessionId={shellSession.id}
             onOpenHistory={() => setHistoryOpen(true)}
           />
         )}
 
-        <div className="terminal-well relative min-h-0 flex-1 overflow-hidden">
+        {/* The dark terminal fill is for shells; the file manager keeps the island's own. */}
+        <div className={cn('relative min-h-0 flex-1 overflow-hidden', !onFiles && 'terminal-well')}>
           {sessions.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
               {/* The well is always the dark terminal fill here, so the text keeps its light tones. */}
@@ -506,20 +517,33 @@ export function TerminalDrawer({
               </Button>
             </div>
           ) : (
-            sessions.map((session) => (
-              <TerminalPane
-                key={session.id}
-                meta={session}
-                active={isOpen && !hidden && session.id === activeSessionId}
-                onExit={() => forgetSession(session.id)}
-              />
-            ))
+            sessions.map((session) => {
+              const active = isOpen && !hidden && session.id === activeSessionId;
+              // Never a TerminalPane for a file manager tab: it would start a shell.
+              if (session.kind === 'sftp') {
+                return session.sftpServerId ? (
+                  <SftpDockPane key={session.id} serverId={session.sftpServerId} active={active} />
+                ) : null;
+              }
+              return (
+                <TerminalPane
+                  key={session.id}
+                  meta={session}
+                  active={active}
+                  onExit={() => forgetSession(session.id)}
+                />
+              );
+            })
           )}
         </div>
 
         <div className="flex h-6 shrink-0 items-center gap-2 px-3 font-mono text-[10px] text-muted-foreground shadow-[inset_0_1px_0_hsl(var(--foreground)/0.08)]">
           <span className="truncate">
-            {activeSession?.kind === 'ssh' ? 'SSH' : shellDisplayName(activeSession?.shell)}
+            {onFiles
+              ? 'SFTP'
+              : activeSession?.kind === 'ssh'
+                ? 'SSH'
+                : shellDisplayName(activeSession?.shell)}
           </span>
           {activeSession?.cwd ? (
             <>
@@ -544,18 +568,18 @@ export function TerminalDrawer({
           ) : null}
         </div>
 
-        {activeSession && (
+        {shellSession && (
           <SshAskAiDialog
-            sessionId={activeSession.id}
-            target={activeSession.kind === 'ssh' ? 'ssh' : 'local'}
+            sessionId={shellSession.id}
+            target={shellSession.kind === 'ssh' ? 'ssh' : 'local'}
             open={askAiOpen}
             onOpenChange={setAskAiOpen}
           />
         )}
-        {activeSession && (
+        {shellSession && (
           <SshAgentHistoryDialog
-            sessionId={activeSession.id}
-            sessionTitle={activeSession.title}
+            sessionId={shellSession.id}
+            sessionTitle={shellSession.title}
             open={historyOpen}
             onOpenChange={setHistoryOpen}
           />

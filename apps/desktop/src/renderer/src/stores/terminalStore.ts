@@ -5,6 +5,13 @@ import { persist } from 'zustand/middleware';
 
 export const TERMINAL_MIN_HEIGHT = 160;
 export const TERMINAL_DEFAULT_HEIGHT = 288;
+/** How much of the page area stays above the drawer when it is made taller. */
+export const TERMINAL_PAGE_ROOM = 240;
+
+/** The tallest the drawer can be in a page area this tall. */
+export function terminalMaxHeight(pageAreaHeight: number): number {
+  return Math.max(TERMINAL_MIN_HEIGHT, pageAreaHeight - TERMINAL_PAGE_ROOM);
+}
 
 /** The project run command a tab was opened to run, which puts it in the status bar. */
 export interface TerminalRunInfo {
@@ -23,9 +30,14 @@ export interface TerminalSessionMeta {
   shell?: string;
   initialInput?: string;
   projectId?: string;
-  /** Defaults to 'local'. An 'ssh' session connects to a saved server instead of spawning a shell. */
-  kind?: 'local' | 'ssh' | 'container';
+  /**
+   * Defaults to 'local'. An 'ssh' session connects to a saved server instead of spawning a shell.
+   * An 'sftp' tab shows a server's file manager (E25) and has no shell at all.
+   */
+  kind?: 'local' | 'ssh' | 'container' | 'sftp';
   sshServerId?: string;
+  /** For an 'sftp' tab: the saved server whose files it shows. */
+  sftpServerId?: string;
   /** The agent conversation this tab resumed, so opening it again goes back to this tab. */
   conversationId?: string;
   /**
@@ -74,7 +86,7 @@ interface TerminalState {
   openSshSession: (server: SshSavedServer, extras?: SshSessionExtras) => string;
   /** The open SSH tab resuming this conversation on this server, if there is one. */
   findSshConversationTab: (serverId: string, conversationId: string) => string | null;
-  /** Closes the tab and ends its shell. */
+  /** Closes the tab and ends its shell. A file manager tab has none: its SFTP session stays. */
   closeSession: (id: string) => void;
   /** Drops the tab of a shell that has already ended. */
   forgetSession: (id: string) => void;
@@ -107,6 +119,11 @@ function withoutSession(
   };
 }
 
+/** Only tabs with a shell that can still be running after a restart are saved. */
+function isKeptAcrossRestart(session: TerminalSessionMeta): boolean {
+  return session.kind !== 'ssh' && session.kind !== 'sftp';
+}
+
 export const useTerminalStore = create<TerminalState>()(
   persist(
     (set, get) => ({
@@ -132,6 +149,7 @@ export const useTerminalStore = create<TerminalState>()(
           projectId: meta.projectId,
           kind: meta.kind,
           sshServerId: meta.sshServerId,
+          sftpServerId: meta.sftpServerId,
           conversationId: meta.conversationId,
           run: meta.run,
         };
@@ -168,7 +186,11 @@ export const useTerminalStore = create<TerminalState>()(
         // also unmounts when the app reloads or React re-runs its effects, and neither of
         // those should cost the user a running shell.
         const session = get().sessions.find((s) => s.id === id);
-        void (session?.kind === 'ssh' ? window.agentmat.ssh : window.agentmat.terminal).kill(id);
+        // A file manager tab is only a view: the SFTP session it shows lives on in main and in
+        // the other views of it (the page, the pop-out), so closing the tab ends nothing.
+        if (session?.kind !== 'sftp') {
+          void (session?.kind === 'ssh' ? window.agentmat.ssh : window.agentmat.terminal).kill(id);
+        }
         set((state) => withoutSession(state, id));
       },
       forgetSession: (id) => set((state) => withoutSession(state, id)),
@@ -183,14 +205,17 @@ export const useTerminalStore = create<TerminalState>()(
         // The pre-filled command already ran once; a reconnect must never type it again.
         // SSH sessions are dropped entirely: they don't survive a restart (no background host
         // to reattach to), so persisting one would only leave a tab that reopens and fails.
+        // File manager tabs go too: the SFTP session behind one ends with the app.
         sessions: state.sessions
-          .filter((s) => s.kind !== 'ssh')
+          .filter(isKeptAcrossRestart)
           .map(({ initialInput: _initialInput, ...rest }) => rest),
       }),
       merge: (persisted, current) => {
         const saved = (persisted ?? {}) as Partial<PersistedTerminalState>;
         const sessions = Array.isArray(saved.sessions)
-          ? saved.sessions.map((session) => ({ ...session, restored: true }))
+          ? saved.sessions
+              .filter(isKeptAcrossRestart)
+              .map((session) => ({ ...session, restored: true }))
           : [];
         return {
           ...current,

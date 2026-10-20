@@ -117,7 +117,7 @@ The status bar at the bottom of the window has a **Keep computer awake** control
 - **Agent** (the default): stay awake while an agent or a command is running.
 - **Off**: allow normal sleep.
 
-In **Agent** mode the panel says what is holding the computer awake, such as an agent at work, a command in a terminal or an SSH session. The screen can still turn off, only sleep is held back. This also keeps the app from being slowed down while it is in the background.
+In **Agent** mode the panel says what is holding the computer awake, such as an agent at work, a command in a terminal, an SSH session or file transfers. The screen can still turn off, only sleep is held back. This also keeps the app from being slowed down while it is in the background.
 
 ## Tips
 

@@ -89,6 +89,11 @@ describe('openSession', () => {
     });
   });
 
+  it('keeps the server of a file manager tab', () => {
+    store().openSession({ title: 'prod', kind: 'sftp', sftpServerId: 'srv-1' });
+    expect(store().sessions[0]).toMatchObject({ kind: 'sftp', sftpServerId: 'srv-1' });
+  });
+
   it('takes an id the caller chose, so a tab can be reopened as itself', () => {
     expect(store().openSession({ id: 'fixed', title: 'sh' })).toBe('fixed');
   });
@@ -173,6 +178,15 @@ describe('closeSession', () => {
     const id = store().openSshSession(server);
     store().closeSession(id);
     expect(bridge.$fn('ssh.kill')).toHaveBeenCalledWith(id);
+  });
+
+  it('only drops a file manager tab: it has no shell, and its SFTP session stays open', () => {
+    const id = store().openSession({ title: 'build box', kind: 'sftp', sftpServerId: 'srv-1' });
+    store().closeSession(id);
+    expect(store().sessions).toEqual([]);
+    // Neither side was asked to end anything ($fn throws for a function nobody touched).
+    expect(() => bridge.$fn('terminal.kill')).toThrow();
+    expect(() => bridge.$fn('ssh.kill')).toThrow();
   });
 
   it('moves to the last remaining tab', () => {
@@ -293,6 +307,28 @@ describe('coming back from a saved drawer', () => {
     const saved = JSON.parse(localStorage.getItem('agentmate-terminal-sessions') ?? '{}');
     expect(saved.state.sessions).toHaveLength(1);
     expect(saved.state.sessions[0].kind).toBeUndefined();
+  });
+
+  it('never saves a file manager tab, which a restart would only reopen disconnected', () => {
+    store().openSession({ title: 'build box', kind: 'sftp', sftpServerId: 'srv-1' });
+    store().openDefaultSession();
+    const saved = JSON.parse(localStorage.getItem('agentmate-terminal-sessions') ?? '{}');
+    expect(saved.state.sessions).toHaveLength(1);
+    expect(saved.state.sessions[0].kind).toBeUndefined();
+  });
+
+  it('drops a file manager tab found in an older save', async () => {
+    seed({
+      isOpen: true,
+      sessions: [
+        { id: 'f1', title: 'build box', kind: 'sftp', sftpServerId: 'srv-1' },
+        { id: 't1', title: 'Terminal', shell: 'powershell.exe' },
+      ],
+      activeSessionId: 'f1',
+    });
+    await rehydrate();
+    expect(store().sessions.map((s) => s.id)).toEqual(['t1']);
+    expect(store().activeSessionId).toBe('t1');
   });
 
   it('never saves a resumed SSH tab or the command it typed', () => {

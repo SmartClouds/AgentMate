@@ -249,8 +249,12 @@ export interface SftpBatchFinished {
 export interface SftpSessionClosed {
   sessionId: string;
   serverId: string;
-  /** `removed`: the saved server was deleted. `closed`: the session ended. `quit`: the app is quitting. */
-  reason: 'removed' | 'closed' | 'quit';
+  /**
+   * `removed`: the saved server was deleted. `closed`: the session ended. `disconnected`: another
+   * view of the session (the page, the panel or the pop-out window) disconnected it. `quit`: the
+   * app is quitting.
+   */
+  reason: 'removed' | 'closed' | 'disconnected' | 'quit';
 }
 
 /** Files and folders from anywhere on this computer to one remote folder. */
@@ -324,6 +328,23 @@ export interface SftpWriteTextInput {
   base: { size: number; mtimeMs: number };
   /** Save even when the file changed on the server since it was read. */
   force: boolean;
+}
+
+/**
+ * The folders a pop-out opens at, those its opener showed. A remote one is absolute on the
+ * server, a local one absolute on this computer; either is left out to start at home.
+ */
+export interface SftpPopOutView {
+  remotePath?: string;
+  localPath?: string;
+}
+
+/** What the pop-out's title bar asks of its own window. `maximize` toggles maximize and restore. */
+export type SftpWindowAction = 'minimize' | 'maximize' | 'close';
+
+/** The pop-out window as its title bar draws it. */
+export interface SftpWindowState {
+  isMaximized: boolean;
 }
 
 /**
@@ -403,4 +424,27 @@ export interface SftpBridge {
   onQueue: (callback: (snapshot: SftpQueueSnapshot) => void) => () => void;
   onBatchFinished: (callback: (event: SftpBatchFinished) => void) => () => void;
   onSessionClosed: (callback: (event: SftpSessionClosed) => void) => () => void;
+  /**
+   * A session this window was handed, from a pop-out window that closed or crashed with sessions
+   * this window did not have. Shown like one it connected to itself. Answers an unsubscribe.
+   */
+  onSessionAdopted: (callback: (info: SftpSessionInfo) => void) => () => void;
+  /**
+   * Opens the file manager of the session in a window of its own, or brings that window to the
+   * front when it is open. The window becomes another owner of the same session, so its queue
+   * and conflicts reach both. Main window only; a pop-out cannot pop out again. A new window opens
+   * at the folders of `view`; one already open just comes to the front.
+   */
+  popOut: (sessionId: string, view?: SftpPopOutView) => Promise<void>;
+  /** From the pop-out: minimize, maximize (or restore) or close its own window. */
+  windowControl: (action: SftpWindowAction) => Promise<void>;
+  /** From the pop-out: whether its window is maximized now. */
+  windowState: () => Promise<SftpWindowState>;
+  /** From the pop-out: its window was maximized or restored. Answers an unsubscribe. */
+  onWindowState: (callback: (state: SftpWindowState) => void) => () => void;
+  /**
+   * From the pop-out: brings the main window to the front on this server's page and closes the
+   * pop-out. The main window navigates through the app's usual route push (`app.onNavigate`).
+   */
+  backToMain: () => Promise<void>;
 }

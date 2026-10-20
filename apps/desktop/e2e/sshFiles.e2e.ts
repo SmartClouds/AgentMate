@@ -1,6 +1,16 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  closeSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+  writeSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import { type LaunchedApp, launchApp } from './app';
 import {
@@ -20,6 +30,14 @@ import {
  * saved on the server, its permissions set to 600, and the folder deleted after typing the
  * confirmation word. Last, the page opens again from the terminal drawer of an SSH tab and from
  * the command palette. What the server holds is checked over `docker exec` after each step.
+ *
+ * The second test is about a transfer the user leaves to work elsewhere. A folder goes up with
+ * one file already on the server, so the batch waits for an answer however fast the link is.
+ * From the Dashboard the status bar and a toast say so, without a dialog over an unrelated page.
+ * The file manager then docks in the bottom panel, where the question opens, and pops out into its
+ * own window, where a second upload asks there and nowhere else. It comes back to the main window,
+ * all on the same session. At the end the big file on the server has every byte and both answers
+ * (keep both) show as `index (1).html` and `index (2).html`.
  */
 
 test.skip(!dockerAvailable(), 'needs Docker to start the test SSH server');
@@ -37,9 +55,36 @@ const SITE_FILES: Record<string, string> = {
   'js/app.js': 'console.log("hi");\n',
 };
 
+/**
+ * The folder of the second test: a big file, and an index.html the server already has. The
+ * conflict on index.html is what keeps the batch open, so the size only has to make the upload
+ * worth watching; the test does not depend on how fast it goes.
+ */
+const BUNDLE = 'bundle';
+const BIG_FILE = 'big.bin';
+const BIG_MB = 300;
+const BIG_DIR = '/tmp/transfers';
+const BUNDLE_DIR = `${BIG_DIR}/${BUNDLE}`;
+
 let server: SshTestServer | undefined;
 let launched: LaunchedApp | undefined;
 let localRoot = '';
+let bigRoot = '';
+
+/** Writes `mb` megabytes in 1 MB blocks that are not all zeros. */
+function writeBigFile(path: string, mb: number): void {
+  const block = Buffer.alloc(1024 * 1024);
+  for (let i = 0; i < block.length; i += 1) block[i] = (i * 31 + 7) & 0xff;
+  const fd = openSync(path, 'w');
+  try {
+    for (let i = 0; i < mb; i += 1) {
+      block[0] = i & 0xff;
+      writeSync(fd, block);
+    }
+  } finally {
+    closeSync(fd);
+  }
+}
 
 test.beforeAll(async () => {
   test.setTimeout(600_000);
@@ -50,11 +95,16 @@ test.beforeAll(async () => {
     mkdirSync(join(localRoot, 'site', ...parts.slice(0, -1)), { recursive: true });
     writeFileSync(join(localRoot, 'site', ...parts), content);
   }
+  bigRoot = mkdtempSync(join(tmpdir(), 'agentmate-sftp-big-'));
+  mkdirSync(join(bigRoot, BUNDLE));
+  writeBigFile(join(bigRoot, BUNDLE, BIG_FILE), BIG_MB);
+  writeFileSync(join(bigRoot, BUNDLE, 'index.html'), '<h1>New</h1>');
 });
 
 test.afterAll(() => {
   server?.stop();
   if (localRoot) rmSync(localRoot, { recursive: true, force: true });
+  if (bigRoot) rmSync(bigRoot, { recursive: true, force: true });
 });
 
 test.afterEach(async () => {
@@ -92,7 +142,20 @@ async function goTo(page: Page, side: 'local' | 'remote', path: string, lastCrum
   const field = page.getByRole('textbox', {
     name: side === 'local' ? 'Folder on this computer' : 'Folder on the server',
   });
-  await field.fill(path);
+  // Opening the field fills in the pane's folder a frame later. In the throttled e2e window that
+  // can land between fill's select-all and its typing, which then appends to the old folder.
+  await expect(async () => {
+    await field.fill(path);
+    // A couple of frames for a late reset to show, with a cap since a hidden window may not paint.
+    await field.evaluate(
+      () =>
+        new Promise((done) => {
+          setTimeout(done, 500);
+          requestAnimationFrame(() => requestAnimationFrame(done));
+        }),
+    );
+    await expect(field).toHaveValue(path, { timeout: 1_000 });
+  }).toPass({ timeout: 20_000 });
   await field.press('Enter');
   const crumbs = page.getByRole('navigation', {
     name: side === 'local' ? 'Folder on this computer' : 'Folder on the server',
@@ -101,7 +164,7 @@ async function goTo(page: Page, side: 'local' | 'remote', path: string, lastCrum
 }
 
 /** Saves the server through the app, so the password is encrypted the way a real save does it. */
-async function saveServer(page: Page): Promise<string> {
+async function saveServer(page: Page, { changedKey = true } = {}): Promise<string> {
   if (!server) throw new Error('SSH server did not start');
   await page.evaluate(
     (input) =>
@@ -126,6 +189,7 @@ async function saveServer(page: Page): Promise<string> {
     hostKeyFingerprint?: string;
   }[];
   expect(servers).toHaveLength(1);
+  if (!changedKey) return servers[0].id;
   servers[0].hostKeyFingerprint = 'ab'.repeat(32);
   writeFileSync(file, JSON.stringify(servers, null, 2));
   return servers[0].id;
@@ -281,4 +345,168 @@ test('moves a folder to a server and back through every step of the file manager
   await page.getByRole('option', { name: new RegExp(`Open SFTP files: ${NICKNAME}`) }).click();
   await expect(palette).toBeHidden();
   await expectFilesPage(page, serverId);
+});
+
+test('keeps transfers going and in reach from anywhere', async () => {
+  test.setTimeout(300_000);
+  launched = await launchApp({});
+  const { app, page } = launched;
+  await page.setViewportSize({ width: 1400, height: 900 });
+  const serverId = await saveServer(page, { changedKey: false });
+  const localSize = statSync(join(bigRoot, BUNDLE, BIG_FILE)).size;
+  // index.html is on the server already, so the upload stops on it and asks.
+  onServer('mkdir -p "$1" && printf "<h1>Old</h1>" > "$1/index.html"', [BUNDLE_DIR]);
+
+  const segment = page.getByRole('button', { name: /^File transfers/ });
+  const conflictTitle = 'This file already exists';
+  const waitingToast = page.getByText(`${NICKNAME} needs your answer`);
+
+  // 1. Remote > SSH > Files. A server never trusted before is trusted on first use, so no prompt.
+  await page.evaluate(() => {
+    location.hash = '#/remote';
+  });
+  await page.getByRole('button', { name: 'SSH', exact: true }).click();
+  const serverRow = page.getByRole('listitem').filter({ hasText: NICKNAME });
+  await expect(serverRow).toBeVisible({ timeout: 30_000 });
+  await serverRow.getByRole('button', { name: 'Files', exact: true }).click();
+  await expectFilesPage(page, serverId);
+  await expect(page.getByRole('button', { name: 'Trust the new key' })).toHaveCount(0);
+
+  await goTo(page, 'local', bigRoot, basename(bigRoot));
+  await goTo(page, 'remote', BIG_DIR, 'transfers');
+  await row(page, 'local', BUNDLE).click();
+  await expect(row(page, 'local', BUNDLE)).toHaveAttribute('aria-selected', 'true');
+  const upload = pane(page, 'local').getByRole('button', { name: 'Upload to server' });
+  await expect(upload).toBeEnabled();
+
+  // 2. Upload, and straight to the Dashboard through the sidebar. Both clicks go in one task: the
+  // question comes back from the server a moment later, and a person leaving the page that fast
+  // is the case under test (on the page itself the dialog would open, which is right there).
+  const uploadButton = await upload.elementHandle();
+  const dashboardLink = await page.getByRole('link', { name: 'Dashboard' }).elementHandle();
+  await page.evaluate(
+    ([first, second]) => {
+      (first as HTMLElement).click();
+      (second as HTMLElement).click();
+    },
+    [uploadButton, dashboardLink],
+  );
+  await expect(page.getByRole('button', { name: 'Edit layout' })).toBeVisible({ timeout: 30_000 });
+  await expect.poll(() => page.evaluate(() => location.hash)).toBe('#/');
+  await expect(grid(page, 'remote')).toHaveCount(0);
+
+  // The status bar says a question waits, and so does a toast. No dialog opens over the
+  // Dashboard, which shows nothing of that server.
+  await expect(segment).toContainText('Needs your answer', { timeout: 60_000 });
+  await expect(waitingToast).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('dialog', { name: conflictTitle })).toHaveCount(0);
+
+  // 3. The popover lists the batch and offers the answer. One Escape closes it.
+  await segment.click();
+  const popover = page.getByRole('dialog').filter({ hasText: 'File transfers' });
+  await expect(popover).toBeVisible();
+  const popoverServer = popover.getByRole('region', { name: NICKNAME });
+  await expect(popoverServer).toContainText(BUNDLE);
+  await expect(
+    popoverServer.getByRole('progressbar', { name: /^bundle.* progress$/ }),
+  ).toBeVisible();
+  await expect(
+    popoverServer.getByRole('button', { name: `Answer the question on ${NICKNAME}` }),
+  ).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(popover).toBeHidden();
+
+  // 4. From the popover into the bottom panel. Its queue starts folded to a summary that shows
+  // the batch waiting. The panel shows the server's files, so the question opens there now, in
+  // place of the toast. That dialog is modal and hides the rest of the window from the
+  // accessibility tree, so the panel is found by its markup while it is up.
+  await segment.click();
+  await expect(popover).toBeVisible();
+  await popover
+    .getByRole('button', { name: `Show the file manager of ${NICKNAME} in the panel` })
+    .click();
+  await expect(popover).toBeHidden();
+  const drawer = page.locator('[data-terminal-drawer]');
+  const dock = drawer.locator(`[data-sftp-dock="${serverId}"] [data-sftp-view="dock"]`);
+  await expect(dock).toBeVisible({ timeout: 30_000 });
+  await expect(drawer.locator('[data-sftp-tab]')).toHaveCount(1);
+  const dockQueue = dock.locator('section[aria-label="Transfers"]');
+  await expect(dockQueue.locator('button[aria-label="Show transfers"]')).toHaveAttribute(
+    'aria-expanded',
+    'false',
+  );
+  await expect(dockQueue).toContainText('1 waiting for you');
+  await expect.poll(() => page.evaluate(() => location.hash)).toBe('#/');
+
+  // 5. The question, answered in the panel's window: keep both. The dialog is modal, so this is
+  // where a person has to answer before the panel's buttons are in reach again.
+  const conflict = page.getByRole('dialog', { name: conflictTitle });
+  await expect(conflict).toBeVisible({ timeout: 30_000 });
+  await expect(waitingToast).toHaveCount(0);
+  await expect(conflict).toContainText('index.html');
+  await conflict.getByRole('button', { name: 'Keep both' }).click();
+  await expect(conflict).toBeHidden({ timeout: 30_000 });
+  await expect(dockQueue).not.toContainText('waiting for you');
+
+  // 6. From the panel into a window of its own, on the same session with the same queue.
+  const opened = app.waitForEvent('window', {
+    predicate: (win) => win.url().includes('sftp-window'),
+    timeout: 60_000,
+  });
+  await dock.getByRole('button', { name: 'Open in a new window' }).click();
+  const popout = await opened;
+  await popout.waitForLoadState('domcontentloaded');
+  expect(popout.url()).toContain(`server=${encodeURIComponent(serverId)}`);
+  // The panel tab steps aside once the window has the files.
+  await expect(drawer.locator('[data-sftp-tab]')).toHaveCount(0, { timeout: 30_000 });
+
+  await expect(grid(popout, 'remote')).toBeVisible({ timeout: 60_000 });
+  await expect(grid(popout, 'local')).toBeVisible();
+  // The batch from the main window is in this window's queue: the same session, not a new one.
+  const windowQueue = popout.getByRole('region', { name: 'Transfers' });
+  await expect(windowQueue).toContainText(BUNDLE, { timeout: 30_000 });
+  await expect(popout.getByRole('dialog', { name: conflictTitle })).toHaveCount(0);
+  // The server pane of the window lists the folder the upload went to.
+  await goTo(popout, 'remote', BUNDLE_DIR, BUNDLE);
+  await expect(row(popout, 'remote', 'index.html')).toBeVisible({ timeout: 30_000 });
+  await expect(windowQueue.getByText('Cancelled', { exact: true })).toHaveCount(0);
+  await expect(windowQueue.getByText(/^Failed/)).toHaveCount(0);
+
+  // A question asked while the window shows the files opens in the window, and only there: the
+  // main window is on the Dashboard. index.html once more, after the first copy is written so the
+  // two answers do not race for the same free name.
+  await expect.poll(() => listed(BUNDLE_DIR), { timeout: 60_000 }).toContain('index (1).html');
+  await goTo(popout, 'local', join(bigRoot, BUNDLE), BUNDLE);
+  await row(popout, 'local', 'index.html').dblclick();
+  const windowConflict = popout.getByRole('dialog', { name: conflictTitle });
+  await expect(windowConflict).toBeVisible({ timeout: 30_000 });
+  await expect(windowConflict).toContainText('index (2).html');
+  await expect(page.getByRole('dialog', { name: conflictTitle })).toHaveCount(0);
+  await windowConflict.getByRole('button', { name: 'Keep both' }).click();
+  await expect(windowConflict).toBeHidden({ timeout: 30_000 });
+  await expect.poll(() => listed(BUNDLE_DIR), { timeout: 60_000 }).toContain('index (2).html');
+
+  // 7. Back to the main window: the pop-out closes and the main window shows the page.
+  const closed = popout.waitForEvent('close', { timeout: 30_000 });
+  await popout.getByRole('button', { name: 'Back to main window' }).first().click();
+  await closed;
+  await expect
+    .poll(() => page.evaluate(() => location.hash), { timeout: 30_000 })
+    .toBe(`#/ssh-files/${serverId}`);
+  await expect(grid(page, 'remote')).toBeVisible({ timeout: 60_000 });
+  const pageQueue = page.getByRole('region', { name: 'Transfers' });
+  await expect(pageQueue).toContainText(BUNDLE);
+
+  // 8. Both batches finish, never cancelled or failed on the way, with every byte on the server
+  // and every copy of index.html.
+  await expect(pageQueue.getByText('Done', { exact: true })).toHaveCount(2, { timeout: 180_000 });
+  await expect(pageQueue.getByText('Cancelled', { exact: true })).toHaveCount(0);
+  await expect(pageQueue.getByText(/^Failed/)).toHaveCount(0);
+  expect(onServer('stat -c %s "$1"', [`${BUNDLE_DIR}/${BIG_FILE}`])).toBe(String(localSize));
+  expect(listed(BUNDLE_DIR)).toBe('big.bin,index (1).html,index (2).html,index.html,');
+  expect(onServer('cat "$1"', [`${BUNDLE_DIR}/index.html`])).toBe('<h1>Old</h1>');
+  expect(onServer('cat "$1"', [`${BUNDLE_DIR}/index (1).html`])).toBe('<h1>New</h1>');
+  expect(onServer('cat "$1"', [`${BUNDLE_DIR}/index (2).html`])).toBe('<h1>New</h1>');
+  // With nothing left to move or answer, the status bar item goes away.
+  await expect(segment).toHaveCount(0, { timeout: 30_000 });
 });

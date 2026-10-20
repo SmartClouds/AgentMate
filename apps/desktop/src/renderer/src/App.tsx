@@ -60,6 +60,8 @@ const HealthPage = lazy(() => import('./pages/HealthPage'));
 const RdpSessionRoute = lazy(() => import('./components/rdp/RdpSessionRoute'));
 /** The SFTP file manager for saved SSH servers (E25), loaded on first visit. */
 const SshFilesPage = lazy(() => import('./pages/SshFilesPage'));
+/** The same file manager popped out into a window of its own. */
+const SftpWindowRoute = lazy(() => import('./components/sftp/SftpWindowRoute'));
 
 /* Glass toasts: richColors is off on purpose. It paints an opaque per-type
    background that would defeat the frosted surface. The type accents live in
@@ -82,7 +84,8 @@ function isStandalonePath(pathname: string): boolean {
     pathname.startsWith('/widget') ||
     pathname === '/desktop-pet' ||
     pathname === '/remote-session' ||
-    pathname === '/rdp-session'
+    pathname === '/rdp-session' ||
+    pathname === '/sftp-window'
   );
 }
 
@@ -152,6 +155,14 @@ export default function App(): React.JSX.Element {
                 element={
                   <Suspense fallback={<div className="h-screen w-screen bg-background" />}>
                     <RdpSessionRoute />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="sftp-window"
+                element={
+                  <Suspense fallback={<div className="h-screen w-screen bg-background" />}>
+                    <SftpWindowRoute />
                   </Suspense>
                 }
               />

@@ -700,6 +700,51 @@ describe('session events', () => {
     await waitFor(() => expect(bridge.$fn('sftp.list')).toHaveBeenCalledWith('sess-1', '/etc'));
   });
 
+  it('goes back to Connect, quietly, when another view of the session disconnected it', () => {
+    bridge.$emit('sftp.onSessionClosed', {
+      sessionId: 'sess-1',
+      serverId: 'srv-1',
+      reason: 'disconnected',
+    });
+
+    expect(files()).toMatchObject({
+      status: 'idle',
+      session: null,
+      error: null,
+      queue: null,
+      editingPath: null,
+      editingFile: null,
+      propertiesPaths: null,
+    });
+    expect(files().remote.entries).toEqual([]);
+    expect(toast.info).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it('shows a session handed over by a closing pop-out, queue and folder included', async () => {
+    const adopted: SftpSessionInfo = { ...SESSION, sessionId: 'sess-2' };
+    const queue: SftpQueueSnapshot = { ...EMPTY_QUEUE, sessionId: 'sess-2' };
+    await useSftpStore.getState().disconnect('srv-1');
+    bridge.$set('sftp.queue', async (id: string) => (id === 'sess-2' ? queue : EMPTY_QUEUE));
+    bridge.$fn('sftp.list').mockClear();
+
+    bridge.$emit('sftp.onSessionAdopted', adopted);
+
+    expect(files()).toMatchObject({ status: 'ready', session: adopted, error: null });
+    await waitFor(() => expect(files().queue).toEqual(queue));
+    await waitFor(() =>
+      expect(bridge.$fn('sftp.list')).toHaveBeenCalledWith('sess-2', '/home/deploy'),
+    );
+  });
+
+  it('keeps the session it shows when another one is handed over for that server', () => {
+    bridge.$emit('sftp.onSessionAdopted', { ...SESSION, sessionId: 'sess-2' });
+    bridge.$emit('sftp.onSessionAdopted', SESSION);
+
+    expect(files().session).toEqual(SESSION);
+    expect(files().status).toBe('ready');
+  });
+
   it('ignores the close at quit and a close for a session it no longer holds', () => {
     bridge.$emit('sftp.onSessionClosed', {
       sessionId: 'sess-1',
@@ -1129,5 +1174,82 @@ describe('file operations, the failures', () => {
       useSftpStore.getState().resolveConflict('srv-1', 'c9', { action: 'skip', applyToAll: false }),
     ).rejects.toThrow('Unknown conflict');
     expect(toast.error).not.toHaveBeenCalled();
+  });
+});
+
+describe('the conflict answer asked for', () => {
+  const CONFLICT = {
+    conflictId: 'c1',
+    batchId: 'b1',
+    itemId: 'i1',
+    direction: 'upload' as const,
+    name: 'index.html',
+    relPath: 'index.html',
+    targetDir: '/home/deploy',
+    source: { size: 1, mtimeMs: 1 },
+    target: { size: 2, mtimeMs: 2, isDirectory: false },
+    renameTo: 'index (1).html',
+    remainingInBatch: 0,
+  };
+
+  beforeEach(async () => {
+    await useSftpStore.getState().connect('srv-1');
+    await waitFor(() => expect(files().remote.entries).toHaveLength(2));
+  });
+
+  it('points at a server only while it has a conflict to answer', () => {
+    useSftpStore.getState().requestAnswer('srv-1');
+    expect(useSftpStore.getState().conflictFocus).toBeNull();
+    useSftpStore.getState().requestAnswer('srv-9');
+    expect(useSftpStore.getState().conflictFocus).toBeNull();
+
+    bridge.$emit('sftp.onQueue', { ...EMPTY_QUEUE, conflict: CONFLICT });
+    useSftpStore.getState().requestAnswer('srv-1');
+    expect(useSftpStore.getState().conflictFocus).toBe('srv-1');
+  });
+
+  it('keeps pointing while the next conflict of the server comes, and lets go once none is left', () => {
+    bridge.$emit('sftp.onQueue', { ...EMPTY_QUEUE, conflict: CONFLICT });
+    useSftpStore.getState().requestAnswer('srv-1');
+    bridge.$emit('sftp.onQueue', { ...EMPTY_QUEUE, conflict: { ...CONFLICT, conflictId: 'c2' } });
+    expect(useSftpStore.getState().conflictFocus).toBe('srv-1');
+    bridge.$emit('sftp.onQueue', EMPTY_QUEUE);
+    expect(useSftpStore.getState().conflictFocus).toBeNull();
+  });
+
+  it("leaves another server's focus alone when this one's conflict clears", () => {
+    useSftpStore.setState((state) => ({
+      conflictFocus: 'srv-2',
+      servers: {
+        ...state.servers,
+        'srv-2': { ...serverFiles(state, 'srv-2'), queue: { ...EMPTY_QUEUE, conflict: CONFLICT } },
+      },
+    }));
+    bridge.$emit('sftp.onQueue', EMPTY_QUEUE);
+    expect(useSftpStore.getState().conflictFocus).toBe('srv-2');
+  });
+
+  it('lets go when the session ends, by a disconnect or from main', async () => {
+    bridge.$emit('sftp.onQueue', { ...EMPTY_QUEUE, conflict: CONFLICT });
+    useSftpStore.getState().requestAnswer('srv-1');
+    await useSftpStore.getState().disconnect('srv-1');
+    expect(useSftpStore.getState().conflictFocus).toBeNull();
+
+    await useSftpStore.getState().connect('srv-1');
+    bridge.$emit('sftp.onQueue', { ...EMPTY_QUEUE, conflict: CONFLICT });
+    useSftpStore.getState().requestAnswer('srv-1');
+    bridge.$emit('sftp.onSessionClosed', {
+      sessionId: 'sess-1',
+      serverId: 'srv-1',
+      reason: 'closed',
+    });
+    expect(useSftpStore.getState().conflictFocus).toBeNull();
+  });
+
+  it('is cleared by a reset', () => {
+    bridge.$emit('sftp.onQueue', { ...EMPTY_QUEUE, conflict: CONFLICT });
+    useSftpStore.getState().requestAnswer('srv-1');
+    resetSftpStore();
+    expect(useSftpStore.getState().conflictFocus).toBeNull();
   });
 });

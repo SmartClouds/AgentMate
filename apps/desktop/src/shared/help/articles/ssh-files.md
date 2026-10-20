@@ -2,8 +2,8 @@
 title: SSH files (SFTP)
 category: Connect
 order: 35
-summary: Open a saved SSH server as a two-pane file manager. Upload and download files and whole folders, answer overwrite questions, change permissions and edit text files on the server.
-keywords: sftp, ssh files, file manager, filezilla, winscp, upload, download, transfer, folders, overwrite, keep both, skip, permissions, chmod, octal, owner, edit remote file, transfers, cancel, retry, scp
+summary: Open a saved SSH server as a two-pane file manager. Upload and download files and whole folders, answer overwrite questions, change permissions and edit text files on the server. Keep an eye on transfers from the status bar, the bottom panel or a window of their own.
+keywords: sftp, ssh files, file manager, filezilla, winscp, upload, download, transfer, folders, overwrite, keep both, skip, permissions, chmod, octal, owner, edit remote file, transfers, cancel, retry, scp, status bar, background, panel, dock, drawer, new window, pop out, separate window
 route: /remote
 ---
 
@@ -21,7 +21,7 @@ There are three ways in, and they all open the same page:
 
 If the servers vault is locked, AgentMate asks for its passkey first. The first time you connect to a server, or if its host key has changed, you are asked to check and trust the key, the same way a terminal tab asks.
 
-The page header says **Files: (nickname)**, with `user@host:port` underneath. **Disconnect** ends the session. If transfers are still running, it asks first, because those transfers are cancelled.
+The page header says **Files: (nickname)**, with `user@host:port` underneath. **Disconnect** ends the session. If transfers are still running, it asks first, because those transfers are cancelled. It ends the session everywhere the server's files are shown, on the page, in the panel and in a separate window alike.
 
 ## Browse
 
@@ -51,7 +51,7 @@ A download only lands in a folder the local pane has shown, and file names from 
 
 ## When a file already exists
 
-If a file you send is already at the target, the transfer stops and asks **This file already exists**. You see both copies side by side, with their size and time, and a **Newer** tag on the later one.
+If a file you send is already at the target, the transfer stops and asks **This file already exists**. The dialog says which server it is on ("On (nickname)") and shows both copies side by side, with their size and time, and a **Newer** tag on the later one. It opens on whatever page you are on, so you do not have to go back to the file manager to answer it.
 
 | Button | What it does |
 | --- | --- |
@@ -103,7 +103,47 @@ The **Transfers** card at the bottom lists each upload, download, delete and per
 - A row can say **Waiting for your answer** (a conflict), **Done**, **Cancelled**, or **Failed** with a count. Click **Failed** to see which files failed and why, and retry them one by one.
 - Each row has a cancel or retry button. The header has **Retry failed**, **Clear finished** and **Cancel all**, and can be folded down to one line.
 - Up to 3 files move at once. If the connection drops, a file is tried once more on a new connection before it counts as failed.
-- Transfers keep running when you go to another page. Come back to see them, and a conflict that was waiting is asked again.
+- Transfers keep running when you go to another page. See [Keep working while files move](#keep-working-while-files-move).
+
+## Keep working while files move
+
+A big upload can take a while, and you do not have to wait on the page for it. Leaving the page never disconnects: the session and its transfers keep running in the background until you click **Disconnect** or quit AgentMate.
+
+### The status bar
+
+While anything is moving, an item shows in the status bar at the bottom of the window, with an arrow for uploads or downloads, the number of transfers and how far along they are, like "2 transfers 48%". When a transfer stops on a file that already exists, the item turns amber and says **Needs your answer**. It is hidden again once nothing runs and nothing waits.
+
+Click it to open the **File transfers** panel. For each server it lists every running transfer with a progress bar, how much has moved and the speed, and a button to cancel it. Each server also has:
+
+- **Answer**, while a question waits. It opens the "This file already exists" dialog.
+- **Open file manager** goes to the server's page.
+- **Show in panel** opens the server's files in the bottom panel (see below).
+
+While files are moving, the **Keep computer awake** item in **Agent** mode also counts them, and says it is held awake for file transfers.
+
+### Show the files in the bottom panel
+
+To keep the file manager at hand while you work on other pages, click **Show in panel** in the server pane's title row, next to **Disconnect**. The files move into a tab of the terminal panel at the bottom of the app, named after the server, and you are taken back to the page you were on before. The panel grows to a height where you can see a screenful of files.
+
+The panel shows a smaller version of the file manager: each pane has a single toolbar row, the rows are tighter, the **Permissions** and **Owner** columns are left out, and the **Transfers** card starts folded to one line. Everything else works as on the page, and **Permissions and properties** is still in the right-click menu.
+
+- **Open as page** in the server pane's title row takes the files back to the full page and closes the tab.
+- Closing the tab only closes the view. The session and its transfers keep going.
+- While the same server's page is open, the tab says **Shown on the page** instead of drawing the files twice. **Show the page** closes the panel.
+
+You can also open the tab from the status bar item's **Show in panel** link. Each server has at most one tab, so doing it again just brings that tab to the front.
+
+### Open the files in a new window
+
+Click **Open in a new window** in the server pane's title row (on the page or in the panel). The server's files open in a window of their own that you can put on another screen. From the page, you are taken back to the page you were on before. From the panel, the tab closes.
+
+The window shows the same session as the main window, with the same transfers and the same questions. If a file already exists, both windows can show the question, and the first answer counts.
+
+- **Back to main window** brings the main window to the front on the server's page and closes this one. The transfers carry on there.
+- Closing the window with its own close button also hands the session back to the main window, so nothing stops. The main window stays where it was.
+- **Disconnect** in the window ends the session for every view, the main window included.
+
+Each server's session has at most one such window. Clicking **Open in a new window** again brings it to the front. The window keeps the light or dark theme it opened with, and it closes when you close the main window.
 
 ## Keyboard shortcuts
 

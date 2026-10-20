@@ -93,9 +93,10 @@ export function TransferQueue({
   onCancel,
   onRetry,
   onClearFinished,
+  defaultOpen = true,
   className,
 }: TransferQueueProps): React.JSX.Element | null {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(defaultOpen);
   const { pending, run } = usePending();
   const bodyId = useId();
   const batches = snapshot?.batches ?? [];

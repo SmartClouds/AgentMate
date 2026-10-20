@@ -63,6 +63,7 @@ export function ConflictDialog({
   conflict,
   onResolve,
   onCancelBatch,
+  serverName,
 }: ConflictDialogProps): React.JSX.Element {
   // The last question stays drawn while the dialog fades out.
   const lastRef = useRef<SftpConflict | null>(null);
@@ -126,6 +127,12 @@ export function ConflictDialog({
         <DialogHeader>
           <DialogTitle>This file already exists</DialogTitle>
           <DialogDescription className="break-words">
+            {serverName ? (
+              <span className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <Server className="h-3 w-3 shrink-0" />
+                <span className="min-w-0 truncate">{`On ${serverName}`}</span>
+              </span>
+            ) : null}
             {folderInTheWay ? 'A folder named ' : null}
             <span className="font-medium text-foreground">{shown?.name}</span>
             {' is already in '}

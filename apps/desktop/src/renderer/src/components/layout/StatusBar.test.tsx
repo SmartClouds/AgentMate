@@ -988,3 +988,46 @@ describe('how old the plan limits entry says its numbers are', () => {
     }
   });
 });
+
+/**
+ * The terminals count and the keep-awake reasons, where the SFTP file manager (E25) shows up: a
+ * docked file manager is a drawer tab but no terminal, and long transfers hold the machine awake.
+ */
+describe('the terminals and keep-awake entries', () => {
+  it('leaves docked file managers out of the terminals count', async () => {
+    useTerminalStore.setState({
+      sessions: [
+        { id: 'shell', title: 'PowerShell' },
+        { id: 'prod', title: 'Production', kind: 'ssh', sshServerId: 'prod' },
+        { id: 'files', title: 'Production files', kind: 'sftp', sftpServerId: 'prod' },
+      ],
+      activeSessionId: null,
+      isOpen: false,
+    });
+    setup({ 'android.sdk': NO_SDK });
+    expect(await screen.findByText('2 terminals')).toBeInTheDocument();
+  });
+
+  it('counts nothing when the only drawer tab is a file manager', async () => {
+    useTerminalStore.setState({
+      sessions: [{ id: 'files', title: 'Production files', kind: 'sftp', sftpServerId: 'prod' }],
+      activeSessionId: null,
+      isOpen: false,
+    });
+    setup({ 'android.sdk': NO_SDK });
+    await screen.findByRole('contentinfo', { name: 'Status bar' });
+    expect(screen.queryByText(/terminals?$/)).not.toBeInTheDocument();
+  });
+
+  it('says file transfers are what keeps the computer awake', async () => {
+    const { user } = setup({
+      'android.sdk': NO_SDK,
+      'power.keepAwakeStatus': { mode: 'agent', blocking: true, busy: ['sftp', 'ssh'] },
+    });
+    await user.click(await screen.findByRole('button', { name: 'Keep computer awake' }));
+    const panel = await screen.findByRole('dialog');
+    expect(
+      within(panel).getByText('Awake for file transfers, an SSH session.'),
+    ).toBeInTheDocument();
+  });
+});
