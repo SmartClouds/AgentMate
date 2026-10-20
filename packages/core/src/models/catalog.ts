@@ -86,6 +86,25 @@ export const GEMINI_CLI_MODELS = {
   },
 } as const satisfies Record<string, CatalogModel>;
 
+// xAI (Grok CLI). Newest first. The ids are the ones MODEL_PRICES already prices.
+
+export const GROK_MODELS = {
+  g47: { label: 'Grok 4.7', cliArg: 'grok-4.7', apiId: 'grok-4.7' },
+  g46: { label: 'Grok 4.6', cliArg: 'grok-4.6', apiId: 'grok-4.6' },
+  g45: { label: 'Grok 4.5', cliArg: 'grok-4.5', apiId: 'grok-4.5' },
+  g43: { label: 'Grok 4.3', cliArg: 'grok-4.3', apiId: 'grok-4.3' },
+  g420: { label: 'Grok 4.20', cliArg: 'grok-4.20', apiId: 'grok-4.20' },
+  build: { label: 'Grok Build', cliArg: 'grok-build', apiId: 'grok-build' },
+} as const satisfies Record<string, CatalogModel>;
+
+// Cursor CLI. `auto` lets Cursor pick the model itself.
+
+export const CURSOR_MODELS = {
+  auto: { label: 'Auto', cliArg: 'auto' },
+  sonnet: { label: 'Sonnet 4.5', cliArg: 'sonnet-4.5' },
+  opus: { label: 'Opus 4.5', cliArg: 'opus-4.5' },
+} as const satisfies Record<string, CatalogModel>;
+
 // Example model names shown as argument hints, per CLI id. Only the model goes here. The flag
 // stays with the CLI in cli/registry.ts, since each CLI spells it differently.
 
@@ -97,7 +116,7 @@ export const CLI_MODEL_EXAMPLES = {
   'gemini-cli': GEMINI_CLI_MODELS.pro.cliArg,
   opencode: `anthropic/${CLAUDE_MODELS.sonnet.apiId}`,
   'codex-cli': CODEX_MODELS.sol.cliArg,
-  'grok-cli': 'grok-4.7',
+  'grok-cli': GROK_MODELS.g47.cliArg,
   'cursor-cli': 'sonnet-4-thinking',
   'copilot-cli': CLAUDE_MODELS.sonnet.apiId,
   'qwen-cli': 'qwen3-coder-plus',
@@ -201,11 +220,10 @@ export const DIFFRAY_EXECUTOR_MODELS = {
     { value: CLAUDE_MODELS.sonnet.cliArg, label: `${CLAUDE_MODELS.sonnet.family} (balanced)` },
     { value: CLAUDE_MODELS.opus.cliArg, label: `${CLAUDE_MODELS.opus.family} (thorough)` },
   ],
-  'cursor-agent-cli': [
-    { value: 'auto', label: 'Auto' },
-    { value: 'sonnet-4.5', label: 'Sonnet 4.5' },
-    { value: 'opus-4.5', label: 'Opus 4.5' },
-  ],
+  'cursor-agent-cli': Object.values(CURSOR_MODELS).map((m) => ({
+    value: m.cliArg,
+    label: m.label,
+  })),
   'opencode-cli': [
     { value: 'opencode/gpt-5-nano', label: 'GPT-5 nano' },
     { value: 'opencode/grok-code', label: 'Grok code' },

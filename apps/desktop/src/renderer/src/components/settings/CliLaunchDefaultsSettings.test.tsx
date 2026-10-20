@@ -106,6 +106,71 @@ describe('CliLaunchDefaultsSettings', () => {
     expect(preview?.textContent).toBe('claude --model opus --permission-mode auto');
   });
 
+  describe('Grok and Cursor', () => {
+    async function openRow(name: RegExp): Promise<HTMLElement> {
+      window.agentmat.cli.detectAll = () =>
+        Promise.resolve(
+          ['claude-code', 'grok-cli', 'cursor-cli'].map((id) => ({
+            id,
+            installed: true as const,
+            version: '1.0.0',
+            executablePath: `/usr/local/bin/${id}`,
+            lastCheckedAt: '2026-01-01T10:00:00.000Z',
+          })),
+        );
+      renderSection();
+      const toggle = (await screen.findByText(name)).closest('button');
+      if (!toggle) throw new Error(`${name} row has no toggle`);
+      fireEvent.click(toggle);
+      const panel = document.getElementById(toggle.getAttribute('aria-controls') ?? '');
+      if (!panel) throw new Error(`${name} panel did not open`);
+      return panel;
+    }
+
+    async function optionLabels(panel: HTMLElement): Promise<string[]> {
+      fireEvent.click(within(panel).getByRole('combobox'));
+      const options = await screen.findAllByRole('option');
+      return options.map((option) => option.textContent ?? '');
+    }
+
+    it('lists the Grok models and offers its three effort levels', async () => {
+      const panel = await openRow(/^Grok CLI/);
+      const labels = await optionLabels(panel);
+      expect(labels).toEqual([
+        'Grok 4.7',
+        'Grok 4.6',
+        'Grok 4.5',
+        'Grok 4.3',
+        'Grok 4.20',
+        'Grok Build',
+      ]);
+      fireEvent.click(screen.getByRole('option', { name: 'Grok 4.7' }));
+      fireEvent.click(await within(panel).findByRole('radio', { name: 'High' }));
+      expect(useCliStore.getState().cliLaunchDefaults['grok-cli']).toEqual({
+        model: 'grok-4.7',
+        effort: 'high',
+      });
+      expect(panel.querySelector('code.font-mono')?.textContent).toBe(
+        'grok --model grok-4.7 --reasoning-effort high',
+      );
+      // Grok stops at High.
+      expect(within(panel).queryByRole('radio', { name: 'Max' })).toBeNull();
+    });
+
+    it('lists the Cursor models and has no effort setting', async () => {
+      const panel = await openRow(/^Cursor CLI/);
+      expect(await optionLabels(panel)).toEqual(['Auto', 'Sonnet 4.5', 'Opus 4.5']);
+      fireEvent.click(screen.getByRole('option', { name: 'Sonnet 4.5' }));
+      expect(within(panel).queryByRole('radiogroup', { name: 'Effort' })).toBeNull();
+      expect(useCliStore.getState().cliLaunchDefaults['cursor-cli']).toEqual({
+        model: 'sonnet-4.5',
+      });
+      expect(panel.querySelector('code.font-mono')?.textContent).toBe(
+        'cursor-agent --model sonnet-4.5',
+      );
+    });
+  });
+
   it('never holds the full-page loading overlay while the CLI sweep runs', async () => {
     // A sweep that takes tens of seconds, as it does on a machine with few CLIs installed.
     // Both sections of the Agents tab share the query, and the last one to mount sets its meta.

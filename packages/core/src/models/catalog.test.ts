@@ -6,12 +6,15 @@ import {
   CLAUDE_MODELS,
   CLI_MODEL_EXAMPLES,
   CODEX_MODELS,
+  CURSOR_MODELS,
   catalogModelForApiId,
   DEFAULT_GEMINI_API_MODEL,
   DEFAULT_OPENAI_API_MODEL,
   DEFAULT_WHISPER_MODEL,
+  DIFFRAY_EXECUTOR_MODELS,
   GEMINI_API_MODELS,
   GEMINI_CLI_MODELS,
+  GROK_MODELS,
   HELP_EMBEDDING_MODEL_OPTIONS,
   HELP_EMBEDDING_MODELS,
   helpEmbeddingModel,
@@ -70,6 +73,22 @@ describe('model catalog', () => {
     for (const model of models) {
       expect(getModelPrice(model.apiId), model.apiId).not.toBeNull();
     }
+  });
+
+  it('prices every Grok model and keeps each CLI argument unique', () => {
+    for (const model of Object.values(GROK_MODELS)) {
+      expect(getModelPrice(model.apiId), model.apiId).not.toBeNull();
+    }
+    for (const models of [GROK_MODELS, CURSOR_MODELS]) {
+      const args = Object.values(models).map((m) => m.cliArg);
+      expect(new Set(args).size).toBe(args.length);
+    }
+  });
+
+  it('offers Diffray the same Cursor models as the launch menu', () => {
+    expect(DIFFRAY_EXECUTOR_MODELS['cursor-agent-cli']).toEqual(
+      Object.values(CURSOR_MODELS).map((m) => ({ value: m.cliArg, label: m.label })),
+    );
   });
 
   it('keeps each default inside its own list', () => {

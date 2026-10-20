@@ -121,7 +121,7 @@ Diff tabs have no menu. Use the tab's **x** or the shortcut to close them.
 The **+** button after the last tab in a pane (**New tab**) opens a menu with:
 
 - **Build a prompt…** to turn a rough request into a prompt and run it in this pane. See [Prompt Builder](prompt-builder.md).
-- **Agents**, the installed AI CLIs, in your chosen order.
+- **Agents**, the installed AI CLIs, in your chosen order. Claude Code, Codex, Gemini, Grok and Cursor open a list of models (and efforts) when you hover them, to start that tab on a specific model.
 - **Shells**, such as **PowerShell**, **PowerShell 7** and **Command Prompt** on Windows, or zsh, bash and fish elsewhere.
 - **Browser** for a web page, usually your dev server.
 - **Manage CLIs**, which opens [AI CLI Manager](cli-manager.md), and **Keyboard shortcuts**, which opens the shortcuts tab in Settings.

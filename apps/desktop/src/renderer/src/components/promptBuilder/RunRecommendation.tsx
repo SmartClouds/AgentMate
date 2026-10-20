@@ -10,6 +10,7 @@ import {
 } from '@agentmat/core';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { CostMeter } from '@/components/cli/CostMeter';
 import { CliLogo } from '@/components/cliLogos';
 import {
   ArrowDown,
@@ -183,29 +184,6 @@ const COMPLEXITY_COPY = {
 } as const;
 
 const COST_COPY = ['Lowest cost', 'Low cost', 'Moderate cost', 'High cost', 'Highest cost'];
-
-function costTone(level: number): string {
-  if (level <= 2) return 'bg-success';
-  if (level === 3) return 'bg-warning';
-  return 'bg-destructive';
-}
-
-function CostMeter({ level, className }: { level: number; className?: string }): React.JSX.Element {
-  return (
-    <span className={cn('inline-flex items-end gap-[2px]', className)} aria-hidden>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <span
-          key={i}
-          className={cn(
-            'w-[3px] rounded-sm transition-colors',
-            i <= level ? costTone(level) : 'bg-foreground/15',
-          )}
-          style={{ height: `${4 + i * 2}px` }}
-        />
-      ))}
-    </span>
-  );
-}
 
 function formatPrice(value: number): string {
   return `$${Number.isInteger(value) ? value : value.toFixed(2)}`;

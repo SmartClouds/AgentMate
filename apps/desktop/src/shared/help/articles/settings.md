@@ -111,11 +111,11 @@ The **Agents** tab covers which CLI starts, how each one launches and how agents
 
 **Launch defaults** sets the model, effort and permission mode each agent starts with in a Workspace tab or terminal. Each installed agent that has launch flags gets a row. Click a row to open it, then choose:
 
-- **Model**: pick from the list or type a model name and choose **Use "name"**.
+- **Model**: pick from the list or type a model name and choose **Use "name"**. Grok and Cursor list the models AgentMate knows, and still accept a typed name.
 - **Effort**: **Not set**, **Low**, **Med**, **High**, **XHigh** or **Max**, limited to what the chosen model supports.
 - **Mode**: cards such as **Not set** or the CLI's own permission modes. Modes that let the agent edit files and run commands without asking are marked with a warning triangle and a red-tinted note.
 
-A preview line shows exactly what the terminal will type, and **Reset** clears the row. Anything left on **Not set** adds no flag and the CLI picks for itself. Hold `Alt` while clicking a launcher to start an agent without these defaults. Agents that are not installed are tucked behind **Show N not installed**.
+A preview line shows exactly what the terminal will type, and **Reset** clears the row. Anything left on **Not set** adds no flag and the CLI picks for itself. Hold `Alt` while clicking a launcher to start an agent without these defaults. To start one tab on a different model or effort without changing the defaults, use the model list on the agent's row in the **+** menu. Agents that are not installed are tucked behind **Show N not installed**.
 
 ### Agent order
 

@@ -1,6 +1,10 @@
+import { CURSOR_MODELS, GROK_MODELS } from '../models/catalog.js';
 import {
+  type CostLevel,
+  defaultEffortFor,
   EFFORT_LABELS,
   type EffortLevel,
+  relativeCostLevel,
   runProfileForTargetAI,
 } from '../promptBuilder/runRecommendation.js';
 import { getCliDefinition } from './registry.js';
@@ -280,6 +284,8 @@ const MODE_SPECS: Record<string, ModeSpec> = {
 
 const ALL_EFFORTS = Object.keys(EFFORT_LABELS) as EffortLevel[];
 
+const GROK_EFFORTS: readonly EffortLevel[] = ['low', 'medium', 'high'];
+
 /** Effort flags for CLIs that have one but no model profile to take it from. */
 const EFFORT_SPECS: Record<string, Pick<CliLaunchOptions, 'efforts' | 'effortArgs'>> = {
   'copilot-cli': {
@@ -287,9 +293,25 @@ const EFFORT_SPECS: Record<string, Pick<CliLaunchOptions, 'efforts' | 'effortArg
     effortArgs: (level) => ['--reasoning-effort', level],
   },
   'grok-cli': {
-    efforts: ['low', 'medium', 'high'],
+    efforts: GROK_EFFORTS,
     effortArgs: (level) => ['--reasoning-effort', level],
   },
+};
+
+/**
+ * Known models for CLIs that have no run profile. Without an entry here such a CLI only takes a
+ * model name typed by hand.
+ */
+const MODEL_SPECS: Record<string, readonly CliLaunchModelOption[]> = {
+  'grok-cli': Object.values(GROK_MODELS).map((model) => ({
+    value: model.cliArg,
+    label: model.label,
+    efforts: GROK_EFFORTS,
+  })),
+  'cursor-cli': Object.values(CURSOR_MODELS).map((model) => ({
+    value: model.cliArg,
+    label: model.label,
+  })),
 };
 
 /** What can be preset for a CLI's launch. Null when AgentMate knows no launch flags for it. */
@@ -297,8 +319,8 @@ export function cliLaunchOptions(cliId: string): CliLaunchOptions | null {
   const cli = getCliDefinition(cliId);
   if (!cli) return null;
   const profile = runProfileForTargetAI(cliId);
-  const models: CliLaunchModelOption[] = profile.generic
-    ? []
+  const models: readonly CliLaunchModelOption[] = profile.generic
+    ? (MODEL_SPECS[cliId] ?? [])
     : profile.models
         .filter((model) => model.modelArg)
         .map((model) => ({ value: model.modelArg!, label: model.label, efforts: model.efforts }));
@@ -352,6 +374,19 @@ function effortFlagKeys(effortArgs: readonly string[]): string[] {
   return [...flagKeys(effortArgs), ...(effortArgs[0] === '--reasoning-effort' ? ['--effort'] : [])];
 }
 
+/**
+ * Whether a CLI takes this effort with this model. A model the CLI's list doesn't know (typed by
+ * hand) is given the benefit of the doubt.
+ */
+function effortFitsModel(
+  options: CliLaunchOptions,
+  model: string | undefined,
+  effort: EffortLevel,
+): boolean {
+  const known = options.models.find((m) => m.value === model);
+  return options.efforts.includes(effort) && (!known || !!known.efforts?.includes(effort));
+}
+
 export interface LaunchDefaultPart {
   kind: 'model' | 'effort' | 'mode';
   args: string[];
@@ -387,11 +422,8 @@ export function launchDefaultParts(
   const takenModel = options.modelFlag
     ? findTakenFlag(takenArgs, modelFlagKeys(options.modelFlag))?.value
     : undefined;
-  const known = options.models.find((m) => m.value === (takenModel ?? model));
   const effortFits =
-    defaults.effort &&
-    options.efforts.includes(defaults.effort) &&
-    (!known || known.efforts?.includes(defaults.effort));
+    defaults.effort && effortFitsModel(options, takenModel ?? model, defaults.effort);
   if (effortFits && options.effortArgs && defaults.effort) {
     const args = options.effortArgs(defaults.effort);
     parts.push({ kind: 'effort', args, applied: !setsAny(takenArgs, effortFlagKeys(args)) });
@@ -417,6 +449,98 @@ export function launchDefaultArgs(
   return launchDefaultParts(cliId, defaults, takenArgs)
     .filter((part) => part.applied)
     .flatMap((part) => part.args);
+}
+
+/** A model, and an effort for it, chosen for one launch from the "+" menu. */
+export interface LaunchPick {
+  model?: string;
+  effort?: EffortLevel;
+}
+
+/** The CLIs whose "+" menu row opens a model and effort picker. */
+export const LAUNCH_PICK_CLI_IDS: readonly string[] = [
+  'claude-code',
+  'codex-cli',
+  'gemini-cli',
+  'grok-cli',
+  'cursor-cli',
+];
+
+export interface LaunchPickModel extends CliLaunchModelOption {
+  /** Short tier name from the run profile, e.g. "Fast". Absent for a CLI without a profile. */
+  tier?: string;
+  /** Where the model sits on its CLI's cost range at its default effort. */
+  costLevel?: CostLevel;
+  /** The same cost level for each effort the model accepts. */
+  effortCost?: Partial<Record<EffortLevel, CostLevel>>;
+}
+
+export interface LaunchPickOptions {
+  cliId: string;
+  models: readonly LaunchPickModel[];
+}
+
+/**
+ * What the "+" menu offers when launching a CLI with a model and effort picked for that one run.
+ * Null for a CLI that has no picker, or no model list to pick from.
+ */
+export function launchPickOptions(cliId: string): LaunchPickOptions | null {
+  if (!LAUNCH_PICK_CLI_IDS.includes(cliId)) return null;
+  const options = cliLaunchOptions(cliId);
+  if (!options?.modelFlag || options.models.length === 0) return null;
+  const profile = runProfileForTargetAI(cliId);
+  const models = options.models.map((model): LaunchPickModel => {
+    const run = profile.generic
+      ? undefined
+      : profile.models.find((m) => m.modelArg === model.value);
+    if (!run) return model;
+    const effortCost: Partial<Record<EffortLevel, CostLevel>> = {};
+    for (const effort of run.efforts ?? []) {
+      effortCost[effort] = relativeCostLevel(profile, { model: run, effort });
+    }
+    return {
+      ...model,
+      tier: run.tier,
+      costLevel: relativeCostLevel(profile, { model: run, effort: defaultEffortFor(run) }),
+      ...(run.efforts?.length ? { effortCost } : {}),
+    };
+  });
+  return { cliId, models };
+}
+
+/**
+ * The flags for one launch's pick: the model flag and model, then the effort when this model
+ * takes it. A pick without a model adds nothing, so the CLI starts on its own defaults.
+ */
+export function launchPickArgs(cliId: string, pick: LaunchPick): string[] {
+  const options = cliLaunchOptions(cliId);
+  const model = pick.model?.trim();
+  if (!options?.modelFlag || !model) return [];
+  const args = [options.modelFlag, model];
+  if (pick.effort && options.effortArgs && effortFitsModel(options, model, pick.effort)) {
+    args.push(...options.effortArgs(pick.effort));
+  }
+  return args;
+}
+
+/**
+ * A pick in words, like "Opus 5.5 · High", for a tab or a menu row. An effort the model can't
+ * take is left out, as it is from the flags. With no model, a bare effort reads "High effort".
+ */
+export function launchPickLabel(cliId: string, pick: LaunchPick): string | undefined {
+  const options = cliLaunchOptions(cliId);
+  if (!options) return undefined;
+  const model = pick.model?.trim();
+  const effort = pick.effort;
+  if (!model) {
+    return effort && options.efforts.includes(effort)
+      ? `${EFFORT_LABELS[effort]} effort`
+      : undefined;
+  }
+  const label = options.models.find((m) => m.value === model)?.label ?? model;
+  return effort && effortFitsModel(options, model, effort)
+    ? `${label} · ${EFFORT_LABELS[effort]}`
+    : label;
 }
 
 /** A flag found in a launch's arguments, with the value right after it when it takes one. */

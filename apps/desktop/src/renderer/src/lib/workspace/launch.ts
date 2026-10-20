@@ -152,12 +152,17 @@ export function launchPromptTab(
 export interface AgentLaunchOptions {
   /** Start bare: without this CLI's launch defaults from Settings. */
   skipLaunchDefaults?: boolean;
+  /** Model and effort flags picked for this one launch. They win over the launch defaults. */
+  runArgs?: string[];
+  /** Shown on the tab, e.g. "Opus 5.5 · High". */
+  runLabel?: string;
 }
 
 /**
  * Opens a tab in the project's workspace that starts an agent CLI. Returns the tab id. The model,
- * effort, and mode come from the CLI's launch defaults in Settings. Whatever is not set there is
- * left to the CLI's own default (for Claude Code, the last `/model` pick).
+ * effort, and mode come from the CLI's launch defaults in Settings, except where `runArgs` set
+ * them for this launch. Whatever is not set is left to the CLI's own default (for Claude Code,
+ * the last `/model` pick).
  */
 export function launchAgentTab(
   project: Project,
@@ -168,7 +173,7 @@ export function launchAgentTab(
   const cli = getCliDefinition(cliId);
   const shell = defaultNewSession().shell;
   const skipLaunchDefaults = options?.skipLaunchDefaults ?? false;
-  const command = agentCommand(cliId, shell, [], [], skipLaunchDefaults);
+  const command = agentCommand(cliId, shell, options?.runArgs ?? [], [], skipLaunchDefaults);
   if (!cli || !command) {
     toast.error('Unknown CLI.');
     return null;
@@ -183,7 +188,7 @@ export function launchAgentTab(
       shell,
       cwd: project.folderPath,
       launchInput: `${command}\r`,
-      runLabel: skipLaunchDefaults ? 'Without launch defaults' : undefined,
+      runLabel: options?.runLabel ?? (skipLaunchDefaults ? 'Without launch defaults' : undefined),
     },
     groupId,
   );

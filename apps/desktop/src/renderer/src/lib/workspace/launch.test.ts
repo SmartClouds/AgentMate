@@ -1,13 +1,15 @@
 // @vitest-environment node
 import type { Project } from '@agentmat/core';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * The launch helpers against the real CLI store, with only the terminal side stubbed out. What
  * they hand the workspace as `launchInput` is exactly what the new tab types into its shell.
  */
 
-const addTerminal = vi.fn((_projectId: string, _tab: { launchInput?: string }) => 'tab-1');
+const addTerminal = vi.fn(
+  (_projectId: string, _tab: { launchInput?: string; runLabel?: string }) => 'tab-1',
+);
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), warning: vi.fn() } }));
 vi.mock('@/lib/terminal/terminalRuntime', () => ({
@@ -45,6 +47,15 @@ async function load() {
 function typed(): string | undefined {
   return addTerminal.mock.calls.at(-1)?.[1].launchInput;
 }
+
+// The first import transforms the whole store graph, which takes several seconds on a busy
+// machine and used to land inside the first test's 15 second limit. The transform is cached, so
+// the imports after `vi.resetModules()` are quick.
+beforeAll(async () => {
+  stubAgentmate();
+  await load();
+  vi.unstubAllGlobals();
+}, 60_000);
 
 beforeEach(() => {
   vi.resetModules();
@@ -100,6 +111,38 @@ describe('launchAgentTab', () => {
     });
     launchAgentTab(project, 'claude-code', undefined, { skipLaunchDefaults: true });
     expect(typed()).toBe('claude\r');
+  });
+
+  it('starts on the model and effort picked for this launch', async () => {
+    const { launchAgentTab } = await load();
+    launchAgentTab(project, 'claude-code', undefined, {
+      runArgs: ['--model', 'opus', '--effort', 'high'],
+      runLabel: 'Opus 5.5 · High',
+    });
+    expect(typed()).toBe('claude --model opus --effort high\r');
+    expect(addTerminal.mock.calls.at(-1)?.[1].runLabel).toBe('Opus 5.5 · High');
+  });
+
+  it('lets a pick win over the saved model and keep the rest of the launch defaults', async () => {
+    const { useCliStore, launchAgentTab } = await load();
+    useCliStore.setState({
+      cliLaunchDefaults: { 'claude-code': { model: 'haiku', effort: 'low', mode: 'plan' } },
+    });
+    launchAgentTab(project, 'claude-code', undefined, { runArgs: ['--model', 'opus'] });
+    expect(typed()).toBe('claude --effort low --permission-mode plan --model opus\r');
+  });
+
+  it('keeps a pick when asked to skip launch defaults', async () => {
+    const { useCliStore, launchAgentTab } = await load();
+    useCliStore.setState({
+      cliLaunchDefaults: { 'claude-code': { effort: 'low', mode: 'plan' } },
+    });
+    launchAgentTab(project, 'claude-code', undefined, {
+      skipLaunchDefaults: true,
+      runArgs: ['--model', 'opus'],
+    });
+    expect(typed()).toBe('claude --model opus\r');
+    expect(addTerminal.mock.calls.at(-1)?.[1].runLabel).toBe('Without launch defaults');
   });
 
   it('adds status hooks once they have been prepared', async () => {
@@ -238,6 +281,9 @@ describe('background task arguments never reach a terminal', () => {
       expectClean(typed(), `${cli.id}: launchAgentTab`);
       launchAgentTab(project, cli.id, undefined, { skipLaunchDefaults: true });
       expectClean(typed(), `${cli.id}: launchAgentTab without launch defaults`);
+
+      launchAgentTab(project, cli.id, undefined, { runArgs: ['--effort', 'high'], runLabel: 'x' });
+      expectClean(typed(), `${cli.id}: launchAgentTab with a pick`);
 
       launchPromptTab(project, { cliId: cli.id, prompt: 'hello', runArgs: ['--effort', 'high'] });
       expectClean(typed(), `${cli.id}: launchPromptTab`);

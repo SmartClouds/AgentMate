@@ -33,6 +33,8 @@ An empty pane shows **Start an agent** (or **Open in this pane** in a split pane
 
 Click **+** in a pane's tab strip. The menu lists **Build a prompt…**, then **Agents**, **Shells**, **Browser**, **Manage CLIs** and **Keyboard shortcuts**. While the menu is open, press `1` to `9` to start the agent with that number. The default agent carries a **default** badge.
 
+Claude Code, Codex, Gemini, Grok and Cursor also have an arrow at the right of their row. Hover the row, or press the right arrow key, to open a list of models. Click a model to start the agent on it. Models that take an effort setting open a second list, where you pick **Low** up to the highest level the model supports. Gemini and Cursor have no effort setting to pick, so their models start the agent right away. Claude Code, Codex and Gemini show each model's tier and a small cost meter, so you can see what a step up costs. Clicking the row itself still starts the agent with your launch defaults, and so does the first row of each list, **Launch with defaults**, which also says what that will use. A check marks the model and effort you saved as launch defaults. The pick applies to that tab only, and anything you leave on **Default** comes from your launch defaults.
+
 ### From the keyboard
 
 `Ctrl+1` to `Ctrl+9` start the agent at that place in the **+** menu in the focused pane. On macOS use `Cmd+1` to `Cmd+9`. Number 1 is the first agent listed, so changing the order changes which key starts which agent.
@@ -53,7 +55,7 @@ In **Settings**, on the **Agents** tab, **Agent order** lists every agent. Drag 
 
 In **Settings**, on the **Agents** tab, **Launch defaults** lets you choose the model, effort and permission mode each agent starts with. Anything left on **Not set** adds no flag, so the CLI uses its own default. These apply only to workspace tabs and terminals. Background tasks such as commit messages use the Arguments box in AI CLI Manager instead. See [Settings](settings.md#launch-defaults).
 
-When at least one launch default is set, launchers show **Alt+click: skip launch defaults**. Hold `Alt` while clicking a tile or menu item (or while pressing its number key in the menu or on an empty pane) to start the agent bare, without those flags. That tab's tooltip then says **Without launch defaults**.
+When at least one launch default is set, launchers show **Alt+click: skip launch defaults**. Hold `Alt` while clicking a tile or menu item (or while pressing its number key in the menu or on an empty pane) to start the agent bare, without those flags. That tab's tooltip then says **Without launch defaults**. If you hold `Alt` on a model or effort in the **+** menu, the model and effort you picked are kept and only the other defaults are dropped.
 
 ### Starting from a prompt
 

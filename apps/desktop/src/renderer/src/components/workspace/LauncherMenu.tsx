@@ -1,4 +1,10 @@
-import type { Project } from '@agentmat/core';
+import {
+  type LaunchPick,
+  launchPickArgs,
+  launchPickLabel,
+  launchPickOptions,
+  type Project,
+} from '@agentmat/core';
 import { useNavigate } from 'react-router-dom';
 import { CliLogo } from '@/components/cliLogos';
 import { Globe, Keyboard, SettingsIcon, Sparkles, TerminalSquare } from '@/components/icons';
@@ -18,6 +24,7 @@ import { launchAgentTab, launchShellTab, shellOptions } from '@/lib/workspace/la
 import { useCliStore } from '@/stores/cliStore';
 import { useShortcutLabel } from '@/stores/shortcutStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { AgentSubmenu } from './AgentSubmenu';
 import { useAgentChoices } from './useAgentChoices';
 
 export interface LauncherMenuProps {
@@ -45,10 +52,15 @@ export function LauncherMenu({
   const shells = shellOptions();
   const browserKey = useShortcutLabel('workspace.newBrowser');
   const promptKey = useShortcutLabel('workspace.buildPrompt');
-  const hasLaunchDefaults = useCliStore((s) => Object.keys(s.cliLaunchDefaults).length > 0);
+  const launchDefaults = useCliStore((s) => s.cliLaunchDefaults);
+  const hasLaunchDefaults = Object.keys(launchDefaults).length > 0;
 
-  const launchAgent = (cliId: string, skipLaunchDefaults = false): void => {
-    launchAgentTab(project, cliId, groupId, { skipLaunchDefaults });
+  const launchAgent = (cliId: string, skipLaunchDefaults = false, pick?: LaunchPick): void => {
+    launchAgentTab(project, cliId, groupId, {
+      skipLaunchDefaults,
+      runArgs: pick ? launchPickArgs(cliId, pick) : undefined,
+      runLabel: pick ? launchPickLabel(cliId, pick) : undefined,
+    });
   };
 
   return (
@@ -56,9 +68,12 @@ export function LauncherMenu({
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
       <DropdownMenuContent
         align={align}
-        className="w-64"
+        // Wide enough for "Claude Code CLI", the Default chip, a digit and the flyout arrow.
+        className="w-[17rem]"
         onCloseAutoFocus={(event) => event.preventDefault()}
         onKeyDown={(event) => {
+          // A flyout is portaled out of this menu, but its key presses still bubble up to here.
+          if (!event.currentTarget.contains(event.target as Node)) return;
           const digit = /^Digit([1-9])$/.exec(event.code);
           const choice = digit ? agents.installed[Number(digit[1]) - 1] : undefined;
           if (!choice || event.ctrlKey || event.metaKey) return;
@@ -97,27 +112,41 @@ export function LauncherMenu({
             No agent CLIs found on this machine yet.
           </p>
         ) : (
-          agents.installed.map((choice, index) => (
-            <DropdownMenuItem
-              key={choice.cli.id}
-              onSelect={() => launchAgent(choice.cli.id)}
-              onClick={(event) => {
-                if (!event.altKey) return;
-                event.preventDefault();
-                setOpenFor(null);
-                launchAgent(choice.cli.id, true);
-              }}
-            >
-              <CliLogo cliId={choice.cli.id} className="h-4 w-4" />
-              <span className="truncate">{choice.cli.name}</span>
-              {choice.isDefault ? (
-                <Chip tone="primary" className="h-4 px-1.5 text-[10px]">
-                  Default
-                </Chip>
-              ) : null}
-              {index < 9 ? <Kbd>{index + 1}</Kbd> : null}
-            </DropdownMenuItem>
-          ))
+          agents.installed.map((choice, index) => {
+            const pickOptions = launchPickOptions(choice.cli.id);
+            const hint = index < 9 ? <Kbd>{index + 1}</Kbd> : null;
+            return pickOptions ? (
+              <AgentSubmenu
+                key={choice.cli.id}
+                choice={choice}
+                options={pickOptions}
+                saved={launchDefaults[choice.cli.id]}
+                trailing={hint}
+                onLaunch={(pick, skip) => launchAgent(choice.cli.id, skip, pick)}
+                onClose={() => setOpenFor(null)}
+              />
+            ) : (
+              <DropdownMenuItem
+                key={choice.cli.id}
+                onSelect={() => launchAgent(choice.cli.id)}
+                onClick={(event) => {
+                  if (!event.altKey) return;
+                  event.preventDefault();
+                  setOpenFor(null);
+                  launchAgent(choice.cli.id, true);
+                }}
+              >
+                <CliLogo cliId={choice.cli.id} className="h-4 w-4" />
+                <span className="truncate">{choice.cli.name}</span>
+                {choice.isDefault ? (
+                  <Chip tone="primary" className="h-4 px-1.5 text-[10px]">
+                    Default
+                  </Chip>
+                ) : null}
+                {hint}
+              </DropdownMenuItem>
+            );
+          })
         )}
         <DropdownMenuSeparator />
         <DropdownMenuLabel>Shells</DropdownMenuLabel>
