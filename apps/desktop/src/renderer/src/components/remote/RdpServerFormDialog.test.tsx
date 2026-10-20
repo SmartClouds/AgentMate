@@ -34,7 +34,7 @@ async function openDisplaySection(initial: RdpSavedServer | null = saved) {
       open
       onOpenChange={() => undefined}
       initial={initial ?? undefined}
-      onSaved={() => {}}
+      onSaved={() => undefined}
     />,
     { bridge: { 'rdp.saveServer': async () => saved } },
   );

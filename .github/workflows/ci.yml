@@ -28,6 +28,12 @@ on:
 permissions:
   contents: read
 
+# On Linux x64, onnxruntime-node's postinstall downloads its CUDA and TensorRT libraries (about
+# 200 MB) from api.nuget.org. The app transcribes on the CPU and never loads them, and a slow
+# connection to NuGet failed a whole install (run 179). The CPU runtime ships in the npm package.
+env:
+  ONNXRUNTIME_NODE_INSTALL: skip
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true

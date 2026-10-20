@@ -40,6 +40,11 @@ on:
 permissions:
   contents: read
 
+# A called workflow does not inherit the caller's env, so CI sets this here too. See ci.yml for why
+# onnxruntime-node's NuGet download is skipped.
+env:
+  ONNXRUNTIME_NODE_INSTALL: skip
+
 jobs:
   unit:
     name: Unit and integration (core, protocol)
