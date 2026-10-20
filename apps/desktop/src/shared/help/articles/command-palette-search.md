@@ -3,7 +3,7 @@ title: Command palette and search
 category: Getting started
 order: 30
 summary: Jump to any page, project, prompt, skill or Vault entry from one search box, and search a project's files, types, members and text from the Workspace.
-keywords: command palette, search, ctrl+k, cmd+k, quick open, go to, find, workspace search, ctrl+p, files, symbols, text search, regex, global shortcuts
+keywords: command palette, search, ctrl+k, cmd+k, quick open, go to, find, workspace search, ctrl+p, files, symbols, text search, regex, wildcard, glob, pattern, global shortcuts
 ---
 
 AgentMate has two search tools. The command palette is a quick way to jump anywhere in the app: pages, projects, worktrees, prompt history, skills and Vault entries. Workspace search is a bigger dialog inside the Workspace that finds files, types, members and text inside one project's code, with a preview of each result.
@@ -58,6 +58,16 @@ Workspace search is a large dialog for finding things in the code of one project
 - Press `Esc` or click the close button to leave.
 
 `Ctrl+P` goes to the Projects page everywhere else in the app. On the Workspace it opens search instead. You can change either key in Settings, Shortcuts. See [Keyboard shortcuts](keyboard-shortcuts.md).
+
+### Patterns in the Files panel search box
+
+The search box in the Workspace Files panel also takes patterns, so you can list files by shape instead of by name:
+
+- `*.md` lists every Markdown file in the project, in any folder. `*` stands for any run of characters inside one folder name, and `?` for exactly one character.
+- `docs/*.md` lists the Markdown files directly inside any `docs` folder. `docs/**/*.md` also goes into the folders below it.
+- Put a regular expression between two slashes for anything a wildcard cannot say, for example `/\.test\.tsx?$/` for test files. It is matched against the whole path and ignores case.
+
+Anything else is searched by name as before. If a regular expression is not valid, the box says so instead of showing an empty list. The full Workspace search dialog does not read these patterns.
 
 ### What you can search for
 

@@ -32,7 +32,7 @@ Each row shows the account, the computer (and port if it is not 3389), the resol
 | Option | What it does |
 | --- | --- |
 | **Resolution** | **Fit the window (follows resizing)** or a fixed size: 1920 × 1080, 1600 × 900, 1366 × 768, 1280 × 720 or 1024 × 768. |
-| **Start in full screen** | Opens the session in full screen. |
+| **Open as** | How the session window opens. **Window** is a smaller window you can move and resize, **Maximized** fills the screen but keeps the Windows taskbar visible, and **Full screen** covers the whole screen. |
 | **Share clipboard** | Copy text and images here and paste them on the server, and the other way around. |
 | **Copy files** | Copy files here and paste them on the server with `Ctrl+V`, and save files copied on the server. It needs clipboard sharing turned on. |
 | **Network Level Authentication** | Signs in before the session starts. Windows Server requires it unless an admin turned it off. If AgentMate and the server cannot agree on security, try switching this. |
@@ -98,7 +98,7 @@ Window controls (minimize, maximize, close) are at the right. Closing the window
 
 ### Full screen
 
-Press `Ctrl+Alt+Break` to switch between full screen and a window, as in the Windows client. In full screen, move the mouse to the top edge of the screen and the connection bar slides down with the same buttons plus **Minimize** and **Disconnect and close**. It hides again a moment after you move away. Turn on **Start in full screen** for a server to always begin that way.
+Press `Ctrl+Alt+Break` to switch between full screen and a window, as in the Windows client. In full screen, move the mouse to the top edge of the screen and the connection bar slides down with the same buttons plus **Minimize** and **Disconnect and close**. It hides again a moment after you move away. Set **Open as** to **Full screen** for a server to always begin that way.
 
 ### Resolution
 

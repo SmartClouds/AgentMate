@@ -21,7 +21,7 @@ Deploy does not have its own "add server" form. It uses the servers you save in 
 1. Click **Add or edit servers in Remote** under the server list (or open **Remote** in the sidebar).
 2. Click **Add server** and fill in **Nickname**, **Host**, **Port** (22 by default) and **Username**.
 3. Choose how to sign in: **Password**, or **Private key** (a **Private key file** and, only if the key is protected, a **Key passphrase**).
-4. Save, then go back to **Deploy**. The server appears in the list with "Core not installed".
+4. Save, then go back to **Deploy**. A new server does not show up in the list by itself: click **Choose servers to show**, tick it and click **Save**. It appears in the list with "Core not installed".
 
 If the server's host key has changed since you last connected, AgentMate stops and asks whether to trust the new key. Only an explicit "trust" stores it. If you are sure it is your server (for example after you reinstalled it), trust it. Otherwise cancel, because a changed key can also mean someone is in the middle of the connection.
 

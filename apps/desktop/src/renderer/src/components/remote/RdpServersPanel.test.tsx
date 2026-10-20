@@ -1,7 +1,13 @@
 import type { RdpSavedServer } from '@shared/apiTypes';
 import { screen, waitFor } from '@testing-library/react';
 import { toast } from 'sonner';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  dragItemDown,
+  mockStackedRows,
+  reorderIds,
+  settleDragClick,
+} from '../../../../test/renderer/dragLayout';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
 import { RdpServersPanel } from './RdpServersPanel';
 
@@ -11,6 +17,7 @@ vi.mock('@/stores/confirmStore', () => ({ confirmDialog: () => Promise.resolve(t
 const options = {
   resolution: 'fitWindow' as const,
   fullscreenOnConnect: false,
+  maximizeOnConnect: true,
   clipboard: true,
   fileTransfer: true,
   nla: true,
@@ -99,6 +106,50 @@ describe('RdpServersPanel certificates', () => {
     await waitFor(() =>
       expect(bridge.$fn('rdp.listServers').mock.calls.length).toBeGreaterThan(before),
     );
+  });
+});
+
+describe('RdpServersPanel drag to reorder', () => {
+  const servers = [withCertificate, withoutCertificate];
+
+  afterEach(() => {
+    settleDragClick();
+    vi.restoreAllMocks();
+  });
+
+  it('moves a server when its grip is dragged, and saves the order it lands in', async () => {
+    mockStackedRows(60);
+    const { container, bridge } = renderPanel({
+      'rdp.reorderServers': (ids: string[]) => ids.map((id) => servers.find((s) => s.id === id)),
+    });
+    await screen.findByText('New box');
+
+    dragItemDown(container, 'server-1', 70);
+
+    await waitFor(() =>
+      expect(bridge.$fn('rdp.reorderServers')).toHaveBeenCalledWith(['server-2', 'server-1']),
+    );
+    expect(reorderIds(container)).toEqual(['server-2', 'server-1']);
+  });
+
+  it('puts the saved order back and says so when saving fails', async () => {
+    mockStackedRows(60);
+    const { container, bridge } = renderPanel({
+      'rdp.reorderServers': async () => {
+        throw new Error("Error invoking remote method 'rdp:reorderServers': Error: Disk full.");
+      },
+    });
+    await screen.findByText('New box');
+    const before = bridge.$fn('rdp.listServers').mock.calls.length;
+
+    dragItemDown(container, 'server-1', 70);
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Disk full.'));
+    // The failed order is read over again, and the list is back to what is saved.
+    await waitFor(() =>
+      expect(bridge.$fn('rdp.listServers').mock.calls.length).toBeGreaterThan(before),
+    );
+    await waitFor(() => expect(reorderIds(container)).toEqual(['server-1', 'server-2']));
   });
 });
 

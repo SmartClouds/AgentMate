@@ -123,6 +123,9 @@ export async function launchApp(seed: {
     JSON.stringify({
       // Shells end with the app, so no terminal host is left running after a test.
       keepTerminalsRunning: false,
+      // Deploy lists only the servers the user chose, and a launch with the DevHost is there to
+      // work on it, so it starts out chosen. A test of the choice itself passes its own list.
+      ...(seed.env?.AGENTMATE_DEPLOY_DEV_CORE ? { deployServerIds: ['devhost'] } : {}),
       ...seed.settings,
     }),
   );

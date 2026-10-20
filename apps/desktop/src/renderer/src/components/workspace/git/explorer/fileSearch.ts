@@ -1,7 +1,8 @@
 /**
  * Ranking for the explorer's file search. The whole file list comes over once and every
  * keystroke is matched here, so this stays to plain string scans: `indexOf` for the common
- * case, and a subsequence walk only for the paths that have no straight match.
+ * case, and a subsequence walk only for the paths that have no straight match. A query that is
+ * a glob or a `/regex/` skips the ranking and is matched by one compiled expression instead.
  */
 
 export interface FileHit {
@@ -20,6 +21,8 @@ export interface FileSearchResult {
   hits: FileHit[];
   /** How many files matched, which can be more than `hits` holds. */
   total: number;
+  /** Set when the query was a `/regex/` that does not compile. */
+  invalid?: true;
 }
 
 export const DEFAULT_SEARCH_LIMIT = 200;
@@ -142,15 +145,107 @@ export function normalizeQuery(query: string): string {
   return query.replace(/\s+/g, '').toLowerCase();
 }
 
-export function searchFiles(
+/** Every file a pattern lets through is as good as any other, so length and name decide. */
+const PATTERN_SCORE = 0;
+
+/** Something between two slashes: `/\.test\.tsx?$/`. */
+const REGEX_QUERY = /^\/(.+)\/$/;
+const GLOB_WILDCARD = /[*?]/;
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+}
+
+/**
+ * A glob as a regular expression. `*` stays inside a folder, `**` goes through them, `?` is one
+ * character. The pattern has to line up with the end of the path and with the start of a folder
+ * name, so `*.md` finds Markdown files anywhere and `docs/*.md` finds them in any `docs`. Each
+ * run of fixed text is a capture group, which is what gets highlighted.
+ */
+function globToRegExp(glob: string): RegExp {
+  let source = '';
+  let fixed = '';
+  const flush = (): void => {
+    if (fixed) source += `(${escapeRegExp(fixed)})`;
+    fixed = '';
+  };
+  for (let at = 0; at < glob.length; at += 1) {
+    const char = glob[at];
+    if (char === '?') {
+      flush();
+      source += '[^/]';
+    } else if (char === '*') {
+      flush();
+      let end = at;
+      while (glob[end + 1] === '*') end += 1;
+      if (end === at) {
+        source += '[^/]*';
+      } else if (glob[end + 1] === '/') {
+        // `**/` also stands for no folder at all.
+        source += '(?:.*/)?';
+        end += 1;
+      } else {
+        source += '.*';
+      }
+      at = end;
+    } else {
+      fixed += char;
+    }
+  }
+  flush();
+  return new RegExp(`(?:^|/)${source}$`, 'id');
+}
+
+/**
+ * The query as a pattern, when it is one: a `/regex/` or a glob with a `*` or `?` in it. Null
+ * for an ordinary search, and 'invalid' for a regex that does not compile.
+ */
+function compilePattern(query: string): { regex: RegExp; glob: boolean } | 'invalid' | null {
+  const literal = REGEX_QUERY.exec(query);
+  if (literal) {
+    try {
+      return { regex: new RegExp(literal[1], 'i'), glob: false };
+    } catch {
+      return 'invalid';
+    }
+  }
+  return GLOB_WILDCARD.test(query) ? { regex: globToRegExp(query), glob: true } : null;
+}
+
+function patternRanges(match: RegExpExecArray, glob: boolean): [number, number][] {
+  if (!glob) {
+    return match[0] ? [[match.index, match.index + match[0].length]] : [];
+  }
+  return (match.indices ?? []).slice(1).flatMap((range) => (range ? [[range[0], range[1]]] : []));
+}
+
+function matchPattern(
+  files: readonly string[],
+  pattern: { regex: RegExp; glob: boolean },
+): FileHit[] {
+  const hits: FileHit[] = [];
+  for (const [index, path] of files.entries()) {
+    const match = pattern.regex.exec(path);
+    if (!match) continue;
+    hits.push({
+      index,
+      path,
+      nameStart: path.lastIndexOf('/') + 1,
+      ranges: patternRanges(match, pattern.glob),
+      score: PATTERN_SCORE,
+    });
+  }
+  return hits;
+}
+
+function matchPlain(
   files: readonly string[],
   query: string,
-  options: { limit?: number; lowered?: readonly string[] } = {},
-): FileSearchResult {
+  precomputed: readonly string[] | undefined,
+): FileHit[] {
   const needle = normalizeQuery(query);
-  if (!needle) return { hits: [], total: 0 };
-  const limit = options.limit ?? DEFAULT_SEARCH_LIMIT;
-  const lowered = options.lowered ?? loweredPaths(files);
+  if (!needle) return [];
+  const lowered = precomputed ?? loweredPaths(files);
   const byPath = needle.includes('/');
 
   const hits: FileHit[] = [];
@@ -165,6 +260,23 @@ export function searchFiles(
       score: match.score,
     });
   }
+  return hits;
+}
+
+/**
+ * `patterns` lets a query be a glob (`*.md`, `docs/*.ts`) or a regular expression between
+ * slashes (`/\.test\.tsx?$/`). It is off by default because other callers search names that
+ * are not paths, where a `*` or a slash is just a character.
+ */
+export function searchFiles(
+  files: readonly string[],
+  query: string,
+  options: { limit?: number; lowered?: readonly string[]; patterns?: boolean } = {},
+): FileSearchResult {
+  const limit = options.limit ?? DEFAULT_SEARCH_LIMIT;
+  const pattern = options.patterns ? compilePattern(query.trim()) : null;
+  if (pattern === 'invalid') return { hits: [], total: 0, invalid: true };
+  const hits = pattern ? matchPattern(files, pattern) : matchPlain(files, query, options.lowered);
   const total = hits.length;
   // Same score: the shorter, then alphabetical path, so the order never wanders between runs.
   // Equal strings (two symbols with one name) keep the order they were given in.

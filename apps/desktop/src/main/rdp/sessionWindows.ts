@@ -69,6 +69,8 @@ export interface OpenRdpWindowOptions {
   sessionId: string;
   title: string;
   fullScreen: boolean;
+  /** Open maximized, taskbar visible. Ignored when `fullScreen` is on. */
+  maximized: boolean;
   onClosed: () => void;
 }
 
@@ -96,8 +98,16 @@ export function openRdpWindow(options: OpenRdpWindowOptions): BrowserWindow {
   });
 
   window.once('ready-to-show', () => {
-    if (!keepWindowsHidden) window.show();
-    if (options.fullScreen) window.setFullScreen(true);
+    if (options.fullScreen) {
+      if (!keepWindowsHidden) window.show();
+      window.setFullScreen(true);
+      return;
+    }
+    if (keepWindowsHidden) return;
+    // Maximizing also shows a hidden window, hence the guard above. Unlike full screen it leaves
+    // the taskbar visible.
+    if (options.maximized) window.maximize();
+    window.show();
   });
   // The page sets its own title from React; keep the server's name on the taskbar instead.
   window.on('page-title-updated', (event) => event.preventDefault());

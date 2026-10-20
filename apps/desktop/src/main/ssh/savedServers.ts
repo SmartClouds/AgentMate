@@ -1,4 +1,5 @@
 import type { StoredSshServer } from '../../shared/apiTypes';
+import { orderById } from '../../shared/orderById';
 import { store } from '../store';
 import type { SshEndpoint } from './connectConfig';
 import type { PoolSource } from './pool';
@@ -27,6 +28,20 @@ export function updateSshServer(
   });
   updateQueue = next.catch(() => undefined);
   return next;
+}
+
+/**
+ * Saves the servers in the order the Remote page's list was dragged into and returns them. It runs
+ * on the same queue as `updateSshServer`, so a connect finishing mid-drop can't lose either write.
+ */
+export function reorderSshServers(orderedIds: string[]): Promise<StoredSshServer[]> {
+  let reordered: StoredSshServer[] = [];
+  const next = updateQueue.then(async () => {
+    reordered = orderById(await store.getSshServers(), orderedIds);
+    await store.setSshServers(reordered);
+  });
+  updateQueue = next.catch(() => undefined);
+  return next.then(() => reordered);
 }
 
 export async function findSavedServer(serverId: string): Promise<StoredSshServer> {

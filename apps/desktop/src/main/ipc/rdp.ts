@@ -13,6 +13,7 @@ import type {
   StoredRdpServer,
 } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';
+import { orderById } from '../../shared/orderById';
 import { withRdpDefaults } from '../../shared/rdpDefaults';
 import { stopRdpTask } from '../agents/rdpTaskRunner';
 import { resolveTunnelRoute } from '../network/proxy';
@@ -101,6 +102,17 @@ function updateServer(
   });
   updateQueue = next.catch(() => undefined);
   return next;
+}
+
+/** Saves the servers in the order the list was dragged into, on the same queue as `updateServer`. */
+function reorderServers(orderedIds: string[]): Promise<StoredRdpServer[]> {
+  let reordered: StoredRdpServer[] = [];
+  const next = updateQueue.then(async () => {
+    reordered = orderById(await store.getRdpServers(), orderedIds);
+    await store.setRdpServers(reordered);
+  });
+  updateQueue = next.catch(() => undefined);
+  return next.then(() => reordered);
 }
 
 function sessionFor(event: IpcMainInvokeEvent, sessionId: string): RdpSession {
@@ -206,6 +218,12 @@ export function registerRdpHandlers(): void {
     checkedCertificates.delete(id);
   });
 
+  ipcMain.handle(
+    IPC.rdp.reorderServers,
+    async (_event, orderedIds: string[]): Promise<RdpSavedServer[]> =>
+      (await reorderServers(orderedIds)).map(toPublicServer),
+  );
+
   ipcMain.handle(IPC.rdp.openSession, async (_event, serverId: string): Promise<string> => {
     const server = (await store.getRdpServers()).find((s) => s.id === serverId);
     if (!server) throw new Error('This saved server no longer exists.');
@@ -215,10 +233,12 @@ export function registerRdpHandlers(): void {
 
     const sessionId = randomUUID();
     let ownerId = -1;
+    const { fullscreenOnConnect, maximizeOnConnect } = withRdpDefaults(server.options);
     const window = openRdpWindow({
       sessionId,
       title: `${server.nickname} - Remote Desktop`,
-      fullScreen: withRdpDefaults(server.options).fullscreenOnConnect,
+      fullScreen: fullscreenOnConnect,
+      maximized: maximizeOnConnect,
       onClosed: () => {
         stopRdpTask(sessionId, 'exited');
         sessions.delete(sessionId);

@@ -244,6 +244,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   idleResourceMinutes: DEFAULT_IDLE_RESOURCE_MINUTES,
   idleResourceNotify: true,
   devSetupStacks: ['essentials'],
+  deployServerIds: [],
 };
 
 /**
@@ -288,6 +289,12 @@ function normalizeEmulatorLaunchFlags(value: unknown): string {
   return value.trim().slice(0, MAX_EMULATOR_LAUNCH_FLAGS);
 }
 
+/** Server ids the user put on the Deploy page. Anything else in the file is a damaged entry. */
+function normalizeDeployServerIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.filter((id): id is string => typeof id === 'string' && id !== ''))];
+}
+
 function withSettingsMigrations(settings: AppSettings): AppSettings {
   const alerts = normalizeUsageResetAlerts(settings.usageResetAlerts);
   const windows = alerts.windows.map((key) =>
@@ -303,6 +310,7 @@ function withSettingsMigrations(settings: AppSettings): AppSettings {
     idleResourceMinutes: normalizeIdleResourceMinutes(settings.idleResourceMinutes),
     idleResourceNotify: settings.idleResourceNotify !== false,
     devSetupStacks: normalizeDevSetupStacks(settings.devSetupStacks),
+    deployServerIds: normalizeDeployServerIds(settings.deployServerIds),
     cliArgs: normalizeCliArgs(settings.cliArgs),
     cliLaunchDefaults: normalizeCliLaunchDefaults(settings.cliLaunchDefaults),
     commitMessage: normalizeCommitMessageSettings(settings.commitMessage),

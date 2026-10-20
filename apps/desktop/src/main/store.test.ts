@@ -326,6 +326,42 @@ describe('settings migrations', () => {
     });
   });
 
+  describe('deployServerIds', () => {
+    it('shows no server in Deploy until the user picks some', async () => {
+      const { store } = await loadStore();
+
+      expect((await store.getSettings()).deployServerIds).toEqual([]);
+    });
+
+    it('keeps the saved servers in the order they were saved in', async () => {
+      userData.writeData('settings.json', { deployServerIds: ['srv-3', 'srv-1', 'srv-2'] });
+      const { store } = await loadStore();
+
+      expect((await store.getSettings()).deployServerIds).toEqual(['srv-3', 'srv-1', 'srv-2']);
+    });
+
+    it('drops anything that is not a server id and lists each id once', async () => {
+      userData.writeData('settings.json', {
+        deployServerIds: ['srv-1', 7, null, '', 'srv-2', 'srv-1', { id: 'srv-3' }],
+      });
+      const { store } = await loadStore();
+
+      expect((await store.getSettings()).deployServerIds).toEqual(['srv-1', 'srv-2']);
+    });
+
+    it.each([
+      ['a string', 'srv-1'],
+      ['an object', { 'srv-1': true }],
+      ['a number', 1],
+      ['null', null],
+    ])('falls back to no servers for %s', async (_name, value) => {
+      userData.writeData('settings.json', { deployServerIds: value });
+      const { store } = await loadStore();
+
+      expect((await store.getSettings()).deployServerIds).toEqual([]);
+    });
+  });
+
   describe('autoPauseRunsWhileAgentWorks', () => {
     it('is off by default, so a run never freezes without the user asking for it', async () => {
       const { store } = await loadStore();

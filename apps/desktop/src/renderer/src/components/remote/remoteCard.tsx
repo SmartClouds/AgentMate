@@ -1,6 +1,8 @@
-import type { IconProps } from '@/components/icons';
+import { GripVertical, type IconProps } from '@/components/icons';
 import { GLASS_CARD } from '@/components/pageKit';
+import type { ReorderMotion } from '@/components/ui/ReorderableGroup';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /**
@@ -69,12 +71,45 @@ export function RemoteRow({
   );
 }
 
+/**
+ * A saved server's row. A held row lifts off the card while the rows around it slide out of its
+ * way, the same motion the Projects list has.
+ */
+export function serverRowClass(dragging: boolean): string {
+  return cn(
+    'relative flex flex-wrap items-center gap-x-3 gap-y-2 py-3 pl-2.5 pr-5',
+    dragging
+      ? 'z-10 rounded-lg bg-popover shadow-lg ring-1 ring-foreground/10 transition-none'
+      : 'transition-transform duration-200 ease-out motion-reduce:transition-none',
+  );
+}
+
+/**
+ * The only draggable part of a saved server's row, so pressing its buttons is never mistaken for
+ * the start of a reorder.
+ */
+export function ServerDragGrip({ motion }: { motion: ReorderMotion }): React.JSX.Element {
+  return (
+    <SimpleTooltip label="Drag to reorder">
+      <span
+        data-drag-grip
+        onPointerDown={motion.onGripPointerDown}
+        className="flex h-8 w-5 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground/50 transition-colors hover:bg-foreground/[0.08] hover:text-foreground active:cursor-grabbing"
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </span>
+    </SimpleTooltip>
+  );
+}
+
 /** Saved servers still loading: rows that shimmer in their own spot inside the card. */
 export function ServerRowsSkeleton(): React.JSX.Element {
   return (
     <div role="status" aria-label="Loading servers" className="settings-rows">
       {Array.from({ length: 2 }, (_, index) => (
-        <div key={index} className="flex items-center gap-3 px-5 py-3">
+        <div key={index} className="flex items-center gap-3 py-3 pl-2.5 pr-5">
+          {/* Where a loaded row keeps its drag grip, so the rows don't shift when they arrive. */}
+          <span aria-hidden className="w-5 shrink-0" />
           <Skeleton className="h-8 w-8 rounded-lg" />
           <div className="min-w-0 flex-1 space-y-1.5">
             <Skeleton className="h-3.5 w-32" />

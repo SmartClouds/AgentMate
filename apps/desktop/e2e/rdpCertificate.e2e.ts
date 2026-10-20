@@ -15,6 +15,7 @@ import { type LaunchedApp, launchApp } from './app';
 const OPTIONS = {
   resolution: 'fitWindow',
   fullscreenOnConnect: false,
+  maximizeOnConnect: true,
   clipboard: false,
   fileTransfer: false,
   nla: false,

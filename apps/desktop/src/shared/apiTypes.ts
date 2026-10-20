@@ -2390,6 +2390,11 @@ export type RdpResolution = 'fitWindow' | { width: number; height: number };
 export interface RdpServerOptions {
   resolution: RdpResolution;
   fullscreenOnConnect: boolean;
+  /**
+   * Open the window maximized, with the taskbar still visible. Ignored when
+   * `fullscreenOnConnect` is on. Off opens a normal-sized window.
+   */
+  maximizeOnConnect: boolean;
   /** Keep text and images in sync between this computer and the server. */
   clipboard: boolean;
   /** Allow copying files both ways through the clipboard channel. */

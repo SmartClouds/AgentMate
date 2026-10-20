@@ -1,7 +1,13 @@
 import type { DeployServer } from '@shared/deployTypes';
 import { screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { queryKeys } from '@/lib/queryKeys';
+import {
+  dragItemDown,
+  mockStackedRows,
+  reorderIds,
+  settleDragClick,
+} from '../../../../test/renderer/dragLayout';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
 import { fileSite, snapshot } from './files/testing/fixtures';
 import { ServerRail } from './ServerRail';
@@ -122,7 +128,7 @@ describe('ServerRail WordPress sites', () => {
   it('says so when there are only sites', () => {
     renderRail({ servers: [], selectedId: null, sites: [wpSite()] });
 
-    expect(screen.getByText('No servers yet.')).toBeTruthy();
+    expect(screen.getByText('No servers shown.')).toBeTruthy();
     expect(screen.getByRole('list', { name: 'WordPress sites' })).toBeTruthy();
   });
 
@@ -207,6 +213,16 @@ describe('ServerRail FTP and SFTP sites', () => {
     expect(screen.getByText('Production:/var/www/site')).toBeTruthy();
   });
 
+  it('names a saved server by its nickname even when the rail does not list it', () => {
+    renderFiles({
+      servers: [],
+      selectedId: null,
+      allServers: [SERVER],
+      fileSites: [fileSite({ connection: { kind: 'saved', sshServerId: 'srv-1' } })],
+    });
+    expect(screen.getByText('Production:/var/www/site')).toBeTruthy();
+  });
+
   it('selects a site, marks it, and offers to add one', async () => {
     const { user, onSelectFileSite, onAddFileSite } = renderFiles({
       fileSites: [fileSite()],
@@ -241,5 +257,153 @@ describe('ServerRail FTP and SFTP sites', () => {
   it('shows no FTP and SFTP group when the page passes none', () => {
     renderRail();
     expect(screen.queryByText('FTP and SFTP sites')).toBeNull();
+  });
+});
+
+describe('ServerRail chosen servers', () => {
+  const PRODUCTION = SERVER;
+  const STAGING: DeployServer = { ...SERVER, id: 'srv-2', nickname: 'Staging' };
+  const BACKUPS: DeployServer = { ...SERVER, id: 'srv-3', nickname: 'Backups' };
+
+  beforeEach(() => mockStackedRows(40));
+  afterEach(() => {
+    vi.restoreAllMocks();
+    settleDragClick();
+  });
+
+  function renderThree(props: Partial<Parameters<typeof ServerRail>[0]> = {}) {
+    const onReorderServers = vi.fn();
+    const view = renderRail({
+      servers: [PRODUCTION, STAGING, BACKUPS],
+      selectedId: null,
+      onReorderServers,
+      ...props,
+    });
+    return { ...view, onReorderServers };
+  }
+
+  it('lists the servers in the order the page gives them', () => {
+    const { container } = renderThree({ servers: [BACKUPS, PRODUCTION, STAGING] });
+
+    expect(reorderIds(container)).toEqual(['srv-3', 'srv-1', 'srv-2']);
+  });
+
+  it('offers to choose which servers are shown', async () => {
+    const onChooseServers = vi.fn();
+    const { user } = renderThree({ onChooseServers });
+
+    await user.click(screen.getByRole('button', { name: /Choose servers to show/ }));
+    expect(onChooseServers).toHaveBeenCalledTimes(1);
+  });
+
+  it('has no choosing row when the page offers none', () => {
+    renderThree();
+
+    expect(screen.queryByRole('button', { name: /Choose servers to show/ })).toBeNull();
+  });
+
+  it('saves the new order when a server is dragged down', () => {
+    const { container, onReorderServers } = renderThree();
+
+    dragItemDown(container, 'srv-1', 45);
+
+    expect(onReorderServers).toHaveBeenCalledTimes(1);
+    expect(onReorderServers).toHaveBeenCalledWith(['srv-2', 'srv-1', 'srv-3']);
+  });
+
+  it('does not save an order when a server is dropped where it was', () => {
+    const { container, onReorderServers } = renderThree();
+
+    dragItemDown(container, 'srv-2', 5);
+
+    expect(onReorderServers).not.toHaveBeenCalled();
+  });
+
+  it('still selects a server on a plain click', async () => {
+    const { user, onSelect, onReorderServers } = renderThree();
+
+    await user.click(screen.getByRole('button', { name: /Staging/ }));
+
+    expect(onSelect).toHaveBeenCalledWith('srv-2');
+    expect(onReorderServers).not.toHaveBeenCalled();
+  });
+
+  it('leaves the order alone when the page cannot save one', () => {
+    const { container } = renderThree({ onReorderServers: undefined });
+
+    dragItemDown(container, 'srv-1', 85);
+
+    expect(reorderIds(container)).toEqual(['srv-1', 'srv-2', 'srv-3']);
+  });
+
+  it('moves the focused server with Alt and the arrow keys', async () => {
+    const { user, onReorderServers } = renderThree();
+
+    screen.getByRole('button', { name: /Production/ }).focus();
+    await user.keyboard('{Alt>}{ArrowDown}{/Alt}');
+    expect(onReorderServers).toHaveBeenLastCalledWith(['srv-2', 'srv-1', 'srv-3']);
+
+    screen.getByRole('button', { name: /Backups/ }).focus();
+    await user.keyboard('{Alt>}{ArrowUp}{/Alt}');
+    expect(onReorderServers).toHaveBeenLastCalledWith(['srv-1', 'srv-3', 'srv-2']);
+  });
+
+  /** Holds the animation frames the rail asks for, so a test decides when they run. */
+  function holdFrames(): () => void {
+    const frames: FrameRequestCallback[] = [];
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      frames.push(callback);
+      return frames.length;
+    });
+    return () => {
+      for (const frame of frames.splice(0)) frame(0);
+    };
+  }
+
+  it('gives the keyboard back to the moved server when the move dropped it', async () => {
+    const runFrames = holdFrames();
+    const onReorderServers = vi.fn(() => (document.activeElement as HTMLElement).blur());
+    const { user } = renderThree({ onReorderServers });
+
+    const production = screen.getByRole('button', { name: /Production/ });
+    production.focus();
+    await user.keyboard('{Alt>}{ArrowDown}{/Alt}');
+    expect(document.activeElement).not.toBe(production);
+    runFrames();
+
+    expect(document.activeElement).toBe(production);
+  });
+
+  it('does not pull the keyboard back after it has gone to another server', async () => {
+    const runFrames = holdFrames();
+    const { user } = renderThree();
+
+    screen.getByRole('button', { name: /Production/ }).focus();
+    await user.keyboard('{Alt>}{ArrowDown}{/Alt}');
+    const backups = screen.getByRole('button', { name: /Backups/ });
+    backups.focus();
+    runFrames();
+
+    expect(document.activeElement).toBe(backups);
+  });
+
+  it('does not move the first server up or the last one down', async () => {
+    const { user, onReorderServers } = renderThree();
+
+    screen.getByRole('button', { name: /Production/ }).focus();
+    await user.keyboard('{Alt>}{ArrowUp}{/Alt}');
+    screen.getByRole('button', { name: /Backups/ }).focus();
+    await user.keyboard('{Alt>}{ArrowDown}{/Alt}');
+
+    expect(onReorderServers).not.toHaveBeenCalled();
+  });
+
+  it('leaves the arrow keys alone without Alt', async () => {
+    const { user, onReorderServers } = renderThree();
+
+    screen.getByRole('button', { name: /Production/ }).focus();
+    await user.keyboard('{ArrowDown}');
+
+    expect(onReorderServers).not.toHaveBeenCalled();
   });
 });

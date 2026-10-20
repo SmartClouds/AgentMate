@@ -581,6 +581,9 @@ const ssh = {
   saveServer: (input: SaveSshServerInput): Promise<SshSavedServer> =>
     ipcRenderer.invoke(IPC.ssh.saveServer, input),
   removeServer: (id: string): Promise<void> => ipcRenderer.invoke(IPC.ssh.removeServer, id),
+  /** Saves the list in the given id order and returns it. Servers left out go to the end. */
+  reorderServers: (orderedIds: string[]): Promise<SshSavedServer[]> =>
+    ipcRenderer.invoke(IPC.ssh.reorderServers, orderedIds),
   pickPrivateKeyFile: (): Promise<string | null> => ipcRenderer.invoke(IPC.ssh.pickPrivateKeyFile),
   vaultStatus: (): Promise<SshVaultStatus> => ipcRenderer.invoke(IPC.ssh.vaultStatus),
   unlockVault: (passphrase: string): Promise<boolean> =>
@@ -2497,6 +2500,9 @@ const rdp = {
   saveServer: (input: SaveRdpServerInput): Promise<RdpSavedServer> =>
     ipcRenderer.invoke(IPC.rdp.saveServer, input),
   removeServer: (id: string): Promise<void> => ipcRenderer.invoke(IPC.rdp.removeServer, id),
+  /** Saves the list in the given id order and returns it. Servers left out go to the end. */
+  reorderServers: (orderedIds: string[]): Promise<RdpSavedServer[]> =>
+    ipcRenderer.invoke(IPC.rdp.reorderServers, orderedIds),
   /** Opens a session window for a saved server and returns its session id. */
   openSession: (serverId: string): Promise<string> =>
     ipcRenderer.invoke(IPC.rdp.openSession, serverId),

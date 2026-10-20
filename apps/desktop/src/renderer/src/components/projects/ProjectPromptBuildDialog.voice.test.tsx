@@ -84,6 +84,16 @@ beforeEach(() => {
 });
 
 describe('Speak prompt', () => {
+  it('leaves the output header to icons, so the size chip keeps its room', async () => {
+    renderDialog(baseSettings());
+
+    const speak = await screen.findByRole('button', { name: 'Speak prompt' });
+    const copy = screen.getByRole('button', { name: 'Copy' });
+    // Neither button spends width on a word; the names live in aria-label and the tooltip.
+    expect(speak.textContent).toBe('');
+    expect(copy.textContent).toBe('');
+  });
+
   it('puts the words into the generated prompt as spoken, in English', async () => {
     const { user, transcribe, ask, translate } = renderDialog(
       // Even with Dictate set to Persian, Speak prompt listens for English.

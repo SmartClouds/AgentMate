@@ -9,11 +9,18 @@ import type {
 } from '@shared/deployTypes';
 import { screen, waitFor, within } from '@testing-library/react';
 import { useLocation } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConfirmDialogHost } from '@/components/ConfirmDialog';
 import { useFilesRunEvents } from '@/components/deploy/files/hooks';
 import { fileSite, snapshot } from '@/components/deploy/files/testing/fixtures';
+import { wpSite } from '@/components/deploy/wordpress/testing/fixtures';
 import { useDeploySetupStore } from '@/stores/deploySetupStore';
+import {
+  dragItemDown,
+  mockStackedRows,
+  reorderIds,
+  settleDragClick,
+} from '../../../test/renderer/dragLayout';
 import { renderWithProviders } from '../../../test/renderer/renderWithProviders';
 
 /**
@@ -154,7 +161,28 @@ function FilesRunEvents(): null {
   return null;
 }
 
+/**
+ * The settings the page reads and writes, kept between calls: the server ids chosen for Deploy.
+ * `initial` is the choice itself, or a function that makes it on the first read.
+ */
+function chosenSettings(initial: string[] | (() => Promise<string[]>)) {
+  let ids: string[] | null = Array.isArray(initial) ? initial : null;
+  return {
+    'settings.get': async () => {
+      if (ids === null && typeof initial === 'function') ids = await initial();
+      return { deployServerIds: ids };
+    },
+    'settings.update': async (updates: { deployServerIds?: string[] }) => {
+      if (updates.deployServerIds) ids = updates.deployServerIds;
+      return { deployServerIds: ids };
+    },
+  };
+}
+
 function renderPage(bridge: Record<string, unknown> = {}, route = '/deploy') {
+  const listServers = (bridge['deploy.listServers'] ?? (async () => [server()])) as () => Promise<
+    DeployServer[]
+  >;
   return renderWithProviders(
     <>
       <FilesRunEvents />
@@ -165,7 +193,12 @@ function renderPage(bridge: Record<string, unknown> = {}, route = '/deploy') {
     {
       route,
       bridge: {
-        'deploy.listServers': async () => [server()],
+        'deploy.listServers': listServers,
+        // Deploy lists only the servers the user chose. Unless a test says otherwise, they chose
+        // every server it lists, as it lists them when the choice is read.
+        ...chosenSettings(async () =>
+          (await window.agentmat.deploy.listServers()).map((one) => one.id),
+        ),
         'deploy.preflight': async () => PREFLIGHT,
         'deploy.health': async () => HEALTH,
         'deploy.access': async (): Promise<DeployAccess> => ({ state: 'not-enrolled' }),
@@ -920,7 +953,7 @@ describe('DeployPage WordPress sites', () => {
     expect(screen.getByRole('navigation', { name: 'Site sections' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Deploy AI/ })).toBeNull();
     const rail = screen.getByRole('navigation', { name: 'Servers' });
-    expect(within(rail).getByText('No servers yet.')).toBeTruthy();
+    expect(within(rail).getByText('No servers shown.')).toBeTruthy();
   });
 
   it('keeps the first server selected when there are servers and sites', async () => {
@@ -1228,5 +1261,255 @@ describe('DeployPage FTP and SFTP sites', () => {
       expect(toast.success).toHaveBeenCalledWith('Deployed Bakery static: 1 uploaded.'),
     );
     expect(await screen.findByRole('region', { name: 'Last deploy' })).toBeTruthy();
+  });
+});
+
+describe('DeployPage chosen servers', () => {
+  const SAVED = [
+    server({ id: 'srv-1', nickname: 'Production' }),
+    server({ id: 'srv-2', nickname: 'Staging' }),
+    server({ id: 'srv-3', nickname: 'Backups' }),
+  ];
+
+  /** The page with three saved servers and `chosen` picked for Deploy. */
+  function renderChosen(chosen: string[], bridge: Record<string, unknown> = {}, route = '/deploy') {
+    return renderPage(
+      { 'deploy.listServers': async () => SAVED, ...chosenSettings(chosen), ...bridge },
+      route,
+    );
+  }
+
+  beforeEach(() => mockStackedRows(40));
+  afterEach(() => {
+    vi.restoreAllMocks();
+    settleDragClick();
+  });
+
+  it('lists only the servers that were chosen, in the order they were arranged', async () => {
+    const { container } = renderChosen(['srv-3', 'srv-1']);
+
+    const rail = await screen.findByRole('navigation', { name: 'Servers' });
+    expect(reorderIds(container)).toEqual(['srv-3', 'srv-1']);
+    expect(within(rail).queryByText('Staging')).toBeNull();
+  });
+
+  it('opens the first server that is shown, not the first one saved', async () => {
+    renderChosen(['srv-3', 'srv-1']);
+
+    expect(await screen.findByRole('heading', { name: 'Backups' })).toBeTruthy();
+  });
+
+  it('opens the first shown server when the address names one that is not shown', async () => {
+    renderChosen(['srv-1'], {}, '/deploy?server=srv-2');
+
+    expect(await screen.findByRole('heading', { name: 'Production' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Staging' })).toBeNull();
+  });
+
+  it('leaves out a chosen server that is no longer saved', async () => {
+    const { container } = renderChosen(['gone', 'srv-2']);
+
+    await screen.findByRole('heading', { name: 'Staging' });
+    expect(reorderIds(container)).toEqual(['srv-2']);
+  });
+
+  it('shimmers until the choice has loaded, even with the servers in', async () => {
+    const choice = deferred<unknown>();
+    const { container, bridge } = renderChosen(['srv-1'], { 'settings.get': () => choice.promise });
+
+    await waitFor(() => expect(bridge.$fn('deploy.listServers')).toHaveBeenCalled());
+    // Long enough for the servers to have come back.
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(container.querySelector('[aria-busy="true"] .shimmer')).not.toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Production' })).toBeNull();
+
+    choice.resolve({ deployServerIds: ['srv-1'] });
+    expect(await screen.findByRole('heading', { name: 'Production' })).toBeTruthy();
+  });
+
+  it('says why the choice did not load and offers to try again', async () => {
+    const { user, bridge } = renderChosen(['srv-1'], {
+      'settings.get': async () => {
+        throw new Error("Error invoking remote method 'settings:get': Error: disk is gone");
+      },
+    });
+
+    expect(await screen.findByText('disk is gone')).toBeTruthy();
+    bridge.$set('settings.get', async () => ({ deployServerIds: ['srv-1'] }));
+    await user.click(screen.getByRole('button', { name: /Try again/ }));
+    expect(await screen.findByRole('heading', { name: 'Production' })).toBeTruthy();
+  });
+
+  describe('when none is chosen', () => {
+    it('asks to choose servers, and says how many are saved', async () => {
+      renderChosen([]);
+
+      expect(await screen.findByText('No servers chosen yet')).toBeTruthy();
+      expect(screen.getByText(/3 saved servers/)).toBeTruthy();
+      expect(screen.getByRole('button', { name: /Choose servers to show/ })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: /Open Remote/ })).toBeNull();
+      expect(screen.queryByRole('navigation', { name: 'Servers' })).toBeNull();
+    });
+
+    it('still points to Remote when no server is saved at all', async () => {
+      renderChosen([], { 'deploy.listServers': async () => [] });
+
+      expect(await screen.findByText('No servers yet')).toBeTruthy();
+      expect(screen.getByRole('button', { name: /Open Remote/ })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: /Choose servers to show/ })).toBeNull();
+    });
+
+    it('chooses servers from there and shows them at once', async () => {
+      const { user, bridge, container } = renderChosen([]);
+
+      await user.click(await screen.findByRole('button', { name: /Choose servers to show/ }));
+      const dialog = await screen.findByRole('dialog', { name: 'Choose servers to show' });
+      await user.click(within(dialog).getByRole('checkbox', { name: /Staging/ }));
+      await user.click(within(dialog).getByRole('checkbox', { name: /Backups/ }));
+      await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+      await waitFor(() =>
+        expect(bridge.$fn('settings.update')).toHaveBeenCalledWith({
+          deployServerIds: ['srv-2', 'srv-3'],
+        }),
+      );
+      expect(await screen.findByRole('heading', { name: 'Staging' })).toBeTruthy();
+      expect(reorderIds(container)).toEqual(['srv-2', 'srv-3']);
+    });
+
+    it('keeps the rail and its way to choose when a site is all there is to show', async () => {
+      const { user } = renderChosen([], { 'deployWordPress.listSites': async () => [wpSite()] });
+
+      expect(await screen.findByRole('heading', { name: 'Bakery' })).toBeTruthy();
+      const rail = screen.getByRole('navigation', { name: 'Servers' });
+      expect(within(rail).getByText('No servers shown.')).toBeTruthy();
+      await user.click(within(rail).getByRole('button', { name: /Choose servers to show/ }));
+      expect(await screen.findByRole('dialog', { name: 'Choose servers to show' })).toBeTruthy();
+    });
+  });
+
+  describe('choosing from the rail', () => {
+    it('adds a server after the ones shown and keeps the one being looked at', async () => {
+      const { user, bridge, container } = renderChosen(['srv-2', 'srv-1']);
+
+      await screen.findByRole('heading', { name: 'Staging' });
+      const rail = screen.getByRole('navigation', { name: 'Servers' });
+      await user.click(within(rail).getByRole('button', { name: /Choose servers to show/ }));
+      const dialog = await screen.findByRole('dialog', { name: 'Choose servers to show' });
+      await user.click(within(dialog).getByRole('checkbox', { name: /Backups/ }));
+      await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+      await waitFor(() =>
+        expect(bridge.$fn('settings.update')).toHaveBeenCalledWith({
+          deployServerIds: ['srv-2', 'srv-1', 'srv-3'],
+        }),
+      );
+      await waitFor(() => expect(reorderIds(container)).toEqual(['srv-2', 'srv-1', 'srv-3']));
+      expect(screen.getByRole('heading', { name: 'Staging' })).toBeTruthy();
+    });
+
+    it('takes a server off the rail', async () => {
+      const { user, bridge, container } = renderChosen(['srv-1', 'srv-2', 'srv-3']);
+
+      await screen.findByRole('heading', { name: 'Production' });
+      const rail = screen.getByRole('navigation', { name: 'Servers' });
+      await user.click(within(rail).getByRole('button', { name: /Choose servers to show/ }));
+      const dialog = await screen.findByRole('dialog', { name: 'Choose servers to show' });
+      await user.click(within(dialog).getByRole('checkbox', { name: /Staging/ }));
+      await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+      await waitFor(() =>
+        expect(bridge.$fn('settings.update')).toHaveBeenCalledWith({
+          deployServerIds: ['srv-1', 'srv-3'],
+        }),
+      );
+      await waitFor(() => expect(reorderIds(container)).toEqual(['srv-1', 'srv-3']));
+    });
+
+    it('moves to the first shown server when the one open is taken off', async () => {
+      const { user } = renderChosen(['srv-1', 'srv-2'], {}, '/deploy?server=srv-2');
+
+      await screen.findByRole('heading', { name: 'Staging' });
+      const rail = screen.getByRole('navigation', { name: 'Servers' });
+      await user.click(within(rail).getByRole('button', { name: /Choose servers to show/ }));
+      const dialog = await screen.findByRole('dialog', { name: 'Choose servers to show' });
+      await user.click(within(dialog).getByRole('checkbox', { name: /Staging/ }));
+      await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+      expect(await screen.findByRole('heading', { name: 'Production' })).toBeTruthy();
+    });
+  });
+
+  describe('ordering', () => {
+    it('saves the new order when a server is dragged, and shows it at once', async () => {
+      const { bridge, container } = renderChosen(['srv-1', 'srv-2', 'srv-3']);
+      await screen.findByRole('heading', { name: 'Production' });
+
+      dragItemDown(container, 'srv-1', 45);
+
+      expect(reorderIds(container)).toEqual(['srv-2', 'srv-1', 'srv-3']);
+      await waitFor(() =>
+        expect(bridge.$fn('settings.update')).toHaveBeenCalledWith({
+          deployServerIds: ['srv-2', 'srv-1', 'srv-3'],
+        }),
+      );
+      expect(bridge.$fn('settings.update')).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the server being looked at when the order changes', async () => {
+      const { container } = renderChosen(['srv-1', 'srv-2', 'srv-3']);
+      await screen.findByRole('heading', { name: 'Production' });
+
+      dragItemDown(container, 'srv-1', 85);
+
+      await waitFor(() => expect(reorderIds(container)).toEqual(['srv-2', 'srv-3', 'srv-1']));
+      expect(screen.getByRole('heading', { name: 'Production' })).toBeTruthy();
+      // With no server in the address, the page held on to the one it was showing.
+      expect(screen.getByTestId('path').textContent).toBe('/deploy?server=srv-1');
+    });
+
+    it('leaves the address alone when it already names the server', async () => {
+      const { container } = renderChosen(['srv-1', 'srv-2', 'srv-3'], {}, '/deploy?server=srv-2');
+      await screen.findByRole('heading', { name: 'Staging' });
+
+      dragItemDown(container, 'srv-1', 45);
+
+      await waitFor(() => expect(reorderIds(container)).toEqual(['srv-2', 'srv-1', 'srv-3']));
+      expect(screen.getByTestId('path').textContent).toBe('/deploy?server=srv-2');
+      expect(screen.getByRole('heading', { name: 'Staging' })).toBeTruthy();
+    });
+
+    it('saves a move made with the keyboard', async () => {
+      const { user, bridge } = renderChosen(['srv-1', 'srv-2', 'srv-3']);
+      await screen.findByRole('heading', { name: 'Production' });
+      const rail = screen.getByRole('navigation', { name: 'Servers' });
+
+      within(rail)
+        .getByRole('button', { name: /Backups/ })
+        .focus();
+      await user.keyboard('{Alt>}{ArrowUp}{/Alt}');
+
+      await waitFor(() =>
+        expect(bridge.$fn('settings.update')).toHaveBeenCalledWith({
+          deployServerIds: ['srv-1', 'srv-3', 'srv-2'],
+        }),
+      );
+    });
+
+    it('says so, and brings the saved order back, when saving the order fails', async () => {
+      const { container } = renderChosen(['srv-1', 'srv-2', 'srv-3'], {
+        'settings.update': async () => {
+          throw new Error("Error invoking remote method 'settings:update': Error: disk is gone");
+        },
+      });
+      await screen.findByRole('heading', { name: 'Production' });
+
+      dragItemDown(container, 'srv-1', 45);
+
+      await waitFor(() =>
+        expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('disk is gone')),
+      );
+      await waitFor(() => expect(reorderIds(container)).toEqual(['srv-1', 'srv-2', 'srv-3']));
+    });
   });
 });

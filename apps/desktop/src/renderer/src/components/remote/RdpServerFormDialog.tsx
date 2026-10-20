@@ -1,8 +1,9 @@
 import type { RdpSavedServer, RdpServerOptions, SaveRdpServerInput } from '@shared/apiTypes';
-import { DEFAULT_RDP_OPTIONS, DEFAULT_RDP_PORT } from '@shared/rdpDefaults';
+import { DEFAULT_RDP_OPTIONS, DEFAULT_RDP_PORT, withRdpDefaults } from '@shared/rdpDefaults';
 import { useEffect, useId, useState } from 'react';
 import { toast } from 'sonner';
 import { ChevronDown, Spinner } from '@/components/icons';
+import { segmentClass } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
 import {
@@ -36,6 +37,36 @@ function parseResolution(value: string): RdpServerOptions['resolution'] {
   if (value === 'fitWindow') return 'fitWindow';
   const [width, height] = value.split('x').map((n) => Number.parseInt(n, 10));
   return { width, height };
+}
+
+/**
+ * How the session window opens. Stored as two flags (`fullscreenOnConnect` wins over
+ * `maximizeOnConnect`), shown as one choice since only one of the three can apply.
+ */
+type OpenMode = 'window' | 'maximized' | 'fullscreen';
+
+const OPEN_MODES: ReadonlyArray<{ value: OpenMode; label: string }> = [
+  { value: 'window', label: 'Window' },
+  { value: 'maximized', label: 'Maximized' },
+  { value: 'fullscreen', label: 'Full screen' },
+];
+
+const OPEN_MODE_HINTS: Record<OpenMode, string> = {
+  window: 'Opens a smaller window you can move and resize.',
+  maximized: 'Fills the screen but keeps the Windows taskbar visible.',
+  fullscreen:
+    'Covers the whole screen. Press Ctrl+Alt+Break to switch between full screen and a window.',
+};
+
+function openModeOf(options: RdpServerOptions): OpenMode {
+  if (options.fullscreenOnConnect) return 'fullscreen';
+  return options.maximizeOnConnect ? 'maximized' : 'window';
+}
+
+function openModeOptions(
+  mode: OpenMode,
+): Pick<RdpServerOptions, 'fullscreenOnConnect' | 'maximizeOnConnect'> {
+  return { fullscreenOnConnect: mode === 'fullscreen', maximizeOnConnect: mode === 'maximized' };
 }
 
 function Field({
@@ -122,11 +153,13 @@ export function RdpServerFormDialog({
     setUsername(initial?.username ?? '');
     setDomain(initial?.domain ?? '');
     setSecret('');
-    setOptions(initial?.options ?? DEFAULT_RDP_OPTIONS);
+    // A server saved by an older version lacks newer options, which would otherwise read as off.
+    setOptions(withRdpDefaults(initial?.options));
     setShowAdvanced(false);
     setSubmitting(false);
   }, [open, initial]);
 
+  const openMode = openModeOf(options);
   const keepsExistingSecret = initial?.hasSecret === true;
   const portNumber = Number.parseInt(port, 10);
   const canSubmit =
@@ -283,13 +316,30 @@ export function RdpServerFormDialog({
                   searchPlaceholder="Search resolutions…"
                 />
               </Field>
-              <ToggleRow
-                id={`${ids}-fullscreen`}
-                label="Start in full screen"
-                hint="Press Ctrl+Alt+Break to switch between full screen and a window."
-                checked={options.fullscreenOnConnect}
-                onChange={(checked) => patchOptions({ fullscreenOnConnect: checked })}
-              />
+              <Field label="Open as" hint={OPEN_MODE_HINTS[openMode]}>
+                <div
+                  role="radiogroup"
+                  aria-label="Open as"
+                  className="grid grid-cols-3 gap-0.5 rounded-full bg-foreground/8 p-0.5"
+                >
+                  {OPEN_MODES.map((mode) => (
+                    <button
+                      key={mode.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={openMode === mode.value}
+                      onClick={() => patchOptions(openModeOptions(mode.value))}
+                      className={cn(
+                        segmentClass(openMode === mode.value),
+                        'h-7 w-full px-2',
+                        openMode === mode.value && 'text-primary',
+                      )}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
+              </Field>
               <ToggleRow
                 id={`${ids}-clipboard`}
                 label="Share clipboard"

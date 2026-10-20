@@ -700,8 +700,11 @@ export function RunRecommendationChip({
           />
         )}
         <span className="truncate font-medium">{choice.model.label}</span>
+        {/* In a tight row the effort gives way first, so the model name stays readable. */}
         {choice.effort && (
-          <span className="truncate text-muted-foreground">{EFFORT_LABELS[choice.effort]}</span>
+          <span className="shrink-4 truncate text-muted-foreground">
+            {EFFORT_LABELS[choice.effort]}
+          </span>
         )}
         <CostMeter level={relativeCostLevel(recommendation.profile, choice)} className="shrink-0" />
       </>
@@ -742,7 +745,7 @@ export function RunRecommendationChip({
           <button
             type="button"
             className={cn(
-              'field-surface flex h-7 min-w-0 items-center gap-1.5 rounded-full pl-2.5 pr-2 text-xs focus:outline-none',
+              'field-surface flex h-7 min-w-0 items-center gap-1 rounded-full pl-2.5 pr-2 text-xs focus:outline-none',
               className,
             )}
           >

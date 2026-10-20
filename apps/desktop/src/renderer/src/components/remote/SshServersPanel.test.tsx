@@ -1,7 +1,13 @@
 import type { SshSavedServer } from '@shared/apiTypes';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { useLocation } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  dragItemDown,
+  mockStackedRows,
+  reorderIds,
+  settleDragClick,
+} from '../../../../test/renderer/dragLayout';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
 import { useTerminalStore } from '../../stores/terminalStore';
 import { SshServersPanel } from './SshServersPanel';
@@ -172,5 +178,51 @@ describe('SshServersPanel', () => {
 
     await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(pathname).toBe('/');
+  });
+});
+
+describe('SshServersPanel drag to reorder', () => {
+  const servers = [
+    server,
+    { ...server, id: 'srv-2', nickname: 'stage' },
+    { ...server, id: 'srv-3', nickname: 'dev' },
+  ];
+
+  afterEach(() => {
+    settleDragClick();
+    vi.restoreAllMocks();
+  });
+
+  it('moves a server when its grip is dragged, and saves the order it lands in', async () => {
+    mockStackedRows(60);
+    const { container, bridge } = renderWithProviders(<SshServersPanel />, {
+      bridge: {
+        'ssh.listServers': servers,
+        'ssh.reorderServers': (ids: string[]) => ids.map((id) => servers.find((s) => s.id === id)),
+      },
+    });
+    await screen.findByText('stage');
+
+    // Two rows down puts the first server last.
+    dragItemDown(container, 'srv-1', 130);
+
+    await waitFor(() =>
+      expect(bridge.$fn('ssh.reorderServers')).toHaveBeenCalledWith(['srv-2', 'srv-3', 'srv-1']),
+    );
+    expect(reorderIds(container)).toEqual(['srv-2', 'srv-3', 'srv-1']);
+  });
+
+  it('does not save anything when a grip is pressed and let go in place', async () => {
+    mockStackedRows(60);
+    const reorder = vi.fn(async () => servers);
+    const { container } = renderWithProviders(<SshServersPanel />, {
+      bridge: { 'ssh.listServers': servers, 'ssh.reorderServers': reorder },
+    });
+    await screen.findByText('stage');
+
+    dragItemDown(container, 'srv-2', 5);
+
+    expect(reorder).not.toHaveBeenCalled();
+    expect(reorderIds(container)).toEqual(['srv-1', 'srv-2', 'srv-3']);
   });
 });

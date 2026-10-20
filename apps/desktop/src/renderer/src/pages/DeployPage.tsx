@@ -1,7 +1,8 @@
+import type { AppSettings } from '@agentmat/core';
 import type { DeployServer } from '@shared/deployTypes';
 import { sshErrorMessage } from '@shared/sshErrors';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { CloudflareDialog } from '@/components/cloudflare/CloudflareDialog';
@@ -9,6 +10,7 @@ import { CloudflareMark } from '@/components/cloudflare/CloudflareMark';
 import { AppStorePanel } from '@/components/deploy/appStore/AppStorePanel';
 import { AppsPanel } from '@/components/deploy/apps/AppsPanel';
 import { AssistantLauncher } from '@/components/deploy/assistant/AssistantLauncher';
+import { ChooseServersDialog } from '@/components/deploy/ChooseServersDialog';
 import { ContainersPanel } from '@/components/deploy/containers/ContainersPanel';
 import { Notice } from '@/components/deploy/deployKit';
 import { FileSiteView, fileSectionFromView } from '@/components/deploy/files/FileSiteView';
@@ -32,7 +34,7 @@ import { useSiteListUpdate, useWordPressSites } from '@/components/deploy/wordpr
 import { wpProblem } from '@/components/deploy/wordpress/messages';
 import { siteSectionFromView } from '@/components/deploy/wordpress/SiteSections';
 import { SiteView } from '@/components/deploy/wordpress/SiteView';
-import { CloudUpload, Lock, RefreshCw, Server } from '@/components/icons';
+import { CloudUpload, Lock, RefreshCw, Server, Sliders } from '@/components/icons';
 import { Chip, EmptyState, GLASS_CARD, GLASS_PANEL } from '@/components/pageKit';
 import { SshVaultUnlockDialog } from '@/components/remote/SshVaultUnlockDialog';
 import { Button } from '@/components/ui/button';
@@ -41,6 +43,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ConnectSiteDialog } from '@/components/wordpress/ConnectSiteDialog';
 import { WordPressMark } from '@/components/wordpress/WordPressMark';
 import { resolveSelection, waitForRail } from '@/lib/deploy/railSelection';
+import { chosenServers } from '@/lib/deploy/railServers';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { confirmDialog } from '@/stores/confirmStore';
@@ -234,6 +237,9 @@ function useFinishedRuns(onFinished: (serverId: string) => void): void {
   }, [runs, clear, queryClient]);
 }
 
+/** Stands in while the settings have not said which servers were chosen. */
+const NO_SERVERS: string[] = [];
+
 export default function DeployPage(): React.JSX.Element {
   usePageHeader(
     'Deploy',
@@ -251,6 +257,35 @@ export default function DeployPage(): React.JSX.Element {
     queryKey: queryKeys.deployServers,
     queryFn: () => window.agentmat.deploy.listServers(),
   });
+  // Every saved server can be deployed to, but the page lists only the ones the user chose.
+  const settingsQuery = useQuery({
+    queryKey: queryKeys.settings,
+    queryFn: () => window.agentmat.settings.get(),
+    meta: { silentLoading: true },
+  });
+  const chosenIds = settingsQuery.data?.deployServerIds ?? NO_SERVERS;
+  // Memoized: the rail keeps the order a drag leaves it in until this list changes.
+  const servers = useMemo(
+    () => chosenServers(serversQuery.data ?? [], chosenIds),
+    [serversQuery.data, chosenIds],
+  );
+  const [chooseOpen, setChooseOpen] = useState(false);
+  const saveChoice = useMutation({
+    mutationFn: (ids: string[]) => window.agentmat.settings.update({ deployServerIds: ids }),
+    meta: { silentLoading: true },
+    onError: (error) => {
+      toast.error(`Could not save the list of servers: ${sshErrorMessage(error)}`);
+      // The rail shows the choice that failed to save, so read the saved one back.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    },
+  });
+  /** The rail shows a new choice or order at once; saving it goes on in the background. */
+  function chooseServers(ids: string[]): void {
+    queryClient.setQueryData<AppSettings>(queryKeys.settings, (current) =>
+      current ? { ...current, deployServerIds: ids } : current,
+    );
+    saveChoice.mutate(ids);
+  }
   const vaultQuery = useQuery({
     queryKey: queryKeys.sshVaultStatus,
     queryFn: () => window.agentmat.ssh.vaultStatus(),
@@ -282,10 +317,12 @@ export default function DeployPage(): React.JSX.Element {
     );
   }
 
-  // A site asked for by the address, or no servers to fall back on: wait for the sites rather
+  // The servers and which of them were chosen both have to be in before the rail can list any. A
+  // site asked for by the address, or no servers to fall back on: wait for the sites rather
   // than flash a server (and start its health checks) or an empty state.
   if (
     serversQuery.isPending ||
+    settingsQuery.isPending ||
     waitForRail(
       params,
       {
@@ -293,22 +330,26 @@ export default function DeployPage(): React.JSX.Element {
         wpSites: sitesQuery.isPending,
         fileSites: fileSitesQuery.isPending,
       },
-      { servers: serversQuery.data?.length ?? 0, wpSites: sitesQuery.data?.length ?? 0 },
+      { servers: servers.length, wpSites: sitesQuery.data?.length ?? 0 },
     )
   ) {
     return <DeployPageSkeleton />;
   }
 
-  if (serversQuery.isError) {
+  if (serversQuery.isError || settingsQuery.isError) {
     return (
       <PageFailure
-        message={sshErrorMessage(serversQuery.error)}
-        onRetry={() => void serversQuery.refetch()}
+        message={sshErrorMessage(serversQuery.isError ? serversQuery.error : settingsQuery.error)}
+        // Both are needed to list anything, so trying again asks again for whichever failed.
+        onRetry={() => {
+          if (serversQuery.isError) void serversQuery.refetch();
+          if (settingsQuery.isError) void settingsQuery.refetch();
+        }}
       />
     );
   }
 
-  const servers = serversQuery.data;
+  const saved = serversQuery.data;
   const sites = sitesQuery.data ?? [];
   const fileSites = fileSitesQuery.data ?? [];
   const fileFormSite = fileForm.siteId
@@ -351,8 +392,20 @@ export default function DeployPage(): React.JSX.Element {
   const cloudflareDialog = (
     <CloudflareDialog open={cloudflareOpen} onOpenChange={setCloudflareOpen} />
   );
+  const chooseDialog = (
+    <ChooseServersDialog
+      open={chooseOpen}
+      onOpenChange={setChooseOpen}
+      servers={saved}
+      chosenIds={chosenIds}
+      onSave={chooseServers}
+    />
+  );
 
-  if (servers.length === 0 && sitesQuery.isError && fileSites.length === 0) {
+  // A failure only stands in for the page when there is no server to pick either. With saved
+  // servers still to choose from, the empty state below is the more useful way out.
+  const noneSaved = saved.length === 0;
+  if (noneSaved && sitesQuery.isError && fileSites.length === 0) {
     return (
       <PageFailure message={wpProblem(sitesQuery.error)} onRetry={() => void sitesQuery.refetch()}>
         {unlockDialog}
@@ -360,7 +413,7 @@ export default function DeployPage(): React.JSX.Element {
     );
   }
 
-  if (servers.length === 0 && sites.length === 0 && fileSitesQuery.isError) {
+  if (noneSaved && sites.length === 0 && fileSitesQuery.isError) {
     return (
       <PageFailure
         message={filesProblem(fileSitesQuery.error)}
@@ -378,13 +431,23 @@ export default function DeployPage(): React.JSX.Element {
           card
           size="lg"
           icon={Server}
-          title="No servers yet"
-          description="Deploy works with the servers you save in Remote, with WordPress sites that run the AgentMate Connector plugin, and with any host that offers FTP or SFTP. Add a server in Remote, or connect a site."
+          title={noneSaved ? 'No servers yet' : 'No servers chosen yet'}
+          description={
+            noneSaved
+              ? 'Deploy works with the servers you save in Remote, with WordPress sites that run the AgentMate Connector plugin, and with any host that offers FTP or SFTP. Add a server in Remote, or connect a site.'
+              : `Deploy lists only the servers you choose. You have ${saved.length} saved server${saved.length === 1 ? '' : 's'}. Pick the ones to deploy to, or connect a site.`
+          }
           action={
             <div className="flex flex-wrap justify-center gap-2">
-              <Button onClick={() => navigate('/remote')}>
-                <Server /> Open Remote
-              </Button>
+              {noneSaved ? (
+                <Button onClick={() => navigate('/remote')}>
+                  <Server /> Open Remote
+                </Button>
+              ) : (
+                <Button onClick={() => setChooseOpen(true)}>
+                  <Sliders /> Choose servers to show
+                </Button>
+              )}
               <Button variant="soft" onClick={() => setConnectOpen(true)}>
                 <WordPressMark className="h-3.5 w-3.5" /> Connect a WordPress site
               </Button>
@@ -401,14 +464,30 @@ export default function DeployPage(): React.JSX.Element {
         {connectDialog}
         {cloudflareDialog}
         {fileFormDialog}
+        {chooseDialog}
       </div>
     );
   }
 
   const locked = vaultQuery.data?.hasPasskey === true && !vaultQuery.data.unlocked;
+  const selection = resolveSelection(params, servers, sites, fileSites);
+  /**
+   * With no server in the address the page shows the first one in the rail, so a drag that moves
+   * that server would switch the page to another. Pinning the one on screen keeps it where it is.
+   */
+  function reorderServers(ids: string[]): void {
+    if (selection.kind === 'server' && params.get('server') === null) {
+      setParams({ server: selection.server.id }, { replace: true });
+    }
+    chooseServers(ids);
+  }
   const railProps = {
     servers,
+    allServers: saved,
     onSelect: (serverId: string) => setParams({ server: serverId }, { replace: true }),
+    // With nothing saved there is nothing to choose from: the rail's link to Remote is the way on.
+    onChooseServers: noneSaved ? undefined : () => setChooseOpen(true),
+    onReorderServers: reorderServers,
     sites,
     sitesLoading: sitesQuery.isPending,
     sitesError: sitesQuery.isError ? wpProblem(sitesQuery.error) : null,
@@ -424,7 +503,6 @@ export default function DeployPage(): React.JSX.Element {
     onAddFileSite: openAddFileSite,
   };
 
-  const selection = resolveSelection(params, servers, sites, fileSites);
   if (selection.kind === 'files') {
     const fileSite = selection.site;
     // No Deploy AI here either: the assistant works on a server's core.
@@ -455,6 +533,7 @@ export default function DeployPage(): React.JSX.Element {
         {unlockDialog}
         {cloudflareDialog}
         {fileFormDialog}
+        {chooseDialog}
       </DeployLayout>
     );
   }
@@ -490,6 +569,7 @@ export default function DeployPage(): React.JSX.Element {
         {unlockDialog}
         {cloudflareDialog}
         {fileFormDialog}
+        {chooseDialog}
       </DeployLayout>
     );
   }
@@ -593,6 +673,7 @@ export default function DeployPage(): React.JSX.Element {
       {unlockDialog}
       {cloudflareDialog}
       {fileFormDialog}
+      {chooseDialog}
     </>
   );
 }

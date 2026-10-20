@@ -176,7 +176,7 @@ export function ExplorerSearch({
   // new one is matched, and the box below dims until it catches up.
   const settled = useDeferredValue(query);
   const results = useMemo(
-    () => searchFiles(files, settled, { lowered }),
+    () => searchFiles(files, settled, { lowered, patterns: true }),
     [files, lowered, settled],
   );
   const hits = results.hits;
@@ -249,7 +249,7 @@ export function ExplorerSearch({
             aria-controls={`explorer-search-list-${project.id}`}
             aria-activedescendant={hits.length > 0 ? optionId(current) : undefined}
             aria-label="Search files by name"
-            placeholder="Search files by name"
+            placeholder="Search files by name or pattern, like *.md"
             spellCheck={false}
             autoComplete="off"
             value={query}
@@ -307,6 +307,10 @@ export function ExplorerSearch({
           ) : index.isError ? (
             <p className="px-3 py-2 text-[11px] text-muted-foreground">
               Could not read this project's files.
+            </p>
+          ) : results.invalid ? (
+            <p className="px-3 py-2 text-[11px] text-muted-foreground">
+              That is not a valid regular expression.
             </p>
           ) : hits.length === 0 ? (
             <p className="px-3 py-2 text-[11px] text-muted-foreground">

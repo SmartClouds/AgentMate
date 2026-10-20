@@ -107,6 +107,7 @@ async function openSession(replies: string[]): Promise<{ page: Page; sessionId: 
       options: {
         resolution: { width: WIDTH, height: HEIGHT },
         fullscreenOnConnect: false,
+        maximizeOnConnect: true,
         clipboard: false,
         fileTransfer: false,
         nla: false,

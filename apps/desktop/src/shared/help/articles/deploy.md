@@ -17,7 +17,7 @@ Click **Deploy** in the sidebar under Ship, or open the command palette and type
 
 ## The server rail
 
-On the left is the **Servers** list with a count. It shows every server you saved in [Remote](remote.md). Deploy does not have its own "add server" button. If a server is missing, click **Add or edit servers in Remote** under the list, add it there, and come back.
+On the left is the **Servers** list with a count. It shows the servers you chose, in the order you put them in. A server you save in [Remote](remote.md) stays out of Deploy until you pick it (see [Choose which servers to show](#choose-which-servers-to-show)). Deploy does not have its own "add server" button. To add one, click **Add or edit servers in Remote** under the list, add it there, come back and pick it.
 
 Each entry shows the server's nickname and a status line with a status mark:
 
@@ -29,9 +29,21 @@ Each entry shows the server's nickname and a status line with a status mark:
 | Online, core 1.2.3 | The core answers. The version number is shown. |
 | Not answering | The last check did not get an answer. |
 
-Click a server to open it. AgentMate checks each core's health every 30 seconds while the page is open. Under the list there are two shortcuts: **Add or edit servers in Remote** and **Cloudflare: domains and DNS** (see [Cloudflare](cloudflare.md)).
+Click a server to open it. AgentMate checks each core's health every 30 seconds while the page is open. Under the list there are three shortcuts: **Choose servers to show**, **Add or edit servers in Remote** and **Cloudflare: domains and DNS** (see [Cloudflare](cloudflare.md)).
 
-If you have no saved servers at all, the page says **No servers yet** and offers **Open Remote** and **Manage Cloudflare**.
+If you have no saved servers at all, the page says **No servers yet** and offers **Open Remote** and **Manage Cloudflare**. If you have saved servers but have not picked any for Deploy, it says **No servers chosen yet** and offers **Choose servers to show**.
+
+### Choose which servers to show
+
+Click **Choose servers to show** under the list. A dialog lists every server you saved in Remote, each with its `user@host:port`. Tick the ones you want in Deploy and click **Save**. **Save** stays off until you change something, and **Cancel** closes the dialog without saving.
+
+- A server you pick joins the end of the list. The servers already there keep their places.
+- Unticking a server takes it off the list. Nothing changes on the server or in Remote, and its core keeps running. Tick it again to bring it back.
+- A link that points at a server you did not pick (from a notification, for example) opens the first server in the list instead.
+
+### Change the order
+
+Drag a server by its row to a new place. The other rows slide out of the way, and the page stays on the server you were looking at. With the keyboard, focus a server and press **Alt** with the **Up** or **Down** arrow. The order is saved, so the list looks the same the next time you open Deploy.
 
 Further down the rail, the **FTP and SFTP sites** group lists folders you deploy to a host over SFTP, FTPS or FTP, without a server core. Click **Add an FTP or SFTP site** to add one. See [FTP and SFTP sites](deploy-ftp-sftp.md).
 

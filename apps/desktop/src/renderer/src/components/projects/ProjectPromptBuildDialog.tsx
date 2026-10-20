@@ -555,45 +555,52 @@ export function ProjectPromptBuildDialog({
             </div>
 
             <div className="relative flex min-h-0 flex-col gap-2 p-5">
-              <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="prompt-build-output" className="shrink-0">
-                  Generated prompt
-                </Label>
-                <RunRecommendationChip
-                  state={runRecommendation}
-                  className="ml-auto max-w-[13rem]"
-                  sizeOnOpen={!autoSize}
-                />
-                {promptVoice.supported && (
-                  <VoiceRecordButton
-                    voice={promptVoice}
-                    idleText="Speak prompt"
-                    idleLabel={SPEAK_PROMPT_LABEL}
-                    blockedReason={
-                      voice.status !== 'idle'
-                        ? OTHER_MIC_BUSY
-                        : isBusy
-                          ? 'Wait for the prompt to finish'
-                          : null
-                    }
+              <div className="flex items-start justify-between gap-2">
+                {/* The chip wraps under the title when the column is narrow, so its model name is
+                    never squeezed away to make room for the buttons. */}
+                <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                  <Label htmlFor="prompt-build-output" className="flex h-8 shrink-0 items-center">
+                    Generated prompt
+                  </Label>
+                  <RunRecommendationChip
+                    state={runRecommendation}
+                    className="max-w-full"
+                    sizeOnOpen={!autoSize}
                   />
-                )}
-                <SimpleTooltip
-                  label={copied ? 'Copied' : copyKey ? `Copy prompt (${copyKey})` : 'Copy prompt'}
-                  wrapTrigger={!generated || isBusy}
-                >
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="gap-1.5 px-2.5"
-                    disabled={!generated || isBusy}
-                    onClick={() => void onCopy()}
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {promptVoice.supported && (
+                    <VoiceRecordButton
+                      voice={promptVoice}
+                      idleText="Speak prompt"
+                      idleLabel={SPEAK_PROMPT_LABEL}
+                      iconOnly
+                      blockedReason={
+                        voice.status !== 'idle'
+                          ? OTHER_MIC_BUSY
+                          : isBusy
+                            ? 'Wait for the prompt to finish'
+                            : null
+                      }
+                    />
+                  )}
+                  <SimpleTooltip
+                    label={copied ? 'Copied' : copyKey ? `Copy prompt (${copyKey})` : 'Copy prompt'}
+                    wrapTrigger={!generated || isBusy}
                   >
-                    {copied ? <Check className="text-primary" /> : <Copy />}
-                    {copied ? 'Copied' : 'Copy'}
-                  </Button>
-                </SimpleTooltip>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      disabled={!generated || isBusy}
+                      onClick={() => void onCopy()}
+                      aria-label={copied ? 'Copied' : 'Copy'}
+                    >
+                      {copied ? <Check className="text-primary" /> : <Copy />}
+                    </Button>
+                  </SimpleTooltip>
+                </div>
               </div>
               <div className="relative min-h-0 flex-1">
                 <Textarea

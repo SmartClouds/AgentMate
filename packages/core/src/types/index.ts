@@ -737,6 +737,11 @@ export interface AppSettings {
    * always present; the rest are the ones the user switched on.
    */
   devSetupStacks: string[];
+  /**
+   * The saved servers the Deploy page lists, in the order the user arranged them. Deploy shows
+   * only these, so a server saved in Remote stays out of it until the user picks it.
+   */
+  deployServerIds: string[];
 }
 
 export type AgentType = 'claude-code' | 'gemini' | 'opencode' | 'codex' | 'cursor' | 'generic';

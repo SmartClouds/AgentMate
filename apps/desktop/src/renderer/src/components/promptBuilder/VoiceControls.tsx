@@ -84,6 +84,7 @@ export function VoiceRecordButton({
   idleText,
   idleLabel,
   blockedReason,
+  iconOnly = false,
   className,
 }: {
   voice: VoiceInput;
@@ -91,6 +92,12 @@ export function VoiceRecordButton({
   idleLabel: string;
   /** Why the button cannot start a recording right now, or null when it can. */
   blockedReason: string | null;
+  /**
+   * Leaves out the words next to the microphone, for headers that share a row with other
+   * controls. The recording clock and a download percentage still show, since they carry
+   * information the icon cannot. The name for screen readers and the tooltip stay as they are.
+   */
+  iconOnly?: boolean;
   className?: string;
 }): React.JSX.Element {
   const busy = voice.status === 'requesting' || voice.status === 'transcribing';
@@ -107,6 +114,17 @@ export function VoiceRecordButton({
         ? 'Starting microphone…'
         : idleLabel;
   const discardLabel = recording ? 'Discard recording' : 'Cancel transcription';
+  const text = recording
+    ? `Stop ${formatElapsed(voice.elapsedSeconds)}`
+    : transcribing
+      ? voice.downloadPercent !== null
+        ? `${voice.downloadPercent}%`
+        : iconOnly
+          ? null
+          : 'Transcribing…'
+      : iconOnly
+        ? null
+        : idleText;
 
   return (
     <div className="flex items-center gap-1">
@@ -115,7 +133,7 @@ export function VoiceRecordButton({
           type="button"
           variant={recording ? 'destructive' : 'ghost'}
           size="sm"
-          className={cn('gap-1.5 px-2.5', className)}
+          className={cn('gap-1.5 px-2.5', text === null && 'w-8 px-0', className)}
           onClick={voice.toggle}
           disabled={busy || blocked}
           aria-label={recording ? label : voice.status === 'idle' ? idleText : label}
@@ -127,15 +145,7 @@ export function VoiceRecordButton({
           ) : (
             <Microphone />
           )}
-          <span className="tabular-nums">
-            {recording
-              ? `Stop ${formatElapsed(voice.elapsedSeconds)}`
-              : transcribing
-                ? voice.downloadPercent !== null
-                  ? `${voice.downloadPercent}%`
-                  : 'Transcribing…'
-                : idleText}
-          </span>
+          {text !== null && <span className="tabular-nums">{text}</span>}
         </Button>
       </SimpleTooltip>
       {(recording || transcribing) && (

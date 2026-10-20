@@ -116,6 +116,10 @@ Each row shows `user@host:port`, the sign-in method and when you last connected.
 | **Edit this server** | Opens the edit form. |
 | **Remove this server** | Removes it after you confirm. You can add it again with the same details. |
 
+### Reorder servers
+
+Drag a row by the grip icon at its left (**Drag to reorder**) to put it above or below another one. The rows in between slide out of the way, and the new order is saved, so the list looks the same next time. The **Remote Desktop** tab works the same way.
+
 ### The servers passkey
 
 By default, saved passwords and key passphrases are protected by your operating system's keychain. You can add a **passkey** on top of that, which is shared by saved SSH servers, saved Remote Desktop servers and project environment secrets.

@@ -7,6 +7,7 @@ function openFakeWindow(sessionId: string) {
     sessionId,
     title: 'Server - Remote Desktop',
     fullScreen: false,
+    maximized: false,
     onClosed: () => undefined,
   }) as unknown as FakeBrowserWindow;
   const executeJavaScript = vi.fn().mockResolvedValue(undefined);
@@ -21,6 +22,7 @@ describe('Remote Desktop session windows', () => {
       sessionId: 'rdp-1',
       title: 'Server - Remote Desktop',
       fullScreen: false,
+      maximized: false,
       onClosed,
     });
     expect(getRdpWindow('rdp-1')).toBe(window);
@@ -36,6 +38,7 @@ describe('Remote Desktop session windows', () => {
       sessionId: 'rdp-3',
       title: 'Server - Remote Desktop',
       fullScreen: false,
+      maximized: false,
       onClosed: () => undefined,
     }) as unknown as FakeBrowserWindow;
     const setBackgroundThrottling = vi.fn();
@@ -48,6 +51,46 @@ describe('Remote Desktop session windows', () => {
     // A session without a window is left alone.
     expect(() => setRdpWindowBackgroundThrottling('missing', false)).not.toThrow();
     window.close();
+  });
+
+  describe('how the window opens', () => {
+    function showFakeWindow(sessionId: string, fullScreen: boolean, maximized: boolean) {
+      const window = openRdpWindow({
+        sessionId,
+        title: 'Server - Remote Desktop',
+        fullScreen,
+        maximized,
+        onClosed: () => undefined,
+      }) as unknown as FakeBrowserWindow;
+      const maximize = vi.spyOn(window, 'maximize');
+      const setFullScreen = vi.spyOn(window, 'setFullScreen');
+      window.emit('ready-to-show');
+      return { window, maximize, setFullScreen };
+    }
+
+    it('maximizes, leaving the taskbar visible, when asked to', () => {
+      const { window, maximize, setFullScreen } = showFakeWindow('rdp-7', false, true);
+      expect(maximize).toHaveBeenCalledOnce();
+      expect(setFullScreen).not.toHaveBeenCalled();
+      expect(window.isVisible()).toBe(true);
+      window.close();
+    });
+
+    it('opens a normal window when maximizing is off', () => {
+      const { window, maximize, setFullScreen } = showFakeWindow('rdp-8', false, false);
+      expect(maximize).not.toHaveBeenCalled();
+      expect(setFullScreen).not.toHaveBeenCalled();
+      expect(window.isVisible()).toBe(true);
+      window.close();
+    });
+
+    it('goes full screen when asked to, and then does not also maximize', () => {
+      const { window, maximize, setFullScreen } = showFakeWindow('rdp-9', true, true);
+      expect(setFullScreen).toHaveBeenCalledWith(true);
+      expect(maximize).not.toHaveBeenCalled();
+      expect(window.isVisible()).toBe(true);
+      window.close();
+    });
   });
 
   // Chromium only lets the page capture Win+V and friends while it is in HTML full screen.

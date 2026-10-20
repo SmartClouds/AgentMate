@@ -32,7 +32,7 @@ import { totpCode } from './totp';
  * published linux-x64 core, real Docker, nginx and a firewall on the server, and Pebble for the
  * certificate. Each step drives the UI and checks what it shows:
  *
- * 1. the server is added in Remote and the core installed from the Deploy wizard;
+ * 1. the server is added in Remote, picked for Deploy and the core installed from the wizard;
  * 2. two-factor goes on with a generated code, and the next sign-in asks for one;
  * 3. Docker is installed from Containers;
  * 4. a project's stack deploys with an environment from its Environments tab;
@@ -159,6 +159,11 @@ for (const image of IMAGES) {
       await expect(app.getByRole('listitem').filter({ hasText: NICKNAME })).toBeVisible();
 
       await app.getByRole('link', { name: 'Deploy' }).click();
+      // Deploy lists only the servers the user chose, so the one just saved is picked first.
+      await app.getByRole('button', { name: 'Choose servers to show' }).click();
+      const pick = app.getByRole('dialog', { name: 'Choose servers to show' });
+      await pick.getByRole('checkbox', { name: new RegExp(NICKNAME) }).click();
+      await pick.getByRole('button', { name: 'Save' }).click();
       const rail = app.getByRole('navigation', { name: 'Servers' });
       await expect(rail.getByText(NICKNAME)).toBeVisible({ timeout: 30_000 });
       // A fresh server: the core is new, so the owner is created with it.

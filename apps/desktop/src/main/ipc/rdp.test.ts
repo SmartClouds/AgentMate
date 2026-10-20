@@ -446,6 +446,62 @@ describe('forgetting a server certificate', () => {
   });
 });
 
+describe('reordering saved servers', () => {
+  const server = (id: string): StoredRdpServer => ({
+    id,
+    nickname: id,
+    host: '10.0.0.5',
+    port: 3389,
+    username: 'admin',
+    options: {
+      resolution: 'fitWindow',
+      fullscreenOnConnect: false,
+      maximizeOnConnect: true,
+      clipboard: true,
+      fileTransfer: true,
+      nla: true,
+    },
+    createdAt: 0,
+    lastConnectedAt: null,
+  });
+
+  function storedIds(): string[] {
+    return (
+      JSON.parse(readFileSync(userData.dataFile('rdp-servers.json'), 'utf-8')) as StoredRdpServer[]
+    ).map((one) => one.id);
+  }
+
+  beforeEach(() => {
+    userData.writeData('rdp-servers.json', [
+      { ...server('a'), secretEnvelope: { mode: 'safeStorage', ciphertext: 'c2VjcmV0' } },
+      server('b'),
+      server('c'),
+    ]);
+  });
+
+  it('saves the servers in the order it is given and returns them', async () => {
+    const reordered = (await invoke(IPC.rdp.reorderServers, ['c', 'a', 'b'])) as { id: string }[];
+
+    expect(reordered.map((one) => one.id)).toEqual(['c', 'a', 'b']);
+    expect(storedIds()).toEqual(['c', 'a', 'b']);
+  });
+
+  it('never hands the renderer a stored secret', async () => {
+    const reordered = (await invoke(IPC.rdp.reorderServers, ['a', 'b', 'c'])) as {
+      hasSecret: boolean;
+    }[];
+
+    expect(reordered[0]).toMatchObject({ hasSecret: true });
+    expect(reordered[0]).not.toHaveProperty('secretEnvelope');
+  });
+
+  it('keeps a server the list leaves out, after the ones it lists', async () => {
+    await invoke(IPC.rdp.reorderServers, ['b']);
+
+    expect(storedIds()).toEqual(['b', 'a', 'c']);
+  });
+});
+
 describe('editing a saved server', () => {
   const input = (patch: Record<string, unknown>) => ({
     id: 'server-1',

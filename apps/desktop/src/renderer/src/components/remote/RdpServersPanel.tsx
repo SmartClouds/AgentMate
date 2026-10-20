@@ -1,18 +1,25 @@
 import type { RdpSavedServer } from '@shared/apiTypes';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Link, Monitor, Pencil, Plus, Shield, Trash2 } from '@/components/icons';
 import { EmptyState, FOOTER_HAIRLINE } from '@/components/pageKit';
 import { ipcErrorMessage } from '@/components/projects/environments/ipcError';
 import { Button } from '@/components/ui/button';
+import { ReorderableGroup, type ReorderMotion } from '@/components/ui/ReorderableGroup';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { queryKeys } from '@/lib/queryKeys';
 import { timeAgo } from '@/lib/time';
 import { confirmDialog } from '@/stores/confirmStore';
 import { RdpCertificateDialog } from './RdpCertificateDialog';
 import { RdpServerFormDialog } from './RdpServerFormDialog';
-import { REMOTE_CARD, RemoteCardHeader, ServerRowsSkeleton } from './remoteCard';
+import {
+  REMOTE_CARD,
+  RemoteCardHeader,
+  ServerDragGrip,
+  ServerRowsSkeleton,
+  serverRowClass,
+} from './remoteCard';
 import { ServersVaultControls } from './ServersVaultControls';
 import { SshVaultUnlockDialog } from './SshVaultUnlockDialog';
 
@@ -23,12 +30,14 @@ function resolutionLabel(server: RdpSavedServer): string {
 
 function SavedRdpServerRow({
   server,
+  motion,
   onConnect,
   onEdit,
   onCertificate,
   onRemoved,
 }: {
   server: RdpSavedServer;
+  motion: ReorderMotion;
   onConnect: (server: RdpSavedServer) => Promise<void>;
   onEdit: (server: RdpSavedServer) => void;
   onCertificate: (server: RdpSavedServer) => void;
@@ -66,7 +75,8 @@ function SavedRdpServerRow({
   const account = server.domain ? `${server.domain}\\${server.username}` : server.username;
 
   return (
-    <li className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3">
+    <li {...motion.itemProps} className={serverRowClass(motion.dragging)}>
+      <ServerDragGrip motion={motion} />
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-foreground/[0.06] text-muted-foreground">
         <Monitor className="h-4 w-4" />
       </span>
@@ -160,6 +170,25 @@ export function RdpServersPanel(): React.JSX.Element {
     await queryClient.invalidateQueries({ queryKey: queryKeys.rdpServers });
   }
 
+  const reorderMutation = useMutation({
+    mutationFn: (orderedIds: string[]) => window.agentmat.rdp.reorderServers(orderedIds),
+    onSuccess: (saved) => queryClient.setQueryData(queryKeys.rdpServers, saved),
+    onError: (error) => {
+      toast.error(ipcErrorMessage(error, 'Could not save the new order.'));
+      // The list on screen is the order that failed to save, so read the real one back.
+      void refreshServers();
+    },
+  });
+
+  /** A drag landed one server at another index. The list shows it at once and saves in the background. */
+  function moveServer(fromIndex: number, toIndex: number): void {
+    const reordered = [...servers];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+    queryClient.setQueryData(queryKeys.rdpServers, reordered);
+    reorderMutation.mutate(reordered.map((server) => server.id));
+  }
+
   function openAdd(): void {
     setEditing(undefined);
     setFormOpen(true);
@@ -235,18 +264,24 @@ export function RdpServersPanel(): React.JSX.Element {
               }
             />
           ) : (
-            <ul className="settings-rows">
-              {servers.map((server) => (
+            <ReorderableGroup
+              as="ul"
+              items={servers}
+              getId={(server) => server.id}
+              enabled
+              className="settings-rows"
+              onMove={moveServer}
+              renderItem={(server, motion) => (
                 <SavedRdpServerRow
-                  key={server.id}
                   server={server}
+                  motion={motion}
                   onConnect={handleConnect}
                   onEdit={openEdit}
                   onCertificate={(target) => setCertificateServerId(target.id)}
                   onRemoved={() => void refreshServers()}
                 />
-              ))}
-            </ul>
+              )}
+            />
           )}
         </div>
       </section>

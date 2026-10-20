@@ -1,16 +1,25 @@
 import type { SshSavedServer } from '@shared/apiTypes';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { FolderOpen, History, Link, Pencil, Plus, Server, Trash2 } from '@/components/icons';
 import { EmptyState, FOOTER_HAIRLINE } from '@/components/pageKit';
+import { ipcErrorMessage } from '@/components/projects/environments/ipcError';
 import { Button } from '@/components/ui/button';
+import { ReorderableGroup, type ReorderMotion } from '@/components/ui/ReorderableGroup';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { queryKeys } from '@/lib/queryKeys';
 import { timeAgo } from '@/lib/time';
 import { confirmDialog } from '@/stores/confirmStore';
 import { useTerminalStore } from '@/stores/terminalStore';
-import { REMOTE_CARD, RemoteCardHeader, ServerRowsSkeleton } from './remoteCard';
+import {
+  REMOTE_CARD,
+  RemoteCardHeader,
+  ServerDragGrip,
+  ServerRowsSkeleton,
+  serverRowClass,
+} from './remoteCard';
 import { ServersVaultControls } from './ServersVaultControls';
 import { SshHistoryPanel } from './SshHistoryPanel';
 import { SshServerFormDialog } from './SshServerFormDialog';
@@ -24,6 +33,7 @@ function authMethodLabel(server: SshSavedServer): string {
 
 function SavedSshServerRow({
   server,
+  motion,
   onConnect,
   onHistory,
   onFiles,
@@ -31,6 +41,7 @@ function SavedSshServerRow({
   onRemoved,
 }: {
   server: SshSavedServer;
+  motion: ReorderMotion;
   onConnect: (server: SshSavedServer) => Promise<void>;
   onHistory: (server: SshSavedServer) => Promise<void>;
   /** Opens the SFTP file manager on this server (E25). */
@@ -68,7 +79,8 @@ function SavedSshServerRow({
   }
 
   return (
-    <li className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3">
+    <li {...motion.itemProps} className={serverRowClass(motion.dragging)}>
+      <ServerDragGrip motion={motion} />
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-foreground/[0.06] text-muted-foreground">
         <Server className="h-4 w-4" />
       </span>
@@ -160,6 +172,26 @@ export function SshServersPanel(): React.JSX.Element {
   async function refreshServers(): Promise<void> {
     await queryClient.invalidateQueries({ queryKey: queryKeys.sshServers });
   }
+
+  const reorderMutation = useMutation({
+    mutationFn: (orderedIds: string[]) => window.agentmat.ssh.reorderServers(orderedIds),
+    onSuccess: (saved) => queryClient.setQueryData(queryKeys.sshServers, saved),
+    onError: (error) => {
+      toast.error(ipcErrorMessage(error, 'Could not save the new order.'));
+      // The list on screen is the order that failed to save, so read the real one back.
+      void refreshServers();
+    },
+  });
+
+  /** A drag landed one server at another index. The list shows it at once and saves in the background. */
+  function moveServer(fromIndex: number, toIndex: number): void {
+    const reordered = [...servers];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+    queryClient.setQueryData(queryKeys.sshServers, reordered);
+    reorderMutation.mutate(reordered.map((server) => server.id));
+  }
+
   async function refreshVault(): Promise<void> {
     await queryClient.invalidateQueries({ queryKey: queryKeys.sshVaultStatus });
   }
@@ -251,19 +283,25 @@ export function SshServersPanel(): React.JSX.Element {
               }
             />
           ) : (
-            <ul className="settings-rows">
-              {servers.map((server) => (
+            <ReorderableGroup
+              as="ul"
+              items={servers}
+              getId={(server) => server.id}
+              enabled
+              className="settings-rows"
+              onMove={moveServer}
+              renderItem={(server, motion) => (
                 <SavedSshServerRow
-                  key={server.id}
                   server={server}
+                  motion={motion}
                   onConnect={(s) => withUnlockedVault(s, 'connect')}
                   onHistory={(s) => withUnlockedVault(s, 'history')}
                   onFiles={(s) => withUnlockedVault(s, 'files')}
                   onEdit={openEdit}
                   onRemoved={() => void refreshServers()}
                 />
-              ))}
-            </ul>
+              )}
+            />
           )}
         </div>
       </section>

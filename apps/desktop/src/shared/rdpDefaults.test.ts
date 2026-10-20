@@ -18,6 +18,7 @@ describe('withRdpDefaults', () => {
     const saved: RdpServerOptions = {
       resolution: { width: 2560, height: 1440 },
       fullscreenOnConnect: true,
+      maximizeOnConnect: false,
       clipboard: false,
       fileTransfer: false,
       nla: false,
@@ -32,6 +33,7 @@ describe('withRdpDefaults', () => {
     expect(withRdpDefaults({ fileTransfer: false }).fileTransfer).toBe(false);
     expect(withRdpDefaults({ nla: false }).nla).toBe(false);
     expect(withRdpDefaults({ fullscreenOnConnect: false }).fullscreenOnConnect).toBe(false);
+    expect(withRdpDefaults({ maximizeOnConnect: false }).maximizeOnConnect).toBe(false);
   });
 
   it('defaults only the fields the record is missing', () => {
@@ -57,7 +59,14 @@ describe('withRdpDefaults', () => {
       expect(value, `${key} has no default`).not.toBeUndefined();
     }
     expect(Object.keys(filled).sort()).toEqual(
-      ['clipboard', 'fileTransfer', 'fullscreenOnConnect', 'nla', 'resolution'].sort(),
+      [
+        'clipboard',
+        'fileTransfer',
+        'fullscreenOnConnect',
+        'maximizeOnConnect',
+        'nla',
+        'resolution',
+      ].sort(),
     );
   });
 });
@@ -73,6 +82,7 @@ describe('defaults', () => {
     expect(DEFAULT_RDP_OPTIONS).toEqual({
       resolution: 'fitWindow',
       fullscreenOnConnect: false,
+      maximizeOnConnect: true,
       clipboard: true,
       fileTransfer: true,
       nla: true,

@@ -19,7 +19,7 @@ import { endsWithPasswordPrompt } from '../agents/shellCommand';
 import { keepAwake } from '../power/keepAwake';
 import { closeSftpSessionsForServer } from '../sftp';
 import { probeHostKey } from '../ssh/connectConfig';
-import { findSavedServer, updateSshServer } from '../ssh/savedServers';
+import { findSavedServer, reorderSshServers, updateSshServer } from '../ssh/savedServers';
 import { SshSessionManager } from '../ssh/sessionManager';
 import {
   decryptSecret,
@@ -244,6 +244,12 @@ export function registerSshHandlers(): void {
     // After the write, so an SFTP open racing the removal no longer finds the server.
     closeSftpSessionsForServer(id);
   });
+
+  ipcMain.handle(
+    IPC.ssh.reorderServers,
+    async (_event, orderedIds: string[]): Promise<SshSavedServer[]> =>
+      (await reorderSshServers(orderedIds)).map(toPublicServer),
+  );
 
   ipcMain.handle(IPC.ssh.pickPrivateKeyFile, async (): Promise<string | null> => {
     const result = await dialog.showOpenDialog({

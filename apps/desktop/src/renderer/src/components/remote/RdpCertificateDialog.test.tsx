@@ -36,6 +36,7 @@ const savedServer: RdpSavedServer = {
   options: {
     resolution: 'fitWindow',
     fullscreenOnConnect: false,
+    maximizeOnConnect: true,
     clipboard: true,
     fileTransfer: true,
     nla: true,

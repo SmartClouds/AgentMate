@@ -77,6 +77,46 @@ describe('ssh:removeServer', () => {
   });
 });
 
+describe('ssh:reorderServers', () => {
+  const three = () => [
+    saved({ secretEnvelope: { mode: 'safeStorage', ciphertext: 'c2VjcmV0' } }),
+    saved({ id: 'srv-2', nickname: 'stage' }),
+    saved({ id: 'srv-3', nickname: 'dev' }),
+  ];
+
+  it('saves the servers in the order it is given and returns them', async () => {
+    userData.writeData('ssh-servers.json', three());
+
+    const reordered = (await invoke(IPC.ssh.reorderServers, ['srv-3', 'srv-1', 'srv-2'])) as {
+      id: string;
+    }[];
+
+    expect(reordered.map((one) => one.id)).toEqual(['srv-3', 'srv-1', 'srv-2']);
+    expect(storedServers().map((one) => one.id)).toEqual(['srv-3', 'srv-1', 'srv-2']);
+  });
+
+  it('never hands the renderer a stored secret', async () => {
+    userData.writeData('ssh-servers.json', three());
+
+    const reordered = (await invoke(IPC.ssh.reorderServers, ['srv-1', 'srv-2', 'srv-3'])) as {
+      hasSecret: boolean;
+    }[];
+
+    expect(reordered[0]).toMatchObject({ hasSecret: true });
+    expect(reordered[0]).not.toHaveProperty('secretEnvelope');
+    // On disk the secret stays, so a reorder does not forget anybody's password.
+    expect(storedServers()[0].secretEnvelope).toBeDefined();
+  });
+
+  it('keeps a server the list leaves out, after the ones it lists', async () => {
+    userData.writeData('ssh-servers.json', three());
+
+    await invoke(IPC.ssh.reorderServers, ['srv-2']);
+
+    expect(storedServers().map((one) => one.id)).toEqual(['srv-2', 'srv-1', 'srv-3']);
+  });
+});
+
 describe('ssh:hostKeyStatus', () => {
   it('reports the stored key and the key the server presents now', async () => {
     userData.writeData('ssh-servers.json', [saved({ hostKeyFingerprint: 'ab'.repeat(32) })]);

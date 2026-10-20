@@ -147,6 +147,43 @@ describe('ExplorerSearch', () => {
     expect(await screen.findByText(/No file matches/)).toBeInTheDocument();
   });
 
+  it('lists the files that fit a wildcard pattern', async () => {
+    renderSearch();
+
+    type('*.ts');
+
+    await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(2));
+    const names = screen.getAllByRole('option').map((option) => option.textContent);
+    expect(names.join(' ')).toContain('workspaceStore.ts');
+    expect(names.join(' ')).toContain('explorer.ts');
+    expect(names.join(' ')).not.toContain('GitPanel.tsx');
+    expect(names.join(' ')).not.toContain('README.md');
+  });
+
+  it('takes a regular expression between two slashes', async () => {
+    renderSearch();
+
+    type('/^readme\\.md$/');
+
+    expect(await screen.findByRole('option')).toHaveTextContent('README.md');
+    expect(screen.getAllByRole('option')).toHaveLength(1);
+  });
+
+  it('says so when the regular expression is not valid', async () => {
+    renderSearch();
+
+    type('/(/');
+
+    expect(await screen.findByText(/not a valid regular expression/i)).toBeInTheDocument();
+    expect(screen.queryByText(/No file matches/)).not.toBeInTheDocument();
+  });
+
+  it('tells the user that patterns work, in the placeholder', () => {
+    renderSearch();
+
+    expect(screen.getByPlaceholderText(/\*\.md/)).toBeInTheDocument();
+  });
+
   it('clears on the first Escape and closes on the second', async () => {
     renderSearch();
 

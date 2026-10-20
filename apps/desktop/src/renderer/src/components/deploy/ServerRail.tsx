@@ -2,13 +2,16 @@ import type { FileSite } from '@shared/deployFilesTypes';
 import type { DeployServer } from '@shared/deployTypes';
 import type { DeployWordPressSite } from '@shared/deployWordPressTypes';
 import { LayoutGroup, motion, useReducedMotion } from 'framer-motion';
+import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { CloudflareMark } from '@/components/cloudflare/CloudflareMark';
-import { ExternalLink, Plus, RefreshCw, Spinner } from '@/components/icons';
+import { ExternalLink, Plus, RefreshCw, Sliders, Spinner } from '@/components/icons';
 import { Chip, SECTION_HEADING } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
+import { ReorderableGroup, type ReorderMotion } from '@/components/ui/ReorderableGroup';
 import { Skeleton } from '@/components/ui/skeleton';
 import { WordPressMark } from '@/components/wordpress/WordPressMark';
+import { moveId } from '@/lib/deploy/railServers';
 import { cn } from '@/lib/utils';
 import { useDeploySetupStore } from '@/stores/deploySetupStore';
 import { type ServerState, serverState, useCoreHealth } from './coreHealth';
@@ -83,14 +86,29 @@ function RowTitle({ selected, children }: { selected: boolean; children: React.R
   );
 }
 
+/**
+ * A server's row while the list can be reordered. A held row lifts off the rail while the rows
+ * around it slide out of its way, the same motion the Projects list has.
+ */
+function serverItemClass(dragging: boolean): string {
+  return dragging
+    ? 'relative z-10 rounded-lg bg-popover shadow-lg ring-1 ring-foreground/10 transition-none'
+    : 'transition-transform duration-200 ease-out motion-reduce:transition-none';
+}
+
 function RailItem({
   server,
   selected,
   onSelect,
+  motion: reorder,
+  onShift,
 }: {
   server: DeployServer;
   selected: boolean;
   onSelect: (serverId: string) => void;
+  motion: ReorderMotion;
+  /** Moves the server one place up (-1) or down (1). Alt with the arrow keys asks for it. */
+  onShift: (delta: -1 | 1) => void;
 }): React.JSX.Element {
   const health = useCoreHealth(server);
   const run = useDeploySetupStore((state) => state.runs[server.id]);
@@ -104,11 +122,19 @@ function RailItem({
   };
 
   return (
-    <li>
+    <li {...reorder.itemProps} className={serverItemClass(reorder.dragging)}>
+      {/* The whole row is the grip: a click selects, and a press that travels reorders. */}
       <button
         type="button"
+        data-drag-grip
         aria-current={selected ? 'true' : undefined}
         onClick={() => onSelect(server.id)}
+        onPointerDown={reorder.onGripPointerDown}
+        onKeyDown={(event) => {
+          if (!event.altKey || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
+          event.preventDefault();
+          onShift(event.key === 'ArrowUp' ? -1 : 1);
+        }}
         className={rowClass(selected)}
       >
         {selected && <ActivePill />}
@@ -359,14 +385,17 @@ function FileSiteGroup({
 }
 
 /**
- * Every saved server with how its core is doing, so the one that needs a look stands out, and
- * under them the WordPress sites connected through the AgentMate Connector plugin and the FTP
- * and SFTP sites.
+ * The servers the user chose for Deploy, in the order they arranged them, each with how its core
+ * is doing so the one that needs a look stands out. Under them come the WordPress sites connected
+ * through the AgentMate Connector plugin and the FTP and SFTP sites.
  */
 export function ServerRail({
   servers,
+  allServers,
   selectedId,
   onSelect,
+  onChooseServers,
+  onReorderServers,
   sites,
   sitesLoading = false,
   sitesError = null,
@@ -384,8 +413,17 @@ export function ServerRail({
   onAddFileSite,
 }: {
   servers: DeployServer[];
+  /**
+   * Every saved server, shown or not, to name the one an FTP or SFTP site connects through.
+   * Left out, the rail's own servers are all it knows.
+   */
+  allServers?: DeployServer[];
   selectedId: string | null;
   onSelect: (serverId: string) => void;
+  /** Left out, there is no row for choosing which servers the rail lists. */
+  onChooseServers?: () => void;
+  /** Gets the server ids in their new order after a drag. Left out, the servers can't be moved. */
+  onReorderServers?: (orderedIds: string[]) => void;
   /** Opens the Cloudflare dialog over Deploy. */
   onOpenCloudflare: () => void;
   /** Left out, the WordPress group is not shown at all. */
@@ -405,24 +443,67 @@ export function ServerRail({
   onRetryFileSites?: () => void;
   onAddFileSite?: () => void;
 }): React.JSX.Element {
+  const navRef = useRef<HTMLElement>(null);
+
+  function reorder(from: number, to: number): void {
+    onReorderServers?.(
+      moveId(
+        servers.map((server) => server.id),
+        from,
+        to,
+      ),
+    );
+  }
+
+  /**
+   * Moving a row can re-mount it, which drops the keyboard, so the moved row takes it back. Only
+   * when it was dropped: a key pressed elsewhere in the meantime keeps its focus.
+   */
+  function shift(index: number, delta: -1 | 1): void {
+    const to = index + delta;
+    if (!onReorderServers || to < 0 || to >= servers.length) return;
+    const movedId = servers[index].id;
+    reorder(index, to);
+    window.requestAnimationFrame(() => {
+      const active = document.activeElement;
+      if (active && active !== document.body) return;
+      const row = Array.from(
+        navRef.current?.querySelectorAll<HTMLElement>('[data-reorder-id]') ?? [],
+      ).find((item) => item.dataset.reorderId === movedId);
+      row?.querySelector<HTMLElement>('[data-drag-grip]')?.focus();
+    });
+  }
+
   return (
-    <nav aria-label="Servers" className="flex flex-col gap-1">
+    <nav ref={navRef} aria-label="Servers" className="flex flex-col gap-1">
       <LayoutGroup id="deploy-rail">
         <GroupHeading label="Servers" count={servers.length} />
         {servers.length === 0 && (
-          <p className="px-3 text-xs text-muted-foreground">No servers yet.</p>
+          <p className="px-3 text-xs text-muted-foreground">No servers shown.</p>
         )}
-        <ul className="flex flex-col gap-px">
-          {servers.map((server) => (
+        <ReorderableGroup
+          as="ul"
+          items={servers}
+          getId={(server) => server.id}
+          enabled={onReorderServers !== undefined}
+          className="flex flex-col gap-px"
+          onMove={reorder}
+          renderItem={(server, motion, index) => (
             <RailItem
-              key={server.id}
               server={server}
               selected={server.id === selectedId}
               onSelect={onSelect}
+              motion={motion}
+              onShift={(delta) => shift(index, delta)}
             />
-          ))}
-        </ul>
+          )}
+        />
         <div className="flex flex-col gap-px">
+          {onChooseServers && (
+            <button type="button" onClick={onChooseServers} className={cn(LINK_ROW, 'w-full')}>
+              <Sliders /> Choose servers to show
+            </button>
+          )}
           <Link to="/remote" className={LINK_ROW}>
             <ExternalLink /> Add or edit servers in Remote
           </Link>
@@ -445,7 +526,7 @@ export function ServerRail({
           onSelectFileSite && (
             <FileSiteGroup
               sites={fileSites ?? []}
-              servers={servers}
+              servers={allServers ?? servers}
               loading={fileSitesLoading}
               error={fileSitesError}
               selectedId={selectedFileSiteId}
