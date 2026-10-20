@@ -180,12 +180,12 @@ describe('LauncherMenu model and effort picker', () => {
   it('starts Cursor on a model, with no effort step', async () => {
     const { user } = await openMenu();
     await openFlyout(user, /Cursor CLI/);
-    const sonnet = await screen.findByRole('menuitem', { name: row('Sonnet 4.5') });
+    const sonnet = await screen.findByRole('menuitem', { name: row('Sonnet 5.5') });
     expect(sonnet).not.toHaveAttribute('aria-haspopup');
     await user.click(sonnet);
     expect(lastLaunch()).toEqual({
-      input: 'cursor-agent --model sonnet-4.5\r',
-      label: 'Sonnet 4.5',
+      input: 'cursor-agent --model claude-sonnet-5-5-high\r',
+      label: 'Sonnet 5.5 (high)',
     });
   });
 
@@ -218,6 +218,7 @@ describe('LauncherMenu flyout details', () => {
       ['Gemini 3.5 Flash-Lite', 'Fast'],
       ['Gemini 3.8 Flash', 'Balanced'],
       ['Gemini 3.1 Pro', 'Deep'],
+      ['Gemini 4 Argon', 'Frontier'],
     ]);
     for (const [label, tier] of tiers) {
       const item = await screen.findByRole('menuitem', { name: row(label) });

@@ -84,25 +84,40 @@ export const GEMINI_CLI_MODELS = {
     cliArg: 'gemini-3.1-pro-preview',
     apiId: 'gemini-3.1-pro-preview',
   },
+  argon: { label: 'Gemini 4 Argon', cliArg: 'gemini-4-argon', apiId: 'gemini-4-argon' },
 } as const satisfies Record<string, CatalogModel>;
 
-// xAI (Grok CLI). Newest first. The ids are the ones MODEL_PRICES already prices.
+// xAI (Grok CLI). Newest first. The ids are the ones xAI's model table lists, and MODEL_PRICES
+// prices them by prefix.
 
 export const GROK_MODELS = {
   g47: { label: 'Grok 4.7', cliArg: 'grok-4.7', apiId: 'grok-4.7' },
   g46: { label: 'Grok 4.6', cliArg: 'grok-4.6', apiId: 'grok-4.6' },
   g45: { label: 'Grok 4.5', cliArg: 'grok-4.5', apiId: 'grok-4.5' },
   g43: { label: 'Grok 4.3', cliArg: 'grok-4.3', apiId: 'grok-4.3' },
-  g420: { label: 'Grok 4.20', cliArg: 'grok-4.20', apiId: 'grok-4.20' },
-  build: { label: 'Grok Build', cliArg: 'grok-build', apiId: 'grok-build' },
+  g420: {
+    label: 'Grok 4.20',
+    cliArg: 'grok-4.20-0309-reasoning',
+    apiId: 'grok-4.20-0309-reasoning',
+  },
+  build: { label: 'Grok Build 0.1', cliArg: 'grok-build-0.1', apiId: 'grok-build-0.1' },
 } as const satisfies Record<string, CatalogModel>;
 
-// Cursor CLI. `auto` lets Cursor pick the model itself.
+// Cursor CLI. `auto` lets Cursor pick the model itself. Every other id is one that
+// `cursor-agent --list-models` prints, and it carries its own effort ("-high"), so the label says
+// which one it is. Any other id from that list can be typed in by hand.
 
 export const CURSOR_MODELS = {
   auto: { label: 'Auto', cliArg: 'auto' },
-  sonnet: { label: 'Sonnet 4.5', cliArg: 'sonnet-4.5' },
-  opus: { label: 'Opus 4.5', cliArg: 'opus-4.5' },
+  composer: { label: 'Composer 2.5', cliArg: 'composer-2.5' },
+  fable: { label: 'Fable 5.1 (high)', cliArg: 'claude-fable-5-1-high' },
+  opus: { label: 'Opus 5.5 (high)', cliArg: 'claude-opus-5-5-high' },
+  sonnet: { label: 'Sonnet 5.5 (high)', cliArg: 'claude-sonnet-5-5-high' },
+  haiku: { label: 'Haiku 5.5 (high)', cliArg: 'claude-haiku-5-5-thinking-high' },
+  sol: { label: 'GPT-5.6 Sol (high)', cliArg: 'gpt-5.6-sol-high' },
+  argon: { label: 'Gemini 4 Argon (high)', cliArg: 'gemini-4-argon-high' },
+  flash: { label: 'Gemini 3.8 Flash (high)', cliArg: 'gemini-3.8-flash-high' },
+  grok: { label: 'Grok 4.7 (high)', cliArg: 'grok-4.7-high' },
 } as const satisfies Record<string, CatalogModel>;
 
 // Example model names shown as argument hints, per CLI id. Only the model goes here. The flag
@@ -117,7 +132,7 @@ export const CLI_MODEL_EXAMPLES = {
   opencode: `anthropic/${CLAUDE_MODELS.sonnet.apiId}`,
   'codex-cli': CODEX_MODELS.sol.cliArg,
   'grok-cli': GROK_MODELS.g47.cliArg,
-  'cursor-cli': 'sonnet-4-thinking',
+  'cursor-cli': CURSOR_MODELS.sonnet.cliArg,
   'copilot-cli': CLAUDE_MODELS.sonnet.apiId,
   'qwen-cli': 'qwen3-coder-plus',
   'cline-cli': CLAUDE_MODELS.sonnet.apiId,
@@ -138,6 +153,7 @@ export const GEMINI_API_MODELS: readonly CatalogModelOption[] = [
   { value: GEMINI_CLI_MODELS.flash.apiId, label: GEMINI_CLI_MODELS.flash.apiId },
   { value: GEMINI_CLI_MODELS.flashLite.apiId, label: GEMINI_CLI_MODELS.flashLite.apiId },
   { value: GEMINI_CLI_MODELS.pro.apiId, label: GEMINI_CLI_MODELS.pro.apiId },
+  { value: GEMINI_CLI_MODELS.argon.apiId, label: GEMINI_CLI_MODELS.argon.apiId },
 ];
 /** Google points new projects at Flash. Gemini 2.x is closed to new users. */
 export const DEFAULT_GEMINI_API_MODEL = GEMINI_CLI_MODELS.flash.apiId;
@@ -391,12 +407,19 @@ export const MODEL_PRICES: Record<string, ModelPrice> = {
   o3: { input: 2, output: 8, cacheRead: 0.5, cacheWrite: 2 },
   'codex-mini': { input: 1.5, output: 6, cacheRead: 0.375, cacheWrite: 1.5 },
 
-  // Google (Gemini). The 3.8 Flash rate is an introductory one that doubles on 2027-01-01.
+  // Google (Gemini). Rates for prompts up to 200k tokens (3.1 Pro and 2.5 Pro cost more beyond
+  // that). The 3.8 and 3.6 Flash rates are introductory and double on 2027-01-01, and Gemini 4
+  // Argon's launch rate doubles on 2026-12-01. The flash-lite entries have to stay: pricing
+  // matches by prefix, so without them those ids would fall through to the Flash rate.
+  'gemini-4-argon': { input: 2, output: 10, cacheRead: 0.1, cacheWrite: 2 },
   'gemini-3.8-flash': { input: 0.75, output: 3.75, cacheRead: 0.075, cacheWrite: 0.75 },
+  'gemini-3.6-flash': { input: 0.75, output: 3.75, cacheRead: 0.075, cacheWrite: 0.75 },
   'gemini-3.5-flash-lite': { input: 0.3, output: 2.5, cacheRead: 0.03, cacheWrite: 0.3 },
   'gemini-3.1-pro': { input: 2, output: 12, cacheRead: 0.2, cacheWrite: 2 },
-  'gemini-2.5-pro': { input: 1.25, output: 10, cacheRead: 0.31, cacheWrite: 1.25 },
-  'gemini-2.5-flash': { input: 0.3, output: 2.5, cacheRead: 0.075, cacheWrite: 0.3 },
+  'gemini-3.1-flash-lite': { input: 0.25, output: 1.5, cacheRead: 0.025, cacheWrite: 0.25 },
+  'gemini-2.5-pro': { input: 1.25, output: 10, cacheRead: 0.125, cacheWrite: 1.25 },
+  'gemini-2.5-flash-lite': { input: 0.1, output: 0.4, cacheRead: 0.01, cacheWrite: 0.1 },
+  'gemini-2.5-flash': { input: 0.3, output: 2.5, cacheRead: 0.03, cacheWrite: 0.3 },
   'gemini-2.0-flash': { input: 0.1, output: 0.4, cacheRead: 0.025, cacheWrite: 0.1 },
 
   // xAI (Grok). Rates for prompts under 200k tokens; longer ones cost double.

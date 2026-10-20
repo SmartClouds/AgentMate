@@ -132,7 +132,18 @@ describe('cliLaunchOptions', () => {
     expect(grok?.models.map((m) => m.value)).toContain('grok-4.7');
     expect(grok?.models.every((m) => m.efforts?.includes('high'))).toBe(true);
     const cursor = cliLaunchOptions('cursor-cli');
-    expect(cursor?.models.map((m) => m.value)).toEqual(['auto', 'sonnet-4.5', 'opus-4.5']);
+    expect(cursor?.models.map((m) => m.value)).toEqual([
+      'auto',
+      'composer-2.5',
+      'claude-fable-5-1-high',
+      'claude-opus-5-5-high',
+      'claude-sonnet-5-5-high',
+      'claude-haiku-5-5-thinking-high',
+      'gpt-5.6-sol-high',
+      'gemini-4-argon-high',
+      'gemini-3.8-flash-high',
+      'grok-4.7-high',
+    ]);
     expect(cursor?.efforts).toEqual([]);
   });
 });
@@ -159,11 +170,13 @@ describe('launchPickOptions', () => {
       'Gemini 3.5 Flash-Lite',
       'Gemini 3.8 Flash',
       'Gemini 3.1 Pro',
+      'Gemini 4 Argon',
     ]);
-    expect(models.map((m) => m.tier)).toEqual(['Fast', 'Balanced', 'Deep']);
-    const [lite, flash, pro] = models.map((m) => m.costLevel!);
+    expect(models.map((m) => m.tier)).toEqual(['Fast', 'Balanced', 'Deep', 'Frontier']);
+    const [lite, flash, pro, argon] = models.map((m) => m.costLevel!);
     expect(lite).toBeLessThan(flash!);
     expect(flash).toBeLessThan(pro!);
+    expect(pro).toBeLessThan(argon!);
     for (const model of models) {
       expect(model.efforts, model.label).toBeUndefined();
       expect(model.effortCost, model.label).toBeUndefined();

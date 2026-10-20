@@ -246,6 +246,13 @@ const RUN_PROFILES: Record<string, Omit<TargetRunProfile, 'cliId' | 'executable'
         tier: 'Deep',
         costWeight: 6,
         bestFor: 'Complex reasoning and larger changes',
+        maxScore: 86,
+      },
+      {
+        ...fromCatalog('argon', GEMINI_CLI_MODELS.argon),
+        tier: 'Frontier',
+        costWeight: 8,
+        bestFor: 'The hardest reasoning and long agent sessions',
         maxScore: 100,
       },
     ],

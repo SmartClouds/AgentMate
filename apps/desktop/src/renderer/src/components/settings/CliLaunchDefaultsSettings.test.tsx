@@ -142,7 +142,7 @@ describe('CliLaunchDefaultsSettings', () => {
         'Grok 4.5',
         'Grok 4.3',
         'Grok 4.20',
-        'Grok Build',
+        'Grok Build 0.1',
       ]);
       fireEvent.click(screen.getByRole('option', { name: 'Grok 4.7' }));
       fireEvent.click(await within(panel).findByRole('radio', { name: 'High' }));
@@ -159,14 +159,25 @@ describe('CliLaunchDefaultsSettings', () => {
 
     it('lists the Cursor models and has no effort setting', async () => {
       const panel = await openRow(/^Cursor CLI/);
-      expect(await optionLabels(panel)).toEqual(['Auto', 'Sonnet 4.5', 'Opus 4.5']);
-      fireEvent.click(screen.getByRole('option', { name: 'Sonnet 4.5' }));
+      expect(await optionLabels(panel)).toEqual([
+        'Auto',
+        'Composer 2.5',
+        'Fable 5.1 (high)',
+        'Opus 5.5 (high)',
+        'Sonnet 5.5 (high)',
+        'Haiku 5.5 (high)',
+        'GPT-5.6 Sol (high)',
+        'Gemini 4 Argon (high)',
+        'Gemini 3.8 Flash (high)',
+        'Grok 4.7 (high)',
+      ]);
+      fireEvent.click(screen.getByRole('option', { name: 'Sonnet 5.5 (high)' }));
       expect(within(panel).queryByRole('radiogroup', { name: 'Effort' })).toBeNull();
       expect(useCliStore.getState().cliLaunchDefaults['cursor-cli']).toEqual({
-        model: 'sonnet-4.5',
+        model: 'claude-sonnet-5-5-high',
       });
       expect(panel.querySelector('code.font-mono')?.textContent).toBe(
-        'cursor-agent --model sonnet-4.5',
+        'cursor-agent --model claude-sonnet-5-5-high',
       );
     });
   });

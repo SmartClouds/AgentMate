@@ -85,6 +85,13 @@ describe('model catalog', () => {
     }
   });
 
+  // Pricing matches by prefix, so a -lite id that loses its own entry is billed as its parent.
+  it('prices a Gemini flash-lite model at its own rate, not the Flash rate it starts with', () => {
+    expect(getModelPrice('gemini-2.5-flash')?.input).toBe(0.3);
+    expect(getModelPrice('gemini-2.5-flash-lite')?.input).toBe(0.1);
+    expect(getModelPrice('gemini-3.1-flash-lite')?.input).toBe(0.25);
+  });
+
   it('offers Diffray the same Cursor models as the launch menu', () => {
     expect(DIFFRAY_EXECUTOR_MODELS['cursor-agent-cli']).toEqual(
       Object.values(CURSOR_MODELS).map((m) => ({ value: m.cliArg, label: m.label })),

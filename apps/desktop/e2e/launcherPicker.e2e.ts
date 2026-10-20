@@ -235,11 +235,11 @@ test('Cursor starts on a picked model and has no effort step', async () => {
   const fakes = installFakeClis(['cursor-agent']);
   launched = await launchApp({ settings: { cliLaunchDefaults: {} } });
   await startOtherCli(launched, /Cursor CLI/, async (page) => {
-    const model = page.getByRole('menuitem', { name: /^Sonnet 4\.5/ });
+    const model = page.getByRole('menuitem', { name: /^Sonnet 5\.5/ });
     await expect(model).not.toHaveAttribute('aria-haspopup', 'menu');
     await model.click();
   });
   await expect
     .poll(() => launchesOf(fakes, 'cursor-agent').at(-1) ?? '', { timeout: 60_000 })
-    .toContain('--model sonnet-4.5');
+    .toContain('--model claude-sonnet-5-5-high');
 });
