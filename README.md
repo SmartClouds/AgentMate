@@ -65,7 +65,7 @@
   </tr>
 </table>
 
-Every screenshot uses demo data (a made-up shop called Northwind), taken in the default Dark theme unless it says otherwise. The Deploy screenshot shows the DevHost described under [Deploy](#deploy), not a real server.
+Apart from the AI Pet card, every screenshot uses demo data (a made-up shop called Northwind), taken in the default Dark theme unless it says otherwise. The Deploy screenshot shows the DevHost described under [Deploy](#deploy), not a real server.
 
 ## Why "ADE"
 
