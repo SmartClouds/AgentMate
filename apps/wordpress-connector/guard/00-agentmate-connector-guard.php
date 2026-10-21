@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AgentMate Connector Guard
  * Description: Undoes an AgentMate deploy that breaks the site. AgentMate Connector installs it and keeps it up to date; it does nothing while no deploy is pending.
- * Version:     1.59.0
+ * Version:     1.60.0
  *
  * While a deploy waits for confirmation it rolls the deploy back when the deadline passes or when
  * PHP dies of a fatal error in a file the deploy changed. It also answers AgentMate's /rescue/*
