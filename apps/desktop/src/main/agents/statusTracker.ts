@@ -109,14 +109,22 @@ async function modelFromTranscript(path: string): Promise<string | undefined> {
   return undefined;
 }
 
-/** Transcripts being watched, by session id, so a `/model` switch shows before any hook fires. */
-const followed = new Map<string, { path: string; watcher: FSWatcher; timer?: NodeJS.Timeout }>();
+/**
+ * Transcripts being watched, by session id, so a `/model` switch shows before any hook fires. A
+ * path reported before Claude Code has written the file (SessionStart comes first) is kept with no
+ * watcher: the Relay context meter still needs to know where to read, and the next hook tries to
+ * watch it again.
+ */
+const followed = new Map<
+  string,
+  { path: string; watcher: FSWatcher | null; timer?: NodeJS.Timeout }
+>();
 
 function unfollowTranscript(id: string): void {
   const follow = followed.get(id);
   if (!follow) return;
   clearTimeout(follow.timer);
-  follow.watcher.close();
+  follow.watcher?.close();
   followed.delete(id);
 }
 
@@ -125,19 +133,21 @@ function unfollowTranscript(id: string): void {
  * prompts, so without this a `/model` switch stayed hidden until the next reply finished.
  */
 function followTranscript(id: string, path: string): void {
-  if (followed.get(id)?.path === path) return;
+  const current = followed.get(id);
+  if (current?.path === path && current.watcher) return;
   unfollowTranscript(id);
   if (!isAbsolute(path) || !path.endsWith('.jsonl')) return;
+  const follow: { path: string; watcher: FSWatcher | null; timer?: NodeJS.Timeout } = {
+    path,
+    watcher: null,
+  };
+  followed.set(id, follow);
   try {
-    const follow: { path: string; watcher: FSWatcher; timer?: NodeJS.Timeout } = {
-      path,
-      watcher: watch(path, { persistent: false }, () => {
-        clearTimeout(follow.timer);
-        follow.timer = setTimeout(() => void agentStatus.runInfo(id, {}), 300);
-      }),
-    };
+    follow.watcher = watch(path, { persistent: false }, () => {
+      clearTimeout(follow.timer);
+      follow.timer = setTimeout(() => void agentStatus.runInfo(id, {}), 300);
+    });
     follow.watcher.on('error', () => unfollowTranscript(id));
-    followed.set(id, follow);
   } catch {
     // The transcript may not exist yet; the next hook tries again.
   }
@@ -177,6 +187,12 @@ let viewing: { visible: Set<string>; focused: string | null } = {
   focused: null,
 };
 let pendingNotices: { id: string; status: AgentStatus; hookMessage?: string }[] = [];
+/**
+ * Sessions main started itself (Relay legs). They are tracked from the start, before any tab
+ * shows them, and a sync from a renderer that has not added their tab yet does not drop them.
+ */
+const pinned = new Set<string>();
+const statusListeners = new Set<(id: string, status: AgentStatus) => void>();
 let noticeTimer: NodeJS.Timeout | null = null;
 
 function broadcastLater(id: string, status: AgentStatus): void {
@@ -270,6 +286,7 @@ function apply(
   entry.state = reduceAgentStatus(entry.state, event);
   const after = entry.state.status;
   if (after === before) return;
+  for (const listener of statusListeners) listener(id, after);
   broadcastLater(id, after);
   syncTicker();
   if ((after === 'done' || after === 'needs-input') && !isLookingAt(id)) {
@@ -285,7 +302,7 @@ export const agentStatus = {
   sync(entries: AgentSessionEntry[]): string[] {
     const wanted = new Set(entries.map((e) => e.sessionId));
     for (const id of [...tracked.keys()]) {
-      if (wanted.has(id)) continue;
+      if (wanted.has(id) || pinned.has(id)) continue;
       tracked.delete(id);
       unfollowTranscript(id);
     }
@@ -378,6 +395,44 @@ export const agentStatus = {
     // on, not a default computed elsewhere in the app.
     const cliId = tracked.get(id)?.cliId;
     if (cliId && next.model) void persistLastRunInfo(cliId, next.model, next.effort);
+  },
+
+  /** Starts tracking a session main started, whatever the renderer's tabs say. */
+  pin(entry: AgentSessionEntry): void {
+    pinned.add(entry.sessionId);
+    if (!tracked.has(entry.sessionId)) {
+      tracked.set(entry.sessionId, {
+        state: initialAgentStatus(Boolean(entry.cliId)),
+        projectId: entry.projectId,
+        cliId: entry.cliId,
+        title: entry.title,
+      });
+      syncTicker();
+    }
+  },
+
+  /** Leaves a pinned session to the renderer's tabs again. */
+  unpin(id: string): void {
+    pinned.delete(id);
+  },
+
+  /** Calls `listener` whenever a session's status changes, until the returned function runs. */
+  subscribe(listener: (id: string, status: AgentStatus) => void): () => void {
+    statusListeners.add(listener);
+    return () => statusListeners.delete(listener);
+  },
+
+  status(id: string): AgentStatus | null {
+    return tracked.get(id)?.state.status ?? null;
+  },
+
+  /** The transcript a Claude Code session reported through its hooks, if it did. */
+  transcriptPath(id: string): string | null {
+    return followed.get(id)?.path ?? null;
+  },
+
+  model(id: string): string | undefined {
+    return runInfos.get(id)?.model;
   },
 
   runInfos(): AgentRunInfoMap {

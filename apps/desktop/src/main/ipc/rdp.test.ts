@@ -5,6 +5,7 @@ import type {
   RdpCertificateCheckResult,
   RdpCertificateInfo,
   RdpFailureInfo,
+  RdpLinkStats,
   RdpStageResult,
   RdpStageStart,
   StoredRdpServer,
@@ -30,6 +31,8 @@ const fakes = vi.hoisted(() => ({
   /** The OS boundary of the files copied on the server: the folder and the Windows clipboard. */
   staging: { supported: true, folder: '' },
   putFilesOnClipboard: vi.fn(),
+  /** What the proxy measured for each session's connection. */
+  linkStats: new Map<string, RdpLinkStats>(),
 }));
 
 vi.mock('../agents/rdpTaskRunner', () => ({ stopRdpTask: fakes.stopRdpTask }));
@@ -66,6 +69,7 @@ vi.mock('../rdp/proxy', () => ({
     }
     closeSession = (): undefined => undefined;
     shutdown = (): undefined => undefined;
+    linkStats = (sessionId: string): RdpLinkStats | null => fakes.linkStats.get(sessionId) ?? null;
   },
 }));
 vi.mock('../rdp/handshake', async (importOriginal) => ({
@@ -121,6 +125,7 @@ beforeEach(async () => {
   fakes.fetchServerCertificate.mockReset();
   fakes.onClosed.length = 0;
   fakes.hooks = null;
+  fakes.linkStats.clear();
   writeServer();
   await load();
 });
@@ -133,6 +138,32 @@ describe('a Remote Desktop session window', () => {
 
     fakes.onClosed[0]?.();
     expect(fakes.stopRdpTask).toHaveBeenCalledWith(sessionId, 'exited');
+  });
+});
+
+describe('the connection readout of a session window', () => {
+  it('answers with the speed and answer time the proxy measured', async () => {
+    const sessionId = await invoke<string>(IPC.rdp.openSession, 'server-1');
+    const stats: RdpLinkStats = { downBytesPerSec: 2048, upBytesPerSec: 64, latencyMs: 41 };
+    fakes.linkStats.set(sessionId, stats);
+
+    const window = FakeBrowserWindow.instances[0];
+    expect(await invokeFrom(window.webContents, IPC.rdp.getLinkStats, sessionId)).toEqual(stats);
+  });
+
+  it('has nothing to report before the connection is open', async () => {
+    const sessionId = await invoke<string>(IPC.rdp.openSession, 'server-1');
+
+    const window = FakeBrowserWindow.instances[0];
+    expect(await invokeFrom(window.webContents, IPC.rdp.getLinkStats, sessionId)).toBeNull();
+  });
+
+  it('only answers the window that owns the session', async () => {
+    const sessionId = await invoke<string>(IPC.rdp.openSession, 'server-1');
+
+    await expect(invoke(IPC.rdp.getLinkStats, sessionId)).rejects.toThrow(
+      'This session has ended.',
+    );
   });
 });
 

@@ -46,8 +46,12 @@ export const FAKE_CLAUDE_ANSWER = 'feat: e2e change';
  * A headless run (`-p`, prompt on stdin) gets its prompt read to the end and a short answer, the
  * way the real CLI behaves, so background tasks finish normally.
  */
-function writeFakeClaude(binDir: string, logFile: string): void {
+function writeFakeClaude(binDir: string, logFile: string, script?: string): void {
   mkdirSync(binDir, { recursive: true });
+  if (script) {
+    writeScriptedClaude(binDir, logFile, script);
+    return;
+  }
   if (process.platform === 'win32') {
     writeFileSync(
       join(binDir, 'claude.cmd'),
@@ -80,6 +84,36 @@ function writeFakeClaude(binDir: string, logFile: string): void {
   }
 }
 
+/**
+ * A `claude` that hands every run to a Node script, for tests that need the CLI to act (run its
+ * hooks, write files) rather than just be there. Launches are still recorded for claudeLaunches().
+ */
+function writeScriptedClaude(binDir: string, logFile: string, script: string): void {
+  if (process.platform === 'win32') {
+    writeFileSync(
+      join(binDir, 'claude.cmd'),
+      [
+        '@echo off',
+        `if not "%~1"=="--version" >>"${logFile}" echo(%*`,
+        `node "${script}" %*`,
+        '',
+      ].join('\r\n'),
+    );
+    return;
+  }
+  const shim = join(binDir, 'claude');
+  writeFileSync(
+    shim,
+    [
+      '#!/bin/sh',
+      `if [ "$1" != "--version" ]; then echo "$*" >> '${logFile}'; fi`,
+      `exec node '${script}' "$@"`,
+      '',
+    ].join('\n'),
+  );
+  chmodSync(shim, 0o755);
+}
+
 /** Streams the app's own output to a file named after this run's temp folder. */
 function captureMainOutput(app: ElectronApplication, root: string): string | null {
   let child: ChildProcess;
@@ -108,6 +142,8 @@ export async function launchApp(seed: {
   env?: Record<string, string>;
   /** Extra command-line switches, for example Chromium's fake microphone. */
   args?: string[];
+  /** A Node script that plays `claude` in place of the plain recorder. */
+  claudeScript?: string;
 }): Promise<LaunchedApp> {
   const root = mkdtempSync(join(tmpdir(), 'agentmate-e2e-'));
   const userDataDir = join(root, 'user-data');
@@ -116,7 +152,7 @@ export async function launchApp(seed: {
   const logFile = join(root, 'claude-launches.log');
   mkdirSync(join(userDataDir, 'data'), { recursive: true });
   mkdirSync(projectDir, { recursive: true });
-  writeFakeClaude(binDir, logFile);
+  writeFakeClaude(binDir, logFile, seed.claudeScript);
 
   writeFileSync(
     join(userDataDir, 'data', 'settings.json'),

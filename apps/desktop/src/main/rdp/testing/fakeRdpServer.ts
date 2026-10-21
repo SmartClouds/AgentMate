@@ -18,13 +18,15 @@ export interface FakeRdpServer {
 /**
  * Speaks just enough RDP to get a client to its TLS handshake: reads the connection request,
  * answers with a confirm that selects TLS, then upgrades the same socket to a TLS server using
- * `certificate`. Anything the client sends after the handshake is ignored.
+ * `certificate`. Anything the client sends after the handshake is ignored, unless `echo` is on,
+ * which sends it straight back.
  */
 export async function startFakeRdpServer(
   certificate: TestCertificate,
   tlsOptions: { ciphers?: string; maxVersion?: 'TLSv1.2' | 'TLSv1.3' } = {},
   /** A port to listen on, to stand in for a server that was reinstalled at the same address. */
   port = 0,
+  echo = false,
 ): Promise<FakeRdpServer> {
   let connections = 0;
   const sockets = new Set<Socket>();
@@ -37,7 +39,9 @@ export async function startFakeRdpServer(
       socket.write(X224_CONFIRM_TLS);
       const secure = new TLSSocket(socket, { isServer: true, ...certificate, ...tlsOptions });
       secure.on('error', () => undefined);
-      secure.on('data', () => undefined);
+      secure.on('data', (data: Buffer) => {
+        if (echo) secure.write(data);
+      });
     });
   });
   await new Promise<void>((resolve) => server.listen(port, '127.0.0.1', resolve));

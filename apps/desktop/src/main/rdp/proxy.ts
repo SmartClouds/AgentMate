@@ -2,8 +2,9 @@ import { randomBytes } from 'node:crypto';
 import type { AddressInfo } from 'node:net';
 import type { TLSSocket } from 'node:tls';
 import { type RawData, type WebSocket, WebSocketServer } from 'ws';
-import type { RdpCertificateInfo, RdpFailureInfo } from '../../shared/apiTypes';
+import type { RdpCertificateInfo, RdpFailureInfo, RdpLinkStats } from '../../shared/apiTypes';
 import { type HandshakeDeps, handshake, toFailureInfo } from './handshake';
+import { LinkMeter } from './linkMeter';
 import {
   buildRdCleanPathError,
   buildRdCleanPathResponse,
@@ -58,6 +59,8 @@ export class RdpProxy {
   private starting: Promise<void> | null = null;
   private readonly tickets = new Map<string, Ticket>();
   private readonly live = new Map<string, Set<() => void>>();
+  /** The traffic of each session's current connection. A reconnect replaces its meter. */
+  private readonly meters = new Map<string, LinkMeter>();
 
   /** `deps` stands in for the network in tests. */
   constructor(
@@ -85,6 +88,11 @@ export class RdpProxy {
 
   get activeSessionCount(): number {
     return this.live.size;
+  }
+
+  /** Speed and answer time of a session's open connection, or null when it has none. */
+  linkStats(sessionId: string): RdpLinkStats | null {
+    return this.meters.get(sessionId)?.snapshot() ?? null;
   }
 
   shutdown(): void {
@@ -211,6 +219,9 @@ export class RdpProxy {
   }
 
   private relay(ws: WebSocket, tlsSocket: TLSSocket, target: RdpProxyTarget): void {
+    const meter = new LinkMeter();
+    this.meters.set(target.sessionId, meter);
+
     let closed = false;
     const close = (): void => {
       if (closed) return;
@@ -220,6 +231,8 @@ export class RdpProxy {
       const set = this.live.get(target.sessionId);
       set?.delete(close);
       if (set && set.size === 0) this.live.delete(target.sessionId);
+      // A reconnect may already have put its own meter here.
+      if (this.meters.get(target.sessionId) === meter) this.meters.delete(target.sessionId);
     };
 
     let set = this.live.get(target.sessionId);
@@ -231,6 +244,7 @@ export class RdpProxy {
 
     tlsSocket.on('data', (chunk: Buffer) => {
       if (ws.readyState !== ws.OPEN) return;
+      meter.recordDown(chunk.length);
       ws.send(chunk, () => {
         if (tlsSocket.isPaused() && ws.bufferedAmount < HIGH_WATER_BYTES / 2) tlsSocket.resume();
       });
@@ -238,7 +252,9 @@ export class RdpProxy {
     });
     ws.on('message', (data) => {
       if (tlsSocket.destroyed) return;
-      if (!tlsSocket.write(toBuffer(data))) {
+      const chunk = toBuffer(data);
+      meter.recordUp(chunk.length);
+      if (!tlsSocket.write(chunk)) {
         ws.pause();
         tlsSocket.once('drain', () => ws.resume());
       }

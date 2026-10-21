@@ -67,7 +67,11 @@ describe('AI CLI launches use the user CLI settings', () => {
       'main/cli/headlessPrompt.ts',
       'main/store.ts',
     ]);
-    expect(filesMatching('main', /\bcliLaunchDefaults\b/)).toEqual(['main/store.ts']);
+    // A Relay leg's terminal is started by main, so its launch line is built there.
+    expect(filesMatching('main', /\bcliLaunchDefaults\b/)).toEqual([
+      'main/relay/launch.ts',
+      'main/store.ts',
+    ]);
   });
 
   it('runs no registry CLI from the main process outside detection and the headless runner', () => {

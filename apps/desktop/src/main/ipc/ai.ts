@@ -310,7 +310,7 @@ const ASSESS_RUN_TIMEOUT_MS = 120000;
  * needs the prompt text, and an agent started inside a repo tends to read files first,
  * which costs time and tokens for no better answer.
  */
-async function assessRun(input: AssessRunInput): Promise<AssessRunResult> {
+export async function assessRun(input: AssessRunInput): Promise<AssessRunResult> {
   const result = await runHeadlessCliPrompt(buildRunAssessmentPrompt(input), tmpdir(), {
     requestId: input.requestId,
     timeoutMs: ASSESS_RUN_TIMEOUT_MS,

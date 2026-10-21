@@ -18,6 +18,7 @@ import {
   File,
   FileCog,
   Folder,
+  FolderKanban,
   FolderOpen,
   GitBranch,
   GitPullRequest,
@@ -61,6 +62,7 @@ import { openCliInTerminal } from '@/lib/openCli';
 import { persianTextProps } from '@/lib/rtl';
 import { timeAgo } from '@/lib/time';
 import { cn } from '@/lib/utils';
+import { useRelayBoardStore } from '@/stores/relayBoardStore';
 
 export const PROJECT_SECTION_IDS = [
   'overview',
@@ -412,6 +414,11 @@ export function ProjectDetailHeader({
           <Button variant="soft" onClick={onPrompt}>
             <MessageSquare /> Prompt
           </Button>
+          <SimpleTooltip label="The project's Relay tasks, as a board you can run from">
+            <Button variant="soft" onClick={() => useRelayBoardStore.getState().open(project.id)}>
+              <FolderKanban /> Task board
+            </Button>
+          </SimpleTooltip>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="soft" size="icon" aria-label="More project actions">

@@ -498,6 +498,57 @@ button.search-pill:hover {
   }
 }
 
+/* Relay (E26): the baton that runs down the planner's track while it reads a project. */
+@keyframes relay-baton {
+  0% {
+    left: -25%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Relay (E26): the light that runs along a live relay's strip, and the glow of the station a
+   session is working on. Both stop for reduced motion. */
+@keyframes relay-sweep {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+.relay-baton-sweep {
+  animation: relay-sweep 2.8s ease-in-out infinite;
+}
+
+@keyframes relay-glow {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.35);
+  }
+}
+
+.relay-station-glow {
+  animation: relay-glow 2.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .relay-baton-sweep,
+  .relay-station-glow {
+    animation: none;
+  }
+  .relay-baton-sweep {
+    display: none;
+  }
+}
+
 /* The workspace search's progress line: a short bar sliding under the search box while
    ripgrep runs, thin enough not to pull the eye away from the results. */
 @keyframes search-progress {

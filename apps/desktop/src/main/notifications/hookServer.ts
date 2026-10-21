@@ -169,9 +169,17 @@ function handleAgentEvent(body: string): void {
     model?: unknown;
     effort?: unknown;
     transcriptPath?: unknown;
+    permissionMode?: unknown;
   };
   if (!tokenMatches(parsed.token)) return;
   if (typeof parsed.sessionId !== 'string' || !SESSION_ID_PATTERN.test(parsed.sessionId)) return;
+  if (typeof parsed.event === 'string') {
+    relayHandlers?.agentEvent(
+      parsed.sessionId,
+      parsed.event,
+      typeof parsed.permissionMode === 'string' ? parsed.permissionMode : undefined,
+    );
+  }
   void agentStatus.runInfo(parsed.sessionId, {
     model: typeof parsed.model === 'string' ? parsed.model.slice(0, 100) : undefined,
     effort: typeof parsed.effort === 'string' ? parsed.effort.slice(0, 20) : undefined,
@@ -241,6 +249,80 @@ async function handleRunCommandsHttp(req: IncomingMessage, res: ServerResponse):
   }
 }
 
+/**
+ * What answers the Relay routes (E26). The relay module registers itself here at startup, so
+ * this server does not depend on it.
+ */
+export interface RelayHttpHandlers {
+  /** A gate hook's question. Resolves to the JSON the hook prints, or null for none. */
+  gate(body: Record<string, unknown>): Promise<Record<string, unknown> | null>;
+  /** A Relay MCP tool call. */
+  mcp(body: Record<string, unknown>): Promise<{ status: number; payload: unknown }>;
+  /** Every status hook event, for the Relay leg it may belong to. */
+  agentEvent(sessionId: string, event: string, permissionMode: string | undefined): void;
+}
+
+let relayHandlers: RelayHttpHandlers | null = null;
+
+export function setRelayHttpHandlers(handlers: RelayHttpHandlers | null): void {
+  relayHandlers = handlers;
+}
+
+/** A gate hook waits on this answer, so after this long it gets no decision rather than a late one. */
+export const RELAY_GATE_DEADLINE_MS = 1500;
+
+async function handleRelayHttp(
+  req: IncomingMessage,
+  res: ServerResponse,
+  route: '/relay-gate' | '/relay',
+): Promise<void> {
+  const body = await readBodyUpTo(req, MAX_BODY_BYTES);
+  if (body === null) {
+    res.writeHead(413).end();
+    req.destroy();
+    return;
+  }
+  let parsed: Record<string, unknown>;
+  try {
+    const value: unknown = JSON.parse(body);
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('shape');
+    parsed = value as Record<string, unknown>;
+  } catch {
+    res.writeHead(400).end();
+    return;
+  }
+  if (!tokenMatches(parsed.token)) {
+    res.writeHead(401).end();
+    return;
+  }
+  const handlers = relayHandlers;
+  if (!handlers) {
+    res.writeHead(route === '/relay' ? 503 : 204).end();
+    return;
+  }
+  try {
+    if (route === '/relay') {
+      const { status, payload } = await handlers.mcp(parsed);
+      res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(payload));
+      return;
+    }
+    let timer: NodeJS.Timeout | undefined;
+    const deadline = new Promise<null>((resolve) => {
+      timer = setTimeout(() => resolve(null), RELAY_GATE_DEADLINE_MS);
+    });
+    const output = await Promise.race([handlers.gate(parsed), deadline]).finally(() =>
+      clearTimeout(timer),
+    );
+    if (!output) {
+      res.writeHead(204).end();
+      return;
+    }
+    res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(output));
+  } catch {
+    res.writeHead(route === '/relay' ? 500 : 204).end();
+  }
+}
+
 export async function startHookServer(): Promise<void> {
   if (server) return;
 
@@ -248,6 +330,10 @@ export async function startHookServer(): Promise<void> {
     const route = req.method === 'POST' ? req.url : null;
     if (route === '/run-commands') {
       void handleRunCommandsHttp(req, res);
+      return;
+    }
+    if (route === '/relay-gate' || route === '/relay') {
+      void handleRelayHttp(req, res, route);
       return;
     }
     if (route !== '/hook' && route !== '/agent-event') {

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ArrowLeft, ArrowRight } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { BlueprintRelayBanner } from './BlueprintRelayBanner';
 import { BlueprintReviewStep } from './BlueprintReviewStep';
 import { BlueprintRevisionsDialog } from './BlueprintRevisionsDialog';
 import { BlueprintStepEditor } from './BlueprintStepEditor';
@@ -29,6 +30,7 @@ export function BlueprintTab({ project }: { project: Project }): React.JSX.Eleme
     setIncludeInAgentFile,
     setDocsFolder,
     setConfirmBeforeWriting,
+    setRelay,
     saveFinalPrompt,
     pickAttachments,
     addAttachment,
@@ -73,6 +75,7 @@ export function BlueprintTab({ project }: { project: Project }): React.JSX.Eleme
 
   return (
     <div className="space-y-2">
+      <BlueprintRelayBanner projectId={project.id} />
       <BlueprintStepRail step={step} filled={filled} onSelect={setStep} />
 
       <div className="glass rounded-[calc(var(--radius)+2px)] p-4">
@@ -86,6 +89,7 @@ export function BlueprintTab({ project }: { project: Project }): React.JSX.Eleme
             onSavePrompt={(text) => saveFinalPrompt.mutate(text)}
             onDocsFolderChange={(folder) => setDocsFolder.mutate(folder)}
             onConfirmBeforeWritingChange={(value) => setConfirmBeforeWriting.mutate(value)}
+            onRelayChange={(value) => setRelay.mutate(value)}
             onOpenHistory={() => setHistoryFor(null)}
             savingPrompt={saveFinalPrompt.isPending}
           />

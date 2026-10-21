@@ -31,6 +31,8 @@ export const IPC = {
     setFinalPrompt: 'blueprints:setFinalPrompt',
     setDocsFolder: 'blueprints:setDocsFolder',
     setConfirmBeforeWriting: 'blueprints:setConfirmBeforeWriting',
+    // (projectId, { enabled, budgetTokens }) -> ProjectBlueprint: the Relay task split (E26)
+    setRelay: 'blueprints:setRelay',
     pickAttachments: 'blueprints:pickAttachments',
     addAttachment: 'blueprints:addAttachment',
     renameAttachment: 'blueprints:renameAttachment',
@@ -227,6 +229,7 @@ export const IPC = {
     openDownloadFolder: 'rdp:openDownloadFolder',
     beginStaging: 'rdp:beginStaging',
     finishStaging: 'rdp:finishStaging',
+    getLinkStats: 'rdp:getLinkStats',
     onCertificatePrompt: 'rdp:onCertificatePrompt',
     onProxyError: 'rdp:onProxyError',
   },
@@ -680,6 +683,62 @@ export const IPC = {
     cancelDiagnose: 'health:cancelDiagnose',
     // main -> renderer: HealthChangedEvent
     onChanged: 'health:changed',
+  },
+  /** Relay (E26): context-sized tasks in the project, run one session each, with handoffs. */
+  relay: {
+    // (projectId) -> RelayBoard
+    board: 'relay:board',
+    // (projectId, taskId) -> RelayTaskDetail | null
+    task: 'relay:task',
+    // (projectId, taskId, RelayTaskStatus) -> void
+    setStatus: 'relay:setStatus',
+    // (projectId, taskIds in the new order) -> void: rewrites their `order` fields
+    reorder: 'relay:reorder',
+    // (projectId, docsFolder?) -> void: writes tasks/RELAY.md when it is missing
+    ensureGuide: 'relay:ensureGuide',
+    // (projectId, RelaySettingsPatch) -> RelayProjectSettings
+    saveSettings: 'relay:saveSettings',
+    // (projectId, taskId) -> RelaySingleRun: guide and handoff in place, status in progress
+    prepareRun: 'relay:prepareRun',
+    // (RelayStartInput) -> RelayStartResult
+    start: 'relay:start',
+    // (relayId) -> void
+    pause: 'relay:pause',
+    resume: 'relay:resume',
+    cancel: 'relay:cancel',
+    // (relayId, taskId) -> void: the current task counts as done
+    markDone: 'relay:markDone',
+    // (projectId) -> RelayRunView[]: every relay of the project, newest first
+    runs: 'relay:runs',
+    // (projectId) -> void, and unwatch: keep the board live while it is on screen
+    watch: 'relay:watch',
+    unwatch: 'relay:unwatch',
+    // (RelayDecomposeInput) -> RelayPlannerResult, nothing written
+    decompose: 'relay:decompose',
+    // (RelayReviseInput) -> RelayPlannerResult, nothing written
+    revise: 'relay:revise',
+    // (requestId) -> void
+    cancelPlanner: 'relay:cancelPlanner',
+    // (projectId, RelayProposal) -> RelayApplyResult
+    applyProposal: 'relay:applyProposal',
+    // (proposalId, accept) -> RelayApplyResult | null: a proposal an agent sent over MCP
+    decideProposal: 'relay:decideProposal',
+    // () -> RelayMcpProposal[]: the proposals still waiting
+    pendingProposals: 'relay:pendingProposals',
+    // ({ legId, tabId }[]) -> void: the leg tabs the renderer has, after a reload
+    reconcile: 'relay:reconcile',
+    // main -> renderer: RelayChangedEvent
+    onChanged: 'relay:changed',
+    // main -> renderer: RelayRunView
+    onRun: 'relay:run',
+    // main -> renderer: RelayContextEvent
+    onContext: 'relay:context',
+    // main -> renderer: RelayLegTabEvent, a leg's session to show as a workspace tab
+    onLegTab: 'relay:legTab',
+    // main -> renderer: RelayCloseTabEvent
+    onCloseTab: 'relay:closeTab',
+    // main -> renderer: RelayMcpProposal
+    onProposal: 'relay:proposal',
   },
   /** Error tracking (E24): Sentry connections, project links and issues. Tokens stay in main. */
   errorTracking: {

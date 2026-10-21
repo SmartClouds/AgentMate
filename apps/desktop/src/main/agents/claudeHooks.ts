@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { app } from 'electron';
 import { portFilePath } from '../notifications/hookServer';
+import { relayGateScriptSource } from '../relay/gateScript';
 
 /**
  * Status hooks for Claude Code sessions started from a workspace tab. They are handed to
@@ -67,6 +68,7 @@ process.stdin.on('end', () => {
     model: typeof payload.model === 'string' ? payload.model : payload.model && payload.model.id,
     effort: process.env.CLAUDE_EFFORT || undefined,
     transcriptPath: typeof payload.transcript_path === 'string' ? payload.transcript_path : undefined,
+    permissionMode: typeof payload.permission_mode === 'string' ? payload.permission_mode : undefined,
   });
   const req = http.request(
     {
@@ -131,6 +133,57 @@ export function claudeHookSettingsPath(): Promise<string | null> {
     return null;
   });
   return prepared;
+}
+
+/** Where the context guard's armed files live: one per Relay leg the guard is due for. */
+export function relayArmedDir(): string {
+  return join(hooksDir(), 'relay-armed');
+}
+
+let relayPrepared: Promise<string | null> | null = null;
+
+/**
+ * The settings file for a Relay leg's Claude Code: the status hooks, except that Stop goes to the
+ * relay gate (which reports the stop itself when it lets one through), plus the gate on the plan,
+ * question and tool hooks. Project MCP servers are enabled up front, since their first-run question
+ * would stall an unattended session. Null when hooks cannot run here.
+ */
+export function claudeRelaySettingsPath(): Promise<string | null> {
+  relayPrepared ??= (async () => {
+    if (!(await hasNode())) return null;
+    const dir = hooksDir();
+    await mkdir(relayArmedDir(), { recursive: true });
+    const statusScript = join(dir, 'agent-event.cjs');
+    const gateScript = join(dir, 'relay-gate.cjs');
+    const settingsPath = join(dir, 'claude-relay-settings.json');
+    const command = (path: string) => `node "${path.replaceAll('\\', '/')}"`;
+    const status = { type: 'command', command: command(statusScript), timeout: 5 };
+    const gate = { type: 'command', command: command(gateScript), timeout: 10 };
+    const hooks: Record<string, unknown[]> = Object.fromEntries(
+      HOOK_EVENTS.filter((event) => event !== 'Stop').map((event) => [
+        event,
+        [{ hooks: [status] }],
+      ]),
+    );
+    hooks.Stop = [{ hooks: [gate] }];
+    hooks.PreToolUse = [{ matcher: 'ExitPlanMode|AskUserQuestion', hooks: [gate] }];
+    hooks.PermissionRequest = [{ matcher: 'ExitPlanMode', hooks: [gate] }];
+    hooks.PostToolUse = [{ hooks: [gate] }];
+    await writeIfChanged(statusScript, scriptContent(portFilePath()));
+    await writeIfChanged(
+      gateScript,
+      relayGateScriptSource({ portFile: portFilePath(), armedDir: relayArmedDir() }),
+    );
+    await writeIfChanged(
+      settingsPath,
+      `${JSON.stringify({ enableAllProjectMcpServers: true, hooks }, null, 2)}\n`,
+    );
+    return settingsPath;
+  })().catch(() => {
+    relayPrepared = null;
+    return null;
+  });
+  return relayPrepared;
 }
 
 /** CLIs whose launches get the status hooks. */

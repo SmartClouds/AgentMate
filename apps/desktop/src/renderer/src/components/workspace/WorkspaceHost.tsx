@@ -6,6 +6,7 @@ import { FolderOpen, Workspace } from '@/components/icons';
 import { EmptyState, GLASS_CARD } from '@/components/pageKit';
 import { ProjectIcon } from '@/components/projects/ProjectIcon';
 import { ProjectPromptBuildDialog } from '@/components/projects/ProjectPromptBuildDialog';
+import { useRelayLegTabs } from '@/components/relay/useRelayLegTabs';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useWorkspaceProject } from '@/hooks/useWorktrees';
@@ -182,6 +183,7 @@ export function WorkspaceHost({ visible }: { visible: boolean }): React.JSX.Elem
   const missing = project?.worktree?.missing === true;
 
   useAutoCloseFinishedShells();
+  useRelayLegTabs();
   useReportViewing(visible);
 
   // Browser tabs keep up with their pages, and new tabs can offer the workspace's dev servers,

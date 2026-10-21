@@ -33,6 +33,7 @@ import {
   Wifi,
 } from '@/components/icons';
 import { ProviderLogo } from '@/components/providerLogos';
+import { RelayStatusSegment } from '@/components/relay/RelayStatusSegment';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { SimpleTooltip } from '@/components/ui/tooltip';
@@ -1345,6 +1346,7 @@ export function StatusBar(): React.JSX.Element {
         <AgentSegments />
       </div>
       <div className="flex h-full shrink-0 items-center">
+        <RelayStatusSegment />
         <RunSegments />
         <SftpTransfersSegment />
         <TerminalsSegment />

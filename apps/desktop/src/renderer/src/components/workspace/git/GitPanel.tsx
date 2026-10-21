@@ -22,6 +22,7 @@ import {
   FolderTree,
   GitBranch,
   History,
+  ListTodo,
   Minus,
   Plus,
   RefreshCw,
@@ -30,6 +31,7 @@ import {
   Undo,
 } from '@/components/icons';
 import { EmptyState, Notice, SECTION_HEADING } from '@/components/pageKit';
+import { RelayTrack } from '@/components/relay/RelayTrack';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SimpleTooltip } from '@/components/ui/tooltip';
@@ -993,6 +995,12 @@ export function GitPanel({
       toolbarTitle: 'Tests',
       actions: <TestsTabActions project={project} />,
       render: () => <TestsSection project={project} />,
+    },
+    {
+      id: 'tasks',
+      title: 'Tasks',
+      icon: ListTodo,
+      render: () => <RelayTrack project={project} />,
     },
   ];
 

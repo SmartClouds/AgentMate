@@ -110,6 +110,39 @@ describe('RdpSessionRoute Ask AI', () => {
   });
 });
 
+describe('RdpSessionRoute connection readout', () => {
+  const stats = { downBytesPerSec: 2 * 1024 * 1024, upBytesPerSec: 50 * 1024, latencyMs: 30 };
+
+  function renderWith(windowState: { isMaximized: boolean; isFullScreen: boolean }) {
+    return renderWithProviders(<RdpSessionRoute />, {
+      route: '/?session=s1',
+      bridge: { ...bridge, 'rdpWindow.getState': windowState, 'rdp.getLinkStats': stats },
+    });
+  }
+
+  it('shows the speed and quality in the top bar once connected', async () => {
+    hook.phase = { kind: 'connected' };
+    const { bridge: fake } = renderWith({ isMaximized: false, isFullScreen: false });
+
+    const indicator = screen.getByTestId('rdp-link-indicator');
+    await waitFor(() => expect(indicator).toHaveTextContent('2.00 MB/s'));
+    expect(indicator).toHaveTextContent('50.0 KB/s');
+    expect(fake.$fn('rdp.getLinkStats')).toHaveBeenCalledWith('s1');
+  });
+
+  it('is not there while still connecting', () => {
+    renderWith({ isMaximized: false, isFullScreen: false });
+    expect(screen.queryByTestId('rdp-link-indicator')).not.toBeInTheDocument();
+  });
+
+  it('is left to the drop-down bar in full screen, which does not carry it', async () => {
+    hook.phase = { kind: 'connected' };
+    renderWith({ isMaximized: false, isFullScreen: true });
+
+    await waitFor(() => expect(screen.queryByTestId('rdp-link-indicator')).not.toBeInTheDocument());
+  });
+});
+
 describe('RdpSessionRoute when the connection fails', () => {
   const keyUsage = describeProxyFailure({
     code: 'tls-key-usage',

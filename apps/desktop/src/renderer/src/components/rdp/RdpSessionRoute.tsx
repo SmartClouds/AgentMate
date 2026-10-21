@@ -41,8 +41,10 @@ import { RdpAgentOverlay } from './RdpAgentOverlay';
 import { RdpAgentStatusBar } from './RdpAgentStatusBar';
 import { RdpAskAiDialog } from './RdpAskAiDialog';
 import { RdpFailureCard } from './RdpFailureCard';
+import { RdpLinkIndicator } from './RdpLinkIndicator';
 import { useRdpAgentBridge } from './useRdpAgentBridge';
 import { useRdpKeyboardLock } from './useRdpKeyboardLock';
+import { useRdpLinkStats } from './useRdpLinkStats';
 import { type RdpPhase, type RdpTransfer, useRdpSession } from './useRdpSession';
 
 const HIDE_BAR_DELAY_MS = 1200;
@@ -179,6 +181,8 @@ export default function RdpSessionRoute(): React.JSX.Element {
   const { phase, options } = session;
   const connected = phase.kind === 'connected';
   useRdpKeyboardLock(connected);
+  // The readout lives in the top bar, which full screen replaces with the drop-down one.
+  const linkStats = useRdpLinkStats(sessionId, connected && !windowState.isFullScreen);
   // Files travel over the clipboard channel, so they need clipboard sharing on.
   const fileTransfer = (options?.clipboard && options.fileTransfer) ?? false;
   const fixedResolution = options != null && options.resolution !== 'fitWindow';
@@ -330,6 +334,7 @@ export default function RdpSessionRoute(): React.JSX.Element {
               <span className="h-1.5 w-1.5 rounded-full bg-current" />
               {badge.label}
             </Badge>
+            {connected && <RdpLinkIndicator stats={linkStats} />}
           </div>
           <div className="flex flex-1 items-center justify-end gap-0.5 pr-2 [-webkit-app-region:no-drag]">
             {actions}

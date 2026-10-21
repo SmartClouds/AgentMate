@@ -31,6 +31,7 @@ import {
   FileText,
   History,
   Languages,
+  ListTodo,
   Plus,
   Save,
   Search,
@@ -53,6 +54,7 @@ import {
   VoiceRecordButton,
   VoiceRecordingStrip,
 } from '@/components/promptBuilder/VoiceControls';
+import { SplitIntoTasksDialog } from '@/components/relay/SplitIntoTasksDialog';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
 import {
@@ -152,6 +154,7 @@ export default function PromptBuilderPage(): React.JSX.Element {
   const [seriesRunMode, setSeriesRunMode] = useState<ScheduledTaskRunMode>('auto');
   const [seriesRun, setSeriesRun] = useState<RunSettings>({});
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [splitOpen, setSplitOpen] = useState(false);
   const [historySearch, setHistorySearch] = useState('');
 
   const navigate = useNavigate();
@@ -906,6 +909,20 @@ export default function PromptBuilderPage(): React.JSX.Element {
             <Button disabled={!generated} onClick={() => void handleSendToCli()}>
               <TerminalSquare /> Send to CLI
             </Button>
+            <SimpleTooltip
+              label="Break this into tasks that each fit one AI session, and run them in order"
+              wrapTrigger={!generated.trim() && !rawInput.trim()}
+            >
+              <Button
+                variant="soft"
+                aria-label="Split into tasks"
+                className="px-2.5 @[34rem]/output:px-3"
+                disabled={!generated.trim() && !rawInput.trim()}
+                onClick={() => setSplitOpen(true)}
+              >
+                <ListTodo /> <span className="hidden @[34rem]/output:inline">Split into tasks</span>
+              </Button>
+            </SimpleTooltip>
             <SimpleTooltip label="Save Template">
               <Button
                 variant="soft"
@@ -1093,6 +1110,13 @@ export default function PromptBuilderPage(): React.JSX.Element {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <SplitIntoTasksDialog
+        open={splitOpen}
+        onOpenChange={setSplitOpen}
+        request={generated.trim() || rawInput.trim()}
+        projectId={null}
+        defaultProjectId={projectId}
+      />
     </div>
   );
 }

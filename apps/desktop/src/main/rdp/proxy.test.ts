@@ -159,6 +159,36 @@ describe('RdpProxy with a Windows server certificate that only allows key enciph
   });
 });
 
+describe('RdpProxy link stats', () => {
+  it('measures what crosses an open session and drops it when the session closes', async () => {
+    server = await startFakeRdpServer(windows, {}, 0, true);
+    await openSession(makeHooks(), boringSslLike({ allowRsa: true }), { port: server.port });
+
+    // Connected, but nothing has crossed yet.
+    expect(proxy?.linkStats('s1')).toEqual({
+      downBytesPerSec: 0,
+      upBytesPerSec: 0,
+      latencyMs: null,
+    });
+
+    sockets[0].send(Buffer.alloc(1000));
+    await vi.waitFor(() => {
+      const stats = proxy?.linkStats('s1');
+      expect(stats?.upBytesPerSec).toBeGreaterThan(0);
+      expect(stats?.downBytesPerSec).toBeGreaterThan(0);
+      expect(stats?.latencyMs).not.toBeNull();
+    });
+
+    proxy?.closeSession('s1');
+    expect(proxy?.linkStats('s1')).toBeNull();
+  });
+
+  it('has nothing for a session that was never connected', async () => {
+    proxy = new RdpProxy(makeHooks());
+    expect(proxy.linkStats('s1')).toBeNull();
+  });
+});
+
 describe('RdpProxy errors', () => {
   it('names a refused connection without the system error code', async () => {
     server = await startFakeRdpServer(windows);

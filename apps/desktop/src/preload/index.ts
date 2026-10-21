@@ -230,6 +230,7 @@ import type {
   RdpClipboardFiles,
   RdpConnectTicket,
   RdpDownloadTarget,
+  RdpLinkStats,
   RdpProxyErrorPayload,
   RdpSavedServer,
   RdpStageResult,
@@ -469,6 +470,7 @@ import { createDeployRegistry } from './deployRegistry';
 import { createDeployWordPress } from './deployWordPress';
 import { createErrorTracking } from './errorTracking';
 import { createHealth } from './health';
+import { createRelay } from './relay';
 import { createSftp } from './sftp';
 
 interface TerminalDataPayload {
@@ -1375,6 +1377,11 @@ const blueprints = {
     ipcRenderer.invoke(IPC.blueprints.setDocsFolder, projectId, folder),
   setConfirmBeforeWriting: (projectId: string, value: boolean): Promise<ProjectBlueprint> =>
     ipcRenderer.invoke(IPC.blueprints.setConfirmBeforeWriting, projectId, value),
+  /** Relay (E26): write the backlog as task files sized to this context budget. */
+  setRelay: (
+    projectId: string,
+    value: { enabled: boolean; budgetTokens: number },
+  ): Promise<ProjectBlueprint> => ipcRenderer.invoke(IPC.blueprints.setRelay, projectId, value),
   /** Null when the picker was cancelled, so the caller can tell that from "nothing changed". */
   pickAttachments: (
     projectId: string,
@@ -1889,6 +1896,7 @@ const deployAppStore = {
 /** Private registries (E08): sign-ins on this computer and credentials stored on a server. */
 const deployRegistry = createDeployRegistry();
 const health = createHealth();
+const relay = createRelay();
 const errorTracking = createErrorTracking();
 
 /** A server core's alerts: disk pressure, failed jobs, a reboot waiting. */
@@ -2550,6 +2558,9 @@ const rdp = {
     ipcRenderer.invoke(IPC.rdp.beginStaging, sessionId, totalBytes),
   finishStaging: (sessionId: string, downloadId: string): Promise<RdpStageResult> =>
     ipcRenderer.invoke(IPC.rdp.finishStaging, sessionId, downloadId),
+  /** Speed and answer time of the session's connection, or null when it has none open. */
+  getLinkStats: (sessionId: string): Promise<RdpLinkStats | null> =>
+    ipcRenderer.invoke(IPC.rdp.getLinkStats, sessionId),
   onCertificatePrompt: (callback: (prompt: RdpCertificatePrompt) => void): (() => void) =>
     subscribe(IPC.rdp.onCertificatePrompt, callback),
   onProxyError: (callback: (payload: RdpProxyErrorPayload) => void): (() => void) =>
@@ -2718,6 +2729,7 @@ const agentmatApi = {
   deployAppStore,
   deployRegistry,
   health,
+  relay,
   errorTracking,
   cloudflare,
   cloudflareServer,

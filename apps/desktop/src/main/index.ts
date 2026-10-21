@@ -18,6 +18,9 @@ import { seedExampleRepositoryIfEmpty } from './exampleSkillRepo';
 import { shutdownLocalServer } from './grammar/localServer';
 import { startHealthScheduler, stopHealthScheduler } from './health/scheduler';
 import { pruneOrphanHealthTargets } from './health/store';
+import { registerRelayHandlers } from './ipc/relay';
+import { pruneOrphanRelays } from './relay/store';
+import { startRelayService } from './relay/wiring';
 import { registerActivityHandlers } from './ipc/activity';
 import { registerAgentHandlers } from './ipc/agents';
 import { registerAiHandlers } from './ipc/ai';
@@ -377,6 +380,7 @@ function registerAllIpcHandlers(): void {
   registerAppNotificationHandlers();
   registerSpellcheckHandlers();
   registerGrammarHandlers();
+  registerRelayHandlers();
   // Health targets carry sealed keys, so only the main window's own page may reach them.
   registerHealthHandlers({
     guard: (event) => {
@@ -484,9 +488,11 @@ app.whenReady().then(async () => {
   void pruneOrphanBlueprints();
   void pruneOrphanEnvironments();
   void pruneOrphanHealthTargets();
+  void pruneOrphanRelays();
   void pruneOrphanErrorLinks();
   void pruneOrphanFileSites();
-  void startHookServer();
+  // Relay legs report through the hook server, so it starts first; neither blocks the window.
+  void startHookServer().then(() => startRelayService().catch(() => undefined));
   setMainWindowFactory(createMainWindow);
   // Nothing answers a confirmation dialog in a test, so closing must not ask.
   if (isE2E) allowQuit();

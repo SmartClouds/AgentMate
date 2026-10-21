@@ -1,5 +1,5 @@
 import type { Project, ProjectBlueprint } from '@agentmat/core';
-import { blueprintStep, targetAIForProject } from '@agentmat/core';
+import { blueprintStep, DEFAULT_RELAY_BUDGET, targetAIForProject } from '@agentmat/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -16,6 +16,7 @@ import {
   StopCircle,
   TerminalSquare,
 } from '@/components/icons';
+import { BudgetPicker } from '@/components/relay/BudgetPicker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,6 +39,7 @@ export function BlueprintReviewStep({
   onSavePrompt,
   onDocsFolderChange,
   onConfirmBeforeWritingChange,
+  onRelayChange,
   onOpenHistory,
   savingPrompt,
 }: {
@@ -50,6 +52,8 @@ export function BlueprintReviewStep({
   onSavePrompt: (text: string) => void;
   onDocsFolderChange: (folder: string) => void;
   onConfirmBeforeWritingChange: (value: boolean) => void;
+  /** Relay (E26): write the backlog as task files sized to this context budget. */
+  onRelayChange: (value: { enabled: boolean; budgetTokens: number }) => void;
   onOpenHistory: () => void;
   savingPrompt: boolean;
 }): React.JSX.Element {
@@ -80,7 +84,19 @@ export function BlueprintReviewStep({
     setTimeout(() => setCopied(false), 1600);
   }
 
-  function openRun(): void {
+  const relay = blueprint.relay ?? { enabled: false, budgetTokens: DEFAULT_RELAY_BUDGET };
+
+  async function openRun(): Promise<void> {
+    // The prompt points the agent at the Relay guide, so it has to be in the project first.
+    if (relay.enabled) {
+      try {
+        await window.agentmat.relay.ensureGuide(project.id, blueprint.docsFolder);
+      } catch {
+        toast.error('Could not write the Relay guide into the project.', {
+          description: 'The agent will not find the task format. Check the docs folder.',
+        });
+      }
+    }
     setRunMounted(true);
     setRunOpen(true);
   }
@@ -94,7 +110,7 @@ export function BlueprintReviewStep({
     if (!written) return;
     toast.success(hadPrompt ? 'Prompt regenerated' : 'Prompt ready', {
       description: 'Run it in an agent CLI now, or read it over and edit it first.',
-      action: { label: 'Run in CLI', onClick: openRun },
+      action: { label: 'Run in CLI', onClick: () => void openRun() },
     });
   }
 
@@ -158,6 +174,34 @@ export function BlueprintReviewStep({
               The agent lists the phases and epics it plans to create and waits for a yes.
             </p>
           </div>
+        </div>
+      </div>
+
+      <div className="flex items-start gap-3 rounded-lg border border-border bg-background/40 px-3 py-2.5">
+        <Switch
+          id="blueprint-relay"
+          checked={relay.enabled}
+          onCheckedChange={(enabled) => onRelayChange({ ...relay, enabled })}
+        />
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="space-y-0.5">
+            <Label htmlFor="blueprint-relay" className="cursor-pointer">
+              Split into Relay tasks
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              The backlog becomes task files that each fit one AI session. AgentMate runs them one
+              after another, and every session leaves a handoff for the next.
+            </p>
+          </div>
+          {relay.enabled ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted-foreground">Context per session</span>
+              <BudgetPicker
+                value={relay.budgetTokens}
+                onChange={(budgetTokens) => onRelayChange({ ...relay, budgetTokens })}
+              />
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -298,7 +342,12 @@ export function BlueprintReviewStep({
             }
             wrapTrigger={!prompt}
           >
-            <Button variant="outline" size="sm" disabled={!prompt || busy} onClick={openRun}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!prompt || busy}
+              onClick={() => void openRun()}
+            >
               <TerminalSquare /> Run in CLI
             </Button>
           </SimpleTooltip>

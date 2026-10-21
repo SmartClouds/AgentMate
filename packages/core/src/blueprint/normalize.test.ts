@@ -242,6 +242,25 @@ describe('withBlueprintDefaults', () => {
     ).toBe(true);
   });
 
+  it('leaves the Relay split off with the default budget when a record has none', () => {
+    expect(withBlueprintDefaults(asBlueprint({})).relay).toEqual({
+      enabled: false,
+      budgetTokens: 200_000,
+    });
+  });
+
+  it('keeps a saved Relay split and budget, and drops a budget it cannot use', () => {
+    expect(
+      withBlueprintDefaults(asBlueprint({ relay: { enabled: true, budgetTokens: 400_000 } })).relay,
+    ).toEqual({ enabled: true, budgetTokens: 400_000 });
+    expect(
+      withBlueprintDefaults(asBlueprint({ relay: { enabled: 'yes', budgetTokens: -1 } })).relay,
+    ).toEqual({ enabled: false, budgetTokens: 200_000 });
+    expect(
+      withBlueprintDefaults(asBlueprint({ relay: { enabled: true, budgetTokens: 900 } })).relay,
+    ).toEqual({ enabled: true, budgetTokens: 200_000 });
+  });
+
   it('dates a record with no timestamps from one moment, not two', () => {
     const blueprint = withBlueprintDefaults(asBlueprint({}));
     expect(blueprint.updatedAt).toBe(blueprint.createdAt);

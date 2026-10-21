@@ -227,3 +227,53 @@ describe('useProjectBlueprint generate', () => {
     expect(() => bridge.$fn('ai.cancelAskCli')).toThrow();
   });
 });
+
+describe('useProjectBlueprint and the Relay split', () => {
+  const split = (): ProjectBlueprint => ({
+    ...blueprint(),
+    relay: { enabled: true, budgetTokens: 400_000 },
+  });
+
+  it('asks the CLI for Relay task files sized to the budget instead of a backlog', async () => {
+    const { result, bridge } = setup({
+      'blueprints.get': split(),
+      'ai.askCli': { ok: false, text: '', cliName: 'Claude Code CLI', error: 'Offline.' },
+    });
+    await waitFor(() => expect(result.current.blueprint).toBeDefined());
+
+    let written: string | null = null;
+    await act(async () => {
+      written = await result.current.generate({
+        cliId: 'claude-code',
+        modelId: null,
+        effort: null,
+      });
+    });
+
+    const [call] = bridge.$fn('ai.askCli').mock.calls;
+    const request = (call[0] as { prompt: string }).prompt;
+    expect(request).toContain('docs/tasks/');
+    expect(request).toContain('400K');
+    expect(written).toContain('docs/tasks/RELAY.md');
+    expect(written).not.toContain('BACKLOG.md');
+  });
+
+  it('saves the switch and the budget', async () => {
+    const { result, bridge } = setup({
+      'blueprints.setRelay': async () => split(),
+    });
+    await waitFor(() => expect(result.current.blueprint).toBeDefined());
+
+    await act(async () => {
+      await result.current.setRelay.mutateAsync({ enabled: true, budgetTokens: 400_000 });
+    });
+
+    expect(bridge.$fn('blueprints.setRelay')).toHaveBeenCalledWith('p1', {
+      enabled: true,
+      budgetTokens: 400_000,
+    });
+    await waitFor(() =>
+      expect(result.current.blueprint?.relay).toEqual({ enabled: true, budgetTokens: 400_000 }),
+    );
+  });
+});

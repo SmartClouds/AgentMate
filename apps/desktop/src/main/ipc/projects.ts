@@ -23,6 +23,7 @@ import { IPC } from '../../shared/ipcChannels';
 import { pruneOrphanFileSites } from '../deploy/files/store';
 import { pruneOrphanErrorLinks } from '../errorTracking/store';
 import { pruneOrphanHealthTargets } from '../health/store';
+import { pruneOrphanRelays } from '../relay/store';
 import {
   deleteClaudeHook,
   installProjectNotificationHooks,
@@ -212,6 +213,7 @@ export function registerProjectHandlers(): void {
     await pruneOrphanBlueprints();
     await pruneOrphanEnvironments();
     await pruneOrphanHealthTargets({ projectIds: [projectId] });
+    await pruneOrphanRelays({ projectIds: [projectId] });
     await pruneOrphanErrorLinks({ projectIds: [projectId] });
     await pruneOrphanFileSites({ projectIds: [projectId] });
   });

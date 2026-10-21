@@ -69,19 +69,25 @@ function renderStep(
     finalPrompt?: string;
     installed?: string[];
     onGenerate?: (choice: unknown) => Promise<string | null>;
+    relay?: { enabled: boolean; budgetTokens: number };
   } = {},
 ) {
   const onGenerate = vi.fn(options.onGenerate ?? (async () => 'New prompt'));
+  const onRelayChange = vi.fn();
   const view = renderWithProviders(
     <BlueprintReviewStep
       project={project}
-      blueprint={blueprint(options.finalPrompt)}
+      blueprint={{
+        ...blueprint(options.finalPrompt),
+        relay: options.relay ?? { enabled: false, budgetTokens: 200_000 },
+      }}
       generateStage="idle"
       onGenerate={onGenerate}
       onCancelGenerate={vi.fn()}
       onSavePrompt={vi.fn()}
       onDocsFolderChange={vi.fn()}
       onConfirmBeforeWritingChange={vi.fn()}
+      onRelayChange={onRelayChange}
       onOpenHistory={vi.fn()}
       savingPrompt={false}
     />,
@@ -96,7 +102,7 @@ function renderStep(
       },
     },
   );
-  return { ...view, onGenerate };
+  return { ...view, onGenerate, onRelayChange };
 }
 
 beforeEach(() => {
@@ -192,5 +198,47 @@ describe('BlueprintReviewStep Run in CLI', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Run dialog' });
     expect(dialog).toHaveTextContent('Act as the product manager. Edited.');
     expect(dialog).toHaveAttribute('data-prompt-type', 'Product');
+  });
+});
+
+describe('BlueprintReviewStep Relay split', () => {
+  it('turns the split on at the default budget', async () => {
+    const { user, onRelayChange } = renderStep();
+
+    expect(screen.queryByRole('radiogroup', { name: 'Session budget' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('switch', { name: 'Split into Relay tasks' }));
+
+    expect(onRelayChange).toHaveBeenCalledWith({ enabled: true, budgetTokens: 200_000 });
+  });
+
+  it('changes the budget while the split is on', async () => {
+    const { user, onRelayChange } = renderStep({
+      relay: { enabled: true, budgetTokens: 200_000 },
+    });
+
+    await user.click(screen.getByRole('radio', { name: '400K' }));
+
+    expect(onRelayChange).toHaveBeenCalledWith({ enabled: true, budgetTokens: 400_000 });
+  });
+
+  it('puts the Relay guide in the project before running the prompt', async () => {
+    const { user, bridge } = renderStep({
+      finalPrompt: 'Plan it',
+      relay: { enabled: true, budgetTokens: 200_000 },
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Run in CLI' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Run dialog' })).toBeInTheDocument();
+    expect(bridge.$fn('relay.ensureGuide')).toHaveBeenCalledWith('p1', 'docs');
+  });
+
+  it('leaves the project alone when the split is off', async () => {
+    const { user, bridge } = renderStep({ finalPrompt: 'Plan it' });
+
+    await user.click(screen.getByRole('button', { name: 'Run in CLI' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Run dialog' })).toBeInTheDocument();
+    expect(() => bridge.$fn('relay.ensureGuide')).toThrow();
   });
 });

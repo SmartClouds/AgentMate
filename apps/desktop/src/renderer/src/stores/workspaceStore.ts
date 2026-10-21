@@ -63,6 +63,11 @@ export interface WorkspaceTerminalTab {
   /** Types "continue" for the agent after a usage limit resets or a network error. */
   autoContinue?: AutoContinueOptions;
   restored?: boolean;
+  /**
+   * Set on a tab that shows a Relay leg (E26). Main started its session, so the tab only ever
+   * attaches to it, and the relay finds the tab again by this id after a reload.
+   */
+  relayLegId?: string;
 }
 
 export interface WorkspaceDiffTab {
@@ -105,13 +110,14 @@ export type WorkspaceTab =
   | WorkspaceBrowserTab;
 
 /** The tabs of the right-hand panel. */
-export type SidePanelSection = 'sourceControl' | 'explorer' | 'history' | 'tests';
+export type SidePanelSection = 'sourceControl' | 'explorer' | 'history' | 'tests' | 'tasks';
 
 export const SIDE_PANEL_SECTIONS: SidePanelSection[] = [
   'sourceControl',
   'explorer',
   'history',
   'tests',
+  'tasks',
 ];
 
 /** The folding sections inside the Source control tab, top to bottom. */
@@ -214,6 +220,12 @@ interface WorkspaceState {
   /** Moves a project to another spot in the rail. `index` is a slot in the rail's current order. */
   moveRailProject: (projectId: string, index: number) => void;
   addTerminal: (projectId: string, tab: NewTerminalTab, groupId?: string) => string;
+  /**
+   * Shows a session main already started (a Relay leg) as a tab of its project, under the
+   * session's own id. The project joins the rail if it was not there, but the workspace on screen
+   * stays the one the user is looking at.
+   */
+  addRelayLegTab: (projectId: string, tab: NewTerminalTab & { id: string }) => void;
   /** Opens a browser tab, on its start page without a url, and returns its id. */
   openBrowser: (projectId: string, options?: { url?: string; groupId?: string }) => string;
   /** Keeps what a browser tab's page shows, for its label and for the next start. */
@@ -528,6 +540,34 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           return id;
         },
 
+        addRelayLegTab: (projectId, { id, ...tab }) => {
+          set((state) => {
+            if (state.workspaces[projectId]?.tabs[id]) return state;
+            const railId = parseScopeId(projectId).projectId;
+            const ws = state.workspaces[projectId] ?? emptyWorkspace();
+            const leg: WorkspaceTerminalTab = {
+              ...tab,
+              kind: 'terminal',
+              id,
+              createdAt: Date.now(),
+              restored: true,
+            };
+            return {
+              railProjectIds: state.railProjectIds.includes(railId)
+                ? state.railProjectIds
+                : [...state.railProjectIds, railId],
+              workspaces: {
+                ...state.workspaces,
+                [projectId]: settle({
+                  ...ws,
+                  root: addTab(ws.root, ws.focusedGroupId, id),
+                  tabs: { ...ws.tabs, [id]: leg },
+                }),
+              },
+            };
+          });
+        },
+
         openBrowser: (projectId, options = {}) => {
           const id = newId('web');
           update(projectId, (ws) => {
@@ -603,6 +643,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 ? { launchInput: resumeInput }
                 : { agentTitle: undefined, conversationId: undefined }),
               restored: false,
+              // A fresh shell is no longer the relay leg main started, so the relay forgets it.
+              relayLegId: undefined,
             };
             return {
               ...ws,

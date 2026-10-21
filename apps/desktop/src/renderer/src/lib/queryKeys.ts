@@ -311,6 +311,10 @@ export const queryKeys = {
     projectId ? (['health', 'list', projectId] as const) : (['health', 'list'] as const),
   /** One target's detail panel: last report, incidents and samples. */
   healthTarget: (id: string) => ['health', 'target', id] as const,
+  /** Relay (E26): a project's task board, one task's details, and its relays. */
+  relayBoard: (projectId: string) => ['relay', 'board', projectId] as const,
+  relayTask: (projectId: string, taskId: string) => ['relay', 'task', projectId, taskId] as const,
+  relayRuns: (projectId: string) => ['relay', 'runs', projectId] as const,
   /** Prefix of everything the Errors tab reads (E24). */
   errorTracking: ['error-tracking'] as const,
   errorConnections: ['error-tracking', 'connections'] as const,

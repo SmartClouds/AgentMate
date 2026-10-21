@@ -1,6 +1,8 @@
+import { DEFAULT_RELAY_BUDGET } from '../relay/format.js';
 import type {
   BlueprintAttachment,
   BlueprintPreset,
+  BlueprintRelaySetting,
   BlueprintSection,
   BlueprintStepId,
   ProjectBlueprint,
@@ -105,6 +107,25 @@ function normalizeSections(value: unknown, now: string): BlueprintSection[] {
   });
 }
 
+/** Below this a session cannot even read its task; above it no model has the window. */
+const RELAY_BUDGET_MIN = 10_000;
+const RELAY_BUDGET_MAX = 2_000_000;
+
+/** The Relay split, off with the default budget unless the record says otherwise. */
+export function normalizeBlueprintRelay(value: unknown): BlueprintRelaySetting {
+  const rec = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  const budget = rec.budgetTokens;
+  const usable =
+    typeof budget === 'number' &&
+    Number.isInteger(budget) &&
+    budget >= RELAY_BUDGET_MIN &&
+    budget <= RELAY_BUDGET_MAX;
+  return {
+    enabled: rec.enabled === true,
+    budgetTokens: usable ? budget : DEFAULT_RELAY_BUDGET,
+  };
+}
+
 /**
  * Read-time normalizer for blueprints.json, the same role `withProjectDefaults`
  * plays for projects: fills in what an older or hand-edited record lacks so the
@@ -125,6 +146,7 @@ export function withBlueprintDefaults(value: ProjectBlueprint): ProjectBlueprint
     // Defaults on, since asking first is the safer behaviour for an agent that
     // is about to write a folder full of files.
     confirmBeforeWriting: rec.confirmBeforeWriting !== false,
+    relay: normalizeBlueprintRelay(rec.relay),
     createdAt,
     updatedAt: typeof rec.updatedAt === 'string' ? rec.updatedAt : createdAt,
   };
@@ -140,6 +162,7 @@ export function createBlankBlueprint(id: string, projectId: string): ProjectBlue
     finalPrompt: '',
     finalPromptUpdatedAt: null,
     confirmBeforeWriting: true,
+    relay: { enabled: false, budgetTokens: DEFAULT_RELAY_BUDGET },
     createdAt: now,
     updatedAt: now,
   };

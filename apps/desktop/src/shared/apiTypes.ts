@@ -2688,6 +2688,19 @@ export interface RdpWindowState {
   isFullScreen: boolean;
 }
 
+/** How a Remote Desktop connection is doing right now, measured on the bytes crossing it. */
+export interface RdpLinkStats {
+  /** Bytes per second arriving from the server, averaged over the last couple of seconds. */
+  downBytesPerSec: number;
+  /** Bytes per second going to the server. */
+  upBytesPerSec: number;
+  /**
+   * About how long the server takes to react to what the person does, in milliseconds. Null
+   * until something was typed or clicked that the server answered.
+   */
+  latencyMs: number | null;
+}
+
 export interface SshDataPayload {
   sessionId: string;
   data: string;

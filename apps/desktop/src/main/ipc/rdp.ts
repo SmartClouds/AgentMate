@@ -8,6 +8,7 @@ import type {
   RdpClipboardFiles,
   RdpConnectTicket,
   RdpDownloadTarget,
+  RdpLinkStats,
   RdpSavedServer,
   RdpStageResult,
   RdpStageStart,
@@ -495,6 +496,12 @@ export function registerRdpHandlers(): void {
       return { ok: true, count: present.length, signature: rawSignature() };
     },
   );
+
+  // Polled by the session window for the speed and quality readout in its top bar.
+  ipcMain.handle(IPC.rdp.getLinkStats, (event, sessionId: string): RdpLinkStats | null => {
+    sessionFor(event, sessionId);
+    return proxy.linkStats(sessionId);
+  });
 }
 
 /** How many Remote Desktop sessions are open, for the confirmation shown before the app closes. */

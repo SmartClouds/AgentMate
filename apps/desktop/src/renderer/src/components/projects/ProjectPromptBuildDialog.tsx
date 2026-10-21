@@ -19,6 +19,7 @@ import {
   Copy,
   History,
   Languages,
+  ListTodo,
   Pin,
   Save,
   Sparkles,
@@ -46,6 +47,7 @@ import {
   VoiceRecordButton,
   VoiceRecordingStrip,
 } from '@/components/promptBuilder/VoiceControls';
+import { SplitIntoTasksDialog } from '@/components/relay/SplitIntoTasksDialog';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
 import {
@@ -286,6 +288,7 @@ export function ProjectPromptBuildDialog({
   const suggestionCli = suggestion ? getCliDefinition(suggestion.cliId) : undefined;
 
   const [scheduling, setScheduling] = useState(false);
+  const [splitting, setSplitting] = useState(false);
   const scheduleMutation = useMutation({
     mutationFn: (values: ComposerValues) =>
       window.agentmat.scheduledTasks.createMany({
@@ -679,6 +682,22 @@ export function ProjectPromptBuildDialog({
           <div className="flex items-center gap-2">
             <SimpleTooltip
               label={
+                rawInput.trim() || generated.trim()
+                  ? 'Break this into tasks that each fit one AI session, and run them in order'
+                  : 'Describe the work first'
+              }
+              wrapTrigger={!rawInput.trim() && !generated.trim()}
+            >
+              <Button
+                variant="outline"
+                disabled={(!rawInput.trim() && !generated.trim()) || isBusy}
+                onClick={() => setSplitting(true)}
+              >
+                <ListTodo /> Split into tasks
+              </Button>
+            </SimpleTooltip>
+            <SimpleTooltip
+              label={
                 generated ? 'Park this on the project’s Overview tab' : 'Generate a prompt first'
               }
               wrapTrigger={!generated}
@@ -807,6 +826,12 @@ export function ProjectPromptBuildDialog({
           </div>
         </DialogFooter>
       </DialogContent>
+      <SplitIntoTasksDialog
+        open={splitting}
+        onOpenChange={setSplitting}
+        request={generated.trim() || rawInput.trim()}
+        projectId={projectId}
+      />
       {scheduling ? (
         <PromptComposerDialog
           open

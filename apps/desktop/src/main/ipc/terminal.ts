@@ -35,6 +35,11 @@ import { toolPathCandidates } from '../toolPaths';
 import { pathKey } from '../windowsPath';
 import { broadcastToWindows, sendToContents } from './send';
 
+/** The shell a new tab gets: PowerShell on Windows, the user's login shell elsewhere. */
+export function defaultTerminalShell(): AllowedShell {
+  return defaultShell();
+}
+
 function defaultShell(): AllowedShell {
   if (process.platform === 'win32') return 'powershell.exe';
   return defaultShellName(process.platform, process.env);
@@ -58,13 +63,22 @@ const sessions = new Map<string, TerminalSessionInfo>();
  * ended, the same way it does for SSH sessions.
  */
 const outputSubscribers = new Map<string, Set<(data: string) => void>>();
-const exitSubscribers = new Map<string, Set<() => void>>();
+/** How a session ended: its exit code, and whether it went down with the terminal host. */
+export interface TerminalExitInfo {
+  exitCode: number;
+  hostLost: boolean;
+}
 
-function notifyExitSubscribers(sessionId: string): void {
+const exitSubscribers = new Map<string, Set<(info: TerminalExitInfo) => void>>();
+
+function notifyExitSubscribers(
+  sessionId: string,
+  info: TerminalExitInfo = { exitCode: 0, hostLost: false },
+): void {
   const listeners = exitSubscribers.get(sessionId);
   outputSubscribers.delete(sessionId);
   exitSubscribers.delete(sessionId);
-  for (const listener of listeners ?? []) listener();
+  for (const listener of listeners ?? []) listener(info);
 }
 /** The window currently showing each session. Output goes there. */
 const owners = new Map<string, WebContents>();
@@ -199,7 +213,7 @@ function forwardData(sessionId: string, data: string): void {
   for (const listener of outputSubscribers.get(sessionId) ?? []) listener(data);
 }
 
-function forwardExit(sessionId: string, exitCode: number): void {
+function forwardExit(sessionId: string, exitCode: number, hostLost = false): void {
   runPauses?.forget(sessionId);
   agentStatus.exit(sessionId);
   autoContinue.exit(sessionId);
@@ -209,7 +223,7 @@ function forwardExit(sessionId: string, exitCode: number): void {
   attached.delete(sessionId);
   capturedDisplays.delete(sessionId);
   syncPowerSaveBlocker();
-  notifyExitSubscribers(sessionId);
+  notifyExitSubscribers(sessionId, { exitCode, hostLost });
 }
 
 const localListener: SessionListener = { onData: forwardData, onExit: forwardExit };
@@ -253,7 +267,7 @@ async function startBackend(): Promise<void> {
       backendReady = null;
       attached.clear();
       // The shells died with the host. Close their tabs; the next terminal starts a new host.
-      for (const sessionId of [...sessions.keys()]) forwardExit(sessionId, 1);
+      for (const sessionId of [...sessions.keys()]) forwardExit(sessionId, 1, true);
     },
   });
   host = client;
@@ -310,67 +324,77 @@ async function createOrAttach(
   return local.createOrAttach(payload, localListener);
 }
 
+/**
+ * Starts (or attaches to) a session. The renderer does this through `IPC.terminal.create` for the
+ * tab on screen; main calls it with no owner for a session it starts itself (a Relay leg), whose
+ * tab attaches later and gets the screen so far from the snapshot.
+ */
+export async function createTerminalSession(
+  options: CreateTerminalOptions,
+  owner: WebContents | null,
+): Promise<TerminalAttachResult | null> {
+  const shell = ALLOWED_SHELLS.includes(options.shell as AllowedShell)
+    ? (options.shell as AllowedShell)
+    : defaultShell();
+  const sessionId =
+    options.sessionId && SESSION_ID_PATTERN.test(options.sessionId)
+      ? options.sessionId
+      : randomUUID();
+
+  // Registered before the call so output produced while it is in flight has somewhere
+  // to go; the pane buffers it until it has painted the snapshot.
+  const previousOwner = owners.get(sessionId);
+  if (owner) owners.set(sessionId, owner);
+  let result: CreateOrAttachResult | null;
+  try {
+    result = await createOrAttach({
+      sessionId,
+      shell,
+      cwd: options.cwd,
+      cols: options.cols,
+      rows: options.rows,
+      env: terminalEnv(sessionId, options.projectId),
+      initialInput: options.initialInput,
+      projectId: options.projectId,
+      attachOnly: options.attachOnly,
+    });
+  } catch (error) {
+    // The pane only shows the reason after "Could not start this terminal." Without this
+    // line nothing anywhere records why, which is all a bug report has to go on when a
+    // shell refuses to start.
+    // biome-ignore lint/suspicious/noConsole: the only record of a terminal that won't open
+    console.warn(`[terminal] could not start ${shell} in ${options.cwd ?? '<default>'}`, error);
+    if (previousOwner) owners.set(sessionId, previousOwner);
+    else owners.delete(sessionId);
+    throw error;
+  }
+  if (!result) {
+    owners.delete(sessionId);
+    return null;
+  }
+  attached.add(sessionId);
+  warmSuspenderSoon();
+  const known = sessions.get(sessionId);
+  sessions.set(sessionId, {
+    // A session remembered from the host list lacks what only the renderer knows.
+    projectId: options.projectId ?? known?.projectId,
+    cliId: options.cliId ?? known?.cliId,
+    surface: options.surface ?? known?.surface,
+    // A reattach passes the tab's own shell, so this is right for restored tabs too.
+    shell,
+    createdAt: known?.createdAt ?? Date.now(),
+  });
+  if (!known) syncPowerSaveBlocker();
+  return { sessionId, isNew: result.isNew, snapshot: result.snapshot };
+}
+
 export function registerTerminalHandlers(): void {
   ipcMain.handle(
     IPC.terminal.create,
-    async (
+    (
       event: IpcMainInvokeEvent,
       options: CreateTerminalOptions = {},
-    ): Promise<TerminalAttachResult | null> => {
-      const shell = ALLOWED_SHELLS.includes(options.shell as AllowedShell)
-        ? (options.shell as AllowedShell)
-        : defaultShell();
-      const sessionId =
-        options.sessionId && SESSION_ID_PATTERN.test(options.sessionId)
-          ? options.sessionId
-          : randomUUID();
-
-      // Registered before the call so output produced while it is in flight has somewhere
-      // to go; the pane buffers it until it has painted the snapshot.
-      const previousOwner = owners.get(sessionId);
-      owners.set(sessionId, event.sender);
-      let result: CreateOrAttachResult | null;
-      try {
-        result = await createOrAttach({
-          sessionId,
-          shell,
-          cwd: options.cwd,
-          cols: options.cols,
-          rows: options.rows,
-          env: terminalEnv(sessionId, options.projectId),
-          initialInput: options.initialInput,
-          projectId: options.projectId,
-          attachOnly: options.attachOnly,
-        });
-      } catch (error) {
-        // The pane only shows the reason after "Could not start this terminal." Without this
-        // line nothing anywhere records why, which is all a bug report has to go on when a
-        // shell refuses to start.
-        // biome-ignore lint/suspicious/noConsole: the only record of a terminal that won't open
-        console.warn(`[terminal] could not start ${shell} in ${options.cwd ?? '<default>'}`, error);
-        if (previousOwner) owners.set(sessionId, previousOwner);
-        else owners.delete(sessionId);
-        throw error;
-      }
-      if (!result) {
-        owners.delete(sessionId);
-        return null;
-      }
-      attached.add(sessionId);
-      warmSuspenderSoon();
-      const known = sessions.get(sessionId);
-      sessions.set(sessionId, {
-        // A session remembered from the host list lacks what only the renderer knows.
-        projectId: options.projectId ?? known?.projectId,
-        cliId: options.cliId ?? known?.cliId,
-        surface: options.surface ?? known?.surface,
-        // A reattach passes the tab's own shell, so this is right for restored tabs too.
-        shell,
-        createdAt: known?.createdAt ?? Date.now(),
-      });
-      if (!known) syncPowerSaveBlocker();
-      return { sessionId, isNew: result.isNew, snapshot: result.snapshot };
-    },
+    ): Promise<TerminalAttachResult | null> => createTerminalSession(options, event.sender),
   );
 
   ipcMain.handle(IPC.terminal.write, (_event, sessionId: string, data: string): void => {
@@ -651,7 +675,10 @@ export function writeToTerminalDisplay(sessionId: string, data: string): void {
 }
 
 /** Fires once when a session ends, however that happens (shell exit, closed tab, lost host). */
-export function subscribeTerminalExit(sessionId: string, listener: () => void): () => void {
+export function subscribeTerminalExit(
+  sessionId: string,
+  listener: (info: TerminalExitInfo) => void,
+): () => void {
   let set = exitSubscribers.get(sessionId);
   if (!set) {
     set = new Set();
@@ -666,8 +693,13 @@ export function writeToSession(sessionId: string, data: string): void {
   writeToShell(sessionId, data);
 }
 
+/** Ids of the sessions the backend is running, for picking up after a restart. */
+export async function runningSessionIds(): Promise<string[]> {
+  return (await listRunningSessions()).map((info) => info.sessionId);
+}
+
 /** Sends input to a session's shell. Unlike `writeToSession`, it is not the user typing. */
-function writeToShell(sessionId: string, data: string): void {
+export function writeToShell(sessionId: string, data: string): void {
   agentStatus.input(sessionId);
   if (host) host.notify({ type: 'write', payload: { sessionId, data } });
   else local?.write(sessionId, data);

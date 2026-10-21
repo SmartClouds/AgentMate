@@ -1,4 +1,6 @@
 import { targetAINote } from '../promptBuilder/targetAiNotes.js';
+import { formatTokenCount, tasksFolderRelPath } from '../relay/format.js';
+import { blueprintRelaySection } from '../relay/prompts.js';
 import type { BlueprintStepId } from '../types/index.js';
 import { flattenAttachmentRefs } from './attachments.js';
 import { blueprintStep } from './steps.js';
@@ -21,6 +23,12 @@ export interface BlueprintPromptInput {
   sections: BlueprintPromptSection[];
   /** Ask the agent to list its intended phases and epics before writing anything. */
   confirmBeforeWriting: boolean;
+  /** Write the backlog as Relay task files sized to this context budget, instead of BACKLOG.md. */
+  relay?: { enabled: boolean; budgetTokens: number };
+}
+
+function relayOn(input: BlueprintPromptInput): boolean {
+  return input.relay?.enabled === true;
 }
 
 function filled(sections: BlueprintPromptSection[]): BlueprintPromptSection[] {
@@ -53,28 +61,51 @@ function referenceBlock(sections: BlueprintPromptSection[]): string {
   ].join('\n');
 }
 
+function backlogArtifact(input: BlueprintPromptInput): string {
+  const { docsFolder } = input;
+  return relayOn(input)
+    ? `4. \`${tasksFolderRelPath(docsFolder)}/T001-slug.md\`: every epic broken into Relay task files, one task
+   per file, as described under "Relay tasks" below.`
+    : `4. \`${docsFolder}/BACKLOG.md\`: every epic broken into implementation-sized tasks, each with a
+   stable id (E<epic>-T<task>), a one-line description, acceptance criteria, and its dependencies.`;
+}
+
 const ARTIFACTS = (
-  docsFolder: string,
-): string => `1. \`${docsFolder}/PRODUCT_BRIEF.md\`: the problem, who has it, the value it delivers, how success
+  input: BlueprintPromptInput,
+): string => `1. \`${input.docsFolder}/PRODUCT_BRIEF.md\`: the problem, who has it, the value it delivers, how success
    is measured, and an explicit "Out of scope" list.
-2. \`${docsFolder}/ROADMAP.md\`: the delivery phases in order. Each phase gets a name, a goal stated
+2. \`${input.docsFolder}/ROADMAP.md\`: the delivery phases in order. Each phase gets a name, a goal stated
    as an outcome rather than an activity, entry and exit criteria, and links to its epics.
-3. \`${docsFolder}/epics/NN-slug.md\`: one file per epic, numbered in delivery order, each with its
+3. \`${input.docsFolder}/epics/NN-slug.md\`: one file per epic, numbered in delivery order, each with its
    objective, the user-visible outcome, acceptance criteria, dependencies, and the risks it carries.
-4. \`${docsFolder}/BACKLOG.md\`: every epic broken into implementation-sized tasks, each with a
-   stable id (E<epic>-T<task>), a one-line description, acceptance criteria, and its dependencies.
-5. \`${docsFolder}/MILESTONES.md\`: the order the phases ship in and what can be demonstrated at each one.
-6. \`${docsFolder}/RISKS.md\`: technical and delivery risks, each with impact, likelihood, and a
+${backlogArtifact(input)}
+5. \`${input.docsFolder}/MILESTONES.md\`: the order the phases ship in and what can be demonstrated at each one.
+6. \`${input.docsFolder}/RISKS.md\`: technical and delivery risks, each with impact, likelihood, and a
    concrete mitigation.`;
 
-const RULES = `- Ground every artifact in the blueprint above. Where the blueprint is silent, write the
+function rules(input: BlueprintPromptInput): string {
+  const sizing = relayOn(input)
+    ? '- Size tasks by the context budget under "Relay tasks", so each fits one AI session.'
+    : `- Size tasks so each one is a single focused change. Split anything that would take more than
+  about a day.`;
+  const links = relayOn(input) ? 'its task files' : 'its backlog tasks';
+  return `- Ground every artifact in the blueprint above. Where the blueprint is silent, write the
   assumption down under an "## Assumptions" heading instead of quietly inventing a requirement.
 - Use the technologies the blueprint names. Do not substitute them or modernize them.
-- Size tasks so each one is a single focused change. Split anything that would take more than
-  about a day.
+${sizing}
 - Order the phases so every phase ends with something that can be run and demonstrated.
-- Cross-link the files: the roadmap links to the epics, and each epic links to its backlog tasks.
+- Cross-link the files: the roadmap links to the epics, and each epic links to ${links}.
 - Write in English, in Markdown. No "TBD", no placeholder sections.`;
+}
+
+function relaySection(input: BlueprintPromptInput): string {
+  if (!relayOn(input) || !input.relay) return '';
+  return `
+
+# Relay tasks
+
+${blueprintRelaySection(input.docsFolder, input.relay.budgetTokens)}`;
+}
 
 /**
  * Assembles the Product Manager prompt locally. This is what seeds the editor
@@ -116,11 +147,11 @@ application source, configuration, or dependencies as part of this task.
 
 Write these files:
 
-${ARTIFACTS(docsFolder)}
+${ARTIFACTS(input)}
 
 # Rules
 
-${RULES}${confirm}
+${rules(input)}${relaySection(input)}${confirm}
 `;
 }
 
@@ -142,6 +173,10 @@ The prompt you write must instruct the assistant to:
 - ground everything in the blueprint and record assumptions explicitly wherever the blueprint is silent;
 - keep the technology choices exactly as the blueprint states them;
 - cross-link the artifacts so the roadmap, the epics, and the backlog reference each other;${
+    relayOn(input) && input.relay
+      ? `\n- write the backlog as Relay task files in \`${tasksFolderRelPath(docsFolder)}/\` rather than one backlog file, each task sized to finish in one AI session with a ${formatTokenCount(input.relay.budgetTokens)}-token context budget, exactly as the "Relay tasks" text below describes (include that text in the prompt);`
+      : ''
+  }${
     confirmBeforeWriting
       ? '\n- list the phases and epics it intends to create and wait for confirmation before writing any files;'
       : ''
@@ -150,7 +185,7 @@ The prompt you write must instruct the assistant to:
 
 Suggested artifacts to name in the prompt:
 
-${ARTIFACTS(docsFolder)}
+${ARTIFACTS(input)}${relaySection(input)}
 
 Project name: ${projectName}
 Primary coding agent: ${agentLabel}

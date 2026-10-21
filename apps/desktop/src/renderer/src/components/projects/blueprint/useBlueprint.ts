@@ -116,6 +116,13 @@ export function useProjectBlueprint(project: Project) {
     meta: QUIET,
   });
 
+  const setRelay = useMutation({
+    mutationFn: (value: { enabled: boolean; budgetTokens: number }) =>
+      window.agentmat.blueprints.setRelay(projectId, value),
+    onSuccess: cache,
+    meta: QUIET,
+  });
+
   const saveFinalPrompt = useMutation({
     mutationFn: (text: string) => window.agentmat.blueprints.setFinalPrompt(projectId, text),
     onSuccess: (next) => {
@@ -256,6 +263,7 @@ export function useProjectBlueprint(project: Project) {
         targetAI: targetAIForProject(project.agentType, project.cliId),
         docsFolder: blueprint.docsFolder,
         confirmBeforeWriting: blueprint.confirmBeforeWriting,
+        relay: blueprint.relay,
         sections: blueprint.sections
           .filter((section) => english.has(section.stepId))
           .map((section) => ({
@@ -316,6 +324,7 @@ export function useProjectBlueprint(project: Project) {
     setIncludeInAgentFile,
     setDocsFolder,
     setConfirmBeforeWriting,
+    setRelay,
     saveFinalPrompt,
     pickAttachments,
     addAttachment,

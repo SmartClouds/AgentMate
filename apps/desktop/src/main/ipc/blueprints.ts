@@ -21,6 +21,7 @@ import {
   renderBlueprintBlock,
 } from '@agentmat/core';
 import { dialog, ipcMain } from 'electron';
+import { z } from 'zod';
 import type {
   BlueprintAgentFileResult,
   BlueprintAgentFileTarget,
@@ -40,6 +41,14 @@ import { blueprintRevisionDb } from '../blueprintRevisionDb';
 import { assertPathWithinRoots } from '../pathGuard';
 import { store } from '../store';
 import { allowedRoots } from './fileSystem';
+
+/** The Relay split as the renderer may set it: a switch and a budget a model can hold. */
+const relaySettingSchema = z
+  .object({
+    enabled: z.boolean(),
+    budgetTokens: z.number().int().min(10_000).max(2_000_000),
+  })
+  .strict();
 
 async function findProject(projectId: string): Promise<Project> {
   const project = (await store.getProjects()).find((entry) => entry.id === projectId);
@@ -269,6 +278,14 @@ export function registerBlueprintHandlers(): void {
         ...blueprint,
         confirmBeforeWriting: value === true,
       })),
+  );
+
+  ipcMain.handle(
+    IPC.blueprints.setRelay,
+    (_event, projectId: string, value: unknown): Promise<ProjectBlueprint> => {
+      const relay = relaySettingSchema.parse(value);
+      return mutateBlueprint(projectId, (blueprint) => ({ ...blueprint, relay }));
+    },
   );
 
   ipcMain.handle(

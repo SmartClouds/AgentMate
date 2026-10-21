@@ -308,7 +308,10 @@ export type AppNotificationKind =
   | 'deploy-info'
   /** A project healthcheck confirmed down, and back up (E22). */
   | 'health-failure'
-  | 'health-recovered';
+  | 'health-recovered'
+  /** A Relay task needs the user (blocked, failing tests, a stalled session), and a relay ended (E26). */
+  | 'relay-attention'
+  | 'relay-finished';
 
 /** In-app inbox item: pipeline results from watched GitHub Actions, or a CLI/tool update. */
 export interface AppNotification {
@@ -1166,8 +1169,19 @@ export interface ProjectBlueprint {
   finalPromptUpdatedAt: string | null;
   /** Have the agent list the phases and epics it intends to write before it writes any files. */
   confirmBeforeWriting: boolean;
+  /**
+   * Relay (E26): write the backlog as task files sized to fit one AI session under this context
+   * budget. Always set once `withBlueprintDefaults` has read the record.
+   */
+  relay?: BlueprintRelaySetting;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface BlueprintRelaySetting {
+  enabled: boolean;
+  /** Context tokens one session may use on a task. */
+  budgetTokens: number;
 }
 
 /** A reusable snippet defined in Settings and pulled into a step with one click. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AGENT_READY_TIMING, type AgentReadySignals, agentReadyVerdict } from './agentReady';
+import { AGENT_READY_TIMING, type AgentReadySignals, agentReadyVerdict } from './agentReady.js';
 
 const t = AGENT_READY_TIMING;
 

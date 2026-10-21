@@ -11,6 +11,8 @@ import DesktopPetRoute from './components/pet/DesktopPetRoute';
 import PromptBuildWidgetRoute from './components/projects/PromptBuildWidgetRoute';
 import { RunProposalHost } from './components/projects/RunProposalHost';
 import { QuitConfirmation } from './components/QuitConfirmation';
+import { RelayBoardHost } from './components/relay/RelayBoard';
+import { RelayProposalHost } from './components/relay/RelayProposalHost';
 import { HostKeyChangedDialogHost } from './components/remote/HostKeyChangedDialog';
 import RemoteSessionRoute from './components/remote/RemoteSessionRoute';
 import { ImageViewerHost } from './components/terminal/ImageViewerHost';
@@ -97,6 +99,8 @@ function AppChrome(): React.JSX.Element | null {
       <AppToaster />
       <ConfirmDialogHost />
       <RunProposalHost />
+      <RelayBoardHost />
+      <RelayProposalHost />
       <StopContainersDialogHost />
       <HostKeyChangedDialogHost />
       <QuitConfirmation />
