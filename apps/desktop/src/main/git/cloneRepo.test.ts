@@ -52,6 +52,37 @@ describe('describeCloneError', () => {
     expect(describeCloneError({ stderr: "Cloning into '.'...\n" })).toMatch(/Clone failed/);
   });
 
+  it('does not blame the address when the gh credential helper could not start', () => {
+    // Real output from git when `!gh auth git-credential` is not on PATH: the mac app opened from
+    // Finder hit this and was told the repository did not exist.
+    const bash =
+      "gh auth git-credential get: line 1: gh: command not found\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n";
+    const dash =
+      "sh: 1: gh: not found\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n";
+
+    for (const stderr of [bash, dash]) {
+      const message = describeCloneError({ stderr });
+      expect(message).not.toMatch(/Repository not found/);
+      expect(message).toMatch(/GitHub CLI/);
+      expect(message).toMatch(/PATH/);
+    }
+  });
+
+  it('still reports a missing repository, including one with gh in its name', () => {
+    expect(
+      describeCloneError({
+        stderr:
+          "remote: Repository not found.\nfatal: repository 'https://github.com/acme/gh-tools.git/' not found\n",
+      }),
+    ).toMatch(/^Repository not found/);
+  });
+
+  it('does not call every "not found" line a missing repository', () => {
+    expect(
+      describeCloneError({ stderr: 'fatal: Remote branch release not found in upstream origin\n' }),
+    ).toBe('fatal: Remote branch release not found in upstream origin');
+  });
+
   it('points an ssh key failure at the sign-in fix too', () => {
     expect(
       describeCloneError({ stderr: 'git@github.com: Permission denied (publickey).' }),

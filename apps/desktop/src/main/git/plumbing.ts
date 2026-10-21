@@ -46,12 +46,20 @@ const RECENT_TAG_LIMIT = 8;
  * the index. The app polls status constantly (the repo watcher, every git query refetch), and a
  * read holding that lock is exactly what made a commit fail at random with "index.lock: File
  * exists". Writes still take the lock, since for them it isn't optional.
+ *
+ * Built on every call rather than once at import. The app rewrites its own environment after
+ * startup (the login shell's PATH on a Mac opened from Finder, the registry PATH on Windows, the
+ * proxy settings), and a copy taken at import would keep the bare launch PATH. A credential helper
+ * like `!gh auth git-credential` is then looked up in /usr/bin:/bin only, and git reports
+ * "gh: command not found" even though gh is installed and signed in.
  */
-export const GIT_ENV: NodeJS.ProcessEnv = {
-  ...process.env,
-  GIT_TERMINAL_PROMPT: '0',
-  GIT_OPTIONAL_LOCKS: '0',
-};
+export function gitEnv(): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    GIT_TERMINAL_PROMPT: '0',
+    GIT_OPTIONAL_LOCKS: '0',
+  };
+}
 
 /**
  * How long to wait between tries when another git holds a lock. It adds up to about two
@@ -77,7 +85,7 @@ export async function git(
         timeout: timeoutMs,
         windowsHide: true,
         maxBuffer: 10 * 1024 * 1024,
-        env: GIT_ENV,
+        env: gitEnv(),
       });
       return stdout;
     } catch (error) {

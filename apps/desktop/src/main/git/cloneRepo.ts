@@ -62,11 +62,24 @@ async function rememberGithubHelper(folder: string): Promise<void> {
   await git(folder, ['config', '--local', '--add', GITHUB_HELPER_KEY, GH_HELPER]);
 }
 
+/**
+ * What a shell prints when git's `!gh auth git-credential` helper can't start: "gh: command not
+ * found" from bash, "sh: 1: gh: not found" from dash.
+ */
+const GH_HELPER_MISSING = /(?:^|[\s:])gh: (?:command )?not found/im;
+
 /** Turns what git printed on a failed clone or fetch into something a person can act on. */
 export function describeCloneError(error: unknown): string {
   const err = error as { stderr?: string; message?: string } | null;
   const stderr = String(err?.stderr || err?.message || '');
-  if (/repository not found|not found|404/i.test(stderr)) {
+  // Ahead of the "not found" check below, which a missing gh would otherwise trip, and then
+  // blame the address for what is really a PATH problem.
+  if (GH_HELPER_MISSING.test(stderr)) {
+    return 'Git could not start the GitHub CLI (gh) to sign in. Make sure gh is installed and on your PATH, then try again.';
+  }
+  // "remote: Repository not found." and "fatal: repository '...' not found", but not any other
+  // line that merely says something was not found.
+  if (/repository\b[^\n]*\bnot found|\b404\b/i.test(stderr)) {
     return 'Repository not found. Check the address. For a private repo, sign in with "gh auth login" and try again.';
   }
   if (

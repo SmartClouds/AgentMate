@@ -274,6 +274,29 @@ describe.skipIf(!git)('against a real repository', () => {
   });
 });
 
+describe.skipIf(!git)('the environment git() runs with', () => {
+  afterEach(() => {
+    delete process.env.AGENTMATE_GIT_ENV_PROBE;
+  });
+
+  it('is read at call time, so a PATH or proxy set after startup reaches git', async () => {
+    const repo = initGitRepo();
+    // An alias that prints a variable, run by the git child itself.
+    const probe = ['-c', 'alias.probe=!echo "$AGENTMATE_GIT_ENV_PROBE"', 'probe'];
+
+    process.env.AGENTMATE_GIT_ENV_PROBE = 'set-after-import';
+
+    expect((await runGit(repo.dir, probe)).trim()).toBe('set-after-import');
+  });
+
+  it('still turns credential prompts off', async () => {
+    const repo = initGitRepo();
+    const probe = ['-c', 'alias.probe=!echo "$GIT_TERMINAL_PROMPT"', 'probe'];
+
+    expect((await runGit(repo.dir, probe)).trim()).toBe('0');
+  });
+});
+
 describe('isGitLockBusy', () => {
   it('spots git refusing to run because another process holds a lock', () => {
     const indexLock = {

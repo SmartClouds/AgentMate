@@ -12,7 +12,7 @@ import {
   splitLinesKeepEnds,
 } from '@agentmat/core';
 import type { VersionFileChange, WriteVersionHunksInput } from '../../shared/apiTypes';
-import { GIT_ENV } from './plumbing';
+import { gitEnv } from './plumbing';
 
 const GIT_TIMEOUT_MS = 60000;
 /** A version bump is a line or two per file. Past this it is a lockfile nobody reads line by line. */
@@ -31,7 +31,7 @@ export function runGit(cwd: string, args: string[], input?: string | Buffer): Pr
   return new Promise((resolvePromise, reject) => {
     const child = spawn('git', ['-C', cwd, ...args], {
       windowsHide: true,
-      env: GIT_ENV,
+      env: gitEnv(),
     });
     const out: Buffer[] = [];
     const err: Buffer[] = [];
