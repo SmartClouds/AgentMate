@@ -333,6 +333,27 @@ describe('ReorderableGroup', () => {
       expect(onMove).toHaveBeenCalledWith(0, 1);
       expect(onOpen).not.toHaveBeenCalled();
     });
+
+    // Vitest's jsdom window is the global itself, and tearing the environment down deletes its
+    // DOM methods. A drag at the end of a test file left the timer to fire after that and throw,
+    // which failed the whole run as an unhandled error.
+    it('leaves the window alone when the test environment is gone before the click timer fires', () => {
+      vi.useFakeTimers();
+      const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'removeEventListener');
+      try {
+        setup();
+        press('a', 0, 0);
+        moveTo('a', 0, 70);
+        release('a');
+
+        // As teardown does: the method is gone from the global, not replaced.
+        Reflect.deleteProperty(globalThis, 'removeEventListener');
+        expect(() => vi.advanceTimersByTime(300)).not.toThrow();
+      } finally {
+        if (descriptor) Object.defineProperty(globalThis, 'removeEventListener', descriptor);
+        vi.useRealTimers();
+      }
+    });
   });
 
   it('moves across a grid row and slides the cards it passes', () => {

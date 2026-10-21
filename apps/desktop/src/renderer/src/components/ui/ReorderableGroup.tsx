@@ -94,11 +94,16 @@ function swallowClickAfterDrag(): void {
     event.stopPropagation();
     event.preventDefault();
   };
-  // The timer keeps its own handle on the window: under test the global can be gone (environment
-  // torn down) by the time it fires.
+  // Under test the environment can be torn down by the time the timer fires. Vitest's window is the
+  // global itself and teardown deletes its DOM methods, so a kept handle still loses them. With no
+  // window left there is no listener to remove.
   const view = window;
   view.addEventListener('click', swallow, { capture: true, once: true });
-  view.setTimeout(() => view.removeEventListener('click', swallow, { capture: true }), 300);
+  view.setTimeout(() => {
+    if (typeof view.removeEventListener === 'function') {
+      view.removeEventListener('click', swallow, { capture: true });
+    }
+  }, 300);
 }
 
 /**
