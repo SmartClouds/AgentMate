@@ -700,9 +700,10 @@ export function RunRecommendationChip({
           />
         )}
         <span className="truncate font-medium">{choice.model.label}</span>
-        {/* In a tight row the effort gives way first, so the model name stays readable. */}
+        {/* In a tight row the effort gives way first, so the model name stays readable. Shrink is
+            weighted by width, so a small factor would still clip the name alongside it. */}
         {choice.effort && (
-          <span className="shrink-4 truncate text-muted-foreground">
+          <span className="shrink-[100] truncate text-muted-foreground">
             {EFFORT_LABELS[choice.effort]}
           </span>
         )}

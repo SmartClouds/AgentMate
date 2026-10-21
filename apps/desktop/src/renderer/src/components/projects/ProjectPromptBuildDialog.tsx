@@ -353,7 +353,7 @@ export function ProjectPromptBuildDialog({
           'flex flex-col gap-0 overflow-hidden p-0 transition-[width,height,max-width,max-height]',
           isMaximized
             ? 'h-[92vh] max-h-[92vh] w-[95vw] max-w-[95vw]'
-            : 'h-[min(38rem,82vh)] max-h-[82vh] w-[min(56rem,94vw)] max-w-4xl',
+            : 'h-[min(38rem,82vh)] max-h-[82vh] w-[min(60rem,94vw)] max-w-[60rem]',
         )}
         onOpenAutoFocus={(event) => {
           event.preventDefault();
@@ -566,10 +566,12 @@ export function ProjectPromptBuildDialog({
 
             <div className="relative flex min-h-0 flex-col gap-2 p-5">
               <div className="flex items-start justify-between gap-2">
-                {/* The chip wraps under the title when the column is narrow, so its model name is
-                    never squeezed away to make room for the buttons. While Speak prompt records,
-                    the recording strip sits where the chip is, and the mic button turns into the
-                    stop button without changing size, so no row grows and the text box stays put. */}
+                {/* The chip stays beside the title and gives up its effort text first when the row
+                    is tight. Its 9rem basis means it only wraps under the title once even the
+                    model name would stop fitting, so the name is never squeezed away. While Speak
+                    prompt records, the recording strip sits where the chip is, and the mic button
+                    turns into the stop button without changing size, so no row grows and the text
+                    box stays put. */}
                 <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-1">
                   <Label htmlFor="prompt-build-output" className="flex h-8 shrink-0 items-center">
                     Generated prompt
@@ -579,7 +581,7 @@ export function ProjectPromptBuildDialog({
                   ) : (
                     <RunRecommendationChip
                       state={runRecommendation}
-                      className="max-w-full"
+                      className="max-w-fit grow basis-36"
                       sizeOnOpen={!autoSize}
                     />
                   )}

@@ -54,6 +54,7 @@ import { stopRun } from '@/stores/runSessionStore';
 import { useShortcutLabel } from '@/stores/shortcutStore';
 import { useTerminalStore } from '@/stores/terminalStore';
 import { terminalTabLabel, useWorkspaceStore } from '@/stores/workspaceStore';
+import { GithubAccountSegment } from './GithubAccountSegment';
 import { SftpTransfersSegment } from './SftpTransfersSegment';
 import { focusPanel, PANEL_SURFACE, PanelTitle, PopSegment, segmentClass } from './statusBarKit';
 
@@ -1348,6 +1349,7 @@ export function StatusBar(): React.JSX.Element {
         <SftpTransfersSegment />
         <TerminalsSegment />
         <UsageLimitSegments />
+        <GithubAccountSegment />
         <DockerSegment />
         <AndroidSegment />
         <SystemSegments />

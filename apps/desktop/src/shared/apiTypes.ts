@@ -1923,9 +1923,16 @@ export interface GithubAccount {
   /** False when gh is there but nobody has logged in with it. */
   authenticated: boolean;
   login: string | null;
+  /** The display name on the GitHub profile, when the account has set one. */
+  name?: string | null;
   /** The signed-in account first, then every organization it belongs to. */
   owners: GithubOwner[];
   error?: string;
+  /**
+   * True when the sign-in could not be read for a reason other than being signed out (a dropped
+   * connection, a GitHub outage), so `authenticated: false` says nothing about the account.
+   */
+  checkFailed?: boolean;
 }
 
 /** Daily GitHub contribution counts for the dashboard activity chart. */

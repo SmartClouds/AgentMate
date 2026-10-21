@@ -57,8 +57,11 @@ export async function readGithubAccount(): Promise<GithubAccount> {
   }
 
   let login: string;
+  let name: string | null;
   try {
-    login = (await ghApi<{ login: string }>('user')).login;
+    const user = await ghApi<{ login: string; name?: string | null }>('user');
+    login = user.login;
+    name = user.name?.trim() || null;
   } catch (error) {
     return {
       cliAvailable: true,
@@ -66,6 +69,8 @@ export async function readGithubAccount(): Promise<GithubAccount> {
       login: null,
       owners: [],
       error: ghErrorMessage(error),
+      // Anything but a sign-out is a hiccup, and callers that poll must not read it as one.
+      checkFailed: classifyGhError(error).authenticated,
     };
   }
 
@@ -78,7 +83,7 @@ export async function readGithubAccount(): Promise<GithubAccount> {
     // The personal account on its own is still a perfectly good place to publish to.
   }
 
-  return { cliAvailable: true, authenticated: true, login, owners };
+  return { cliAvailable: true, authenticated: true, login, name, owners };
 }
 
 interface GithubContributionCalendar {
