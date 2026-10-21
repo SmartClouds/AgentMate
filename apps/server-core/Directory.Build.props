@@ -31,7 +31,7 @@
     <NuGetAuditLevel>low</NuGetAuditLevel>
     <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1900;NU1901;NU1902</WarningsNotAsErrors>
 
-    <Version Condition="'$(Version)' == ''">1.60.0</Version>
+    <Version Condition="'$(Version)' == ''">1.61.0</Version>
     <Product>AgentMate Server Core</Product>
     <Company>AgentMate</Company>
     <Copyright>AgentMate</Copyright>
