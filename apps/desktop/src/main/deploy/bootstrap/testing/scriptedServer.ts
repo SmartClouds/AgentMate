@@ -30,6 +30,10 @@ export interface ScriptedMachine {
   configuredGroups: string[] | null;
   /** What `admin restore-stage` prints about the backup it checked (E15). */
   stagedBackup: string;
+  /** The tool the release probe finds; null when the server has neither or cannot reach GitHub. */
+  serverDownload: 'curl' | 'wget' | null;
+  /** When set, the server's own download fails with this, as curl or wget would print it. */
+  downloadFailure: { stderr: string; exitCode?: number } | null;
 }
 
 export const UBUNTU_24 =
@@ -57,6 +61,8 @@ export function scriptedMachine(overrides: Partial<ScriptedMachine> = {}): Scrip
       contents: { users: 2 },
       owners: ['maria'],
     }),
+    serverDownload: null,
+    downloadFailure: null,
     ...overrides,
   };
 }
@@ -76,6 +82,10 @@ export class ScriptedConnection {
   readonly commands: string[] = [];
   readonly rootCommands: string[] = [];
   readonly uploads: Array<{ path: string; bytes: number; mode?: number }> = [];
+  /** The login user's downloads of the release, as the commands reached the server. */
+  readonly downloads: string[] = [];
+  /** The login user's probes of the release address. */
+  readonly probes: string[] = [];
   readonly tunnels: string[] = [];
   readonly execStreams: string[] = [];
   /** Every exec as it reached the server: the command line and everything written to stdin. */
@@ -119,6 +129,17 @@ export class ScriptedConnection {
     if (command.includes('getenforce')) return done(`${m.selinux ?? 'absent'}\n`);
     if (command.startsWith('mktemp -d')) return done('/tmp/agentmate.Test123456\n');
     if (command.startsWith('rm -rf /tmp/agentmate.')) return done();
+
+    // The login user's own commands against the release: never root's, even on a root login.
+    if (command.startsWith('sh -c ') && command.includes('/releases/download/')) {
+      if (command.includes('command -v curl')) {
+        this.probes.push(command);
+        return done(m.serverDownload ? `${m.serverDownload}\n` : '');
+      }
+      this.downloads.push(command);
+      const failure = m.downloadFailure;
+      return failure ? done('', failure.exitCode ?? 22, failure.stderr) : done();
+    }
 
     if (command === "sudo -S -k -p '' true") {
       return stdin.split('\n')[0] === m.sudoPassword ? done() : done('', 1, 'Sorry, try again.\n');

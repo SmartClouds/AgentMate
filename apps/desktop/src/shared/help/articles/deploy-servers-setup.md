@@ -39,6 +39,7 @@ Opening a server without a core runs a read-only check over SSH. Nothing is chan
 | **Service manager** | The server must run systemd. |
 | **Free space** | At least 300 MB free under `/opt` and `/var`. |
 | **Root access** | How the install gets root: signed in as root, sudo with no password, sudo with the saved login password, sudo that asks for a password, or no sudo at all (blocks the install). |
+| **Getting the core** | Shown once nothing else blocks the install. If the server can reach GitHub and has `curl` or `wget`, it downloads the core itself ("The server downloads it from GitHub", marked ready). Otherwise the app sends it over SSH ("This app sends it over SSH", a note). Either way works, the first is just faster. |
 | **Connection** | Only shown when the server's SSH does not allow tunnels. The core's own bridge over SSH is used instead. |
 | **SELinux** | Shown when SELinux is enforcing or permissive. The files get labelled for it. |
 | **Installed now** | Shown when a core is already there, with its version. |
@@ -63,18 +64,19 @@ When it finishes, a message says the core is running on the server and the rail 
 The timeline lists the whole plan before it runs, then marks each step as waiting, in progress, done or failed. A progress bar shows for steps like uploading. The steps are:
 
 1. **Check the server**
-2. **Get the server core** (downloads the release for your AgentMate version)
-3. **Upload it to the server**
-4. **Verify the checksum on the server**
-5. **Give your login access to the core** (adds your SSH user to the `agentmate` group)
-6. **Unpack the release**
-7. **Label the files for SELinux** (only on SELinux servers)
-8. **Install the system service**
-9. **Switch to the new release**
-10. **Start the core**
-11. **Tidy up old files**
-12. **Check that it answers**
-13. **Set up your account on the core**, **Enroll this computer** and **Sign in** (when you gave an account)
+2. **Download the server core on the server** (when the preflight showed the server can reach GitHub; it saves the release for your AgentMate version and checks its checksum), or else **Get the server core** (the app downloads that release) followed by **Upload it to the server**
+3. **Verify the checksum on the server**
+4. **Give your login access to the core** (adds your SSH user to the `agentmate` group)
+5. **Unpack the release**
+6. **Label the files for SELinux** (only on SELinux servers)
+7. **Install the system service**
+8. **Switch to the new release**
+9. **Start the core**
+10. **Tidy up old files**
+11. **Check that it answers**
+12. **Set up your account on the core**, **Enroll this computer** and **Sign in** (when you gave an account)
+
+If the server's own download fails when the install runs (GitHub did not answer, or the file it got did not match its checksum), the download step says why, and the timeline adds **Get the server core** and **Upload it to the server** so the app sends it instead. The install carries on from there.
 
 If a new core does not start, the timeline adds **Go back to the previous release** and the server returns to the core it had before.
 

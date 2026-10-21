@@ -91,6 +91,8 @@ interface TerminalState {
   /** Drops the tab of a shell that has already ended. */
   forgetSession: (id: string) => void;
   setActiveSession: (id: string) => void;
+  /** Moves the tab at `from` so it sits at `to`, the way a drop in the tab strip lands it. */
+  moveSession: (from: number, to: number) => void;
 }
 
 type PersistedTerminalState = Pick<
@@ -195,6 +197,15 @@ export const useTerminalStore = create<TerminalState>()(
       },
       forgetSession: (id) => set((state) => withoutSession(state, id)),
       setActiveSession: (id) => set({ activeSessionId: id }),
+      moveSession: (from, to) =>
+        set((state) => {
+          const last = state.sessions.length - 1;
+          if (from === to || from < 0 || from > last || to < 0 || to > last) return state;
+          const sessions = [...state.sessions];
+          const [moved] = sessions.splice(from, 1);
+          sessions.splice(to, 0, moved);
+          return { sessions };
+        }),
     }),
     {
       name: 'agentmate-terminal-sessions',

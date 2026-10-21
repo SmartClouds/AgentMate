@@ -223,6 +223,60 @@ test('one click anywhere on a tab switches to it while typing in another', async
   }
 });
 
+test('dragging a tab moves it along the strip without switching to it or touching its shell', async () => {
+  launched = await launchApp({ settings: {} });
+  const { page } = launched;
+  await openDrawer(page);
+
+  const newTab = page.getByRole('button', { name: /^New Terminal/ }).first();
+  await newTab.click();
+  await expect.poll(() => drawerSessions(page), { timeout: 60_000 }).toHaveLength(1);
+  await newTab.click();
+  await expect.poll(() => drawerSessions(page), { timeout: 60_000 }).toHaveLength(2);
+  const tabs = page.getByRole('tablist', { name: 'Terminal sessions' }).getByRole('tab');
+  await expect(tabs).toHaveText(['Terminal', 'Terminal 2']);
+  await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
+  const pids = (await drawerSessions(page)).map((session) => session.pid).sort();
+
+  const first = await tabs.nth(0).boundingBox();
+  const second = await tabs.nth(1).boundingBox();
+  if (!first || !second) throw new Error('The tabs have no layout');
+
+  // Pick the second tab up by its label and carry it over the first, in steps so the pointer
+  // really travels.
+  const y = second.y + second.height / 2;
+  const fromX = second.x + second.width / 2;
+  await page.mouse.move(fromX, y);
+  await page.mouse.down();
+  await page.mouse.move(fromX - 10, y, { steps: 4 });
+  await page.mouse.move(first.x + first.width / 2, y, { steps: 12 });
+  // Held: the tab under the pointer follows it, and the one it passes has slid out of the way.
+  await expect
+    .poll(() => tabs.nth(1).evaluate((tab) => (tab as HTMLElement).style.transform))
+    .not.toBe('');
+  await expect
+    .poll(() => tabs.nth(0).evaluate((tab) => (tab as HTMLElement).style.transform))
+    .not.toBe('');
+  await page.mouse.up();
+
+  await expect(tabs).toHaveText(['Terminal 2', 'Terminal']);
+  // Letting go of a dragged tab must not also switch to it: the one that was active still is.
+  await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'true');
+  // Once dropped, both tabs are handed back to their own layout, with no slide left on them.
+  await expect
+    .poll(() =>
+      tabs.evaluateAll((all) => all.map((tab) => (tab as HTMLElement).style.transform).join('|')),
+    )
+    .toBe('|');
+  // Moving a tab is not closing or restarting it: the same two shells are still running.
+  expect((await drawerSessions(page)).map((session) => session.pid).sort()).toEqual(pids);
+
+  // A click still switches tabs afterwards.
+  await tabs.nth(1).click();
+  await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
+  await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'false');
+});
+
 test('quitting with no shells left takes the background host with it', async () => {
   launched = await launchApp({ settings: {} });
   const current = launched;

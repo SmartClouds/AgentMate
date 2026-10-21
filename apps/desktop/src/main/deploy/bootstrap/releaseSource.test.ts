@@ -170,6 +170,51 @@ describe('githubReleaseSource', () => {
       'https://github.com/SmartClouds/AgentMate/releases/download/v1.53.0/agentmate-core-1.53.0-linux-x64.tar.gz',
     );
   });
+
+  describe('remote', () => {
+    const manifest = manifestFor({ 'linux-x64': 'x64 bytes', 'linux-arm64': 'arm bytes' });
+
+    it('names the public address and the checksum the app holds, without downloading', () => {
+      const download = vi.fn();
+      const source = githubReleaseSource(manifest, tempDir(), download);
+
+      expect(source.remote?.('linux-arm64')).toEqual({
+        version: '1.53.0',
+        rid: 'linux-arm64',
+        file: 'agentmate-core-1.53.0-linux-arm64.tar.gz',
+        sha256: sha256('arm bytes'),
+        url: 'https://github.com/SmartClouds/AgentMate/releases/download/v1.53.0/agentmate-core-1.53.0-linux-arm64.tar.gz',
+      });
+      expect(download).not.toHaveBeenCalled();
+    });
+
+    it('has nothing for a processor the app build has no release for', () => {
+      const source = githubReleaseSource(manifestFor({ 'linux-x64': 'x' }), tempDir(), vi.fn());
+
+      expect(source.remote?.('linux-arm64')).toBeNull();
+    });
+
+    it('is the same release the app would download itself', async () => {
+      const source = githubReleaseSource(manifest, tempDir(), async (_url, destination) => {
+        writeFileSync(destination, 'x64 bytes');
+      });
+
+      const remote = source.remote?.('linux-x64');
+      const local = await source.release('linux-x64');
+
+      expect(remote).toMatchObject({
+        version: local.version,
+        file: local.file,
+        sha256: local.sha256,
+      });
+    });
+  });
+});
+
+describe('localArtifactSource has no public address', () => {
+  it('leaves it to the app to upload a development build', () => {
+    expect(localArtifactSource(tempDir()).remote).toBeUndefined();
+  });
 });
 
 describe('repoReleaseDirectory', () => {

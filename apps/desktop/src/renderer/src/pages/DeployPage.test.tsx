@@ -124,6 +124,7 @@ const PREFLIGHT: DeployPreflight = {
   transport: 'streamlocal',
   selinux: 'absent',
   freeDiskMb: 19_531,
+  serverDownload: false,
   installed: null,
   available: '1.53.0',
   problems: [],

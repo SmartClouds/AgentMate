@@ -62,6 +62,11 @@ export interface DeployPreflight {
   transport: 'streamlocal' | 'bridge';
   selinux: 'enforcing' | 'permissive' | 'disabled' | 'absent';
   freeDiskMb: number | null;
+  /**
+   * Whether the server can download the core from GitHub itself. When it cannot (no curl or wget,
+   * no route to GitHub, or a development build), the app downloads it and uploads it over SSH.
+   */
+  serverDownload: boolean;
   installed: { version: string } | null;
   /** The core version this app installs; null when this build has none to offer. */
   available: string | null;
@@ -71,6 +76,7 @@ export interface DeployPreflight {
 
 export type DeploySetupPhase =
   | 'preflight'
+  | 'fetch'
   | 'download'
   | 'upload'
   | 'verify'

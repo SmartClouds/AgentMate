@@ -88,6 +88,18 @@ service, Unix socket, tunnel and REST.
   Development builds use `pnpm server-core:publish <rid>` output, found by walking up from the app
   path, so `electron-vite dev` and a build folder both work. `AGENTMATE_SERVER_CORE_ARTIFACTS`
   overrides the folder.
+- **T6, the server downloads it instead.** The release is public, so a packaged build's source
+  also names the asset's address (`remote`), and the preflight tries it from the server (a HEAD
+  request through GitHub's redirect, with curl and then wget, as the login user). A server that
+  answers downloads the tarball itself into the same staging folder an upload would use, and
+  checks its SHA-256 there; the app downloads and uploads nothing (about 63 MB per install, which
+  is slow from a home connection). The root `verify` step is unchanged and checks the file again
+  after the copy into the root-only folder, so a server-side download is trusted no more than an
+  upload. If the probe says no, or the download fails or does not match on the day, the install
+  falls back to the app's download and upload, and the `fetch` step says why. Development builds
+  have no address and always upload. `serverDownload.ts` holds the commands; the real-shell test
+  there runs them with a stand-in curl and wget, and the same commands were run once against the
+  v1.60.0 release on GitHub with its published checksum.
 - **T9.** Removing the core with its data also deletes the `agentmate` group.
 - **T13.** The DevHost serves the real core (health for now) on loopback; fake platform, Docker and
   nginx state arrive with the epics that need them. The app lists it only when not packaged and

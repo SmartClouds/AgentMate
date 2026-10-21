@@ -3,6 +3,7 @@ import type { DeployPreflight, DeploySetupPhase, DeploySetupProgress } from '@sh
 /** How the wizard names each step, in the words of someone who never opened a terminal. */
 export const SETUP_LABELS: Record<DeploySetupPhase, string> = {
   preflight: 'Check the server',
+  fetch: 'Download the server core on the server',
   download: 'Get the server core',
   upload: 'Upload it to the server',
   verify: 'Verify the checksum on the server',
@@ -33,18 +34,19 @@ export interface TimelineStep {
 }
 
 /**
- * The steps an install goes through, in order, so the whole plan shows before it runs. With an
- * account, setting up this computer's access follows.
+ * The steps an install goes through, in order, so the whole plan shows before it runs. A server
+ * that can reach GitHub downloads the core itself; otherwise this app gets it and uploads it. If
+ * the server's own download fails on the day, the install adds those two steps where they
+ * happen. With an account, setting up this computer's access follows.
  */
 export function installPhases(
-  preflight: Pick<DeployPreflight, 'selinux'>,
+  preflight: Pick<DeployPreflight, 'selinux' | 'serverDownload'>,
   withAccount = false,
 ): DeploySetupPhase[] {
   const selinux = preflight.selinux === 'enforcing' || preflight.selinux === 'permissive';
   return [
     'preflight',
-    'download',
-    'upload',
+    ...(preflight.serverDownload ? (['fetch'] as const) : (['download', 'upload'] as const)),
     'verify',
     'group',
     'extract',

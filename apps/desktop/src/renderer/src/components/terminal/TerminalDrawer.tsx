@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -17,6 +17,7 @@ import {
 } from '@/components/icons';
 import { SftpDockPane } from '@/components/sftp/SftpDockPane';
 import { Button } from '@/components/ui/button';
+import { ReorderableGroup, type ReorderMotion } from '@/components/ui/ReorderableGroup';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useRunPauseStore } from '@/stores/runPauseStore';
@@ -74,11 +75,13 @@ function SessionTab({
   active,
   onSelect,
   onClose,
+  reorder,
 }: {
   session: TerminalSessionMeta;
   active: boolean;
   onSelect: () => void;
   onClose: () => void;
+  reorder: ReorderMotion;
 }): React.JSX.Element {
   const aiWaiting = useSshAgentStore((s) => isSshAgentWaitingOnUser(s.sessions[session.id]));
   const paused = useRunPauseStore((s) => s.paused[session.id] !== undefined);
@@ -89,9 +92,12 @@ function SessionTab({
   return (
     <SimpleTooltip label={aiWaiting ? `${label}\nThe AI task here is waiting for you` : label}>
       <div
+        {...reorder.itemProps}
         role="tab"
         aria-selected={active}
         tabIndex={0}
+        // The tab is its own grip. A press that never moves is still a click, so it selects.
+        onPointerDown={reorder.onGripPointerDown}
         onClick={onSelect}
         onKeyDown={(e) => {
           if (e.target !== e.currentTarget) return;
@@ -111,10 +117,17 @@ function SessionTab({
         }}
         // A pill with a glowing underline, like a Workspace pane's tabs and the API Client's.
         className={cn(
-          'group relative flex h-7 max-w-[14rem] shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-md px-2.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
-          active
-            ? 'bg-foreground/[0.08] text-foreground'
-            : 'text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground',
+          'group relative flex h-7 max-w-[14rem] shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-md px-2.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
+          reorder.lifted
+            ? // Held by the pointer: opaque, so the tabs it passes don't show through, and it
+              // follows the pointer with no easing.
+              'cursor-grabbing bg-popover text-foreground shadow-md ring-1 ring-foreground/10 transition-none'
+            : cn(
+                'transition-[color,background-color,transform] duration-200 ease-out motion-reduce:transition-none',
+                active
+                  ? 'bg-foreground/[0.08] text-foreground'
+                  : 'text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground',
+              ),
         )}
       >
         {active ? (
@@ -148,6 +161,8 @@ function SessionTab({
         <button
           type="button"
           aria-label={`Close ${session.title}`}
+          // Pressing the cross is not the start of a drag.
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
             onClose();
@@ -173,11 +188,14 @@ export function SessionTabStrip({
   activeSessionId,
   onSelect,
   onClose,
+  onMove,
 }: {
   sessions: TerminalSessionMeta[];
   activeSessionId: string | null;
   onSelect: (id: string) => void;
   onClose: (id: string) => void;
+  /** A tab was dragged to a new place: its index before and after. */
+  onMove: (from: number, to: number) => void;
 }): React.JSX.Element {
   const listRef = useRef<HTMLDivElement>(null);
   const [overflow, setOverflow] = useState({ start: false, end: false });
@@ -211,7 +229,7 @@ export function SessionTabStrip({
     syncOverflow();
     const observer = new ResizeObserver(syncOverflow);
     observer.observe(el);
-    for (const child of Array.from(el.children)) observer.observe(child);
+    for (const tab of Array.from(el.querySelectorAll('[role="tab"]'))) observer.observe(tab);
     return () => observer.disconnect();
   }, [sessions, activeSessionId, scrollActiveIntoView, syncOverflow]);
 
@@ -253,17 +271,25 @@ export function SessionTabStrip({
         role="tablist"
         aria-label="Terminal sessions"
         onScroll={syncOverflow}
-        className="flex min-w-0 flex-1 flex-nowrap items-center gap-0.5 self-stretch overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex min-w-0 flex-1 items-center self-stretch overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {sessions.map((session) => (
-          <SessionTab
-            key={session.id}
-            session={session}
-            active={session.id === activeSessionId}
-            onSelect={() => onSelect(session.id)}
-            onClose={() => onClose(session.id)}
-          />
-        ))}
+        {/* Drag a tab to move it. The tabs it passes slide aside, as the Workspace's do. */}
+        <ReorderableGroup
+          items={sessions}
+          getId={(session) => session.id}
+          enabled={sessions.length > 1}
+          className="flex shrink-0 flex-nowrap items-center gap-0.5"
+          onMove={onMove}
+          renderItem={(session, motion) => (
+            <SessionTab
+              session={session}
+              active={session.id === activeSessionId}
+              onSelect={() => onSelect(session.id)}
+              onClose={() => onClose(session.id)}
+              reorder={motion}
+            />
+          )}
+        />
       </div>
       {canScroll && (
         <button
@@ -302,6 +328,7 @@ export function TerminalDrawer({
   const sessions = useTerminalStore((s) => s.sessions);
   const activeSessionId = useTerminalStore((s) => s.activeSessionId);
   const setActiveSession = useTerminalStore((s) => s.setActiveSession);
+  const moveSession = useTerminalStore((s) => s.moveSession);
   const forgetSession = useTerminalStore((s) => s.forgetSession);
   const navigate = useNavigate();
   const openDefaultSession = useTerminalStore((s) => s.openDefaultSession);
@@ -317,6 +344,13 @@ export function TerminalDrawer({
   const shellRef = useRef<HTMLElement>(null);
 
   const activeSession = sessions.find((s) => s.id === activeSessionId) ?? sessions.at(-1) ?? null;
+  // The panes keep one order whatever order the tabs are dragged into. They stack on top of each
+  // other, so the order is invisible, and moving a pane in the DOM would cost its terminal the
+  // scroll position and the keyboard focus. Sorting by id leaves the panes already there alone.
+  const panes = useMemo(
+    () => [...sessions].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)),
+    [sessions],
+  );
   // A file manager tab has no shell, so nothing that talks to one is offered on it.
   const onFiles = activeSession?.kind === 'sftp';
   const shellSession = onFiles ? null : activeSession;
@@ -440,6 +474,7 @@ export function TerminalDrawer({
               activeSessionId={activeSessionId}
               onSelect={setActiveSession}
               onClose={closeTerminalTab}
+              onMove={moveSession}
             />
           )}
           {sessions.length === 0 && <div className="flex-1" />}
@@ -517,7 +552,7 @@ export function TerminalDrawer({
               </Button>
             </div>
           ) : (
-            sessions.map((session) => {
+            panes.map((session) => {
               const active = isOpen && !hidden && session.id === activeSessionId;
               // Never a TerminalPane for a file manager tab: it would start a shell.
               if (session.kind === 'sftp') {

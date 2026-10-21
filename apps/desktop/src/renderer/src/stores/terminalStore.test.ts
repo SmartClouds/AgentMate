@@ -226,6 +226,60 @@ describe('setActiveSession', () => {
   });
 });
 
+describe('moveSession', () => {
+  function openThree(): string[] {
+    return [
+      store().openSession({ id: 'a', title: 'A' }),
+      store().openSession({ id: 'b', title: 'B' }),
+      store().openSession({ id: 'c', title: 'C' }),
+    ];
+  }
+
+  function order(): string[] {
+    return store().sessions.map((session) => session.id);
+  }
+
+  it('moves a tab right, so it lands where the drop put it', () => {
+    openThree();
+    store().moveSession(0, 2);
+    expect(order()).toEqual(['b', 'c', 'a']);
+  });
+
+  it('moves a tab left', () => {
+    openThree();
+    store().moveSession(2, 0);
+    expect(order()).toEqual(['c', 'a', 'b']);
+  });
+
+  it('keeps the active tab active, wherever it ends up', () => {
+    openThree();
+    store().setActiveSession('a');
+    store().moveSession(0, 2);
+    expect(store().activeSessionId).toBe('a');
+  });
+
+  it('changes nothing for a move to the same place or off the ends', () => {
+    openThree();
+    const before = store().sessions;
+    store().moveSession(1, 1);
+    store().moveSession(-1, 1);
+    store().moveSession(1, 3);
+    store().moveSession(5, 0);
+    expect(store().sessions).toBe(before);
+  });
+
+  it('saves the new order for the next start', () => {
+    openThree();
+    store().moveSession(2, 0);
+    const saved = JSON.parse(localStorage.getItem('agentmate-terminal-sessions') ?? '{}');
+    expect(saved.state.sessions.map((session: { id: string }) => session.id)).toEqual([
+      'c',
+      'a',
+      'b',
+    ]);
+  });
+});
+
 describe('coming back from a saved drawer', () => {
   function seed(state: Record<string, unknown>): void {
     localStorage.setItem('agentmate-terminal-sessions', JSON.stringify({ state, version: 0 }));

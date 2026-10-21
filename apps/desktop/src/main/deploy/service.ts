@@ -231,7 +231,11 @@ export class DeployService {
     this.refuseDevHost(serverId);
     const server = await this.saved(serverId);
     const [report, available] = await Promise.all([
-      this.withLease(serverId, (lease) => runPreflight(lease.connection)),
+      this.withLease(serverId, (lease) =>
+        runPreflight(lease.connection, {
+          remote: (rid) => this.deps.releases.remote?.(rid) ?? null,
+        }),
+      ),
       this.deps.availableVersion(),
     ]);
     return {
@@ -246,6 +250,7 @@ export class DeployService {
       transport: report.streamLocal === 'prohibited' ? 'bridge' : 'streamlocal',
       selinux: report.selinux,
       freeDiskMb: report.freeDiskMb,
+      serverDownload: report.serverDownload !== null,
       installed: report.installed ? { version: report.installed.version } : null,
       available,
       problems: available

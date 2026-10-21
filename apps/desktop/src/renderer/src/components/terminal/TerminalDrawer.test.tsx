@@ -147,6 +147,26 @@ describe('TerminalDrawer shell', () => {
     expect(screen.getAllByTestId('terminal-pane')).toHaveLength(2);
   });
 
+  it('moves the tabs without moving the terminals behind them', () => {
+    renderDrawer();
+    const tabNames = (): (string | null)[] =>
+      screen.getAllByRole('tab').map((tab) => tab.textContent);
+    const panes = screen.getAllByTestId('terminal-pane');
+    expect(tabNames()).toEqual(['PowerShell', 'Command Prompt']);
+
+    act(() => useTerminalStore.getState().moveSession(0, 1));
+
+    expect(tabNames()).toEqual(['Command Prompt', 'PowerShell']);
+    // Taking a terminal out of the page and putting it back costs it its scroll position and its
+    // keyboard focus, and the panes sit on top of each other, so their order is never seen.
+    const after = screen.getAllByTestId('terminal-pane');
+    expect(after).toHaveLength(2);
+    after.forEach((pane, index) => {
+      expect(pane).toBe(panes[index]);
+    });
+    expect(after.map((pane) => pane.textContent)).toEqual(['s1', 's2']);
+  });
+
   it('treats closing a run tab as stopping the run, and offers its Docker containers', async () => {
     const runningForProject = vi.fn(async () => []);
     installAgentmatBridge({ 'docker.runningForProject': runningForProject });

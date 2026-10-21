@@ -13,6 +13,13 @@ import {
   type ReleaseRid,
   releaseRidFor,
 } from './osSupport';
+import type { RemoteRelease } from './releaseSource';
+import {
+  type DownloadTool,
+  parseProbe,
+  probeCommand,
+  RELEASE_PROBE_TIMEOUT_MS,
+} from './serverDownload';
 
 /**
  * A read-only look at a server before installing the core: everything here runs as the login
@@ -36,8 +43,24 @@ export interface PreflightReport {
   streamLocal: 'allowed' | 'prohibited';
   installed: { version: string; release: string } | null;
   selinux: 'enforcing' | 'permissive' | 'disabled' | 'absent';
+  /**
+   * The tool the server can download the core with, when it reached the release itself. Null when
+   * it has neither curl nor wget, cannot reach GitHub, or no release address was asked about; the
+   * app then sends the core over SSH.
+   */
+  serverDownload: DownloadTool | null;
   /** What stands in the way of an install; empty when it can go ahead. */
   problems: string[];
+}
+
+export interface PreflightOptions {
+  probeTimeoutMs?: number;
+  /**
+   * Where the server could download the release for its processor. Given, the check also tries
+   * that address from the server; left out, it does not, which keeps the check quick for callers
+   * that never install.
+   */
+  remote?: (rid: ReleaseRid) => Pick<RemoteRelease, 'url'> | null;
 }
 
 const MIN_FREE_MB = 300;
@@ -61,7 +84,7 @@ export type PreflightConnection = Pick<SshConnection, 'exec' | 'endpoint' | 'ope
  */
 export async function runPreflight(
   connection: PreflightConnection,
-  options: { probeTimeoutMs?: number } = {},
+  options: PreflightOptions = {},
 ): Promise<PreflightReport> {
   const timeoutMs = options.probeTimeoutMs ?? PROBE_TIMEOUT_MS;
   const { host } = connection.endpoint;
@@ -146,6 +169,19 @@ export async function runPreflight(
     if (error instanceof TunnelRefusedError && error.prohibited) streamLocal = 'prohibited';
   }
 
+  // Last, and only for a server that could take the core at all: a server that cannot reach
+  // GitHub answers this probe slowly, and an unsupported one has no use for the answer.
+  let serverDownload: DownloadTool | null = null;
+  const remote = rid && problems.length === 0 ? options.remote?.(rid) : null;
+  if (remote) {
+    // Not `run`: no answer, or an unreachable release, only means the app sends the core itself.
+    const probe = await connection.exec(probeCommand(remote.url), {
+      timeoutMs: options.probeTimeoutMs ?? RELEASE_PROBE_TIMEOUT_MS,
+      maxOutputBytes: 1_024,
+    });
+    if (!probe.timedOut) serverDownload = parseProbe(probe.stdout);
+  }
+
   return {
     os,
     architecture: { machine, rid },
@@ -156,6 +192,7 @@ export async function runPreflight(
     streamLocal,
     installed,
     selinux,
+    serverDownload,
     problems,
   };
 }

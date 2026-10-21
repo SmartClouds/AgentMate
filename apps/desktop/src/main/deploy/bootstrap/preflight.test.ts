@@ -11,7 +11,7 @@ import {
   type FakeSshServer,
   startFakeSshServer,
 } from '../../ssh/testing/fakeSshServer';
-import { type PreflightConnection, runPreflight } from './preflight';
+import { type PreflightConnection, type PreflightOptions, runPreflight } from './preflight';
 
 /**
  * Before anything runs as root, the installer looks at the server as the login user and says in
@@ -31,6 +31,8 @@ interface Machine {
   installed: { release: string; version: string } | null;
   selinux: string | null;
   streamLocal: boolean;
+  /** What the probe of the release address prints: the tool that got an answer, or nothing. */
+  releaseProbe: 'curl' | 'wget' | 'none';
 }
 
 const typical: Machine = {
@@ -43,7 +45,11 @@ const typical: Machine = {
   installed: null,
   selinux: null,
   streamLocal: true,
+  releaseProbe: 'curl',
 };
+
+const RELEASE_URL =
+  'https://github.com/SmartClouds/AgentMate/releases/download/v1.53.0/agentmate-core-1.53.0-linux-x64.tar.gz';
 
 function answer(machine: Machine, { command }: ExecRequest): ExecReply {
   if (command === 'cat /etc/os-release') return { stdout: machine.osRelease };
@@ -66,6 +72,9 @@ function answer(machine: Machine, { command }: ExecRequest): ExecReply {
       : { exitCode: 127 };
   }
   if (command.includes('getenforce')) return { stdout: `${machine.selinux ?? 'absent'}\n` };
+  if (command.includes('/releases/download/')) {
+    return { stdout: machine.releaseProbe === 'none' ? '' : `${machine.releaseProbe}\n` };
+  }
   return { exitCode: 127, stderr: `unexpected: ${command}` };
 }
 
@@ -79,12 +88,18 @@ afterEach(async () => {
   server = null;
 });
 
-async function preflight(overrides: Partial<Machine> = {}) {
+const asked: string[] = [];
+
+async function preflight(overrides: Partial<Machine> = {}, options: PreflightOptions = {}) {
   const machine = { ...typical, ...overrides };
+  asked.length = 0;
   server = await startFakeSshServer({
     username: 'deployer',
     password: 'pw',
-    exec: (request) => answer(machine, request),
+    exec: (request) => {
+      asked.push(request.command);
+      return answer(machine, request);
+    },
     forwarding: machine.streamLocal ? 'allowed' : 'prohibited',
     // The probe targets a socket nobody listens on, so an allowed tunnel still fails to connect.
     forward: () => null,
@@ -96,7 +111,7 @@ async function preflight(overrides: Partial<Machine> = {}) {
     authMethod: 'password',
     password: 'pw',
   });
-  return runPreflight(connection);
+  return runPreflight(connection, options);
 }
 
 describe('runPreflight', () => {
@@ -140,6 +155,54 @@ describe('runPreflight', () => {
 
     expect(report.selinux).toBe('enforcing');
     expect(report.sudo).toBe('root');
+  });
+
+  describe('whether the server can fetch the core itself', () => {
+    const remote: PreflightOptions['remote'] = (rid) => ({
+      url: RELEASE_URL.replace('linux-x64', rid),
+    });
+    const probed = () => asked.filter((command) => command.includes('/releases/download/'));
+
+    it('asks about the release for the server processor, and learns the tool that works', async () => {
+      const report = await preflight({ releaseProbe: 'curl' }, { remote });
+
+      expect(report.serverDownload).toBe('curl');
+      expect(probed()).toHaveLength(1);
+      expect(probed()[0]).toContain(RELEASE_URL);
+    });
+
+    it('learns wget when that is the one that works', async () => {
+      expect((await preflight({ releaseProbe: 'wget' }, { remote })).serverDownload).toBe('wget');
+    });
+
+    it('is fine with a server that cannot fetch it, and says so', async () => {
+      const report = await preflight({ releaseProbe: 'none' }, { remote });
+
+      expect(report.serverDownload).toBeNull();
+      expect(report.problems).toEqual([]);
+    });
+
+    it('asks nothing of GitHub unless the caller has a release address', async () => {
+      const report = await preflight({ releaseProbe: 'curl' });
+
+      expect(report.serverDownload).toBeNull();
+      expect(probed()).toEqual([]);
+    });
+
+    it('asks nothing of GitHub when the source has no build for this processor', async () => {
+      const report = await preflight({ releaseProbe: 'curl' }, { remote: () => null });
+
+      expect(report.serverDownload).toBeNull();
+      expect(probed()).toEqual([]);
+    });
+
+    it('does not wait on GitHub for a server that cannot take the core anyway', async () => {
+      const report = await preflight({ releaseProbe: 'curl', systemd: false }, { remote });
+
+      expect(report.problems.join('\n')).toMatch(/systemd/);
+      expect(report.serverDownload).toBeNull();
+      expect(probed()).toEqual([]);
+    });
   });
 
   it.each([
@@ -213,6 +276,16 @@ describe('runPreflight against a server that stops answering', () => {
     const { connection } = connectionWhere((command) => command === 'sudo -k -n true');
 
     await expect(runPreflight(connection)).rejects.toBeInstanceOf(CommandTimeoutError);
+  });
+
+  it('takes a silent probe of the release as a server that cannot fetch it', async () => {
+    // GitHub being slow or filtered is the app's cue to send the core itself, not a failed check.
+    const { connection } = connectionWhere((command) => command.includes('/releases/download/'));
+
+    const report = await runPreflight(connection, { remote: () => ({ url: RELEASE_URL }) });
+
+    expect(report.serverDownload).toBeNull();
+    expect(report.problems).toEqual([]);
   });
 
   it('still treats a core that hangs on its version as a broken install', async () => {

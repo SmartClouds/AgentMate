@@ -9,6 +9,9 @@ import type { ReleaseRid } from './osSupport';
  * release asset for their own version; development builds use `pnpm server-core:publish`
  * output. Either way the file must match the SHA-256 in the release manifest, and the installer
  * checks it again on the server before unpacking it.
+ *
+ * A packaged build can also name the release's public address (`remote`), so a server that can
+ * reach GitHub downloads the core itself and this app downloads and uploads nothing.
  */
 
 export interface ReleaseAsset {
@@ -32,8 +35,22 @@ export interface CoreRelease {
   localPath: string;
 }
 
+/** A release the server could download itself, with the checksum the app already holds for it. */
+export interface RemoteRelease {
+  version: string;
+  rid: ReleaseRid;
+  file: string;
+  sha256: string;
+  url: string;
+}
+
 export interface ReleaseSource {
   release: (rid: ReleaseRid) => Promise<CoreRelease>;
+  /**
+   * Where a server could fetch this release itself, without this app downloading it first. Left
+   * out by sources with no public address (development builds), which always upload.
+   */
+  remote?: (rid: ReleaseRid) => RemoteRelease | null;
 }
 
 export type Downloader = (url: string, destination: string) => Promise<void>;
@@ -138,6 +155,17 @@ export function githubReleaseSource(
 ): ReleaseSource {
   const manifest = parseReleaseManifest(manifestValue);
   return {
+    remote: (rid) => {
+      const asset = manifest.assets.find((candidate) => candidate.rid === rid);
+      if (!asset) return null;
+      return {
+        version: manifest.version,
+        rid,
+        file: asset.file,
+        sha256: asset.sha256,
+        url: releaseDownloadUrl(manifest.version, asset.file),
+      };
+    },
     release: async (rid) => {
       const asset = assetFor(manifest, rid, 'in this app build');
       await mkdir(cacheDirectory, { recursive: true });

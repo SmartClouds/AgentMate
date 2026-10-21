@@ -26,18 +26,36 @@ const SHA = 'ab'.repeat(32);
 const STAGING = '/tmp/agentmate.Test123456';
 const PREVIOUS = '/opt/agentmate-core/releases/1.52.0-cdcdcdcdcdcd';
 
-function releaseSource(version = '1.53.0'): ReleaseSource {
+/**
+ * A source like the packaged build's, whose servers may fetch the release themselves (`remote`),
+ * or like a development build's, which only has a local copy to upload.
+ */
+function releaseSource(
+  version = '1.53.0',
+  { remote = false, releaseError }: { remote?: boolean; releaseError?: Error } = {},
+) {
   const localPath = join(tempDir(), `agentmate-core-${version}-linux-x64.tar.gz`);
   writeFileSync(localPath, 'tarball bytes');
-  return {
-    release: async (rid): Promise<CoreRelease> => ({
-      version,
-      rid,
-      file: `agentmate-core-${version}-${rid}.tar.gz`,
-      sha256: SHA,
-      localPath,
-    }),
+  const file = (rid: string) => `agentmate-core-${version}-${rid}.tar.gz`;
+  const release = vi.fn(async (rid: CoreRelease['rid']): Promise<CoreRelease> => {
+    if (releaseError) throw releaseError;
+    return { version, rid, file: file(rid), sha256: SHA, localPath };
+  });
+  const source: ReleaseSource = {
+    release,
+    ...(remote
+      ? {
+          remote: (rid) => ({
+            version,
+            rid,
+            file: file(rid),
+            sha256: SHA,
+            url: `https://github.com/SmartClouds/AgentMate/releases/download/v${version}/${file(rid)}`,
+          }),
+        }
+      : {}),
   };
+  return { source, release };
 }
 
 interface SetupOptions {
@@ -45,6 +63,10 @@ interface SetupOptions {
   healthError?: Error;
   /** Only these transports reach the core; the others fail the way a refused tunnel does. */
   reachableBy?: CoreTransportKind[];
+  /** The release source names a public address, as a packaged build's does. */
+  remote?: boolean;
+  /** The app cannot get its own copy of the release. */
+  releaseError?: Error;
 }
 
 function setup(machine: Partial<ScriptedMachine> = {}, options: SetupOptions = {}) {
@@ -67,12 +89,14 @@ function setup(machine: Partial<ScriptedMachine> = {}, options: SetupOptions = {
       };
     },
   );
-  const deps: InstallerDeps = { connect, releases: releaseSource(), health };
+  const { source, release } = releaseSource('1.53.0', options);
+  const deps: InstallerDeps = { connect, releases: source, health };
   const progress: InstallProgress[] = [];
   return {
     server,
     connect,
     health,
+    release,
     progress,
     install: (sudoPassword: string | null = null) =>
       installCore(deps, {
@@ -349,6 +373,219 @@ describe('installCore', () => {
 
     await expect(install('deployer-pw')).rejects.toThrow(/disk full/);
     expect(progress.at(-1)).toMatchObject({ phase: 'extract', status: 'failed' });
+  });
+});
+
+/**
+ * A server that can reach GitHub fetches the core itself, so the app downloads and uploads
+ * nothing. The login user does it into the staging folder, and the root step checks the
+ * checksum again either way. If the server's download fails on the day, the app does what it
+ * always did.
+ */
+describe('installCore, when the server can fetch the core itself', () => {
+  const doneIn = (progress: InstallProgress[]) =>
+    progress.filter((event) => event.status === 'done').map((event) => event.phase);
+
+  it('has the server download it, and the app downloads and uploads nothing', async () => {
+    const { server, release, progress, install } = setup(
+      { serverDownload: 'curl' },
+      { remote: true },
+    );
+
+    const result = await install('deployer-pw');
+
+    expect(result.version).toBe('1.53.0');
+    expect(server.uploads).toEqual([]);
+    expect(release).not.toHaveBeenCalled();
+    expect(server.downloads).toHaveLength(1);
+    expect(server.downloads[0]).toContain('curl');
+    expect(server.downloads[0]).toContain(
+      `https://github.com/SmartClouds/AgentMate/releases/download/v1.53.0/agentmate-core-1.53.0-linux-x64.tar.gz`,
+    );
+    expect(server.downloads[0]).toContain(`${STAGING}/agentmate-core-1.53.0-linux-x64.tar.gz`);
+    expect(doneIn(progress)).toEqual([
+      'preflight',
+      'fetch',
+      'verify',
+      'group',
+      'extract',
+      'unit',
+      'switch',
+      'start',
+      'cleanup',
+      'health',
+    ]);
+    expect(progress.some((event) => event.phase === 'download' || event.phase === 'upload')).toBe(
+      false,
+    );
+  });
+
+  it('checks the download again as root, from a folder only root can write to', async () => {
+    const { server, install } = setup({ serverDownload: 'curl' }, { remote: true });
+
+    await install('deployer-pw');
+
+    const verify = server.rootCommands.find((command) => command.includes('sha256sum -c'));
+    expect(verify).toContain(`cp -- ${STAGING}/agentmate-core-1.53.0-linux-x64.tar.gz `);
+    expect(verify).toContain(SHA);
+  });
+
+  it('runs the download as the login user, never as root', async () => {
+    const { server, install } = setup({ serverDownload: 'curl' }, { remote: true });
+
+    await install('deployer-pw');
+
+    expect(server.rootCommands.some((command) => command.includes('/releases/download/'))).toBe(
+      false,
+    );
+  });
+
+  it('does the same for a root login', async () => {
+    const { server, install } = setup({ uid: 0, serverDownload: 'curl' }, { remote: true });
+
+    await install();
+
+    expect(server.downloads).toHaveLength(1);
+    expect(server.uploads).toEqual([]);
+    expect(server.rootCommands.some((command) => command.includes('/releases/download/'))).toBe(
+      false,
+    );
+  });
+
+  it('uses wget when that is what the server has', async () => {
+    const { server, install } = setup({ serverDownload: 'wget' }, { remote: true });
+
+    await install('deployer-pw');
+
+    expect(server.downloads[0]).toContain('wget');
+    expect(server.downloads[0]).not.toContain('curl');
+  });
+
+  it('removes the staging folder after the server downloaded into it', async () => {
+    const { server, install } = setup({ serverDownload: 'curl' }, { remote: true });
+
+    await install('deployer-pw');
+
+    expect(server.commands).toContain(`rm -rf ${STAGING}`);
+  });
+
+  it('has the app get and upload the core when the server could not reach GitHub', async () => {
+    const { server, release, progress, install } = setup(
+      { serverDownload: null },
+      { remote: true },
+    );
+
+    await install('deployer-pw');
+
+    expect(server.downloads).toEqual([]);
+    expect(server.uploads).toHaveLength(1);
+    expect(release).toHaveBeenCalledTimes(1);
+    expect(doneIn(progress).slice(0, 4)).toEqual(['preflight', 'download', 'upload', 'verify']);
+    expect(progress.some((event) => event.phase === 'fetch')).toBe(false);
+  });
+
+  it('does not ask the server about GitHub for a source with no public address', async () => {
+    const { server, install } = setup({ serverDownload: 'curl' });
+
+    await install('deployer-pw');
+
+    expect(server.probes).toEqual([]);
+    expect(server.downloads).toEqual([]);
+    expect(server.uploads).toHaveLength(1);
+  });
+
+  it('falls back to the upload when the server fails to download, and says why', async () => {
+    const { server, release, progress, install } = setup(
+      {
+        serverDownload: 'curl',
+        downloadFailure: { stderr: 'curl: (6) Could not resolve host: github.com\n', exitCode: 6 },
+      },
+      { remote: true },
+    );
+
+    const result = await install('deployer-pw');
+
+    expect(result.version).toBe('1.53.0');
+    expect(server.downloads).toHaveLength(1);
+    expect(server.uploads).toEqual([
+      { path: `${STAGING}/agentmate-core-1.53.0-linux-x64.tar.gz`, bytes: 13, mode: 0o600 },
+    ]);
+    expect(release).toHaveBeenCalledTimes(1);
+    const fetched = progress.find((event) => event.phase === 'fetch' && event.status === 'done');
+    expect(fetched?.detail).toMatch(/Could not resolve host: github\.com.*sends it instead/);
+    expect(doneIn(progress).slice(0, 5)).toEqual([
+      'preflight',
+      'fetch',
+      'download',
+      'upload',
+      'verify',
+    ]);
+  });
+
+  it('falls back when what the server downloaded does not match the checksum', async () => {
+    const { server, progress, install } = setup(
+      { serverDownload: 'curl', downloadFailure: { stderr: '', exitCode: CHECKSUM_MISMATCH_EXIT } },
+      { remote: true },
+    );
+
+    await install('deployer-pw');
+
+    expect(server.uploads).toHaveLength(1);
+    const fetched = progress.find((event) => event.phase === 'fetch' && event.status === 'done');
+    expect(fetched?.detail).toMatch(/does not match the published checksum/);
+  });
+
+  it('keeps one staging folder when it falls back, and removes it', async () => {
+    const { server, install } = setup(
+      { serverDownload: 'curl', downloadFailure: { stderr: 'curl: (28) timed out', exitCode: 28 } },
+      { remote: true },
+    );
+
+    const staging = vi.spyOn(server, 'createStagingDirectory');
+
+    await install('deployer-pw');
+
+    expect(staging).toHaveBeenCalledTimes(1);
+    expect(server.commands).toContain(`rm -rf ${STAGING}`);
+  });
+
+  it('stops with the app-side reason when neither the server nor the app can get the core', async () => {
+    const { progress, install } = setup(
+      { serverDownload: 'curl', downloadFailure: { stderr: 'curl: (22) 404', exitCode: 22 } },
+      { remote: true, releaseError: new Error('github.com did not answer.') },
+    );
+
+    await expect(install('deployer-pw')).rejects.toThrow(/github\.com did not answer/);
+    expect(progress.at(-1)).toMatchObject({ phase: 'download', status: 'failed' });
+  });
+
+  it('still refuses a mismatch that only the root check sees', async () => {
+    const { server, install } = setup(
+      {
+        serverDownload: 'curl',
+        failures: [{ match: 'sha256sum -c', stderr: '', exitCode: CHECKSUM_MISMATCH_EXIT }],
+      },
+      { remote: true },
+    );
+
+    await expect(install('deployer-pw')).rejects.toThrow(/does not match its published checksum/);
+    expect(ran(server, 'tar -xzf')).toBe(false);
+  });
+
+  it('goes back to the previous release the same way after a server download', async () => {
+    const { server, install } = setup(
+      {
+        serverDownload: 'curl',
+        installed: { release: PREVIOUS, version: '1.52.0' },
+        failures: [{ match: 'enable agentmate-core', stderr: 'failed' }],
+      },
+      { remote: true },
+    );
+
+    await expect(install('deployer-pw')).rejects.toThrow(/did not start.*back to 1\.52\.0/s);
+    expect(server.rootCommands.some((command) => command.startsWith(`ln -sfn ${PREVIOUS} `))).toBe(
+      true,
+    );
   });
 });
 

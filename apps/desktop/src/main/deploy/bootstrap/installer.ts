@@ -26,17 +26,20 @@ import {
   uninstallSteps,
 } from './installPlan';
 import { type PreflightConnection, runPreflight } from './preflight';
-import type { ReleaseSource } from './releaseSource';
+import type { CoreRelease, ReleaseSource, RemoteRelease } from './releaseSource';
+import { DOWNLOAD_TIMEOUT_MS, type DownloadTool, downloadCommand } from './serverDownload';
 
 /**
  * Installs or upgrades the server core on a saved server over SSH:
  *
  * 1. A read-only preflight, then root access (a sudo password is checked on its own first).
- * 2. The release for the server's processor, already checked against the app's manifest.
- * 3. An upload into a fresh folder the login user owns.
- * 4. The install plan's root steps in order. The server checks the checksum again, in a folder
+ * 2. The release lands in a fresh folder the login user owns. A server that reached GitHub in the
+ *    preflight downloads it there itself, with curl or wget, and checks its checksum. If that
+ *    fails on the day, or the server could not reach GitHub, the app gets the release for the
+ *    server's processor (already checked against its manifest) and uploads it instead.
+ * 3. The install plan's root steps in order. The server checks the checksum again, in a folder
  *    only root can write to, before anything is unpacked.
- * 5. A new login when the login is not root, since the agentmate group only applies to new
+ * 4. A new login when the login is not root, since the agentmate group only applies to new
  *    logins, and a health check through the same tunnel the app uses from then on.
  *
  * Once the server has started switching to the new release, a failure to start or to answer
@@ -87,11 +90,14 @@ const STEP_TIMEOUT_MS = 180_000;
 const STEP_OPTIONS: ExecOptions = { timeoutMs: STEP_TIMEOUT_MS, maxOutputBytes: 64 * 1024 };
 const JOURNAL_COMMAND = 'journalctl -u agentmate-core -n 30 --no-pager -o cat';
 const FAILURE_DETAIL_CHARS = 1_500;
+const DOWNLOAD_DETAIL_CHARS = 300;
+const DOWNLOAD_OPTIONS: ExecOptions = { timeoutMs: DOWNLOAD_TIMEOUT_MS, maxOutputBytes: 8 * 1024 };
 /** Once these steps begin, the server may no longer run the release it had. */
 const SWITCHING_STEPS: ReadonlySet<InstallStepId> = new Set(['unit', 'switch', 'start']);
 
 const TITLES = {
   preflight: 'Check the server',
+  fetch: 'Download the server core on the server',
   download: 'Get the server core',
   upload: 'Upload it to the server',
   health: 'Check that the core answers',
@@ -109,6 +115,14 @@ function commandFailure(result: ExecResult): string {
     return text.length > FAILURE_DETAIL_CHARS ? `...${text.slice(-FAILURE_DETAIL_CHARS)}` : text;
   }
   return result.exitCode === null ? 'the command was stopped' : `exit code ${result.exitCode}`;
+}
+
+/** Why the server's own download failed, on one line, for the step that says the app steps in. */
+function downloadFailure(result: ExecResult): string {
+  if (result.exitCode === CHECKSUM_MISMATCH_EXIT) {
+    return 'what it received does not match the published checksum';
+  }
+  return commandFailure(result).replace(/\s+/g, ' ').trim().slice(0, DOWNLOAD_DETAIL_CHARS);
 }
 
 function stepFailure(step: PlanStep, result: ExecResult, version: string): string {
@@ -160,7 +174,9 @@ export async function installCore(
 
   try {
     const { report, rid } = await phase('preflight', TITLES.preflight, async () => {
-      const found = await runPreflight(lease.connection);
+      const found = await runPreflight(lease.connection, {
+        remote: (id) => deps.releases.remote?.(id) ?? null,
+      });
       if (found.problems.length > 0 || !found.architecture.rid) {
         throw new Error(`This server cannot take the server core yet. ${found.problems.join(' ')}`);
       }
@@ -168,7 +184,15 @@ export async function installCore(
       return { report: found, rid: found.architecture.rid };
     });
 
-    const release = await phase('download', TITLES.download, () => deps.releases.release(rid));
+    // The server fetches the core itself when its preflight reached the release. Otherwise this
+    // app gets it, which is also the way back if the server's own download fails on the day.
+    const remote = report.serverDownload ? (deps.releases.remote?.(rid) ?? null) : null;
+    let local = null as CoreRelease | null;
+    const getLocal = async (): Promise<CoreRelease> => {
+      local ??= await phase('download', TITLES.download, () => deps.releases.release(rid));
+      return local;
+    };
+    const release: Pick<CoreRelease, 'version' | 'file' | 'sha256'> = remote ?? (await getLocal());
     const target = releaseDirectory(release.version, release.sha256);
     const installed = report.installed;
     // Only a release folder the installer made, and not the one being reinstalled.
@@ -212,24 +236,73 @@ export async function installCore(
     };
 
     let stagingDirectory = null as string | null;
+    const stage = async (): Promise<string> => {
+      stagingDirectory ??= await lease.connection.createStagingDirectory();
+      return stagingDirectory;
+    };
+
+    /**
+     * The server downloads the core into the staging folder and checks its checksum, as the login
+     * user. Null when it could not, which is not a failure: the step says why the app steps in.
+     */
+    const fetchOnServer = async (
+      tool: DownloadTool,
+      from: RemoteRelease,
+    ): Promise<string | null> => {
+      emit({ phase: 'fetch', title: TITLES.fetch, status: 'running' });
+      let why: string;
+      try {
+        const directory = await stage();
+        const result = await lease.connection.exec(
+          downloadCommand({
+            tool,
+            url: from.url,
+            directory,
+            file: from.file,
+            sha256: from.sha256,
+          }),
+          DOWNLOAD_OPTIONS,
+        );
+        if (succeeded(result)) {
+          emit({ phase: 'fetch', title: TITLES.fetch, status: 'done' });
+          return `${directory}/${from.file}`;
+        }
+        why = downloadFailure(result);
+      } catch (error) {
+        why = sshErrorMessage(error);
+      }
+      emit({
+        phase: 'fetch',
+        title: TITLES.fetch,
+        status: 'done',
+        detail: `The server could not download it (${why}), so this app gets it and sends it instead.`,
+      });
+      return null;
+    };
+
     const shell = await rootShell();
     try {
-      const stagingFile = await phase('upload', TITLES.upload, async () => {
-        const content = await readFile(release.localPath);
-        stagingDirectory = await lease.connection.createStagingDirectory();
-        const path = `${stagingDirectory}/${release.file}`;
-        let reported = -1;
-        await lease.connection.upload(content, path, {
-          mode: 0o600,
-          onProgress: (sent, total) => {
-            const percent = total > 0 ? Math.floor((sent / total) * 100) : 100;
-            if (percent === reported) return;
-            reported = percent;
-            emit({ phase: 'upload', title: TITLES.upload, status: 'running', percent });
-          },
+      let stagingFile =
+        remote && report.serverDownload ? await fetchOnServer(report.serverDownload, remote) : null;
+
+      if (stagingFile === null) {
+        const source = await getLocal();
+        stagingFile = await phase('upload', TITLES.upload, async () => {
+          const content = await readFile(source.localPath);
+          const path = `${await stage()}/${release.file}`;
+          let reported = -1;
+          await lease.connection.upload(content, path, {
+            mode: 0o600,
+            onProgress: (sent, total) => {
+              const percent = total > 0 ? Math.floor((sent / total) * 100) : 100;
+              if (percent === reported) return;
+              reported = percent;
+              emit({ phase: 'upload', title: TITLES.upload, status: 'running', percent });
+            },
+          });
+          return path;
         });
-        return path;
-      });
+      }
 
       const steps = installSteps({
         version: release.version,

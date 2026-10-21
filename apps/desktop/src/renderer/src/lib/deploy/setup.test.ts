@@ -33,6 +33,21 @@ describe('installPhases', () => {
     ]);
   });
 
+  it('has a server that reaches GitHub download the core itself, with no upload', () => {
+    const phases = installPhases({ ...PREFLIGHT, serverDownload: true });
+
+    expect(phases.slice(0, 3)).toEqual(['preflight', 'fetch', 'verify']);
+    expect(phases).not.toContain('download');
+    expect(phases).not.toContain('upload');
+  });
+
+  it('has the app get the core and upload it when the server cannot reach GitHub', () => {
+    const phases = installPhases({ ...PREFLIGHT, serverDownload: false });
+
+    expect(phases.slice(0, 4)).toEqual(['preflight', 'download', 'upload', 'verify']);
+    expect(phases).not.toContain('fetch');
+  });
+
   it('adds SELinux labels where SELinux is on', () => {
     expect(installPhases({ ...PREFLIGHT, selinux: 'enforcing' })).toContain('selinux');
     expect(installPhases({ ...PREFLIGHT, selinux: 'permissive' })).toContain('selinux');
@@ -99,6 +114,32 @@ describe('timeline', () => {
       'health',
     ]);
     expect(steps[2]).toMatchObject({ status: 'done', label: SETUP_LABELS.rollback });
+  });
+
+  it("adds the app's download and upload where they happen when the server could not fetch it", () => {
+    const steps = timeline(
+      ['preflight', 'fetch', 'verify'],
+      [
+        event('preflight', 'done'),
+        event('fetch', 'running'),
+        event('fetch', 'done', { detail: 'The server could not download it (...), so ...' }),
+        event('download', 'running'),
+        event('download', 'done'),
+        event('upload', 'running', { percent: 50 }),
+        event('upload', 'done'),
+        event('verify', 'running'),
+      ],
+    );
+
+    expect(steps.map((step) => step.phase)).toEqual([
+      'preflight',
+      'fetch',
+      'download',
+      'upload',
+      'verify',
+    ]);
+    expect(steps[1]).toMatchObject({ status: 'done', detail: expect.stringMatching(/could not/) });
+    expect(steps.map((step) => step.status)).toEqual(['done', 'done', 'done', 'done', 'running']);
   });
 });
 

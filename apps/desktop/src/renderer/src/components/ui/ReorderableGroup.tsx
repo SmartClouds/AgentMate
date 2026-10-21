@@ -7,6 +7,11 @@ export interface ReorderMotion {
   itemProps: { 'data-reorder-id': string; style?: React.CSSProperties };
   /** True for the item under the pointer, so the caller can lift it and stop its own transitions. */
   dragging: boolean;
+  /**
+   * True once the pointer has really moved. A plain press is `dragging` too, so an item that
+   * should only look lifted when it is being moved, such as a tab you also click, reads this.
+   */
+  lifted: boolean;
   /** Goes on the grip's `onPointerDown`. The grip is the only thing that starts a drag. */
   onGripPointerDown: (event: React.PointerEvent<HTMLElement>) => void;
 }
@@ -107,10 +112,26 @@ function swallowClickAfterDrag(): void {
 }
 
 /**
+ * Whether the items all sit on one line, like the tabs of a strip. Their widths can differ there,
+ * so an item can't take the place of its neighbor: it has to make way by the dragged item's width.
+ */
+function inOneRow(boxes: Box[]): boolean {
+  return boxes.length > 1 && boxes.every((box) => box.top === boxes[0].top);
+}
+
+/**
  * How far an item that isn't being dragged moves. The items between the dragged item's start and
  * its target each step one place toward the gap it leaves. In a grid that step can cross a row.
  */
 function shiftFor({ from, to, boxes }: Drag, index: number): Point {
+  if (inOneRow(boxes)) {
+    // Left to right. The gap is the space between two neighbors, taken from the first pair.
+    const gap = boxes[1].left - boxes[0].left - boxes[0].width;
+    const room = boxes[from].width + gap;
+    if (from < to && index > from && index <= to) return { x: -room, y: 0 };
+    if (to < from && index >= to && index < from) return { x: room, y: 0 };
+    return { x: 0, y: 0 };
+  }
   if (from < to && index > from && index <= to) return between(boxes[index - 1], boxes[index]);
   if (to < from && index >= to && index < from) return between(boxes[index + 1], boxes[index]);
   return { x: 0, y: 0 };
@@ -303,6 +324,7 @@ export function ReorderableGroup<T>({
                 : undefined,
           },
           dragging,
+          lifted: Boolean(dragging && drag?.travelled),
           onGripPointerDown: (event) => begin(event, index),
         };
         return <Fragment key={id}>{renderItem(item, motion, index)}</Fragment>;

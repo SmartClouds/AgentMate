@@ -76,6 +76,20 @@ function releases(): ReleaseSource {
   };
 }
 
+/** Like a packaged build's source, whose release servers may download themselves. */
+function publicReleases(): ReleaseSource {
+  return {
+    ...releases(),
+    remote: (rid) => ({
+      version: '1.53.0',
+      rid,
+      file: `agentmate-core-1.53.0-${rid}.tar.gz`,
+      sha256: SHA,
+      url: `https://github.com/SmartClouds/AgentMate/releases/download/v1.53.0/agentmate-core-1.53.0-${rid}.tar.gz`,
+    }),
+  };
+}
+
 function setup(machine: Partial<ScriptedMachine> = {}, overrides: Partial<DeployServiceDeps> = {}) {
   const server = new ScriptedConnection(scriptedMachine(machine));
   const released = vi.fn();
@@ -179,11 +193,24 @@ describe('DeployService.preflight', () => {
       transport: 'bridge',
       selinux: 'absent',
       freeDiskMb: 19531,
+      serverDownload: false,
       installed: null,
       available: '1.53.0',
       problems: [],
     });
     expect(released).toHaveBeenCalled();
+  });
+
+  it('says the server fetches the core itself when it reaches the release', async () => {
+    const { service } = setup({ serverDownload: 'wget' }, { releases: publicReleases() });
+
+    expect((await service.preflight('srv-1')).serverDownload).toBe(true);
+  });
+
+  it('says the app sends the core when the server cannot reach the release', async () => {
+    const { service } = setup({ serverDownload: null }, { releases: publicReleases() });
+
+    expect((await service.preflight('srv-1')).serverDownload).toBe(false);
   });
 
   it('knows a key login has no password to try for sudo', async () => {

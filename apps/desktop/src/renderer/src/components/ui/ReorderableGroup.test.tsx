@@ -42,9 +42,23 @@ function gridCells(count: number, columns: number): Box[] {
   }));
 }
 
+/** A strip of tabs: one line, `gap` apart, each as wide as its own width. */
+function stripCells(widths: number[], gap: number): Box[] {
+  let left = 0;
+  return widths.map((width) => {
+    const box = { left, top: 0, width, height: 28 };
+    left += width + gap;
+    return box;
+  });
+}
+
 function Row({ item, motion }: { item: Item; motion: ReorderMotion }): React.JSX.Element {
   return (
-    <div {...motion.itemProps} data-dragging={String(motion.dragging)}>
+    <div
+      {...motion.itemProps}
+      data-dragging={String(motion.dragging)}
+      data-lifted={String(motion.lifted)}
+    >
       <span data-testid={`grip-${item.id}`} onPointerDown={motion.onGripPointerDown} />
       {item.name}
     </div>
@@ -368,6 +382,64 @@ describe('ReorderableGroup', () => {
     release('a');
     expect(onMove).toHaveBeenCalledWith(0, 1);
     expect(orderOf(container)).toEqual(['b', 'a', 'c', 'd']);
+  });
+
+  describe('a single line of items with different widths', () => {
+    // Alpha 100 wide, Bravo 60, Charlie 80, with 2px between them.
+    const boxes = stripCells([100, 60, 80], 2);
+
+    it('makes way by the width of the item held, not by the width of its neighbor', () => {
+      const { container, onMove } = setup({ boxes });
+      press('a', 0, 0);
+      moveTo('a', 80, 0);
+
+      // Alpha's middle is now at 130, nearest Bravo's. Bravo steps left by Alpha's 100 and the gap,
+      // not by its own 60, which is what leaves the strip packed once Alpha lands.
+      expect(itemFor(container, 'a').style.transform).toBe('translate(80px, 0px)');
+      expect(itemFor(container, 'b').style.transform).toBe('translate(-102px, 0px)');
+      expect(itemFor(container, 'c').style.transform).toBe('');
+
+      // Far past the end, the item stops at the last tab's edge, and both tabs have made way.
+      moveTo('a', 400, 0);
+      expect(itemFor(container, 'a').style.transform).toBe('translate(144px, 0px)');
+      expect(itemFor(container, 'b').style.transform).toBe('translate(-102px, 0px)');
+      expect(itemFor(container, 'c').style.transform).toBe('translate(-102px, 0px)');
+
+      release('a');
+      expect(onMove).toHaveBeenCalledWith(0, 2);
+      expect(orderOf(container)).toEqual(['b', 'c', 'a']);
+    });
+
+    it('makes way to the right when an item is dragged left', () => {
+      const { container, onMove } = setup({ boxes });
+      press('c', 0, 0);
+      moveTo('c', -400, 0);
+
+      // Charlie is 80 wide, so Alpha and Bravo each step right by 80 and the gap.
+      expect(itemFor(container, 'a').style.transform).toBe('translate(82px, 0px)');
+      expect(itemFor(container, 'b').style.transform).toBe('translate(82px, 0px)');
+
+      release('c');
+      expect(onMove).toHaveBeenCalledWith(2, 0);
+      expect(orderOf(container)).toEqual(['c', 'a', 'b']);
+    });
+
+    it('does not lift an item for a press that never moved', () => {
+      const { container } = setup({ boxes });
+      press('b', 0, 0);
+      expect(itemFor(container, 'b').dataset.dragging).toBe('true');
+      expect(itemFor(container, 'b').dataset.lifted).toBe('false');
+
+      moveTo('b', 1, 1);
+      expect(itemFor(container, 'b').dataset.lifted).toBe('false');
+
+      moveTo('b', 20, 0);
+      expect(itemFor(container, 'b').dataset.lifted).toBe('true');
+      expect(itemFor(container, 'a').dataset.lifted).toBe('false');
+
+      release('b');
+      expect(itemFor(container, 'b').dataset.lifted).toBe('false');
+    });
   });
 
   it('moves down into the next grid row and shifts the cards in both directions', () => {

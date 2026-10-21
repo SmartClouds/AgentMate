@@ -20,6 +20,7 @@ const READY: DeployPreflight = {
   transport: 'streamlocal',
   selinux: 'absent',
   freeDiskMb: 20_480,
+  serverDownload: false,
   installed: null,
   available: '1.53.0',
   problems: [],
@@ -69,6 +70,24 @@ describe('PreflightChecklist', () => {
     }
     expect(row('Operating system').textContent).toContain('Unknown');
     expect(row('Root access').textContent).toContain('sudo is not installed');
+  });
+
+  it('says who fetches the core: the server when it reaches GitHub, the app otherwise', () => {
+    const { rerender } = render(
+      <PreflightChecklist preflight={{ ...READY, serverDownload: true }} />,
+    );
+    expect(row('Getting the core').textContent).toContain('The server downloads it from GitHub');
+    expect(row('Getting the core').textContent).toContain('ready');
+
+    rerender(<PreflightChecklist preflight={READY} />);
+    expect(row('Getting the core').textContent).toContain('This app sends it over SSH');
+    expect(row('Getting the core').textContent).toContain('note');
+  });
+
+  it('does not say how the core gets there while something else blocks the install', () => {
+    render(<PreflightChecklist preflight={{ ...READY, problems: ['No systemd.'] }} />);
+
+    expect(screen.queryByText('Getting the core', { selector: 'dt' })).toBeNull();
   });
 
   it('describes each way of getting root', () => {

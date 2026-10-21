@@ -63,6 +63,16 @@ function rows(preflight: DeployPreflight): Row[] {
     },
     { label: 'Root access', ...sudoValue(preflight) },
   ];
+  // The server is only asked about GitHub once nothing else stands in the way.
+  if (preflight.problems.length === 0) {
+    list.push({
+      label: 'Getting the core',
+      value: preflight.serverDownload
+        ? 'The server downloads it from GitHub'
+        : 'This app sends it over SSH',
+      verdict: preflight.serverDownload ? 'ok' : 'note',
+    });
+  }
   // Only certain when sshd said no outright; otherwise the install finds out by trying.
   if (preflight.transport === 'bridge') {
     list.push({
