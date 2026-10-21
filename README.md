@@ -51,11 +51,11 @@
   </tr>
   <tr>
     <td width="50%"><img src=".github/assets/screenshot-dashboard.png" alt="Dashboard" /></td>
-    <td width="50%"><img src=".github/assets/screenshot-themes.png" alt="The same workspace in VS 2026, VS Code Dark, Dark and Light" /></td>
+    <td width="50%"><img src=".github/assets/screenshot-themes.png" alt="The same workspace in Dark, VS 2026, VS Code Dark and Light" /></td>
   </tr>
   <tr>
     <td align="center"><em>Dashboard: system health, network, and token usage at a glance</em></td>
-    <td align="center"><em>Themes: VS 2026, VS Code Dark, Dark, and Light</em></td>
+    <td align="center"><em>Themes: Dark (the default, green), VS 2026, VS Code Dark, and Light</em></td>
   </tr>
   <tr>
     <td colspan="2" align="center"><img src=".github/assets/screenshot-pet.png" alt="AI Pet token report" /></td>
@@ -65,7 +65,7 @@
   </tr>
 </table>
 
-Every screenshot uses demo data (a made-up shop called Northwind), taken in the VS 2026 theme unless it says otherwise. The Deploy screenshot shows the DevHost described under [Deploy](#deploy), not a real server.
+Every screenshot uses demo data (a made-up shop called Northwind), taken in the default Dark theme unless it says otherwise. The Deploy screenshot shows the DevHost described under [Deploy](#deploy), not a real server.
 
 ## Why "ADE"
 
