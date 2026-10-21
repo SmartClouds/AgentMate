@@ -120,6 +120,19 @@ describe('RelayBoardHost', () => {
     expect(within(column('Blocked')).queryAllByRole('article')).toEqual([]);
   });
 
+  it('catches up with the code, from the toolbar and from an empty board', async () => {
+    const { user } = open({ 'relay.board': board({ tasks: [] }) });
+    await user.click(await screen.findByRole('button', { name: 'Plan the rest with AI' }));
+    expect(
+      await screen.findByRole('heading', { name: 'Pick up a project in progress' }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(screen.getByRole('button', { name: 'Catch up' }));
+    expect(
+      await screen.findByRole('heading', { name: 'Pick up a project in progress' }),
+    ).toBeInTheDocument();
+  });
+
   it('closes on Escape', async () => {
     const { user } = open();
     await screen.findByRole('dialog', { name: 'CuraLink' });

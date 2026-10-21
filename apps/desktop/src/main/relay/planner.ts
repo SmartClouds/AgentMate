@@ -1,4 +1,5 @@
 import {
+  buildCatchUpRequest,
   buildDecomposeRequest,
   buildReviseRequest,
   diffProposal,
@@ -8,6 +9,7 @@ import {
   runArgsFor,
 } from '@agentmat/core';
 import type {
+  RelayCatchUpInput,
   RelayDecomposeInput,
   RelayPlannerInput,
   RelayPlannerResult,
@@ -26,6 +28,8 @@ import { readBoardFiles, relayFolder } from './taskFiles';
 
 /** Reading a repository and its docs before answering can take a while on a high effort. */
 export const PLANNER_TIMEOUT_MS = 10 * 60_000;
+/** Catching up reads the whole project and its history, not just the docs. */
+export const CATCH_UP_TIMEOUT_MS = 20 * 60_000;
 
 async function context(projectId: string) {
   const project = await findProjectScope(projectId);
@@ -41,6 +45,7 @@ async function plan(
   prompt: string,
   board: Awaited<ReturnType<typeof readBoardFiles>>,
   cwd: string,
+  timeoutMs = PLANNER_TIMEOUT_MS,
 ): Promise<RelayPlannerResult> {
   const cliId = input.cliId ?? null;
   // The planner picker sends the run profile's model id, the same as Build Prompt's run choice.
@@ -50,7 +55,7 @@ async function plan(
     preferredCliId: cliId,
     strictCli: Boolean(cliId),
     runArgs,
-    timeoutMs: PLANNER_TIMEOUT_MS,
+    timeoutMs,
   });
   if (!result.ok) {
     return {
@@ -69,6 +74,16 @@ async function plan(
     entries: diffProposal(board.files, parsed.proposal),
     cliName: result.cliName,
   };
+}
+
+function boardTasks(board: Awaited<ReturnType<typeof readBoardFiles>>) {
+  return board.files.map((file) => ({
+    id: file.task.id,
+    title: file.task.title,
+    status: file.task.status,
+    depends: file.task.depends,
+    estimate: file.task.estimate,
+  }));
 }
 
 /** Breaks a request into context-sized tasks that continue the board's numbering. */
@@ -97,16 +112,25 @@ export async function reviseBoard(input: RelayReviseInput): Promise<RelayPlanner
     docsFolder: settings.docsFolder,
     budget: input.budget ?? settings.options.defaultBudget,
     firstId: nextTaskId(board.files.map((file) => file.task.id)),
-    tasks: board.files.map((file) => ({
-      id: file.task.id,
-      title: file.task.title,
-      status: file.task.status,
-      depends: file.task.depends,
-      estimate: file.task.estimate,
-    })),
+    tasks: boardTasks(board),
     note: input.note,
   });
   return plan(input, prompt, board, project.folderPath);
+}
+
+/** Works out where a project already under way stands and plans what is left. */
+export async function catchUpBoard(input: RelayCatchUpInput): Promise<RelayPlannerResult> {
+  const { project, settings, board } = await context(input.projectId);
+  const prompt = buildCatchUpRequest({
+    projectName: project.name,
+    docsFolder: settings.docsFolder,
+    budget: input.budget ?? settings.options.defaultBudget,
+    firstId: nextTaskId(board.files.map((file) => file.task.id)),
+    tasks: boardTasks(board),
+    recordDone: input.recordDone,
+    note: input.note,
+  });
+  return plan(input, prompt, board, project.folderPath, CATCH_UP_TIMEOUT_MS);
 }
 
 export function cancelPlanner(requestId: string): void {

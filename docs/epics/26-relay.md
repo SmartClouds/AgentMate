@@ -86,6 +86,16 @@ switch the session to auto mode once the plan is ready.
   clean plan approved into auto mode, a plan with questions held, and a planner split scheduled
   after a running task.
 - [x] T17 Docs and a Help article (`src/shared/help/articles/relay.md`).
+- [x] T18 Catch up a project in progress. `buildCatchUpRequest` asks a read-only planner for what
+  is finished, half done and left, from the code, the plans and the git history. A proposal's new
+  tasks may carry `status: done` and a `handoff`, and a change may mark a board task done with
+  one. Applying writes the guide, done tasks with ticked criteria, and starting handoffs
+  (`renderHandoff`: `outcome: done` for finished work, `continue` with a Next step for half-done
+  work), never over a handoff a session filled in. The Revise dialog gained a `catch-up` mode with
+  a "Put finished work on the board" switch and a strip of where the project stands; it opens
+  from the empty Tasks tab, the empty board and the board's Catch up button. A first leg's prompt
+  tells the session to build on a handoff that already records work. Unit tests in core, main and
+  renderer, and an e2e that plans the rest through the UI and runs the half-done task next.
 
 ## Acceptance criteria
 
@@ -100,6 +110,8 @@ switch the session to auto mode once the plan is ready.
 - AC5 Revise with AI proposes changes from the docs, shows them before anything is written, and
   never changes a done task.
 - AC6 A split prompt can be scheduled to start after a chosen task is done.
+- AC7 On a project already under way, Plan the rest with AI puts finished work on the board as
+  done, gives half-done work a starting handoff, and the relay carries on from it.
 
 ## Implementation notes
 

@@ -238,4 +238,20 @@ describe('planning', () => {
     expect(applied.written).toEqual(['T003-export.md']);
     expect(taskText('T003-export.md')).toContain('depends: [T002]');
   });
+
+  it('catches up a project in progress, and refuses a request without the done choice', async () => {
+    await load();
+    cli.run.mockResolvedValue({
+      ok: true,
+      text: JSON.stringify({ summary: 'x', add: [{ title: 'Export', status: 'done' }] }),
+      cliName: 'Claude Code',
+    });
+    const planned = await invoke<RelayPlannerResult>(IPC.relay.catchUp, {
+      requestId: 'q3',
+      projectId: 'p1',
+      recordDone: true,
+    });
+    expect(planned).toMatchObject({ ok: true, entries: [{ kind: 'add', status: 'done' }] });
+    await expect(invoke(IPC.relay.catchUp, { requestId: 'q4', projectId: 'p1' })).rejects.toThrow();
+  });
 });

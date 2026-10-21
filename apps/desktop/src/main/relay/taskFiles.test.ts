@@ -122,6 +122,59 @@ describe('writing', () => {
     ]);
   });
 
+  it('starts a new board with its guide, and writes the starting handoffs', async () => {
+    const folder = relayFolder(project, 'docs');
+    const result = await applyProposalFiles(folder, {
+      summary: '',
+      add: [
+        { title: 'Login', status: 'done', handoff: { done: 'Built in src/auth.' } },
+        { title: 'Search', handoff: { done: 'The API.', next: 'Build the page.' } },
+      ],
+      change: [],
+      split: [],
+      remove: [],
+    });
+    expect(result.warnings).toEqual([]);
+    expect(readFileSync(join(tasksDir(), 'RELAY.md'), 'utf-8')).toContain('# Relay');
+    const login = await readHandoff(folder, 'T001');
+    const search = await readHandoff(folder, 'T002');
+    expect(login?.handoff.outcome).toBe('done');
+    expect(search?.handoff.sections.next).toBe('Build the page.');
+  });
+
+  it('never writes a starting handoff over one a session filled in', async () => {
+    writeTask('T001-login.md', task('T001', 'Login'));
+    mkdirSync(join(tasksDir(), 'handoffs'), { recursive: true });
+    const path = join(tasksDir(), 'handoffs', 'T001.md');
+    const filled = '---\ntask: T001\noutcome: continue\n---\n## Done so far\nHalf of it.\n';
+    writeFileSync(path, filled);
+    const folder = relayFolder(project, 'docs');
+    const result = await applyProposalFiles(folder, {
+      summary: '',
+      add: [],
+      change: [{ id: 'T001', status: 'done', handoff: { done: 'All of it.' } }],
+      split: [],
+      remove: [],
+    });
+    expect(readFileSync(path, 'utf-8')).toBe(filled);
+    expect(result.warnings).toEqual([expect.stringContaining('T001 already has a handoff')]);
+    expect((await readBoardFiles(folder)).files[0].task.status).toBe('done');
+  });
+
+  it('fills in a handoff that is still the empty template', async () => {
+    writeTask('T001-login.md', task('T001', 'Login'));
+    const folder = relayFolder(project, 'docs');
+    await ensureHandoffTemplate(folder, { id: 'T001', title: 'Login' });
+    await applyProposalFiles(folder, {
+      summary: '',
+      add: [],
+      change: [{ id: 'T001', handoff: { done: 'Half of it.', next: 'The rest.' } }],
+      split: [],
+      remove: [],
+    });
+    expect((await readHandoff(folder, 'T001'))?.handoff.sections.done).toBe('Half of it.');
+  });
+
   it('writes the guide and a handoff template only when they are missing', async () => {
     const folder = relayFolder(project, 'docs');
     await ensureGuide(folder);

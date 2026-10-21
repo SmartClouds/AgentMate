@@ -717,6 +717,8 @@ export const IPC = {
     decompose: 'relay:decompose',
     // (RelayReviseInput) -> RelayPlannerResult, nothing written
     revise: 'relay:revise',
+    // (RelayCatchUpInput) -> RelayPlannerResult, nothing written
+    catchUp: 'relay:catchUp',
     // (requestId) -> void
     cancelPlanner: 'relay:cancelPlanner',
     // (projectId, RelayProposal) -> RelayApplyResult

@@ -154,6 +154,98 @@ describe('ReviseWithAiDialog', () => {
     expect(await screen.findByText('The planner timed out after 10 minutes.')).toBeInTheDocument();
   });
 
+  describe('catching up a project in progress', () => {
+    const CATCH_UP: RelayProposal = {
+      summary: 'Login is built and search is half done.',
+      add: [
+        { title: 'Login', status: 'done', handoff: { done: 'src/auth.' } },
+        { title: 'Search', estimate: 80_000, handoff: { done: 'The API.', next: 'The page.' } },
+        { title: 'Export', estimate: 60_000 },
+      ],
+      change: [],
+      split: [],
+      remove: [],
+    };
+    const CATCH_UP_ENTRIES: ProposalEntry[] = [
+      { kind: 'add', id: 'T001', title: 'Login', fields: [], status: 'done', handoff: true },
+      { kind: 'add', id: 'T002', title: 'Search', fields: [], handoff: true },
+      { kind: 'add', id: 'T003', title: 'Export', fields: [] },
+    ];
+
+    function catchUp(onOpenChange = vi.fn()) {
+      const view = renderWithProviders(
+        <ReviseWithAiDialog projectId="p1" mode="catch-up" open onOpenChange={onOpenChange} />,
+        {
+          bridge: {
+            'projects.list': [{ id: 'p1', name: 'Apollo', folderPath: '/w', cliId: 'claude-code' }],
+            'cli.detectAll': [{ id: 'claude-code', installed: true }],
+            'relay.board': async () => board,
+            'relay.catchUp': async () => ({
+              ok: true,
+              proposal: CATCH_UP,
+              entries: CATCH_UP_ENTRIES,
+              cliName: 'Claude Code',
+            }),
+            'relay.applyProposal': async () => ({
+              written: ['T001-login.md', 'T002-search.md', 'T003-export.md'],
+              removed: [],
+              warnings: [],
+            }),
+          },
+        },
+      );
+      return { ...view, onOpenChange };
+    }
+
+    it('reads the code and history, with or without the finished work on the board', async () => {
+      const { user, bridge } = catchUp();
+      expect(
+        await screen.findByRole('heading', { name: 'Pick up a project in progress' }),
+      ).toBeInTheDocument();
+      const recordDone = screen.getByRole('switch', { name: /Put finished work on the board/ });
+      expect(recordDone).toBeChecked();
+      await user.click(recordDone);
+      await user.type(
+        screen.getByRole('textbox', { name: /Anything it should know/ }),
+        'The plan is in docs/ROADMAP.md',
+      );
+      const plan = screen.getByRole('button', { name: 'Plan the rest' });
+      await waitFor(() => expect(plan).toBeEnabled());
+      await user.click(plan);
+
+      await screen.findByRole('list', { name: 'Proposed changes' });
+      expect(bridge.$fn('relay.catchUp')).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectId: 'p1',
+          recordDone: false,
+          note: 'The plan is in docs/ROADMAP.md',
+          budget: 400_000,
+        }),
+      );
+    });
+
+    it('shows where the project stands, then puts it on the board', async () => {
+      const { user, bridge, onOpenChange } = catchUp();
+      const plan = await screen.findByRole('button', { name: 'Plan the rest' });
+      await waitFor(() => expect(plan).toBeEnabled());
+      await user.click(plan);
+
+      const standing = await screen.findByRole('img', { name: 'Where the project stands' });
+      expect(standing).toHaveAccessibleDescription('1 finished, 1 half done, 1 to do');
+      await user.click(screen.getByRole('button', { name: 'Apply 3 changes' }));
+
+      await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+      expect(bridge.$fn('relay.applyProposal')).toHaveBeenCalledWith('p1', CATCH_UP);
+      expect(toast.success).toHaveBeenCalledWith(
+        'Board updated',
+        expect.objectContaining({
+          description: '3 task files written.',
+          action: expect.objectContaining({ label: 'Open the board' }),
+        }),
+      );
+    });
+  });
+
   it('stops a revision that is still running', async () => {
     const { user, bridge } = open({ 'relay.revise': () => new Promise(() => undefined) });
     await review(user);

@@ -278,6 +278,20 @@ const TEST_ALIASES: Record<string, RelayTestResult> = {
 };
 
 /** Reads the baton a session left. The app trusts only what parses; the rest becomes an issue. */
+/** A task's Goal section, or its title when it has none. */
+export function taskGoal(task: Pick<RelayTask, 'title' | 'body'>): string {
+  const lines = task.body.split(/\r?\n/);
+  const start = lines.findIndex((line) => /^goal$/i.test(HEADING.exec(line)?.[1] ?? ''));
+  if (start === -1) return task.title;
+  const end = lines.findIndex((line, index) => index > start && HEADING.test(line));
+  return (
+    lines
+      .slice(start + 1, end === -1 ? undefined : end)
+      .join('\n')
+      .trim() || task.title
+  );
+}
+
 export function parseHandoff(taskId: string, content: string): RelayHandoff {
   const { data, body, issue } = splitFrontMatter(content);
   const issues: RelayIssue[] = issue ? [issue] : [];
@@ -456,8 +470,9 @@ export function renderTaskFile(draft: RelayTaskDraft): string {
   if (draft.scope?.trim()) sections.push(`## Scope\n\n${draft.scope.trim()}`);
   const criteria = (draft.acceptance ?? []).map((item) => item.trim()).filter(Boolean);
   if (criteria.length > 0) {
+    const box = draft.status === 'done' ? '[x]' : '[ ]';
     sections.push(
-      `## Acceptance criteria\n\n${criteria.map((item) => `- [ ] ${item}`).join('\n')}`,
+      `## Acceptance criteria\n\n${criteria.map((item) => `- ${box} ${item}`).join('\n')}`,
     );
   }
   if (draft.testPlan?.trim()) sections.push(`## Test plan\n\n${draft.testPlan.trim()}`);

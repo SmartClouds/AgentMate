@@ -7,11 +7,13 @@ import {
   nextTaskId,
   parseTokenCount,
   relayGuideMarkdown,
+  renderHandoff,
   renderHandoffTemplate,
   taskFileName,
   taskIdFromFileName,
   taskRelPath,
 } from './format.js';
+import { parseHandoff } from './parse.js';
 
 describe('task ids and file names', () => {
   it('accepts T plus at least three digits', () => {
@@ -86,6 +88,30 @@ describe('handoff template', () => {
     expect(text).toContain('tests: not-run');
     const headings = [...text.matchAll(/^## (.+)$/gm)].map((match) => match[1]);
     expect(headings).toEqual(HANDOFF_SECTIONS.map((section) => section.heading));
+  });
+});
+
+describe('a written handoff', () => {
+  it('fills the sections it is given and leaves the hint in the rest', () => {
+    const text = renderHandoff({
+      id: 'T004',
+      outcome: 'continue',
+      sections: {
+        purpose: 'Board columns.',
+        done: 'The To do column renders, in src/board/Columns.tsx.',
+        next: 'Add the Done column.',
+      },
+    });
+    const handoff = parseHandoff('T004', text);
+    expect(handoff).toMatchObject({ outcome: 'continue', tests: 'not-run', leg: 0 });
+    expect(handoff.sections.done).toBe('The To do column renders, in src/board/Columns.tsx.');
+    expect(handoff.sections.next).toBe('Add the Done column.');
+    expect(handoff.missingSections).toEqual(['decisions', 'rejected']);
+  });
+
+  it('records finished work as done', () => {
+    const text = renderHandoff({ id: 'T001', outcome: 'done', sections: { purpose: 'Login.' } });
+    expect(parseHandoff('T001', text).outcome).toBe('done');
   });
 });
 

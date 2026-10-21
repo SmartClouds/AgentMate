@@ -111,3 +111,35 @@ describe('reviseBoard', () => {
     expect(cli.cancel).toHaveBeenCalledWith('r4');
   });
 });
+
+describe('catchUpBoard', () => {
+  it('asks where the project stands, with the board, the note and a longer timeout', async () => {
+    cli.run.mockResolvedValue({
+      ok: true,
+      text: JSON.stringify({
+        summary: 'Login is done; search is half built.',
+        add: [{ title: 'Search', handoff: { done: 'The API.', next: 'The page.' } }],
+      }),
+      cliName: 'Claude Code',
+    });
+    const { catchUpBoard, PLANNER_TIMEOUT_MS } = await import('./planner');
+    const result = await catchUpBoard({
+      requestId: 'r5',
+      projectId: 'p1',
+      recordDone: false,
+      note: 'The plan is in docs/ROADMAP.md.',
+    });
+    const [prompt, cwd, options] = cli.run.mock.calls[0];
+    expect(cwd).toBe(folder);
+    expect(prompt).toContain('T001 Login [done]');
+    expect(prompt).toContain('The plan is in docs/ROADMAP.md.');
+    expect(prompt).toMatch(/do not add tasks for finished work/i);
+    expect(prompt).toContain('T002');
+    expect(options.timeoutMs).toBeGreaterThan(PLANNER_TIMEOUT_MS);
+    expect(options).not.toHaveProperty('allowWrites');
+    expect(result).toMatchObject({
+      ok: true,
+      entries: [{ kind: 'add', id: 'T002', title: 'Search', handoff: true }],
+    });
+  });
+});

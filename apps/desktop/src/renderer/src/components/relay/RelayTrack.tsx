@@ -30,6 +30,7 @@ import { useRelayBoardStore } from '@/stores/relayBoardStore';
 import { FuelRing } from './FuelRing';
 import { RelayLiveStrip } from './RelayLiveStrip';
 import { RelayRunSettings } from './RelayRunSettings';
+import { ReviseWithAiDialog } from './ReviseWithAiDialog';
 import { RunRelayButton } from './RunRelayButton';
 import {
   choiceFor,
@@ -314,6 +315,7 @@ export function RelayTrack({ project }: { project: Project }): React.JSX.Element
   const query = useRelayBoard(project.id);
   const openBoard = useRelayBoardStore((s) => s.open);
   const [starting, setStarting] = useState(false);
+  const [catchingUp, setCatchingUp] = useState(false);
 
   if (query.isPending) return <TrackSkeleton />;
   if (query.isError || !query.data) {
@@ -355,25 +357,37 @@ export function RelayTrack({ project }: { project: Project }): React.JSX.Element
                 context budget. Every session leaves a handoff the next one starts from.
               </p>
               <p>
-                Turn on "Split into Relay tasks" in Blueprint, or use "Split into tasks" in Build
-                Prompt. Tasks are Markdown files in{' '}
+                Project already under way? Plan the rest with AI works out what is done and turns
+                what is left into tasks. For new work, turn on "Split into Relay tasks" in
+                Blueprint, or use "Split into tasks" in Build Prompt. Tasks are Markdown files in{' '}
                 <span className="font-mono">{board.docsFolder}/tasks/</span>.
               </p>
             </div>
           }
           action={
-            board.guidePresent ? undefined : (
-              <Button
-                type="button"
-                variant="soft"
-                size="sm"
-                disabled={starting}
-                onClick={() => void startBoard()}
-              >
-                <ListTodo /> Start a board
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button type="button" size="sm" onClick={() => setCatchingUp(true)}>
+                <Route /> Plan the rest with AI
               </Button>
-            )
+              {board.guidePresent ? null : (
+                <Button
+                  type="button"
+                  variant="soft"
+                  size="sm"
+                  disabled={starting}
+                  onClick={() => void startBoard()}
+                >
+                  <ListTodo /> Start a board
+                </Button>
+              )}
+            </div>
           }
+        />
+        <ReviseWithAiDialog
+          projectId={project.id}
+          mode="catch-up"
+          open={catchingUp}
+          onOpenChange={setCatchingUp}
         />
       </div>
     );

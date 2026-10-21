@@ -9,6 +9,7 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
+  CircleCheck,
   Minus,
   Pencil,
   Plus,
@@ -101,7 +102,27 @@ const KINDS = {
   },
 } as const;
 
+/** A new task that records work finished before Relay: it needs no session, so no budget. */
+const FINISHED = {
+  word: 'Finished task',
+  eyebrow: 'Done',
+  Icon: CircleCheck,
+  rail: 'bg-success',
+  tint: 'text-success',
+} as const;
+
+function Chip({ label, hint }: { label: string; hint: string }): React.JSX.Element {
+  return (
+    <SimpleTooltip label={hint}>
+      <span className="rounded-full bg-foreground/[0.06] px-1.5 py-px text-[9.5px] font-medium tracking-normal text-muted-foreground normal-case">
+        {label}
+      </span>
+    </SimpleTooltip>
+  );
+}
+
 const FIELD_NAMES: Record<string, string> = {
+  status: 'Status',
   title: 'Title',
   epic: 'Epic',
   depends: 'Depends on',
@@ -281,7 +302,8 @@ export function ProposalReview({
 
       <ul aria-label="Proposed changes" className="space-y-1.5">
         {keyed.map(({ entry, key, addIndex }) => {
-          const kind = KINDS[entry.kind];
+          const finished = entry.kind === 'add' && entry.status === 'done';
+          const kind = finished ? FINISHED : KINDS[entry.kind];
           if (dropped.has(key)) {
             return (
               <li
@@ -325,6 +347,18 @@ export function ProposalReview({
                     <span className="font-mono tracking-normal text-muted-foreground normal-case">
                       {entry.id}
                     </span>
+                    {entry.handoff && entry.kind === 'add' && !finished ? (
+                      <Chip
+                        label="Half done"
+                        hint="Its first session starts from a handoff that says what exists and what comes next"
+                      />
+                    ) : null}
+                    {entry.handoff && entry.kind === 'change' ? (
+                      <Chip
+                        label="With a handoff"
+                        hint="A handoff records what the code already has, unless a session already wrote one"
+                      />
+                    ) : null}
                   </div>
                   {task ? (
                     <div className="mt-1.5 space-y-1.5">
@@ -338,20 +372,22 @@ export function ProposalReview({
                           className="w-full rounded-md bg-transparent px-1 py-0.5 -ml-1 text-sm font-medium outline-none hover:bg-foreground/[0.04] focus-visible:bg-background/60 focus-visible:ring-2 focus-visible:ring-ring"
                         />
                       )}
-                      <div className="flex items-center gap-2">
-                        <BudgetGauge taskId={entry.id} estimate={estimate} budget={budget} />
-                        {readOnly ? (
-                          <span className="w-12 text-right font-mono text-xs text-muted-foreground tabular-nums">
-                            {estimate === null ? '' : formatTokenCount(estimate)}
-                          </span>
-                        ) : (
-                          <EstimateField
-                            taskId={entry.id}
-                            value={estimate}
-                            onCommit={(next) => editAdd(addIndex, { estimate: next })}
-                          />
-                        )}
-                      </div>
+                      {finished ? null : (
+                        <div className="flex items-center gap-2">
+                          <BudgetGauge taskId={entry.id} estimate={estimate} budget={budget} />
+                          {readOnly ? (
+                            <span className="w-12 text-right font-mono text-xs text-muted-foreground tabular-nums">
+                              {estimate === null ? '' : formatTokenCount(estimate)}
+                            </span>
+                          ) : (
+                            <EstimateField
+                              taskId={entry.id}
+                              value={estimate}
+                              onCommit={(next) => editAdd(addIndex, { estimate: next })}
+                            />
+                          )}
+                        </div>
+                      )}
                       {task.depends && task.depends.length > 0 ? (
                         <p className="text-[11px] text-muted-foreground">
                           After {task.depends.join(', ')}

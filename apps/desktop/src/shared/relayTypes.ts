@@ -155,6 +155,14 @@ export interface RelayReviseInput extends RelayPlannerInput {
   note?: string;
 }
 
+/** Catching up a project already under way: what is done, half done and left, as tasks. */
+export interface RelayCatchUpInput extends RelayPlannerInput {
+  /** Put finished work on the board as done tasks. */
+  recordDone: boolean;
+  /** What the user says about the project, such as where its plan is. */
+  note?: string;
+}
+
 export type RelayPlannerResult =
   | {
       ok: true;

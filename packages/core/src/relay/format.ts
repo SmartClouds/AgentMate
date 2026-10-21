@@ -143,6 +143,31 @@ ${sections}`;
 }
 
 /**
+ * A handoff written for a session to find, when catching up a project whose work started before
+ * Relay: finished work gets one with `outcome: done`, half-done work one that says where it stands.
+ * A section left out keeps its hint, as in the template.
+ */
+export function renderHandoff(input: {
+  id: string;
+  outcome: 'done' | 'continue';
+  sections: Partial<Record<HandoffSectionKey, string>>;
+}): string {
+  const sections = HANDOFF_SECTIONS.map((section) => {
+    const text = input.sections[section.key]?.trim();
+    return `## ${section.heading}\n\n${text || `<!-- ${section.hint} -->`}\n`;
+  }).join('\n');
+  return `---
+task: ${input.id}
+outcome: ${input.outcome}
+tests: not-run
+leg: 0
+updated:
+---
+
+${sections}`;
+}
+
+/**
  * The guide that lives next to the tasks. Prompts point at it instead of repeating the rules, so
  * each session spends its context on the work.
  */

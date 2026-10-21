@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   blueprintRelaySection,
+  buildCatchUpRequest,
   buildDecomposeRequest,
   buildLegPrompt,
   buildReviseRequest,
@@ -41,6 +42,11 @@ describe('buildLegPrompt', () => {
 
   it('leaves the commit out when the relay does not commit', () => {
     expect(buildLegPrompt({ ...base, commitPerTask: false })).not.toMatch(/commit/i);
+  });
+
+  it('lets a first session build on a handoff that already records work', () => {
+    // Catching up a project in progress writes a handoff for half-done work before any session.
+    expect(buildLegPrompt(base)).toMatch(/already records work.*Next step/);
   });
 
   it('tells a continuation to carry on from the next step', () => {
@@ -124,6 +130,51 @@ describe('buildReviseRequest', () => {
     expect(request).toContain('T010');
     expect(request).toContain('docs/');
     expect(request).not.toContain('—');
+  });
+});
+
+describe('buildCatchUpRequest', () => {
+  const base = {
+    projectName: 'CuraLink',
+    docsFolder: 'docs',
+    budget: 200_000,
+    firstId: 'T001',
+    tasks: [],
+    recordDone: true,
+  };
+
+  it('asks for what is finished, half done and left, read from the code and the docs', () => {
+    const request = buildCatchUpRequest(base);
+    expect(request).toMatch(/do not change any file/i);
+    expect(request).toMatch(/git log/);
+    expect(request).toContain('"status": "done"');
+    expect(request).toContain('"handoff"');
+    expect(request).toMatch(/half done/i);
+    expect(request).toContain('200K');
+    expect(request).toContain('T001');
+    expect(request).toMatch(/only the JSON/i);
+    expect(request).not.toContain('—');
+  });
+
+  it('keeps finished work off the board when the user does not want it', () => {
+    const request = buildCatchUpRequest({ ...base, recordDone: false });
+    expect(request).toMatch(/do not add tasks for finished work/i);
+  });
+
+  it('lists the board so its tasks can be marked done, and passes the note', () => {
+    const request = buildCatchUpRequest({
+      ...base,
+      firstId: 'T003',
+      tasks: [
+        { id: 'T001', title: 'Login', status: 'done', depends: [], estimate: null },
+        { id: 'T002', title: 'Search', status: 'todo', depends: ['T001'], estimate: 90_000 },
+      ],
+      note: 'The plan is in docs/ROADMAP.md.',
+    });
+    expect(request).toContain('T002 Search [todo] depends T001, estimate 90K');
+    expect(request).toMatch(/never change, split or remove a task that is done/i);
+    expect(request).toContain('The plan is in docs/ROADMAP.md.');
+    expect(request).toContain('T003');
   });
 });
 

@@ -1,8 +1,8 @@
 import { DEFAULT_RELAY_BUDGET, type RelayProposal } from '@agentmat/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { toast } from 'sonner';
-import { CircleCheck, ListTodo, Sparkles, Spinner, Wand2 } from '@/components/icons';
+import { CircleCheck, ListTodo, Route, Sparkles, Spinner, Wand2 } from '@/components/icons';
 import { Notice } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,38 +14,146 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { queryKeys } from '@/lib/queryKeys';
+import { cn } from '@/lib/utils';
+import { useRelayBoardStore } from '@/stores/relayBoardStore';
 import { PlannerProgress } from './PlannerProgress';
 import { ProposalReview, proposalSize } from './ProposalReview';
 import { RelayPlannerFields, useRelayPlanner } from './RelayPlannerPicker';
 import { usePlannerRun } from './usePlannerRun';
 
+/**
+ * `revise` brings an existing board in line with the docs. `catch-up` is for a project already
+ * under way: the AI works out what is finished, half done and left, from the code, the plans and
+ * the history, and turns the rest into tasks.
+ */
+export type PlanWithAiMode = 'revise' | 'catch-up';
+
 export interface ReviseWithAiDialogProps {
   projectId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  mode?: PlanWithAiMode;
 }
 
 function plural(count: number, word: string): string {
   return `${count} ${word}${count === 1 ? '' : 's'}`;
 }
 
+const COPY = {
+  revise: {
+    Icon: Sparkles,
+    title: 'Revise tasks with AI',
+    noteLabel: 'What should change? (optional)',
+    notePlaceholder: 'Leave it empty to compare the tasks with the docs as they are.',
+    doing: 'reading the docs and the tasks',
+    start: 'Review tasks',
+    again: 'Review again',
+    nothing: 'The tasks already match the docs.',
+  },
+  'catch-up': {
+    Icon: Route,
+    title: 'Pick up a project in progress',
+    noteLabel: 'Anything it should know? (optional)',
+    notePlaceholder: 'Where the plan lives, what to skip, what matters most.',
+    doing: 'reading the code, the plans and the history',
+    start: 'Plan the rest',
+    again: 'Plan again',
+    nothing: 'Nothing is left to plan. The code already does what the plans describe.',
+  },
+} as const;
+
+/** How a catch-up proposal splits the project: finished, half done (with a handoff) and to do. */
+function standing(proposal: RelayProposal): { finished: number; half: number; todo: number } {
+  let finished = proposal.change.filter((change) => change.status === 'done').length;
+  let half = 0;
+  let todo = proposal.split.reduce((sum, split) => sum + split.into.length, 0);
+  for (const task of proposal.add) {
+    if (task.status === 'done') finished += 1;
+    else if (task.handoff) half += 1;
+    else todo += 1;
+  }
+  return { finished, half, todo };
+}
+
 /**
- * Brings the board back in line with the project's docs, the spec-driven way: the docs are the
- * source of truth, and a planner reads them and the task files, then proposes tasks to add,
- * change, split or remove. Nothing changes until the user applies what they kept.
+ * The project as the relay would pick it up: a short track where finished legs are filled, the
+ * half-done one carries half a baton and the rest wait as open rings.
+ */
+function ProjectStanding({ proposal }: { proposal: RelayProposal }): React.JSX.Element | null {
+  const descriptionId = useId();
+  const { finished, half, todo } = standing(proposal);
+  const total = finished + half + todo;
+  if (total === 0) return null;
+  const words = `${finished} finished, ${half} half done, ${todo} to do`;
+  const stations = [
+    ...Array.from({ length: finished }, () => 'finished' as const),
+    ...Array.from({ length: half }, () => 'half' as const),
+    ...Array.from({ length: todo }, () => 'todo' as const),
+  ];
+  return (
+    <div className="space-y-2 rounded-xl bg-foreground/[0.03] px-4 py-3 ring-1 ring-foreground/[0.07] ring-inset">
+      <div
+        role="img"
+        aria-label="Where the project stands"
+        aria-describedby={descriptionId}
+        className="relative flex items-center gap-1.5"
+      >
+        <span aria-hidden className="absolute inset-x-1 top-1/2 h-px bg-foreground/10" />
+        {stations.map((kind, index) => (
+          <span
+            // The stations are interchangeable dots, so their place is their identity.
+            key={index}
+            aria-hidden
+            className={cn(
+              'relative h-2.5 min-w-1.5 flex-1 rounded-full',
+              kind === 'finished' && 'bg-success shadow-[0_0_8px_-2px_hsl(var(--success)/0.7)]',
+              kind === 'half' &&
+                'bg-[linear-gradient(90deg,hsl(var(--primary))_50%,hsl(var(--foreground)/0.08)_50%)] ring-1 ring-primary/50 ring-inset',
+              kind === 'todo' && 'bg-background ring-1 ring-foreground/20 ring-inset',
+            )}
+          />
+        ))}
+      </div>
+      <p id={descriptionId} className="flex flex-wrap gap-x-3 text-[11px] text-muted-foreground">
+        <span className="sr-only">{words}</span>
+        <span aria-hidden className="inline-flex items-center gap-1">
+          <span className="h-1.5 w-1.5 rounded-full bg-success" /> {finished} finished
+        </span>
+        <span aria-hidden className="inline-flex items-center gap-1">
+          <span className="h-1.5 w-1.5 rounded-full bg-primary" /> {half} half done
+        </span>
+        <span aria-hidden className="inline-flex items-center gap-1">
+          <span className="h-1.5 w-1.5 rounded-full ring-1 ring-foreground/30" /> {todo} to do
+        </span>
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Planning a board with AI, the spec-driven way. Revising treats the docs as the source of truth:
+ * a planner reads them and the task files, then proposes tasks to add, change, split or remove.
+ * Catching up reads the code and the history as well, to see what is already built. Nothing
+ * changes until the user applies what they kept.
  */
 export function ReviseWithAiDialog({
   projectId,
   open,
   onOpenChange,
+  mode = 'revise',
 }: ReviseWithAiDialogProps): React.JSX.Element | null {
   const queryClient = useQueryClient();
+  const openBoard = useRelayBoardStore((s) => s.open);
   const [note, setNote] = useState('');
+  const [recordDone, setRecordDone] = useState(true);
   const [proposal, setProposal] = useState<RelayProposal | null>(null);
   const [applying, setApplying] = useState(false);
   const run = usePlannerRun();
+  const copy = COPY[mode];
+  const catchingUp = mode === 'catch-up';
 
   const boardQuery = useQuery({
     queryKey: queryKeys.relayBoard(projectId),
@@ -65,6 +173,7 @@ export function ReviseWithAiDialog({
   useEffect(() => {
     if (!open) return;
     setNote('');
+    setRecordDone(true);
     setProposal(null);
   }, [open]);
 
@@ -78,14 +187,11 @@ export function ReviseWithAiDialog({
   async function review(): Promise<void> {
     if (running || !planner.input.cliId) return;
     setProposal(null);
+    const fields = { projectId, note: note.trim() || undefined, budget, ...planner.input };
     await run.start((requestId) =>
-      window.agentmat.relay.revise({
-        requestId,
-        projectId,
-        note: note.trim() || undefined,
-        budget,
-        ...planner.input,
-      }),
+      catchingUp
+        ? window.agentmat.relay.catchUp({ requestId, recordDone, ...fields })
+        : window.agentmat.relay.revise({ requestId, ...fields }),
     );
   }
 
@@ -98,6 +204,9 @@ export function ReviseWithAiDialog({
       const removed = result.removed.length > 0 ? `, ${result.removed.length} removed` : '';
       toast.success('Board updated', {
         description: `${plural(result.written.length, 'task file')} written${removed}.`,
+        ...(catchingUp
+          ? { action: { label: 'Open the board', onClick: () => openBoard(projectId) } }
+          : {}),
       });
       for (const warning of result.warnings) toast.warning(warning);
       onOpenChange(false);
@@ -112,6 +221,8 @@ export function ReviseWithAiDialog({
 
   const size = proposal ? proposalSize(proposal) : 0;
   const nothingToDo = planned !== null && proposalSize(planned.proposal) === 0;
+  const noteId = `relay-${mode}-note`;
+  const recordDoneId = `relay-${mode}-record-done`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -120,28 +231,58 @@ export function ReviseWithAiDialog({
           <p className="flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.12em] text-primary uppercase">
             <ListTodo aria-hidden className="h-3 w-3" /> Relay
           </p>
-          <DialogTitle>Revise tasks with AI</DialogTitle>
+          <DialogTitle>{copy.title}</DialogTitle>
           <DialogDescription>
-            The AI reads the docs in <span className="font-mono">{docsFolder}/</span>, which are the
-            source of truth, and the task files, then proposes tasks to add, change, split or remove
-            so the board matches the docs. It never changes a task that is done.
+            {catchingUp ? (
+              <>
+                For a project already under way. The AI reads the code, the plans and the git
+                history, works out what is finished, half done and left, and turns the rest into
+                tasks that each fit one session. Half-done work starts from a handoff that says
+                where it stands. Nothing is written until you apply it.
+              </>
+            ) : (
+              <>
+                The AI reads the docs in <span className="font-mono">{docsFolder}/</span>, which are
+                the source of truth, and the task files, then proposes tasks to add, change, split
+                or remove so the board matches the docs. It never changes a task that is done.
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
 
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
           <div className="space-y-1.5">
-            <Label htmlFor="relay-revise-note" className="text-xs text-muted-foreground">
-              What should change? (optional)
+            <Label htmlFor={noteId} className="text-xs text-muted-foreground">
+              {copy.noteLabel}
             </Label>
             <Textarea
-              id="relay-revise-note"
+              id={noteId}
               value={note}
               disabled={running}
-              placeholder="Leave it empty to compare the tasks with the docs as they are."
+              placeholder={copy.notePlaceholder}
               onChange={(event) => setNote(event.target.value)}
               className="min-h-20 text-sm"
             />
           </div>
+
+          {catchingUp ? (
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-0.5">
+                <Label htmlFor={recordDoneId} className="text-sm">
+                  Put finished work on the board
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  As done tasks, so the board shows the progress and new tasks can build on them.
+                </p>
+              </div>
+              <Switch
+                id={recordDoneId}
+                checked={recordDone}
+                disabled={running}
+                onCheckedChange={setRecordDone}
+              />
+            </div>
+          ) : null}
 
           <RelayPlannerFields planner={planner} disabled={running} />
 
@@ -149,7 +290,7 @@ export function ReviseWithAiDialog({
             <PlannerProgress
               cliName={planner.cliName}
               elapsed={run.elapsed}
-              doing="reading the docs and the tasks"
+              doing={copy.doing}
               onCancel={run.cancel}
             />
           ) : null}
@@ -162,15 +303,18 @@ export function ReviseWithAiDialog({
 
           {nothingToDo ? (
             <Notice tone="success" size="sm" icon={CircleCheck}>
-              The tasks already match the docs.
+              {copy.nothing}
             </Notice>
           ) : planned && proposal ? (
-            <ProposalReview
-              proposal={planned.proposal}
-              entries={planned.entries}
-              budget={budget}
-              onChange={setProposal}
-            />
+            <div className="space-y-3">
+              {catchingUp ? <ProjectStanding proposal={proposal} /> : null}
+              <ProposalReview
+                proposal={planned.proposal}
+                entries={planned.entries}
+                budget={budget}
+                onChange={setProposal}
+              />
+            </div>
           ) : null}
         </div>
 
@@ -189,7 +333,7 @@ export function ReviseWithAiDialog({
                   disabled={running || applying}
                   onClick={() => void review()}
                 >
-                  <Sparkles /> Review again
+                  <Sparkles /> {copy.again}
                 </Button>
                 <Button
                   type="button"
@@ -208,7 +352,7 @@ export function ReviseWithAiDialog({
                 disabled={running || !planner.input.cliId}
                 onClick={() => void review()}
               >
-                <Sparkles /> Review tasks
+                <copy.Icon /> {copy.start}
               </Button>
             )}
           </div>

@@ -4,6 +4,7 @@ import { IPC } from '../shared/ipcChannels';
 import type {
   RelayApplyResult,
   RelayBoard,
+  RelayCatchUpInput,
   RelayChangedEvent,
   RelayCloseTabEvent,
   RelayContextEvent,
@@ -62,6 +63,8 @@ export function createRelay() {
       ipcRenderer.invoke(IPC.relay.decompose, input),
     revise: (input: RelayReviseInput): Promise<RelayPlannerResult> =>
       ipcRenderer.invoke(IPC.relay.revise, input),
+    catchUp: (input: RelayCatchUpInput): Promise<RelayPlannerResult> =>
+      ipcRenderer.invoke(IPC.relay.catchUp, input),
     cancelPlanner: (requestId: string): Promise<void> =>
       ipcRenderer.invoke(IPC.relay.cancelPlanner, requestId),
     applyProposal: (projectId: string, proposal: RelayProposal): Promise<RelayApplyResult> =>

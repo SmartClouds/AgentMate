@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LayoutGroup } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { FolderKanban, Sliders, Wand2, X } from '@/components/icons';
+import { FolderKanban, Route, Sliders, Wand2, X } from '@/components/icons';
 import { CatalogCardShimmer, EmptyState, LoadFailure } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
 import { SimpleTooltip } from '@/components/ui/tooltip';
@@ -218,6 +218,7 @@ export function RelayBoard({
   const [selected, setSelected] = useState<string | null>(focusTaskId);
   const [epic, setEpic] = useState<string | null>(null);
   const [revising, setRevising] = useState(false);
+  const [catchingUp, setCatchingUp] = useState(false);
 
   useEffect(() => setSelected(focusTaskId), [focusTaskId]);
 
@@ -315,6 +316,11 @@ export function RelayBoard({
               </Button>
             </RelayRunSettings>
           ) : null}
+          <SimpleTooltip label="See what the code already does, mark it done and plan what is left">
+            <Button type="button" variant="soft" size="sm" onClick={() => setCatchingUp(true)}>
+              <Route /> Catch up
+            </Button>
+          </SimpleTooltip>
           <SimpleTooltip label="Compare the tasks with the docs and propose changes">
             <Button type="button" variant="soft" size="sm" onClick={() => setRevising(true)}>
               <Wand2 /> Revise with AI
@@ -345,10 +351,16 @@ export function RelayBoard({
               title="No tasks on this board yet"
               description={
                 <p>
-                  Turn on "Split into Relay tasks" in Blueprint, use "Split into tasks" in Build
-                  Prompt, or write task files in{' '}
+                  Project already under way? Plan the rest with AI works out what is done and turns
+                  what is left into tasks. For new work, turn on "Split into Relay tasks" in
+                  Blueprint, use "Split into tasks" in Build Prompt, or write task files in{' '}
                   <span className="font-mono">{board.docsFolder}/tasks/</span>.
                 </p>
+              }
+              action={
+                <Button type="button" size="sm" onClick={() => setCatchingUp(true)}>
+                  <Route /> Plan the rest with AI
+                </Button>
               }
             />
           </div>
@@ -372,6 +384,12 @@ export function RelayBoard({
       </div>
 
       <ReviseWithAiDialog projectId={projectId} open={revising} onOpenChange={setRevising} />
+      <ReviseWithAiDialog
+        projectId={projectId}
+        mode="catch-up"
+        open={catchingUp}
+        onOpenChange={setCatchingUp}
+      />
     </div>
   );
 }

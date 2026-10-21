@@ -19,7 +19,7 @@ import type {
   RelayTaskDetail,
 } from '../../shared/relayTypes';
 import { buildRelayBoard, projectRelayFolder, relayTaskDetail } from '../relay/board';
-import { cancelPlanner, decomposeRequest, reviseBoard } from '../relay/planner';
+import { cancelPlanner, catchUpBoard, decomposeRequest, reviseBoard } from '../relay/planner';
 import { getRelayRuntime } from '../relay/runtime';
 import { legRecords, saveRelaySettings, settingsPatchSchema } from '../relay/store';
 import {
@@ -73,6 +73,11 @@ const plannerFields = {
 };
 const decomposeSchema = z.object({ ...plannerFields, request: z.string().min(1).max(100_000) });
 const reviseSchema = z.object({ ...plannerFields, note: z.string().max(20_000).optional() });
+const catchUpSchema = z.object({
+  ...plannerFields,
+  recordDone: z.boolean(),
+  note: z.string().max(20_000).optional(),
+});
 /** A proposal is checked again in core when it is applied; this only bounds its size. */
 const proposalSchema = z
   .object({
@@ -228,6 +233,11 @@ export function registerRelayHandlers(): void {
   ipcMain.handle(
     IPC.relay.revise,
     (_event, input: unknown): Promise<RelayPlannerResult> => reviseBoard(reviseSchema.parse(input)),
+  );
+  ipcMain.handle(
+    IPC.relay.catchUp,
+    (_event, input: unknown): Promise<RelayPlannerResult> =>
+      catchUpBoard(catchUpSchema.parse(input)),
   );
   ipcMain.handle(IPC.relay.cancelPlanner, (_event, request: unknown): void => {
     cancelPlanner(requestId.parse(request));

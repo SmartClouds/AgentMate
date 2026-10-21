@@ -5,6 +5,7 @@ import {
   applyProposal,
   type BoardFile,
   type HandoffMeta,
+  isRelayTaskId,
   normalizeDocsFolder,
   parseHandoff,
   parseTaskFile,
@@ -142,7 +143,10 @@ export async function applyProposalFiles(
 ): Promise<RelayApplyResult> {
   const board = await readBoardFiles(folder);
   const plan = applyProposal(board.files, proposal);
+  const warnings = [...plan.warnings];
   await mkdir(folder.tasksDir, { recursive: true });
+  // A board started from a proposal gets its guide too; sessions are pointed at it.
+  await ensureGuide(folder);
   for (const file of plan.write) {
     // The names come from core (id plus an ascii slug), so they never leave the folder.
     if (!taskIdFromFileName(file.file)) continue;
@@ -152,11 +156,26 @@ export async function applyProposalFiles(
     if (!taskIdFromFileName(file)) continue;
     await rm(join(folder.tasksDir, file), { force: true });
   }
+  for (const handoff of plan.handoffs) {
+    if (!isRelayTaskId(handoff.taskId)) continue;
+    if (await handoffHasWork(folder, handoff.taskId)) {
+      warnings.push(`${handoff.taskId} already has a handoff, so it was kept as it is.`);
+      continue;
+    }
+    await mkdir(folder.handoffsDir, { recursive: true });
+    await writeAtomic(handoffPath(folder, handoff.taskId), handoff.content);
+  }
   return {
     written: plan.write.map((file) => file.file),
     removed: plan.remove,
-    warnings: plan.warnings,
+    warnings,
   };
+}
+
+/** A handoff a session wrote something in, as opposed to none or the untouched template. */
+async function handoffHasWork(folder: RelayFolder, taskId: string): Promise<boolean> {
+  const read = await readHandoff(folder, taskId);
+  return read !== null && Object.values(read.handoff.sections).some((text) => text.trim() !== '');
 }
 
 export async function ensureGuide(folder: RelayFolder): Promise<void> {

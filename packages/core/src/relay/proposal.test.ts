@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseTaskFile, renderTaskFile } from './parse.js';
+import { parseHandoff, parseTaskFile, renderTaskFile } from './parse.js';
 import { applyProposal, diffProposal, parsePlanProposal } from './proposal.js';
 import type { RelayTask } from './types.js';
 
@@ -147,6 +147,131 @@ describe('applyProposal', () => {
     expect(plan.remove).toEqual(['T002-search.md']);
     expect(parseTaskFile(plan.write[0].file, plan.write[0].content).depends).toEqual([]);
   });
+
+  it('adds no handoffs when the proposal has none', () => {
+    const plan = applyProposal(board, {
+      summary: '',
+      add: [{ title: 'New' }],
+      change: [],
+      split: [],
+      remove: [],
+    });
+    expect(plan.handoffs).toEqual([]);
+  });
+});
+
+describe('catching up with work already done', () => {
+  const empty: ReturnType<typeof existing>[] = [];
+
+  it('records finished work as done tasks with ticked criteria and a done handoff', () => {
+    const plan = applyProposal(empty, {
+      summary: '',
+      add: [
+        {
+          title: 'Login',
+          status: 'done',
+          goal: 'Users can sign in.',
+          acceptance: ['Signs in with a password'],
+          handoff: { done: 'src/auth/login.ts, covered by login.test.ts.' },
+        },
+        { title: 'Search', depends: ['T001'] },
+      ],
+      change: [],
+      split: [],
+      remove: [],
+    });
+    const [login, search] = plan.write.map((file) => parseTaskFile(file.file, file.content));
+    expect(login).toMatchObject({
+      id: 'T001',
+      status: 'done',
+      acceptance: { checked: 1, total: 1 },
+    });
+    expect(search).toMatchObject({ id: 'T002', status: 'todo', depends: ['T001'] });
+    expect(plan.handoffs).toHaveLength(1);
+    const handoff = parseHandoff('T001', plan.handoffs[0].content);
+    expect(plan.handoffs[0].taskId).toBe('T001');
+    expect(handoff.outcome).toBe('done');
+    expect(handoff.sections.purpose).toBe('Users can sign in.');
+    expect(handoff.sections.done).toBe('src/auth/login.ts, covered by login.test.ts.');
+  });
+
+  it('starts half-done work from a handoff that says where it stands', () => {
+    const plan = applyProposal(empty, {
+      summary: '',
+      add: [
+        {
+          title: 'Export',
+          handoff: { done: 'CSV export works.', next: 'Add the PDF export.' },
+        },
+      ],
+      change: [],
+      split: [],
+      remove: [],
+    });
+    expect(parseTaskFile(plan.write[0].file, plan.write[0].content).status).toBe('todo');
+    const handoff = parseHandoff('T001', plan.handoffs[0].content);
+    expect(handoff).toMatchObject({ outcome: 'continue', tests: 'not-run', leg: 0 });
+    expect(handoff.sections.purpose).toBe('Export');
+    expect(handoff.sections.next).toBe('Add the PDF export.');
+  });
+
+  it('marks a board task done when the code shows it is, with its handoff', () => {
+    const plan = applyProposal(board(), {
+      summary: '',
+      add: [],
+      change: [{ id: 'T002', status: 'done', handoff: { done: 'Search is built.' } }],
+      split: [],
+      remove: [],
+    });
+    expect(parseTaskFile(plan.write[0].file, plan.write[0].content).status).toBe('done');
+    expect(plan.handoffs.map((entry) => entry.taskId)).toEqual(['T002']);
+    expect(parseHandoff('T002', plan.handoffs[0].content).sections.purpose).toBe('Goal of Search.');
+  });
+
+  it('reads any status other than done as todo', () => {
+    const result = parsePlanProposal(
+      JSON.stringify({
+        add: [
+          { title: 'A', status: 'Done' },
+          { title: 'B', status: 'in-progress' },
+          { title: 'C' },
+        ],
+      }),
+    );
+    expect(result.ok && result.proposal.add.map((task) => task.status)).toEqual([
+      'done',
+      'todo',
+      undefined,
+    ]);
+  });
+
+  it('shows the new status and the handoff in the review', () => {
+    const entries = diffProposal(board(), {
+      summary: '',
+      add: [{ title: 'Login', status: 'done', handoff: { done: 'Built.' } }],
+      change: [{ id: 'T002', status: 'done', handoff: { done: 'Built.' } }],
+      split: [],
+      remove: [],
+    });
+    expect(entries).toEqual([
+      { kind: 'add', id: 'T004', title: 'Login', fields: [], status: 'done', handoff: true },
+      {
+        kind: 'change',
+        id: 'T002',
+        title: 'Search',
+        fields: [{ field: 'status', before: 'todo', after: 'done' }],
+        handoff: true,
+      },
+    ]);
+  });
+
+  function board() {
+    return [
+      existing('T001', 'Login', { status: 'done' }),
+      existing('T002', 'Search', { depends: ['T001'] }),
+      existing('T003', 'Export', { depends: ['T002'] }),
+    ];
+  }
 });
 
 describe('diffProposal', () => {

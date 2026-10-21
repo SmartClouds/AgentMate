@@ -163,6 +163,20 @@ describe('RelayTrack', () => {
     expect(bridge.$fn('relay.ensureGuide')).toHaveBeenCalledWith('p1', 'docs');
   });
 
+  it('offers to plan the rest of a project that is already under way', async () => {
+    const { user } = renderWithProviders(<RelayTrack project={project} />, {
+      bridge: {
+        'relay.board': board({ tasks: [], exists: false, guidePresent: false }),
+        'projects.list': [project],
+        'cli.detectAll': [{ id: 'claude-code', installed: true }],
+      },
+    });
+    await user.click(await screen.findByRole('button', { name: 'Plan the rest with AI' }));
+    expect(
+      await screen.findByRole('heading', { name: 'Pick up a project in progress' }),
+    ).toBeInTheDocument();
+  });
+
   it('pauses a live relay and stops it after asking', async () => {
     const { user, bridge } = renderWithProviders(<RelayTrack project={project} />, {
       bridge: { 'relay.board': board({ tasks, active: live() }) },

@@ -1,9 +1,17 @@
 import { z } from 'zod';
-import { formatTokenCount, nextTaskId, parseTokenCount, taskFileName } from './format.js';
+import {
+  formatTokenCount,
+  nextTaskId,
+  parseTokenCount,
+  renderHandoff,
+  taskFileName,
+} from './format.js';
 import {
   renderTaskFile,
   setBodySection,
   setFrontMatterValue,
+  setTaskStatus,
+  taskGoal,
   yamlFlowList,
   yamlScalar,
 } from './parse.js';
@@ -23,6 +31,24 @@ const tokens = z
 
 const text = z.string().transform((value) => value.trim());
 
+/** Only finished work is recorded as such; anything a planner calls partial is still to do. */
+const proposalStatus = z
+  .string()
+  .transform((value): 'todo' | 'done' => (value.trim().toLowerCase() === 'done' ? 'done' : 'todo'));
+
+const handoffText = z
+  .union([z.string(), z.null()])
+  .transform((value) => value?.trim() ?? '')
+  .optional();
+
+/** A starting handoff for work done before Relay: Purpose comes from the task's goal. */
+const proposalHandoff = z.object({
+  done: handoffText,
+  decisions: handoffText,
+  rejected: handoffText,
+  next: handoffText,
+});
+
 const taskFields = {
   title: z.string().trim().min(1, 'Every task needs a title.'),
   epic: z.string().trim().nullish(),
@@ -35,6 +61,8 @@ const taskFields = {
   scope: text.optional(),
   acceptance: z.array(z.string()).optional(),
   testPlan: text.optional(),
+  status: proposalStatus.optional(),
+  handoff: proposalHandoff.optional(),
 };
 
 const proposalTask = z.object({ id: z.string().trim().toUpperCase().optional(), ...taskFields });
@@ -120,6 +148,11 @@ export interface ProposalPlan {
   write: { file: string; content: string }[];
   /** Files to delete, by name inside the tasks folder. */
   remove: string[];
+  /**
+   * Starting handoffs, for work that was finished or begun before Relay. Main never writes one
+   * over a handoff a session has filled in.
+   */
+  handoffs: { taskId: string; content: string }[];
   /** Parts of the proposal that were left out, and why. */
   warnings: string[];
 }
@@ -222,12 +255,17 @@ export function applyProposal(board: readonly BoardFile[], proposal: RelayPropos
     return out;
   };
 
+  const handoffs: ProposalPlan['handoffs'] = [];
   const write: ProposalPlan['write'] = newTasks.map(({ id, task, inherit }) => {
     const own = Boolean(task.depends?.length);
     const depends = resolve(own ? (task.depends ?? []) : inherit, id, own);
+    const status = task.status ?? 'todo';
+    if (task.handoff) {
+      handoffs.push(startingHandoff(id, status, task.goal || task.title, task.handoff));
+    }
     return {
       file: taskFileName(id, task.title),
-      content: renderTaskFile({ ...task, id, status: 'todo', depends }),
+      content: renderTaskFile({ ...task, id, status, depends }),
     };
   });
 
@@ -260,11 +298,38 @@ export function applyProposal(board: readonly BoardFile[], proposal: RelayPropos
       );
     }
     if (change) content = applyChange(content, change);
+    if (change?.handoff) {
+      const status = change.status ?? 'todo';
+      handoffs.push(
+        startingHandoff(task.id, status, change.goal || taskGoal(task), change.handoff),
+      );
+    }
     write.push({ file: entry.file, content });
   }
 
   const remove = board.filter((entry) => removed.has(entry.task.id)).map((entry) => entry.file);
-  return { write, remove, warnings };
+  return { write, remove, warnings, handoffs };
+}
+
+function startingHandoff(
+  taskId: string,
+  status: 'todo' | 'done',
+  purpose: string,
+  handoff: NonNullable<ProposalTask['handoff']>,
+): ProposalPlan['handoffs'][number] {
+  return {
+    taskId,
+    content: renderHandoff({
+      id: taskId,
+      outcome: status === 'done' ? 'done' : 'continue',
+      sections: { purpose, ...handoff },
+    }),
+  };
+}
+
+/** A finished task's criteria are met, so its boxes are ticked. */
+function tickCriteria(content: string): string {
+  return content.replace(/^(\s*[-*]\s+)\[ \]/gm, '$1[x]');
 }
 
 function applyChange(content: string, change: ProposalChange): string {
@@ -304,6 +369,10 @@ function applyChange(content: string, change: ProposalChange): string {
     );
   }
   if (change.testPlan) next = setBodySection(next, 'Test plan', change.testPlan);
+  if (change.status) {
+    next = setTaskStatus(next, change.status);
+    if (change.status === 'done') next = tickCriteria(next);
+  }
   return next;
 }
 
@@ -321,6 +390,10 @@ export interface ProposalEntry {
   /** The parts a split makes, as the proposal names them. */
   parts?: { id: string; title: string }[];
   reason?: string;
+  /** A new task's status, when the proposal records it as finished (or says it is to do). */
+  status?: 'todo' | 'done';
+  /** The entry comes with a starting handoff. */
+  handoff?: boolean;
 }
 
 function show(field: string, value: unknown): string {
@@ -333,6 +406,7 @@ function show(field: string, value: unknown): string {
 }
 
 const DIFF_FIELDS = [
+  'status',
   'title',
   'epic',
   'depends',
@@ -356,11 +430,14 @@ export function diffProposal(
     id: ids.added[index],
     title: task.title,
     fields: [],
+    ...(task.status ? { status: task.status } : {}),
+    ...(task.handoff ? { handoff: true } : {}),
   }));
   for (const change of proposal.change) {
     const task = byId.get(change.id);
     const before: Record<string, unknown> = task
       ? {
+          status: task.status,
           title: task.title,
           epic: task.epic,
           depends: task.depends,
@@ -381,6 +458,7 @@ export function diffProposal(
       id: change.id,
       title: change.title ?? task?.title ?? change.id,
       fields,
+      ...(change.handoff ? { handoff: true } : {}),
     });
   }
   for (const split of proposal.split) {

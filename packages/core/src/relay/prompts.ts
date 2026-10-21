@@ -44,7 +44,7 @@ export function buildLegPrompt(input: LegPromptInput): string {
   const handoff = handoffRelPath(docsFolder, task.id);
   const read = [
     `- ${taskRelPath(docsFolder, task.file)} (the task)`,
-    `- ${handoff} (its handoff${input.continuation ? ', which says where the last session stopped' : ''})`,
+    `- ${handoff} (its handoff${input.continuation ? ', which says where the last session stopped' : '. When it already records work, build on it from its Next step'})`,
     ...input.dependsOn.map(
       (id) => `- ${handoffRelPath(docsFolder, id)} (handoff of ${id}, which this task builds on)`,
     ),
@@ -197,6 +197,100 @@ ${note}
 Answer with only the JSON below. No prose before or after it.
 
 ${RELAY_PROPOSAL_SHAPE}`;
+}
+
+/** The proposal shape for catching up: new tasks may be finished, and may carry a handoff. */
+export const CATCH_UP_PROPOSAL_SHAPE = `{
+  "summary": "two or three sentences: where the project stands and what is left",
+  "add": [
+    {
+      "id": "T001",
+      "title": "Short imperative title",
+      "status": "done or todo",
+      "epic": "E01 or null",
+      "depends": [],
+      "estimate": 90000,
+      "specs": ["docs/epics/01-example.md"],
+      "goal": "What the task achieves",
+      "scope": "What it touches and what it leaves alone",
+      "acceptance": ["One checkable criterion per entry"],
+      "testPlan": "The tests that prove it",
+      "handoff": {
+        "done": "What already exists and works, with the files and tests that show it",
+        "decisions": "Choices already made in the code that later work must respect",
+        "rejected": "Approaches the history shows were dropped, or None.",
+        "next": "For unfinished work, the exact next action"
+      }
+    }
+  ],
+  "change": [{ "id": "T004", "status": "done", "handoff": { "done": "..." } }],
+  "split": [],
+  "remove": []
+}`;
+
+export interface CatchUpInput {
+  projectName: string;
+  docsFolder: string;
+  budget: number;
+  firstId: string;
+  tasks: ReviseInput['tasks'];
+  /** Put finished work on the board as done tasks. */
+  recordDone: boolean;
+  note?: string;
+}
+
+/**
+ * Asks a planner to work out where a project already under way stands, from its code, docs and
+ * history, and to turn what is left into Relay tasks. Half-done work gets a handoff that says
+ * where it stands, so its first session carries on instead of starting over.
+ */
+export function buildCatchUpRequest(input: CatchUpInput): string {
+  const board =
+    input.tasks.length > 0
+      ? input.tasks
+          .map((task) => {
+            const depends = task.depends.length > 0 ? ` depends ${task.depends.join(', ')}` : '';
+            const estimate =
+              task.estimate !== null ? `, estimate ${formatTokenCount(task.estimate)}` : '';
+            return `- ${task.id} ${task.title} [${task.status}]${depends}${estimate}`;
+          })
+          .join('\n')
+      : '- none yet';
+  const finished = input.recordDone
+    ? `- Finished work: add a few tasks with "status": "done", one per finished feature or epic (not one per commit), so the board shows the progress and later tasks can depend on them. Give each a "handoff" whose "done" says where the work lives and which tests cover it, and whose "decisions" holds what later tasks must respect.`
+    : `- Finished work: do not add tasks for finished work. Mention what later tasks build on in their own "handoff" instead.`;
+  const note = input.note?.trim()
+    ? `\nWhat the user says about the project:\n"""\n${input.note.trim()}\n"""\n`
+    : '';
+  return `You are taking over the project "${input.projectName}", which is already under way, so that AgentMate Relay can finish it. Do not change any file.
+
+Work out where the project stands:
+- what it is meant to deliver: read the README and every plan you find, such as the docs in ${input.docsFolder}/, a roadmap, a backlog, epics, a delivery status or TODO notes;
+- what is already built: read the code and its tests, and the git history (git log) if you can run it;
+- what is half done and what is not started.
+
+Then plan the rest as tasks that AgentMate Relay runs one after another.
+
+${sizingRules(input.budget)}
+
+How to record what you find:
+${finished}
+- Half done work: a task with "status": "todo" whose "handoff" has "done" (what exists and works now, with the files) and "next" (the exact next action), so its first session carries on instead of starting over.
+- Work not started: tasks with "status": "todo" and no handoff.
+- Plan only what the plans and the code point at. When they disagree, follow the code for what is done and the plans for what is left, and say so in "summary".
+
+Rules for the tasks already on the board:
+- Never change, split or remove a task that is done.
+- When the code shows a board task is finished, list it under "change" with "status": "done" and a "handoff".
+- Change or split board tasks that no longer match the plans, keeping their ids.
+- Number new tasks from ${input.firstId} upward, in the order they should run. Use "depends" for tasks that must be done first.
+
+The board now:
+${board}
+${note}
+Answer with only the JSON below. No prose before or after it.
+
+${CATCH_UP_PROPOSAL_SHAPE}`;
 }
 
 /**

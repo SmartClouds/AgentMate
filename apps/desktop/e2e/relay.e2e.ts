@@ -314,3 +314,68 @@ test('splits a request with the planner and runs it after a task the relay is wo
   await openTasksTab(page);
   await expect(page.getByRole('listitem', { name: /T003 Search page, Done/ })).toBeVisible();
 });
+
+test('picks up a project in progress, then carries on from the half-done task', async () => {
+  test.setTimeout(150_000);
+  launched = await launchRelayApp();
+  const { page, projectDir } = launched;
+  write(
+    projectDir,
+    '.fake-relay.json',
+    JSON.stringify({
+      proposal: {
+        summary: 'Login is built and search is half done.',
+        add: [
+          {
+            id: 'T001',
+            title: 'Login',
+            status: 'done',
+            acceptance: ['Signs in with a password'],
+            handoff: { done: 'src/auth.js, covered by auth.test.js.' },
+          },
+          {
+            id: 'T002',
+            title: 'Search',
+            depends: ['T001'],
+            estimate: 60000,
+            handoff: { done: 'The search API.', next: 'Build the search page.' },
+          },
+          { id: 'T003', title: 'Export', depends: ['T002'], estimate: 40000 },
+        ],
+        change: [],
+        split: [],
+        remove: [],
+      },
+    }),
+  );
+  await openWorkspace(launched);
+  await page.getByRole('tab', { name: 'Tasks' }).click();
+  await page.getByRole('button', { name: 'Plan the rest with AI' }).click();
+
+  const dialog = page.getByRole('dialog', { name: 'Pick up a project in progress' });
+  const plan = dialog.getByRole('button', { name: 'Plan the rest' });
+  await expect(plan).toBeEnabled({ timeout: 15_000 });
+  await plan.click();
+  await expect(
+    dialog.getByRole('img', { name: 'Where the project stands' }),
+  ).toHaveAccessibleDescription('1 finished, 1 half done, 1 to do', { timeout: 30_000 });
+  await dialog.getByRole('button', { name: 'Apply 3 changes' }).click();
+  await expect(dialog).toBeHidden();
+
+  await expect(page.getByRole('list', { name: 'Relay track' })).toBeVisible();
+  await expect(page.getByText('1 of 3 done')).toBeVisible();
+  expect(statusOf(projectDir, 'T001')).toBe('done');
+  expect(existsSync(join(projectDir, 'docs/tasks/RELAY.md'))).toBe(true);
+  expect(readFileSync(join(projectDir, 'docs/tasks/handoffs/T002.md'), 'utf-8')).toContain(
+    'Build the search page.',
+  );
+
+  await page.getByRole('button', { name: 'Run relay' }).first().click();
+  await expect.poll(() => statusOf(projectDir, 'T003'), { timeout: 90_000 }).toBe('done');
+  const launches = launched.claudeLaunches().filter((line) => line.includes('AgentMate Relay'));
+  // The finished task needs no session; the half-done one is told to build on its handoff.
+  expect(launches).toHaveLength(2);
+  expect(launches[0]).toContain('task T002');
+  expect(launches[0]).toContain('already records work');
+  expect(launches[1]).toContain('task T003');
+});

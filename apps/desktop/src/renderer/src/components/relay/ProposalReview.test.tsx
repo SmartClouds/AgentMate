@@ -170,6 +170,46 @@ describe('ProposalReview', () => {
     expect(screen.getByRole('meter', { name: 'T016 estimate' })).toBeInTheDocument();
   });
 
+  it('shows finished work as done and half-done work as starting from a handoff', () => {
+    const proposal: RelayProposal = {
+      summary: '',
+      add: [
+        { title: 'Login', status: 'done', estimate: 40_000, handoff: { done: 'Built.' } },
+        { title: 'Search', estimate: 90_000, handoff: { done: 'The API.', next: 'The page.' } },
+      ],
+      change: [{ id: 'T004', status: 'done', handoff: { done: 'Built.' } }],
+      split: [],
+      remove: [],
+    };
+    renderWithProviders(
+      <ProposalReview
+        proposal={proposal}
+        entries={[
+          { kind: 'add', id: 'T010', title: 'Login', fields: [], status: 'done', handoff: true },
+          { kind: 'add', id: 'T011', title: 'Search', fields: [], handoff: true },
+          {
+            kind: 'change',
+            id: 'T004',
+            title: 'Export',
+            fields: [{ field: 'status', before: 'todo', after: 'done' }],
+            handoff: true,
+          },
+        ]}
+        budget={200_000}
+        onChange={vi.fn()}
+      />,
+    );
+    const done = screen.getByRole('listitem', { name: /^Finished task T010 Login/ });
+    // A finished task needs no session, so it is not read against the budget.
+    expect(within(done).queryByRole('meter')).not.toBeInTheDocument();
+    const half = screen.getByRole('listitem', { name: /^New task T011 Search/ });
+    expect(within(half).getByText('Half done')).toBeInTheDocument();
+    expect(within(half).getByRole('meter', { name: 'T011 estimate' })).toBeInTheDocument();
+    const change = screen.getByRole('listitem', { name: /^Change T004/ });
+    expect(within(change).getByText('Status')).toBeInTheDocument();
+    expect(within(change).getByText('With a handoff')).toBeInTheDocument();
+  });
+
   it('never uses the native title attribute', () => {
     const { container } = renderWithProviders(<Harness onChange={vi.fn()} />);
     expect(container.querySelector('[title]')).toBeNull();
