@@ -108,14 +108,18 @@ function AboutBody(): React.JSX.Element {
           It's free and open source under the MIT license.
         </p>
 
-        <div className="relative mt-6 flex flex-wrap items-center justify-center gap-2">
+        {/* The two actions are too wide to share a row at this width. They always stack, and the
+            first has a fixed minimum width, so the shorter "Checking…" label can't let them
+            pop onto one row and move everything while a check runs. */}
+        <div className="relative mt-6 flex flex-col items-center gap-2">
           {updatePending && !busy ? (
-            <Button onClick={openUpdateDialog}>
+            <Button className="min-w-44" onClick={openUpdateDialog}>
               <Download />
               View update
             </Button>
           ) : (
             <Button
+              className="min-w-44"
               onClick={() => void runCheck()}
               // aria-disabled rather than disabled, so focus stays on the button while it works.
               aria-disabled={busy}
