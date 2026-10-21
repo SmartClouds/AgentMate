@@ -25,7 +25,7 @@ The endpoint is private. It only answers a request that carries the target's key
 
 Your app needs the endpoint before AgentMate can watch it, and your AI agent can write it for you. Click **Build with AI** (in the toolbar, on the first-use screen, or in a target's details while it does not answer yet).
 
-1. Pick the project, and if you like the environment and the server. Choose **Bearer key** or **HTTP Basic** and the path (`/_agentmate/health` by default).
+1. Pick the project, and if you like the environment and the server. Choose **Bearer key** or **HTTP Basic** and the path (`/_agentmate/health` by default). AgentMate only picks the project for you when you open the dialog from a project's own Monitoring tab, when a project is chosen in the page's project filter, or when you have a single project. Otherwise the prompt area shows **Which project is the endpoint for?** with your projects listed, and you click one. The footer always says which project the agent will open in ("Opens in (project)"), or "Pick a project first".
 2. The prompt on the right updates as you go. It carries the whole AgentMate Health Protocol: the request, the report format, the security rules and an example. It asks the agent to read the project, check every service it really uses (database, cache, queues, storage, mail, external APIs), and add tests.
 3. Click **Send to Claude Code** (the button names your project's agent) to start it in the project's workspace with the prompt, or **Copy prompt** to use it anywhere else. The **Protocol** tab has the protocol on its own, for a developer or another AI.
 

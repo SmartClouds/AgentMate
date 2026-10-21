@@ -132,7 +132,9 @@ Tests are shown as a tree: a test project for each framework found (a folder wit
 
 ### Results and re-running
 
-While tests run, a line says **Running {n} tests…** and the counts update live, for example **2 failed**, **40 passed**, **1 skipped**, with a timer. A stopped run says **Stopped**. When the run ends:
+While tests run, a line says **Running {n} tests…** and the counts update live, for example **2 failed**, **40 passed**, **1 skipped**, with a timer. A stopped run says **Stopped**.
+
+A long suite is not cut off just because it takes a while. AgentMate only stops a test project when it has printed nothing at all for 30 minutes, and every line of output starts the wait again. A project stopped that way shows a card saying the run "printed nothing for 30 minutes and was stopped", with its log. When the run ends:
 
 - **Run failed** runs only what failed, and runs again every test project that could not run.
 - **Fix all with AI** appears when more than one thing failed, counting projects that could not run (except ones whose test tool was not found).

@@ -3,7 +3,7 @@ title: Remote
 category: Connect
 order: 10
 summary: Control another AgentMate over your network, connect to servers over SSH, open Windows Remote Desktop sessions, and pair the AgentMate mobile app.
-keywords: remote, ssh, remote control, host, pairing code, qr code, mobile, phone, companion app, servers, saved servers, host key, passkey, lan, rdp, connect
+keywords: remote, ssh, remote control, host, pairing code, qr code, mobile, phone, companion app, servers, saved servers, host key, passkey, lan, rdp, connect, sudo, su, saved password, enter saved password
 route: /remote
 ---
 
@@ -13,7 +13,7 @@ Two sets of tools live here. The first is a remote control that works between Ag
 
 ## Where to find it
 
-Click **Remote** in the sidebar under **Connect**, or open the command palette and type Remote. Pick a tab at the top: **Host**, **Connect**, **SSH** or **Remote Desktop**.
+Click **Remote** in the sidebar under **Connect**, or open the command palette and type Remote. Pick a tab at the top: **Host**, **Connect**, **SSH** or **Remote Desktop**. The page remembers the tab you used last and opens on it next time. The first time, it opens on **Host**.
 
 Below the tabs, two shared cards can appear on any tab: **File transfers** (progress of files being sent or received, shown once a transfer starts) and **Activity** (a running log of what happened, such as pairing attempts and connections, with timestamps).
 
@@ -137,6 +137,12 @@ The first time you connect to a server, AgentMate saves its host key fingerprint
 
 - **Don't connect** (the default, safe choice).
 - **Trust the new key** to save it and connect.
+
+### Saved password at sudo and su prompts
+
+When a server signs in with a saved password and the shell then asks for a password, such as a `sudo` or `su` prompt, an **Enter saved password** button appears at the bottom right of the terminal. Click it and AgentMate types the saved password and presses `Enter` for you, then hands the keyboard back to the terminal. The password stays inside AgentMate and is never shown on screen. If it cannot be read, a message tells you to type it in the terminal yourself.
+
+The button only shows while the prompt is waiting, and it comes back at the next prompt. It does not appear for servers that sign in with a private key, and not while an AI task is running in that tab, since the AI answers its own prompts.
 
 ### AI history on a server
 

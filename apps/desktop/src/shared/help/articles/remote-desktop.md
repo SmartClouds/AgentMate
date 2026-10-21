@@ -3,7 +3,7 @@ title: Remote Desktop
 category: Connect
 order: 20
 summary: Sign in to Windows servers and PCs over RDP in their own window, with shared clipboard, file copy, full screen, and an AI that can do tasks on the remote desktop for you.
-keywords: rdp, remote desktop, windows server, windows, mstsc, nla, clipboard, file copy, full screen, ctrl+alt+del, certificate, reinstall, forget certificate, tls, key usage, proxy, socks, ask ai, session window, resolution
+keywords: rdp, remote desktop, windows server, windows, mstsc, nla, clipboard, file copy, full screen, ctrl+alt+del, certificate, reinstall, forget certificate, tls, key usage, proxy, socks, ask ai, session window, resolution, connection quality, signal bars, latency, speed, download, upload, slow
 ---
 
 Remote Desktop lets you sign in to a Windows Server or Windows PC that has Remote Desktop (RDP) turned on. Each connection opens in its own window, like the Windows Remote Desktop Connection app. You can share the clipboard, copy files in both directions, go full screen, and even ask an AI to carry out a task on the remote desktop by looking at the screen and using the mouse and keyboard.
@@ -95,6 +95,19 @@ In a normal window, a bar at the top shows the server name, a status badge (Conn
 | Full screen icon | Enters or leaves full screen. |
 
 Window controls (minimize, maximize, close) are at the right. Closing the window ends the session.
+
+### Connection quality
+
+Once connected, the status badge is followed by four small signal bars and the current download and upload speed. The bars show how quickly the server reacts to what you do, which is what makes a connection feel fast or slow:
+
+| Bars | Quality | The server answers in about |
+| --- | --- | --- |
+| 4 | Excellent | 75 ms or less |
+| 3 | Good | 150 ms or less |
+| 2 | Fair | 300 ms or less |
+| 1 | Poor | more than 300 ms |
+
+Point at the readout for the exact figure and the speeds. Until you type or click and the server answers, the tooltip says "Connection quality: measuring" and the bars are grey. A remote desktop only sends something when the screen changes, so AgentMate times how long the server takes to react to your keys and clicks instead of pinging it, and uses the middle of the recent samples. The speeds are averaged over a couple of seconds, and they are hidden when the window is narrow. In full screen the top bar is hidden, so the readout is too.
 
 ### Full screen
 

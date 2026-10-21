@@ -3,7 +3,7 @@ title: Interface tour
 category: Getting started
 order: 20
 summary: A tour of the AgentMate window, covering the sidebar or top menu, title bar, back and forward buttons, header buttons, status bar, version and updates, messages, themes and quitting.
-keywords: interface, layout, sidebar, top menu, menu bar, title bar, status bar, back forward, toast, recent messages, bell, update, check for updates, version, theme, glass, quit, loading
+keywords: interface, layout, sidebar, top menu, menu bar, title bar, status bar, back forward, toast, recent messages, bell, update, check for updates, version, theme, glass, quit, loading, github account, gh, relay, pause run, macos update, rosetta, apple silicon, arm64
 ---
 
 The AgentMate window has the same few parts on every page: a title bar across the top, the main menu (a sidebar on the left or a bar along the top), a header with the page title and a few buttons, the page itself, and a status bar along the bottom. This article explains what each part does and how to change the ones you can.
@@ -83,10 +83,12 @@ The strip along the bottom of the window shows what is running. The left side is
 
 | Item | What it shows |
 | --- | --- |
-| Project runs | Projects started with **Run**. A single run shows its name and the port it listens on (or the device it went to), plus its CPU and memory. More than one collapses into a count such as "2 runs". The panel lists each run with **Show terminal** and **Stop** buttons. |
+| Relay | Only while a [relay](relay.md) is running or waiting to start. It shows the task on the move (such as `T003`), how many tasks are done out of all of them, and how full the session's context is. It turns amber when a task is waiting for you, and a `+1` means another relay is live. Click it to open the task board. |
+| Project runs | Projects started with **Run**. A single run shows its name and the port it listens on (or the device it went to), plus its CPU and memory. A run that listens on several ports shows the first, with a `+1` for each other. More than one run collapses into a count such as "2 runs". A paused run reads **paused** instead of its CPU. The panel lists each run with its web addresses (click one to open it, or use its copy button) and the buttons **Show terminal**, **Pause** or **Resume**, and **Stop**. With two or more runs it also has **Pause all** and **Resume all**, and a switch, **Pause runs while an agent works**. See [Pause a run](projects.md#pause-a-run). |
 | File transfers | Uploads and downloads in the [SSH file manager](ssh-files.md#the-status-bar), like "2 transfers 48%", or **Needs your answer** when a file already exists at the target. The panel lists each transfer with a cancel button, an **Answer** button for a waiting question, and **Open file manager** and **Show in panel** for each server. Hidden while nothing moves and nothing waits. |
 | Terminals | The number of open terminals, for example "3 terminals". Click it to open the **Running CLIs** dialog, which shows CPU and memory for every terminal. |
-| Plan limits | One item each for Claude Code, Codex and Cursor when the account reports plan limits, showing the percentage used of the next limit to reset and a countdown. If a read fails, the item stays, dimmed with a warning icon, until the limits can be read again. The panel lists that provider's limits, has a **Refresh** button for it, and **Open Token Usage** goes to [Token Usage](token-usage.md). Each one can be turned off under **Status bar limits** in [Settings](settings.md#status-bar-limits). |
+| Plan limits | One item each for Claude Code, Codex and Cursor when the account reports plan limits, showing the percentage used of the next limit to reset and a countdown. If the account cannot be read, the item stays: it shows the last reading, dimmed with a warning icon, or for Claude Code an estimate from your local logs marked with a `~`. The panel lists that provider's limits, has a **Refresh** button for it, and **Open Token Usage** goes to [Token Usage](token-usage.md#the-status-bar). Each one can be turned off under **Status bar limits** in [Settings](settings.md#status-bar-limits). |
+| GitHub account | The account the GitHub CLI (`gh`) is signed in as, shown as `@login`, or **Not signed in**. The panel shows the name, the organizations you belong to, **Open profile** and **Use another account**, which opens a terminal with `gh auth login` typed in (press `Enter` there). The refresh button checks the sign-in again, and a login finished in your browser shows up within seconds. If the check fails, for example when you are offline, the item keeps the last account, dimmed with a warning icon, instead of saying you are signed out. Hidden when `gh` is not installed. |
 | Docker | "N running" containers. The panel lists up to eight, and **Open the Docker page** goes to [Docker](docker.md). Hidden when Docker is not available. |
 | Android | "N running" emulators. The panel lists them with their memory and CPU. **Open the Android page** goes to [Android](android.md). Hidden when no Android SDK is found. |
 | CPU | Current CPU use with a meter. The panel adds a chart, per-core bars, the busiest apps and any GPU. |
@@ -125,6 +127,17 @@ The update dialog changes as the update moves along:
 | Problem | **Download interrupted** (it can resume) or **Update failed**. | **Hide**, then **Resume download** or **Try again** |
 
 If you hide the dialog while a download is running, paused, finished or interrupted, a small chip stays in the page header showing the version (or **Paused**, **Ready**, **Interrupted**, **Resume**) and the percentage. Click the chip to bring the dialog back.
+
+**Restart now** turns into **Restarting...** and both buttons are greyed out while AgentMate hands over to the installer. If that fails, a message says "Restart to install failed. Quit the app and it installs on the way out." and the update still installs when you quit.
+
+### Updates on macOS
+
+The macOS builds are not signed with an Apple Developer ID, so the system's own updater cannot install them. AgentMate does it itself: it unpacks the new version next to the app, quits, swaps the app for the new one and opens it again. Two things can stop it, and both come with a message:
+
+- **"macOS is running AgentMate from a temporary copy."** The app was opened straight from a downloaded disk image or zip. Move AgentMate to the Applications folder, open it from there, and update again.
+- **"AgentMate can't write to (folder), so it can't replace itself."** Your account cannot change the folder the app is in. Download the new version from the releases page instead.
+
+On a Mac with an Apple Silicon chip, updates always bring the Apple Silicon (arm64) version. If you are running the Intel version through Rosetta, a notice titled **Install the Apple Silicon version** appears when the window opens. Git and the built-in terminals fail under Rosetta with "missing compatible architecture". **Open releases page** takes you to the download, and you drag the new app over the old one in Applications. Your projects and settings are kept. Tick **Don't show this again** to stop the notice, otherwise it comes back each launch. The next update switches you over by itself.
 
 You can also check and manage updates from **Settings**, **Data** tab, in the **About** card. It shows the same status line, the progress bar and the same actions: **Check for updates**, **Download**, **Pause**, **Resume download**, **Show** and **Restart now**.
 

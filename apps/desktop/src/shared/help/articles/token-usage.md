@@ -184,10 +184,12 @@ Claude Code, Codex and Cursor each get their own item in the status bar at the b
 
 A **Refresh** button sits beside the provider's name in that panel. It re-reads that one provider and leaves the others alone.
 
-If a provider's limits cannot be read, its item stays in the bar. It keeps the last limits it reported, dimmed with a warning icon, until those limits reset. A provider that has never been read shows only the warning icon, and its panel says what went wrong.
+If a provider's limits cannot be read, its item stays in the bar. It keeps the last limits it reported, dimmed with a warning icon, until those limits reset. The panel then says "Last read" with how long ago, and what went wrong. A provider that has never been read shows only the warning icon, and its panel says what went wrong.
 
-- **Claude Code** shows its 5-hour session and weekly limits.
-- **Codex** reads its limits from its own session logs: a ChatGPT plan has a 5-hour session and a weekly limit, while a free account has a single monthly one. The numbers are as of your last Codex turn. A limit whose reset time has passed shows 0% until your next turn, and if it was the account's only limit, the Codex item leaves the bar until then.
+The countdowns and the "Updated" time in the panel refresh every half minute, so they keep moving while you leave the window alone.
+
+- **Claude Code** shows its 5-hour session and weekly limits. AgentMate asks Claude for them, and when Claude answers that it is being asked too often, waits as long as Claude says before it asks again, so a busy moment does not turn into a run of failures. A new sign-in is read straight away. When Claude cannot be reached and there is no earlier reading to show, the item falls back to an estimate worked out from your local session logs. It is marked with a `~` before the percent, and the panel says "Estimated from local logs" with the reason. An estimate is never saved as if it were Claude's own numbers, and the last real reading always wins over it.
+- **Codex** reads its limits from its own session logs: a ChatGPT plan has a 5-hour session and a weekly limit, while a free account has a single monthly one. The numbers are as of your last Codex turn, and the panel's "Updated" time is when that turn happened. A limit whose reset time has passed shows 0% until your next turn, and if it was the account's only limit, the Codex item leaves the bar until then.
 - **Cursor** shows how much of the plan's included usage is spent this billing cycle, in total and split into Auto and API, with a countdown to the end of the cycle. An older request-based plan shows its monthly request limit instead.
 
 To hide a provider's item, turn off its switch under **Status bar limits** on the General tab of [Settings](settings.md#status-bar-limits).

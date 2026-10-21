@@ -3,7 +3,7 @@ title: Troubleshooting and FAQ
 category: Troubleshooting
 order: 10
 summary: Fixes for common problems such as AI provider errors, CLIs that are not detected, terminals that will not start, Docker, SSH host keys and failed updates, plus where AgentMate keeps its data and a short FAQ.
-keywords: troubleshooting, problem, error, fix, not working, help, faq, ollama not reachable, api key, timeout, cli not detected, not installed, terminal won't start, docker not available, host key changed, update failed, reset, data folder, userData, logs, proxy
+keywords: troubleshooting, problem, error, fix, not working, help, faq, ollama not reachable, api key, timeout, cli not detected, not installed, terminal won't start, docker not available, host key changed, rosetta, intel, apple silicon, missing compatible architecture, gh not found, clone failed, update failed, reset, data folder, userData, logs, proxy
 ---
 
 This page lists the problems people run into most, with the exact messages AgentMate shows and what to do about each one. If your problem is not here, use the **Ask the guide** chat on the Help page (press `F1`), which answers from these articles when an AI provider is set up. See [Help center](help-center.md).
@@ -106,6 +106,16 @@ AgentMate checks for updates every hour and in **Settings**, **Data**, **About**
 - "Download paused. What you already have stays on disk." Click **Resume download**. The download also resumes by itself if the connection drops, and what was downloaded is kept.
 - "Downloaded file did not match the published checksum. The partial was discarded so the next try starts clean." The download was damaged. Click **Download** again.
 - When it finishes, click **Restart now** to install. Terminals keep running through an update restart.
+- "Restart to install failed. Quit the app and it installs on the way out." The hand-over to the installer did not start. Quit AgentMate and the update installs as it closes.
+- On a Mac, "macOS is running AgentMate from a temporary copy." Move AgentMate to the Applications folder, open it from there, and update again. "AgentMate can't write to (folder), so it can't replace itself." means your account cannot change that folder, so download the new version from the releases page. See [Updates on macOS](interface-tour.md#updates-on-macos).
+
+### Git says the Intel version of AgentMate is installed
+
+"This Mac has an Apple Silicon chip, but the Intel version of AgentMate is installed, so git can't run." In the built-in terminals the same problem shows up as "missing compatible architecture". macOS runs the Intel version through Rosetta, and the developer tools it starts cannot run that way. Install the Apple Silicon (arm64) version: AgentMate shows an **Install the Apple Silicon version** notice at launch with a button to the releases page, and the next update switches you over by itself. Your projects and settings are kept. See [Updates on macOS](interface-tour.md#updates-on-macos).
+
+### Clone or fetch says Git could not start the GitHub CLI
+
+"Git could not start the GitHub CLI (gh) to sign in. Make sure gh is installed and on your PATH, then try again." Private GitHub repositories are cloned and fetched with your `gh` sign-in. Check that `gh --version` works in a terminal, and that `gh auth status` says you are signed in (`gh auth login` if not). If you just installed `gh`, close and reopen AgentMate so it sees the new `PATH`. Then use **Clone from GitHub** on the project's Git tab to try again, see [Projects](projects.md#git). The message "Repository not found" is different: it means the address is wrong or your account cannot see that repository.
 
 ### Settings does not load
 

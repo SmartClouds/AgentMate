@@ -3,7 +3,7 @@ title: Projects
 category: Getting started
 order: 50
 summary: Add and organise your projects, then use each project's page for its prompts and Blueprint, git, token usage and cost, security scans, packages, Docker, bootstrap files, skills, MCP servers, hooks and environments.
-keywords: projects, project, new project, folder, pin, archive, tags, icon, run command, create with ai, placeholder, run input, bootstrap, blueprint, standing prompt, git, tag version, security scan, packages, environments, hooks, diffray, drafts, usage, cost, tokens, spend
+keywords: projects, project, new project, folder, pin, archive, tags, icon, run command, create with ai, placeholder, run input, bootstrap, blueprint, standing prompt, git, tag version, security scan, packages, environments, hooks, diffray, drafts, usage, cost, tokens, spend, pause, resume, freeze, hot reload, clone, clone from github, private repo, task board, relay
 route: /projects
 ---
 
@@ -61,7 +61,7 @@ Until the name and folder are filled in, the button is disabled and the footer s
 | --- | --- |
 | **Name** | The project's name. |
 | **Folder** | Where the project lives. Paste a path or click **Browse**. Terminals and agents start in this folder. Picking a folder fills in the name from the folder name if the name is empty. |
-| **Git repository** | Where the code is hosted. Paste a public GitHub link (`github.com/owner/repo`) to clone it into the folder on Create: the dialog says "Will clone into …". The folder must be empty (an existing repo is kept as-is). A failed clone still creates the project with the link, and the error tells you why. Private repos need `gh auth login` first. An **Open** button opens the link. Fetch and pull afterwards from the project's Git tab. |
+| **Git repository** | Where the code is hosted. Paste a GitHub link (`github.com/owner/repo`) to clone it into the folder on Create: the dialog says "Will clone into …". The folder must be empty (an existing repo is kept as-is). A private repo needs the GitHub CLI signed in (`gh auth login`), and AgentMate uses that sign-in for the clone and for later fetches and pulls. A failed clone still creates the project with the link, and the error tells you why. Use **Clone from GitHub** on the project's Git tab to try again, see [Git](#git). An **Open** button opens the link. Fetch and pull afterwards from the project's Git tab. |
 | **Tags** | Press `Enter` or comma to add a tag. Backspace in the empty box removes the last one. Tags are used by search and filtering. |
 | **Description** | One line about what the project is. |
 
@@ -118,6 +118,28 @@ To add one, click **Ask for a value** on a command's row, or use **Add command t
 
 To keep `{{name}}` as plain text, put spaces inside the braces, as in `{{ name }}`. Go template text such as `{{range .Items}}` is left alone.
 
+### Pause a run
+
+A dev server with hot reload rebuilds every time a file changes, which takes CPU you may want for something else. **Pause** freezes the run's shell and everything it started. A paused run uses no CPU and keeps its state, so when you **Resume** it carries on where it was and picks up every file change in one go. It works on Windows, macOS and Linux.
+
+You can pause and resume in four places:
+
+- **The Workspace header.** A pause button sits beside **Run** while the project on screen has a run going. It acts on all of that project's runs at once, since a web app and its API usually watch the same files. It turns into a play button (**Resume**) while they are paused.
+- **The status bar.** Open the run item and use **Pause** or **Resume** on a run's row, or **Pause all** and **Resume all** when there are two or more. See [Interface tour](interface-tour.md#the-status-bar).
+- **The keyboard.** `F6` pauses or resumes the same run `Shift+F5` would stop, the one open in the drawer or else the newest. You can change it in **Settings** > **Shortcuts**, where it is listed as **Pause or resume run** in the **Terminal** group.
+- **The paused run's terminal.** A banner across the top says it is paused and has a **Resume** button. A frozen terminal looks hung, because what you type is only read once the run thaws.
+
+A run whose command has finished (only its shell is left) has nothing to pause.
+
+#### Pause while an agent works
+
+Turn on **Pause runs while an agent works** at the bottom of the status bar's run panel, and AgentMate does it for you. While an AI agent is working in the same folder as a run (or in a folder above or below it), the run is paused. A few seconds after the agent stops working, the run resumes by itself. The wait is there because agents go quiet for a moment between steps. It is off by default.
+
+- A banner on the run's terminal says **Paused while an agent works in this folder.**
+- If you click **Resume** while the agent is still working, AgentMate leaves that run alone until the agent is done.
+- A run you paused yourself is never resumed for you.
+- Turning the switch off resumes the runs it paused.
+
 ## A project's page
 
 The page has a header, a section list on the left (a tab bar on narrow windows) and the section's content on the right.
@@ -130,6 +152,7 @@ The page has a header, a section list on the left (a tab bar on narrow windows) 
 - **Run** appears when the project has a run command.
 - **Open workspace** opens this project in the [Workspace](workspace.md).
 - **Prompt** opens the standing prompt editor. See [Overview](#overview).
+- **Task board** opens the project's [Relay](relay.md) tasks as a board you can run from.
 - The **More project actions** menu has **Edit project**, **Set a run command** and **Create run command with AI** (when there is none), **Open folder**, **Open terminal**, **Archive project** or **Restore project**, and **Remove project**. Removing asks first and only removes the project from AgentMate: your files on disk are kept.
 
 ### Sections
@@ -166,10 +189,11 @@ The step rail across the top has **Idea** (what you are building), **Architectur
 1. Fill in at least one step, then open the **Review** step.
 2. Set **Docs folder**, the folder (relative to the project root) where the agent should write the plan. The default is `docs`.
 3. Turn **Confirm before writing files** on if you want the agent to list its planned phases and epics and wait for your yes before writing anything.
-4. Click **Generate prompt** (it reads **Regenerate prompt** once one exists). Use the arrow beside it to choose who writes the prompt under **Generate with**: a CLI, a model and an effort level (**Written by**, **Model**, **Effort**), or the AI provider from Settings. The choice is remembered for the project. Steps written in Persian are translated first.
+4. Turn on **Split into Relay tasks** if you want the backlog written as task files that each fit one AI session, and pick **Context per session** under it. See [Relay tasks](relay.md). Once the agent has written them, a **Tasks ready** banner on the Blueprint tab has an **Open board** button.
+5. Click **Generate prompt** (it reads **Regenerate prompt** once one exists). Use the arrow beside it to choose who writes the prompt under **Generate with**: a CLI, a model and an effort level (**Written by**, **Model**, **Effort**), or the AI provider from Settings. The choice is remembered for the project. Steps written in Persian are translated first.
 5. Read and edit the prompt in the editor. **Save prompt** stores your edits.
 
-The prompt asks the agent to write a product brief, a roadmap with phases, one file per epic, a backlog of tasks, milestones and a risk list inside the docs folder.
+The prompt asks the agent to write a product brief, a roadmap with phases, one file per epic, a backlog of tasks, milestones and a risk list inside the docs folder. With **Split into Relay tasks** on, the backlog is written as Relay task files instead.
 
 Under the editor you can **Copy** the prompt, **Save as draft** (it appears in the project's Prompts section under Drafts), **Use as standing prompt**, or **Run in CLI**. **Run in CLI** asks for the model and effort, then opens the agent in a Workspace tab with the prompt typed in. Press `Enter` there to run it. The **History** button on this step lists earlier versions of the prompt.
 
@@ -192,7 +216,11 @@ Each entry has icons: **Copy prompt**, **Delete**, and depending on its kind **M
 
 The Git section is a full set of everyday git tools for the project's folder. See [Git in the Workspace](workspace-git.md) for the Workspace version.
 
-If the folder is not a repository, the section says so and offers **Initialize repository**. The setup wizard then walks through two steps:
+If the folder is not a repository, the section says so and offers **Initialize repository** or **Clone from GitHub…**. If the project has a GitHub address saved but nothing was cloned yet (for example the clone on Create failed), the section says "This project's GitHub repository isn't on this computer yet" and the first button is **Clone** followed by the repository name, with **Initialize a new repository** next to it.
+
+**Clone from GitHub…** asks for the **Repository address** (`https://github.com/owner/repo`) and clones it into the project's folder. If the folder already has files, AgentMate asks before it connects them to the repository, and your files are left as they are, so differences show up as changes. A private repository needs the GitHub CLI signed in (`gh auth login`). If git cannot start the GitHub CLI, the message says "Make sure gh is installed and on your PATH", so check that `gh` runs in a terminal and try again.
+
+**Initialize repository** starts a new repository instead. The setup wizard walks through two steps:
 
 1. **Set up git for this project**: choose the **Initial branch** (default `master`), and whether to commit the files already in the folder (**Commit the files that are already in the folder**, with a **Commit message**, default "Initial commit"). Click **Initialize repository**.
 2. **Connect this project to GitHub**: with the GitHub CLI installed and signed in, choose an **Owner** (your account or an organization) and a **Repository name**, click **Check**, then **Connect and push** (or **Create repository and push** if it does not exist yet, with an optional description and a private or public choice). **Connect over SSH instead of HTTPS** is available. Without the GitHub CLI you can use **Use a remote URL instead** and paste a remote address. A final step says what was pushed and links to the repository.
@@ -372,6 +400,8 @@ Build Prompt turns a rough request into a clear prompt for a project. Open it fr
 4. Use **Copy** (`Ctrl+C`, ignored while text is selected) or edit the result.
 5. Click **Save draft** to keep it in the project's Prompts section, **Open in** (or **Run on**) an agent to open the agent in the Workspace with the prompt typed in (press `Enter` there to run it), or the arrow for other agents and **Add scheduled task**.
 
+**Split into tasks** at the bottom turns the request into [Relay tasks](relay.md): small tasks that each fit one AI session and run one after another. It is greyed out until you have typed a request or generated a prompt.
+
 A chip above the result can size the prompt and suggest a model and effort, in which case the button reads **Run on** that model. **History** goes to the project's Prompts section. **Maximize** enlarges the dialog, and **Add to desktop** pins a small Build Prompt widget for that project to your desktop. See [Widgets and desktop pet](widgets-desktop-pet.md).
 
 ## Tips
@@ -385,6 +415,7 @@ A chip above the result can size the prompt and suggest a model and effort, in w
 ## Related
 
 - [Getting started](getting-started.md)
+- [Relay tasks](relay.md)
 - [Workspace](workspace.md)
 - [Workspace Git](workspace-git.md)
 - [Worktrees](worktrees.md)

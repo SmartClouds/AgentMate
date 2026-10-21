@@ -3,7 +3,7 @@ title: Prompt Builder
 category: Build
 order: 10
 summary: Turn a rough idea, typed or spoken in any language, into a clear prompt for your AI coding agent, then run it, save it or schedule it.
-keywords: prompt builder, prompt, generate prompt, build prompt, translate, voice input, dictate, target ai, prompt type, template, draft, schedule, history, recommended run, model, effort, sizing, send to cli, widget, pin to desktop
+keywords: prompt builder, prompt, generate prompt, build prompt, translate, voice input, dictate, target ai, prompt type, template, draft, schedule, history, recommended run, model, effort, sizing, send to cli, widget, pin to desktop, split into tasks, relay, task board
 route: /prompt-builder
 ---
 
@@ -51,6 +51,7 @@ The **Generated prompt** editor on the right is a normal text editor, so you can
 | **Copy** (icon) | Copies the prompt to the clipboard. |
 | **Save Template** | Asks for a **Template name** and stores the prompt, type and target AI as a template. |
 | **Send to CLI** | Opens a terminal with your AI CLI and the prompt already typed in. |
+| **Split into tasks** | Breaks the work into [Relay tasks](relay.md), small tasks that each fit one AI session and run one after another. It works as soon as there is a request, even before you generate a prompt. A dialog asks which project the tasks are for if you have not picked one under **Project**. |
 | **Export Markdown** | Saves the prompt as a file, offering the name `prompt.md`. |
 | **Clear** (trash icon) | Empties the request and the generated prompt. |
 
@@ -142,6 +143,7 @@ By default the dialog sizes the prompt on its own as soon as **Generate prompt**
 ### Footer actions
 
 - **Clear** empties the request and result.
+- **Split into tasks** turns the request or the generated prompt into [Relay tasks](relay.md) for this project. An AI planner reads the project without changing it and proposes tasks sized to the context budget you choose. You review them, leave some out, and then add them to the project's task board, run them now, or start them later. It is greyed out until there is a request.
 - **Save draft** parks the prompt on the project (the tooltip calls this the project's Overview tab, and the confirmation says "Draft saved. Find it on the project's Overview tab."). The dialog then closes.
 - The main run button opens an agent in the Workspace with the prompt typed in and ready: **Run on <model · effort>** when a fresh sizing exists, otherwise **Open in <your agent>**. Press `Enter` in that tab to run it.
 - The arrow next to it lists other ways: the suggested model, the default model and effort, **Other agents** you have installed, and **Add scheduled task** (**Run it later, by hand or at a set time**), which opens an **Add scheduled task** dialog.
@@ -177,6 +179,7 @@ In the normal (not maximized) dialog, the pin button (**Add to desktop**, toolti
 - [Ask AI](ask-ai.md)
 - [Writing check, voice input and translation](writing-voice-translation.md)
 - [Projects](projects.md)
+- [Relay tasks](relay.md)
 - [Workspace terminals and agents](workspace-terminals-agents.md)
 - [Scheduled tasks](scheduled-tasks.md)
 - [Keyboard shortcuts](keyboard-shortcuts.md)

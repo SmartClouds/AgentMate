@@ -61,6 +61,7 @@ Clicking it opens that terminal session, or brings the Remote Desktop session wi
 A few more things use the same system notifications:
 
 - **Server alerts** from Deploy: a warning or critical alert on one of your servers (disk filling, a failed job, a certificate that did not renew and so on) shows a notification when AgentMate is not in the foreground, and clicking it opens that server.
+- **Relay alerts** from [Relay tasks](relay.md): a task is blocked, is done but its tests fail, a session ended or stopped without its handoff, a session is not moving, a plan is ready for you to look at, or the relay finished. A system notification appears and clicking it opens that project's Workspace. The same message is kept in Recent messages with a **Relay** tag, as a success when the relay finishes cleanly and as a warning for everything else.
 - **Usage threshold alerts** from Token Usage (see [Usage alerts](#usage-alerts)).
 
 If your system does not support notifications, AgentMate falls back to messages inside the app where it can.

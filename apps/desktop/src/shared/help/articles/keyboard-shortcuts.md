@@ -49,6 +49,7 @@ These work on every page. Their groups in Settings are **Terminal** and **Naviga
 | Toggle terminal | `Ctrl+T`, `Ctrl` + backtick | Opens the terminal drawer, or closes it when it is open. |
 | New terminal tab | `Ctrl+Shift` + backtick | Starts another shell in the drawer. |
 | Stop run | `Shift+F5` | Closes the project run's terminal and ends everything it started. |
+| Pause or resume run | `F6` | Freezes the project run so it uses no CPU, or lets a paused one carry on. It acts on the same run Stop run would pick: the one open in the drawer, or else the newest. See [Pause a run](projects.md#pause-a-run). |
 | Go to Projects | `Ctrl+P` | Opens the Projects page. Not available while a dialog is open. |
 | Open Help | `F1` | Opens the Help page. Works even while you are typing in a text box. Not available while a dialog is open. |
 | Command palette | `Ctrl+K` | Opens search across projects, pages and commands. |

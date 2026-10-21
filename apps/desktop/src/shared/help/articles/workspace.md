@@ -27,7 +27,7 @@ Once you have opened a project, **Workspace** reopens on the project you used la
 | --- | --- |
 | Project rail (far left) | One tile for every project you have open, with its worktrees under it. |
 | Panes (center) | Your tabs. Split the area into as many panes as you like. |
-| Project panel (right) | **Source control**, **Explorer**, **Agent sessions** and **Tests** for the project on screen. See [Git in the Workspace](workspace-git.md), [Files and editor](workspace-files-editor.md) and [Browser and tests](workspace-browser-tests.md). |
+| Project panel (right) | **Source control**, **Explorer**, **Agent sessions**, **Tests** and **Tasks** for the project on screen. See [Git in the Workspace](workspace-git.md), [Files and editor](workspace-files-editor.md), [Browser and tests](workspace-browser-tests.md) and [Relay tasks](relay.md). |
 
 The page header shows the project name, its folder, and a row of buttons described under [Header buttons](#header-buttons).
 
@@ -146,6 +146,10 @@ The play button starts the project's run command, for example `pnpm dev`. Its to
 
 To open a dev server in a pane instead, start it in a terminal tab. See [Browser and tests](workspace-browser-tests.md).
 
+### Pause
+
+While one of the project's runs is going, a pause button appears next to Run. It freezes the run so it uses no CPU, and the same button, now a play button, resumes it. It acts on all of the project's runs at once. `F6` does the same for the newest run. See [Pause a run](projects.md#pause-a-run), including how to have AgentMate pause runs for you while an agent works in the same folder.
+
 ### Tag a version
 
 The tag icon opens the project's **Tag a version** flow without leaving the Workspace. See [Projects](projects.md).
@@ -212,6 +216,7 @@ These work on the Workspace page. On macOS, use `Cmd` where the table says `Ctrl
 | New worktree | `Ctrl+Shift+N` |
 | Run project | `F5` |
 | Stop run | `Shift+F5` |
+| Pause or resume run | `F6` |
 | Search files and code | `Ctrl+P` |
 | Next / previous change in a diff | `F7` / `Shift+F7` |
 
@@ -230,6 +235,7 @@ These work on the Workspace page. On macOS, use `Cmd` where the table says `Ctrl
 - [Files and editor](workspace-files-editor.md)
 - [Git in the Workspace](workspace-git.md)
 - [Browser and tests](workspace-browser-tests.md)
+- [Relay tasks](relay.md)
 - [Worktrees](worktrees.md)
 - [Projects](projects.md)
 - [Keyboard shortcuts](keyboard-shortcuts.md)

@@ -13,7 +13,7 @@ Everything here works on the project folder on screen. If that is a worktree, it
 
 ## Where to find it
 
-Open a project in the **Workspace**. The right panel opens on **Source control** (the branch icon). Its tabs are **Source control**, **Explorer**, **Agent sessions** and **Tests**. A number on the **Source control** icon counts changed files (or failing checks on your pull request, which take priority and turn it red).
+Open a project in the **Workspace**. The right panel opens on **Source control** (the branch icon). Its tabs are **Source control**, **Explorer**, **Agent sessions**, **Tests** and **Tasks** (the project's [Relay](relay.md) tasks). A number on the **Source control** icon counts changed files (or failing checks on your pull request, which take priority and turn it red).
 
 - Press `Ctrl+Shift+G` (`Cmd+Shift+G` on macOS) to hide or show the panel. When it is hidden, a narrow strip with the tab icons stays on the right. Click an icon to bring the panel back on that tab.
 - Drag the panel's left edge to resize it, between 240 and 560 pixels wide. Double-click the edge to go back to the default width.
