@@ -33,7 +33,8 @@ function subscribe<T>(channel: string, callback: (payload: T) => void): () => vo
  */
 export function createRelay() {
   return {
-    board: (projectId: string): Promise<RelayBoard> => ipcRenderer.invoke(IPC.relay.board, projectId),
+    board: (projectId: string): Promise<RelayBoard> =>
+      ipcRenderer.invoke(IPC.relay.board, projectId),
     task: (projectId: string, taskId: string): Promise<RelayTaskDetail | null> =>
       ipcRenderer.invoke(IPC.relay.task, projectId, taskId),
     setStatus: (projectId: string, taskId: string, status: RelayTaskStatus): Promise<void> =>

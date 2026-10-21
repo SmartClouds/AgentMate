@@ -23,7 +23,6 @@ import { IPC } from '../../shared/ipcChannels';
 import { pruneOrphanFileSites } from '../deploy/files/store';
 import { pruneOrphanErrorLinks } from '../errorTracking/store';
 import { pruneOrphanHealthTargets } from '../health/store';
-import { pruneOrphanRelays } from '../relay/store';
 import {
   deleteClaudeHook,
   installProjectNotificationHooks,
@@ -36,6 +35,7 @@ import {
   normalizeIconDataUrl,
   readIconFile,
 } from '../projectIcons';
+import { pruneOrphanRelays } from '../relay/store';
 import { logActivity, pruneOrphanBlueprints, pruneOrphanEnvironments, store } from '../store';
 
 /**

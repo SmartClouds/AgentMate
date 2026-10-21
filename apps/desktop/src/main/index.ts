@@ -18,9 +18,6 @@ import { seedExampleRepositoryIfEmpty } from './exampleSkillRepo';
 import { shutdownLocalServer } from './grammar/localServer';
 import { startHealthScheduler, stopHealthScheduler } from './health/scheduler';
 import { pruneOrphanHealthTargets } from './health/store';
-import { registerRelayHandlers } from './ipc/relay';
-import { pruneOrphanRelays } from './relay/store';
-import { startRelayService } from './relay/wiring';
 import { registerActivityHandlers } from './ipc/activity';
 import { registerAgentHandlers } from './ipc/agents';
 import { registerAiHandlers } from './ipc/ai';
@@ -57,6 +54,7 @@ import { registerProxyHandlers } from './ipc/proxy';
 import { registerPullRequestHandlers } from './ipc/pullRequests';
 import { closeAllRdpSessions, registerRdpHandlers } from './ipc/rdp';
 import { registerRdpAgentHandlers } from './ipc/rdpAgent';
+import { registerRelayHandlers } from './ipc/relay';
 import { registerRemoteHandlers } from './ipc/remote';
 import { registerResourceActivityHandlers } from './ipc/resourceActivity';
 import { registerRunProposalHandlers } from './ipc/runProposals';
@@ -104,6 +102,8 @@ import { petManager } from './pet/petWindow';
 import { startPipelineWatcher, stopPipelineWatcher } from './pipelines/watcher';
 import { promptBuildWidgetManager } from './promptBuild/widgetWindows';
 import { allowQuit, guardQuit, registerQuitGuardHandlers } from './quitGuard';
+import { pruneOrphanRelays } from './relay/store';
+import { startRelayService } from './relay/wiring';
 import { remoteManager } from './remote/manager';
 import {
   startResourceActivityTracker,
