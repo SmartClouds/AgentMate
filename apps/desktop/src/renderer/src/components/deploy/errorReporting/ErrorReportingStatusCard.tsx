@@ -146,7 +146,8 @@ export function ErrorReportingStatusCard({
             {status.lastError}
           </Notice>
         )}
-        {tested && (
+        {/* A refused test event leaves the same sentence as the failure the core holds: say it once. */}
+        {tested && !(state?.key === 'failing' && tested.message === status.lastError) && (
           <Notice
             role={tested.delivered ? 'status' : 'alert'}
             tone={tested.delivered ? 'success' : 'destructive'}

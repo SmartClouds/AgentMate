@@ -86,8 +86,9 @@ from the user's own projects with an API token; the two share nothing but the pr
 
 - **Not tried against a real Sentry.** Everything was built and checked against the OpenTelemetry SDK, the
   core's real host and a fake Sentry on loopback. Whether sentry.io and a self-hosted Sentry accept this
-  wire format (protobuf over HTTP), and show the records under Logs, is taken from Sentry's documentation
-  and has not been observed. Sentry labels this intake open beta.
+  wire format (protobuf over HTTP), and show the records under Logs, has not been observed. Sentry's
+  pages for the intake do not name the format; their OpenTelemetry Collector guide uses the standard
+  `otlphttp` exporter, which sends protobuf, the same as this one. Sentry labels the intake open beta.
 - The delivery record and counts live in memory: a restart of the core starts them again.
 - Queued records are lost if the core is killed (not stopped), as with any batching exporter.
 - Traces and metrics are not sent, and a log does not become a Sentry Issue.

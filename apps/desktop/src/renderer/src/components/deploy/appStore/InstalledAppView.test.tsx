@@ -63,6 +63,19 @@ describe('the post-install card', () => {
     expect(screen.getByText(/Up to date: it runs the images the App Store pins/)).toBeTruthy();
   });
 
+  it('copies a connection detail, and says when the clipboard refuses', async () => {
+    const { user } = renderApp({}, ['operator']);
+    const card = await screen.findByRole('list', { name: 'Connection details' });
+
+    await user.click(within(card).getByRole('button', { name: 'Copy Host' }));
+    expect(toast.success).toHaveBeenCalledWith('Host copied.');
+    expect(await navigator.clipboard.readText()).toBe('127.0.0.1:16379');
+
+    vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValueOnce(new Error('denied'));
+    await user.click(within(card).getByRole('button', { name: 'Copy Host' }));
+    expect(toast.error).toHaveBeenCalledWith('Could not copy the host.');
+  });
+
   it('reveals them for an Admin after a step-up', async () => {
     let stepped = false;
     const reveal = vi.fn(async (input: { password?: string }) => {

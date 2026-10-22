@@ -357,6 +357,28 @@ describe('ErrorReportingCard', () => {
       ).toBeTruthy();
     });
 
+    it('says a refused test event once when the core already holds the same failure', async () => {
+      const refusal = 'Sentry rejected the key in this DSN (HTTP 401).';
+      const failing = reporting({ lastError: refusal, lastFailedAtUnixMs: Date.now() - 1_000 });
+      const { user } = renderCard({
+        'deployErrorReporting.status': async () => failing,
+        'deployErrorReporting.test': async () => ({
+          delivered: false,
+          httpStatus: 401,
+          message: refusal,
+        }),
+      });
+
+      await user.click(await screen.findByRole('button', { name: 'Send test event' }));
+      await waitFor(() =>
+        expect(
+          screen.getByRole('button', { name: 'Send test event' }).hasAttribute('disabled'),
+        ).toBe(false),
+      );
+
+      expect(screen.getAllByText(refusal)).toHaveLength(1);
+    });
+
     it('removes it after a confirmation', async () => {
       const { user, bridge } = renderCard({
         'deployErrorReporting.status': async () => reporting(),
