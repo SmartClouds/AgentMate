@@ -3,11 +3,11 @@ name: CI
 # Checks every push and pull request: formatting/lint (Biome), no deprecated
 # dependencies or deprecated imports, types, a real build of the desktop app,
 # and every test suite: unit, integration, mobile, the system tests on Docker
-# test servers and the Linux end-to-end run.
+# test servers and the end-to-end run on Linux and macOS.
 #
-# All of it runs on our self-hosted Linux runner. GitHub's hosted runners are
-# for CD only, which also covers what needs Windows or macOS: packaging, and
-# the end-to-end tests on those two (see test.yml).
+# All of it runs on our self-hosted Linux runner, apart from the macOS
+# end-to-end shards, which run on our self-hosted Mac mini (CI only, CD never
+# uses it). GitHub's hosted runners are for CD, which packages the installers.
 #
 # The jobs do not wait for each other, and the desktop unit and end-to-end
 # suites are split into shards, so a run is only as fast as the number of
