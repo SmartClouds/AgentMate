@@ -148,7 +148,12 @@ export function PlanDialog({
 
   // The core's preview follows the form, a moment after the typing stops.
   useEffect(() => {
-    if (!open || issue || keepIssue || keepLast === null) return;
+    if (!open || issue || keepIssue || keepLast === null) {
+      // A preview asked for before the form went wrong is not coming any more.
+      setPreviewing(false);
+      setPreview(null);
+      return;
+    }
     let stale = false;
     setPreviewing(true);
     const timer = setTimeout(() => {

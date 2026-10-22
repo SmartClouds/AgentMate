@@ -116,6 +116,15 @@ public sealed class BackupPlanSchedulerTests : IDisposable
     }
 
     [Fact]
+    public void An_unknown_time_zone_says_how_to_get_it_or_what_always_works()
+    {
+        var problem = BackupPlanScheduler.ScheduleProblem("0 3 * * *", "Mars/Olympus_Mons");
+
+        Assert.Contains("tzdata", problem, StringComparison.Ordinal);
+        Assert.Contains("UTC", problem, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void A_fine_schedule_has_no_problem_and_its_next_runs_are_known()
     {
         var from = DateTimeOffset.Parse("2026-10-22T05:00:00Z", System.Globalization.CultureInfo.InvariantCulture);

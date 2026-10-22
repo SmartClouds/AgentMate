@@ -50,7 +50,7 @@ On the **Overview**, click **Back up now**, tick the destinations and, if you wa
 A plan backs up on a schedule. In **Plans**, click **New plan** and set:
 
 - **Schedule**: every few hours, daily at a time, weekly on a day at a time, or a custom cron line.
-- **Time zone**: the zone the schedule is read in. It starts at this computer's zone.
+- **Time zone**: the zone the schedule is read in. It starts at this computer's zone. A server without the tzdata package knows only UTC; install tzdata on it or pick UTC.
 - **Destinations**: where each backup goes.
 - **Keep the last**: how many of this plan's backups each destination keeps. Optionally, also delete ones older than a number of days.
 

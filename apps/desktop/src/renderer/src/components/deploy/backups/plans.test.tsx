@@ -110,8 +110,23 @@ describe('PlansTab', () => {
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('combobox', { name: 'Schedule' }));
     await user.click(await screen.findByRole('option', { name: 'Custom cron line' }));
-    await user.type(within(dialog).getByLabelText('Cron line'), '0 0 31 2 *');
+    const line = within(dialog).getByLabelText('Cron line');
+    await user.clear(line);
+    await user.type(line, '0 0 31 2 *');
     expect(await within(dialog).findByText('That cron line never runs.')).toBeTruthy();
+  });
+
+  it('stops waiting for a preview while the schedule does not make sense', async () => {
+    const { user } = renderPlans({ 'deployServerBackups.listPlans': [] });
+    await user.click(await screen.findByRole('button', { name: 'New plan' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('combobox', { name: 'Schedule' }));
+    await user.click(await screen.findByRole('option', { name: 'Custom cron line' }));
+    await user.clear(within(dialog).getByLabelText('Cron line'));
+    await user.type(within(dialog).getByLabelText('Cron line'), '0 3 * *');
+    expect(
+      await within(dialog).findByText('The preview shows here once the schedule makes sense.'),
+    ).toBeTruthy();
   });
 
   it('opens a saved plan with its preset filled in', async () => {

@@ -71,7 +71,7 @@ internal sealed class FullBackupComposer(CoreDirectories directories, IBackupDoc
                         volumeEntries.Add(await AddVolumeAsync(tar, volume, scratch, cancellationToken));
                     }
 
-                    foreach (var image in images)
+                    foreach (var image in images.Where(image => !IsHelperOnly(image, containers)))
                     {
                         imageEntries.Add(await AddImageAsync(tar, image, Saved(image, containers), scratch, cancellationToken));
                     }
@@ -146,8 +146,20 @@ internal sealed class FullBackupComposer(CoreDirectories directories, IBackupDoc
     /// proves nothing on its own: Docker's containerd store gives images built here one too.
     /// </summary>
     internal static bool Saved(BackupImage image, IReadOnlyList<BackupContainer> containers) =>
-        image.Tags.Length > 0
-        && (image.RepoDigests.Length == 0 || containers.Any(container => container.Image == image.Id || image.Tags.Contains(container.Image, StringComparer.Ordinal)));
+        image.Tags.Length > 0 && (image.RepoDigests.Length == 0 || Used(image, containers));
+
+    /// <summary>
+    /// The helper image the backup itself pulls is left out, unless a container of the server runs
+    /// the same image (busybox at that version, say): then it is that container's image too.
+    /// </summary>
+    internal static bool IsHelperOnly(BackupImage image, IReadOnlyList<BackupContainer> containers)
+    {
+        var helperDigest = DockerBackupEngine.HelperImage[DockerBackupEngine.HelperImage.IndexOf('@')..];
+        return image.RepoDigests.Any(digest => digest.EndsWith(helperDigest, StringComparison.Ordinal)) && !Used(image, containers);
+    }
+
+    private static bool Used(BackupImage image, IReadOnlyList<BackupContainer> containers) =>
+        containers.Any(container => container.Image == image.Id || image.Tags.Contains(container.Image, StringComparer.Ordinal));
 
     private async Task<ImageEntry> AddImageAsync(TarWriter tar, BackupImage image, bool save, string scratch, CancellationToken cancellationToken)
     {

@@ -34,6 +34,12 @@ internal sealed class CoreRestoreTargets(StackOperations stacks, WebSites sites,
 
     public async Task<string?> ApplyWebsitesAsync(CancellationToken cancellationToken)
     {
+        // A server that had no websites has nothing for nginx to serve, and may not have nginx.
+        if ((await sites.ListSitesAsync(cancellationToken)).Length == 0 && (await sites.ListStreamsAsync(cancellationToken)).Length == 0)
+        {
+            return null;
+        }
+
         var result = await sites.ApplyAsync(new Updates.Requester(Guid.Empty, "restore"), cancellationToken);
         if (result.Applied || (result.Problems.Length == 0 && result.Error is null))
         {

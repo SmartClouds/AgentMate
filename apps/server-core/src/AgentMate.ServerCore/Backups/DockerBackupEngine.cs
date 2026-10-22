@@ -105,7 +105,6 @@ internal sealed class DockerBackupEngine(Uri endpoint) : IBackupDocker, IDisposa
     {
         var images = await Client.Images.ListImagesAsync(new ImagesListParameters { All = false }, cancellationToken);
         return [.. images
-            .Where(image => !(image.RepoTags ?? []).Any(tag => tag.StartsWith("busybox", StringComparison.Ordinal) && (image.RepoDigests ?? []).Any(d => HelperImage.EndsWith(d[(d.IndexOf('@') + 1)..], StringComparison.Ordinal))))
             .Select(image => new BackupImage(
                 image.ID,
                 [.. (image.RepoTags ?? []).Where(tag => tag != "<none>:<none>")],

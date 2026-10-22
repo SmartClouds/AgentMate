@@ -66,6 +66,40 @@ describe('BackupsPanel', () => {
     expect(within(plans).getByText(/Daily at 03:30/)).toBeTruthy();
     expect(within(plans).getByText(/Next run/)).toBeTruthy();
   });
+
+  it('follows a run while it goes, then stops asking', async () => {
+    const running = {
+      ...RUN,
+      state: 'running' as const,
+      finishedAtUnixMs: undefined,
+      targets: RUN.targets.map((target) => ({ ...target, state: 'pending' as const, attempts: 0 })),
+    };
+    const done = { ...RUN, state: 'succeeded' as const };
+    const listRuns = vi.fn(async () => (listRuns.mock.calls.length > 1 ? [done] : [running]));
+    renderPanel({ 'deployServerBackups.listRuns': listRuns });
+    const history = await screen.findByRole('table', { name: 'Backup runs' });
+    expect(within(history).getByText('Running')).toBeTruthy();
+    expect(await within(history).findByText('Done', {}, { timeout: 5_000 })).toBeTruthy();
+    const calls = listRuns.mock.calls.length;
+    await new Promise((resolve) => setTimeout(resolve, 2_500));
+    expect(listRuns.mock.calls.length).toBe(calls);
+  });
+
+  it('tells a destination waiting to try again from one not tried yet', async () => {
+    const running = {
+      ...RUN,
+      state: 'running' as const,
+      finishedAtUnixMs: undefined,
+      targets: [
+        { ...RUN.targets[0], state: 'pending' as const, attempts: 0, pruned: 0 },
+        { ...RUN.targets[1], state: 'pending' as const, attempts: 1 },
+      ],
+    };
+    renderPanel({ 'deployServerBackups.listRuns': [running] });
+    const history = await screen.findByRole('table', { name: 'Backup runs' });
+    expect(within(history).getByText(/Local disk: Waiting/)).toBeTruthy();
+    expect(within(history).getByText(/Storage box: Retrying/)).toBeTruthy();
+  });
 });
 
 describe('Back up now', () => {

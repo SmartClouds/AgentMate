@@ -30,12 +30,30 @@
     <DebugType>none</DebugType>
   </PropertyGroup>
 
+  <!-- Hangfire is LGPL-3.0, which lets anyone swap in their own build of the library. Inside the
+       single-file bundle it could not be swapped, so its assemblies ship beside the binary, with
+       the license texts and notices from its package. -->
+  <ItemGroup Condition="'$(PkgHangfire_Core)' != ''">
+    <None Include="$(PkgHangfire_Core)\COPYING;$(PkgHangfire_Core)\COPYING.LESSER;$(PkgHangfire_Core)\NOTICES"
+          Link="licenses\hangfire\%(Filename)%(Extension)"
+          CopyToOutputDirectory="Never"
+          CopyToPublishDirectory="PreserveNewest"
+          ExcludeFromSingleFile="true" />
+  </ItemGroup>
+  <Target Name="KeepHangfireBesideTheBinary" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Condition="$([System.String]::Copy('%(Filename)').StartsWith('Hangfire.'))">
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
   <ItemGroup>
     <PackageReference Include="Cronos" />
     <PackageReference Include="Docker.DotNet.Enhanced" />
     <PackageReference Include="FluentFTP" />
     <PackageReference Include="Hangfire.AspNetCore" />
-    <PackageReference Include="Hangfire.Core" />
+    <PackageReference Include="Hangfire.Core" GeneratePathProperty="true" />
     <PackageReference Include="Hangfire.Storage.SQLite" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />

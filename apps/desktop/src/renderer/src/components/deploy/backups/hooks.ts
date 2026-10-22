@@ -5,6 +5,8 @@ import { queryKeys } from '@/lib/queryKeys';
 /** The Backups section's reads (E28). Each card shimmers on its own while its read is pending. */
 
 const RUNS = 25;
+/** How often a run that is still going is read again, so its destinations move on screen. */
+const RUNNING_POLL_MS = 2_000;
 
 export function useBackupSecret(serverId: string) {
   return useQuery({
@@ -29,6 +31,8 @@ export function useBackupPlans(serverId: string) {
     queryKey: queryKeys.deployBackupPlans(serverId),
     queryFn: async () => (await window.agentmat.deployServerBackups.listPlans(serverId)) ?? [],
     retry: false,
+    refetchInterval: (query) =>
+      query.state.data?.some((plan) => plan.lastRun?.state === 'running') ? RUNNING_POLL_MS : false,
   });
 }
 
@@ -37,6 +41,8 @@ export function useBackupRuns(serverId: string) {
     queryKey: queryKeys.deployBackupRuns(serverId),
     queryFn: async () => (await window.agentmat.deployServerBackups.listRuns(serverId, RUNS)) ?? [],
     retry: false,
+    refetchInterval: (query) =>
+      query.state.data?.some((run) => run.state === 'running') ? RUNNING_POLL_MS : false,
   });
 }
 

@@ -71,7 +71,7 @@ internal sealed class BackupPlanScheduler(IRecurringJobManager recurring, JobSto
 
         if (Zone(timeZone) is not { } zone)
         {
-            return $"'{timeZone}' is not a time zone this server knows.";
+            return $"'{timeZone}' is not a time zone this server knows. Servers without the tzdata package know only UTC: install it, or pick UTC.";
         }
 
         var runs = Occurrences(expression, zone, DateTimeOffset.UtcNow, 4);

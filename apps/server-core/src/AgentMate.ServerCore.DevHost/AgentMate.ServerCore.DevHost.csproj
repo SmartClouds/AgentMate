@@ -10,6 +10,9 @@
     <IsPackable>false</IsPackable>
     <IsPublishable>false</IsPublishable>
     <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
+    <!-- On Windows, time zones by IANA name (what the app sends for backup plans) need ICU, which
+         Windows has; the real core runs on Linux and reads them from tzdata. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>
 
   <ItemGroup>

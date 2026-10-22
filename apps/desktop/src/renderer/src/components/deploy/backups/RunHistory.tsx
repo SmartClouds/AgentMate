@@ -19,9 +19,15 @@ import {
 import { dateAndTime, RUN_STATE, runLabel, TARGET_STATE } from './format';
 import { useBackupRuns } from './hooks';
 
-/** One destination's outcome, with the reason on hover when it failed. */
+/**
+ * One destination's outcome, with the reason on hover when it failed. A failed try before the last
+ * leaves it waiting for the next one, which the core makes 30 seconds and then 5 minutes later.
+ */
 export function TargetChip({ target }: { target: BackupRunTargetInfo }): React.JSX.Element {
-  const state = TARGET_STATE[target.state];
+  const retrying = target.state === 'pending' && target.attempts > 0;
+  const state = retrying
+    ? { label: 'Retrying', tone: 'warning' as const }
+    : TARGET_STATE[target.state];
   const pruned = target.pruned > 0 ? `, ${target.pruned} old removed` : '';
   const chip = (
     <Chip tone={state.tone} dot pulse={target.state === 'uploading'}>

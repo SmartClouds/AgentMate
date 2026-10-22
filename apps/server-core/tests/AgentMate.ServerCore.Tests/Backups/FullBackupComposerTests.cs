@@ -103,6 +103,21 @@ public sealed class FullBackupComposerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task The_backup_helper_image_is_left_out_unless_a_container_runs_it_too()
+    {
+        var helperDigest = "busybox@" + DockerBackupEngine.HelperImage[(DockerBackupEngine.HelperImage.IndexOf('@') + 1)..];
+        _docker.Images.Add(new BackupImage("sha256:busybox", ["busybox:1.37"], [helperDigest]));
+
+        var (_, alone) = await WriteAsync();
+        _docker.Containers.Add(new BackupContainer("keeper", "busybox:1.37", null, true, new ContainerSpec([], null, null, null, null, [], [], [], null, null)));
+        var (archive, used) = await WriteAsync();
+
+        Assert.Empty(alone.Snapshot.Images);
+        Assert.Equal("busybox:1.37", Encoding.UTF8.GetString(Assert.Single(await EntriesAsync(archive), e => e.Key.StartsWith("server/images/", StringComparison.Ordinal)).Value));
+        Assert.NotNull(Assert.Single(used.Snapshot.Images).File);
+    }
+
+    [Fact]
     public async Task The_snapshot_says_what_ran_where_and_behind_which_firewall()
     {
         _state.Firewall = new FirewallRulesSnapshot(FirewallBackendKind.Ufw, true, FirewallPolicy.Deny, [new FirewallRuleSpec(FirewallAction.Allow, FirewallProtocol.Tcp, 443)]);

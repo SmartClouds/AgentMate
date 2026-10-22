@@ -67,7 +67,7 @@ own records of the server.
 - [x] T12 Desktop main: service, IPC, preload, OAuth loopback, the restore wizard, this computer's
   records of the server.
 - [x] T13 Renderer: the Backups section, its tabs, dialogs and wizard.
-- [ ] T14 End to end and system tests.
+- [x] T14 End to end and system tests.
 - [x] T15 Help article, README, status and risks.
 
 ## Acceptance criteria
@@ -91,6 +91,32 @@ own records of the server.
 - Volumes are copied live; a busy database may restore inconsistent.
 - Google Drive and OneDrive need the user's own OAuth client.
 - DNS outside Cloudflare is listed for the user to change, not changed.
+- A server without the tzdata package (Ubuntu's minimal image, for one) knows only UTC, so a plan
+  in any other zone is refused with that reason.
+- A destination that refuses is tried again after 30 seconds and 5 minutes, so a run with one
+  stays Running (that destination "Retrying") for about 6 minutes before it is Partly failed.
+
+## End to end and system tests (T14)
+
+- `apps/desktop/e2e/deployServerBackups.e2e.ts` drives the section against the DevHost: secret key,
+  a folder, a Telegram account signed in with its code (a wrong code first), a destination that
+  refuses everything, a plan keeping 2 run three times (2 left on each working destination, the
+  refusing one retrying without holding the others up), and a backup downloaded here encrypted.
+- `apps/desktop/src/main/deploy/serverBackups/serverBackups.int.test.ts` (AGENTMATE_SYSTEM_TESTS=1)
+  uses the published core on two systemd test servers, each on a Docker network in the
+  documentation range so the core sees a public address. The first runs a compose stack and a
+  container of its own with data in volumes; a plan keeping 2 runs three times into a folder; the
+  newest is fetched back by the core, downloaded, refused with a wrong secret and restored onto the
+  second with the right one. Bringing it up there loads the images, writes the volumes back, starts
+  the stack and the container with their data, reports the stack file that names the old address,
+  and schedules the restored plan again.
+- Found on the way: the run history and the plans' last run did not refresh while a run went on;
+  a destination waiting to try again looked like one not tried yet; a schedule that stopped making
+  sense left the preview loading for good; the DevHost on Windows refused every IANA time zone
+  (its globalization was invariant). On the real servers: an image a container ran was left out
+  when it was the backup's own helper image (busybox at the same digest), so the stack and the
+  container could not start after a restore; and a server with no websites failed the restore's
+  Websites step for having no nginx.
 
 ## Desktop notes (T12, T13)
 
