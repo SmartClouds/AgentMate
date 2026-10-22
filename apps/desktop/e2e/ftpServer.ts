@@ -68,39 +68,66 @@ function waitForGreeting(port: number, greeting: string, deadline: number): Prom
 /**
  * Ten passive ports for this process, published 1:1: FTP announces the port to connect to, so
  * the port inside the container has to be the one on this computer. The process id keeps two
- * test runs on one machine apart.
+ * test runs on one machine apart, and `attempt` moves on to another block when one is taken.
+ *
+ * The blocks stay under 32768, where Linux starts handing out ephemeral ports. Docker takes the
+ * host port of every `127.0.0.1::22` mapping from there, the other test servers' included, so a
+ * block above it could already belong to a container started a moment earlier.
  */
-export function passivePortRange(pid = process.pid): { min: number; max: number } {
-  const min = 30_000 + (pid % 500) * 10;
+export function passivePortRange(pid = process.pid, attempt = 0): { min: number; max: number } {
+  const min = 20_000 + ((pid + attempt * 101) % 1000) * 10;
   return { min, max: min + 9 };
+}
+
+/** Starts the container on the first passive port block nothing else on this computer holds. */
+function runContainer(): string {
+  for (let attempt = 0; ; attempt++) {
+    const name = `agentmate-e2e-ftp-${process.pid}-${Date.now()}`;
+    const { min, max } = passivePortRange(process.pid, attempt);
+    try {
+      docker([
+        'run',
+        '-d',
+        '--rm',
+        '--name',
+        name,
+        '-e',
+        `PASV_MIN=${min}`,
+        '-e',
+        `PASV_MAX=${max}`,
+        '-e',
+        'PASV_ADDRESS=127.0.0.1',
+        '-p',
+        '127.0.0.1::21',
+        '-p',
+        '127.0.0.1::2121',
+        '-p',
+        '127.0.0.1::2222',
+        '-p',
+        `127.0.0.1:${min}-${max}:${min}-${max}`,
+        IMAGE,
+      ]);
+      return name;
+    } catch (error) {
+      // A container that could not bind its ports is left created but not running.
+      try {
+        docker(['rm', '-f', name]);
+      } catch {
+        // Never created.
+      }
+      // Another container, a process on Linux, or Docker Desktop's "ports are not available".
+      const taken =
+        /port is already allocated|address already in use|ports are not available/i.test(
+          String((error as { stderr?: unknown }).stderr ?? error),
+        );
+      if (!taken || attempt >= 4) throw error;
+    }
+  }
 }
 
 export async function startFtpServer(): Promise<FtpTestServer> {
   docker(['build', '-q', '-t', IMAGE, join(APP_ROOT, 'e2e', 'ftp-server')], 900_000);
-  const name = `agentmate-e2e-ftp-${process.pid}-${Date.now()}`;
-  const { min, max } = passivePortRange();
-  docker([
-    'run',
-    '-d',
-    '--rm',
-    '--name',
-    name,
-    '-e',
-    `PASV_MIN=${min}`,
-    '-e',
-    `PASV_MAX=${max}`,
-    '-e',
-    'PASV_ADDRESS=127.0.0.1',
-    '-p',
-    '127.0.0.1::21',
-    '-p',
-    '127.0.0.1::2121',
-    '-p',
-    '127.0.0.1::2222',
-    '-p',
-    `127.0.0.1:${min}-${max}:${min}-${max}`,
-    IMAGE,
-  ]);
+  const name = runContainer();
   const stop = () => {
     try {
       docker(['rm', '-f', name]);
