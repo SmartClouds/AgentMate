@@ -2,6 +2,10 @@
 # a root login and a non-root user in wheel, whose sudo asks for the password. Never shipped.
 FROM rockylinux/rockylinux:9
 ENV container=docker
+# dnf picks a mirror at random, and a slow one held a nightly install for 13 minutes (53 kB/s for
+# BaseOS's 41 MB of metadata). Under minrate for the default 30 seconds, dnf gives that mirror up and
+# takes the next. The installs the tests run inside the server, Docker's among them, read this too.
+RUN printf '\nminrate=300k\n' >> /etc/dnf/dnf.conf
 RUN dnf -y install systemd openssh-server sudo passwd procps-ng tar gzip policycoreutils \
  && dnf clean all \
  && ssh-keygen -A \
