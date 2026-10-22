@@ -127,9 +127,9 @@ describe('FakeFiles', () => {
 
     await hub.filesClose(first.sessionId);
     expect(files.closed).toEqual([first.sessionId]);
-    expect(
-      await hubFailure(hub.filesStat({ sessionId: first.sessionId, path: '/' })),
-    ).toMatch(/\[files:sessionGone\]/);
+    expect(await hubFailure(hub.filesStat({ sessionId: first.sessionId, path: '/' }))).toMatch(
+      /\[files:sessionGone\]/,
+    );
   });
 
   it('lists entries with the full mode, lstat links and marks broken ones', async () => {
@@ -148,12 +148,7 @@ describe('FakeFiles', () => {
     const byName = (name: string) => listing.entries.find((entry) => entry.name === name);
     expect(listing.path).toBe('/site');
     expect(listing.partial).toBe(false);
-    expect(listing.entries.map((entry) => entry.name)).toEqual([
-      'a.txt',
-      'gone',
-      'to-a',
-      'to-dir',
-    ]);
+    expect(listing.entries.map((entry) => entry.name)).toEqual(['a.txt', 'gone', 'to-a', 'to-dir']);
     expect(byName('a.txt')).toEqual<FileEntry>({
       name: 'a.txt',
       kind: 'file',

@@ -14,7 +14,7 @@ import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { useEditorRevealStore } from '@/stores/editorRevealStore';
 import { setFileDirty } from '@/stores/explorerStore';
-import type { WorkspaceFileTab } from '@/stores/workspaceStore';
+import { useWorkspaceStore, type WorkspaceFileTab } from '@/stores/workspaceStore';
 import { ImageFileTab } from './ImageFileTab';
 
 /** Files past this open read-only: Monaco copes, but editing a multi-megabyte file here is a trap. */
@@ -43,9 +43,12 @@ export default function FileTab({
     setAsText(false);
   }, [tab.path]);
 
+  // A preview tab keeps its id while the file in it changes, so each file gets fresh state
+  // (draft, save, image size) instead of inheriting the last one's.
   if (isImagePath(tab.path) && !asText) {
     return (
       <ImageFileTab
+        key={tab.path}
         project={project}
         tab={tab}
         onEditSource={isTextImagePath(tab.path) ? () => setAsText(true) : undefined}
@@ -54,6 +57,7 @@ export default function FileTab({
   }
   return (
     <TextFileTab
+      key={tab.path}
       project={project}
       tab={tab}
       onShowImage={isImagePath(tab.path) ? () => setAsText(false) : undefined}
@@ -73,6 +77,7 @@ function TextFileTab({
   onShowImage?: () => void;
 }): React.JSX.Element {
   const queryClient = useQueryClient();
+  const openFile = useWorkspaceStore((s) => s.openFile);
   const file = useQuery({
     queryKey: fileQueryKey(tab.path),
     queryFn: () => window.agentmat.fs.readFile(tab.path),
@@ -222,7 +227,11 @@ function TextFileTab({
         ) : (
           <MonacoEditor
             value={draft ?? file.data ?? ''}
-            onChange={(value) => setDraft(value)}
+            onChange={(value) => {
+              setDraft(value);
+              // Editing a preview tab keeps it, so the edit isn't lost to the next file clicked.
+              if (tab.preview) openFile(project.id, tab.path, { pin: true });
+            }}
             language={languageFor(tab.path.replaceAll('\\', '/'))}
             readOnly={tooLarge}
             reveal={reveal}

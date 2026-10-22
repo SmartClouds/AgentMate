@@ -10,6 +10,7 @@ import { CloudflareMark } from '@/components/cloudflare/CloudflareMark';
 import { AppStorePanel } from '@/components/deploy/appStore/AppStorePanel';
 import { AppsPanel } from '@/components/deploy/apps/AppsPanel';
 import { AssistantLauncher } from '@/components/deploy/assistant/AssistantLauncher';
+import { BackupsPanel } from '@/components/deploy/backups/BackupsPanel';
 import { ChooseServersDialog } from '@/components/deploy/ChooseServersDialog';
 import { ContainersPanel } from '@/components/deploy/containers/ContainersPanel';
 import { Notice } from '@/components/deploy/deployKit';
@@ -20,6 +21,7 @@ import { SiteFormDialog } from '@/components/deploy/files/SiteFormDialog';
 import { FirewallPanel } from '@/components/deploy/firewall/FirewallPanel';
 import { InstallPanel } from '@/components/deploy/InstallPanel';
 import { LogsPanel } from '@/components/deploy/logs/LogsPanel';
+import { NotificationsPanel } from '@/components/deploy/notifications/NotificationsPanel';
 import { ConnectionBadge } from '@/components/deploy/overview/ConnectionBadge';
 import { useConnectionUpdates } from '@/components/deploy/overview/hooks';
 import { OverviewPanel } from '@/components/deploy/overview/OverviewPanel';
@@ -28,6 +30,7 @@ import { ServerRail } from '@/components/deploy/ServerRail';
 import { ServerSections, sectionFromView } from '@/components/deploy/ServerSections';
 import { SetupFailure } from '@/components/deploy/SetupFailure';
 import { SecurityPanel } from '@/components/deploy/security/SecurityPanel';
+import { ServerFilesPanel } from '@/components/deploy/serverFiles/ServerFilesPanel';
 import { SitesPanel } from '@/components/deploy/sites/SitesPanel';
 import { ConnectorDownloadCard } from '@/components/deploy/wordpress/ConnectorDownloadCard';
 import { useSiteListUpdate, useWordPressSites } from '@/components/deploy/wordpress/hooks';
@@ -613,6 +616,9 @@ export default function DeployPage(): React.JSX.Element {
   } else if (section === 'firewall') {
     sections = true;
     content = <FirewallPanel server={selected} />;
+  } else if (section === 'backups') {
+    sections = true;
+    content = <BackupsPanel server={selected} />;
   } else if (section === 'security') {
     sections = true;
     content = (
@@ -621,9 +627,20 @@ export default function DeployPage(): React.JSX.Element {
         onUpdateCore={selected.dev ? undefined : () => setUpdating(selected.id)}
       />
     );
+  } else if (section === 'notifications') {
+    sections = true;
+    content = (
+      <NotificationsPanel
+        server={selected}
+        onUpdateCore={selected.dev ? undefined : () => setUpdating(selected.id)}
+      />
+    );
   } else if (section === 'containers') {
     sections = true;
     content = <ContainersPanel server={selected} />;
+  } else if (section === 'files') {
+    sections = true;
+    content = <ServerFilesPanel server={selected} />;
   } else if (section === 'apps') {
     sections = true;
     content = <AppsPanel server={selected} />;

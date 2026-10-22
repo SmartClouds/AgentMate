@@ -5,7 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useEditorRevealStore } from '@/stores/editorRevealStore';
-import type { WorkspaceFileTab } from '@/stores/workspaceStore';
+import { useWorkspaceStore, type WorkspaceFileTab } from '@/stores/workspaceStore';
 import { installAgentmatBridge } from '../../../../test/renderer/agentmatBridge';
 
 // Monaco needs a real layout engine, and neither test below is about the editor itself.
@@ -15,10 +15,12 @@ vi.mock('@/components/editor/MonacoEditor', async () => {
   return {
     MonacoEditor: ({
       value,
+      onChange,
       reveal,
       onRevealed,
     }: {
       value: string;
+      onChange?: (value: string) => void;
       reveal?: { line: number; column: number } | null;
       onRevealed?: () => void;
     }) => {
@@ -27,7 +29,14 @@ vi.mock('@/components/editor/MonacoEditor', async () => {
         revealed.push(`${reveal.line}:${reveal.column}`);
         onRevealed?.();
       }, [reveal, onRevealed]);
-      return <div data-testid="monaco">{value}</div>;
+      return (
+        <>
+          <div data-testid="monaco">{value}</div>
+          <button type="button" onClick={() => onChange?.(`${value} edited`)}>
+            type
+          </button>
+        </>
+      );
     },
   };
 });
@@ -37,8 +46,8 @@ const FileTab = (await import('./FileTab')).default;
 
 const project = { id: 'p1', name: 'App', folderPath: 'E:\\work\\app' } as Project;
 
-function tab(path: string): WorkspaceFileTab {
-  return { kind: 'file', id: 't1', path, preview: false };
+function tab(path: string, preview = false): WorkspaceFileTab {
+  return { kind: 'file', id: 't1', path, preview };
 }
 
 /** A fresh cache per test, so one test's picture is never the next one's cached answer. */
@@ -159,6 +168,41 @@ describe('FileTab', () => {
     // Taken as it is applied, so switching back to the tab later does not jump again.
     await waitFor(() => expect(useEditorRevealStore.getState().pending[path]).toBeUndefined());
     expect(revealed).toEqual(['3:2']);
+  });
+
+  it("shows the new file, not the last one's edits, when a preview tab moves on", async () => {
+    const texts: Record<string, string> = {
+      'E:\\work\\app\\README.md': '# Readme',
+      'E:\\work\\app\\docs\\guide.md': '# Guide',
+      'E:\\work\\app\\docs\\notes.md': '# Notes',
+    };
+    installAgentmatBridge({ 'fs.readFile': (path: string) => texts[path] });
+    const view = renderTab(tab('E:\\work\\app\\README.md', true));
+    expect(await screen.findByTestId('monaco')).toHaveTextContent('# Readme');
+    fireEvent.click(screen.getByText('type'));
+    expect(screen.getByTestId('monaco')).toHaveTextContent('# Readme edited');
+
+    // Clicking through files quickly reuses the same tab for each one.
+    view.rerender(wrap(tab('E:\\work\\app\\docs\\guide.md', true)));
+    expect(await screen.findByText('# Guide')).toBeInTheDocument();
+    view.rerender(wrap(tab('E:\\work\\app\\docs\\notes.md', true)));
+    expect(await screen.findByText('# Notes')).toBeInTheDocument();
+    expect(screen.queryByText('Unsaved')).not.toBeInTheDocument();
+  });
+
+  it('pins a preview tab once its file is edited', async () => {
+    const openFile = vi.fn();
+    const original = useWorkspaceStore.getState().openFile;
+    useWorkspaceStore.setState({ openFile });
+    try {
+      installAgentmatBridge({ 'fs.readFile': () => '# Readme' });
+      renderTab(tab('E:\\work\\app\\README.md', true));
+      await screen.findByTestId('monaco');
+      fireEvent.click(screen.getByText('type'));
+      expect(openFile).toHaveBeenCalledWith('p1', 'E:\\work\\app\\README.md', { pin: true });
+    } finally {
+      useWorkspaceStore.setState({ openFile: original });
+    }
   });
 
   it('keeps a plain file in the editor', async () => {

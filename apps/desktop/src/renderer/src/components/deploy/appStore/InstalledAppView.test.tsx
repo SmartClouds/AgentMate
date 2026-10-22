@@ -2,7 +2,7 @@ import { encodeCoreError } from '@shared/coreErrors';
 import { screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
-import { sampleJob, sampleRevision } from '../apps/testing/fixtures';
+import { sampleDetails, sampleJob, sampleRevision } from '../apps/testing/fixtures';
 import { installedCompose, SERVER, STACK_ID, storeBridge, storeDetails } from './testing/fixtures';
 
 /**
@@ -170,5 +170,34 @@ describe('the post-install card', () => {
       },
     });
     expect(await screen.findByText(/The app did not load: The core is not answering/)).toBeTruthy();
+  });
+});
+
+describe('logs and consoles of an installed app', () => {
+  it('waits for something to run before it offers logs or a console', async () => {
+    renderApp();
+    await screen.findByRole('list', { name: 'Connection details' });
+    expect(screen.getByRole('button', { name: 'Logs' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Console' })).toBeDisabled();
+  });
+
+  it('opens the sheet on every service, and keeps the console from an Operator', async () => {
+    const running = {
+      ...storeDetails('cache', []),
+      services: sampleDetails().services,
+    };
+    const { user } = renderApp(
+      {
+        'deployStacks.get': running,
+        'deployDocker.watchLogs': async () => 'logs-1',
+        'deployDocker.unwatchLogs': async () => true,
+      },
+      ['operator'],
+    );
+    await screen.findByRole('list', { name: 'Connection details' });
+    expect(screen.getByRole('button', { name: 'Console' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Logs' }));
+    const sheet = await screen.findByRole('dialog', { name: 'cache' });
+    expect(within(sheet).getByRole('log', { name: 'Log: cache' })).toBeInTheDocument();
   });
 });

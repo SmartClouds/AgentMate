@@ -7,7 +7,7 @@ import type {
 import { FakeCore } from '../../../shared/deploy/testing/fakeCore';
 import { fakeLiveHubs } from '../testing/fakeLiveHub';
 import { CoreLinks } from './coreLinks';
-import { ContainerStatsFeed, DockerEventsFeed } from './dockerFeeds';
+import { COMMAND_NOT_RERUN, ContainerStatsFeed, DockerEventsFeed } from './dockerFeeds';
 import { DockerLinks } from './dockerLinks';
 
 /**
@@ -354,6 +354,43 @@ describe('DockerLinks consoles', () => {
       rows: 30,
     });
     expect(terminal.ends).toEqual([]);
+  });
+
+  it('does not run a chosen command again when the connection changes', async () => {
+    const { core, hubs, docker } = setup();
+    const terminal = consoleListener();
+    docker.openConsole(
+      'srv-1',
+      {
+        containerId: 'shop-api-1',
+        columns: 80,
+        rows: 24,
+        command: ['/bin/sh', '-c', 'php artisan migrate'],
+        user: 'root',
+      },
+      terminal.events,
+    );
+    await settle();
+    expect(hubs.latest()?.requested.find((one) => one.kind === 'console')?.args[0]).toMatchObject({
+      command: ['/bin/sh', '-c', 'php artisan migrate'],
+      user: 'root',
+    });
+    core.dropAll();
+    await settle(5_000);
+
+    expect(hubs.latest()?.requested.some((one) => one.kind === 'console')).toBe(false);
+    expect(core.docker.consoles).toHaveLength(1);
+    expect(terminal.ends).toEqual([{ error: COMMAND_NOT_RERUN }]);
+    // Its place is free again.
+    expect(() =>
+      [1, 2].map(() =>
+        docker.openConsole(
+          'srv-1',
+          { containerId: 'toolbox', columns: 80, rows: 24 },
+          consoleListener().events,
+        ),
+      ),
+    ).not.toThrow();
   });
 
   it('ends the shell when closed, and frees its place', async () => {

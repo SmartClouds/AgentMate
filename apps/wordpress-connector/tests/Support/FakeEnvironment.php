@@ -265,6 +265,21 @@ final class FakeEnvironment implements Environment
         return count($this->health) > 1 ? array_shift($this->health) : $this->health[0];
     }
 
+    /** @var array<string, string> what download() returns by URL; any other URL fails */
+    public $downloads = array();
+
+    /** @var array<int, array{url: string, maxBytes: int, timeout: int}> */
+    public $downloadCalls = array();
+
+    public function download(string $url, int $maxBytes, int $timeoutSeconds): array
+    {
+        $this->downloadCalls[] = array('url' => $url, 'maxBytes' => $maxBytes, 'timeout' => $timeoutSeconds);
+        if (!isset($this->downloads[$url])) {
+            return array('body' => null, 'error' => 'cURL error 6: Could not resolve host: github.com');
+        }
+        return array('body' => $this->downloads[$url], 'error' => '');
+    }
+
     public function invalidateOpcache(string $path): void
     {
         $this->invalidated[] = $path;

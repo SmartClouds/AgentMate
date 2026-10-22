@@ -44,7 +44,21 @@ internal static class BackupArchive
     /// <summary>What a restore will unpack at most.</summary>
     public static readonly TarExtractionLimits RestoreLimits = new() { MaxTotalBytes = 4L * 1024 * 1024 * 1024, MaxEntries = 200_000 };
 
-    /// <summary>Writes the .tar.gz to <paramref name="output"/>; <paramref name="work"/> is a private scratch folder.</summary>
+    /// <summary>
+    /// The unpack limits for a payload of this size (E28): a full backup holds volumes and images,
+    /// so the E15 limit grows with it, up to fifty times the compressed size (a guard against a
+    /// crafted archive that unpacks into far more than it weighs) and never past the free space.
+    /// </summary>
+    public static TarExtractionLimits RestoreLimitsFor(long payloadBytes, long freeBytes) => new()
+    {
+        MaxTotalBytes = Math.Max(RestoreLimits.MaxTotalBytes, Math.Min(payloadBytes * 50, Math.Max(0, freeBytes - (512L * 1024 * 1024)))),
+        MaxEntries = 5_000_000,
+    };
+
+    /// <summary>
+    /// Writes the .tar.gz to <paramref name="output"/>; <paramref name="work"/> is a private scratch
+    /// folder. <paramref name="more"/> adds entries after the core's own (a full backup's server/).
+    /// </summary>
     public static async Task<BackupManifest> WriteAsync(
         string dataDirectory,
         string work,
@@ -52,7 +66,8 @@ internal static class BackupArchive
         string coreVersion,
         string hostName,
         long nowUnixMs,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<TarWriter, Task>? more = null)
     {
         ArgumentNullException.ThrowIfNull(output);
         var snapshot = Path.Combine(work, CoreDatabase.FileName);
@@ -74,6 +89,11 @@ internal static class BackupArchive
             {
                 await AddFolderAsync(tar, Path.Combine(dataDirectory, folder), folder, cancellationToken);
             }
+
+            if (more is not null)
+            {
+                await more(tar);
+            }
         }
 
         return manifest;
@@ -85,12 +105,18 @@ internal static class BackupArchive
     /// made safe to start: every session it held ends (its devices stay), and a firewall change it
     /// was waiting on is closed, since this server never made it.
     /// </summary>
-    public static async Task<BackupManifest> StageAsync(Stream payload, string into, IReadOnlyCollection<string> knownMigrations, long nowUnixMs, CancellationToken cancellationToken)
+    public static async Task<BackupManifest> StageAsync(
+        Stream payload,
+        string into,
+        IReadOnlyCollection<string> knownMigrations,
+        long nowUnixMs,
+        CancellationToken cancellationToken,
+        TarExtractionLimits? limits = null)
     {
         ArgumentNullException.ThrowIfNull(knownMigrations);
         try
         {
-            await SafeTarExtractor.ExtractAsync(payload, into, RestoreLimits, cancellationToken);
+            await SafeTarExtractor.ExtractAsync(payload, into, limits ?? RestoreLimits, cancellationToken);
         }
         catch (ArchiveRejectedException rejected)
         {

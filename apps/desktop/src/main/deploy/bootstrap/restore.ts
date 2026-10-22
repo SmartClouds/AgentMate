@@ -35,6 +35,8 @@ import {
  */
 
 const STEP_TIMEOUT_MS = 10 * 60_000;
+/** Where the core keeps a backup it fetched from a destination (E28). */
+const FETCHED = /^\/var\/lib\/agentmate-core\/backups\/[0-9a-f]{32}\.ambackup$/;
 const OUTPUT_BYTES = 256 * 1024;
 const FAILURE_CHARS = 1_500;
 
@@ -57,6 +59,11 @@ export interface RestoreDeps {
 export interface RestoreRequest {
   serverId: string;
   file: string;
+  /**
+   * The file is already on the server: a backup the core fetched from a destination (E28), kept
+   * root only in its incoming folder. Nothing is uploaded then.
+   */
+  fileOnServer?: boolean;
   passphrase: string;
   sudoPassword: string | null;
   userName: string;
@@ -139,28 +146,33 @@ export async function restoreCore(
       return result;
     });
 
+  if (request.fileOnServer && (!FETCHED.test(request.file) || request.file.includes('..'))) {
+    throw new Error('The fetched backup is not where the core keeps fetched backups.');
+  }
   const lease = await deps.connect(request.serverId);
   let staging = null as string | null;
   try {
     const password = request.sudoPassword ?? lease.connection.endpoint.password ?? null;
     const shell = await openRootShell(lease.connection, password);
 
-    const uploaded = await phase('upload', TITLES.upload, async () => {
-      const content = await readFile(request.file);
-      staging = await lease.connection.createStagingDirectory();
-      const path = `${staging}/backup.ambackup`;
-      let reported = -1;
-      await lease.connection.upload(content, path, {
-        mode: 0o600,
-        onProgress: (sent, total) => {
-          const percent = total > 0 ? Math.floor((sent / total) * 100) : 100;
-          if (percent === reported) return;
-          reported = percent;
-          emit({ phase: 'upload', title: TITLES.upload, status: 'running', percent });
-        },
-      });
-      return path;
-    });
+    const uploaded = request.fileOnServer
+      ? request.file
+      : await phase('upload', TITLES.upload, async () => {
+          const content = await readFile(request.file);
+          staging = await lease.connection.createStagingDirectory();
+          const path = `${staging}/backup.ambackup`;
+          let reported = -1;
+          await lease.connection.upload(content, path, {
+            mode: 0o600,
+            onProgress: (sent, total) => {
+              const percent = total > 0 ? Math.floor((sent / total) * 100) : 100;
+              if (percent === reported) return;
+              reported = percent;
+              emit({ phase: 'upload', title: TITLES.upload, status: 'running', percent });
+            },
+          });
+          return path;
+        });
 
     const staged = parseStaged(
       (await run(shell, stageStep(uploaded), `${request.passphrase}\n`)).stdout,

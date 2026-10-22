@@ -132,6 +132,15 @@ runs every shared vector.
   thing; `Routes\UpdateHandlers` is the route. The request is `{version, files: [{path, size,
   sha256}]}` with one blob per file, so the plugin never needs ZipArchive and the update can't
   carry anything but plain files.
+- Or the site downloads it (`updateDownload` in `/site/info` and `/hello`): the same file list
+  plus `download: {url}` and no blobs. The URL must match `Protocol::UPDATE_DOWNLOAD_URL` (the
+  plugin zip on an AgentMate GitHub release, tagged with the version being installed), so a key
+  can't point the site at any other address. `Environment::download` fetches it with
+  `wp_safe_remote_get` (redirects followed, 30 s, size capped), `Update\ZipReader` reads it in
+  memory (stored or deflate, no ZipArchive, every offset bounds-checked), and every file must
+  match the listed size and sha256 with no file more or less. Any of that failing is
+  `updateRefused` with reason `downloadFailed` before anything is written, which tells the app to
+  send the files itself. The list is checked (paths, required files) before the download.
 - Order: validate everything in memory (shape, paths through `PathPolicy`, an extension allow-list,
   sizes, sha256, required files, the main file's header and constant against `version`, no
   downgrade, `Requires PHP` and `Requires at least`, PHP syntax). Then, holding the deploy mutex

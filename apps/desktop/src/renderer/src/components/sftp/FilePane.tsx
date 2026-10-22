@@ -402,8 +402,7 @@ export function FilePane({
     } else if (key === 'Delete') {
       if (refusals.remove && selectedEntries.length > 0) toast.info(refusals.remove);
       else void deleteEntries(selectedEntries);
-    }
-    else if (key === 'F5') void store().refresh(serverId, side);
+    } else if (key === 'F5') void store().refresh(serverId, side);
     else if (key === 'Escape') setSelection(EMPTY_SELECTION);
     else if (key === 'Tab') {
       // Tab and Shift+Tab jump straight to the other pane's list, from either side.
@@ -790,8 +789,8 @@ export function FilePane({
       {hasListing && pane.partial ? (
         <div className="px-2.5 pt-2">
           <Notice role="status" tone="warning" size="sm">
-            Only part of this folder is listed, because it is too large to read in full without a
-            shell. Start the container, or open a folder further down.
+            Only part of this folder is listed. Without a shell, a large folder is only read up to a
+            size limit. Open a folder further down to see everything in it.
           </Notice>
         </div>
       ) : null}

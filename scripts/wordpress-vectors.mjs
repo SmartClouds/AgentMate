@@ -273,6 +273,12 @@ const paths = [
   ['php.ini', 'hardDenied'],
   ['.DS_Store', 'hardDenied'],
   ['.agentmate/hooks/a.sh', 'hardDenied'],
+  ['.claude-plugin/plugin.json', 'hardDenied'],
+  ['inc/.CLAUDE.local/x.md', 'hardDenied'],
+  ['.agentmate-cache/a.json', 'hardDenied'],
+  ['build/.AgentMate.old/a', 'hardDenied'],
+  ['.claudia/x', null],
+  ['claude-notes/a.txt', null],
   ['.mcp.json', 'hardDenied'],
   ['x/.cursor/rules/r.mdc', 'hardDenied'],
 ].map(([path, reason]) => (reason === null ? { path, ok: true } : { path, ok: false, reason }));

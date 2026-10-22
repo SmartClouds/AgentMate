@@ -60,6 +60,11 @@ describe('passphraseIssue', () => {
 });
 
 describe('BackupCard', () => {
+  it('points to the Backups section for whole-server backups (E28)', () => {
+    renderCard();
+    expect(screen.getByRole('button', { name: 'Backups section' })).toBeTruthy();
+  });
+
   it('makes a backup once the passphrase is long enough and typed twice', async () => {
     const { user, bridge } = renderCard();
 

@@ -67,6 +67,7 @@ Once a server has its core installed, a tab strip appears under the header. The 
 | **Overview** | Health score, live charts, alerts, system facts, updates, services, reboot, core health and your access | This article |
 | **Apps** | Your apps: Docker Compose stacks you deploy, update and watch, and private registry sign-ins | [Containers and stacks](deploy-containers-stacks.md) |
 | **Containers** | Docker containers, images, volumes, networks and disk use | [Containers and stacks](deploy-containers-stacks.md) |
+| **Files** | The two-pane file manager on the server disk, a container or a volume | [Server files](deploy-files.md) |
 | **App Store** | One-click apps from a catalog | [App Store](deploy-app-store.md) |
 | **Websites** | Nginx sites and certificates | [Websites and certificates](deploy-websites-certificates.md) |
 | **Firewall** | Firewall rules with a safe apply | [Firewall and security](deploy-firewall-security.md) |
@@ -169,6 +170,7 @@ To skip the question altogether, tick **Remember my password on this computer** 
 
 - [Deploy: servers and setup](deploy-servers-setup.md)
 - [Deploy: containers and stacks](deploy-containers-stacks.md)
+- [Deploy: server files](deploy-files.md)
 - [Deploy: websites and certificates](deploy-websites-certificates.md)
 - [Deploy: App Store](deploy-app-store.md)
 - [Deploy: firewall and security](deploy-firewall-security.md)

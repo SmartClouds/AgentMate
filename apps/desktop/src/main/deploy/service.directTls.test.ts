@@ -272,6 +272,34 @@ describe('DeployService with direct TLS', () => {
     expect(pool.acquire).not.toHaveBeenCalled();
   });
 
+  it('checks health over direct TLS without an SSH login, so the pool can close it', async () => {
+    const { service, pool } = await setup();
+
+    const health = await service.health('srv-1');
+
+    expect(health).toMatchObject({ version: '1.53.0', transport: 'direct-tls' });
+    expect(pool.acquire).not.toHaveBeenCalled();
+  });
+
+  it('checks health over SSH when the port does not answer, and leaves it alone a while', async () => {
+    const { service, pool } = await setup({ health: { 'direct-tls': unreachable() } });
+
+    expect((await service.health('srv-1')).transport).toBe('streamlocal');
+    expect(pool.acquire).toHaveBeenCalledTimes(1);
+
+    await service.health('srv-1');
+    expect(pool.acquire).toHaveBeenCalledTimes(2);
+  });
+
+  it('refuses a health check on a pin mismatch, with nothing tried over SSH', async () => {
+    const { service, pool } = await setup({ health: { 'direct-tls': mismatch() } });
+
+    const error = await service.health('srv-1').catch((caught: unknown) => caught);
+
+    expect(coreErrorCode(error)).toBe('tlsPinMismatch');
+    expect(pool.acquire).not.toHaveBeenCalled();
+  });
+
   it('reads the pin over SSH even while the link rides direct TLS', async () => {
     const { service, shortOver } = await setup();
     await service.links.call('srv-1', (hub) => hub.ping());

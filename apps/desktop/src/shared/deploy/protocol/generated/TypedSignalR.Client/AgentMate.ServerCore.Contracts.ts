@@ -3,7 +3,7 @@
 /* tslint:disable */
 // @ts-nocheck
 import type { IStreamResult, Subject } from '@microsoft/signalr';
-import type { PingResponse, AccountInfo, StepUpRequest, StepUpResponse, DeviceInfo, SessionInfo, TotpSetup, RecoveryCodes, CreateEnrollmentCodeRequest, EnrollmentCodeInfo, UserInfo, CreateUserRequest, ResetUserPasswordRequest, AuditQuery, AuditPage, AuditVerificationInfo, SystemInfo, ServiceInfo, MetricsHistoryRequest, MetricsHistory, MetricsStreamRequest, MetricsSample, UpdatesInfo, JobQuery, JobPage, JobInfo, JobStreamItem, AlertQuery, AlertInfo, AlertStreamRequest, ManagedService, FirewallStatus, FirewallPreset, FirewallChangeSetQuery, FirewallChangeSetInfo, ExposureInventory, FirewallChangeRequest, FirewallChangePreview, DockerStatus, ContainerList, ContainerDetails, ContainerStatsRequest, ContainerStatsBatch, ContainerLogsRequest, ContainerLogBatch, ImageInfo, VolumeInfo, NetworkInfo, DockerDiskUsage, DockerEventsRequest, DockerEvent, ContainerSummary, ContainerRemoveRequest, ImagePullRequest, ImageRemoveRequest, ContainerEnvVariable, ConsoleRequest, ConsoleInput, ConsoleOutput, DockerPruneRequest, DockerPruneResult, DockerInstallRequest, FileTarget, FileSessionInfo, FilePathRequest, FileListing, FileEntry, FileRenameRequest, FileRemoveRequest, FileChmodRequest, NginxStatus, SiteInfo, StreamProxyInfo, CertificateInfo, SiteLogRequest, SiteLogBatch, SiteSettings, SiteSaveResult, StreamProxySettings, StreamProxySaveResult, NginxApplyResult, CertificateIssueRequest, CertificateUploadRequest, CertificateUploadResult, CertificateRemoveRequest, StackInfo, StackDetails, StackRevisionRef, StackRevisionFiles, CreateStackRequest, AcknowledgeStackRisksRequest, StackRevisionInfo, StackActionRequest, ReviseStackRequest, StackEnvEntry, StackDeployRequest, RegistryCredentialInfo, SaveRegistryCredentialRequest, AssistantModeInfo, ExecApprovalNonce, ExecRequest, ExecOutput, JournalRequest, JournalBatch, SiteSnippets, OriginLockStatus, OriginLockRequest, OriginLockPreview, OriginLockResult, OriginCertificateRequestInfo, OriginCertificateInstall, DnsCredentialInfo, DnsCredentialRequest, DnsCredentialSaveResult, SecurityChecklistRequest, SecurityChecklist, SshHardeningRequest, SshHardeningPreview, SshHardeningChangeInfo, BackupRequest, BackupInfo, DirectTlsStatus, DirectTlsRequest } from '../AgentMate.ServerCore.Contracts';
+import type { PingResponse, AccountInfo, StepUpRequest, StepUpResponse, DeviceInfo, SessionInfo, TotpSetup, RecoveryCodes, CreateEnrollmentCodeRequest, EnrollmentCodeInfo, UserInfo, CreateUserRequest, ResetUserPasswordRequest, AuditQuery, AuditPage, AuditVerificationInfo, SystemInfo, ServiceInfo, MetricsHistoryRequest, MetricsHistory, MetricsStreamRequest, MetricsSample, UpdatesInfo, JobQuery, JobPage, JobInfo, JobStreamItem, AlertQuery, AlertInfo, AlertStreamRequest, ManagedService, FirewallStatus, FirewallPreset, FirewallChangeSetQuery, FirewallChangeSetInfo, ExposureInventory, FirewallChangeRequest, FirewallChangePreview, DockerStatus, ContainerList, ContainerDetails, ContainerStatsRequest, ContainerStatsBatch, ContainerLogsRequest, ContainerLogBatch, ImageInfo, VolumeInfo, NetworkInfo, DockerDiskUsage, DockerEventsRequest, DockerEvent, ContainerSummary, ContainerRemoveRequest, ImagePullRequest, ImageRemoveRequest, ContainerEnvVariable, ConsoleRequest, ConsoleInput, ConsoleOutput, DockerPruneRequest, DockerPruneResult, DockerInstallRequest, FileTarget, FileSessionInfo, FilePathRequest, FileListing, FileEntry, FileRenameRequest, FileRemoveRequest, FileChmodRequest, NginxStatus, SiteInfo, StreamProxyInfo, CertificateInfo, SiteLogRequest, SiteLogBatch, SiteSettings, SiteSaveResult, StreamProxySettings, StreamProxySaveResult, NginxApplyResult, CertificateIssueRequest, CertificateUploadRequest, CertificateUploadResult, CertificateRemoveRequest, StackInfo, StackDetails, StackRevisionRef, StackRevisionFiles, CreateStackRequest, AcknowledgeStackRisksRequest, StackRevisionInfo, StackActionRequest, ReviseStackRequest, StackEnvEntry, StackDeployRequest, RegistryCredentialInfo, SaveRegistryCredentialRequest, AssistantModeInfo, ExecApprovalNonce, ExecRequest, ExecOutput, JournalRequest, JournalBatch, SiteSnippets, OriginLockStatus, OriginLockRequest, OriginLockPreview, OriginLockResult, OriginCertificateRequestInfo, OriginCertificateInstall, DnsCredentialInfo, DnsCredentialRequest, DnsCredentialSaveResult, SecurityChecklistRequest, SecurityChecklist, SshHardeningRequest, SshHardeningPreview, SshHardeningChangeInfo, BackupRequest, BackupInfo, BackupSecretStatus, SetBackupSecretRequest, BackupDestinationInfo, SaveBackupDestinationRequest, BackupDestinationTest, BackupPlanInfo, SaveBackupPlanRequest, BackupPlanPreviewRequest, BackupPlanPreview, BackupRunInfo, RunBackupNowRequest, StoredBackupInfo, StartTelegramLoginRequest, TelegramLoginState, ContinueTelegramLoginRequest, BackupFetchInfo, PendingServerRestore, RunServerRestoreRequest, ServerRestoreStatus, DirectTlsStatus, DirectTlsRequest, ErrorReportingStatus, ErrorReportingRequest, ErrorReportingSaveResult, ErrorReportingTestResult, TelegramNotificationsStatus, TelegramNotificationsRequest, TelegramNotificationsSaveResult, TelegramNotificationsTestResult } from '../AgentMate.ServerCore.Contracts';
 
 /**
 * Everything the app can ask the core over the WebSocket. The desktop's typed client is
@@ -769,6 +769,135 @@ export type ICoreHub = {
     */
     deleteBackup(backupId: string): Promise<boolean>;
     /**
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.BackupSecretStatus>
+    */
+    getBackupSecret(): Promise<BackupSecretStatus>;
+    /**
+    * Sets the secret key, or changes it with the current one. Neither is kept.
+    * @param request Transpiled from AgentMate.ServerCore.Contracts.SetBackupSecretRequest
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.BackupSecretStatus>
+    */
+    setBackupSecret(request: SetBackupSecretRequest): Promise<BackupSecretStatus>;
+    /**
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.BackupDestinationInfo[]>
+    */
+    listBackupDestinations(): Promise<BackupDestinationInfo[]>;
+    /**
+    * Adds or changes a destination. Its credentials are sealed and never read back.
+    * @param request Transpiled from AgentMate.ServerCore.Contracts.SaveBackupDestinationRequest
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.BackupDestinationInfo>
+    */
+    saveBackupDestination(request: SaveBackupDestinationRequest): Promise<BackupDestinationInfo>;
+    /**
+    * Removes a destination and takes it out of every plan. What it holds stays there.
+    * @param destinationId Transpiled from System.Guid
+    * @returns Transpiled from System.Threading.Tasks.Task<bool>
+    */
+    deleteBackupDestination(destinationId: string): Promise<boolean>;
+    /**
+    * Writes, reads back and deletes a small file, with the request's settings (the stored secret when it has none).
+    * @param request Transpiled from AgentMate.ServerCore.Contracts.SaveBackupDestinationRequest
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.BackupDestinationTest>
+    */
+    testBackupDestination(request: SaveBackupDestinationRequest): Promise<BackupDestinationTest>;
+    /**
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.BackupPlanInfo[]>
+    */
+    listBackupPlans(): Promise<BackupPlanInfo[]>;
+    /**
+    * Adds or changes a plan and puts it on the schedule.
+    * @param request Transpiled from AgentMate.ServerCore.Contracts.SaveBackupPlanRequest
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.BackupPlanInfo>
+    */
+    saveBackupPlan(request: SaveBackupPlanRequest): Promise<BackupPlanInfo>;
+    /**
+    * @param planId Transpiled from System.Guid
+    * @returns Transpiled from System.Threading.Tasks.Task<bool>
+    */
+    deleteBackupPlan(planId: string): Promise<boolean>;
+    /**
+    * What a plan would do: next runs, how many backups stay, about how much room. Changes nothing.
+    * @param request Transpiled from AgentMate.ServerCore.Contracts.BackupPlanPreviewRequest
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.BackupPlanPreview>
+    */
+    previewBackupPlan(request: BackupPlanPreviewRequest): Promise<BackupPlanPreview>;
+    /**
+    * Runs a plan now, off its schedule. The run shows in the history.
+    * @param planId Transpiled from System.Guid
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.BackupRunInfo>
+    */
+    runBackupPlan(planId: string): Promise<BackupRunInfo>;
+    /**
+    * Backs up now to the destinations named, and keeps the file an hour for download when asked.
+    * @param request Transpiled from AgentMate.ServerCore.Contracts.RunBackupNowRequest
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.BackupRunInfo>
+    */
+    runBackupNow(request: RunBackupNowRequest): Promise<BackupRunInfo>;
+    /**
+    * The newest runs first, with each destination's outcome.
+    * @param limit Transpiled from int
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.BackupRunInfo[]>
+    */
+    listBackupRuns(limit: number): Promise<BackupRunInfo[]>;
+    /**
+    * One run as it stands, for following it; null when there is none.
+    * @param runId Transpiled from System.Guid
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.BackupRunInfo?>
+    */
+    getBackupRun(runId: string): Promise<BackupRunInfo>;
+    /**
+    * What a destination holds, newest first, as its manifests say.
+    * @param destinationId Transpiled from System.Guid
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.StoredBackupInfo[]>
+    */
+    listStoredBackups(destinationId: string): Promise<StoredBackupInfo[]>;
+    /**
+    * Deletes one backup and its parts from a destination.
+    * @param destinationId Transpiled from System.Guid
+    * @param backupId Transpiled from System.Guid
+    * @returns Transpiled from System.Threading.Tasks.Task<bool>
+    */
+    deleteStoredBackup(destinationId: string, backupId: string): Promise<boolean>;
+    /**
+    * Starts signing in to a Telegram account; Telegram sends a code.
+    * @param request Transpiled from AgentMate.ServerCore.Contracts.StartTelegramLoginRequest
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.TelegramLoginState>
+    */
+    startTelegramLogin(request: StartTelegramLoginRequest): Promise<TelegramLoginState>;
+    /**
+    * Sends the code, then the cloud password when the account has one.
+    * @param request Transpiled from AgentMate.ServerCore.Contracts.ContinueTelegramLoginRequest
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.TelegramLoginState>
+    */
+    continueTelegramLogin(request: ContinueTelegramLoginRequest): Promise<TelegramLoginState>;
+    /**
+    * Fetches a backup from a destination onto this server for a restore. Owner, with a step-up.
+    * @param destinationId Transpiled from System.Guid
+    * @param backupId Transpiled from System.Guid
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.BackupFetchInfo>
+    */
+    fetchStoredBackup(destinationId: string, backupId: string): Promise<BackupFetchInfo>;
+    /**
+    * @param fetchId Transpiled from System.Guid
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.BackupFetchInfo?>
+    */
+    getBackupFetch(fetchId: string): Promise<BackupFetchInfo>;
+    /**
+    * What a restored state still has to bring up on this server, or null when nothing waits.
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.PendingServerRestore?>
+    */
+    getPendingServerRestore(): Promise<PendingServerRestore>;
+    /**
+    * Puts back volumes and images, starts what ran, and moves the address when asked. Owner, with a step-up.
+    * @param request Transpiled from AgentMate.ServerCore.Contracts.RunServerRestoreRequest
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.ServerRestoreStatus>
+    */
+    runServerRestore(request: RunServerRestoreRequest): Promise<ServerRestoreStatus>;
+    /**
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.ServerRestoreStatus?>
+    */
+    getServerRestoreStatus(): Promise<ServerRestoreStatus>;
+    /**
     * The listener's setting and state, and the pin of the certificate it presents.
     * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.DirectTlsStatus>
     */
@@ -784,6 +913,48 @@ export type ICoreHub = {
     * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.DirectTlsStatus>
     */
     disableDirectTls(): Promise<DirectTlsStatus>;
+    /**
+    * Where logs go, how sending is going, and the options. Never the key. Admin.
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.ErrorReportingStatus>
+    */
+    getErrorReporting(): Promise<ErrorReportingStatus>;
+    /**
+    * Sets it up or changes it, effective at once. Owner, with a step-up.
+    * @param request Transpiled from AgentMate.ServerCore.Contracts.ErrorReportingRequest
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.ErrorReportingSaveResult>
+    */
+    saveErrorReporting(request: ErrorReportingRequest): Promise<ErrorReportingSaveResult>;
+    /**
+    * Forgets the DSN and stops sending. Owner, with a step-up.
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.ErrorReportingStatus>
+    */
+    removeErrorReporting(): Promise<ErrorReportingStatus>;
+    /**
+    * Sends one test event to the project and says whether Sentry took it. Admin.
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.ErrorReportingTestResult>
+    */
+    sendErrorReportingTest(): Promise<ErrorReportingTestResult>;
+    /**
+    * Which chat alerts go to, which kinds, and how sending is going. Never the token. Admin.
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.TelegramNotificationsStatus>
+    */
+    getTelegramNotifications(): Promise<TelegramNotificationsStatus>;
+    /**
+    * Sets it up or changes it, effective at once. Owner, with a step-up.
+    * @param request Transpiled from AgentMate.ServerCore.Contracts.TelegramNotificationsRequest
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.TelegramNotificationsSaveResult>
+    */
+    saveTelegramNotifications(request: TelegramNotificationsRequest): Promise<TelegramNotificationsSaveResult>;
+    /**
+    * Forgets the token and stops sending. Owner, with a step-up.
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.TelegramNotificationsStatus>
+    */
+    removeTelegramNotifications(): Promise<TelegramNotificationsStatus>;
+    /**
+    * Sends one test message to the chat and says whether Telegram took it. Admin.
+    * @returns Transpiled from System.Threading.Tasks.Task<AgentMate.ServerCore.Contracts.TelegramNotificationsTestResult>
+    */
+    sendTelegramNotificationTest(): Promise<TelegramNotificationsTestResult>;
 }
 
 /**

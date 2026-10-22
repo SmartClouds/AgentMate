@@ -107,6 +107,14 @@ interface Environment
      */
     public function healthChecks(): array;
 
+    /**
+     * Fetches a public file over HTTPS, following redirects: the body, or a short reason it could
+     * not be had (no HTTP transport, a blocked host, an HTTP error, too large, too slow).
+     *
+     * @return array{body: string|null, error: string}
+     */
+    public function download(string $url, int $maxBytes, int $timeoutSeconds): array;
+
     /** Drops a changed PHP file from the opcode cache. */
     public function invalidateOpcache(string $path): void;
 

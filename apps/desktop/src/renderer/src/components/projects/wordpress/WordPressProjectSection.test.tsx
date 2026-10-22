@@ -58,6 +58,32 @@ describe('WordPressProjectSection', () => {
     expect(within(counts).getByText('1')).toBeTruthy();
   });
 
+  it('lists what the project ignores in its own section, and saves changes from there', async () => {
+    const base = wpProject();
+    const project = {
+      ...base,
+      wordpress: { ...base.wordpress, ignore: { 'theme:storefront': ['/vendor/'] } },
+    } as typeof base;
+    const { user, bridge } = renderSection(
+      { 'deployWordPress.setProjectIgnore': async () => base },
+      project,
+    );
+
+    const section = await screen.findByRole('region', { name: 'Ignored files' });
+    const list = within(section).getByRole('list', { name: 'Ignored files and folders' });
+    expect(within(list).getByText('vendor/')).toBeTruthy();
+    expect(within(section).getByText(/Never deployed/)).toBeTruthy();
+    await user.click(
+      within(section).getByRole('button', { name: 'Stop ignoring vendor/ in storefront' }),
+    );
+    await waitFor(() =>
+      expect(bridge.$fn('deployWordPress.setProjectIgnore')).toHaveBeenCalledWith({
+        projectId: 'p1',
+        ignore: {},
+      }),
+    );
+  });
+
   it('checks the local changes again when the window gets focus back', async () => {
     const { bridge } = renderSection();
     await screen.findByText('5');
@@ -206,6 +232,43 @@ describe('WordPressProjectSection', () => {
       ),
     );
     expect(toast.success).toHaveBeenCalledWith('Added tweaks.php.');
+  });
+
+  it('adds a new theme or plugin made in the project, then reviews its first deploy', async () => {
+    const fresh = { kind: 'plugin', slug: 'fresh' };
+    const base = wpProject();
+    const updated = {
+      ...base,
+      wordpress: { ...base.wordpress, items: [...(base.wordpress?.items ?? []), fresh] },
+    };
+    const { user, bridge } = renderSection({
+      'deployWordPress.localItems': [{ ...fresh, isFile: false, linked: false }],
+      'deployWordPress.setProjectItems': updated,
+      'deployWordPress.planDeploy': new Promise(() => undefined),
+    });
+    await user.click(await screen.findByRole('button', { name: 'New theme or plugin' }));
+    const dialog = await screen.findByRole('dialog', { name: 'New theme or plugin' });
+    await user.click(await within(dialog).findByRole('checkbox', { name: /fresh/ }));
+    await user.click(within(dialog).getByRole('button', { name: 'Add and review deploy' }));
+
+    await waitFor(() =>
+      expect(bridge.$fn('deployWordPress.setProjectItems')).toHaveBeenCalledWith(
+        expect.objectContaining({ projectId: 'p1', newItems: [fresh] }),
+      ),
+    );
+    expect(await screen.findByRole('dialog', { name: /Deploy to Acme Shop/ })).toBeTruthy();
+    expect(bridge.$fn('deployWordPress.planDeploy')).toHaveBeenCalledWith({
+      projectId: 'p1',
+      items: [fresh],
+    });
+  });
+
+  it('keeps a new theme or plugin off for a read-only site, like any deploy', async () => {
+    renderSection({ 'deployWordPress.listSites': [wpSite({ scope: 'read' })] });
+    await screen.findByText('Read only');
+    expect(
+      (screen.getByRole('button', { name: 'New theme or plugin' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 
   it('offers to link a project whose site is gone to a connected one', async () => {

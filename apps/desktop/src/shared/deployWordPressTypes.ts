@@ -179,6 +179,22 @@ export interface DeployWordPressItemsInput {
   siteId?: string;
   /** The project's new item list; newly added items are pulled. */
   items: WpItemRef[];
+  /**
+   * The items among `items` that the site does not have yet: a theme or plugin made in this
+   * project. Their folders must already hold files. They are linked without a pull, and the
+   * first deploy creates them on the site.
+   */
+  newItems?: WpItemRef[];
+}
+
+/**
+ * The files and folders a project leaves out of its pulls and deploys, as gitignore-like lines
+ * relative to each item's root: under `*` for every item, or `theme:slug` for one. Replaces the
+ * saved list as a whole.
+ */
+export interface DeployWordPressIgnoreInput {
+  projectId: string;
+  ignore: Record<string, string[]>;
 }
 
 /** Makes an existing project, not yet linked to any site, a WordPress project. */
@@ -187,6 +203,16 @@ export interface DeployWordPressLinkProjectInput {
   projectId: string;
   siteId: string;
   items: WpItemRef[];
+  /** As in DeployWordPressItemsInput: items among `items` the site does not have yet. */
+  newItems?: WpItemRef[];
+}
+
+/** A theme or plugin folder (or single-file plugin) found in a project's wp-content. */
+export interface DeployWordPressLocalItem extends WpItemRef {
+  /** A single `.php` file rather than a folder. */
+  isFile: boolean;
+  /** The project already syncs it. */
+  linked: boolean;
 }
 
 export interface DeployWordPressLinkProjectResult {
@@ -288,6 +314,13 @@ export interface DeployWordPressUpdateConnectorResult {
   version: string;
   /** The site's health checks after the swap; empty when nothing was sent. */
   checks: WpHealthCheck[];
+  /**
+   * Where the new files came from: `site` when the site downloaded the GitHub release itself,
+   * `app` when this app sent them. Absent when nothing was sent.
+   */
+  source?: 'site' | 'app';
+  /** Why the site could not download the release itself, when the app sent the files instead. */
+  downloadProblem?: string;
 }
 
 /** Re-exported so renderer code can import everything WordPress from one place. */

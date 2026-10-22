@@ -1,5 +1,5 @@
 import type { ProjectWordPressItemKind, WpItemRef, WpRollbackReason } from '@agentmat/core';
-import { WP_HARD_DENY_DIRS, WP_HARD_DENY_FILES, WP_HARD_DENY_PREFIXES } from '@agentmat/core';
+import { WP_AGENT_PREFIXES, WP_HARD_DENY_DIRS, WP_HARD_DENY_FILES } from '@agentmat/core';
 import type {
   DeployWordPressDeployResult,
   DeployWordPressLeftOutReason,
@@ -98,7 +98,8 @@ export const PLANNED_PHASES: Record<DeployWordPressOperationKind, DeployWordPres
 export const LEFT_OUT_REASON: Record<DeployWordPressLeftOutReason, string> = {
   agentFiles: "Agent settings or AgentMate's own files",
   hardDenied: 'Never sent: version control, secrets, PHP settings or system clutter',
-  ignored: 'Left out by an ignore rule (.distignore, .agentmateignore or the defaults)',
+  ignored:
+    'Left out by an ignore rule (your ignore list, .gitignore, .distignore, .agentmateignore or the defaults)',
   symlink: 'A link to somewhere else, which is never followed',
   tooLarge: 'Larger than 64 MB',
   caseCollision: 'Another file has the same name apart from upper and lower case',
@@ -121,7 +122,7 @@ const AGENT_FILES = new Set(
       name === '.agentmateignore',
   ),
 );
-const AGENT_PREFIXES = WP_HARD_DENY_PREFIXES.filter((prefix) => prefix === '.aider');
+const AGENT_PREFIXES = WP_AGENT_PREFIXES;
 
 /** Whether a path is (or sits inside) an agent's settings, skills or AgentMate's own files. */
 export function isAgentPath(path: string): boolean {

@@ -3,6 +3,7 @@ import {
   createWpIgnoreRules,
   findWpCaseCollisions,
   isWpHardDenied,
+  validateWpItemPath,
   wpItemKey,
   wpItemRoot,
   wpMirrorPath,
@@ -18,6 +19,25 @@ describe('the hard deny list', () => {
     expect(isWpHardDenied('.curſor/rules/r.mdc')).toBe(true);
     expect(isWpHardDenied('AGENTſ.md')).toBe(true);
     expect(isWpHardDenied('claude.php')).toBe(false);
+  });
+
+  it('keeps every folder or file that starts with .claude or .agentmate on this computer', () => {
+    for (const path of [
+      '.claude-plugin/plugin.json',
+      'inc/.claude.local/x.md',
+      '.claudeignore',
+      '.CLAUDE-notes/a.txt',
+      '.agentmate-cache/a.json',
+      'build/.agentmate.old/a',
+      '.agentmatefoo',
+    ]) {
+      expect(isWpHardDenied(path), path).toBe(true);
+      expect(validateWpItemPath(path), path).toEqual({ ok: false, reason: 'hardDenied' });
+    }
+    // Only the dot names: a plain word, or a longer name that merely shares the letters, is fine.
+    for (const path of ['claude-notes/a.txt', 'inc/agentmate.php', '.claudia/x', '.agent/x']) {
+      expect(isWpHardDenied(path), path).toBe(false);
+    }
   });
 });
 
@@ -102,5 +122,53 @@ describe('ignore rules', () => {
   it('skip lines that are only a slash or a bang', () => {
     const built = createWpIgnoreRules([{ source: '.distignore', text: '/\n!\n' }]);
     expect(built.ok).toBe(true);
+  });
+
+  it("leave out what the item's and the project's .gitignore name, until the site has it", () => {
+    const built = createWpIgnoreRules([], {
+      itemRoot: 'wp-content/plugins/shop',
+      item: '/dist/\n*.map\n!keep.map\n',
+      project: 'vendor/\n/wp-content/plugins/shop/tests/\n/wp-content/uploads/\n',
+    });
+    if (!built.ok) throw new Error('should compile');
+    const { rules } = built;
+    expect(rules.excludedUnlessTracked('dist/app.js')).toBe(true);
+    expect(rules.excludedUnlessTracked('inc/dist/app.js')).toBe(false);
+    expect(rules.excludedUnlessTracked('a/b.js.map')).toBe(true);
+    expect(rules.excludedUnlessTracked('keep.map')).toBe(false);
+    expect(rules.excludedUnlessTracked('vendor/autoload.php')).toBe(true);
+    expect(rules.excludedUnlessTracked('tests/a.php')).toBe(true);
+    expect(rules.excludedUnlessTracked('inc/shop.php')).toBe(false);
+    expect(rules.excluded('dist/app.js')).toBe(false);
+  });
+
+  it('keep a .gitignore from putting a built-in default back', () => {
+    const built = createWpIgnoreRules([], {
+      itemRoot: 'wp-content/themes/t',
+      item: '!node_modules/\n!debug.log\n',
+    });
+    if (!built.ok) throw new Error('should compile');
+    expect(built.rules.excludedUnlessTracked('node_modules/x.js')).toBe(true);
+    expect(built.rules.excludedUnlessTracked('debug.log')).toBe(true);
+  });
+
+  it('never fail on a .gitignore line it cannot read', () => {
+    const built = createWpIgnoreRules([], {
+      itemRoot: 'wp-content/themes/t',
+      item: '[a\ndist/\n',
+      project: '[z-a\nbuild/\n',
+    });
+    if (!built.ok) throw new Error('should compile');
+    expect(built.rules.excludedUnlessTracked('dist/a.js')).toBe(true);
+    expect(built.rules.excludedUnlessTracked('build/a.js')).toBe(true);
+  });
+
+  it('let the project .gitignore whitelist one theme out of a folder it ignores', () => {
+    const built = createWpIgnoreRules([], {
+      itemRoot: 'wp-content/themes/mine',
+      project: '/wp-content/themes/*\n!/wp-content/themes/mine\n',
+    });
+    if (!built.ok) throw new Error('should compile');
+    expect(built.rules.excludedUnlessTracked('functions.php')).toBe(false);
   });
 });

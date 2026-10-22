@@ -5,10 +5,12 @@ import type {
   DeployWordPressCreateProjectInput,
   DeployWordPressDeployResult,
   DeployWordPressDisconnectInput,
+  DeployWordPressIgnoreInput,
   DeployWordPressItemsInput,
   DeployWordPressLinkProjectInput,
   DeployWordPressLinkProjectResult,
   DeployWordPressLocalChanges,
+  DeployWordPressLocalItem,
   DeployWordPressPlan,
   DeployWordPressPlanInput,
   DeployWordPressProgressEvent,
@@ -72,6 +74,12 @@ export function createDeployWordPress(subscribe: Subscribe) {
       ipcRenderer.invoke(IPC.deployWordPress.createProject, input),
     setProjectItems: (input: DeployWordPressItemsInput): Promise<Project> =>
       ipcRenderer.invoke(IPC.deployWordPress.setProjectItems, input),
+    /** Saves what the project leaves out of its pulls and deploys, replacing the whole list. */
+    setProjectIgnore: (input: DeployWordPressIgnoreInput): Promise<Project> =>
+      ipcRenderer.invoke(IPC.deployWordPress.setProjectIgnore, input),
+    /** The theme and plugin folders found in a project's wp-content, for picking new ones. */
+    localItems: (projectId: string): Promise<DeployWordPressLocalItem[]> =>
+      ipcRenderer.invoke(IPC.deployWordPress.localItems, projectId),
     linkProject: (
       input: DeployWordPressLinkProjectInput,
     ): Promise<DeployWordPressLinkProjectResult> =>

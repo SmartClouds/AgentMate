@@ -1,5 +1,6 @@
 import { API_TOKEN, DB_PASSWORD } from '@shared/deploy/testing/fakeDockerData';
 import { act, screen, waitFor, within } from '@testing-library/react';
+import { useLocation } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { ConfirmDialogHost } from '@/components/ConfirmDialog';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
@@ -20,16 +21,23 @@ vi.mock('@/components/terminal/TerminalPane', () => ({
     meta,
     onExit,
   }: {
-    meta: { container?: { containerId: string } };
+    meta: { container?: { containerId: string; command?: string[]; user?: string } };
     onExit: () => void;
   }) => (
     <button type="button" onClick={onExit}>
       Terminal for {meta.container?.containerId}
+      {meta.container?.command ? ` running ${JSON.stringify(meta.container.command)}` : ''}
+      {meta.container?.user ? ` as ${meta.container.user}` : ''}
     </button>
   ),
 }));
 
 const { ContainersPanel } = await import('./ContainersPanel');
+
+function LocationProbe(): React.JSX.Element {
+  const location = useLocation();
+  return <span data-testid="path">{`${location.pathname}${location.search}`}</span>;
+}
 
 const STEP_UP = new Error(
   "Error invoking remote method 'deployDocker:revealEnv': Error: [core:stepUpRequired] Confirm your password.",
@@ -40,6 +48,7 @@ async function openContainer(name: string, bridge: Record<string, unknown> = {},
     <>
       <ContainersPanel server={SERVER} />
       <ConfirmDialogHost />
+      <LocationProbe />
     </>,
     { bridge: { ...dockerBridge(roles), ...bridge } },
   );
@@ -236,6 +245,51 @@ describe('ContainerDrawer', () => {
     expect(within(drawer).getByRole('button', { name: /Open a console/ })).toBeInTheDocument();
   });
 
+  it('runs a chosen command as a chosen user, and runs it again only when asked', async () => {
+    const { user, drawer } = await openContainer('toolbox');
+    await user.click(within(drawer).getByRole('tab', { name: 'Console' }));
+    await user.type(within(drawer).getByLabelText('Command'), 'php artisan migrate | tail -n 5');
+    await user.click(within(drawer).getByLabelText('User'));
+    await user.click(await screen.findByRole('option', { name: 'root' }));
+    await user.click(within(drawer).getByRole('button', { name: /^Run$/ }));
+
+    const terminal = within(drawer).getByRole('button', { name: /Terminal for/ });
+    expect(terminal).toHaveTextContent(
+      'running ["/bin/sh","-c","php artisan migrate | tail -n 5"] as root',
+    );
+    expect(within(drawer).getByRole('status')).toHaveTextContent(
+      'Running php artisan migrate | tail -n 5 as root in toolbox',
+    );
+    await user.click(terminal);
+    expect(within(drawer).getByText('The command has ended.')).toBeInTheDocument();
+    await user.click(within(drawer).getByRole('button', { name: 'Run it again' }));
+    await user.click(within(drawer).getByRole('button', { name: 'Close the console' }));
+    // The form keeps what was typed.
+    expect(within(drawer).getByLabelText('Command')).toHaveValue('php artisan migrate | tail -n 5');
+  });
+
+  it('refuses a user name docker exec would not take', async () => {
+    const { user, drawer } = await openContainer('toolbox');
+    await user.click(within(drawer).getByRole('tab', { name: 'Console' }));
+    await user.click(within(drawer).getByLabelText('User'));
+    await user.type(screen.getByPlaceholderText('A user, or uid:gid'), 'not a user');
+    await user.click(await screen.findByRole('option', { name: 'Run as not a user' }));
+    expect(within(drawer).getByRole('alert')).toHaveTextContent(/not a user name or id/);
+    expect(within(drawer).getByRole('button', { name: /Open a console/ })).toBeDisabled();
+  });
+
+  it('reads as many log lines as asked', async () => {
+    const { user, bridge, drawer } = await openContainer('shop-api-1');
+    await user.click(within(drawer).getByRole('tab', { name: 'Logs' }));
+    await user.click(within(drawer).getByLabelText('Lines to read'));
+    await user.click(await screen.findByRole('option', { name: 'Last 5,000 lines' }));
+    await waitFor(() =>
+      expect(bridge.$fn('deployDocker.watchLogs')).toHaveBeenLastCalledWith(
+        expect.objectContaining({ tail: 5_000 }),
+      ),
+    );
+  });
+
   it('cannot open a console in a stopped container', async () => {
     const { user, drawer } = await openContainer('migrate-once');
     await user.click(within(drawer).getByRole('tab', { name: 'Console' }));
@@ -329,5 +383,32 @@ describe('ContainerDrawer', () => {
     expect(
       await screen.findByRole('dialog', { name: /Which project runs shop-api-1/ }),
     ).toBeInTheDocument();
+  });
+});
+
+describe('ContainerDrawer, Browse files (E27)', () => {
+  it('opens the Files section on this container', async () => {
+    const { user, drawer } = await openContainer('shop-api-1');
+    await user.click(within(drawer).getByRole('button', { name: 'Browse files' }));
+    expect(screen.getByTestId('path').textContent).toBe(
+      '/deploy?server=srv-1&view=files&source=container&target=shop-api-1',
+    );
+  });
+
+  it('is there for a stopped container too', async () => {
+    const { drawer } = await openContainer('migrate-once');
+    expect(within(drawer).getByRole('button', { name: 'Browse files' })).toBeEnabled();
+  });
+
+  it('is off below Admin, and says why', async () => {
+    const { user, drawer } = await openContainer('shop-api-1', {}, ['operator']);
+    const button = within(drawer).getByRole('button', { name: 'Browse files' });
+    expect(button).toBeDisabled();
+    await user.hover(button.parentElement as HTMLElement);
+    expect(
+      await screen.findByRole('tooltip', {
+        name: 'Browsing files in a container is for Admins.',
+      }),
+    ).toBeTruthy();
   });
 });

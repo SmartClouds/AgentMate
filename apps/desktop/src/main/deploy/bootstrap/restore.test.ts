@@ -21,10 +21,14 @@ import {
 
 const PASSPHRASE = 'orange tractor bicycle lamp';
 
-function setup(machine: Partial<ScriptedMachine> = {}, health?: () => Promise<HealthResponse>) {
+function setup(
+  machine: Partial<ScriptedMachine> = {},
+  health?: () => Promise<HealthResponse>,
+  onServer?: string,
+) {
   const server = new ScriptedConnection(scriptedMachine(machine));
-  const file = join(tempDir(), 'web.ambackup');
-  writeFileSync(file, 'AMBACKUP ciphertext');
+  const file = onServer ?? join(tempDir(), 'web.ambackup');
+  if (!onServer) writeFileSync(file, 'AMBACKUP ciphertext');
   const progress: DeployRestoreProgress[] = [];
   const run = (userName = 'maria') =>
     restoreCore(
@@ -38,6 +42,7 @@ function setup(machine: Partial<ScriptedMachine> = {}, health?: () => Promise<He
       {
         serverId: 'srv',
         file,
+        ...(onServer ? { fileOnServer: true } : {}),
         passphrase: PASSPHRASE,
         sudoPassword: null,
         userName,
@@ -102,6 +107,30 @@ describe('restoreCore', () => {
     expect(server.commands.some((command) => command.startsWith('rm -rf /tmp/agentmate.'))).toBe(
       true,
     );
+  });
+
+  it('stages a backup the core already fetched onto the server, without an upload (E28)', async () => {
+    const fetched = '/var/lib/agentmate-core/backups/0f8b0f8b0f8b0f8b0f8b0f8b0f8b0f8b.ambackup';
+    const { server, run, phases } = setup(
+      { coreUsers: [{ userName: 'maria', roles: ['owner'] }] },
+      undefined,
+      fetched,
+    );
+
+    await run();
+
+    expect(server.uploads).toEqual([]);
+    const stage = server.rootStdin.find((entry) => entry.command.includes('admin restore-stage'));
+    expect(stage?.command).toContain(fetched);
+    expect(stage?.stdin).toBe(`${PASSPHRASE}
+`);
+    expect(phases()[0]).toBe('stage:done');
+  });
+
+  it('refuses a fetched file outside the folder the core fetches into', async () => {
+    const { server, run } = setup({}, undefined, '/etc/shadow');
+    await expect(run()).rejects.toThrow(/not where/);
+    expect(server.rootCommands).toEqual([]);
   });
 
   it('changes nothing when the backup refuses its passphrase', async () => {

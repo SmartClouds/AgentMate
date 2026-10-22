@@ -2,6 +2,7 @@ import { act, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { queryKeys } from '@/lib/queryKeys';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
+import { notSetUp } from '../errorReporting/testing/fixtures';
 import { CHECKLIST } from './checklist/testing/fixtures';
 import { MARIA, SERVER, signedIn, THIS_COMPUTER, THIS_SESSION } from './testing/fixtures';
 
@@ -24,6 +25,7 @@ function renderPanel(access: unknown) {
       'deploySecurity.listSessions': async () => [THIS_SESSION],
       'deploySecurity.queryAudit': async () => ({ events: [] }),
       'deployHardening.checklist': async () => CHECKLIST,
+      'deployErrorReporting.status': async () => notSetUp(),
     },
   });
 }
@@ -54,6 +56,7 @@ describe('SecurityPanel', () => {
       'Devices and sessions',
       'Audit trail',
       'Backups',
+      'Error reporting',
       'Connection',
     ]);
     expect(await screen.findByRole('list', { name: 'Checklist' })).toBeTruthy();
@@ -74,12 +77,25 @@ describe('SecurityPanel', () => {
       'Checklist',
       'Devices and sessions',
       'Audit trail',
+      'Error reporting',
       'Connection',
     ]);
     await user.click(screen.getByRole('tab', { name: 'Devices and sessions' }));
     expect(await screen.findByText(/Every computer enrolled on this core/)).toBeTruthy();
     const devices = await screen.findByRole('list', { name: 'Devices' });
     expect(within(devices).getByRole('listitem', { name: 'Maria-PC' })).toBeTruthy();
+  });
+
+  it('opens error reporting from its tab, with the form for an Owner and none for an Admin', async () => {
+    const owner = renderPanel(async () => signedIn(['owner']));
+    await owner.user.click(await screen.findByRole('tab', { name: 'Error reporting' }));
+    expect(await screen.findByLabelText('Sentry DSN')).toBeTruthy();
+    owner.unmount();
+
+    const admin = renderPanel(async () => signedIn(['admin']));
+    await admin.user.click(await screen.findByRole('tab', { name: 'Error reporting' }));
+    expect(await screen.findByText(/An Owner can set this up/)).toBeTruthy();
+    expect(screen.queryByLabelText('Sentry DSN')).toBeNull();
   });
 
   it('moves an Owner who stepped down off the Users tab', async () => {

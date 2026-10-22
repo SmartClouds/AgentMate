@@ -463,10 +463,13 @@ import type { SshHostKeyStatus } from '../shared/sshHostKey';
 import { cloudflareServer } from './cloudflareServer';
 import { createDeployAssistant, createDeployLogs } from './deployAssistant';
 import { createDeployDirectTls } from './deployDirectTls';
+import { createDeployErrorReporting } from './deployErrorReporting';
+import { createDeployTelegram } from './deployTelegram';
 import { createDeployDocker } from './deployDocker';
 import { createDeployFiles } from './deployFiles';
 import { createDeployHardening } from './deployHardening';
 import { createDeployRegistry } from './deployRegistry';
+import { createDeployServerBackups } from './deployServerBackups';
 import { createDeployWordPress } from './deployWordPress';
 import { createErrorTracking } from './errorTracking';
 import { createHealth } from './health';
@@ -1835,9 +1838,14 @@ const deployJobs = {
 /** Docker on a server: containers, their stats, logs and console, and Docker's resources. */
 const deployDocker = createDeployDocker(subscribe);
 const deployDirectTls = createDeployDirectTls();
+const deployErrorReporting = createDeployErrorReporting();
+const deployTelegram = createDeployTelegram();
 
 /** The Security center (E15): the checklist, its SSH fixes, backups and restores. */
 const deployHardening = createDeployHardening(subscribe);
+
+/** A server's Backups section (E28): destinations, plans, runs and the restore wizard. */
+const deployServerBackups = createDeployServerBackups(subscribe);
 
 /** WordPress sites through the AgentMate Connector plugin, and WordPress projects (E19 to E21). */
 const deployWordPress = createDeployWordPress(subscribe);
@@ -2720,6 +2728,7 @@ const agentmatApi = {
   deploy,
   deploySecurity,
   deployHardening,
+  deployServerBackups,
   deployWordPress,
   deployFiles,
   sftp: createSftp(subscribe),
@@ -2729,6 +2738,8 @@ const agentmatApi = {
   deployAlerts,
   deployDocker,
   deployDirectTls,
+  deployErrorReporting,
+  deployTelegram,
   deployAssistant,
   deployLogs,
   deploySites,

@@ -134,6 +134,38 @@ describe('buildProblems', () => {
     );
   });
 
+  it('names failed backups and crash loops the core saw, without listing a loop twice (E30)', () => {
+    const problems = buildProblems({
+      now: NOW,
+      containers: [container('sender', { state: 'restarting', status: 'Restarting (1) now' })],
+      alerts: [
+        alert(1, {
+          kind: 'backupFailed',
+          resource: 'backup-plan:1',
+          severity: 'critical',
+          message: 'Nightly: disk full',
+        }),
+        alert(2, { kind: 'containerCrashLoop', resource: 'sender', severity: 'critical' }),
+        alert(3, {
+          kind: 'containerCrashLoop',
+          resource: 'worker',
+          severity: 'critical',
+          message: 'worker keeps restarting: it exited 3 times',
+        }),
+      ],
+    });
+
+    expect(problems.map((p) => [p.kind, p.title])).toEqual([
+      ['crashLoop', 'sender keeps restarting'],
+      ['crashLoop', 'worker keeps restarting'],
+      ['alert', 'A backup failed'],
+    ]);
+    expect(problems.find((p) => p.title === 'worker keeps restarting')).toMatchObject({
+      containerName: 'worker',
+      detail: 'worker keeps restarting: it exited 3 times',
+    });
+  });
+
   it('warns about certificates close to their end and flags expired ones', () => {
     const problems = buildProblems({
       now: NOW,

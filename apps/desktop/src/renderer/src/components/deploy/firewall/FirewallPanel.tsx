@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { OriginLockCard } from '@/components/cloudflare/server/OriginLockCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { draftFromRule } from '@/lib/deploy/firewall/format';
+import { missingRules, takeFirewallRules } from '@/lib/deploy/firewall/restoredRules';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { confirmDialog } from '@/stores/confirmStore';
@@ -242,6 +243,24 @@ export function FirewallPanel({ server }: { server: DeployServer }): React.JSX.E
     reset('apply');
     setReviewing(true);
   }, [fixAsked, status.data, presets.data, canAdmin, params, setParams, reset]);
+
+  // A restore from Backups (E28) offers the backup's rules here: the ones the firewall lacks are
+  // staged and the usual review opens. Applying them is the usual safe apply and keep.
+  const restoreAsked = params.get('fix') === 'restore-rules';
+  useEffect(() => {
+    if (!restoreAsked || !status.data) return;
+    const next = new URLSearchParams(params);
+    next.delete('fix');
+    setParams(next, { replace: true });
+    const rules = missingRules(takeFirewallRules(serverId), status.data.rules);
+    if (!canAdmin || status.data.pending || rules.length === 0) return;
+    setStaged((current) => [
+      ...current,
+      ...rules.map((rule) => ({ change: { kind: 'addRule' as const, rule } })),
+    ]);
+    reset('apply');
+    setReviewing(true);
+  }, [restoreAsked, status.data, canAdmin, params, setParams, reset, serverId]);
 
   if (access.isPending) {
     return (

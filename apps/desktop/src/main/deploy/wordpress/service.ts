@@ -34,7 +34,11 @@ import type {
   DeployWordPressSiteInfo,
   DeployWordPressUpdateConnectorResult,
 } from '../../../shared/deployWordPressTypes';
-import { wordPressError, wordPressErrorCode } from '../../../shared/wordpressErrors';
+import {
+  wordPressError,
+  wordPressErrorCode,
+  wordPressErrorMessage,
+} from '../../../shared/wordpressErrors';
 import { VaultLockedError } from '../../ssh/vaultErrors';
 import { WpClient, WpRemoteError, wpRequestCap } from './client';
 import { type ConnectorBundle, compareConnectorVersions } from './connectorBundle';
@@ -91,7 +95,15 @@ const UPDATE_REFUSED: Record<WpUpdateRefusal, string> = {
     'The newer connector needs a newer PHP or WordPress than this site has, so it was not installed. Nothing was changed.',
   notReplaceable:
     "The connector's folder on the site can't be replaced from here (it may be a symlink or not writable), so nothing was changed. Download the plugin and upload it in wp-admin instead.",
+  downloadFailed: 'The site could not download the connector from GitHub, so nothing was changed.',
 };
+/** Errors after which the site has changed nothing, so the app sends the files itself. */
+const DOWNLOAD_FALLBACK_CODES: ReadonlySet<string> = new Set([
+  'badRequest',
+  'timeout',
+  'unreachable',
+  'foreignResponse',
+]);
 /** More themes and plugins than any site has; a longer list is cut here. */
 export const MAX_LISTED_ITEMS = 2000;
 
@@ -213,6 +225,7 @@ export function cleanInfo(info: WpSiteInfo): WpSiteInfo {
     },
     // Absent from a connector that predates the update route, and that is not the same as false.
     selfUpdate: typeof info.selfUpdate === 'boolean' ? info.selfUpdate : undefined,
+    updateDownload: info.updateDownload === true ? true : undefined,
   };
 }
 
@@ -446,6 +459,10 @@ export class WordPressService {
    * Replaces the connector on a site with the one that ships with this app. Only a connector that
    * reports `selfUpdate` has the route (older ones are updated by hand once). The site swaps its
    * own plugin folder, health-checks itself, and puts the old files back when it fails the check.
+   *
+   * A site that can download the release itself (`updateDownload`) is asked to first, which saves
+   * pushing the plugin through a slow link. When it can't (no route out, GitHub down, a release
+   * that differs), the app sends the files the way older connectors take them.
    */
   async updateConnector(siteId: string): Promise<DeployWordPressUpdateConnectorResult> {
     const bundle = await this.deps.readConnectorBundle();
@@ -487,10 +504,27 @@ export class WordPressService {
         `The connector on this site (version ${fromVersion || 'unknown'}) can't update itself. Upload the plugin once in wp-admin (Plugins > Add New > Upload Plugin); after that, updates can be done from here.`,
       );
     }
-    const request: WpConnectorUpdateRequest = {
-      version: bundle.version,
-      files: bundle.files.map(({ path, size, sha256 }) => ({ path, size, sha256 })),
-    };
+    const files = bundle.files.map(({ path, size, sha256 }) => ({ path, size, sha256 }));
+
+    let downloadProblem: string | undefined;
+    if (bundle.downloadUrl && info.updateDownload === true) {
+      const request: WpConnectorUpdateRequest = {
+        version: bundle.version,
+        files,
+        download: { url: bundle.downloadUrl },
+      };
+      try {
+        const result = await this.requestUpdate(client, request, [], fromVersion);
+        return { ...result, source: 'site' };
+      } catch (error) {
+        if (!(error instanceof WpRemoteError) || !downloadFallsBack(error)) {
+          throw this.connectorUpdateError(error, 0, undefined);
+        }
+        downloadProblem = cleanSiteText(wordPressErrorMessage(error), 300);
+      }
+    }
+
+    const request: WpConnectorUpdateRequest = { version: bundle.version, files };
     const blobs = bundle.files.map((file) => file.bytes);
     // What goes on the wire is the gzipped frame, so that is what the site's limit is held against.
     const wireBytes = gzipBytes(
@@ -504,7 +538,24 @@ export class WordPressService {
     ) {
       throw this.updateTooLarge(wireBytes, limit);
     }
+    try {
+      const result = await this.requestUpdate(client, request, blobs, fromVersion);
+      return { ...result, source: 'app', ...(downloadProblem ? { downloadProblem } : {}) };
+    } catch (error) {
+      throw this.connectorUpdateError(error, wireBytes, limit);
+    }
+  }
 
+  /**
+   * One `/connector/update` call. A reply that never came back may still have followed a swap that
+   * worked, so the site is asked for its version before that counts as a failure.
+   */
+  private async requestUpdate(
+    client: WpClient,
+    request: WpConnectorUpdateRequest,
+    blobs: Uint8Array[],
+    fromVersion: string,
+  ): Promise<DeployWordPressUpdateConnectorResult> {
     let reply: WpConnectorUpdateResponse;
     try {
       reply = (
@@ -514,18 +565,17 @@ export class WordPressService {
         })
       ).data;
     } catch (error) {
-      // A reply that never came back may still have followed a swap that worked.
       const code = error instanceof WpRemoteError ? error.code : null;
       if (code === 'timeout' || code === 'unreachable' || code === 'foreignResponse') {
         const now = await client
           .call(WP_ROUTES.siteInfo, {})
           .then((reading) => cleanInfo(reading.data))
           .catch(() => null);
-        if (now && compareConnectorVersions(now.pluginVersion, bundle.version) >= 0) {
-          return { outcome: 'updated', fromVersion, version: bundle.version, checks: [] };
+        if (now && compareConnectorVersions(now.pluginVersion, request.version) >= 0) {
+          return { outcome: 'updated', fromVersion, version: request.version, checks: [] };
         }
       }
-      throw this.connectorUpdateError(error, wireBytes, limit);
+      throw error;
     }
     const state: unknown = reply.state;
     if (state !== 'updated' && state !== 'rolledBack') {
@@ -537,7 +587,7 @@ export class WordPressService {
     return {
       outcome: state,
       fromVersion,
-      version: bundle.version,
+      version: request.version,
       checks: (Array.isArray(reply.checks) ? reply.checks : [])
         .slice(0, 10)
         .filter(isEntry)
@@ -794,6 +844,12 @@ export class WordPressService {
       this.operations.delete(operationId);
     }
   }
+}
+
+/** Whether a failed download left the site as it was, so sending the files is worth a try. */
+function downloadFallsBack(error: WpRemoteError): boolean {
+  if (error.code === 'updateRefused') return error.details.reason === 'downloadFailed';
+  return DOWNLOAD_FALLBACK_CODES.has(error.code);
 }
 
 /**

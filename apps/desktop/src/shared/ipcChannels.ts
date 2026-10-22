@@ -1006,6 +1006,36 @@ export const IPC = {
     acceptPin: 'deployDirectTls:acceptPin',
   },
   /**
+   * Error reporting on a server (E29): its core sends warnings and errors to a Sentry project as
+   * OpenTelemetry logs. The DSN only goes in; nothing here returns one.
+   */
+  deployErrorReporting: {
+    /** (serverId) -> DeployErrorReportingStatus; Admin. */
+    status: 'deployErrorReporting:status',
+    /** (DeployErrorReportingSaveInput) -> DeployErrorReportingSaveResult; Owner, may need a step-up. */
+    save: 'deployErrorReporting:save',
+    /** (DeployErrorReportingRemoveInput) -> DeployErrorReportingStatus; Owner, may need a step-up. */
+    remove: 'deployErrorReporting:remove',
+    /** (serverId) -> DeployErrorReportingTestResult: one test event, and whether Sentry took it. Admin. */
+    test: 'deployErrorReporting:test',
+  },
+  /**
+   * Telegram notifications on a server (E30): its core sends alerts to a Telegram chat through a
+   * bot. The token only goes in; nothing here returns one.
+   */
+  deployTelegram: {
+    /** (serverId) -> DeployTelegramStatus; Admin. */
+    status: 'deployTelegram:status',
+    /** (DeployTelegramSaveInput) -> DeployTelegramSaveResult; Owner, may need a step-up. */
+    save: 'deployTelegram:save',
+    /** (DeployTelegramRemoveInput) -> DeployTelegramStatus; Owner, may need a step-up. */
+    remove: 'deployTelegram:remove',
+    /** (serverId) -> DeployTelegramTestResult: one test message, and whether Telegram took it. Admin. */
+    test: 'deployTelegram:test',
+    /** (botToken) -> DeployTelegramDetectResult: the chat that last wrote to the bot, asked from this computer. */
+    detectChat: 'deployTelegram:detectChat',
+  },
+  /**
    * Docker on a server (E06): the engine and its install, containers and their lifecycle, live
    * stats, logs and engine events, a console, and images, volumes, networks and disk use.
    */
@@ -1180,6 +1210,47 @@ export const IPC = {
     onRestoreProgress: 'deployHardening:onRestoreProgress',
   },
   /**
+   * A server's Backups section (E28): the secret key, destinations (with the Google Drive and
+   * OneDrive sign-in and the Telegram login), plans with their preview, runs, what each
+   * destination holds, downloads to this computer and the restore wizard. Owners only; the
+   * changes may need a step-up (`[core:stepUpRequired]`).
+   */
+  deployServerBackups: {
+    getSecret: 'deployServerBackups:getSecret',
+    setSecret: 'deployServerBackups:setSecret',
+    listDestinations: 'deployServerBackups:listDestinations',
+    saveDestination: 'deployServerBackups:saveDestination',
+    deleteDestination: 'deployServerBackups:deleteDestination',
+    testDestination: 'deployServerBackups:testDestination',
+    connectCloudDrive: 'deployServerBackups:connectCloudDrive',
+    cancelCloudSignIn: 'deployServerBackups:cancelCloudSignIn',
+    startTelegramLogin: 'deployServerBackups:startTelegramLogin',
+    continueTelegramLogin: 'deployServerBackups:continueTelegramLogin',
+    listPlans: 'deployServerBackups:listPlans',
+    savePlan: 'deployServerBackups:savePlan',
+    deletePlan: 'deployServerBackups:deletePlan',
+    previewPlan: 'deployServerBackups:previewPlan',
+    runPlan: 'deployServerBackups:runPlan',
+    runNow: 'deployServerBackups:runNow',
+    listRuns: 'deployServerBackups:listRuns',
+    getRun: 'deployServerBackups:getRun',
+    watchRun: 'deployServerBackups:watchRun',
+    stopWatchingRun: 'deployServerBackups:stopWatchingRun',
+    downloadRun: 'deployServerBackups:downloadRun',
+    listStored: 'deployServerBackups:listStored',
+    deleteStored: 'deployServerBackups:deleteStored',
+    downloadStored: 'deployServerBackups:downloadStored',
+    pickFile: 'deployServerBackups:pickFile',
+    restore: 'deployServerBackups:restore',
+    pendingRestore: 'deployServerBackups:pendingRestore',
+    restoreStatus: 'deployServerBackups:restoreStatus',
+    bringUp: 'deployServerBackups:bringUp',
+    /** main -> the main window: a run as it stands, and its download. */
+    onRunProgress: 'deployServerBackups:onRunProgress',
+    /** main -> the main window: a restore's steps, and how bringing the server up goes. */
+    onRestoreProgress: 'deployServerBackups:onRestoreProgress',
+  },
+  /**
    * WordPress sites connected through the AgentMate Connector plugin (E19 to E21): connecting
    * with a key, the site's items and deploy history, and pulling and deploying WordPress projects.
    */
@@ -1200,6 +1271,8 @@ export const IPC = {
     cancel: 'deployWordPress:cancel',
     createProject: 'deployWordPress:createProject',
     setProjectItems: 'deployWordPress:setProjectItems',
+    setProjectIgnore: 'deployWordPress:setProjectIgnore',
+    localItems: 'deployWordPress:localItems',
     linkProject: 'deployWordPress:linkProject',
     unlinkProject: 'deployWordPress:unlinkProject',
     localChanges: 'deployWordPress:localChanges',

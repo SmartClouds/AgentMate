@@ -76,6 +76,23 @@ describe('containerConsoleAdapter', () => {
     expect(bridge.$fn('deployDocker.closeConsole')).toHaveBeenCalledWith('console-1');
   });
 
+  it('runs a chosen command as a chosen user', async () => {
+    const bridge = installAgentmatBridge({ 'deployDocker.openConsole': async () => 'console-1' });
+    const adapter = containerConsoleAdapter('srv-1', 'toolbox', {
+      command: ['/bin/sh', '-c', 'php artisan migrate'],
+      user: 'root',
+    });
+    await adapter.create({ sessionId: 'pane-1' });
+    expect(bridge.$fn('deployDocker.openConsole')).toHaveBeenCalledWith({
+      serverId: 'srv-1',
+      containerId: 'toolbox',
+      columns: 80,
+      rows: 24,
+      command: ['/bin/sh', '-c', 'php artisan migrate'],
+      user: 'root',
+    });
+  });
+
   it('prints the core’s refusal in red and ends with a failure', async () => {
     const { adapter, data, exits, emit } = setup();
     await adapter.create({ sessionId: 'pane-1' });

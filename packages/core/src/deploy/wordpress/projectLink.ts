@@ -3,6 +3,7 @@ import type {
   ProjectWordPressItemKind,
   ProjectWordPressLink,
 } from '../../types/index.js';
+import { normalizeWpIgnore } from './ignoreList.js';
 import { isValidWpSlug, wpItemKey } from './pathPolicy.js';
 
 const KINDS: ReadonlySet<string> = new Set<ProjectWordPressItemKind>([
@@ -18,7 +19,7 @@ const SITE_ID = /^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/;
  */
 export function normalizeProjectWordPressLink(value: unknown): ProjectWordPressLink | undefined {
   if (typeof value !== 'object' || value === null) return undefined;
-  const raw = value as { siteId?: unknown; items?: unknown; linkedAt?: unknown };
+  const raw = value as { siteId?: unknown; items?: unknown; linkedAt?: unknown; ignore?: unknown };
   if (typeof raw.siteId !== 'string' || !SITE_ID.test(raw.siteId)) return undefined;
   if (!Array.isArray(raw.items)) return undefined;
   const seen = new Set<string>();
@@ -39,5 +40,6 @@ export function normalizeProjectWordPressLink(value: unknown): ProjectWordPressL
     typeof raw.linkedAt === 'string' && !Number.isNaN(Date.parse(raw.linkedAt))
       ? raw.linkedAt
       : new Date(0).toISOString();
-  return { siteId: raw.siteId, items, linkedAt };
+  const ignore = normalizeWpIgnore(raw.ignore, items);
+  return { siteId: raw.siteId, items, linkedAt, ...(ignore ? { ignore } : {}) };
 }

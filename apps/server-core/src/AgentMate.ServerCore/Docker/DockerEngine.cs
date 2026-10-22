@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Channels;
 using AgentMate.ServerCore.Contracts;
+using AgentMate.ServerCore.Files;
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using Version = System.Version;
@@ -33,6 +34,12 @@ internal sealed partial class DockerEngine(Uri endpoint, ILogger<DockerEngine> l
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     private DockerClient? _client;
+
+    /// <summary>
+    /// The same engine without the request timeout, for archive transfers (E27): a gigabyte into a
+    /// volume over a slow link takes longer than any timeout that suits the other calls.
+    /// </summary>
+    private DockerClient? _transfers;
     private EngineVersion? _version;
 
     public async Task<EngineVersion?> GetVersionAsync(CancellationToken cancellationToken)
@@ -64,7 +71,9 @@ internal sealed partial class DockerEngine(Uri endpoint, ILogger<DockerEngine> l
             async client =>
             {
                 var containers = await client.Containers.ListContainersAsync(new ContainersListParameters { All = true }, cancellationToken);
-                return [.. containers.Select(DockerMapping.Container)];
+
+                // The helpers volumes are browsed through are the core's own, not the user's.
+                return [.. containers.Select(DockerMapping.Container).Where(c => !c.Labels.ContainsKey(VolumeHelpers.Label))];
             },
             cancellationToken);
 
@@ -213,6 +222,7 @@ internal sealed partial class DockerEngine(Uri endpoint, ILogger<DockerEngine> l
     public void Dispose()
     {
         _client?.Dispose();
+        _transfers?.Dispose();
         _gate.Dispose();
     }
 
@@ -258,6 +268,7 @@ internal sealed partial class DockerEngine(Uri endpoint, ILogger<DockerEngine> l
             var spoken = negotiated.ToString();
             _version = new EngineVersion(version.Version ?? string.Empty, version.APIVersion, version.MinAPIVersion ?? string.Empty, spoken, version.Os ?? "linux", version.Arch ?? string.Empty);
             LogNegotiated(logger, _version.Version, version.APIVersion, spoken);
+            _transfers = Build(negotiated, Timeout.InfiniteTimeSpan);
             _client = Build(negotiated);
             return _client;
         }
@@ -267,11 +278,11 @@ internal sealed partial class DockerEngine(Uri endpoint, ILogger<DockerEngine> l
         }
     }
 
-    private DockerClient Build(Version? apiVersion) =>
+    private DockerClient Build(Version? apiVersion, TimeSpan? timeout = null) =>
         new DockerClientBuilder()
             .WithEndpoint(endpoint)
             .WithApiVersion(apiVersion)
-            .WithTimeout(_requestTimeout)
+            .WithTimeout(timeout ?? _requestTimeout)
             .WithTransportOptions(UnixSocketTransport.Instance, endpoint.LocalPath)
             .Build();
 
@@ -389,6 +400,7 @@ internal sealed partial class DockerEngine(Uri endpoint, ILogger<DockerEngine> l
     {
         var client = Interlocked.Exchange(ref _client, null);
         client?.Dispose();
+        Interlocked.Exchange(ref _transfers, null)?.Dispose();
         _version = null;
     }
 

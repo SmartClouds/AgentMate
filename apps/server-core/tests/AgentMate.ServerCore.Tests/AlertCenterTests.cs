@@ -174,4 +174,15 @@ public sealed class AlertCenterTests : IAsyncLifetime
         Assert.Equal(1, pruned);
         Assert.Single(await _alerts.ListAsync(new AlertQuery(IncludeResolved: true), Cancel));
     }
+
+    [Fact]
+    public async Task The_latest_revision_is_zero_at_first_then_the_highest_change()
+    {
+        Assert.Equal(0, await _alerts.LatestRevisionAsync(Cancel));
+
+        await _alerts.RaiseAsync(AlertKind.DiskPressure, "/", AlertSeverity.Warning, "full", Cancel);
+        var resolved = await _alerts.ResolveAsync(AlertKind.DiskPressure, "/", Cancel);
+
+        Assert.Equal(resolved!.Revision, await _alerts.LatestRevisionAsync(Cancel));
+    }
 }

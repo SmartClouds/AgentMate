@@ -50,6 +50,9 @@ export function MonacoEditor({
   const onRevealedRef = useRef(onRevealed);
   onRevealedRef.current = onRevealed;
   const revealedRef = useRef<number | null>(null);
+  // Set while the value prop is written in, so the caller doesn't get its own value back as an
+  // edit. A file tab took that echo for a draft and kept showing the old file after a switch.
+  const applyingRef = useRef(false);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only setup; prop changes are applied via refs/other effects, not by recreating the editor
   useEffect(() => {
@@ -71,6 +74,7 @@ export function MonacoEditor({
     editorRef.current = editor;
 
     const contentDisposable = editor.onDidChangeModelContent(() => {
+      if (applyingRef.current) return;
       onChangeRef.current?.(editor.getValue());
     });
 
@@ -92,7 +96,12 @@ export function MonacoEditor({
   useEffect(() => {
     const editor = editorRef.current;
     if (editor && editor.getValue() !== value) {
-      editor.setValue(value);
+      applyingRef.current = true;
+      try {
+        editor.setValue(value);
+      } finally {
+        applyingRef.current = false;
+      }
     }
   }, [value]);
 

@@ -35,6 +35,23 @@ describe('normalizeProjectWordPressLink', () => {
     expect(normalizeProjectWordPressLink({ siteId: 's', items: [] })).toBeUndefined();
   });
 
+  it('keeps the saved ignore list for the items it has, and leaves the field out when empty', () => {
+    const link = normalizeProjectWordPressLink({
+      siteId: 's',
+      linkedAt: '2026-10-05T10:00:00.000Z',
+      items: [{ kind: 'theme', slug: 't' }],
+      ignore: { '*': ['*.map'], 'theme:t': ['/src/'], 'plugin:gone': ['/x/'] },
+    });
+    expect(link?.ignore).toEqual({ '*': ['*.map'], 'theme:t': ['/src/'] });
+    const bare = normalizeProjectWordPressLink({
+      siteId: 's',
+      items: [{ kind: 'theme', slug: 't' }],
+      ignore: { 'plugin:gone': ['/x/'] },
+    });
+    expect(bare).toBeDefined();
+    expect('ignore' in (bare ?? {})).toBe(false);
+  });
+
   it('falls back to the epoch for a missing or broken date', () => {
     expect(
       normalizeProjectWordPressLink({ siteId: 's', items: [{ kind: 'theme', slug: 't' }] })

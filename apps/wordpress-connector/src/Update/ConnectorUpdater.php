@@ -1,8 +1,10 @@
 <?php
 /**
- * Replaces the connector's own folder with a newer release the desktop app sends, so a site does
- * not need the zip uploaded by hand. The app sends the files of the plugin zip it ships with;
- * nothing is fetched from the internet, and the release can only come from a paired write key.
+ * Replaces the connector's own folder with a newer release the desktop app asks for, so a site
+ * does not need the zip uploaded by hand. The app either sends the files of the plugin zip it
+ * ships with, or lists them and has the site download that zip from the AgentMate GitHub release
+ * (the only address it fetches from). Either way the release can only come from a paired write
+ * key, and every file must match the size and sha256 the signed request gives for it.
  *
  * What keeps a bad update from hurting the site, in order:
  * - every file is hashed, its path checked, and every PHP file parsed before anything is written;
@@ -41,6 +43,9 @@ final class ConnectorUpdater
         'src/Plugin.php',
         'guard/00-agentmate-connector-guard.php',
     );
+
+    /** The folder the release zip holds the plugin in. */
+    const ZIP_ROOT = 'agentmate-connector/';
 
     const VERSION = '/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/D';
 
@@ -113,7 +118,7 @@ final class ConnectorUpdater
 
     /**
      * @param mixed $body
-     * @return array{version: string, files: array<string, string>} the files by path, with their bytes
+     * @return array{version: string, files: array<string, string>, downloaded: bool} the files by path, with their bytes
      */
     private function readRequest($body, Frame $frame): array
     {
@@ -125,10 +130,21 @@ final class ConnectorUpdater
         if (!is_array($files) || array_keys($files) !== range(0, count($files) - 1) || count($files) < 1 || count($files) > Protocol::UPDATE_MAX_FILES) {
             throw ApiError::badRequest('An update lists 1 to ' . Protocol::UPDATE_MAX_FILES . ' files.');
         }
-        if (count($files) !== $frame->blobCount()) {
+        $url = null;
+        if (is_array($body) && array_key_exists('download', $body)) {
+            $download = $body['download'];
+            $url = is_array($download) && isset($download['url']) && is_string($download['url']) ? $download['url'] : '';
+            if (preg_match(Protocol::UPDATE_DOWNLOAD_URL, $url, $tag) !== 1 || $tag[1] !== $version) {
+                throw ApiError::badRequest('An update the site downloads names the AgentMate release of the version it installs.');
+            }
+            if ($frame->blobCount() !== 0) {
+                throw ApiError::badRequest('An update the site downloads carries no blobs.');
+            }
+        } elseif (count($files) !== $frame->blobCount()) {
             throw ApiError::badRequest('Send one blob for each file of the update.');
         }
         $out = array();
+        $wanted = array();
         $lowered = array();
         $total = 0;
         foreach ($files as $index => $file) {
@@ -151,6 +167,10 @@ final class ConnectorUpdater
             if ($size > Protocol::UPDATE_MAX_FILE_BYTES || $total > Protocol::UPDATE_MAX_TOTAL_BYTES) {
                 throw $this->badPackage('The update is larger than a connector can be.');
             }
+            if ($url !== null) {
+                $wanted[$path] = array('size' => $size, 'sha256' => $sha);
+                continue;
+            }
             if ($frame->blobLength($index) !== $size) {
                 throw $this->badPackage($shown . ' is not the size the update says it is.');
             }
@@ -160,21 +180,56 @@ final class ConnectorUpdater
             }
             $out[$path] = $bytes;
         }
-        foreach (array_keys($out) as $path) {
+        $listed = $url !== null ? $wanted : $out;
+        foreach (array_keys($listed) as $path) {
             $parts = explode('/', $path);
             for ($length = 1; $length < count($parts); $length++) {
-                if (isset($out[implode('/', array_slice($parts, 0, $length))])) {
+                if (isset($listed[implode('/', array_slice($parts, 0, $length))])) {
                     throw $this->badPackage('The update holds ' . Text::clean($path, 120) . ' inside a file.');
                 }
             }
         }
         foreach (self::REQUIRED as $required) {
-            if (!isset($out[$required])) {
+            if (!isset($listed[$required])) {
                 throw $this->badPackage('The update is missing ' . $required . ', so it is not a complete connector.');
             }
         }
+        if ($url !== null) {
+            $out = $this->download($url, $wanted);
+        }
         $this->checkMain($out[self::MAIN], $version);
-        return array('version' => $version, 'files' => $out);
+        return array('version' => $version, 'files' => $out, 'downloaded' => $url !== null);
+    }
+
+    /**
+     * Fetches the release zip and takes its files only when they are exactly the ones the signed
+     * request lists, byte for byte. The app sends the files itself when this fails.
+     *
+     * @param array<string, array{size: int, sha256: string}> $wanted
+     * @return array<string, string>
+     */
+    private function download(string $url, array $wanted): array
+    {
+        $fetched = $this->env->download($url, Protocol::UPDATE_DOWNLOAD_MAX_BYTES, Protocol::UPDATE_DOWNLOAD_TIMEOUT_SECONDS);
+        if ($fetched['body'] === null) {
+            throw $this->refused('downloadFailed', 'The site could not download the connector from GitHub (' . Text::clean($fetched['error'], 200) . ').');
+        }
+        $files = ZipReader::read($fetched['body'], self::ZIP_ROOT, Protocol::UPDATE_MAX_FILES, Protocol::UPDATE_MAX_FILE_BYTES, Protocol::UPDATE_MAX_TOTAL_BYTES);
+        if ($files === null) {
+            throw $this->refused('downloadFailed', 'The file the site downloaded from GitHub is not a plugin zip it can read.');
+        }
+        $out = array();
+        foreach ($wanted as $path => $file) {
+            $bytes = isset($files[$path]) ? $files[$path] : null;
+            if ($bytes === null || strlen($bytes) !== $file['size'] || !hash_equals($file['sha256'], hash('sha256', $bytes))) {
+                throw $this->refused('downloadFailed', 'The connector the site downloaded is not the same as the one in this app (' . Text::clean($path, 120) . ' differs).');
+            }
+            $out[$path] = $bytes;
+        }
+        if (count($files) !== count($out)) {
+            throw $this->refused('downloadFailed', 'The connector the site downloaded holds files the one in this app does not.');
+        }
+        return $out;
     }
 
     /** The main file must be this connector and say it is the version the request names. */
@@ -206,7 +261,7 @@ final class ConnectorUpdater
     // Doing it --------------------------------------------------------------------------------
 
     /**
-     * @param array{version: string, files: array<string, string>} $request
+     * @param array{version: string, files: array<string, string>, downloaded: bool} $request
      * @param array<string, mixed> $connection
      * @return array<string, mixed>
      */
@@ -262,7 +317,7 @@ final class ConnectorUpdater
             return array('state' => 'rolledBack', 'fromVersion' => $from, 'version' => $to, 'files' => count($files), 'checks' => $checks);
         }
         $this->remove($old);
-        $this->audit->add('connectorUpdated', $env->now(), $ip, 'Updated AgentMate Connector from ' . $from . ' to ' . $to . ' (' . count($files) . ' files).', $connection);
+        $this->audit->add('connectorUpdated', $env->now(), $ip, 'Updated AgentMate Connector from ' . $from . ' to ' . $to . ' (' . count($files) . ' files' . ($request['downloaded'] ? ', downloaded by the site' : '') . ').', $connection);
         return array('state' => 'updated', 'fromVersion' => $from, 'version' => $to, 'files' => count($files), 'checks' => $checks);
     }
 

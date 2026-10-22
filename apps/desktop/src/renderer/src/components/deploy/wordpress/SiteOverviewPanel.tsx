@@ -157,6 +157,13 @@ function ConnectorUpdateNotice({
     return (
       <Notice role="status" tone="success">
         The connector on this site is now version {result.version} (it was {result.fromVersion}).
+        {result.source === 'site' && ' The site downloaded it from GitHub itself.'}
+        {result.downloadProblem && (
+          <>
+            {" The site couldn't download it itself, so AgentMate sent the files. "}
+            <span className="text-muted-foreground">{result.downloadProblem}</span>
+          </>
+        )}
         {result.checks.some((check) => check.ok === true) &&
           ' The site passed its health check after the swap.'}
       </Notice>

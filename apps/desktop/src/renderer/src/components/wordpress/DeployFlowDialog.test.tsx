@@ -1,7 +1,7 @@
 import type { DeployWordPressDeployResult } from '@shared/deployWordPressTypes';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
 import {
   change,
@@ -10,6 +10,11 @@ import {
   wpProject,
   wpSite,
 } from '../projects/wordpress/testing/fixtures';
+
+const toast = vi.hoisted(() =>
+  Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() }),
+);
+vi.mock('sonner', () => ({ toast }));
 
 vi.mock('@/components/editor/MonacoDiffEditor', async () => ({
   MonacoDiffEditor: (await import('../deploy/sites/testing/monacoMocks')).FakeMonacoDiffEditor,
@@ -70,7 +75,7 @@ describe('DeployFlowDialog review', () => {
     expect(screen.getByText(/2 files to upload \(2.50 KB\), 1 to delete/)).toBeTruthy();
     expect(bridge.$fn('deployWordPress.planDeploy')).toHaveBeenCalledWith({ projectId: 'p1' });
 
-    await user.click(screen.getByRole('button', { name: /style\.css/ }));
+    await user.click(screen.getByRole('button', { name: /^Modified\s*style\.css/ }));
     expect(await screen.findByTestId('snippet-diff')).toHaveTextContent('old css => new css');
     expect(bridge.$fn('deployWordPress.remoteFile')).toHaveBeenCalledWith({
       projectId: 'p1',
@@ -277,5 +282,205 @@ describe('DeployFlowDialog outcome', () => {
 
     await act(async () => call.resolve(done));
     expect(await screen.findByText('Deployed')).toBeTruthy();
+  });
+});
+
+describe('DeployFlowDialog ignoring files', () => {
+  const NEW_PHP = change({ path: 'inc/new.php', local: 'added', expectedRemote: null, size: 512 });
+  const STYLE = change({ path: 'style.css' });
+  const OLD = change({ path: 'old.php', local: 'deleted', action: 'deleteRemote', size: 0 });
+  const FULL = wpPlan({ changes: [STYLE, NEW_PHP, OLD] });
+  const WITHOUT_INC = wpPlan({ changes: [STYLE, OLD], uploadBytes: 2048 });
+
+  type Calls = { $fn: (path: string) => { mock: { calls: unknown[][] } } };
+  /** What setProjectIgnore was called with; the bridge refuses to name a call nobody made. */
+  const saved = (bridge: Calls): unknown[] => {
+    try {
+      return bridge.$fn('deployWordPress.setProjectIgnore').mock.calls.map((call) => call[0]);
+    } catch {
+      return [];
+    }
+  };
+  const planCalls = (bridge: Calls) => bridge.$fn('deployWordPress.planDeploy').mock.calls.length;
+
+  beforeEach(() => {
+    toast.success.mockClear();
+    toast.error.mockClear();
+    toast.info.mockClear();
+  });
+
+  /** A project whose saved list is kept in the test, as the main process would keep it. */
+  function renderIgnoring(
+    options: {
+      plans?: unknown[];
+      ignore?: Record<string, string[]>;
+      save?: (input: { ignore: Record<string, string[]> }) => Promise<unknown>;
+    } = {},
+  ) {
+    let current = wpProject();
+    const withList = (ignore?: Record<string, string[]>) => {
+      const { ignore: _old, ...rest } = current.wordpress as unknown as Record<string, unknown>;
+      current = {
+        ...current,
+        wordpress: { ...rest, ...(ignore && Object.keys(ignore).length ? { ignore } : {}) },
+      } as typeof current;
+      return current;
+    };
+    withList(options.ignore);
+    const plans = [...(options.plans ?? [FULL])];
+    return renderDialog({
+      'projects.list': async () => [current],
+      'deployWordPress.planDeploy': vi.fn(async () =>
+        plans.length > 1 ? (plans.shift() as unknown) : plans[0],
+      ),
+      'deployWordPress.setProjectIgnore':
+        options.save ??
+        (async (input: { ignore: Record<string, string[]> }) => withList(input.ignore)),
+    });
+  }
+
+  it('ignores a folder from a file menu, saves it, and shows the list without it', async () => {
+    const { user, bridge } = renderIgnoring({ plans: [FULL, WITHOUT_INC] });
+    await user.click(await screen.findByRole('button', { name: 'Ignore options for inc/new.php' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Ignore the folder inc/' }));
+
+    await waitFor(() =>
+      expect(saved(bridge)).toEqual([
+        { projectId: 'p1', ignore: { 'theme:storefront': ['/inc/'] } },
+      ]),
+    );
+    await waitFor(() => expect(screen.queryByText('inc/new.php')).toBeNull());
+    expect(planCalls(bridge)).toBe(2);
+    expect(screen.getByText('style.css')).toBeTruthy();
+    expect(toast.success).toHaveBeenCalledWith(
+      'Ignored inc/ in storefront.',
+      expect.objectContaining({ action: expect.objectContaining({ label: 'Undo' }) }),
+    );
+    // What is saved shows up under the review, ready to be taken back.
+    expect(
+      await screen.findByRole('button', { name: 'Stop ignoring inc/ in storefront' }),
+    ).toBeTruthy();
+  });
+
+  it('ignores a series of ticked files in one go, and the bar goes away', async () => {
+    const { user, bridge } = renderIgnoring({ plans: [FULL, wpPlan({ changes: [NEW_PHP] })] });
+    await user.click(await screen.findByRole('checkbox', { name: 'Select style.css' }));
+    expect(screen.getByText('1 file selected')).toBeTruthy();
+    await user.click(screen.getByRole('checkbox', { name: 'Select old.php' }));
+    expect(screen.getByText('2 files selected')).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Ignore selected files' }));
+    await waitFor(() =>
+      expect(saved(bridge)).toEqual([
+        { projectId: 'p1', ignore: { 'theme:storefront': ['/style.css', '/old.php'] } },
+      ]),
+    );
+    await waitFor(() => expect(screen.queryByText('2 files selected')).toBeNull());
+    expect(toast.success).toHaveBeenCalledWith('Ignored 2 files in storefront.', expect.anything());
+    // The rows are gone from the changes; the saved lines show under the review instead.
+    expect(screen.queryByRole('checkbox', { name: 'Select style.css' })).toBeNull();
+    expect(screen.queryByRole('checkbox', { name: 'Select old.php' })).toBeNull();
+    expect(screen.getByRole('checkbox', { name: 'Select inc/new.php' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Stop ignoring style.css in storefront' }),
+    ).toBeTruthy();
+  });
+
+  it('keeps the list on screen while it is worked out again, and holds Continue', async () => {
+    const second = deferred<unknown>();
+    let calls = 0;
+    const { user, bridge } = renderDialog({
+      'projects.list': [wpProject()],
+      'deployWordPress.planDeploy': async () => {
+        calls += 1;
+        return calls === 1 ? FULL : second.promise;
+      },
+      'deployWordPress.setProjectIgnore': async (input: { ignore: Record<string, string[]> }) => ({
+        ...wpProject(),
+        wordpress: { ...wpProject().wordpress, ignore: input.ignore },
+      }),
+    });
+    await user.click(await screen.findByRole('button', { name: 'Ignore options for old.php' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Ignore this file' }));
+    await waitFor(() => expect(calls).toBe(2));
+
+    // The old rows are still there, but nothing can be changed or continued until the new ones.
+    expect(screen.getByRole('checkbox', { name: 'Select old.php' })).toBeTruthy();
+    expect((await continueButton()).disabled).toBe(true);
+    expect(
+      (screen.getByRole('checkbox', { name: 'Select style.css' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(saved(bridge)).toHaveLength(1);
+
+    await act(async () => second.resolve(WITHOUT_INC));
+    await waitFor(() =>
+      expect(screen.queryByRole('checkbox', { name: 'Select inc/new.php' })).toBeNull(),
+    );
+    expect((await continueButton()).disabled).toBe(false);
+  });
+
+  it('puts the list back from the toast, and checks the changes again', async () => {
+    const { user, bridge } = renderIgnoring({ plans: [FULL, WITHOUT_INC, FULL] });
+    await user.click(await screen.findByRole('button', { name: 'Ignore options for inc/new.php' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Ignore this file' }));
+    await waitFor(() => expect(toast.success).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.queryByRole('checkbox', { name: 'Select inc/new.php' })).toBeNull(),
+    );
+
+    const options = toast.success.mock.calls.at(-1)?.[1] as { action: { onClick: () => void } };
+    await act(async () => options.action.onClick());
+    await waitFor(() => expect(saved(bridge).at(-1)).toEqual({ projectId: 'p1', ignore: {} }));
+    expect(await screen.findByRole('checkbox', { name: 'Select inc/new.php' })).toBeTruthy();
+    expect(planCalls(bridge)).toBe(3);
+  });
+
+  it('lists what is ignored and stops ignoring from the review', async () => {
+    const { user, bridge } = renderIgnoring({
+      ignore: { 'theme:storefront': ['/vendor/'] },
+      plans: [FULL, FULL],
+    });
+    expect(await screen.findByText('Ignored for this project')).toBeTruthy();
+    await user.click(
+      await screen.findByRole('button', { name: 'Stop ignoring vendor/ in storefront' }),
+    );
+    await waitFor(() => expect(saved(bridge)).toEqual([{ projectId: 'p1', ignore: {} }]));
+    await waitFor(() => expect(planCalls(bridge)).toBe(2));
+  });
+
+  it('says so when the ticked files cannot be ignored, and saves nothing', async () => {
+    const solo = change({
+      item: { kind: 'plugin', slug: 'solo.php' },
+      path: 'solo.php',
+      local: 'modified',
+    });
+    const { user, bridge } = renderIgnoring({ plans: [wpPlan({ changes: [solo] })] });
+    await user.click(await screen.findByRole('checkbox', { name: 'Select solo.php' }));
+    await user.click(screen.getByRole('button', { name: 'Ignore selected files' }));
+    await waitFor(() =>
+      expect(toast.info).toHaveBeenCalledWith(
+        "A single-file plugin has only its own file, so there's nothing to ignore in it.",
+      ),
+    );
+    expect(saved(bridge)).toEqual([]);
+    expect(screen.getByText('1 file selected')).toBeTruthy();
+  });
+
+  it('tells the user when saving fails, and leaves the list as it was', async () => {
+    const { user, bridge } = renderIgnoring({
+      save: async () => {
+        throw new Error('[wp:badRequest] Line 1 of the ignore list cannot be read.');
+      },
+    });
+    await user.click(await screen.findByRole('button', { name: 'Ignore options for old.php' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Ignore this file' }));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('Line 1 of the ignore list cannot be read.'),
+    );
+    expect(planCalls(bridge)).toBe(1);
+    expect(screen.getByText('old.php')).toBeTruthy();
+    expect(
+      (screen.getByRole('checkbox', { name: 'Select style.css' }) as HTMLButtonElement).disabled,
+    ).toBe(false);
   });
 });

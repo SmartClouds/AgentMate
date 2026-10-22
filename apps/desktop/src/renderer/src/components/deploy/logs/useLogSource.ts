@@ -5,7 +5,7 @@ import type {
   JournalLine,
 } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
 import { useEffect, useMemo, useState } from 'react';
-import { appendLines } from '@/lib/deploy/containers/logs';
+import { appendLines, DEFAULT_TAIL, MAX_TEXT_LOG_TAIL } from '@/lib/deploy/containers/logs';
 import {
   auditEntries,
   containerEntries,
@@ -37,7 +37,6 @@ export type LogSource =
 
 /** The core follows at most four container logs per connection; an app shows that many services. */
 export const MAX_STACK_SERVICES = 4;
-const TAIL = 500;
 
 export interface LiveSource {
   entries: LogEntry[];
@@ -59,7 +58,7 @@ const EMPTY: Raw = { containers: {}, journal: [], site: [], audit: [] };
 export function useLogSource(
   serverId: string,
   source: LogSource | null,
-  options: { follow: boolean; run: number },
+  options: { follow: boolean; run: number; tail?: number },
 ): LiveSource {
   const [raw, setRaw] = useState<Raw>(EMPTY);
   const [status, setStatus] = useState({
@@ -67,13 +66,14 @@ export function useLogSource(
     ended: false,
     error: null as string | null,
   });
-  const { follow, run } = options;
+  const { follow, run, tail = DEFAULT_TAIL } = options;
   const key = source ? JSON.stringify(source) : '';
 
   useEffect(() => {
     setRaw(EMPTY);
     setStatus({ ready: false, ended: false, error: null });
     if (!source) return;
+    const textTail = Math.min(tail, MAX_TEXT_LOG_TAIL);
     const fail = (failure: unknown) =>
       setStatus({ ready: true, ended: true, error: coreErrorMessage(failure) });
     const quiet = setTimeout(() => setStatus((current) => ({ ...current, ready: true })), 1_500);
@@ -95,7 +95,7 @@ export function useLogSource(
                 serverId,
                 containerId: target.id,
                 follow,
-                tail: TAIL,
+                tail,
               }),
             stop: window.agentmat.deployDocker.unwatchLogs,
             onEvent: (event) => {
@@ -128,7 +128,7 @@ export function useLogSource(
               serverId,
               unit: source.unit,
               follow,
-              lines: TAIL,
+              lines: textTail,
             }),
           stop: window.agentmat.deployLogs.unwatchJournal,
           onEvent: (event) => {
@@ -154,7 +154,7 @@ export function useLogSource(
               serverId,
               siteId: source.siteId,
               kind: source.logKind,
-              tailLines: TAIL,
+              tailLines: textTail,
             }),
           stop: window.agentmat.deploySites.unwatchLog,
           onEvent: (event) => {
@@ -192,7 +192,7 @@ export function useLogSource(
     return () => {
       for (const stop of stops) stop();
     };
-  }, [serverId, key, follow, run]);
+  }, [serverId, key, follow, run, tail]);
 
   const entries = useMemo(() => {
     if (!source) return [];

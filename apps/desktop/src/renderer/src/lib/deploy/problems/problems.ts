@@ -131,10 +131,23 @@ function stackProblems(stacks: readonly StackInfo[]): Problem[] {
   return found;
 }
 
-function alertProblems(alerts: readonly AlertInfo[]): Problem[] {
+/** `looping` are the containers already listed as crash loops from their own state. */
+function alertProblems(alerts: readonly AlertInfo[], looping: ReadonlySet<string>): Problem[] {
   const found: Problem[] = [];
   for (const alert of alerts) {
     if (alert.resolvedAtUnixMs !== undefined || alert.kind === 'rebootRequired') continue;
+    if (alert.kind === 'containerCrashLoop') {
+      if (looping.has(alert.resource)) continue;
+      found.push({
+        id: `alert:${alert.id}`,
+        kind: 'crashLoop',
+        severity: alert.severity === 'critical' ? 'critical' : 'warning',
+        title: `${alert.resource} keeps restarting`,
+        detail: alert.message,
+        containerName: alert.resource,
+      });
+      continue;
+    }
     const kind: ProblemKind =
       alert.kind === 'diskPressure'
         ? 'diskPressure'
@@ -150,7 +163,9 @@ function alertProblems(alerts: readonly AlertInfo[]): Problem[] {
           ? 'A job failed'
           : alert.kind === 'certificateRenewalFailed'
             ? 'A certificate did not renew'
-            : 'The firewall needs a look';
+            : alert.kind === 'backupFailed'
+              ? 'A backup failed'
+              : 'The firewall needs a look';
     found.push({
       id: `alert:${alert.id}`,
       kind,
@@ -226,10 +241,16 @@ function exposureProblems(exposure: ExposureInventory): Problem[] {
 
 export function buildProblems(inputs: ProblemInputs): Problem[] {
   const alerts = inputs.alerts ?? [];
+  const fromContainers = containerProblems(inputs.containers ?? []);
+  const looping = new Set(
+    fromContainers.flatMap((p) =>
+      p.kind === 'crashLoop' && p.containerName ? [p.containerName] : [],
+    ),
+  );
   const problems = [
-    ...containerProblems(inputs.containers ?? []),
+    ...fromContainers,
     ...stackProblems(inputs.stacks ?? []),
-    ...alertProblems(alerts),
+    ...alertProblems(alerts, looping),
     ...certificateProblems(inputs.certificates ?? [], alerts, inputs.now),
     ...(inputs.exposure ? exposureProblems(inputs.exposure) : []),
   ];

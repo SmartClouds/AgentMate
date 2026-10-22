@@ -24,5 +24,7 @@
   <!-- The nginx renderer variants the golden files pin, so the harness loads exactly those. -->
   <ItemGroup>
     <Compile Include="..\AgentMate.ServerCore.Tests\Nginx\NginxVariants.cs" Link="Nginx\NginxVariants.cs" />
+    <!-- The backup destination contract (E28), run here against real FTP and SFTP. -->
+    <Compile Include="..\AgentMate.ServerCore.Tests\Backups\BackupDestinationContract.cs" Link="Backups\BackupDestinationContract.cs" />
   </ItemGroup>
 </Project>

@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Docker,
   EllipsisVertical,
+  FileText,
   Globe,
   Search,
   Spinner,
@@ -60,6 +61,8 @@ export interface ContainerActions {
   remove?: (container: ContainerSummary) => void;
   /** The container that has a call on its way, whose menu waits. */
   busyId?: string | null;
+  /** Every service's log of a compose project together. */
+  openStackLogs?: (project: string) => void;
 }
 
 const ACTION_LABEL: Record<DeployContainerAction, string> = {
@@ -135,15 +138,18 @@ function GroupHeader({
   row,
   workingDirectory,
   onToggle,
+  onLogs,
 }: {
   row: Extract<ContainerRow, { kind: 'group' }>;
   workingDirectory?: string;
   onToggle: () => void;
+  onLogs?: (project: string) => void;
 }): React.JSX.Element {
   const Chevron = row.folded ? ChevronRight : ChevronDown;
   const stopped = row.total - row.running;
+  const project = row.project;
   return (
-    <div className="flex h-full items-end pb-1">
+    <div className="flex h-full items-end gap-1 pb-1">
       <button
         type="button"
         onClick={onToggle}
@@ -163,6 +169,18 @@ function GroupHeader({
           </span>
         )}
       </button>
+      {project && onLogs && (
+        <SimpleTooltip label="Every service's log">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Logs of ${project}`}
+            onClick={() => onLogs(project)}
+          >
+            <FileText />
+          </Button>
+        </SimpleTooltip>
+      )}
     </div>
   );
 }
@@ -316,6 +334,7 @@ export function ContainerList({
                     row={row}
                     workingDirectory={directories.get(row.project ?? '')}
                     onToggle={() => setFolded((current) => toggled(current, row.key))}
+                    onLogs={actions.openStackLogs}
                   />
                 ) : (
                   <ContainerItem container={row.container} history={history} actions={actions} />

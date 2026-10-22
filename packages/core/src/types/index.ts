@@ -862,6 +862,12 @@ export interface ProjectWordPressLink {
   siteId: string;
   items: ProjectWordPressItem[];
   linkedAt: string;
+  /**
+   * What the user chose to leave out of pulls and deploys, as gitignore-like lines relative to an
+   * item's root: under `*` for every item, or under `theme:slug` for one. Saved so the choice is
+   * not made again at every deploy. Absent when nothing is ignored.
+   */
+  ignore?: Record<string, string[]>;
 }
 
 export interface Project {

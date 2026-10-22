@@ -572,6 +572,49 @@ describe('installCore, when the server can fetch the core itself', () => {
     expect(ran(server, 'tar -xzf')).toBe(false);
   });
 
+  it('updates an installed core the same way, and keeps the old release to go back to', async () => {
+    const { server, release, progress, install } = setup(
+      { serverDownload: 'curl', installed: { release: PREVIOUS, version: '1.52.0' } },
+      { remote: true },
+    );
+
+    const result = await install('deployer-pw');
+
+    expect(result).toMatchObject({ version: '1.53.0', previousVersion: '1.52.0' });
+    expect(server.downloads).toHaveLength(1);
+    expect(server.uploads).toEqual([]);
+    expect(release).not.toHaveBeenCalled();
+    expect(doneIn(progress).slice(0, 3)).toEqual(['preflight', 'fetch', 'verify']);
+    // The cleanup keeps the release that ran before, so a bad update can go back to it.
+    const cleanup = server.rootCommands.find((command) => command.includes('for release in'));
+    expect(cleanup).toContain('1.52.0-cdcdcdcdcdcd');
+    expect(cleanup).toContain(releaseDirectory('1.53.0', SHA).split('/').pop());
+  });
+
+  it('has the app send the update when the server cannot download it', async () => {
+    const { server, release, progress, install } = setup(
+      {
+        serverDownload: 'curl',
+        downloadFailure: { stderr: 'curl: (28) Connection timed out', exitCode: 28 },
+        installed: { release: PREVIOUS, version: '1.52.0' },
+      },
+      { remote: true },
+    );
+
+    const result = await install('deployer-pw');
+
+    expect(result).toMatchObject({ version: '1.53.0', previousVersion: '1.52.0' });
+    expect(server.uploads).toHaveLength(1);
+    expect(release).toHaveBeenCalledTimes(1);
+    expect(doneIn(progress).slice(0, 5)).toEqual([
+      'preflight',
+      'fetch',
+      'download',
+      'upload',
+      'verify',
+    ]);
+  });
+
   it('goes back to the previous release the same way after a server download', async () => {
     const { server, install } = setup(
       {

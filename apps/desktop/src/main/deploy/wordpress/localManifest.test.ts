@@ -184,6 +184,191 @@ describe('ignore layers', () => {
   });
 });
 
+describe('what git ignores', () => {
+  const FOO: WpItemRef = { kind: 'theme', slug: 'foo' };
+  const FOO_ROOT = 'wp-content/themes/foo';
+
+  beforeEach(() => {
+    put(`${FOO_ROOT}/style.css`);
+    put(`${FOO_ROOT}/inc/a.php`);
+  });
+
+  it("leaves out what the item's own .gitignore names, and says so", async () => {
+    put(`${FOO_ROOT}/dist/app.js`);
+    put(`${FOO_ROOT}/assets/app.css.map`);
+    put(`${FOO_ROOT}/.gitignore`, '/dist/\n*.map\n');
+    const walk = await walkLocalItem({ projectRoot: root, item: FOO, isFile: false });
+    expect(Object.keys(walk.files).sort()).toEqual(['inc/a.php', 'style.css']);
+    const ignored = walk.leftOut.filter((entry) => entry.reason === 'ignored').map((e) => e.path);
+    expect(ignored.sort()).toEqual(['.gitignore', 'assets/app.css.map', 'dist/']);
+  });
+
+  it("leaves out what the project's .gitignore names, whether it is anchored or not", async () => {
+    put(`${FOO_ROOT}/vendor/lib/x.php`);
+    put(`${FOO_ROOT}/build/out.js`);
+    put(`${FOO_ROOT}/inc/vendor/y.php`);
+    put(`${FOO_ROOT}/pack.zip`);
+    put('.gitignore', 'vendor/\n/wp-content/themes/foo/build/\n*.zip\n/wp-content/uploads/\n');
+    const walk = await walkLocalItem({ projectRoot: root, item: FOO, isFile: false });
+    expect(Object.keys(walk.files).sort()).toEqual(['inc/a.php', 'style.css']);
+  });
+
+  it('keeps a theme the project .gitignore whitelists out of a folder it ignores', async () => {
+    put('.gitignore', '/wp-content/themes/*\n!/wp-content/themes/foo\n');
+    const walk = await walkLocalItem({ projectRoot: root, item: FOO, isFile: false });
+    expect(Object.keys(walk.files).sort()).toEqual(['inc/a.php', 'style.css']);
+  });
+
+  it('does not use a project .gitignore that ignores the whole item folder', async () => {
+    put('.gitignore', '/wp-content/themes/foo/\n*.php\n');
+    const walk = await walkLocalItem({ projectRoot: root, item: FOO, isFile: false });
+    expect(Object.keys(walk.files).sort()).toEqual(['inc/a.php', 'style.css']);
+  });
+
+  it('keeps a git-ignored file the site or the last sync already has', async () => {
+    put(`${FOO_ROOT}/vendor/lib.php`);
+    put(`${FOO_ROOT}/.gitignore`, 'vendor/\n');
+    const fresh = await walkLocalItem({ projectRoot: root, item: FOO, isFile: false });
+    expect(fresh.files['vendor/lib.php']).toBeUndefined();
+    const tracked = await walkLocalItem({
+      projectRoot: root,
+      item: FOO,
+      isFile: false,
+      tracked: new Set(['vendor/lib.php']),
+    });
+    expect(tracked.files['vendor/lib.php']).toBeDefined();
+  });
+
+  it("lets the user's .agentmateignore put a git-ignored file back, but not a built-in default", async () => {
+    put(`${FOO_ROOT}/dist/app.js`);
+    put(`${FOO_ROOT}/node_modules/x/index.js`);
+    put(`${FOO_ROOT}/.gitignore`, 'dist/\n!node_modules/\n');
+    put(`${FOO_ROOT}/.agentmateignore`, '!dist/\n');
+    const walk = await walkLocalItem({ projectRoot: root, item: FOO, isFile: false });
+    expect(walk.files['dist/app.js']).toBeDefined();
+    expect(walk.files['node_modules/x/index.js']).toBeUndefined();
+  });
+
+  it('does not stop on a .gitignore line it cannot read', async () => {
+    put(`${FOO_ROOT}/dist/app.js`);
+    put(`${FOO_ROOT}/.gitignore`, '[z-a]\ndist/\n');
+    put('.gitignore', '[a\n');
+    const walk = await walkLocalItem({ projectRoot: root, item: FOO, isFile: false });
+    expect(walk.files['dist/app.js']).toBeUndefined();
+    expect(walk.files['style.css']).toBeDefined();
+  });
+
+  it('does not read a .gitignore that is a link or too big', async () => {
+    put(`${FOO_ROOT}/dist/app.js`);
+    put(`${FOO_ROOT}/pack.zip`);
+    put('.gitignore', `${'#'.repeat(300 * 1024)}\n*.zip\n`);
+    put('outside.txt', 'dist/\n');
+    const linked = link(join(root, 'outside.txt'), `${FOO_ROOT}/.gitignore`, false);
+    const walk = await walkLocalItem({ projectRoot: root, item: FOO, isFile: false });
+    expect(walk.files['pack.zip']).toBeDefined();
+    if (linked) expect(walk.files['dist/app.js']).toBeDefined();
+  });
+});
+
+describe('the saved ignore list', () => {
+  const FOO: WpItemRef = { kind: 'theme', slug: 'foo' };
+  const FOO_ROOT = 'wp-content/themes/foo';
+
+  beforeEach(() => {
+    put(`${FOO_ROOT}/style.css`);
+    put(`${FOO_ROOT}/src/app.ts`);
+    put(`${FOO_ROOT}/assets/app.css.map`);
+    put(`${FOO_ROOT}/inc/src/keep.php`);
+    put(`${FOO_ROOT}/debug.log`);
+  });
+
+  it('leaves files and folders out, and reports each one', async () => {
+    const walk = await walkLocalItem({
+      projectRoot: root,
+      item: FOO,
+      isFile: false,
+      savedIgnore: ['*.map', '/src/'],
+    });
+    expect(Object.keys(walk.files).sort()).toEqual(['inc/src/keep.php', 'style.css']);
+    const reasons = Object.fromEntries(walk.leftOut.map((entry) => [entry.path, entry.reason]));
+    expect(reasons['src/']).toBe('ignored');
+    expect(reasons['assets/app.css.map']).toBe('ignored');
+    expect(walk.rules.excluded('src/app.ts')).toBe(true);
+    expect(walk.rules.excluded('inc/src/keep.php')).toBe(false);
+  });
+
+  it('leaves a file out even when the site already has it', async () => {
+    const walk = await walkLocalItem({
+      projectRoot: root,
+      item: FOO,
+      isFile: false,
+      tracked: new Set(['src/app.ts']),
+      savedIgnore: ['/src/'],
+    });
+    expect(walk.files['src/app.ts']).toBeUndefined();
+  });
+
+  it('can put a default back with a ! line', async () => {
+    const walk = await walkLocalItem({
+      projectRoot: root,
+      item: FOO,
+      isFile: false,
+      savedIgnore: ['!debug.log'],
+    });
+    expect(walk.files['debug.log']).toBeDefined();
+  });
+
+  it('says that the saved list is wrong when a line cannot be read', async () => {
+    const error = await walkLocalItem({
+      projectRoot: root,
+      item: FOO,
+      isFile: false,
+      savedIgnore: ['/ok/', '[z-a]'],
+    }).catch((caught) => caught);
+    expect(wordPressErrorCode(error)).toBe('badRequest');
+    expect(error.message).toContain('Line 2 of the saved ignore list');
+  });
+
+  it('leaves a single-file plugin out when its name is on the list', async () => {
+    put('wp-content/plugins/hello.php');
+    const walk = await walkLocalItem({
+      projectRoot: root,
+      item: { kind: 'plugin', slug: 'hello.php' },
+      isFile: true,
+      savedIgnore: ['/hello.php'],
+    });
+    expect(walk.files).toEqual({});
+    expect(walk.leftOut).toEqual([
+      { item: { kind: 'plugin', slug: 'hello.php' }, path: 'hello.php', reason: 'ignored' },
+    ]);
+  });
+});
+
+describe('agent folders by prefix', () => {
+  const FOO: WpItemRef = { kind: 'theme', slug: 'foo' };
+  const FOO_ROOT = 'wp-content/themes/foo';
+
+  it('never sends a folder or file that starts with .claude or .agentmate', async () => {
+    put(`${FOO_ROOT}/style.css`);
+    put(`${FOO_ROOT}/.claude-plugin/plugin.json`);
+    put(`${FOO_ROOT}/inc/.agentmate-cache/a.json`);
+    put(`${FOO_ROOT}/.claudeignore`);
+    const walk = await walkLocalItem({ projectRoot: root, item: FOO, isFile: false });
+    expect(Object.keys(walk.files)).toEqual(['style.css']);
+    const reasons = Object.fromEntries(walk.leftOut.map((entry) => [entry.path, entry.reason]));
+    expect(reasons).toMatchObject({
+      '.claude-plugin/plugin.json': 'agentFiles',
+      'inc/.agentmate-cache/a.json': 'agentFiles',
+      '.claudeignore': 'agentFiles',
+    });
+  });
+
+  it('classes them as agent files', () => {
+    expect(deniedReason('.claude-plugin/plugin.json')).toBe('agentFiles');
+    expect(deniedReason('a/.agentmate.old/x')).toBe('agentFiles');
+  });
+});
+
 describe('links, caps and odd names', () => {
   it('never follows a link inside an item, and refuses a linked item folder', async () => {
     put(`${THEME_ROOT}/style.css`);

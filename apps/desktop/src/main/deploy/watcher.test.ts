@@ -127,6 +127,25 @@ describe('DeployAlertWatcher', () => {
     expect(toasts).toHaveLength(1);
   });
 
+  it('names failed backups and crash loops in the inbox (E30)', async () => {
+    const { core, inbox, watcher } = setup();
+    core.raise(
+      'backupFailed',
+      'backup-plan:1',
+      'critical',
+      'Nightly: the archive could not be built.',
+    );
+    core.raise('containerCrashLoop', 'shop-api-1', 'critical', 'shop-api-1 keeps restarting.');
+
+    await watcher.sync();
+    await settle();
+
+    expect(inbox.map((entry) => entry.title).sort()).toEqual([
+      'A backup failed on Production',
+      'A container keeps restarting on Production',
+    ]);
+  });
+
   it('names the firewall and Cloudflare alerts in the inbox', async () => {
     const { core, inbox, watcher } = setup();
     core.raise('firewallRolledBack', 'change-7', 'warning', 'Nobody kept change 7.');

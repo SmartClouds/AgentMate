@@ -18,6 +18,8 @@ import { FakeCloudflareCore } from './fakeCloudflareCore';
 import { FakeCoreConnection } from './fakeCoreConnection';
 import { metricsSample, sampleServices, sampleSystemInfo, sampleUpdates } from './fakeCoreData';
 import { FakeDocker } from './fakeDocker';
+import { FakeErrorReporting } from './fakeErrorReporting';
+import { FakeTelegram } from './fakeTelegram';
 import { FakeFiles } from './fakeFiles';
 import { FakeFirewall } from './fakeFirewall';
 import { FakeNginx } from './fakeNginx';
@@ -119,6 +121,18 @@ export class FakeCore {
     certificateNotAfterUnixMs: Date.UTC(2046, 0, 1),
     defaultPort: 7443,
   };
+
+  /** Error reporting (E29): where the core sends its warnings and errors. Off until an Owner sets it up. */
+  readonly errorReporting: FakeErrorReporting = new FakeErrorReporting({
+    now: () => this.now(),
+    userName: () => this.userName,
+  });
+
+  /** Telegram notifications (E30): where the core sends its alerts. Off until an Owner sets them up. */
+  readonly telegram: FakeTelegram = new FakeTelegram({
+    now: () => this.now(),
+    userName: () => this.userName,
+  });
 
   constructor(readonly now: () => number = Date.now) {
     this.firewall = new FakeFirewall(now, (change) =>

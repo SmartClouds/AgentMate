@@ -29,4 +29,33 @@ internal sealed partial class InMemoryDockerEngine
 
         return this;
     }
+
+    /// <summary>
+    /// The container exits on its own and Docker's restart policy starts it again at once: the events
+    /// one round of a crash loop gives (E30).
+    /// </summary>
+    public void SimulateCrash(string container, int exitCode = 1)
+    {
+        lock (_gate)
+        {
+            var found = Find(container);
+            found.Exit(NowMs, exitCode);
+            Raise("container", "die", found, ("exitCode", exitCode.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            found.Start(NowMs);
+            found.RestartCount++;
+            Raise("container", "start", found);
+        }
+    }
+
+    /// <summary>How many event streams are open right now.</summary>
+    public int EventListeners
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _listeners.Count;
+            }
+        }
+    }
 }

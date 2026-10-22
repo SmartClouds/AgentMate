@@ -172,14 +172,21 @@ export interface ConsoleFeedEvents {
   ended(end: { exitCode?: number; error?: string }): void;
 }
 
+/** Said when a console that runs a chosen command loses its connection. */
+export const COMMAND_NOT_RERUN =
+  'The connection to the server changed, so the command was not run again.';
+
 /**
  * A terminal in a container. Keystrokes and size changes go into the current stream's input;
  * when the connection changes under it, a new shell opens at the last known size, and its first
- * output is marked as a restart so the screen can say that the old shell is gone.
+ * output is marked as a restart so the screen can say that the old shell is gone. A chosen
+ * command is never started twice (it could be a migration), so that console ends instead.
  */
 export class ConsoleFeed implements LinkFeed<ConsoleOutput> {
   private input: Subject<ConsoleInput> | null = null;
   private opens = 0;
+  /** The core took the command, so it may have run. */
+  private ran = false;
   private freshShell = false;
   private exitCode: number | undefined;
   private finished = false;
@@ -196,6 +203,8 @@ export class ConsoleFeed implements LinkFeed<ConsoleOutput> {
 
   open(hub: ICoreHub): IStreamResult<ConsoleOutput> {
     this.input?.complete();
+    if (this.request.command && this.ran) throw new Error(COMMAND_NOT_RERUN);
+    this.ran = true;
     const input = new Subject<ConsoleInput>();
     this.input = input;
     this.opens += 1;
@@ -224,7 +233,11 @@ export class ConsoleFeed implements LinkFeed<ConsoleOutput> {
   }
 
   failed(error: Error): number | null {
-    if (STREAMS_BUSY.test(error.message)) return REOPEN_AFTER_FAILURE_MS;
+    if (STREAMS_BUSY.test(error.message)) {
+      // Refused before anything started, so the command is still to run.
+      this.ran = false;
+      return REOPEN_AFTER_FAILURE_MS;
+    }
     this.close();
     this.events.ended({ error: hubMessage(error) });
     return null;

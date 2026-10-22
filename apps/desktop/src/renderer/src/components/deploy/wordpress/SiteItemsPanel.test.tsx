@@ -35,6 +35,14 @@ interface NewProjectProps {
   initialItems?: WpItemRef[];
 }
 
+interface NewItemProps {
+  open: boolean;
+  site: DeployWordPressSite;
+  project?: Project;
+  onOpenChange: (open: boolean) => void;
+  onAdded: (project: Project, items: WpItemRef[]) => void;
+}
+
 const toast = vi.hoisted(() =>
   Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), info: vi.fn() }),
 );
@@ -71,6 +79,26 @@ vi.mock('./AddToProjectDialog', () => ({
 vi.mock('@/components/projects/wordpress/NewWordPressProjectDialog', () => ({
   NewWordPressProjectDialog: (props: NewProjectProps) =>
     props.open ? <div data-testid="new-project">{JSON.stringify(props)}</div> : null,
+}));
+
+// And the new theme or plugin dialog, which has its own tests.
+const NEW_ITEMS: WpItemRef[] = [{ kind: 'plugin', slug: 'fresh' }];
+vi.mock('./NewItemDialog', () => ({
+  NewItemDialog: (props: NewItemProps) =>
+    props.open ? (
+      <div data-testid="new-item">
+        <span>{props.site.id}</span>
+        <button
+          type="button"
+          onClick={() => {
+            props.onOpenChange(false);
+            props.onAdded(wpProject({ id: 'proj-new' }), NEW_ITEMS);
+          }}
+        >
+          Mock added
+        </button>
+      </div>
+    ) : null,
 }));
 
 const { SiteItemsPanel } = await import('./SiteItemsPanel');
@@ -226,6 +254,40 @@ describe('SiteItemsPanel', () => {
     })) as HTMLButtonElement;
     await screen.findAllByText(/DISALLOW_FILE_MODS is set/);
     expect(deploy.disabled).toBe(true);
+  });
+
+  describe('a theme or plugin the site does not have yet', () => {
+    it('opens the new item dialog for this site', async () => {
+      const { user } = renderPanel();
+      await user.click(await screen.findByRole('button', { name: 'New theme or plugin' }));
+      expect(within(screen.getByTestId('new-item')).getByText(wpSite().id)).toBeTruthy();
+    });
+
+    it('goes on to the deploy review of the items it added, in the project they went into', async () => {
+      const { user } = renderPanel();
+      await user.click(await screen.findByRole('button', { name: 'New theme or plugin' }));
+      await user.click(screen.getByRole('button', { name: 'Mock added' }));
+      expect(shown<FlowProps>('deploy-flow')).toMatchObject({
+        open: true,
+        projectId: 'proj-new',
+        siteId: wpSite().id,
+        items: NEW_ITEMS,
+      });
+    });
+
+    it('keeps it off for a read-only key, and says why on hover', async () => {
+      const { user } = renderPanel({}, wpSite({ scope: 'read' }));
+      const button = (await screen.findByRole('button', {
+        name: 'New theme or plugin',
+      })) as HTMLButtonElement;
+      expect(button.disabled).toBe(true);
+      await user.hover(button.parentElement as HTMLElement);
+      expect(
+        await screen.findByRole('tooltip', {
+          name: 'Read-only key. You can pull files from this site but not deploy to it.',
+        }),
+      ).toBeTruthy();
+    });
   });
 
   it('says why the items did not load', async () => {

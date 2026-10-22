@@ -46,6 +46,8 @@ export interface DeployDockerDeps extends CoreCallDeps {
    * gets it in the request's X-Registry-Auth header, so it never lands on the server's disk.
    */
   registryAuth?: (reference: string) => Promise<RegistryAuth | null>;
+  /** A container or volume was removed, so the file manager's sessions on it can end (E27). */
+  removed?: (serverId: string, kind: 'container' | 'volume', idOrName: string) => void;
 }
 
 export class DeployDocker {
@@ -107,14 +109,15 @@ export class DeployDocker {
     });
   }
 
-  remove(input: DeployContainerRemoveInput): Promise<void> {
-    return this.run(input.serverId, (hub) =>
+  async remove(input: DeployContainerRemoveInput): Promise<void> {
+    await this.run(input.serverId, (hub) =>
       hub.removeContainer({
         containerId: input.containerId,
         removeVolumes: input.removeVolumes,
         force: input.force,
       }),
     );
+    this.deps.removed?.(input.serverId, 'container', input.containerId);
   }
 
   /** The last lines of a container's log, collected once rather than followed. */
@@ -151,8 +154,9 @@ export class DeployDocker {
     return this.run(serverId, (hub) => hub.listVolumes());
   }
 
-  removeVolume(input: DeployVolumeRemoveInput): Promise<void> {
-    return this.run(input.serverId, (hub) => hub.removeVolume(input.volume, input.force));
+  async removeVolume(input: DeployVolumeRemoveInput): Promise<void> {
+    await this.run(input.serverId, (hub) => hub.removeVolume(input.volume, input.force));
+    this.deps.removed?.(input.serverId, 'volume', input.volume);
   }
 
   listNetworks(serverId: string): Promise<NetworkInfo[]> {

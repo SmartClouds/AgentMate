@@ -7,14 +7,22 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { useVirtualRows } from '@/hooks/useVirtualRows';
-import { clockTime, findMatches, highlight, plain } from '@/lib/deploy/containers/logs';
+import {
+  clockTime,
+  DEFAULT_TAIL,
+  findMatches,
+  highlight,
+  plain,
+} from '@/lib/deploy/containers/logs';
 import { cn } from '@/lib/utils';
+import { TailPicker } from '../logs/TailPicker';
 import { useContainerLog } from './hooks';
 
 /**
  * A container's log (E06 T8), as plain text (it can hold anything a program printed): the last
- * 500 lines, then every new one while following, with a search that marks and steps through its
- * matches. stderr lines say "err" in their own column, not only in another colour.
+ * few hundred lines (or as many as asked for), then every new one while following, with a search
+ * that marks and steps through its matches. stderr lines say "err" in their own column, not only
+ * in another colour.
  */
 
 const LINE_HEIGHT = 20;
@@ -30,9 +38,10 @@ export function ContainerLogsTab({
 }): React.JSX.Element {
   const [follow, setFollow] = useState(container.state === 'running');
   const [run, setRun] = useState(0);
+  const [tail, setTail] = useState(DEFAULT_TAIL);
   const [query, setQuery] = useState('');
   const [current, setCurrent] = useState(0);
-  const log = useContainerLog(serverId, container.id, { follow, run });
+  const log = useContainerLog(serverId, container.id, { follow, tail, run });
   const matches = useMemo(() => findMatches(log.lines, query), [log.lines, query]);
   const virtual = useVirtualRows(log.lines.length, LINE_HEIGHT, 20);
   const atBottom = useRef(true);
@@ -111,6 +120,13 @@ export function ContainerLogsTab({
             </SimpleTooltip>
           </>
         )}
+        <TailPicker
+          value={tail}
+          onChange={(next) => {
+            atBottom.current = true;
+            setTail(next);
+          }}
+        />
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
           <Switch
             checked={follow}

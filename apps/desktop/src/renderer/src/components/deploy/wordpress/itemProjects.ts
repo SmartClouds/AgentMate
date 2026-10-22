@@ -39,16 +39,15 @@ function holds(project: Project, item: WpItemRef): boolean {
   return (project.wordpress?.items ?? []).some((entry) => wpItemKey(entry) === key);
 }
 
-/** Sorts every project into the groups above, each by name. */
-export function projectChoicesFor(
+function sortInto(
   projects: readonly Project[],
   siteId: string,
-  item: WpItemRef,
+  isHolding: (project: Project) => boolean,
 ): ProjectChoices {
   const choices: ProjectChoices = { siteProjects: [], unlinked: [], otherSite: [], holding: [] };
   for (const project of projects) {
     const link = project.wordpress;
-    if (holds(project, item)) choices.holding.push(project);
+    if (isHolding(project)) choices.holding.push(project);
     else if (!link) choices.unlinked.push(project);
     else if (link.siteId === siteId) choices.siteProjects.push(project);
     else choices.otherSite.push({ project, siteId: link.siteId });
@@ -58,6 +57,23 @@ export function projectChoicesFor(
   choices.holding.sort(byName);
   choices.otherSite.sort((a, b) => byName(a.project, b.project));
   return choices;
+}
+
+/** Sorts every project into the groups above, each by name. */
+export function projectChoicesFor(
+  projects: readonly Project[],
+  siteId: string,
+  item: WpItemRef,
+): ProjectChoices {
+  return sortInto(projects, siteId, (project) => holds(project, item));
+}
+
+/** The same groups for something that is not on the site yet, so no project holds it. */
+export function projectChoicesForSite(
+  projects: readonly Project[],
+  siteId: string,
+): ProjectChoices {
+  return sortInto(projects, siteId, () => false);
 }
 
 /**

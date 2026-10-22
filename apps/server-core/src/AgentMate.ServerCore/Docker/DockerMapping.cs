@@ -8,6 +8,27 @@ namespace AgentMate.ServerCore.Docker;
 /// <summary>Docker.DotNet's models to the core's own types.</summary>
 internal static class DockerMapping
 {
+    /// <summary>
+    /// Go's os.FileMode (what the archive API's stat header carries) as a POSIX st_mode: the
+    /// type from Go's high bits, then setuid, setgid, sticky and the permission bits.
+    /// </summary>
+    public static int PosixMode(uint goMode)
+    {
+        const uint dir = 1u << 31, symlink = 1u << 27, device = 1u << 26, pipe = 1u << 25, socket = 1u << 24;
+        const uint setuid = 1u << 23, setgid = 1u << 22, charDevice = 1u << 21, sticky = 1u << 20;
+        var type = (goMode & dir) != 0 ? 0x4000
+            : (goMode & symlink) != 0 ? 0xA000
+            : (goMode & device) != 0 ? (goMode & charDevice) != 0 ? 0x2000 : 0x6000
+            : (goMode & pipe) != 0 ? 0x1000
+            : (goMode & socket) != 0 ? 0xC000
+            : 0x8000;
+        return type
+            | ((goMode & setuid) != 0 ? 0x800 : 0)
+            | ((goMode & setgid) != 0 ? 0x400 : 0)
+            | ((goMode & sticky) != 0 ? 0x200 : 0)
+            | (int)(goMode & 0x1FF);
+    }
+
     public const string ProjectLabel = "com.docker.compose.project";
 
     public const string ServiceLabel = "com.docker.compose.service";

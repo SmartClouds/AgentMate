@@ -320,6 +320,35 @@ final class WordPressEnvironment implements Environment
         return array('name' => $name, 'status' => $status, 'ok' => $ok, 'detail' => $detail);
     }
 
+    public function download(string $url, int $maxBytes, int $timeoutSeconds): array
+    {
+        if ($this->minimal || !function_exists('wp_safe_remote_get')) {
+            return array('body' => null, 'error' => 'WordPress\'s HTTP functions are not loaded');
+        }
+        // The swap and its health checks still have to fit in the request after the download.
+        if (function_exists('set_time_limit')) {
+            @set_time_limit($timeoutSeconds + 90); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+        }
+        $response = wp_safe_remote_get($url, array(
+            'timeout' => $timeoutSeconds,
+            'redirection' => 5,
+            'limit_response_size' => $maxBytes + 1,
+            'headers' => array('Accept' => 'application/octet-stream'),
+        ));
+        if (is_wp_error($response)) {
+            return array('body' => null, 'error' => $response->get_error_message());
+        }
+        $status = (int) wp_remote_retrieve_response_code($response);
+        if ($status !== 200) {
+            return array('body' => null, 'error' => 'GitHub answered HTTP ' . $status);
+        }
+        $body = (string) wp_remote_retrieve_body($response);
+        if (strlen($body) > $maxBytes) {
+            return array('body' => null, 'error' => 'the file is larger than a connector can be');
+        }
+        return array('body' => $body, 'error' => '');
+    }
+
     public function invalidateOpcache(string $path): void
     {
         if ($this->minimal) {

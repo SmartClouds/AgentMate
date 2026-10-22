@@ -2,7 +2,12 @@ import { createHash, randomBytes } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { WP_CONNECTOR_VERSION, WP_ROUTES, type WpItemRef } from '@agentmat/core';
+import {
+  WP_CONNECTOR_VERSION,
+  WP_ROUTES,
+  type WpItemRef,
+  wpConnectorReleaseUrl,
+} from '@agentmat/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { SecretEnvelope } from '../../../shared/apiTypes';
 import type { DeployWordPressProgressEvent } from '../../../shared/deployWordPressTypes';
@@ -464,14 +469,19 @@ describe('updateConnector', () => {
       version: WP_CONNECTOR_VERSION,
     });
     expect(result.checks.map((check) => check.name)).toEqual(['home', 'ajaxPing']);
+    expect(result.source).toBe('app');
+    expect(result.downloadProblem).toBeUndefined();
     expect(fake.pluginVersion).toBe(WP_CONNECTOR_VERSION);
     expect(fake.updates).toEqual([
       {
         version: WP_CONNECTOR_VERSION,
         files: ['agentmate-connector.php', 'readme.txt', 'src/Plugin.php'],
         state: 'updated',
+        source: 'upload',
       },
     ]);
+    // A development build names no release, so the site is never asked to download.
+    expect(fake.downloads).toEqual([]);
     expect(fake.audit[0]?.event).toBe('connectorUpdated');
     // The version the app remembers comes from the site's own answer afterwards.
     expect((await state.site(site.id))?.pluginVersion).toBe(WP_CONNECTOR_VERSION);
@@ -714,6 +724,118 @@ describe('updateConnector', () => {
 
     expect(wordPressErrorCode(await failure(service.updateConnector(site.id)))).toBe('timeout');
     expect(fake.pluginVersion).toBe('1.0.0');
+  });
+
+  describe('when the site can download the release itself', () => {
+    const releaseUrl = wpConnectorReleaseUrl(WP_CONNECTOR_VERSION);
+    const released = () => ({ ...testConnectorBundle(), downloadUrl: releaseUrl });
+
+    it('asks the site to download it and sends no files', async () => {
+      fake.pluginVersion = '1.0.0';
+      const { service, state } = make({ readConnectorBundle: async () => released() });
+      const site = await service.connect({ connectionKey: fake.createKey() });
+
+      const result = await service.updateConnector(site.id);
+
+      expect(result).toMatchObject({ outcome: 'updated', fromVersion: '1.0.0', source: 'site' });
+      expect(result.downloadProblem).toBeUndefined();
+      expect(fake.downloads).toEqual([releaseUrl]);
+      expect(fake.updates).toEqual([
+        {
+          version: WP_CONNECTOR_VERSION,
+          files: ['agentmate-connector.php', 'readme.txt', 'src/Plugin.php'],
+          state: 'updated',
+          source: 'download',
+          url: releaseUrl,
+        },
+      ]);
+      expect(updateCalls()).toHaveLength(1);
+      expect((await state.site(site.id))?.pluginVersion).toBe(WP_CONNECTOR_VERSION);
+    });
+
+    it('sends the files itself when the site could not download them, and says why', async () => {
+      fake.pluginVersion = '1.0.0';
+      fake.switches.downloadFails =
+        'The site could not download the connector from GitHub (cURL error 28: Operation timed out).';
+      const { service } = make({ readConnectorBundle: async () => released() });
+      const site = await service.connect({ connectionKey: fake.createKey() });
+
+      const result = await service.updateConnector(site.id);
+
+      expect(result).toMatchObject({ outcome: 'updated', source: 'app' });
+      expect(result.downloadProblem).toBe(
+        'The site could not download the connector from GitHub (cURL error 28: Operation timed out).',
+      );
+      expect(fake.downloads).toEqual([releaseUrl]);
+      expect(fake.updates.map((update) => update.source)).toEqual(['upload']);
+      expect(updateCalls()).toHaveLength(2);
+      expect(fake.pluginVersion).toBe(WP_CONNECTOR_VERSION);
+    });
+
+    it('sends the files when the download request never got an answer and nothing changed', async () => {
+      fake.pluginVersion = '1.0.0';
+      let calls = 0;
+      const lossy: typeof nodeTransport = async (request) => {
+        const update =
+          request.url.includes('connector/update') || request.url.includes('connector%2Fupdate');
+        if (update && ++calls === 1) {
+          throw new WpRemoteError('timeout', 'The site took too long to answer.');
+        }
+        return nodeTransport(request);
+      };
+      const { service } = make({ transport: lossy, readConnectorBundle: async () => released() });
+      const site = await service.connect({ connectionKey: fake.createKey() });
+
+      const result = await service.updateConnector(site.id);
+
+      expect(result).toMatchObject({ outcome: 'updated', source: 'app' });
+      expect(result.downloadProblem).toContain('took too long');
+      expect(fake.updates.map((update) => update.source)).toEqual(['upload']);
+    });
+
+    it('does not send the files again for a refusal they would meet too', async () => {
+      fake.pluginVersion = '1.0.0';
+      fake.switches.refuseUpdate = {
+        code: 'updateRefused',
+        message: 'AgentMate Connector 9.0.0 needs PHP 99.0 or newer, and this site runs 7.4.33.',
+        details: { reason: 'requirements' },
+      };
+      const { service } = make({ readConnectorBundle: async () => released() });
+      const site = await service.connect({ connectionKey: fake.createKey() });
+
+      const error = await failure(service.updateConnector(site.id));
+
+      expect(wordPressErrorCode(error)).toBe('updateRefused');
+      expect(error.message).toContain('needs PHP 99.0 or newer');
+      expect(updateCalls()).toHaveLength(1);
+    });
+
+    it('reports an update the site undid without sending the same files again', async () => {
+      fake.pluginVersion = '1.0.0';
+      fake.switches.updateHealthFails = true;
+      const { service } = make({ readConnectorBundle: async () => released() });
+      const site = await service.connect({ connectionKey: fake.createKey() });
+
+      const result = await service.updateConnector(site.id);
+
+      expect(result).toMatchObject({ outcome: 'rolledBack', source: 'site' });
+      expect(updateCalls()).toHaveLength(1);
+      expect(fake.pluginVersion).toBe('1.0.0');
+    });
+
+    it('sends the files straight away to a connector that cannot download', async () => {
+      fake.pluginVersion = '1.0.0';
+      fake.switches.updateDownload = false;
+      const { service } = make({ readConnectorBundle: async () => released() });
+      const site = await service.connect({ connectionKey: fake.createKey() });
+
+      const result = await service.updateConnector(site.id);
+
+      expect(result).toMatchObject({ outcome: 'updated', source: 'app' });
+      expect(result.downloadProblem).toBeUndefined();
+      expect(fake.downloads).toEqual([]);
+      expect(updateCalls()).toHaveLength(1);
+    });
   });
 });
 

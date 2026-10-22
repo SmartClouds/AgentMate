@@ -6,6 +6,7 @@ import {
   findWpCaseCollisions,
   isWpHardDenied,
   validateWpItemPath,
+  WP_AGENT_PREFIXES,
   WP_MAX_FILE_BYTES,
   WP_MAX_FILES_PER_ITEM,
   type WpFileMap,
@@ -57,6 +58,8 @@ export interface WpWalkOptions {
   isFile: boolean;
   /** Paths the site or the last sync has: the default ignore list does not apply to them. */
   tracked?: ReadonlySet<string>;
+  /** The lines the user saved for this item (and for every item): left out both ways. */
+  savedIgnore?: readonly string[];
   hashes?: WpHashCache;
   maxFiles?: number;
   maxFileBytes?: number;
@@ -103,7 +106,9 @@ export function deniedReason(path: string): 'agentFiles' | 'hardDenied' {
     if (!isWpHardDenied(segment)) continue;
     // Folded the way the deny check folds it, so a lookalike name is classed as what it becomes.
     const name = segment.normalize('NFKC').toLowerCase();
-    return AGENT_DIRS.has(name) || AGENT_FILES.has(name) || name.startsWith('.aider')
+    return AGENT_DIRS.has(name) ||
+      AGENT_FILES.has(name) ||
+      WP_AGENT_PREFIXES.some((prefix) => name.startsWith(prefix))
       ? 'agentFiles'
       : 'hardDenied';
   }
@@ -146,40 +151,59 @@ function linkErrorThrow(path: string): never {
   throw linkError(path);
 }
 
+async function readTextFile(path: string): Promise<string | null> {
+  const info = await lstat(path).catch(() => null);
+  // A linked or oversized ignore file is not read: rules come only from files in the project.
+  if (!info?.isFile() || info.size > MAX_IGNORE_FILE_BYTES) return null;
+  return readFile(path, 'utf-8');
+}
+
 async function readIgnoreFile(
   path: string,
   source: string,
   negations: boolean,
 ): Promise<WpIgnoreLayer | null> {
-  const info = await lstat(path).catch(() => null);
-  // A linked or oversized ignore file is not read: rules come only from files in the project.
-  if (!info?.isFile() || info.size > MAX_IGNORE_FILE_BYTES) return null;
-  return { source, text: await readFile(path, 'utf-8'), negations };
+  const text = await readTextFile(path);
+  return text === null ? null : { source, text, negations };
 }
 
-/** The item's ignore layers, in order: its .distignore, the project's and its .agentmateignore. */
+/**
+ * The item's ignore layers, in order: its .distignore, the project's and its .agentmateignore,
+ * then the list the user saved for the project. What git ignores (the project's and the item's
+ * .gitignore) counts like the default list: left out until the site has it.
+ */
 export async function itemIgnoreRules(
   projectRoot: string,
   item: WpItemRef,
   isFile: boolean,
+  savedIgnore: readonly string[] = [],
 ): Promise<WpIgnoreRules> {
-  const root = join(projectRoot, wpItemRoot(item));
+  const itemRoot = wpItemRoot(item);
+  const root = join(projectRoot, itemRoot);
   // An item's .distignore comes from the site with the theme or plugin, so its `!` lines are
   // dropped: a site can only leave more out, never put a default-ignored file back in a deploy.
   const layers = [
     isFile
       ? null
-      : await readIgnoreFile(join(root, '.distignore'), `${wpItemRoot(item)}/.distignore`, false),
+      : await readIgnoreFile(join(root, '.distignore'), `${itemRoot}/.distignore`, false),
     await readIgnoreFile(join(projectRoot, '.agentmateignore'), '.agentmateignore', true),
     isFile
       ? null
-      : await readIgnoreFile(
-          join(root, '.agentmateignore'),
-          `${wpItemRoot(item)}/.agentmateignore`,
-          true,
-        ),
+      : await readIgnoreFile(join(root, '.agentmateignore'), `${itemRoot}/.agentmateignore`, true),
+    savedIgnore.length > 0
+      ? { source: 'the saved ignore list', text: savedIgnore.join('\n'), negations: true }
+      : null,
   ].filter((layer): layer is WpIgnoreLayer => layer !== null);
-  const compiled = createWpIgnoreRules(layers);
+  // A single-file plugin has no folder of its own, so only the project's .gitignore could apply,
+  // and a file is not worth a rule set of its own.
+  const git = isFile
+    ? undefined
+    : {
+        itemRoot,
+        item: (await readTextFile(join(root, '.gitignore'))) ?? undefined,
+        project: (await readTextFile(join(projectRoot, '.gitignore'))) ?? undefined,
+      };
+  const compiled = createWpIgnoreRules(layers, git);
   if (!compiled.ok) {
     throw wordPressError(
       'badRequest',
@@ -221,7 +245,7 @@ export async function walkLocalItem(options: WpWalkOptions): Promise<WpLocalWalk
   const tracked = options.tracked ?? new Set<string>();
   const maxFiles = options.maxFiles ?? WP_MAX_FILES_PER_ITEM;
   const maxFileBytes = options.maxFileBytes ?? WP_MAX_FILE_BYTES;
-  const rules = await itemIgnoreRules(projectRoot, item, isFile);
+  const rules = await itemIgnoreRules(projectRoot, item, isFile, options.savedIgnore);
   const walk: WpLocalWalk = { item, isFile, exists: false, files: {}, leftOut: [], rules };
   const kind = await itemRootKind(projectRoot, item);
   const root = join(projectRoot, wpItemRoot(item));

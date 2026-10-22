@@ -255,7 +255,8 @@ export class FakeFileTree {
       throw new FakeFilesError('invalidInput', `${mode} is not a permission mode.`);
     }
     const { node } = this.walk(path, true);
-    if (!node || node.kind === 'link') throw new FakeFilesError('notFound', `${path} is not there.`);
+    if (!node || node.kind === 'link')
+      throw new FakeFilesError('notFound', `${path} is not there.`);
     node.mode = mode;
   }
 
@@ -271,7 +272,8 @@ export class FakeFileTree {
   /** Puts a file at `path` (a link there is replaced, not followed) and answers its entry. */
   write(path: string, bytes: Uint8Array, mode?: number): FileEntry {
     const walked = this.walk(path, false);
-    if (walked.node?.kind === 'dir') throw new FakeFilesError('isDirectory', `${path} is a folder.`);
+    if (walked.node?.kind === 'dir')
+      throw new FakeFilesError('isDirectory', `${path} is a folder.`);
     const parent = this.parentOf(walked, path);
     const kept = walked.node?.kind === 'file' ? walked.node.mode : 0o644;
     const node: FileNode = {
@@ -324,7 +326,14 @@ export class FakeFileTree {
         brokenLink: false,
       };
     }
-    const target = this.walkOrNull(path, true)?.node ?? null;
+    // A link that loops counts as broken, as `stat` failing with ELOOP makes it on the core.
+    let target: FakeNode | null;
+    try {
+      target = this.walk(path, true).node;
+    } catch (error) {
+      if (!(error instanceof FakeFilesError)) throw error;
+      target = null;
+    }
     return {
       ...base,
       kind: 'symlink',
@@ -360,7 +369,10 @@ export class FakeFileTree {
       const node = folder.children.get(name) ?? null;
       if (!node) {
         if (last) return { node: null, parent: folder, name, path: joinParts([...done, name]) };
-        throw new FakeFilesError('notFound', `${joinParts(parts.slice(0, index + 1))} is not there.`);
+        throw new FakeFilesError(
+          'notFound',
+          `${joinParts(parts.slice(0, index + 1))} is not there.`,
+        );
       }
       if (node.kind === 'link' && (!last || followLast)) {
         const target = node.target.startsWith('/')

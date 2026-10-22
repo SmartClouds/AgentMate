@@ -90,7 +90,7 @@ A red box explains why the install stopped, with a fold-out **What the core logg
 
 ### Update or reinstall the core
 
-On an installed server, open the menu (three dots) on the **Server core** card on the Overview and choose **Update or reinstall**. The panel says the running core keeps working until the new one is ready, and that if the new one does not start the server goes back to the one it has now. Choose **Update to core (version)** or **Reinstall core (version)**, or **Cancel** to go back. The security checklist in the **Security** section can also offer an update of the core when one is due. The DevHost cannot be updated this way.
+On an installed server, open the menu (three dots) on the **Server core** card on the Overview and choose **Update or reinstall**. The panel says the running core keeps working until the new one is ready, and that if the new one does not start the server goes back to the one it has now. Choose **Update to core (version)** or **Reinstall core (version)**, or **Cancel** to go back. The new core is fetched the same way as in a first install: the server downloads it from GitHub itself when it can (see **Getting the core** in the checklist), and the app downloads it and sends it over SSH when it cannot. The security checklist in the **Security** section can also offer an update of the core when one is due. The DevHost cannot be updated this way.
 
 ## Server core health
 

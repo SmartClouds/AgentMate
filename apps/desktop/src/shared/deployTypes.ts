@@ -193,6 +193,8 @@ export interface DeployHealth {
   apiVersion: number;
   startedAtUnixMs: number;
   checkedAt: number;
+  /** What the check went through: direct TLS when it answers, else the install's SSH channel. */
+  transport?: DeployTransport;
 }
 
 /**

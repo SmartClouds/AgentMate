@@ -236,7 +236,8 @@ Deploy turns a Linux server you can SSH into into one you can manage from AgentM
 | Websites | nginx sites and TCP or UDP proxies in front of your apps, checked with `nginx -t` before they go live, and Let's Encrypt certificates that renew themselves |
 | Firewall | ufw or firewalld rules, a list of containers that publish ports past the firewall with a "make private" fix, and a change that rolls itself back unless you confirm it |
 | Logs | A problems feed (crash loops, failed deploys, expiring certificates, exposed ports), any log on the server, and the Deploy AI drawer to diagnose a problem |
-| Security | A checklist with a score and previewed fixes, users and roles, devices and sessions, the audit trail, encrypted backups, and the connection (SSH or direct TLS) |
+| Security | A checklist with a score and previewed fixes, users and roles, devices and sessions, the audit trail, encrypted backups, error reporting (the core's warnings and errors sent to your Sentry project over OpenTelemetry), and the connection (SSH or direct TLS) |
+| Backups | Back up the whole server (the panel, its settings, the stacks, every Docker volume, the images in use, the firewall rules) now or on a schedule, encrypted with a secret key only you know, to several places at once: a folder on the server, FTP or FTPS, SFTP, Google Drive, OneDrive, or a Telegram account (sent in parts when it is big). Each plan keeps its newest N backups. Restore to the same server, or to a new one with a new address, and the settings that named the old address move with it |
 
 Cloudflare has its own dialog: connect one or more accounts with scoped API tokens, manage DNS records, zone settings and WAF rules, issue Origin CA certificates for a server, and lock a server's web ports to Cloudflare's addresses.
 

@@ -129,6 +129,41 @@ describe('SiteOverviewPanel', () => {
       expect(screen.getByText(/is now version/)).toBeTruthy();
     });
 
+    it('says when the site downloaded the release itself', async () => {
+      const update = vi.fn(async () => done({ source: 'site' }));
+      const { user } = renderPanel(async () => updatable(), wpSite(), {
+        'deployWordPress.updateConnector': update,
+      });
+
+      await user.click(await screen.findByRole('button', { name: /^Update to/ }));
+
+      const notice = await screen.findByRole('status');
+      expect(notice.textContent).toContain('downloaded it from GitHub itself');
+      expect(notice.textContent).not.toContain('AgentMate sent the files');
+    });
+
+    it('says why AgentMate sent the files when the site could not download them', async () => {
+      const update = vi.fn(async () =>
+        done({
+          source: 'app',
+          downloadProblem:
+            'The site could not download the connector from GitHub (cURL error 6: Could not resolve host: github.com).',
+        }),
+      );
+      const { user } = renderPanel(async () => updatable(), wpSite(), {
+        'deployWordPress.updateConnector': update,
+      });
+
+      await user.click(await screen.findByRole('button', { name: /^Update to/ }));
+
+      const notice = await screen.findByRole('status');
+      expect(notice.textContent).toContain(
+        "couldn't download it itself, so AgentMate sent the files",
+      );
+      expect(notice.textContent).toContain('Could not resolve host: github.com');
+      expect(notice.textContent).toContain('is now version');
+    });
+
     it('holds the button while the update runs', async () => {
       let finish: (value: ReturnType<typeof done>) => void = () => undefined;
       const update = vi.fn(

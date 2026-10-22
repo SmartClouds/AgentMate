@@ -2,7 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, rm, stat } from 'node:fs/promises';
 import {
   buildWpProjectPrompt,
+  createWpIgnoreRules,
   normalizeProjectWordPressLink,
+  normalizeWpIgnore,
   type Project,
   planWpDeploy,
   planWpPull,
@@ -17,6 +19,7 @@ import {
   type WpSkippedEntry,
   withoutWpProjectPrompt,
   withWpProjectPrompt,
+  wpIgnoreLinesFor,
   wpItemKey,
   wpItemRoot,
   wpKeyTransportSecurity,
@@ -25,12 +28,14 @@ import {
 import type {
   DeployWordPressCreateProjectInput,
   DeployWordPressDeployResult,
+  DeployWordPressIgnoreInput,
   DeployWordPressItemsInput,
   DeployWordPressLeftOut,
   DeployWordPressLeftOutReason,
   DeployWordPressLinkProjectInput,
   DeployWordPressLinkProjectResult,
   DeployWordPressLocalChanges,
+  DeployWordPressLocalItem,
   DeployWordPressPlan,
   DeployWordPressPlanInput,
   DeployWordPressPullResult,
@@ -47,7 +52,9 @@ import { deniedReason, type WpHashCache, walkLocalItem } from './localManifest';
 import { WpLocalWriter } from './localWriter';
 import {
   assertItemFoldersEmpty,
+  assertNewItems,
   itemsWithFiles,
+  listLocalItems,
   newWpLink,
   requireLinkedProject,
   selectItems,
@@ -284,6 +291,7 @@ export class WordPressProjectService extends WordPressService {
       .map(cleanItem)
       .filter((item): item is WpItem => item !== null);
     const base = await this.baseFor(project.id, site);
+    const saved = normalizeProjectWordPressLink(project.wordpress)?.ignore;
     const gathered: Gathered = { info, siteItems, items: [], leftOut: [], remoteLeftOut: [] };
     for (const item of items) {
       const key = wpItemKey(item);
@@ -305,6 +313,7 @@ export class WordPressProjectService extends WordPressService {
         item,
         isFile,
         tracked: new Set([...Object.keys(baseFiles), ...Object.keys(remote.files)]),
+        savedIgnore: wpIgnoreLinesFor(saved, item),
         hashes: this.hashes,
         signal,
       });
@@ -692,17 +701,30 @@ export class WordPressProjectService extends WordPressService {
             .filter((item): item is WpItem => item !== null && !item.protected)
             .map(wpItemKey),
         );
-        const unknown = input.items.filter((item) => !onSite.has(wpItemKey(item)));
+        const fresh = new Set((input.newItems ?? []).map(wpItemKey));
+        const unknown = input.items.filter(
+          (item) => !onSite.has(wpItemKey(item)) && !fresh.has(wpItemKey(item)),
+        );
         if (unknown.length > 0) {
           throw wordPressError(
             'itemUnknown',
             `The site has no ${unknown.map((item) => wpItemRoot(item)).join(', ')}.`,
           );
         }
+        const linked = new Set(link.items.map(wpItemKey));
+        await assertNewItems({
+          projectRoot: project.folderPath,
+          items: input.items,
+          newItems: input.newItems ?? [],
+          linked,
+          onSite,
+        });
         if (siteId !== link.siteId) await this.relinkBase(project.id, site);
 
-        const linked = new Set(link.items.map(wpItemKey));
-        const added = input.items.filter((item) => !linked.has(wpItemKey(item)));
+        // New items are linked as they are: there is nothing on the site to pull into them.
+        const added = input.items.filter(
+          (item) => !linked.has(wpItemKey(item)) && !fresh.has(wpItemKey(item)),
+        );
         if (added.length > 0) {
           await assertItemFoldersEmpty(project.folderPath, added);
           const writer = new WpLocalWriter(project.folderPath);
@@ -733,13 +755,50 @@ export class WordPressProjectService extends WordPressService {
         }
         const updated = await this.projectDeps.projects.setLink(
           project.id,
-          newWpLink(site.id, input.items, this.now()),
+          newWpLink(site.id, input.items, this.now(), link.ignore),
         );
         this.dropPlans(project.id);
         report('done', 1, 1);
         return updated;
       }),
     );
+  }
+
+  /**
+   * Saves what the user chose to leave out of this project's pulls and deploys, replacing the
+   * whole list. A line that cannot be read is refused, naming the line, so a saved list always
+   * compiles. Plans made with the old list are dropped, since they show the wrong files.
+   */
+  async setProjectIgnore(input: DeployWordPressIgnoreInput): Promise<Project> {
+    const { project, link } = await requireLinkedProject(
+      this.projectDeps.projects,
+      input.projectId,
+    );
+    const ignore = normalizeWpIgnore(input.ignore, link.items);
+    for (const [key, lines] of Object.entries(ignore ?? {})) {
+      const checked = createWpIgnoreRules([{ source: key, text: lines.join('\n') }]);
+      if (!checked.ok) {
+        throw wordPressError(
+          'badRequest',
+          `Line ${checked.line} of the ignore list for ${key === '*' ? 'every item' : key} cannot be read: ${checked.reason}. Fix it and try again.`,
+        );
+      }
+    }
+    const { ignore: _old, ...rest } = link;
+    const updated = await this.projectDeps.projects.setLink(
+      project.id,
+      ignore ? { ...rest, ignore } : rest,
+    );
+    this.dropPlans(project.id);
+    return updated;
+  }
+
+  /** The theme and plugin folders in the project, for picking new ones to deploy. */
+  async localItems(projectId: string): Promise<DeployWordPressLocalItem[]> {
+    const project = await this.projectDeps.projects.get(projectId);
+    if (!project) throw wordPressError('projectNotLinked', 'That project no longer exists.');
+    const link = normalizeProjectWordPressLink(project.wordpress);
+    return listLocalItems(project.folderPath, new Set((link?.items ?? []).map(wpItemKey)));
   }
 
   /** A relink keeps the base only when it is the same site (same key) under a new id. */
@@ -777,15 +836,29 @@ export class WordPressProjectService extends WordPressService {
         await this.deps.bases.remove(project.id);
         report('manifest', 0, input.items.length);
         const gathered = await this.gather(client, site, project, input.items, signal);
-        const missing = gathered.items.filter((state) => !state.onSite);
+        const fresh = new Set((input.newItems ?? []).map(wpItemKey));
+        const missing = gathered.items.filter(
+          (state) => !state.onSite && !fresh.has(wpItemKey(state.item)),
+        );
         if (missing.length > 0) {
           throw wordPressError(
             'itemUnknown',
             `The site has no ${missing.map((state) => wpItemRoot(state.item)).join(', ')}.`,
           );
         }
-        const notPulled = await itemsWithFiles(project.folderPath, input.items);
-        const kept = new Set(notPulled.map(wpItemKey));
+        await assertNewItems({
+          projectRoot: project.folderPath,
+          items: input.items,
+          newItems: input.newItems ?? [],
+          linked: new Set(),
+          onSite: new Set(
+            gathered.items.filter((state) => state.onSite).map((s) => wpItemKey(s.item)),
+          ),
+        });
+        const withFiles = await itemsWithFiles(project.folderPath, input.items);
+        // A new item's files are the point: it is linked as it is, and reported apart.
+        const notPulled = withFiles.filter((item) => !fresh.has(wpItemKey(item)));
+        const kept = new Set(withFiles.map(wpItemKey));
         const items = gathered.items
           .filter((state) => !kept.has(wpItemKey(state.item)))
           .map((state) => ({ ...state, base: {} }));
@@ -876,6 +949,7 @@ export class WordPressProjectService extends WordPressService {
         item,
         isFile: baseItem?.isFile ?? guessIsFile(item),
         tracked: new Set(Object.keys(baseFiles)),
+        savedIgnore: wpIgnoreLinesFor(link.ignore, item),
         hashes: this.hashes,
       });
       if (!walk.exists) continue;

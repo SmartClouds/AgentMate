@@ -4,8 +4,10 @@ using AgentMate.ServerCore.Cloudflare;
 using AgentMate.ServerCore.Data;
 using AgentMate.ServerCore.DirectTls;
 using AgentMate.ServerCore.Endpoints;
+using AgentMate.ServerCore.ErrorReporting;
 using AgentMate.ServerCore.Hosting;
 using AgentMate.ServerCore.Hubs;
+using AgentMate.ServerCore.Notifications;
 using AgentMate.ServerCore.Security;
 using AgentMate.ServerCore.Web;
 using Microsoft.AspNetCore.Authentication;
@@ -75,6 +77,10 @@ internal static class CoreApplication
         builder.Services.AddCloudflare();
         // The opt-in HTTPS listener (E16): nothing is bound until the mode is turned on.
         builder.AddDirectTls();
+        // Warnings and errors to a Sentry project as OpenTelemetry logs, once a person sets it up (E29).
+        builder.AddErrorReporting();
+        // Alerts to a Telegram chat through a bot, once a person sets it up (E30).
+        builder.Services.AddTelegramNotifications();
         // Reports readiness to systemd (Type=notify), so `systemctl start` only returns once the
         // socket is listening and fails outright for a release that cannot start.
         builder.Services.AddSystemd();
@@ -131,6 +137,7 @@ internal static class CoreApplication
         app.MapAuthEndpoints();
         app.MapStackEndpoints();
         app.MapBackupEndpoints();
+        app.MapFileEndpoints();
         app.MapHub<CoreHub>(CoreHub.Path, options =>
             {
                 options.Transports = HttpTransportType.WebSockets;

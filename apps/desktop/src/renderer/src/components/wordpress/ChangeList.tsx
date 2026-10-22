@@ -3,13 +3,23 @@ import { wpItemKey, wpMirrorPath } from '@agentmat/core';
 import { wordPressErrorMessage } from '@shared/wordpressErrors';
 import { useQuery } from '@tanstack/react-query';
 import { MonacoDiffEditor } from '@/components/editor/MonacoDiffEditor';
-import { FileCode, X } from '@/components/icons';
+import { EyeOff, FileCode, X } from '@/components/icons';
 import { ITEM_KIND_LABEL, joinFolder } from '@/components/projects/wordpress/wordpressCopy';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { formatBytes } from '@/lib/format';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
+import { type IgnoreChoice, ignoreChoicesFor } from './ignoreChoices';
 
 /**
  * The files a pull or deploy would change, grouped by theme or plugin (E21). Clicking one shows
@@ -90,12 +100,87 @@ export function ItemHeading({
   );
 }
 
+/** Turns on picking files to leave out of the sync (E21). */
+export interface ChangeListIgnore {
+  /** The ticked rows, by `changeKey`. */
+  picked: ReadonlySet<string>;
+  onPickedChange: (next: Set<string>) => void;
+  /** A choice made from a row's menu. */
+  onIgnore: (choice: IgnoreChoice) => void;
+  /** Locks the boxes and menus, while the list is being worked out again. */
+  disabled?: boolean;
+}
+
 export interface ChangeListProps {
   /** The plan's changes; conflicts are left to the ConflictResolver. */
   changes: readonly WpPlannedChange[];
   direction: SyncDirection;
   selectedKey?: string | null;
   onSelect?: (change: WpPlannedChange) => void;
+  /** When given, each row has a box to tick and a menu to leave the file out. */
+  ignore?: ChangeListIgnore;
+}
+
+/** Groups the choices of one file: the file, its folders, its ending. */
+function choiceGroups(choices: readonly IgnoreChoice[]): IgnoreChoice[][] {
+  const groups = [
+    choices.filter((choice) => choice.id === 'file'),
+    choices.filter((choice) => choice.id.startsWith('folder:')),
+    choices.filter((choice) => choice.id.startsWith('extension')),
+  ];
+  return groups.filter((group) => group.length > 0);
+}
+
+function RowIgnoreMenu({
+  change,
+  choices,
+  disabled,
+  onIgnore,
+}: {
+  change: WpPlannedChange;
+  choices: readonly IgnoreChoice[];
+  disabled?: boolean;
+  onIgnore: (choice: IgnoreChoice) => void;
+}): React.JSX.Element {
+  return (
+    <DropdownMenu>
+      <SimpleTooltip label="Leave out of the sync…">
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="mr-1 shrink-0 text-muted-foreground opacity-60 hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+            aria-label={`Ignore options for ${change.path}`}
+            disabled={disabled}
+          >
+            <EyeOff className="h-3.5 w-3.5" />
+          </Button>
+        </DropdownMenuTrigger>
+      </SimpleTooltip>
+      <DropdownMenuContent align="end" className="max-w-sm">
+        {choiceGroups(choices).map((group, index) => (
+          <div key={group[0].id}>
+            {index > 0 ? <DropdownMenuSeparator /> : null}
+            {group.map((choice) => (
+              <DropdownMenuItem key={choice.id} onSelect={() => onIgnore(choice)}>
+                {choice.label}
+              </DropdownMenuItem>
+            ))}
+          </div>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/** Checked when all of a group's rows are ticked, mixed when some are. */
+function groupState(
+  keys: readonly string[],
+  picked: ReadonlySet<string>,
+): boolean | 'indeterminate' {
+  const count = keys.filter((key) => picked.has(key)).length;
+  if (count === 0) return false;
+  return count === keys.length ? true : 'indeterminate';
 }
 
 export function ChangeList({
@@ -103,6 +188,7 @@ export function ChangeList({
   direction,
   selectedKey,
   onSelect,
+  ignore,
 }: ChangeListProps): React.JSX.Element {
   const shown = changes.filter(
     (change) => change.action !== 'conflict' && change.action !== 'none',
@@ -116,27 +202,43 @@ export function ChangeList({
       </p>
     );
   }
+
+  function toggle(keys: readonly string[], on: boolean): void {
+    if (!ignore) return;
+    const next = new Set(ignore.picked);
+    for (const key of keys) {
+      if (on) next.add(key);
+      else next.delete(key);
+    }
+    ignore.onPickedChange(next);
+  }
+
   return (
     <div className="space-y-3">
-      {groupByItem(shown).map((group) => (
-        <section key={wpItemKey(group.item)} className="space-y-1">
-          <ItemHeading item={group.item} count={group.entries.length} />
-          <ul className="overflow-hidden rounded-lg bg-foreground/[0.03] ring-1 ring-inset ring-foreground/[0.07]">
-            {group.entries.map((change) => {
-              const key = changeKey(change);
-              const kind = changeKind(change, direction);
-              const selected = selectedKey === key;
-              return (
-                <li key={key}>
-                  <button
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => onSelect?.(change)}
-                    className={cn(
-                      'flex w-full cursor-pointer items-center gap-2.5 px-2.5 py-1.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
-                      selected ? 'bg-primary/10' : 'hover:bg-foreground/[0.05]',
-                    )}
-                  >
+      {groupByItem(shown).map((group) => {
+        const keys = group.entries.map(changeKey);
+        return (
+          <section key={wpItemKey(group.item)} className="space-y-1">
+            {ignore ? (
+              <div className="flex items-center gap-2 pl-2.5">
+                <Checkbox
+                  aria-label={`Select all changes in ${group.item.slug}`}
+                  checked={groupState(keys, ignore.picked)}
+                  disabled={ignore.disabled}
+                  onCheckedChange={(checked) => toggle(keys, checked === true)}
+                />
+                <ItemHeading item={group.item} count={group.entries.length} />
+              </div>
+            ) : (
+              <ItemHeading item={group.item} count={group.entries.length} />
+            )}
+            <ul className="overflow-hidden rounded-lg bg-foreground/[0.03] ring-1 ring-inset ring-foreground/[0.07]">
+              {group.entries.map((change) => {
+                const key = changeKey(change);
+                const kind = changeKind(change, direction);
+                const selected = selectedKey === key;
+                const body = (
+                  <>
                     <ChangeKindChip kind={kind} />
                     <span className="min-w-0 flex-1 truncate font-mono text-xs">{change.path}</span>
                     {change.size > 0 ? (
@@ -144,13 +246,65 @@ export function ChangeList({
                         {formatBytes(change.size)}
                       </span>
                     ) : null}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ))}
+                  </>
+                );
+                const rowClass = cn(
+                  'flex w-full cursor-pointer items-center gap-2.5 px-2.5 py-1.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
+                  selected ? 'bg-primary/10' : 'hover:bg-foreground/[0.05]',
+                );
+                if (!ignore) {
+                  return (
+                    <li key={key}>
+                      <button
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => onSelect?.(change)}
+                        className={rowClass}
+                      >
+                        {body}
+                      </button>
+                    </li>
+                  );
+                }
+                const choices = ignoreChoicesFor(change.item, change.path);
+                const ticked = ignore.picked.has(key);
+                return (
+                  <li
+                    key={key}
+                    className={cn('flex items-center', ticked ? 'bg-primary/[0.07]' : '')}
+                  >
+                    <Checkbox
+                      className="ml-2.5 shrink-0"
+                      aria-label={`Select ${change.path}`}
+                      checked={ticked}
+                      disabled={ignore.disabled}
+                      onCheckedChange={(checked) => toggle([key], checked === true)}
+                    />
+                    <button
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => onSelect?.(change)}
+                      className={cn(rowClass, 'min-w-0 flex-1')}
+                    >
+                      {body}
+                    </button>
+                    {choices.length > 0 ? (
+                      <RowIgnoreMenu
+                        change={change}
+                        choices={choices}
+                        disabled={ignore.disabled}
+                        onIgnore={ignore.onIgnore}
+                      />
+                    ) : (
+                      <span className="mr-1 h-7 w-7 shrink-0" aria-hidden="true" />
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        );
+      })}
     </div>
   );
 }

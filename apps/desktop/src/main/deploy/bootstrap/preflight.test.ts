@@ -196,6 +196,23 @@ describe('runPreflight', () => {
       expect(probed()).toEqual([]);
     });
 
+    it('asks the same when a core is already installed, so an update can be fetched too', async () => {
+      const report = await preflight(
+        {
+          releaseProbe: 'curl',
+          installed: {
+            release: '/opt/agentmate-core/releases/1.52.0-abcdef012345',
+            version: '1.52.0',
+          },
+        },
+        { remote },
+      );
+
+      expect(report.installed?.version).toBe('1.52.0');
+      expect(report.serverDownload).toBe('curl');
+      expect(probed()).toHaveLength(1);
+    });
+
     it('does not wait on GitHub for a server that cannot take the core anyway', async () => {
       const report = await preflight({ releaseProbe: 'curl', systemd: false }, { remote });
 

@@ -1,6 +1,9 @@
 using System.Net;
 using AgentMate.ServerCore;
+using AgentMate.ServerCore.Contracts;
 using AgentMate.ServerCore.Data;
+using AgentMate.ServerCore.Docker;
+using AgentMate.ServerCore.Files;
 using AgentMate.ServerCore.Security;
 using Microsoft.AspNetCore.Identity;
 
@@ -33,6 +36,8 @@ internal static class DevHost
 
     public const string DevRegistryToken = "devhost-registry-token-4417";
 
+    private static readonly SemaphoreSlim _ownerGate = new(1, 1);
+
     public static async Task<int> RunAsync(string[] args)
     {
         var port = int.TryParse(Environment.GetEnvironmentVariable("AGENTMATE_DEV_CORE_PORT"), out var chosen)
@@ -56,13 +61,32 @@ internal static class DevHost
             ],
             Fakes.FakePlatform.Add);
         app.MapPost("/dev/enroll", EnrollAsync).AllowAnonymous();
+        app.MapPost("/dev/files/seed", SeedFile).AllowAnonymous();
+        app.MapPost("/dev/containers/crash", Crash).AllowAnonymous();
         await app.StartAsync();
         await EnsureDevOwnerAsync(app.Services);
         await app.WaitForShutdownAsync();
         return 0;
     }
 
+    /// <summary>
+    /// Made right after the start, and by an enrollment that comes first: the health endpoint
+    /// answers as soon as the server listens, so a test may enroll before the start is done.
+    /// </summary>
     private static async Task EnsureDevOwnerAsync(IServiceProvider services)
+    {
+        await _ownerGate.WaitAsync();
+        try
+        {
+            await CreateDevOwnerAsync(services);
+        }
+        finally
+        {
+            _ownerGate.Release();
+        }
+    }
+
+    private static async Task CreateDevOwnerAsync(IServiceProvider services)
     {
         await using var scope = services.CreateAsyncScope();
         var users = scope.ServiceProvider.GetRequiredService<UserManager<CoreUser>>();
@@ -89,6 +113,7 @@ internal static class DevHost
         }
 
         var publicKey = DeviceKeys.ParsePublicKey(request.PublicKey);
+        await EnsureDevOwnerAsync(http.RequestServices);
         var owner = await users.FindByNameAsync(DevUserName);
         if (publicKey is null || owner is null)
         {
@@ -108,7 +133,101 @@ internal static class DevHost
         return Results.Ok(new DevEnrollResponse(device.Id, DevUserName));
     }
 
+    /// <summary>
+    /// Puts a file, folder or link into a pretend container's or volume's files (E27), folders on
+    /// the way made as needed, so the app's integration tests can set up what they browse.
+    /// Loopback only, like enrolling.
+    /// </summary>
+    private static IResult SeedFile(DevFileSeedRequest request, HttpContext http, InMemoryDockerEngine engine)
+    {
+        if (http.Connection.RemoteIpAddress is not { } remote || !IPAddress.IsLoopback(remote))
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        var kind = request.Kind switch
+        {
+            "container" => FileTargetKind.Container,
+            "volume" => FileTargetKind.Volume,
+            _ => (FileTargetKind?)null,
+        };
+        var type = request.Type switch
+        {
+            "dir" => 'd',
+            "file" => 'f',
+            "link" => 'l',
+            _ => '-',
+        };
+        if (kind is null || type == '-' || (type == 'l' && string.IsNullOrEmpty(request.LinkTarget)) || !FilePaths.TryNormalize(request.Path, out _))
+        {
+            return Results.BadRequest();
+        }
+
+        byte[]? content;
+        try
+        {
+            content = request.ContentBase64 is { } encoded ? Convert.FromBase64String(encoded) : null;
+        }
+        catch (FormatException)
+        {
+            return Results.BadRequest();
+        }
+
+        try
+        {
+            engine.PlantEntry(kind.Value, request.Id, request.Path, type, request.Mode, content, request.MtimeUnixMs, request.LinkTarget);
+        }
+        catch (DockerNotFoundException)
+        {
+            return Results.NotFound();
+        }
+        catch (MemoryFsException)
+        {
+            return Results.Conflict();
+        }
+
+        return Results.NoContent();
+    }
+
+    /// <summary>
+    /// One pretend container exits on its own and is started again (E30), so the app's e2e run can
+    /// make a crash loop the core's container watcher sees. Loopback only, like enrolling.
+    /// </summary>
+    private static IResult Crash(DevCrashRequest request, HttpContext http, InMemoryDockerEngine engine)
+    {
+        if (http.Connection.RemoteIpAddress is not { } remote || !IPAddress.IsLoopback(remote))
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        try
+        {
+            engine.SimulateCrash(request.Container, request.ExitCode);
+        }
+        catch (DockerNotFoundException)
+        {
+            return Results.NotFound();
+        }
+
+        return Results.NoContent();
+    }
+
     internal sealed record DevEnrollRequest(string PublicKey, string? DeviceName);
+
+    internal sealed record DevCrashRequest(string Container, int ExitCode = 1);
+
+    /// <param name="Kind">"container" or "volume".</param>
+    /// <param name="Type">"dir", "file" or "link".</param>
+    /// <param name="Mode">Permission bits (0644 is 420).</param>
+    internal sealed record DevFileSeedRequest(
+        string Kind,
+        string Id,
+        string Path,
+        string Type,
+        int? Mode = null,
+        string? ContentBase64 = null,
+        long? MtimeUnixMs = null,
+        string? LinkTarget = null);
 
     internal sealed record DevEnrollResponse(Guid DeviceId, string UserName);
 }

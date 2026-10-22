@@ -1,15 +1,20 @@
+using AgentMate.ServerCore.Alerts;
 using AgentMate.ServerCore.Assistant;
 using AgentMate.ServerCore.Cloudflare;
 using AgentMate.ServerCore.DevHost.Fakes;
 using AgentMate.ServerCore.DirectTls;
 using AgentMate.ServerCore.Docker;
+using AgentMate.ServerCore.ErrorReporting;
 using AgentMate.ServerCore.Firewall;
 using AgentMate.ServerCore.Hardening;
 using AgentMate.ServerCore.Nginx;
+using AgentMate.ServerCore.Notifications;
 using AgentMate.ServerCore.Platform;
 using AgentMate.ServerCore.Stacks;
 using AgentMate.ServerCore.Tests.Cloudflare;
 using AgentMate.ServerCore.Tests.Docker;
+using AgentMate.ServerCore.Tests.ErrorReporting;
+using AgentMate.ServerCore.Tests.Notifications;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -96,6 +101,17 @@ public sealed class CoreFactory : WebApplicationFactory<Program>
             { LineDelay = TimeSpan.Zero });
             services.AddSingleton<IExecRunner>(provider => provider.GetRequiredService<FakeExecRunner>());
             services.AddSingleton<IJournalSource, FakeJournal>();
+
+            // Error reporting (E29): a fake Sentry, so nothing a test logs ever leaves the machine.
+            services.AddSingleton<FakeIngest>();
+            services.AddSingleton<IErrorReportingTransport>(provider => new FakeIngestTransport(provider.GetRequiredService<FakeIngest>()));
+
+            // Crash loops (E30): tests stop and kill containers all the time, so nothing watches for them.
+            services.AddSingleton(new ContainerWatchOptions(RunInBackground: false));
+
+            // Telegram notifications (E30): a fake Bot API, so no alert a test raises reaches a chat.
+            services.AddSingleton<FakeTelegramApi>();
+            services.AddSingleton<ITelegramTransport>(provider => new FakeTelegramTransport(provider.GetRequiredService<FakeTelegramApi>().Handler));
         });
     }
 

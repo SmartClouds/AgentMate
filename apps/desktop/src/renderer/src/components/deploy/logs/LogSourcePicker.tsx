@@ -9,6 +9,7 @@ import type { LogSource } from './useLogSource';
  * Picks what the logs center shows (E09 T1): one container, every service of an app at once, a
  * systemd unit's journal (any unit name can be typed), a site's access or error log, or the core's
  * audit trail. A choice is a string so the picker can search it; `parseSourceValue` reads it back.
+ * Scoped to one app, it offers only that app and its containers.
  */
 
 export const COMMON_UNITS = [
@@ -81,14 +82,18 @@ export function LogSourcePicker({
   value,
   containers,
   sites,
+  scope,
   onChange,
 }: {
   value: string;
   containers: ContainerList | undefined;
   sites: readonly SiteInfo[] | undefined;
+  /** 'stack' offers only the app and its containers, as given in `containers`. */
+  scope?: 'stack';
   onChange: (value: string) => void;
 }): React.JSX.Element {
   const groups = containers?.groups ?? [];
+  const stackOnly = scope === 'stack';
   const options = [
     ...groups
       .filter((group) => group.project)
@@ -102,15 +107,19 @@ export function LogSourcePicker({
         label: `Container ${container.name}`,
       })),
     ),
-    ...COMMON_UNITS.map((unit) => ({ value: `journal:${unit}`, label: `Journal ${unit}` })),
-    ...(sites ?? []).flatMap((site) =>
-      (['access', 'error'] as const).map((logKind) => ({
-        value: `site:${logKind}:${site.settings.id}`,
-        label: `Site ${site.settings.domains[0] ?? site.settings.id}: ${logKind} log`,
-      })),
-    ),
-    { value: 'audit', label: 'Core audit trail' },
   ];
+  if (!stackOnly) {
+    options.push(
+      ...COMMON_UNITS.map((unit) => ({ value: `journal:${unit}`, label: `Journal ${unit}` })),
+      ...(sites ?? []).flatMap((site) =>
+        (['access', 'error'] as const).map((logKind) => ({
+          value: `site:${logKind}:${site.settings.id}`,
+          label: `Site ${site.settings.domains[0] ?? site.settings.id}: ${logKind} log`,
+        })),
+      ),
+      { value: 'audit', label: 'Core audit trail' },
+    );
+  }
   return (
     <Combobox
       className="h-8 w-72 text-xs"
@@ -118,8 +127,8 @@ export function LogSourcePicker({
       onChange={onChange}
       options={options}
       placeholder="Choose a log"
-      searchPlaceholder="Search, or type a unit name"
-      allowCustom
+      searchPlaceholder={stackOnly ? 'Search' : 'Search, or type a unit name'}
+      allowCustom={!stackOnly}
       customLabel={(text) => `Journal of ${text}`}
       ariaLabel="Log source"
     />

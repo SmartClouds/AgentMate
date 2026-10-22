@@ -96,7 +96,9 @@ service, Unix socket, tunnel and REST.
   is slow from a home connection). The root `verify` step is unchanged and checks the file again
   after the copy into the root-only folder, so a server-side download is trusted no more than an
   upload. If the probe says no, or the download fails or does not match on the day, the install
-  falls back to the app's download and upload, and the `fetch` step says why. Development builds
+  falls back to the app's download and upload, and the `fetch` step says why. An update to a newer
+  core is the same install with a core already there, so it takes the same path (and the old
+  release is kept to go back to). Development builds
   have no address and always upload. `serverDownload.ts` holds the commands; the real-shell test
   there runs them with a stand-in curl and wget, and the same commands were run once against the
   v1.60.0 release on GitHub with its published checksum.

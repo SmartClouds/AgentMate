@@ -28,7 +28,11 @@ The container drawer and the Volumes tab open it straight on that container or v
   - Rename, delete and chmod are execs with the paths as arguments, never through a shell string.
   - A volume is mounted at `/data` in a helper container (busybox, pinned by digest, no network),
     which gives it a shell and confines every path to the volume. Paths are shown from `/`. The
-    helper is reused per volume, removed after 5 minutes idle, and swept at core start.
+    helper is reused per volume, removed after 5 minutes idle, and swept at core start. It is
+    `busybox@sha256:bdf57e52...` (1.37), and it is left out of the Containers list.
+  - Links inside a volume are resolved by the core one name at a time: an absolute link starts at
+    the volume's root and `..` stops there, so no link reaches the helper's own files. Containers
+    keep the kernel's rules.
 - Admins only, like the console. Every download and change is in the audit trail.
 
 ## Tasks
@@ -36,23 +40,23 @@ The container drawer and the Volumes tab open it straight on that container or v
 - [x] T0 Contracts and scaffolding: `Contracts/FileContracts.cs` and the hub methods (stubs),
   regenerated TS contracts, `SftpSessionInfo.kind`, `capabilities` and `limitation`,
   `shared/fileTargets.ts`, this file and the status row.
-- [ ] T1 Core: lister output parser and path rules.
-- [ ] T2 Core: one-entry tar writer and unwrap.
-- [ ] T3 Core: engine exec (no TTY), archive stat, get and put, helper containers.
-- [ ] T4 Core: the files service (capabilities, both listings, uploads through `.part`, helper
+- [x] T1 Core: lister output parser and path rules.
+- [x] T2 Core: one-entry tar writer and unwrap.
+- [x] T3 Core: engine exec (no TTY), archive stat, get and put, helper containers.
+- [x] T4 Core: the files service (capabilities, both listings, uploads through `.part`, helper
   reuse, idle removal, sweep, audit) and the in-memory engine's file trees for the DevHost.
-- [ ] T5 Core: hub methods and the REST transfers, Admin only.
-- [ ] T6 Core: system tests against real Docker (alpine, debian slim, distroless, a volume).
-- [ ] T7 Desktop: `DockerFileClient` passing the E25 client contract, error mapping, abort,
+- [x] T5 Core: hub methods and the REST transfers, Admin only.
+- [x] T6 Core: system tests against real Docker (alpine, debian slim, distroless, a volume).
+- [x] T7 Desktop: `DockerFileClient` passing the E25 client contract, error mapping, abort,
   stall and progress.
-- [ ] T8 Desktop: the routing pool, Docker targets in `findServer`, kind and capabilities in
+- [x] T8 Desktop: the routing pool, Docker targets in `findServer`, kind and capabilities in
   `open`, sessions closed with the server.
-- [ ] T9 Desktop: the contract suite against a real DevHost core.
-- [ ] T10 Renderer: actions gated by capabilities, the partial listing banner.
-- [ ] T11 Renderer: the Files section with its source picker and states.
-- [ ] T12 Renderer: Browse files in the container drawer and the Volumes tab.
-- [ ] T13 `deployServerFiles.e2e.ts` against the DevHost.
-- [ ] T14 Help article, coverage floors, this file and the status row.
+- [x] T9 Desktop: the contract suite against a real DevHost core.
+- [x] T10 Renderer: actions gated by capabilities, the partial listing banner.
+- [x] T11 Renderer: the Files section with its source picker and states.
+- [x] T12 Renderer: Browse files in the container drawer and the Volumes tab.
+- [x] T13 `deployServerFiles.e2e.ts` against the DevHost.
+- [x] T14 Help article, coverage floors, this file and the status row.
 
 ## Acceptance criteria
 
@@ -75,5 +79,6 @@ The container drawer and the Volumes tab open it straight on that container or v
 
 - A volume whose driver Docker cannot mount in the helper cannot be browsed.
 - Listing a very large folder in a stopped or shell-less container is partial.
-- Without a shell, uploads are written in place, not atomically.
+- Without a shell, uploads are written in place, not atomically, and links are only partly
+  described (a broken link is not spotted, and only links to a sibling folder count as folders).
 - With user namespace remapping, uploaded files keep the uid the tar entry carries.

@@ -221,7 +221,8 @@ export function SshFilesView({
       data-sftp-view={variant}
       className={cn(
         'flex min-h-0 flex-1 flex-col overflow-hidden',
-        compact ? 'gap-1.5 p-1.5' : 'gap-2 p-2',
+        // Embedded, the section around it already sets the margins.
+        compact ? 'gap-1.5 p-1.5' : variant === 'embedded' ? 'gap-2' : 'gap-2 p-2',
       )}
     >
       <div className="flex min-h-0 flex-1">

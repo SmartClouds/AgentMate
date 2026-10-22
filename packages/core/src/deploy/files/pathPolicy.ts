@@ -1,6 +1,7 @@
 import { createIgnoreRules, type IgnoreLayer, type IgnoreRulesResult } from '../ignoreRules.js';
 import {
   validateWpItemPath,
+  WP_AGENT_PREFIXES,
   WP_DEFAULT_IGNORE,
   WP_HARD_DENY_DIRS,
   WP_HARD_DENY_FILES,
@@ -120,7 +121,9 @@ export function deniedReasonForSync(path: string): 'agentFiles' | 'hardDenied' {
   for (const segment of path.split('/')) {
     if (!segmentDenied(segment)) continue;
     const name = fold(segment);
-    return AGENT_NAMES.has(name) || name.startsWith('.aider') ? 'agentFiles' : 'hardDenied';
+    return AGENT_NAMES.has(name) || WP_AGENT_PREFIXES.some((prefix) => name.startsWith(prefix))
+      ? 'agentFiles'
+      : 'hardDenied';
   }
   return 'hardDenied';
 }

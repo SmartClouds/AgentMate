@@ -92,6 +92,18 @@ internal sealed partial class BackupService(CoreDirectories directories, TimePro
         }
     }
 
+    /// <summary>
+    /// Takes a finished server backup (E28) to wait here for the app like one made on demand: the
+    /// same name, the same hour.
+    /// </summary>
+    public void Adopt(Guid id, string file)
+    {
+        EnsurePrivate(Root);
+        var target = PathOf(id);
+        File.Move(file, target, overwrite: true);
+        File.SetLastWriteTimeUtc(target, time.GetUtcNow().UtcDateTime);
+    }
+
     /// <summary>The backup's file to send, or null when it is gone (downloaded and deleted, or expired).</summary>
     public FileStream? OpenRead(Guid id)
     {
@@ -129,6 +141,9 @@ internal sealed partial class BackupService(CoreDirectories directories, TimePro
             }
         }
     }
+
+    /// <summary>Where a backup waits; restore-stage reads it from here as root.</summary>
+    public string PathFor(Guid id) => PathOf(id);
 
     private string PathOf(Guid id) => Path.Combine(Root, id.ToString("N") + Extension);
 

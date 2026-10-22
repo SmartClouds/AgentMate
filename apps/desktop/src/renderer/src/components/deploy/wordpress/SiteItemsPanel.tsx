@@ -12,6 +12,7 @@ import {
   CloudUpload,
   EllipsisVertical,
   ExternalLink,
+  FilePlus,
   FolderPlus,
   LinkOff,
   Lock,
@@ -43,6 +44,7 @@ import { SetupFailure } from '../SetupFailure';
 import { AddToProjectDialog } from './AddToProjectDialog';
 import { siteProjects, useProjects, useSiteInfo, useSiteItems } from './hooks';
 import { fileChangesStatus, SCOPE_SUMMARY, wpProblem } from './messages';
+import { NewItemDialog } from './NewItemDialog';
 import { useItemProjectActions } from './useItemProjectActions';
 
 const GROUPS: ReadonlyArray<{ kind: ProjectWordPressItemKind; title: string; empty: string }> = [
@@ -82,7 +84,7 @@ function linksItem(project: Project, item: WpItemRef): boolean {
   );
 }
 
-type FlowTarget = { kind: 'deploy' | 'pull'; projectId: string; item: WpItemRef };
+type FlowTarget = { kind: 'deploy' | 'pull'; projectId: string; items: WpItemRef[] };
 
 /** The project dialog open for an item: add it to one, move it, or make a new one with it. */
 type ItemDialog = { kind: 'add' | 'move' | 'new'; item: WpItem; from?: Project };
@@ -240,7 +242,7 @@ function ItemRow({
                     variant="soft"
                     aria-label={`Pull ${item.name} into ${project.name}`}
                     onClick={() =>
-                      handlers.onOpenFlow({ kind: 'pull', projectId: project.id, item: ref })
+                      handlers.onOpenFlow({ kind: 'pull', projectId: project.id, items: [ref] })
                     }
                   >
                     <CloudDownload /> Pull
@@ -251,7 +253,7 @@ function ItemRow({
                       disabled={deployBlocked !== null}
                       aria-label={`Review and deploy ${item.name} from ${project.name}`}
                       onClick={() =>
-                        handlers.onOpenFlow({ kind: 'deploy', projectId: project.id, item: ref })
+                        handlers.onOpenFlow({ kind: 'deploy', projectId: project.id, items: [ref] })
                       }
                     >
                       <CloudUpload /> Review and deploy
@@ -292,6 +294,7 @@ export function SiteItemsPanel({ site }: { site: DeployWordPressSite }): React.J
   // Kept after closing so the dialog can animate out; the key mounts a fresh one per open.
   const [dialog, setDialog] = useState<(ItemDialog & { key: number }) | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [newItemOpen, setNewItemOpen] = useState(false);
   const itemActions = useItemProjectActions(site.id);
   const unlinker = useUnlinkWordPressProject();
   const [removingId, setRemovingId] = useState<string | null>(null);
@@ -362,6 +365,21 @@ export function SiteItemsPanel({ site }: { site: DeployWordPressSite }): React.J
           {siteBlock}
         </Notice>
       )}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+        <p className="min-w-0 text-xs text-muted-foreground">
+          Made a theme or plugin that this site doesn't have yet? Deploy it from here.
+        </p>
+        <SimpleTooltip label={siteBlock} wrapTrigger>
+          <Button
+            size="sm"
+            variant="soft"
+            disabled={siteBlock !== null}
+            onClick={() => setNewItemOpen(true)}
+          >
+            <FilePlus /> New theme or plugin
+          </Button>
+        </SimpleTooltip>
+      </div>
       {itemsQuery.isError && (
         <div className="flex flex-col items-start gap-2">
           <div className="w-full">
@@ -433,13 +451,19 @@ export function SiteItemsPanel({ site }: { site: DeployWordPressSite }): React.J
             </DeployCard>
           );
         })}
+      <NewItemDialog
+        open={newItemOpen}
+        onOpenChange={setNewItemOpen}
+        site={site}
+        onAdded={(project, items) => open({ kind: 'deploy', projectId: project.id, items })}
+      />
       {target?.kind === 'deploy' && (
         <DeployFlowDialog
           open={flowOpen}
           onOpenChange={setFlowOpen}
           projectId={target.projectId}
           siteId={site.id}
-          items={[target.item]}
+          items={target.items}
         />
       )}
       {target?.kind === 'pull' && (
@@ -448,7 +472,7 @@ export function SiteItemsPanel({ site }: { site: DeployWordPressSite }): React.J
           onOpenChange={setFlowOpen}
           projectId={target.projectId}
           siteId={site.id}
-          items={[target.item]}
+          items={target.items}
         />
       )}
       {(dialog?.kind === 'add' || dialog?.kind === 'move') && (

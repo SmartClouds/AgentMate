@@ -63,15 +63,20 @@ function healthy(port: number): Promise<boolean> {
   });
 }
 
-export async function startDevHost(): Promise<DevHost> {
+/** `args` go on the DevHost's command line after its own, such as a setting a spec needs. */
+export async function startDevHost(options: { args?: string[] } = {}): Promise<DevHost> {
   execFileSync('dotnet', ['build', PROJECT, '--nologo', '-v', 'quiet'], { stdio: 'inherit' });
   const port = await freePort();
   const data = mkdtempSync(join(tmpdir(), 'agentmate-e2e-devhost-'));
   // Later arguments win, so this replaces the DevHost's own data folder.
-  const child: ChildProcess = spawn('dotnet', [DLL, `--Core:DataDirectory=${data}`], {
-    env: { ...process.env, AGENTMATE_DEV_CORE_PORT: String(port) },
-    stdio: 'ignore',
-  });
+  const child: ChildProcess = spawn(
+    'dotnet',
+    [DLL, `--Core:DataDirectory=${data}`, ...(options.args ?? [])],
+    {
+      env: { ...process.env, AGENTMATE_DEV_CORE_PORT: String(port) },
+      stdio: 'ignore',
+    },
+  );
   const stop = () => {
     if (child.exitCode === null) child.kill();
     try {

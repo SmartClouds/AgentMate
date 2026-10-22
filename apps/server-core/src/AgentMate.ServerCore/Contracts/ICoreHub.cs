@@ -454,6 +454,73 @@ public interface ICoreHub
     /// <summary>Deletes a backup from the server, once the app has it. True when there was one.</summary>
     Task<bool> DeleteBackup(Guid backupId);
 
+    // Server backups (E28), Owners only. Setting the secret, saving or removing a destination,
+    // backing up now and deleting a stored backup need a step-up.
+
+    Task<BackupSecretStatus> GetBackupSecret();
+
+    /// <summary>Sets the secret key, or changes it with the current one. Neither is kept.</summary>
+    Task<BackupSecretStatus> SetBackupSecret(SetBackupSecretRequest request);
+
+    Task<BackupDestinationInfo[]> ListBackupDestinations();
+
+    /// <summary>Adds or changes a destination. Its credentials are sealed and never read back.</summary>
+    Task<BackupDestinationInfo> SaveBackupDestination(SaveBackupDestinationRequest request);
+
+    /// <summary>Removes a destination and takes it out of every plan. What it holds stays there.</summary>
+    Task<bool> DeleteBackupDestination(Guid destinationId);
+
+    /// <summary>Writes, reads back and deletes a small file, with the request's settings (the stored secret when it has none).</summary>
+    Task<BackupDestinationTest> TestBackupDestination(SaveBackupDestinationRequest request);
+
+    Task<BackupPlanInfo[]> ListBackupPlans();
+
+    /// <summary>Adds or changes a plan and puts it on the schedule.</summary>
+    Task<BackupPlanInfo> SaveBackupPlan(SaveBackupPlanRequest request);
+
+    Task<bool> DeleteBackupPlan(Guid planId);
+
+    /// <summary>What a plan would do: next runs, how many backups stay, about how much room. Changes nothing.</summary>
+    Task<BackupPlanPreview> PreviewBackupPlan(BackupPlanPreviewRequest request);
+
+    /// <summary>Runs a plan now, off its schedule. The run shows in the history.</summary>
+    Task<BackupRunInfo> RunBackupPlan(Guid planId);
+
+    /// <summary>Backs up now to the destinations named, and keeps the file an hour for download when asked.</summary>
+    Task<BackupRunInfo> RunBackupNow(RunBackupNowRequest request);
+
+    /// <summary>The newest runs first, with each destination's outcome.</summary>
+    Task<BackupRunInfo[]> ListBackupRuns(int limit);
+
+    /// <summary>One run as it stands, for following it; null when there is none.</summary>
+    Task<BackupRunInfo?> GetBackupRun(Guid runId);
+
+    /// <summary>What a destination holds, newest first, as its manifests say.</summary>
+    Task<StoredBackupInfo[]> ListStoredBackups(Guid destinationId);
+
+    /// <summary>Deletes one backup and its parts from a destination.</summary>
+    Task<bool> DeleteStoredBackup(Guid destinationId, Guid backupId);
+
+    /// <summary>Starts signing in to a Telegram account; Telegram sends a code.</summary>
+    Task<TelegramLoginState> StartTelegramLogin(StartTelegramLoginRequest request);
+
+    /// <summary>Sends the code, then the cloud password when the account has one.</summary>
+    Task<TelegramLoginState> ContinueTelegramLogin(ContinueTelegramLoginRequest request);
+
+    /// <summary>Fetches a backup from a destination onto this server for a restore. Owner, with a step-up.</summary>
+    Task<BackupFetchInfo> FetchStoredBackup(Guid destinationId, Guid backupId);
+
+    Task<BackupFetchInfo?> GetBackupFetch(Guid fetchId);
+
+    /// <summary>What a restored state still has to bring up on this server, or null when nothing waits.</summary>
+    Task<PendingServerRestore?> GetPendingServerRestore();
+
+    /// <summary>Puts back volumes and images, starts what ran, and moves the address when asked. Owner, with a step-up.</summary>
+    Task<ServerRestoreStatus> RunServerRestore(RunServerRestoreRequest request);
+
+    Task<ServerRestoreStatus?> GetServerRestoreStatus();
+    // E28 end
+
     // Direct TLS (E16): every role reads it; Owners change it, turning it on needs a step-up.
 
     /// <summary>The listener's setting and state, and the pin of the certificate it presents.</summary>
@@ -464,6 +531,34 @@ public interface ICoreHub
 
     /// <summary>Closes the port. Owner.</summary>
     Task<DirectTlsStatus> DisableDirectTls();
+
+    // Error reporting (E29): the core's warnings and errors, sent to a Sentry project as OpenTelemetry logs.
+
+    /// <summary>Where logs go, how sending is going, and the options. Never the key. Admin.</summary>
+    Task<ErrorReportingStatus> GetErrorReporting();
+
+    /// <summary>Sets it up or changes it, effective at once. Owner, with a step-up.</summary>
+    Task<ErrorReportingSaveResult> SaveErrorReporting(ErrorReportingRequest request);
+
+    /// <summary>Forgets the DSN and stops sending. Owner, with a step-up.</summary>
+    Task<ErrorReportingStatus> RemoveErrorReporting();
+
+    /// <summary>Sends one test event to the project and says whether Sentry took it. Admin.</summary>
+    Task<ErrorReportingTestResult> SendErrorReportingTest();
+
+    // Telegram notifications (E30): the core's alerts, sent to a Telegram chat through a bot.
+
+    /// <summary>Which chat alerts go to, which kinds, and how sending is going. Never the token. Admin.</summary>
+    Task<TelegramNotificationsStatus> GetTelegramNotifications();
+
+    /// <summary>Sets it up or changes it, effective at once. Owner, with a step-up.</summary>
+    Task<TelegramNotificationsSaveResult> SaveTelegramNotifications(TelegramNotificationsRequest request);
+
+    /// <summary>Forgets the token and stops sending. Owner, with a step-up.</summary>
+    Task<TelegramNotificationsStatus> RemoveTelegramNotifications();
+
+    /// <summary>Sends one test message to the chat and says whether Telegram took it. Admin.</summary>
+    Task<TelegramNotificationsTestResult> SendTelegramNotificationTest();
 }
 
 /// <summary>Everything the core can push to the app without being asked.</summary>

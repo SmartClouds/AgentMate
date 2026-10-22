@@ -32,6 +32,25 @@ public sealed class EndpointAuthorizationCoverageTests(CoreFactory factory) : IC
         Assert.Empty(undecided);
     }
 
+    /// <summary>A container's files are for Admins (E27): whoever can write them can run anything in it.</summary>
+    [Fact]
+    public void File_transfers_are_for_admins()
+    {
+        var files = factory.Services
+            .GetRequiredService<EndpointDataSource>()
+            .Endpoints
+            .OfType<RouteEndpoint>()
+            .Where(endpoint => endpoint.RoutePattern.RawText?.StartsWith("/api/v1/files", StringComparison.Ordinal) == true)
+            .ToList();
+
+        Assert.Equal(
+            ["GET /api/v1/files/{sessionId:guid}/content", "PUT /api/v1/files/{sessionId:guid}/content"],
+            files.Select(endpoint => $"{endpoint.Metadata.GetMetadata<Microsoft.AspNetCore.Routing.HttpMethodMetadata>()!.HttpMethods.Single()} {endpoint.RoutePattern.RawText}").Order(StringComparer.Ordinal));
+        Assert.All(files, endpoint => Assert.Contains(
+            endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>(),
+            data => data.Policy == AgentMate.ServerCore.Security.CorePolicies.Admin));
+    }
+
     /// <summary>Health, and the sign-in steps that run before there is a token.</summary>
     [Fact]
     public void Only_health_and_sign_in_are_anonymous()

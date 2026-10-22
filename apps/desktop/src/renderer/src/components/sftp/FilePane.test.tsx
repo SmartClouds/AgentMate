@@ -812,8 +812,7 @@ describe('the context menu, rename', () => {
 });
 
 describe('what the remote side allows (E27)', () => {
-  const LIMITATION =
-    'The container is stopped. Start it to rename, delete or change permissions.';
+  const LIMITATION = 'The container is stopped. Start it to rename, delete or change permissions.';
   const LIMITED: SftpSessionInfo = {
     ...SESSION,
     kind: 'container',

@@ -175,6 +175,7 @@ describe('open', () => {
       port: 2222,
       username: 'deploy',
       home: '/home/deploy',
+      kind: 'ssh',
     });
     expect(h.server.pool.acquired).toBe(1);
     expect(h.server.callsOf('sftpRealpath')).toEqual(['.']);

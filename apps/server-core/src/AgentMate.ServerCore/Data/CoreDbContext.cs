@@ -57,6 +57,19 @@ internal sealed class CoreDbContext(DbContextOptions<CoreDbContext> options)
 
     public DbSet<OriginLockSetting> OriginLock => Set<OriginLockSetting>();
 
+    // Server backups (E28).
+    public DbSet<BackupKeyRingRecord> BackupKeyRing => Set<BackupKeyRingRecord>();
+
+    public DbSet<BackupDestinationRecord> BackupDestinations => Set<BackupDestinationRecord>();
+
+    public DbSet<BackupPlanRecord> BackupPlans => Set<BackupPlanRecord>();
+
+    public DbSet<BackupPlanDestinationRecord> BackupPlanDestinations => Set<BackupPlanDestinationRecord>();
+
+    public DbSet<BackupRunRecord> BackupRuns => Set<BackupRunRecord>();
+
+    public DbSet<BackupRunTargetRecord> BackupRunTargets => Set<BackupRunTargetRecord>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -147,6 +160,7 @@ internal sealed class CoreDbContext(DbContextOptions<CoreDbContext> options)
         StackModel.Configure(builder);
         RegistryModel.Configure(builder);
         CloudflareModel.Configure(builder);
+        BackupModel.Configure(builder);
     }
 }
 

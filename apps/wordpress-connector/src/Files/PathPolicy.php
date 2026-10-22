@@ -65,7 +65,7 @@ final class PathPolicy
         'desktop.ini',
     );
 
-    const DENY_PREFIXES = array('.aider', '.env.', 'id_rsa', 'id_ed25519', 'id_ecdsa');
+    const DENY_PREFIXES = array('.aider', '.claude', '.agentmate', '.env.', 'id_rsa', 'id_ed25519', 'id_ecdsa');
 
     const DENY_SUFFIXES = array('.pem', '.ppk');
 

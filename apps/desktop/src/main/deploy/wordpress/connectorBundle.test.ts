@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,7 +12,11 @@ import {
 import AdmZip from 'adm-zip';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { wordPressErrorCode } from '../../../shared/wordpressErrors';
-import { compareConnectorVersions, readConnectorBundle } from './connectorBundle';
+import {
+  compareConnectorVersions,
+  readConnectorBundle,
+  readShippedConnector,
+} from './connectorBundle';
 import { connectorZipPath } from './connectorZip';
 
 /**
@@ -214,6 +218,37 @@ describe('readConnectorBundle', () => {
       expect(paths.every((path) => !path.startsWith(ROOT))).toBe(true);
     },
   );
+});
+
+describe('readShippedConnector', () => {
+  const shipped = (isPackaged: boolean) => {
+    zipOf(
+      {
+        [`${ROOT}agentmate-connector.php`]: mainFile(WP_CONNECTOR_VERSION),
+        [`${ROOT}src/Plugin.php`]: '<?php',
+      },
+      'agentmate-connector.zip',
+    );
+    // The development path is <appPath>/../wordpress-connector/dist; the packaged one is
+    // <resources>/wordpress-connector.
+    const folder = isPackaged
+      ? join(dir, 'wordpress-connector')
+      : join(dir, 'wordpress-connector', 'dist');
+    mkdirSync(folder, { recursive: true });
+    renameSync(join(dir, 'agentmate-connector.zip'), join(folder, 'agentmate-connector.zip'));
+    return readShippedConnector({ isPackaged, resourcesPath: dir, appPath: join(dir, 'app') });
+  };
+
+  it('names the GitHub release a site can download it from in a packaged app', async () => {
+    const bundle = await shipped(true);
+    expect(bundle.downloadUrl).toBe(
+      `https://github.com/SmartClouds/AgentMate/releases/download/v${WP_CONNECTOR_VERSION}/agentmate-connector.zip`,
+    );
+  });
+
+  it('names none in a development build, whose zip may match no release', async () => {
+    expect((await shipped(false)).downloadUrl).toBeUndefined();
+  });
 });
 
 describe('compareConnectorVersions', () => {

@@ -154,6 +154,13 @@ internal sealed partial class AlertCenter(
         return [.. (await alerts.OrderBy(a => a.Revision).Take(Math.Clamp(limit, 1, MaxListed)).ToListAsync(cancellationToken)).Select(ToInfo)];
     }
 
+    /// <summary>The revision of the last change so far, or 0 before any.</summary>
+    public async Task<long> LatestRevisionAsync(CancellationToken cancellationToken = default)
+    {
+        await using var db = await contexts.CreateDbContextAsync(cancellationToken);
+        return await db.Alerts.MaxAsync(a => (long?)a.Revision, cancellationToken) ?? 0;
+    }
+
     public async Task<AlertInfo[]> OpenAsync(AlertKind kind, CancellationToken cancellationToken = default)
     {
         await using var db = await contexts.CreateDbContextAsync(cancellationToken);

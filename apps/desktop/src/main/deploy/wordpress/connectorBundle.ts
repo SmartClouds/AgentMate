@@ -7,6 +7,7 @@ import {
   WP_UPDATE_MAX_FILE_BYTES,
   WP_UPDATE_MAX_FILES,
   WP_UPDATE_MAX_TOTAL_BYTES,
+  wpConnectorReleaseUrl,
 } from '@agentmat/core';
 import AdmZip from 'adm-zip';
 import { wordPressError } from '../../../shared/wordpressErrors';
@@ -38,6 +39,11 @@ export interface ConnectorBundle {
   /** Sorted by path. */
   files: ConnectorBundleFile[];
   totalBytes: number;
+  /**
+   * The GitHub release that holds this same zip, which a site can download itself. Only packaged
+   * builds name one: a development build's zip may not match any release.
+   */
+  downloadUrl?: string;
 }
 
 function broken(why: string): Error {
@@ -130,8 +136,11 @@ export async function readConnectorBundle(zipFile: string): Promise<ConnectorBun
 }
 
 /** The shipped zip for this run (packaged resources, or the development build). */
-export function readShippedConnector(
+export async function readShippedConnector(
   deps: Pick<ConnectorZipDeps, 'isPackaged' | 'resourcesPath' | 'appPath'>,
 ): Promise<ConnectorBundle> {
-  return readConnectorBundle(connectorZipPath(deps));
+  const bundle = await readConnectorBundle(connectorZipPath(deps));
+  return deps.isPackaged
+    ? { ...bundle, downloadUrl: wpConnectorReleaseUrl(bundle.version) }
+    : bundle;
 }

@@ -22,6 +22,7 @@ import type {
   ContainerSummary,
   DirectTlsRequest,
   DnsCredentialRequest,
+  ErrorReportingRequest,
   DockerDiskUsage,
   DockerEvent,
   DockerEventsRequest,
@@ -66,6 +67,7 @@ import type {
   SiteSnippets,
   StepUpRequest,
   StreamProxySettings,
+  TelegramNotificationsRequest,
   VolumeInfo,
 } from '../protocol/generated/AgentMate.ServerCore.Contracts';
 import type { ICoreHub } from '../protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
@@ -324,6 +326,60 @@ export class FakeCoreConnection implements ICoreHub {
     return this.answer({ ...this.core.directTls });
   };
 
+  // Error reporting (E29): Admins read and test it, Owners change it with a step-up.
+
+  getErrorReporting = async () => {
+    this.assertOpen();
+    this.assertRole('GetErrorReporting', ADMINS);
+    return this.answer({ ...this.core.errorReporting.status });
+  };
+  saveErrorReporting = async (request: ErrorReportingRequest) => {
+    this.assertOpen();
+    this.assertRole('SaveErrorReporting', OWNERS);
+    if (this.core.stepUpUntil <= this.core.now()) throw unauthorizedError('SaveErrorReporting');
+    return this.answer(this.core.errorReporting.save(request));
+  };
+  removeErrorReporting = async () => {
+    this.assertOpen();
+    this.assertRole('RemoveErrorReporting', OWNERS);
+    if (this.core.stepUpUntil <= this.core.now()) throw unauthorizedError('RemoveErrorReporting');
+    return this.answer(this.core.errorReporting.remove());
+  };
+  sendErrorReportingTest = async () => {
+    this.assertOpen();
+    this.assertRole('SendErrorReportingTest', ADMINS);
+    return this.answer(this.core.errorReporting.test());
+  };
+
+  // Telegram notifications (E30): Admins read and test them, Owners change them with a step-up.
+
+  getTelegramNotifications = async () => {
+    this.assertOpen();
+    this.assertRole('GetTelegramNotifications', ADMINS);
+    return this.answer({ ...this.core.telegram.status });
+  };
+  saveTelegramNotifications = async (request: TelegramNotificationsRequest) => {
+    this.assertOpen();
+    this.assertRole('SaveTelegramNotifications', OWNERS);
+    if (this.core.stepUpUntil <= this.core.now()) {
+      throw unauthorizedError('SaveTelegramNotifications');
+    }
+    return this.answer(this.core.telegram.save(request));
+  };
+  removeTelegramNotifications = async () => {
+    this.assertOpen();
+    this.assertRole('RemoveTelegramNotifications', OWNERS);
+    if (this.core.stepUpUntil <= this.core.now()) {
+      throw unauthorizedError('RemoveTelegramNotifications');
+    }
+    return this.answer(this.core.telegram.remove());
+  };
+  sendTelegramNotificationTest = async () => {
+    this.assertOpen();
+    this.assertRole('SendTelegramNotificationTest', ADMINS);
+    return this.answer(this.core.telegram.test());
+  };
+
   // Websites and certificates: Viewers read, Admins change, Owners write snippets, and taking a
   // certificate off needs a step-up as well.
 
@@ -485,6 +541,30 @@ export class FakeCoreConnection implements ICoreHub {
   revertSshHardening = () => this.unused('RevertSshHardening');
   createBackup = () => this.unused('CreateBackup');
   deleteBackup = () => this.unused('DeleteBackup');
+  // Server backups (E28) have tests of their own with plain fakes.
+  getBackupSecret = () => this.unused('GetBackupSecret');
+  setBackupSecret = () => this.unused('SetBackupSecret');
+  listBackupDestinations = () => this.unused('ListBackupDestinations');
+  saveBackupDestination = () => this.unused('SaveBackupDestination');
+  deleteBackupDestination = () => this.unused('DeleteBackupDestination');
+  testBackupDestination = () => this.unused('TestBackupDestination');
+  listBackupPlans = () => this.unused('ListBackupPlans');
+  saveBackupPlan = () => this.unused('SaveBackupPlan');
+  deleteBackupPlan = () => this.unused('DeleteBackupPlan');
+  previewBackupPlan = () => this.unused('PreviewBackupPlan');
+  runBackupPlan = () => this.unused('RunBackupPlan');
+  runBackupNow = () => this.unused('RunBackupNow');
+  listBackupRuns = () => this.unused('ListBackupRuns');
+  getBackupRun = () => this.unused('GetBackupRun');
+  listStoredBackups = () => this.unused('ListStoredBackups');
+  deleteStoredBackup = () => this.unused('DeleteStoredBackup');
+  startTelegramLogin = () => this.unused('StartTelegramLogin');
+  continueTelegramLogin = () => this.unused('ContinueTelegramLogin');
+  fetchStoredBackup = () => this.unused('FetchStoredBackup');
+  getBackupFetch = () => this.unused('GetBackupFetch');
+  getPendingServerRestore = () => this.unused('GetPendingServerRestore');
+  runServerRestore = () => this.unused('RunServerRestore');
+  getServerRestoreStatus = () => this.unused('GetServerRestoreStatus');
 
   // Reading the server.
 

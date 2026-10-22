@@ -3,7 +3,7 @@ title: Containers, apps and stacks
 category: Deploy
 order: 30
 summary: Manage Docker on a server you deploy to, with live container lists, logs, consoles, images, volumes and networks, and deploy compose apps from your projects with rollbacks.
-keywords: docker, containers, compose, stack, apps, logs, console, shell, exec, images, volumes, networks, prune, disk usage, deploy app, revision, rollback, new app wizard, docker install
+keywords: docker, containers, compose, stack, apps, logs, compose logs, console, shell, exec, run command, docker exec, root, images, volumes, networks, prune, disk usage, deploy app, revision, rollback, new app wizard, docker install
 route: /deploy
 ---
 
@@ -33,7 +33,7 @@ If Docker is installed but stopped, the card says **Docker is installed but not 
 
 Once Docker runs, the top of the section shows a line with the Docker version, the Compose version (or "no Compose"), the cgroup version and the storage driver. Below it are five tabs: **Containers**, **Images**, **Volumes**, **Networks** and **Disk use**.
 
-The **Containers** tab lists every container on the server, grouped by compose project. Containers that did not come from compose sit in a group called "Not in a compose project". Each group header shows how many of its containers are running (for example "2 of 3 running, 1 stopped") and the project's folder on the server. Click a header to fold or unfold the group.
+The **Containers** tab lists every container on the server, grouped by compose project. Containers that did not come from compose sit in a group called "Not in a compose project". Each group header shows how many of its containers are running (for example "2 of 3 running, 1 stopped") and the project's folder on the server. Click a header to fold or unfold the group. The log button at the end of a compose project's header opens that app's logs and consoles (see [Logs and consoles of an app](#logs-and-consoles-of-an-app)).
 
 Each row shows:
 
@@ -62,7 +62,7 @@ Click the three dot menu on a row (or in the container panel header) to see the 
 
 ### The container panel
 
-Click a container's name to open its panel, which slides in from the right. The header shows the name, the state chip, the image, quick buttons (**Restart** and **Stop** for a running container, **Resume** for a paused one, **Start** otherwise), **Send logs to the project CLI** and the same three dot menu. It has seven tabs.
+Click a container's name to open its panel, which slides in from the right. The header shows the name, the state chip, the image, quick buttons (**Restart** and **Stop** for a running container, **Resume** for a paused one, **Start** otherwise), **Send logs to the project CLI**, **Browse files** (for Admins, see [Server files](deploy-files.md)) and the same three dot menu. It has seven tabs.
 
 #### Overview
 
@@ -76,6 +76,7 @@ Four charts for a running container: **Processor** (100% is one core), **Memory*
 
 The last 500 lines of the container's log, then new lines as they arrive while **Follow** is on. Each line has a time and a column that says `out` or `err` for stdout and stderr. Controls:
 
+- **Lines to read** starts the log with the last 100, 500, 1,000, 2,000 or 5,000 lines.
 - **Search the log** marks matches and shows "1 of 5". Press `Enter` for the next match and `Shift+Enter` for the previous one, or use the arrow buttons.
 - **Follow** keeps the view at the bottom. If you scroll up to read, it stops jumping.
 - **Read again** appears when the stream ended (for example because the container stopped).
@@ -95,7 +96,11 @@ Each port with a plain explanation: "Only other containers on its network reach 
 
 #### Console
 
-A shell inside a running container, for Admins only (other roles see that consoles are for Admins). Click **Open a console** to start bash (or sh) as the container's own user. Opening and closing a console are recorded in the server's audit trail, what you type is not. Click **Close the console** to end it, or **Open a new one** after the shell exits.
+A shell inside a running container, for Admins only (other roles see that consoles are for Admins). Click **Open a console** to start bash (or sh) as the container's own user. Click **Close the console** to end it, or **Open a new one** after the shell exits.
+
+To run one command instead, type it in **Command**, such as `php artisan migrate` or `psql -U postgres`, and click **Run**. It runs through `sh`, so pipes and `&&` work, in a terminal you can type into (for prompts and interactive tools). **User** picks who runs it: **Its own user** (the image's user), **root**, or any name or id you type, such as `www-data` or `1000:1000`. After the command ends, **Run it again** runs it once more and **Back** returns to the form with your command kept.
+
+Opening and closing a console are recorded in the server's audit trail, with the command and the user. What you type into it is not. If the connection to the server changes while a shell is open, a new shell takes over and says so. A command is never run a second time by itself: its console ends with "The connection to the server changed, so the command was not run again."
 
 ### Send a container's log to a project CLI
 
@@ -119,7 +124,7 @@ The **Images** tab lists the images on the server with tags, size, age and how m
 
 ### Volumes
 
-The **Volumes** tab lists each volume with its compose project, size and how many containers use it. Admins can remove a volume that no container uses. You must type the volume's name to confirm, and the dialog warns that everything stored in it is deleted.
+The **Volumes** tab lists each volume with its compose project, size and how many containers use it. Admins can open a volume's files with the folder button on its row (see [Server files](deploy-files.md)), and can remove a volume that no container uses. You must type the volume's name to confirm, and the dialog warns that everything stored in it is deleted.
 
 ### Networks
 
@@ -164,17 +169,25 @@ Click an app card to see its page. The header shows the name, status, which revi
 - **Start**, **Stop**, **Restart** and **Take down**. **Take down** removes the containers and networks but keeps volumes and revisions, so a deploy brings the app back.
 - **Delete**, which removes the containers and revisions but keeps the volumes.
 - **Delete with its data** (Admins only), which also deletes the volumes. You must type the app's name to confirm.
+- **Logs** and **Console** (Admins only), which open the app's logs and consoles (see below).
 
-These buttons need the Operator role and are disabled while a job works on the app. Start, stop, restart, take down and delete open a job log window.
+The lifecycle buttons need the Operator role and are disabled while a job works on the app. Start, stop, restart, take down and delete open a job log window.
 
 Below the toolbar:
 
 - The **timeline** of the shown revision.
-- **Services**: each service with its image, ports and containers (with state and health).
+- **Services**: each service with its image, ports and containers (with state and health). Each container has a log button, and a running one a console button.
 - **Revisions**: every upload is kept, with its number, state (Waiting for files, Ready, Invalid, Deploying, Live, Failed or Replaced), date and who made it. Click one to see its timeline. **Roll back** (or **Roll back to this revision** in the timeline) deploys an older revision's files again as a new revision, after a confirmation. Only revisions that ran once can be rolled back to.
 - **Route map**: where each published port leads, with a note that domains are added under Websites.
 - **Registry sign-in**: see [Registries](deploy-registries.md). It has a switch to send this computer's sign-ins with this app's deploys.
 - **Files of revision N**: click to see the compose file as uploaded, the env key names and the loopback override file. Env values stay on the server.
+
+### Logs and consoles of an app
+
+A panel on the right with two tabs, opened from an app's page, an installed app in the [App Store](deploy-app-store.md), or a compose project's header in the container list.
+
+- **Logs** follows every service of the app together, each line with its service name in its own color, the way `docker compose logs -f` does. Pick one container in the log list to read it alone. The core follows at most four container logs at once, so an app with more services shows the first four together and says so. The level filter, time range, search, **Lines to read**, **Follow**, **Download** and **Ask the AI** work as in the Logs section's viewer (see [Assistant and logs](deploy-assistant-logs.md)).
+- **Console** (Admins only) opens a shell or runs a command in one of the app's running containers. Pick the container first when the app has more than one running. It works like the **Console** tab of the [container panel](#the-container-panel). When nothing runs, it says to start the app first.
 
 ## Tips
 

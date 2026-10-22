@@ -4,7 +4,7 @@
 // @ts-nocheck
 import type { HubConnection, IStreamResult, Subject } from '@microsoft/signalr';
 import type { ICoreHub, ICoreHubReceiver } from './AgentMate.ServerCore.Contracts';
-import type { PingResponse, AccountInfo, StepUpRequest, StepUpResponse, DeviceInfo, SessionInfo, TotpSetup, RecoveryCodes, CreateEnrollmentCodeRequest, EnrollmentCodeInfo, UserInfo, CreateUserRequest, ResetUserPasswordRequest, AuditQuery, AuditPage, AuditVerificationInfo, SystemInfo, ServiceInfo, MetricsHistoryRequest, MetricsHistory, MetricsStreamRequest, MetricsSample, UpdatesInfo, JobQuery, JobPage, JobInfo, JobStreamItem, AlertQuery, AlertInfo, AlertStreamRequest, ManagedService, FirewallStatus, FirewallPreset, FirewallChangeSetQuery, FirewallChangeSetInfo, ExposureInventory, FirewallChangeRequest, FirewallChangePreview, DockerStatus, ContainerList, ContainerDetails, ContainerStatsRequest, ContainerStatsBatch, ContainerLogsRequest, ContainerLogBatch, ImageInfo, VolumeInfo, NetworkInfo, DockerDiskUsage, DockerEventsRequest, DockerEvent, ContainerSummary, ContainerRemoveRequest, ImagePullRequest, ImageRemoveRequest, ContainerEnvVariable, ConsoleRequest, ConsoleInput, ConsoleOutput, DockerPruneRequest, DockerPruneResult, DockerInstallRequest, FileTarget, FileSessionInfo, FilePathRequest, FileListing, FileEntry, FileRenameRequest, FileRemoveRequest, FileChmodRequest, NginxStatus, SiteInfo, StreamProxyInfo, CertificateInfo, SiteLogRequest, SiteLogBatch, SiteSettings, SiteSaveResult, StreamProxySettings, StreamProxySaveResult, NginxApplyResult, CertificateIssueRequest, CertificateUploadRequest, CertificateUploadResult, CertificateRemoveRequest, StackInfo, StackDetails, StackRevisionRef, StackRevisionFiles, CreateStackRequest, AcknowledgeStackRisksRequest, StackRevisionInfo, StackActionRequest, ReviseStackRequest, StackEnvEntry, StackDeployRequest, RegistryCredentialInfo, SaveRegistryCredentialRequest, AssistantModeInfo, ExecApprovalNonce, ExecRequest, ExecOutput, JournalRequest, JournalBatch, SiteSnippets, OriginLockStatus, OriginLockRequest, OriginLockPreview, OriginLockResult, OriginCertificateRequestInfo, OriginCertificateInstall, DnsCredentialInfo, DnsCredentialRequest, DnsCredentialSaveResult, SecurityChecklistRequest, SecurityChecklist, SshHardeningRequest, SshHardeningPreview, SshHardeningChangeInfo, BackupRequest, BackupInfo, DirectTlsStatus, DirectTlsRequest } from '../AgentMate.ServerCore.Contracts';
+import type { PingResponse, AccountInfo, StepUpRequest, StepUpResponse, DeviceInfo, SessionInfo, TotpSetup, RecoveryCodes, CreateEnrollmentCodeRequest, EnrollmentCodeInfo, UserInfo, CreateUserRequest, ResetUserPasswordRequest, AuditQuery, AuditPage, AuditVerificationInfo, SystemInfo, ServiceInfo, MetricsHistoryRequest, MetricsHistory, MetricsStreamRequest, MetricsSample, UpdatesInfo, JobQuery, JobPage, JobInfo, JobStreamItem, AlertQuery, AlertInfo, AlertStreamRequest, ManagedService, FirewallStatus, FirewallPreset, FirewallChangeSetQuery, FirewallChangeSetInfo, ExposureInventory, FirewallChangeRequest, FirewallChangePreview, DockerStatus, ContainerList, ContainerDetails, ContainerStatsRequest, ContainerStatsBatch, ContainerLogsRequest, ContainerLogBatch, ImageInfo, VolumeInfo, NetworkInfo, DockerDiskUsage, DockerEventsRequest, DockerEvent, ContainerSummary, ContainerRemoveRequest, ImagePullRequest, ImageRemoveRequest, ContainerEnvVariable, ConsoleRequest, ConsoleInput, ConsoleOutput, DockerPruneRequest, DockerPruneResult, DockerInstallRequest, FileTarget, FileSessionInfo, FilePathRequest, FileListing, FileEntry, FileRenameRequest, FileRemoveRequest, FileChmodRequest, NginxStatus, SiteInfo, StreamProxyInfo, CertificateInfo, SiteLogRequest, SiteLogBatch, SiteSettings, SiteSaveResult, StreamProxySettings, StreamProxySaveResult, NginxApplyResult, CertificateIssueRequest, CertificateUploadRequest, CertificateUploadResult, CertificateRemoveRequest, StackInfo, StackDetails, StackRevisionRef, StackRevisionFiles, CreateStackRequest, AcknowledgeStackRisksRequest, StackRevisionInfo, StackActionRequest, ReviseStackRequest, StackEnvEntry, StackDeployRequest, RegistryCredentialInfo, SaveRegistryCredentialRequest, AssistantModeInfo, ExecApprovalNonce, ExecRequest, ExecOutput, JournalRequest, JournalBatch, SiteSnippets, OriginLockStatus, OriginLockRequest, OriginLockPreview, OriginLockResult, OriginCertificateRequestInfo, OriginCertificateInstall, DnsCredentialInfo, DnsCredentialRequest, DnsCredentialSaveResult, SecurityChecklistRequest, SecurityChecklist, SshHardeningRequest, SshHardeningPreview, SshHardeningChangeInfo, BackupRequest, BackupInfo, BackupSecretStatus, SetBackupSecretRequest, BackupDestinationInfo, SaveBackupDestinationRequest, BackupDestinationTest, BackupPlanInfo, SaveBackupPlanRequest, BackupPlanPreviewRequest, BackupPlanPreview, BackupRunInfo, RunBackupNowRequest, StoredBackupInfo, StartTelegramLoginRequest, TelegramLoginState, ContinueTelegramLoginRequest, BackupFetchInfo, PendingServerRestore, RunServerRestoreRequest, ServerRestoreStatus, DirectTlsStatus, DirectTlsRequest, ErrorReportingStatus, ErrorReportingRequest, ErrorReportingSaveResult, ErrorReportingTestResult, TelegramNotificationsStatus, TelegramNotificationsRequest, TelegramNotificationsSaveResult, TelegramNotificationsTestResult } from '../AgentMate.ServerCore.Contracts';
 
 
 // components
@@ -628,6 +628,98 @@ class ICoreHub_HubProxy implements ICoreHub {
         return await this.connection.invoke("DeleteBackup", backupId);
     }
 
+    public readonly getBackupSecret = async (): Promise<BackupSecretStatus> => {
+        return await this.connection.invoke("GetBackupSecret");
+    }
+
+    public readonly setBackupSecret = async (request: SetBackupSecretRequest): Promise<BackupSecretStatus> => {
+        return await this.connection.invoke("SetBackupSecret", request);
+    }
+
+    public readonly listBackupDestinations = async (): Promise<BackupDestinationInfo[]> => {
+        return await this.connection.invoke("ListBackupDestinations");
+    }
+
+    public readonly saveBackupDestination = async (request: SaveBackupDestinationRequest): Promise<BackupDestinationInfo> => {
+        return await this.connection.invoke("SaveBackupDestination", request);
+    }
+
+    public readonly deleteBackupDestination = async (destinationId: string): Promise<boolean> => {
+        return await this.connection.invoke("DeleteBackupDestination", destinationId);
+    }
+
+    public readonly testBackupDestination = async (request: SaveBackupDestinationRequest): Promise<BackupDestinationTest> => {
+        return await this.connection.invoke("TestBackupDestination", request);
+    }
+
+    public readonly listBackupPlans = async (): Promise<BackupPlanInfo[]> => {
+        return await this.connection.invoke("ListBackupPlans");
+    }
+
+    public readonly saveBackupPlan = async (request: SaveBackupPlanRequest): Promise<BackupPlanInfo> => {
+        return await this.connection.invoke("SaveBackupPlan", request);
+    }
+
+    public readonly deleteBackupPlan = async (planId: string): Promise<boolean> => {
+        return await this.connection.invoke("DeleteBackupPlan", planId);
+    }
+
+    public readonly previewBackupPlan = async (request: BackupPlanPreviewRequest): Promise<BackupPlanPreview> => {
+        return await this.connection.invoke("PreviewBackupPlan", request);
+    }
+
+    public readonly runBackupPlan = async (planId: string): Promise<BackupRunInfo> => {
+        return await this.connection.invoke("RunBackupPlan", planId);
+    }
+
+    public readonly runBackupNow = async (request: RunBackupNowRequest): Promise<BackupRunInfo> => {
+        return await this.connection.invoke("RunBackupNow", request);
+    }
+
+    public readonly listBackupRuns = async (limit: number): Promise<BackupRunInfo[]> => {
+        return await this.connection.invoke("ListBackupRuns", limit);
+    }
+
+    public readonly getBackupRun = async (runId: string): Promise<BackupRunInfo> => {
+        return await this.connection.invoke("GetBackupRun", runId);
+    }
+
+    public readonly listStoredBackups = async (destinationId: string): Promise<StoredBackupInfo[]> => {
+        return await this.connection.invoke("ListStoredBackups", destinationId);
+    }
+
+    public readonly deleteStoredBackup = async (destinationId: string, backupId: string): Promise<boolean> => {
+        return await this.connection.invoke("DeleteStoredBackup", destinationId, backupId);
+    }
+
+    public readonly startTelegramLogin = async (request: StartTelegramLoginRequest): Promise<TelegramLoginState> => {
+        return await this.connection.invoke("StartTelegramLogin", request);
+    }
+
+    public readonly continueTelegramLogin = async (request: ContinueTelegramLoginRequest): Promise<TelegramLoginState> => {
+        return await this.connection.invoke("ContinueTelegramLogin", request);
+    }
+
+    public readonly fetchStoredBackup = async (destinationId: string, backupId: string): Promise<BackupFetchInfo> => {
+        return await this.connection.invoke("FetchStoredBackup", destinationId, backupId);
+    }
+
+    public readonly getBackupFetch = async (fetchId: string): Promise<BackupFetchInfo> => {
+        return await this.connection.invoke("GetBackupFetch", fetchId);
+    }
+
+    public readonly getPendingServerRestore = async (): Promise<PendingServerRestore> => {
+        return await this.connection.invoke("GetPendingServerRestore");
+    }
+
+    public readonly runServerRestore = async (request: RunServerRestoreRequest): Promise<ServerRestoreStatus> => {
+        return await this.connection.invoke("RunServerRestore", request);
+    }
+
+    public readonly getServerRestoreStatus = async (): Promise<ServerRestoreStatus> => {
+        return await this.connection.invoke("GetServerRestoreStatus");
+    }
+
     public readonly getDirectTls = async (): Promise<DirectTlsStatus> => {
         return await this.connection.invoke("GetDirectTls");
     }
@@ -638,6 +730,38 @@ class ICoreHub_HubProxy implements ICoreHub {
 
     public readonly disableDirectTls = async (): Promise<DirectTlsStatus> => {
         return await this.connection.invoke("DisableDirectTls");
+    }
+
+    public readonly getErrorReporting = async (): Promise<ErrorReportingStatus> => {
+        return await this.connection.invoke("GetErrorReporting");
+    }
+
+    public readonly saveErrorReporting = async (request: ErrorReportingRequest): Promise<ErrorReportingSaveResult> => {
+        return await this.connection.invoke("SaveErrorReporting", request);
+    }
+
+    public readonly removeErrorReporting = async (): Promise<ErrorReportingStatus> => {
+        return await this.connection.invoke("RemoveErrorReporting");
+    }
+
+    public readonly sendErrorReportingTest = async (): Promise<ErrorReportingTestResult> => {
+        return await this.connection.invoke("SendErrorReportingTest");
+    }
+
+    public readonly getTelegramNotifications = async (): Promise<TelegramNotificationsStatus> => {
+        return await this.connection.invoke("GetTelegramNotifications");
+    }
+
+    public readonly saveTelegramNotifications = async (request: TelegramNotificationsRequest): Promise<TelegramNotificationsSaveResult> => {
+        return await this.connection.invoke("SaveTelegramNotifications", request);
+    }
+
+    public readonly removeTelegramNotifications = async (): Promise<TelegramNotificationsStatus> => {
+        return await this.connection.invoke("RemoveTelegramNotifications");
+    }
+
+    public readonly sendTelegramNotificationTest = async (): Promise<TelegramNotificationsTestResult> => {
+        return await this.connection.invoke("SendTelegramNotificationTest");
     }
 }
 

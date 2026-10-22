@@ -98,6 +98,8 @@ export default defineConfig({
         'src/main/deploy/wordpress/index.ts',
         'src/main/deploy/files/index.ts',
         'src/main/sftp/index.ts',
+        // Deploy hands itself to the file manager at start-up (E27), between the two entry points above.
+        'src/main/deploy/dockerFiles/backend.ts',
         // FTP and SFTP sites (E23): the contract suite and the in-memory server only serve the tests.
         'src/main/deploy/files/transport/contract.ts',
         'src/main/deploy/files/transport/fakeRemote.ts',
@@ -232,6 +234,13 @@ export default defineConfig({
             'src/renderer/src/lib/sftp/**': { lines: 95, branches: 90 },
             'src/renderer/src/stores/sftpStore.ts': { lines: 90, branches: 80 },
             'src/renderer/src/pages/SshFilesPage.tsx': { lines: 85, functions: 75, branches: 75 },
+            // Files in containers and volumes (E27): the core's file client, its pool and the Files section.
+            'src/main/deploy/dockerFiles/**': { lines: 90, branches: 80 },
+            'src/renderer/src/components/deploy/serverFiles/**': {
+              lines: 90,
+              functions: 85,
+              branches: 85,
+            },
             'src/renderer/src/components/deploy/appStore/**': {
               lines: 90,
               functions: 80,
@@ -285,6 +294,15 @@ export default defineConfig({
             'src/main/ipc/deployDirectTls.ts': { lines: 95, branches: 90 },
             'src/shared/deploy/directTlsValidation.ts': { lines: 95, branches: 90 },
             'src/renderer/src/components/deploy/security/directTls/**': {
+              lines: 90,
+              functions: 80,
+              branches: 75,
+            },
+            // Error reporting (E29): the DSN checks, the service, its IPC and its tab.
+            'src/main/deploy/errorReporting/**': { lines: 95, branches: 90 },
+            'src/main/ipc/deployErrorReporting.ts': { lines: 95, branches: 90 },
+            'src/shared/deploy/errorReportingValidation.ts': { lines: 95, branches: 90 },
+            'src/renderer/src/components/deploy/errorReporting/**': {
               lines: 90,
               functions: 80,
               branches: 75,

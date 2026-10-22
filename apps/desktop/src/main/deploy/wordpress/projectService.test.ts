@@ -544,6 +544,142 @@ describe('deploy', () => {
   });
 });
 
+describe('the saved ignore list', () => {
+  it('is kept on the link, and plans made before it are dropped', async () => {
+    const project = await createShop([THEME, TOOLS]);
+    write(project, 'wp-content/themes/shop/inc/new.php', '<?php // new');
+    const before = await service.planDeploy({ projectId: project.id });
+
+    const updated = await service.setProjectIgnore({
+      projectId: project.id,
+      ignore: { '*': ['*.map'], 'theme:shop': ['/inc/'], 'plugin:gone': ['/x/'] },
+    });
+    expect(updated.wordpress?.ignore).toEqual({ '*': ['*.map'], 'theme:shop': ['/inc/'] });
+    expect(updated.wordpress?.items.map(wpItemKey)).toEqual(['theme:shop', 'plugin:tools']);
+    expect(projects.get(project.id)?.wordpress?.ignore).toEqual(updated.wordpress?.ignore);
+
+    const stale = await failure(
+      service.deploy({ planId: before.planId, operationId: op(), force: false }),
+    );
+    expect(wordPressErrorCode(stale)).toBe('planExpired');
+
+    const cleared = await service.setProjectIgnore({ projectId: project.id, ignore: {} });
+    expect(cleared.wordpress && 'ignore' in cleared.wordpress).toBe(false);
+  });
+
+  it('keeps a changed file out of the plan and the count, and says it was left out', async () => {
+    const project = await createShop([THEME]);
+    write(project, 'wp-content/themes/shop/inc/setup.php', '<?php // changed');
+    write(project, 'wp-content/themes/shop/inc/more.php', '<?php // more');
+    write(project, 'wp-content/themes/shop/style.css', '/* Theme Name: Shop 2 */');
+    expect(await service.localChanges(project.id)).toMatchObject({ added: 1, modified: 2 });
+
+    await service.setProjectIgnore({ projectId: project.id, ignore: { 'theme:shop': ['/inc/'] } });
+    expect(await service.localChanges(project.id)).toMatchObject({
+      added: 0,
+      modified: 1,
+      deleted: 0,
+    });
+    const plan = await service.planDeploy({ projectId: project.id });
+    expect(plan.changes.map((change) => `${change.action}:${change.path}`)).toEqual([
+      'upload:style.css',
+    ]);
+    expect(plan.leftOut).toContainEqual({ item: THEME, path: 'inc/', reason: 'ignored' });
+  });
+
+  it('does not delete on the site what it now ignores, and never sends it', async () => {
+    const project = await createShop([THEME]);
+    await service.setProjectIgnore({ projectId: project.id, ignore: { '*': ['/inc/'] } });
+    rmSync(join(project.folderPath, 'wp-content/themes/shop/inc'), { recursive: true });
+    write(project, 'wp-content/themes/shop/style.css', '/* Theme Name: Shop 2 */');
+
+    const plan = await service.planDeploy({ projectId: project.id });
+    expect(plan.changes.map((change) => `${change.action}:${change.path}`)).toEqual([
+      'upload:style.css',
+    ]);
+    const result = await service.deploy({ planId: plan.planId, operationId: op(), force: false });
+    expect(result.state).toBe('done');
+    expect(fake.file(THEME, 'inc/setup.php')).toBe('<?php // setup');
+    expect(await service.localChanges(project.id)).toMatchObject({ deleted: 0 });
+  });
+
+  it('does not pull what is ignored either', async () => {
+    const project = await createShop([THEME]);
+    await service.setProjectIgnore({ projectId: project.id, ignore: { 'theme:shop': ['/inc/'] } });
+    fake.setFile(THEME, 'inc/setup.php', '<?php // site edit');
+    fake.setFile(THEME, 'style.css', '/* site edit */');
+    const plan = await service.planPull({ projectId: project.id });
+    expect(plan.changes.map((change) => change.path)).toEqual(['style.css']);
+    expect(plan.leftOut).toContainEqual({ item: THEME, path: 'inc/setup.php', reason: 'ignored' });
+  });
+
+  it('stays when items are added or taken away, for the items that remain', async () => {
+    const project = await createShop([THEME]);
+    await service.setProjectIgnore({
+      projectId: project.id,
+      ignore: { '*': ['*.map'], 'theme:shop': ['/inc/'] },
+    });
+    const more = await service.setProjectItems({
+      operationId: op(),
+      projectId: project.id,
+      items: [THEME, TOOLS],
+    });
+    expect(more.wordpress?.ignore).toEqual({ '*': ['*.map'], 'theme:shop': ['/inc/'] });
+
+    await service.setProjectIgnore({
+      projectId: project.id,
+      ignore: { '*': ['*.map'], 'theme:shop': ['/inc/'], 'plugin:tools': ['/docs/'] },
+    });
+    const fewer = await service.setProjectItems({
+      operationId: op(),
+      projectId: project.id,
+      items: [TOOLS],
+    });
+    expect(fewer.wordpress?.ignore).toEqual({ '*': ['*.map'], 'plugin:tools': ['/docs/'] });
+  });
+
+  it('refuses a line it cannot read, naming the line, and keeps what was saved', async () => {
+    const project = await createShop([THEME]);
+    await service.setProjectIgnore({ projectId: project.id, ignore: { '*': ['*.map'] } });
+    const error = await failure(
+      service.setProjectIgnore({
+        projectId: project.id,
+        ignore: { 'theme:shop': ['/ok/', '[z-a]'] },
+      }),
+    );
+    expect(wordPressErrorCode(error)).toBe('badRequest');
+    expect(error.message).toContain('Line 2');
+    expect(error.message).toContain('theme:shop');
+    expect(projects.get(project.id)?.wordpress?.ignore).toEqual({ '*': ['*.map'] });
+  });
+
+  it('refuses a project that is not linked', async () => {
+    const plain = plainProject();
+    const error = await failure(
+      service.setProjectIgnore({ projectId: plain.id, ignore: { '*': ['*.map'] } }),
+    );
+    expect(wordPressErrorCode(error)).toBe('projectNotLinked');
+  });
+});
+
+describe('what git ignores, on a real deploy', () => {
+  it('leaves out files the project .gitignore names, until the site has them', async () => {
+    const project = await createShop([THEME]);
+    write(project, '.gitignore', 'vendor/\n*.map\n');
+    write(project, 'wp-content/themes/shop/vendor/lib.php', '<?php // lib');
+    write(project, 'wp-content/themes/shop/assets/app.js.map', '{}');
+    write(project, 'wp-content/themes/shop/inc/new.php', '<?php // new');
+    const plan = await service.planDeploy({ projectId: project.id });
+    expect(plan.changes.map((change) => change.path)).toEqual(['inc/new.php']);
+    expect(plan.leftOut).toEqual(
+      expect.arrayContaining([
+        { item: THEME, path: 'vendor/', reason: 'ignored' },
+        { item: THEME, path: 'assets/app.js.map', reason: 'ignored' },
+      ]),
+    );
+  });
+});
+
 describe('pull', () => {
   it('downloads site changes, deletes site deletions, and moves the base', async () => {
     const project = await createShop([THEME, HELLO]);
@@ -964,6 +1100,143 @@ describe('moving an item between projects', () => {
     expect(linkedKeys(from.id)).toEqual(['theme:shop', 'plugin:tools']);
     expect(await bases.read(from.id)).toEqual(fromBase);
     expect(local(from, 'wp-content/themes/shop/style.css')).toBe('/* Theme Name: Shop */');
+  });
+});
+
+describe('new themes and plugins', () => {
+  const FRESH: WpItemRef = { kind: 'plugin', slug: 'fresh' };
+  const SKIN: WpItemRef = { kind: 'theme', slug: 'skin' };
+  const SOLO: WpItemRef = { kind: 'plugin', slug: 'solo.php' };
+  const steps = (plan: { changes: { action: string; path: string }[] }) =>
+    plan.changes.map((change) => `${change.action}:${change.path}`).sort();
+
+  it('lists the theme and plugin folders in a project, and which ones it already syncs', async () => {
+    const project = await createShop([THEME]);
+    write(project, 'wp-content/plugins/fresh/fresh.php', '<?php // fresh');
+    write(project, 'wp-content/plugins/solo.php', '<?php // solo');
+    write(project, 'wp-content/plugins/index.php', '<?php // Silence is golden.');
+    write(project, 'wp-content/themes/skin/style.css', '/* Theme Name: Skin */');
+    write(project, 'wp-content/themes/index.php', '<?php // Silence is golden.');
+    write(project, 'wp-content/themes/.claude-notes/x.md', 'notes');
+    write(project, 'wp-content/mu-plugins/loader.php', '<?php // loader');
+    mkdirSync(join(project.folderPath, 'wp-content/plugins/empty'), { recursive: true });
+    expect(await service.localItems(project.id)).toEqual([
+      { kind: 'theme', slug: 'shop', isFile: false, linked: true },
+      { kind: 'theme', slug: 'skin', isFile: false, linked: false },
+      { kind: 'plugin', slug: 'fresh', isFile: false, linked: false },
+      { kind: 'plugin', slug: 'solo.php', isFile: true, linked: false },
+      { kind: 'mu-plugin', slug: 'loader.php', isFile: true, linked: false },
+    ]);
+  });
+
+  it('lists nothing for a project with no wp-content, and works for a project not linked', async () => {
+    const plain = plainProject();
+    expect(await service.localItems(plain.id)).toEqual([]);
+    write(plain, 'wp-content/themes/skin/style.css', '/* Theme Name: Skin */');
+    expect(await service.localItems(plain.id)).toEqual([
+      { kind: 'theme', slug: 'skin', isFile: false, linked: false },
+    ]);
+    expect(wordPressErrorCode(await failure(service.localItems('nope')))).toBe('projectNotLinked');
+  });
+
+  it('links a plugin the site does not have without pulling, then deploys it as new', async () => {
+    const project = await createShop([THEME]);
+    write(project, 'wp-content/plugins/fresh/fresh.php', '<?php // fresh');
+    write(project, 'wp-content/plugins/fresh/inc/a.php', '<?php // a');
+    const updated = await service.setProjectItems({
+      operationId: op(),
+      projectId: project.id,
+      items: [THEME, FRESH],
+      newItems: [FRESH],
+    });
+    expect(updated.wordpress?.items.map(wpItemKey)).toEqual(['theme:shop', 'plugin:fresh']);
+    expect(local(project, 'wp-content/plugins/fresh/fresh.php')).toBe('<?php // fresh');
+
+    const plan = await service.planDeploy({ projectId: project.id, items: [FRESH] });
+    expect(plan.warnings).toContain('createsItem');
+    expect(steps(plan)).toEqual(['upload:fresh.php', 'upload:inc/a.php']);
+    const result = await service.deploy({ planId: plan.planId, operationId: op(), force: false });
+    expect(result).toMatchObject({ state: 'done', uploaded: 2 });
+    expect(fake.file(FRESH, 'fresh.php')).toBe('<?php // fresh');
+    expect(fake.file(FRESH, 'inc/a.php')).toBe('<?php // a');
+    expect((await service.planDeploy({ projectId: project.id })).changes).toEqual([]);
+  });
+
+  it('adds new items beside items it pulls from the site, in one change', async () => {
+    const project = await createShop([THEME]);
+    write(project, 'wp-content/plugins/fresh/fresh.php', '<?php // fresh');
+    const updated = await service.setProjectItems({
+      operationId: op(),
+      projectId: project.id,
+      items: [THEME, TOOLS, FRESH],
+      newItems: [FRESH],
+    });
+    expect(updated.wordpress?.items.map(wpItemKey)).toEqual([
+      'theme:shop',
+      'plugin:tools',
+      'plugin:fresh',
+    ]);
+    expect(local(project, 'wp-content/plugins/tools/tools.php')).toBe('<?php // tools');
+    expect(Object.keys((await bases.read(project.id))?.items ?? {}).sort()).toEqual([
+      'plugin:tools',
+      'theme:shop',
+    ]);
+  });
+
+  it('links a project that has no site yet with a new theme and a single-file plugin', async () => {
+    const plain = plainProject();
+    write(plain, 'wp-content/themes/skin/style.css', '/* Theme Name: Skin */');
+    write(plain, 'wp-content/plugins/solo.php', '<?php // solo');
+    const { project } = await service.linkProject({
+      operationId: op(),
+      projectId: plain.id,
+      siteId,
+      items: [SKIN, SOLO],
+      newItems: [SKIN, SOLO],
+    });
+    expect(project.wordpress?.items.map(wpItemKey)).toEqual(['theme:skin', 'plugin:solo.php']);
+    const plan = await service.planDeploy({ projectId: project.id });
+    expect(plan.warnings).toContain('createsItem');
+    expect(steps(plan)).toEqual(['upload:solo.php', 'upload:style.css']);
+    const result = await service.deploy({ planId: plan.planId, operationId: op(), force: false });
+    expect(result.state).toBe('done');
+    expect(fake.file(SKIN, 'style.css')).toBe('/* Theme Name: Skin */');
+    expect(fake.file(SOLO, 'solo.php')).toBe('<?php // solo');
+  });
+
+  it('refuses a new item the site already has, one without files, and one not in the list', async () => {
+    const project = await createShop([THEME]);
+    const linked = () => projects.get(project.id)?.wordpress?.items.map(wpItemKey);
+    const change = (items: WpItemRef[], newItems: WpItemRef[]) =>
+      service.setProjectItems({ operationId: op(), projectId: project.id, items, newItems });
+
+    write(project, 'wp-content/plugins/tools/tools.php', '<?php // mine');
+    const known = await failure(change([THEME, TOOLS], [TOOLS]));
+    expect(wordPressErrorCode(known)).toBe('badRequest');
+    expect(known.message).toContain('already has wp-content/plugins/tools');
+
+    mkdirSync(join(project.folderPath, 'wp-content/plugins/hollow'), { recursive: true });
+    const hollow: WpItemRef = { kind: 'plugin', slug: 'hollow' };
+    const empty = await failure(change([THEME, hollow], [hollow]));
+    expect(wordPressErrorCode(empty)).toBe('badRequest');
+    expect(empty.message).toContain('wp-content/plugins/hollow has no files');
+    const absent = await failure(change([THEME, FRESH], [FRESH]));
+    expect(absent.message).toContain('wp-content/plugins/fresh has no files');
+
+    write(project, 'wp-content/plugins/fresh/fresh.php', '<?php // fresh');
+    const outside = await failure(change([THEME], [FRESH]));
+    expect(wordPressErrorCode(outside)).toBe('badRequest');
+    expect(linked()).toEqual(['theme:shop']);
+  });
+
+  it('keeps the other item rules: an item the site lacks is still unknown unless it is new', async () => {
+    const project = await createShop([THEME]);
+    const ghost: WpItemRef = { kind: 'plugin', slug: 'ghost' };
+    write(project, 'wp-content/plugins/ghost/ghost.php', '<?php // ghost');
+    const error = await failure(
+      service.setProjectItems({ operationId: op(), projectId: project.id, items: [THEME, ghost] }),
+    );
+    expect(wordPressErrorCode(error)).toBe('itemUnknown');
   });
 });
 

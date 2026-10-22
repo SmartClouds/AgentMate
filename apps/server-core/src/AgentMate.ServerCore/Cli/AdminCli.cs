@@ -394,7 +394,14 @@ internal static class AdminCli
             BackupManifest manifest;
             await using (var staged = File.OpenRead(payload))
             {
-                manifest = await BackupArchive.StageAsync(staged, into, [.. context.Db.Database.GetMigrations()], context.Now, CancellationToken.None);
+                var free = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(into))!).AvailableFreeSpace;
+                manifest = await BackupArchive.StageAsync(
+                    staged,
+                    into,
+                    [.. context.Db.Database.GetMigrations()],
+                    context.Now,
+                    CancellationToken.None,
+                    BackupArchive.RestoreLimitsFor(staged.Length, free));
             }
 
             var owners = await BackupArchive.OwnersAsync(into, CancellationToken.None);

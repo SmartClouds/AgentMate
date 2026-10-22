@@ -206,6 +206,8 @@ Two buttons sit in the card's header:
 
 The **Backups** tab (Owners only) makes and restores backups of the server core.
 
+This is the quick backup of the core alone. For backups of the whole server (apps, volumes and firewall rules too), on a schedule and sent to other places, use the server's **Backups** section. See [Server backups](deploy-server-backups.md).
+
 A backup holds the core's database (users, computers, sites, certificates, settings), the keys that open what it keeps encrypted, and the apps' files. It is encrypted on the server with a passphrase you choose (AES-256-GCM, key stretched with PBKDF2), saved on your computer and deleted from the server.
 
 #### Make a backup

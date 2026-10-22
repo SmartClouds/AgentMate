@@ -1,3 +1,4 @@
+import type { ContainerList } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
@@ -20,15 +21,20 @@ const sites = [
   },
 ] as never;
 
-function render(initial: string, extra: Record<string, unknown> = {}) {
+function render(
+  initial: string,
+  extra: Record<string, unknown> = {},
+  props: { scope?: 'stack'; containers?: ContainerList } = {},
+) {
   const onAskAi = vi.fn();
   const view = renderWithProviders(
     <div style={{ height: 600 }}>
       <LogViewer
         serverId={SERVER.id}
-        containers={containers}
+        containers={props.containers ?? containers}
         sites={sites}
         initial={initial}
+        scope={props.scope}
         onAskAi={onAskAi}
       />
     </div>,
@@ -141,6 +147,62 @@ describe('LogViewer', () => {
       },
     });
     expect(await screen.findByText(/cannot do that/)).toBeInTheDocument();
+  });
+});
+
+describe('LogViewer, how much and which logs', () => {
+  it('starts with as many lines as asked, up to 2000 for a journal and 5000 for a container', async () => {
+    const { bridge, user } = render('journal:nginx.service');
+    await user.click(screen.getByLabelText('Lines to read'));
+    expect(screen.queryByRole('option', { name: 'Last 5,000 lines' })).not.toBeInTheDocument();
+    await user.click(await screen.findByRole('option', { name: 'Last 2,000 lines' }));
+    await waitFor(() =>
+      expect(bridge.$fn('deployLogs.watchJournal')).toHaveBeenLastCalledWith(
+        expect.objectContaining({ unit: 'nginx.service', lines: 2_000 }),
+      ),
+    );
+
+    await user.click(screen.getByLabelText('Log source'));
+    await user.click(await screen.findByRole('option', { name: 'Container shop-api-1' }));
+    await user.click(screen.getByLabelText('Lines to read'));
+    await user.click(await screen.findByRole('option', { name: 'Last 5,000 lines' }));
+    await waitFor(() =>
+      expect(bridge.$fn('deployDocker.watchLogs')).toHaveBeenLastCalledWith(
+        expect.objectContaining({ tail: 5_000 }),
+      ),
+    );
+  });
+
+  it('offers only the app and its containers when kept to one app', async () => {
+    const shop = containers.groups.filter((group) => group.project === 'shop');
+    const { user } = render('stack:shop', {}, { scope: 'stack', containers: { groups: shop } });
+    await user.click(screen.getByLabelText('Log source'));
+    const options = (await screen.findAllByRole('option')).map((option) => option.textContent);
+    expect(options).toContain('App shop: every service');
+    expect(options).toContain('Container shop-api-1');
+    expect(options.some((text) => /Journal|Site|audit/.test(text ?? ''))).toBe(false);
+  });
+
+  it('says when an app has more services than are followed together', async () => {
+    const shop = containers.groups.find((group) => group.project === 'shop');
+    const first = shop?.containers[0];
+    if (!shop || !first) throw new Error('the seed has a shop');
+    const bigger: ContainerList = {
+      groups: [
+        {
+          ...shop,
+          containers: [
+            ...shop.containers,
+            { ...first, id: `${first.id}-extra`, name: 'shop-worker-1', composeService: 'worker' },
+          ],
+        },
+      ],
+    };
+    const { bridge } = render('stack:shop', {}, { scope: 'stack', containers: bigger });
+    expect(
+      screen.getByText(/Showing the first 4 of 5 services together. Pick one service/),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(bridge.$fn('deployDocker.watchLogs')).toHaveBeenCalledTimes(4));
   });
 });
 

@@ -1,4 +1,4 @@
-import { coreErrorMessage } from '@shared/coreErrors';
+import { coreErrorCode, coreErrorMessage } from '@shared/coreErrors';
 import type { DeployServer } from '@shared/deployTypes';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
@@ -41,7 +41,10 @@ interface Known {
 
 /** Ask again rather than let a change race the end of the window. */
 const MARGIN_MS = 30_000;
-/** SignalR's words for a refused policy; the role was checked before the button showed. */
+/**
+ * SignalR's words for a refused policy; the role was checked before the button showed. Calls made
+ * through the main process's callCore come back as `[core:stepUpRequired]` instead.
+ */
 const UNAUTHORIZED = /because user is unauthorized/i;
 
 export function useStepUp(server: DeployServer): StepUp {
@@ -101,7 +104,10 @@ export function useStepUp(server: DeployServer): StepUp {
       try {
         return await work();
       } catch (error) {
-        if (!UNAUTHORIZED.test(error instanceof Error ? error.message : String(error))) throw error;
+        const refusedStepUp =
+          UNAUTHORIZED.test(error instanceof Error ? error.message : String(error)) ||
+          coreErrorCode(error) === 'stepUpRequired';
+        if (!refusedStepUp) throw error;
         if (!(await confirm(state.twoFactor))) return undefined;
         return await work();
       }

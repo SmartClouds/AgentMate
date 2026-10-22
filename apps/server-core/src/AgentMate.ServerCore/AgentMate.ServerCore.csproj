@@ -31,12 +31,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Cronos" />
     <PackageReference Include="Docker.DotNet.Enhanced" />
+    <PackageReference Include="FluentFTP" />
+    <PackageReference Include="Hangfire.AspNetCore" />
+    <PackageReference Include="Hangfire.Core" />
+    <PackageReference Include="Hangfire.Storage.SQLite" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" />
+    <PackageReference Include="SSH.NET" />
+    <PackageReference Include="OpenTelemetry" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     <PackageReference Include="Tapper.Attributes" />
     <PackageReference Include="TypedSignalR.Client.TypeScript.Attributes" />
+    <PackageReference Include="WTelegramClient" />
   </ItemGroup>
 
   <!-- Passwords long enough to pass the length rule but too common to allow (see its README). -->

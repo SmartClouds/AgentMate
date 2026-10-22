@@ -42,6 +42,7 @@ import {
   wpCanonicalPair,
   wpCanonicalRequest,
   wpCanonicalResponse,
+  wpConnectorReleaseUrl,
   wpItemKey,
 } from '@agentmat/core';
 import { compareConnectorVersions } from '../connectorBundle';
@@ -106,6 +107,13 @@ export interface FakeConnectorSwitches {
   notReplaceable: boolean;
   /** The site fails its health check after a connector update, so the update is undone. */
   updateHealthFails: boolean;
+  /**
+   * With the route: the connector can download an update from the GitHub release itself, and
+   * `/site/info` says `updateDownload: true`. Off, it is a connector that only takes blobs.
+   */
+  updateDownload: boolean;
+  /** An update the site downloads is refused with `downloadFailed` and this message. */
+  downloadFails: string | null;
   /** A connector update is refused with this error (the site's own reasons: syntax, size, ...). */
   refuseUpdate: { code: WpErrorCode; message: string; details?: Record<string, unknown> } | null;
 }
@@ -268,6 +276,8 @@ export class FakeConnector {
     selfUpdate: true,
     notReplaceable: false,
     updateHealthFails: false,
+    updateDownload: true,
+    downloadFails: null,
     refuseUpdate: null,
   };
   readonly limits: WpLimits = defaultLimits();
@@ -283,7 +293,16 @@ export class FakeConnector {
   /** The version the plugin reports; a connector update changes it. */
   pluginVersion: string = WP_CONNECTOR_VERSION;
   /** Every connector update that arrived and was not refused, with its outcome. */
-  readonly updates: { version: string; files: string[]; state: 'updated' | 'rolledBack' }[] = [];
+  readonly updates: {
+    version: string;
+    files: string[];
+    state: 'updated' | 'rolledBack';
+    /** `download`: the site fetched this address itself; `upload`: the files came as blobs. */
+    source: 'download' | 'upload';
+    url?: string;
+  }[] = [];
+  /** Every release address the site was asked to download, including refused ones. */
+  readonly downloads: string[] = [];
   activeTheme = { stylesheet: 'shop', template: 'shop' };
   private readonly siteKey = privateKeyFromSeed(seedBytes(WP_VECTORS.keys.site.seedHex));
   private readonly nonces = new Set<string>();
@@ -780,6 +799,7 @@ export class FakeConnector {
       filesystemMethod: 'direct',
       readOnlyByConstant: false,
       ...(this.switches.selfUpdate ? { selfUpdate: !this.switches.notReplaceable } : {}),
+      ...(this.switches.selfUpdate && this.switches.updateDownload ? { updateDownload: true } : {}),
       sodium: 'native',
       limits: this.limits,
       guard: { installed: true, rescueUrl: this.rescueUrl },
@@ -805,8 +825,23 @@ export class FakeConnector {
   ) {
     const request = input as Partial<WpConnectorUpdateRequest>;
     const files = Array.isArray(request.files) ? request.files : null;
-    if (typeof request.version !== 'string' || !files || files.length !== blobs.length) {
+    // A connector without the download takes only blobs, so a download request has too few.
+    const url =
+      this.switches.updateDownload && request.download !== undefined
+        ? request.download?.url
+        : undefined;
+    if (
+      typeof request.version !== 'string' ||
+      !files ||
+      files.length !== (url === undefined ? blobs.length : files.length)
+    ) {
       throw new FakeError('badRequest', 'Send a version and one blob per file.');
+    }
+    if (url !== undefined && (url !== wpConnectorReleaseUrl(request.version) || blobs.length > 0)) {
+      throw new FakeError(
+        'badRequest',
+        'An update the site downloads names the release, no blobs.',
+      );
     }
     if (this.activeDeploy()) {
       throw new FakeError('busy', 'Another deploy is still open on this site.', {
@@ -815,7 +850,17 @@ export class FakeConnector {
     }
     const refusal = this.switches.refuseUpdate;
     if (refusal) throw new FakeError(refusal.code, refusal.message, refusal.details);
+    if (url !== undefined) {
+      this.downloads.push(url);
+      if (this.switches.downloadFails !== null) {
+        throw new FakeError('updateRefused', this.switches.downloadFails, {
+          reason: 'downloadFailed',
+        });
+      }
+    }
     files.forEach((file, index) => {
+      // A downloaded release is taken to match the list; the plugin's own tests check that.
+      if (url !== undefined) return;
       if (sha(blobs[index]) !== file.sha256 || blobs[index].length !== file.size) {
         throw new FakeError('updateRefused', 'A file does not match its hash.', {
           reason: 'badPackage',
@@ -845,6 +890,8 @@ export class FakeConnector {
       version: request.version,
       files: paths,
       state: failed ? 'rolledBack' : 'updated',
+      source: url === undefined ? 'upload' : 'download',
+      ...(url === undefined ? {} : { url }),
     });
     if (failed) {
       this.record('connectorRolledBack', connection.label, `Tried ${request.version}.`);

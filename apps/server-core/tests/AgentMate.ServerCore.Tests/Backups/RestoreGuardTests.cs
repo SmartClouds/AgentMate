@@ -128,6 +128,36 @@ public sealed class RestoreGuardTests : IDisposable
     }
 
     [Fact]
+    public async Task A_backup_being_made_blocks_the_restore_and_a_finished_one_does_not()
+    {
+        await CoreDatabase.PrepareAsync(CoreDatabase.PathIn(_server), Cancel);
+        var id = Guid.NewGuid();
+        await using (var services = AdminCli.BuildServices(Environment))
+        await using (var scope = services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<CoreDbContext>();
+            db.BackupRuns.Add(new BackupRunRecord { Id = id, PlanName = "Nightly", State = BackupRunState.Running, StartedAt = 1 });
+            await db.SaveChangesAsync(Cancel);
+        }
+
+        CoreDatabase.ReleasePool(CoreDatabase.PathIn(_server));
+        var (_, waiting, _) = await RestoreAsync();
+        await using (var services = AdminCli.BuildServices(Environment))
+        await using (var scope = services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<CoreDbContext>();
+            (await db.BackupRuns.FindAsync([id], Cancel))!.State = BackupRunState.Succeeded;
+            await db.SaveChangesAsync(Cancel);
+        }
+
+        CoreDatabase.ReleasePool(CoreDatabase.PathIn(_server));
+        var (_, finished, _) = await RestoreAsync();
+
+        Assert.Contains("backup \"Nightly\" being made", waiting, StringComparison.Ordinal);
+        Assert.Contains(NotABackup, finished, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task A_confirmed_firewall_change_does_not()
     {
         var id = await FirewallChangeAsync(FirewallChangeState.AwaitingConfirmation);

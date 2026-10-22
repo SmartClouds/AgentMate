@@ -22,8 +22,13 @@ const DEFAULT_SIZE = { cols: 80, rows: 24 };
  * `TerminalPane` can render it like any other session. The pane knows the session by its own id
  * while the main process names the console by a subscription id that comes back from the open
  * call, so this keeps the mapping, and holds on to output that arrives before that answer.
+ * Without a command it opens the container's shell; `user` runs it as someone else.
  */
-export function containerConsoleAdapter(serverId: string, containerId: string) {
+export function containerConsoleAdapter(
+  serverId: string,
+  containerId: string,
+  run: { command?: string[]; user?: string } = {},
+) {
   const deploy = window.agentmat.deployDocker;
   let paneId: string | null = null;
   let consoleId: string | null = null;
@@ -65,6 +70,8 @@ export function containerConsoleAdapter(serverId: string, containerId: string) {
           containerId,
           columns: options.cols ?? DEFAULT_SIZE.cols,
           rows: options.rows ?? DEFAULT_SIZE.rows,
+          ...(run.command ? { command: run.command } : {}),
+          ...(run.user ? { user: run.user } : {}),
         });
       } catch (error) {
         off?.();

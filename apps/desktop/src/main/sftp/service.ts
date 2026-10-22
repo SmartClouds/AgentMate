@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { filesError, filesErrorCode } from '../../shared/deployFilesErrors';
+import { parseDockerFileTargetId } from '../../shared/fileTargets';
 import { IPC } from '../../shared/ipcChannels';
 import { isValidEntryName } from '../../shared/sftpNames';
 import type {
@@ -223,8 +224,7 @@ export class SftpService {
 
   private async start(pending: PendingOpen): Promise<SftpSessionInfo> {
     const { ownerId, serverId } = pending;
-    const server = await this.deps.findServer(serverId);
-    if (!server) throw serverGone();
+    if (!(await this.deps.findServer(serverId))) throw serverGone();
     let lease: ClientLease;
     try {
       lease = await this.deps.pool.acquire(serverId);
@@ -232,12 +232,15 @@ export class SftpService {
       throw connectError(error);
     }
     let home: string;
+    let current: SftpServerInfo | null;
     try {
       if (pending.cancelled) throw closedWhileOpening();
       home = await lease.client.sftpRealpath('.');
       if (pending.cancelled) throw closedWhileOpening();
       // The server may have been removed while this logged in; its sessions are already closed.
-      if (!(await this.deps.findServer(serverId))) throw serverGone();
+      // This look also knows what logging in learned (a container's user, say).
+      current = await this.deps.findServer(serverId);
+      if (!current) throw serverGone();
       // And the window may have gone during that last look.
       if (pending.cancelled) throw closedWhileOpening();
     } catch (error) {
@@ -246,14 +249,19 @@ export class SftpService {
     }
 
     const sessionId = this.randomId();
+    const { client } = lease;
     const info: SftpSessionInfo = {
       sessionId,
       serverId,
-      nickname: server.nickname,
-      host: server.host,
-      port: server.port,
-      username: server.username,
+      nickname: current.nickname,
+      host: current.host,
+      port: current.port,
+      username: current.username,
       home,
+      kind: parseDockerFileTargetId(serverId)?.kind ?? 'ssh',
+      // A Docker target says what it allows (E27); a saved server's disk allows everything.
+      ...(client.capabilities ? { capabilities: client.capabilities() } : {}),
+      ...(client.limitation ? { limitation: client.limitation() } : {}),
     };
     // The engine only calls back once it has work, by when `session` below is set.
     const engine = createTransferEngine({
@@ -388,6 +396,16 @@ export class SftpService {
     await Promise.all(
       [...this.sessions.values()].map((session) => this.closeWithEvent(session, 'quit')),
     );
+  }
+
+  /** The servers and Docker targets with a session, open or opening. */
+  serverIds(): string[] {
+    const ids = new Set<string>();
+    for (const session of this.sessions.values()) ids.add(session.info.serverId);
+    for (const pending of this.pending.values()) {
+      if (!pending.cancelled) ids.add(pending.serverId);
+    }
+    return [...ids];
   }
 
   /** Batches not over yet, across every session. */
@@ -532,9 +550,10 @@ export class SftpService {
     const session = this.own(ownerId, sessionId);
     const { home } = session.info;
     const path = resolveRemoteInput(input, home, home);
-    const entries = await this.withBrowse(session, path, 'read', async (client) => {
+    const { entries, partial } = await this.withBrowse(session, path, 'read', async (client) => {
       try {
-        return await client.sftpListDetailed(path);
+        if (client.sftpListing) return await client.sftpListing(path);
+        return { entries: await client.sftpListDetailed(path), partial: false };
       } catch (error) {
         if (isDropped(client, error)) throw error;
         // Listing a file fails like a missing folder would; say which it was.
@@ -549,6 +568,8 @@ export class SftpService {
       path,
       parent: parentOf(path),
       entries: entries.map((entry) => toRemoteEntry(path, entry)),
+      // A container's big folder listed without a shell comes back cut short (E27).
+      ...(partial ? { partial: true } : {}),
     };
   }
 

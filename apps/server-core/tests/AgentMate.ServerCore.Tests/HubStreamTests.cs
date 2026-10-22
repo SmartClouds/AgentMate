@@ -215,9 +215,13 @@ public sealed class HubStreamTests
             return Task.CompletedTask;
         };
 
-        _ = hub.InvokeAsync<AlertInfo[]>(nameof(ICoreHub.ListAlerts), new string('x', 128 * 1024), Cancel);
+        var tooBig = hub.InvokeAsync<AlertInfo[]>(nameof(ICoreHub.ListAlerts), new string('x', 128 * 1024), Cancel);
 
         // The core closes a connection that sends more than 64 KB in one message.
         await closed.Task.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
+
+        // The call itself fails with the connection. Observed here, so it is not left for the finalizer
+        // to throw into whichever test host is running by then.
+        await Assert.ThrowsAnyAsync<Exception>(() => tooBig);
     }
 }

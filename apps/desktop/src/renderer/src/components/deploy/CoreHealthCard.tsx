@@ -87,6 +87,8 @@ export function CoreHealthCard({
   }
 
   const answering = health.isSuccess && !health.isError;
+  // The check goes through direct TLS when it answers, so it says which way the core is reached.
+  const transport = health.data?.transport ?? core.transport;
   const status = health.isError ? (
     <Chip tone="warning">Not answering</Chip>
   ) : answering ? (
@@ -106,7 +108,7 @@ export function CoreHealthCard({
         health.isError
           ? 'The last check did not get an answer.'
           : health.data
-            ? `Answering through ${TRANSPORT_PHRASE[core.transport]}, checked ${shortAge(health.data.checkedAt, now)} ago.`
+            ? `Answering through ${TRANSPORT_PHRASE[transport]}, checked ${shortAge(health.data.checkedAt, now)} ago.`
             : 'Checking whether the core answers.'
       }
       actions={
@@ -189,7 +191,7 @@ export function CoreHealthCard({
         <Fact label="Processor" mono>
           {core.architecture}
         </Fact>
-        <Fact label="Connection">{TRANSPORT_TEXT[core.transport]}</Fact>
+        <Fact label="Connection">{TRANSPORT_TEXT[transport]}</Fact>
       </dl>
     </DeployCard>
   );

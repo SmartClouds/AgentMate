@@ -68,7 +68,42 @@ internal interface IDockerEngine
 
     /// <summary>Events from <paramref name="since"/> (or from now), then as they happen.</summary>
     IAsyncEnumerable<EngineEvent> StreamEventsAsync(EventCursor? since, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// docker exec without a TTY (E27): the command runs with its argv as given (no shell unless it
+    /// is one), stdout and stderr come back apart, and reading stops at the output cap. A command
+    /// still running at the timeout fails the call.
+    /// </summary>
+    Task<ExecResult> RunExecAsync(string container, IReadOnlyList<string> command, string? user, TimeSpan timeout, int outputCapBytes, CancellationToken cancellationToken);
+
+    /// <summary>The archive API's stat of a path (HEAD); null when nothing is there. Throws <see cref="DockerNotFoundException"/> for a container that does not exist.</summary>
+    Task<PathStat?> StatPathAsync(string container, string path, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The archive API's tar of a path, streamed as the engine writes it. "/folder/." gives the
+    /// folder's contents as "./name" entries. Throws <see cref="DockerPathNotFoundException"/> when
+    /// nothing is at the path.
+    /// </summary>
+    Task<Stream> GetArchiveAsync(string container, string path, CancellationToken cancellationToken);
+
+    /// <summary>Extracts a tar into a folder that is there (PUT), owners as the tar's headers give them.</summary>
+    Task PutArchiveAsync(string container, string folder, Stream archive, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Creates and starts a helper container for a volume (E27), pulling its image first when it
+    /// is missing. Returns the container's id.
+    /// </summary>
+    Task<string> CreateHelperAsync(HelperSpec spec, CancellationToken cancellationToken);
+
+    /// <summary>Removes a helper container, running or not; one that is already gone is no error.</summary>
+    Task RemoveHelperAsync(string helper, CancellationToken cancellationToken);
+
+    /// <summary>The ids of every container, running or not, that carries this label.</summary>
+    Task<IReadOnlyList<string>> ListLabelledContainersAsync(string label, CancellationToken cancellationToken);
 }
+
+/// <summary>Nothing is at that path in the container (the container itself is there).</summary>
+internal sealed class DockerPathNotFoundException(string message) : Exception(message);
 
 /// <summary>The engine is not installed, not running, or speaks an API too old for the core.</summary>
 internal sealed class DockerUnavailableException(string message, Exception? inner = null) : Exception(message, inner);
@@ -142,6 +177,26 @@ internal interface IExecSession : IAsyncDisposable
     /// <summary>The exit code once the process has ended, or null if it is unknown.</summary>
     Task<int?> ExitCodeAsync(CancellationToken cancellationToken);
 }
+
+/// <summary>What a command run without a TTY printed, and how it ended.</summary>
+/// <param name="ExitCode">Null when it is not known, as when the output was cut at the cap.</param>
+/// <param name="Truncated">The output reached the cap; nothing after it was read.</param>
+internal sealed record ExecResult(int? ExitCode, byte[] Stdout, byte[] Stderr, bool Truncated);
+
+/// <summary>The archive API's stat of a path, with the mode as a POSIX st_mode (type bits included).</summary>
+/// <param name="LinkTarget">Where a link points, as stored; null for anything else.</param>
+internal sealed record PathStat(string Name, long Size, int Mode, long MtimeUnixMs, string? LinkTarget);
+
+/// <summary>
+/// A helper container: the image (pinned by digest), the volume and where it is mounted, the
+/// labels that find it again, and its command. It runs without a network.
+/// </summary>
+internal sealed record HelperSpec(
+    ImageReference Image,
+    string Volume,
+    string MountPoint,
+    IReadOnlyDictionary<string, string> Labels,
+    IReadOnlyList<string> Command);
 
 /// <summary>A validated image reference split the way the engine's pull wants it.</summary>
 internal sealed record ImageReference(string Repository, string? Tag, string? Digest)

@@ -486,6 +486,34 @@
       "reason": "hardDenied"
     },
     {
+      "path": ".claude-plugin/plugin.json",
+      "ok": false,
+      "reason": "hardDenied"
+    },
+    {
+      "path": "inc/.CLAUDE.local/x.md",
+      "ok": false,
+      "reason": "hardDenied"
+    },
+    {
+      "path": ".agentmate-cache/a.json",
+      "ok": false,
+      "reason": "hardDenied"
+    },
+    {
+      "path": "build/.AgentMate.old/a",
+      "ok": false,
+      "reason": "hardDenied"
+    },
+    {
+      "path": ".claudia/x",
+      "ok": true
+    },
+    {
+      "path": "claude-notes/a.txt",
+      "ok": true
+    },
+    {
       "path": ".mcp.json",
       "ok": false,
       "reason": "hardDenied"

@@ -333,6 +333,7 @@ describe('DeployService.health', () => {
       apiVersion: 1,
       startedAtUnixMs: 99,
       checkedAt: 1_000,
+      transport: 'bridge',
     });
     expect(transports.map((transport) => transport.kind)).toEqual(['bridge']);
     expect(released).toHaveBeenCalled();

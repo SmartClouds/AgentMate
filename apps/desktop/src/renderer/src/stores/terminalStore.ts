@@ -44,7 +44,7 @@ export interface TerminalSessionMeta {
    * For a 'container' session: a console in a container on a server with the core (Deploy).
    * These panes live inside the Containers screen and are never put in the store.
    */
-  container?: { serverId: string; containerId: string };
+  container?: { serverId: string; containerId: string; command?: string[]; user?: string };
   /**
    * Brought back from a previous run of the app. Its pane only reconnects to the shell that
    * is still running in the background and closes itself if that shell is gone, so a

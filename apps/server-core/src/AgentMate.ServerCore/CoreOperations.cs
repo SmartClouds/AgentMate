@@ -1,8 +1,10 @@
 using AgentMate.ServerCore.Alerts;
 using AgentMate.ServerCore.Assistant;
+using AgentMate.ServerCore.Backups;
 using AgentMate.ServerCore.Contracts;
 using AgentMate.ServerCore.Docker;
 using AgentMate.ServerCore.Execution;
+using AgentMate.ServerCore.Files;
 using AgentMate.ServerCore.Firewall;
 using AgentMate.ServerCore.Hardening;
 using AgentMate.ServerCore.Hosting;
@@ -90,11 +92,17 @@ internal static class CoreOperations
         services.AddSingleton<ServerServices>();
         services.AddCoreDocker();
 
+        // Files in containers and volumes (E27), through the engine.
+        services.AddCoreFiles();
+
         // Recovery of jobs a previous core left running comes first, then the samplers and checks.
         services.AddHostedService(provider => provider.GetRequiredService<JobEngine>());
         services.AddHostedService(provider => provider.GetRequiredService<MetricsSampler>());
         services.AddHostedService(provider => provider.GetRequiredService<UpdatesCache>());
         services.AddHostedService<AlertMonitor>();
+        // Containers that keep crashing (E30), from Docker's events.
+        services.AddSingleton(ContainerWatchOptions.Default);
+        services.AddHostedService<ContainerWatcher>();
         services.AddHostedService<CoreMaintenance>();
 
         // The host firewall (E13): its change sets settle themselves once the database is up.
@@ -108,6 +116,9 @@ internal static class CoreOperations
 
         // Compose stacks (E07): after the job engine, so its recovery runs after the jobs' own.
         services.AddCoreStacks();
+
+        // Server backups (E28): plans on Hangfire's schedule, then its server.
+        services.AddCoreBackups();
 
         // The Deploy AI's exec stream and the logs center's journal (E09).
         services.AddCoreAssistant();

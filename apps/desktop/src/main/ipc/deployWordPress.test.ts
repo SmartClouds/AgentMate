@@ -40,6 +40,8 @@ function harness(trusted = true) {
     cancel: fn(),
     createProject: fn(),
     setProjectItems: fn(),
+    setProjectIgnore: fn(),
+    localItems: fn(),
     linkProject: fn(),
     unlinkProject: fn(),
     localChanges: fn(),
@@ -376,6 +378,85 @@ describe('registerDeployWordPressHandlers', () => {
       { ...link, projectId: 42 },
     ]) {
       await expect(call(IPC.deployWordPress.linkProject, bad)).rejects.toThrow();
+    }
+  });
+
+  it('reads the new items of an item change and a link, and lists a project folder', async () => {
+    const { service, call } = harness();
+    const fresh = { kind: 'plugin', slug: 'fresh' };
+    await call(IPC.deployWordPress.setProjectItems, {
+      operationId: OPERATION,
+      projectId: PROJECT,
+      items: [THEME, fresh],
+      newItems: [fresh, fresh],
+    });
+    expect(service.setProjectItems).toHaveBeenLastCalledWith({
+      operationId: OPERATION,
+      projectId: PROJECT,
+      items: [THEME, fresh],
+      newItems: [fresh],
+    });
+    await call(IPC.deployWordPress.linkProject, {
+      operationId: OPERATION,
+      projectId: PROJECT,
+      siteId: SITE,
+      items: [fresh],
+      newItems: [fresh],
+    });
+    expect(service.linkProject).toHaveBeenLastCalledWith({
+      operationId: OPERATION,
+      projectId: PROJECT,
+      siteId: SITE,
+      items: [fresh],
+      newItems: [fresh],
+    });
+    for (const newItems of [
+      'x',
+      [{ kind: 'widget', slug: 'w' }],
+      [{ kind: 'plugin', slug: '../x' }],
+    ]) {
+      await expect(
+        call(IPC.deployWordPress.setProjectItems, {
+          operationId: OPERATION,
+          projectId: PROJECT,
+          items: [THEME],
+          newItems,
+        }),
+      ).rejects.toThrow();
+    }
+
+    await call(IPC.deployWordPress.localItems, PROJECT);
+    expect(service.localItems).toHaveBeenCalledWith(PROJECT);
+    await expect(call(IPC.deployWordPress.localItems, '../x')).rejects.toThrow('not a project');
+  });
+
+  it('reads the ignore list a project saves, and refuses what is not one', async () => {
+    const { service, call } = harness();
+    const ignore = { '*': ['*.map'], 'theme:twentytwentyfive': ['/src/', '/docs/'] };
+    await call(IPC.deployWordPress.setProjectIgnore, { projectId: PROJECT, ignore, extra: 1 });
+    expect(service.setProjectIgnore).toHaveBeenCalledWith({ projectId: PROJECT, ignore });
+    await call(IPC.deployWordPress.setProjectIgnore, { projectId: PROJECT, ignore: {} });
+    expect(service.setProjectIgnore).toHaveBeenLastCalledWith({ projectId: PROJECT, ignore: {} });
+
+    const many = Object.fromEntries(
+      Array.from({ length: 300 }, (_, index) => [`plugin:p${index}`, ['/x/']]),
+    );
+    for (const bad of [
+      { ignore },
+      { projectId: 42, ignore },
+      { projectId: PROJECT },
+      { projectId: PROJECT, ignore: ['/src/'] },
+      { projectId: PROJECT, ignore: { '*': '/src/' } },
+      { projectId: PROJECT, ignore: { '*': [7] } },
+      { projectId: PROJECT, ignore: { '*': ['a\nb'] } },
+      { projectId: PROJECT, ignore: { '*': ['x'.repeat(5000)] } },
+      {
+        projectId: PROJECT,
+        ignore: { '*': Array.from({ length: 2000 }, (_, index) => `/f${index}`) },
+      },
+      { projectId: PROJECT, ignore: many },
+    ]) {
+      await expect(call(IPC.deployWordPress.setProjectIgnore, bad)).rejects.toThrow();
     }
   });
 

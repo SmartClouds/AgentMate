@@ -187,7 +187,7 @@ export type AuditVerificationInfo = {
 }
 
 /** Transpiled from AgentMate.ServerCore.Contracts.AlertKind */
-export type AlertKind = "diskPressure" | "jobFailed" | "rebootRequired" | "firewallRolledBack" | "firewallRollbackFailed" | "certificateRenewalFailed" | "originLockRefreshFailed";
+export type AlertKind = "diskPressure" | "jobFailed" | "rebootRequired" | "firewallRolledBack" | "firewallRollbackFailed" | "certificateRenewalFailed" | "originLockRefreshFailed" | "backupFailed" | "containerCrashLoop";
 
 /** Transpiled from AgentMate.ServerCore.Contracts.AlertSeverity */
 export type AlertSeverity = "info" | "warning" | "critical";
@@ -460,6 +460,405 @@ export type BackupInfo = {
     coreVersion: string;
     /** Transpiled from AgentMate.ServerCore.Contracts.BackupContents */
     contents: BackupContents;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.BackupDestinationKind */
+export type BackupDestinationKind = "folder" | "ftp" | "sftp" | "googleDrive" | "oneDrive" | "telegram";
+
+/** Transpiled from AgentMate.ServerCore.Contracts.BackupTrigger */
+export type BackupTrigger = "schedule" | "manual" | "beforeRestore";
+
+/** Transpiled from AgentMate.ServerCore.Contracts.BackupRunState */
+export type BackupRunState = "running" | "succeeded" | "partlyFailed" | "failed";
+
+/** Transpiled from AgentMate.ServerCore.Contracts.BackupTargetState */
+export type BackupTargetState = "pending" | "uploading" | "succeeded" | "failed";
+
+/** Transpiled from AgentMate.ServerCore.Contracts.BackupSecretStatus */
+export type BackupSecretStatus = {
+    /** Transpiled from bool */
+    isSet: boolean;
+    /** Transpiled from string? */
+    keyId?: string;
+    /** Transpiled from long */
+    updatedAtUnixMs?: number;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.SetBackupSecretRequest */
+export type SetBackupSecretRequest = {
+    /** Transpiled from string? */
+    currentSecret?: string;
+    /** Transpiled from string */
+    newSecret: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.BackupDestinationSettings */
+export type BackupDestinationSettings = {
+    /** Transpiled from string? */
+    path?: string;
+    /** Transpiled from string? */
+    host?: string;
+    /** Transpiled from int */
+    port?: number;
+    /** Transpiled from string? */
+    userName?: string;
+    /** Transpiled from bool */
+    tls?: boolean;
+    /** Transpiled from string? */
+    hostKeySha256?: string;
+    /** Transpiled from string? */
+    clientId?: string;
+    /** Transpiled from string? */
+    folderName?: string;
+    /** Transpiled from int */
+    apiId?: number;
+    /** Transpiled from string? */
+    accountName?: string;
+    /** Transpiled from bool */
+    isPremium?: boolean;
+    /** Transpiled from string? */
+    chat?: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.BackupDestinationSecret */
+export type BackupDestinationSecret = {
+    /** Transpiled from string? */
+    password?: string;
+    /** Transpiled from string? */
+    privateKey?: string;
+    /** Transpiled from string? */
+    privateKeyPassphrase?: string;
+    /** Transpiled from string? */
+    clientSecret?: string;
+    /** Transpiled from string? */
+    refreshToken?: string;
+    /** Transpiled from string? */
+    apiHash?: string;
+    /** Transpiled from string? */
+    telegramLoginId?: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.BackupDestinationInfo */
+export type BackupDestinationInfo = {
+    /** Transpiled from System.Guid */
+    id: string;
+    /** Transpiled from string */
+    name: string;
+    /** Transpiled from AgentMate.ServerCore.Contracts.BackupDestinationKind */
+    kind: BackupDestinationKind;
+    /** Transpiled from string */
+    summary: string;
+    /** Transpiled from AgentMate.ServerCore.Contracts.BackupDestinationSettings */
+    settings: BackupDestinationSettings;
+    /** Transpiled from bool */
+    hasSecret: boolean;
+    /** Transpiled from long */
+    maxPartBytes?: number;
+    /** Transpiled from long */
+    lastTestedAtUnixMs?: number;
+    /** Transpiled from string? */
+    lastError?: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.SaveBackupDestinationRequest */
+export type SaveBackupDestinationRequest = {
+    /** Transpiled from System.Guid */
+    id?: string;
+    /** Transpiled from string */
+    name: string;
+    /** Transpiled from AgentMate.ServerCore.Contracts.BackupDestinationKind */
+    kind: BackupDestinationKind;
+    /** Transpiled from AgentMate.ServerCore.Contracts.BackupDestinationSettings */
+    settings: BackupDestinationSettings;
+    /** Transpiled from AgentMate.ServerCore.Contracts.BackupDestinationSecret? */
+    secret?: BackupDestinationSecret;
+    /** Transpiled from long */
+    maxPartBytes?: number;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.BackupDestinationTest */
+export type BackupDestinationTest = {
+    /** Transpiled from bool */
+    ok: boolean;
+    /** Transpiled from string? */
+    problem?: string;
+    /** Transpiled from string? */
+    hostKeySha256?: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.BackupPlanInfo */
+export type BackupPlanInfo = {
+    /** Transpiled from System.Guid */
+    id: string;
+    /** Transpiled from string */
+    name: string;
+    /** Transpiled from bool */
+    enabled: boolean;
+    /** Transpiled from string */
+    cron: string;
+    /** Transpiled from string */
+    timeZone: string;
+    /** Transpiled from int */
+    keepLast: number;
+    /** Transpiled from int */
+    keepDays?: number;
+    /** Transpiled from System.Guid[] */
+    destinationIds: string[];
+    /** Transpiled from long */
+    nextRunAtUnixMs?: number;
+    /** Transpiled from AgentMate.ServerCore.Contracts.BackupRunInfo? */
+    lastRun?: BackupRunInfo;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.SaveBackupPlanRequest */
+export type SaveBackupPlanRequest = {
+    /** Transpiled from System.Guid */
+    id?: string;
+    /** Transpiled from string */
+    name: string;
+    /** Transpiled from bool */
+    enabled: boolean;
+    /** Transpiled from string */
+    cron: string;
+    /** Transpiled from string */
+    timeZone: string;
+    /** Transpiled from int */
+    keepLast: number;
+    /** Transpiled from int */
+    keepDays?: number;
+    /** Transpiled from System.Guid[] */
+    destinationIds: string[];
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.BackupPlanPreviewRequest */
+export type BackupPlanPreviewRequest = {
+    /** Transpiled from System.Guid */
+    planId?: string;
+    /** Transpiled from string */
+    cron: string;
+    /** Transpiled from string */
+    timeZone: string;
+    /** Transpiled from int */
+    keepLast: number;
+    /** Transpiled from int */
+    keepDays?: number;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.BackupPlanPreview */
+export type BackupPlanPreview = {
+    /** Transpiled from string? */
+    problem?: string;
+    /** Transpiled from long[] */
+    nextRunsUnixMs: number[];
+    /** Transpiled from int */
+    kept: number;
+    /** Transpiled from long */
+    bytesPerDestination?: number;
+    /** Transpiled from long */
+    firstDeletionAtUnixMs?: number;
+    /** Transpiled from long */
+    coversMs: number;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.BackupRunTargetInfo */
+export type BackupRunTargetInfo = {
+    /** Transpiled from System.Guid */
+    destinationId: string;
+    /** Transpiled from string */
+    destinationName: string;
+    /** Transpiled from AgentMate.ServerCore.Contracts.BackupTargetState */
+    state: BackupTargetState;
+    /** Transpiled from int */
+    attempts: number;
+    /** Transpiled from int */
+    pruned: number;
+    /** Transpiled from string? */
+    error?: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.BackupRunInfo */
+export type BackupRunInfo = {
+    /** Transpiled from System.Guid */
+    id: string;
+    /** Transpiled from System.Guid */
+    planId?: string;
+    /** Transpiled from string? */
+    planName?: string;
+    /** Transpiled from AgentMate.ServerCore.Contracts.BackupTrigger */
+    trigger: BackupTrigger;
+    /** Transpiled from AgentMate.ServerCore.Contracts.BackupRunState */
+    state: BackupRunState;
+    /** Transpiled from long */
+    startedAtUnixMs: number;
+    /** Transpiled from long */
+    finishedAtUnixMs?: number;
+    /** Transpiled from long */
+    sizeBytes?: number;
+    /** Transpiled from string? */
+    error?: string;
+    /** Transpiled from string? */
+    requestedByName?: string;
+    /** Transpiled from AgentMate.ServerCore.Contracts.BackupRunTargetInfo[] */
+    targets: BackupRunTargetInfo[];
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.RunBackupNowRequest */
+export type RunBackupNowRequest = {
+    /** Transpiled from System.Guid[] */
+    destinationIds: string[];
+    /** Transpiled from bool */
+    keepForDownload: boolean;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.StoredBackupInfo */
+export type StoredBackupInfo = {
+    /** Transpiled from System.Guid */
+    backupId: string;
+    /** Transpiled from System.Guid */
+    destinationId: string;
+    /** Transpiled from System.Guid */
+    planId?: string;
+    /** Transpiled from string */
+    serverName: string;
+    /** Transpiled from long */
+    createdAtUnixMs: number;
+    /** Transpiled from long */
+    sizeBytes: number;
+    /** Transpiled from int */
+    parts: number;
+    /** Transpiled from string */
+    coreVersion: string;
+    /** Transpiled from string */
+    keyId: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.TelegramLoginStep */
+export type TelegramLoginStep = "code" | "password" | "done";
+
+/** Transpiled from AgentMate.ServerCore.Contracts.StartTelegramLoginRequest */
+export type StartTelegramLoginRequest = {
+    /** Transpiled from int */
+    apiId: number;
+    /** Transpiled from string */
+    apiHash: string;
+    /** Transpiled from string */
+    phoneNumber: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.ContinueTelegramLoginRequest */
+export type ContinueTelegramLoginRequest = {
+    /** Transpiled from string */
+    loginId: string;
+    /** Transpiled from string? */
+    code?: string;
+    /** Transpiled from string? */
+    password?: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.TelegramLoginState */
+export type TelegramLoginState = {
+    /** Transpiled from string */
+    loginId: string;
+    /** Transpiled from AgentMate.ServerCore.Contracts.TelegramLoginStep */
+    step: TelegramLoginStep;
+    /** Transpiled from string? */
+    accountName?: string;
+    /** Transpiled from bool */
+    isPremium?: boolean;
+    /** Transpiled from string? */
+    problem?: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.BackupFetchInfo */
+export type BackupFetchInfo = {
+    /** Transpiled from System.Guid */
+    id: string;
+    /** Transpiled from System.Guid */
+    backupId: string;
+    /** Transpiled from AgentMate.ServerCore.Contracts.BackupRunState */
+    state: BackupRunState;
+    /** Transpiled from long */
+    sizeBytes: number;
+    /** Transpiled from long */
+    bytesDone: number;
+    /** Transpiled from string? */
+    path?: string;
+    /** Transpiled from string? */
+    error?: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.AddressChange */
+export type AddressChange = {
+    /** Transpiled from string */
+    area: string;
+    /** Transpiled from string */
+    target: string;
+    /** Transpiled from string */
+    from: string;
+    /** Transpiled from string */
+    to: string;
+    /** Transpiled from bool */
+    automatic: boolean;
+    /** Transpiled from string? */
+    note?: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.PendingServerRestore */
+export type PendingServerRestore = {
+    /** Transpiled from string */
+    hostName: string;
+    /** Transpiled from long */
+    createdAtUnixMs: number;
+    /** Transpiled from string[] */
+    oldAddresses: string[];
+    /** Transpiled from string[] */
+    newAddresses: string[];
+    /** Transpiled from int */
+    volumes: number;
+    /** Transpiled from int */
+    savedImages: number;
+    /** Transpiled from int */
+    pulledImages: number;
+    /** Transpiled from int */
+    containers: number;
+    /** Transpiled from string[] */
+    projects: string[];
+    /** Transpiled from AgentMate.ServerCore.Contracts.FirewallRuleSpec[] */
+    firewallRules: FirewallRuleSpec[];
+    /** Transpiled from AgentMate.ServerCore.Contracts.AddressChange[] */
+    addressChanges: AddressChange[];
+    /** Transpiled from bool */
+    liveCopy: boolean;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.RunServerRestoreRequest */
+export type RunServerRestoreRequest = {
+    /** Transpiled from bool */
+    moveAddresses: boolean;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.ServerRestoreStep */
+export type ServerRestoreStep = {
+    /** Transpiled from string */
+    name: string;
+    /** Transpiled from AgentMate.ServerCore.Contracts.BackupTargetState */
+    state: BackupTargetState;
+    /** Transpiled from string? */
+    detail?: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.ServerRestoreStatus */
+export type ServerRestoreStatus = {
+    /** Transpiled from AgentMate.ServerCore.Contracts.BackupRunState */
+    state: BackupRunState;
+    /** Transpiled from AgentMate.ServerCore.Contracts.ServerRestoreStep[] */
+    steps: ServerRestoreStep[];
+    /** Transpiled from AgentMate.ServerCore.Contracts.AddressChange[] */
+    applied: AddressChange[];
+    /** Transpiled from string[] */
+    manualDns: string[];
+    /** Transpiled from string? */
+    error?: string;
 }
 
 /** Transpiled from AgentMate.ServerCore.Contracts.CertificateSource */
@@ -1178,6 +1577,70 @@ export type DockerEvent = {
     exitCode?: number;
 }
 
+/** Transpiled from AgentMate.ServerCore.Contracts.ErrorReportingStatus */
+export type ErrorReportingStatus = {
+    /** Transpiled from bool */
+    configured: boolean;
+    /** Transpiled from bool */
+    enabled: boolean;
+    /** Transpiled from string? */
+    host?: string;
+    /** Transpiled from string? */
+    projectId?: string;
+    /** Transpiled from string */
+    environment: string;
+    /** Transpiled from string */
+    serverName: string;
+    /** Transpiled from string */
+    minLevel: string;
+    /** Transpiled from string */
+    defaultServerName: string;
+    /** Transpiled from long */
+    sentCount: number;
+    /** Transpiled from long */
+    lastSentAtUnixMs?: number;
+    /** Transpiled from long */
+    lastFailedAtUnixMs?: number;
+    /** Transpiled from string? */
+    lastError?: string;
+    /** Transpiled from long */
+    changedAtUnixMs?: number;
+    /** Transpiled from string? */
+    changedBy?: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.ErrorReportingRequest */
+export type ErrorReportingRequest = {
+    /** Transpiled from string? */
+    dsn?: string;
+    /** Transpiled from bool */
+    enabled: boolean;
+    /** Transpiled from string? */
+    environment?: string;
+    /** Transpiled from string? */
+    serverName?: string;
+    /** Transpiled from string? */
+    minLevel?: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.ErrorReportingSaveResult */
+export type ErrorReportingSaveResult = {
+    /** Transpiled from string[] */
+    problems: string[];
+    /** Transpiled from AgentMate.ServerCore.Contracts.ErrorReportingStatus? */
+    status?: ErrorReportingStatus;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.ErrorReportingTestResult */
+export type ErrorReportingTestResult = {
+    /** Transpiled from bool */
+    delivered: boolean;
+    /** Transpiled from int */
+    httpStatus?: number;
+    /** Transpiled from string */
+    message: string;
+}
+
 /** Transpiled from AgentMate.ServerCore.Contracts.FileTargetKind */
 export type FileTargetKind = "container" | "volume";
 
@@ -1671,6 +2134,68 @@ export type JobPage = {
     jobs: JobInfo[];
     /** Transpiled from long */
     nextBeforeCreatedAtUnixMs?: number;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.TelegramNotificationsStatus */
+export type TelegramNotificationsStatus = {
+    /** Transpiled from bool */
+    configured: boolean;
+    /** Transpiled from bool */
+    enabled: boolean;
+    /** Transpiled from string? */
+    chatId?: string;
+    /** Transpiled from string */
+    serverName: string;
+    /** Transpiled from string */
+    defaultServerName: string;
+    /** Transpiled from AgentMate.ServerCore.Contracts.AlertKind[] */
+    kinds: AlertKind[];
+    /** Transpiled from bool */
+    sendResolved: boolean;
+    /** Transpiled from long */
+    sentCount: number;
+    /** Transpiled from long */
+    lastSentAtUnixMs?: number;
+    /** Transpiled from long */
+    lastFailedAtUnixMs?: number;
+    /** Transpiled from string? */
+    lastError?: string;
+    /** Transpiled from long */
+    changedAtUnixMs?: number;
+    /** Transpiled from string? */
+    changedBy?: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.TelegramNotificationsRequest */
+export type TelegramNotificationsRequest = {
+    /** Transpiled from bool */
+    enabled: boolean;
+    /** Transpiled from string? */
+    botToken?: string;
+    /** Transpiled from string? */
+    chatId?: string;
+    /** Transpiled from string? */
+    serverName?: string;
+    /** Transpiled from AgentMate.ServerCore.Contracts.AlertKind[]? */
+    kinds?: AlertKind[];
+    /** Transpiled from bool */
+    sendResolved: boolean;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.TelegramNotificationsSaveResult */
+export type TelegramNotificationsSaveResult = {
+    /** Transpiled from string[] */
+    problems: string[];
+    /** Transpiled from AgentMate.ServerCore.Contracts.TelegramNotificationsStatus? */
+    status?: TelegramNotificationsStatus;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.TelegramNotificationsTestResult */
+export type TelegramNotificationsTestResult = {
+    /** Transpiled from bool */
+    delivered: boolean;
+    /** Transpiled from string */
+    message: string;
 }
 
 /** Transpiled from AgentMate.ServerCore.Contracts.RegistryAuth */

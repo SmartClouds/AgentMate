@@ -43,8 +43,13 @@ internal sealed partial class CoreHub(
     RegistryCredentials registries,
     CloudflareServices cloudflare,
     SecurityCenterServices security,
+    Backups.BackupCenter backupCenter,
+    Backups.BackupOperations backupOperations,
     DirectTls.DirectTlsManager directTls,
-    AssistantHubServices assistant) : Hub<ICoreHubReceiver>, ICoreHub
+    ErrorReporting.ErrorReportingManager errorReporting,
+    Notifications.TelegramManager telegram,
+    AssistantHubServices assistant,
+    Files.ContainerFilesService files) : Hub<ICoreHubReceiver>, ICoreHub
 {
     public const string Path = "/hubs/core";
 

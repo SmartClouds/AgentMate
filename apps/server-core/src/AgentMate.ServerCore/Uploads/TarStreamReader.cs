@@ -5,9 +5,10 @@ namespace AgentMate.ServerCore.Uploads;
 
 /// <summary>
 /// One entry's header, with PAX and GNU long names and sizes already applied. <see cref="Type"/>
-/// is the tar typeflag: '0' file, '1' hard link, '2' symbolic link, '5' folder, and so on.
+/// is the tar typeflag: '0' file, '1' hard link, '2' symbolic link, '5' folder, and so on. The
+/// owner and time come from the header or, when it has them, its PAX record.
 /// </summary>
-internal sealed record TarEntryHeader(char Type, string Name, string LinkName, long Size, int Mode);
+internal sealed record TarEntryHeader(char Type, string Name, string LinkName, long Size, int Mode, int Uid = 0, int Gid = 0, long MtimeUnixMs = 0);
 
 /// <summary>
 /// Reads a tar stream one header at a time, for ustar, PAX and GNU archives. It exists because
@@ -94,11 +95,32 @@ internal sealed class TarStreamReader(Stream stream)
                 pending.Name ?? ReadName(_block),
                 pending.LinkName ?? DecodeName(TrimNul(_block.AsSpan(157, 100))),
                 pending.Size ?? size,
-                (int)ParseNumber(_block.AsSpan(100, 8), "mode"));
+                (int)ParseNumber(_block.AsSpan(100, 8), "mode"),
+                pending.Uid ?? (int)Informational(_block.AsSpan(108, 8)),
+                pending.Gid ?? (int)Informational(_block.AsSpan(116, 8)),
+                pending.MtimeUnixMs ?? (Informational(_block.AsSpan(136, 12)) * 1000));
             _remaining = header.Size;
             _padding = Padding(header.Size);
             return header;
         }
+    }
+
+    /// <summary>Reads the next bytes of the current entry's contents; 0 once they are all read.</summary>
+    public async ValueTask<int> ReadContentAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+    {
+        if (_remaining == 0 || buffer.IsEmpty)
+        {
+            return 0;
+        }
+
+        var read = await stream.ReadAsync(buffer[..(int)Math.Min(buffer.Length, _remaining)], cancellationToken);
+        if (read == 0)
+        {
+            throw new EndOfStreamException();
+        }
+
+        _remaining -= read;
+        return read;
     }
 
     /// <summary>Copies the current entry's contents, returning how many bytes there were.</summary>
@@ -166,9 +188,10 @@ internal sealed class TarStreamReader(Stream stream)
     }
 
     /// <summary>
-    /// The PAX records this reader acts on: the entry's path, link target and size. Anything else
-    /// (times, owners, vendor attributes) is read past, except sparse-file maps, whose contents
-    /// would unpack as garbage.
+    /// The PAX records this reader acts on: the entry's path, link target and size, and for
+    /// reading only, its owner and time (a value that is not a number leaves the header's).
+    /// Anything else (other times, owner names, vendor attributes) is read past, except
+    /// sparse-file maps, whose contents would unpack as garbage.
     /// </summary>
     private static void ReadPaxRecords(ReadOnlySpan<byte> data, PendingNames pending)
     {
@@ -216,6 +239,18 @@ internal sealed class TarStreamReader(Stream stream)
 
                     pending.Size = size;
                     break;
+                case "uid":
+                    pending.Uid = int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var uid) ? uid : null;
+                    break;
+                case "gid":
+                    pending.Gid = int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var gid) ? gid : null;
+                    break;
+                case "mtime":
+                    pending.MtimeUnixMs = decimal.TryParse(value, NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var seconds)
+                        && Math.Abs(seconds) < 1e13m
+                        ? (long)decimal.Floor(seconds * 1000)
+                        : null;
+                    break;
                 default:
                     if (key.StartsWith("GNU.sparse.", StringComparison.Ordinal))
                     {
@@ -227,6 +262,19 @@ internal sealed class TarStreamReader(Stream stream)
             }
 
             data = data[length..];
+        }
+    }
+
+    /// <summary>An owner or a time, which only describes the entry: one that does not parse reads as 0.</summary>
+    private static long Informational(ReadOnlySpan<byte> field)
+    {
+        try
+        {
+            return ParseNumber(field, "field");
+        }
+        catch (ArchiveRejectedException)
+        {
+            return 0;
         }
     }
 
@@ -324,6 +372,12 @@ internal sealed class TarStreamReader(Stream stream)
         public string? LinkName { get; set; }
 
         public long? Size { get; set; }
+
+        public int? Uid { get; set; }
+
+        public int? Gid { get; set; }
+
+        public long? MtimeUnixMs { get; set; }
 
         public bool Any => _kinds.Count > 0;
 

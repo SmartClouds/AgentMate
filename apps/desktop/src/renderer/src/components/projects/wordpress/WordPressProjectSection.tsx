@@ -6,11 +6,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { NewItemDialog } from '@/components/deploy/wordpress/NewItemDialog';
 import { useItemProjectActions } from '@/components/deploy/wordpress/useItemProjectActions';
 import {
   CloudDownload,
   CloudUpload,
   ExternalLink,
+  FilePlus,
   Link as LinkIcon,
   LinkOff,
   Plus,
@@ -33,6 +35,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { ConnectSiteDialog } from '@/components/wordpress/ConnectSiteDialog';
 import { DeployFlowDialog } from '@/components/wordpress/DeployFlowDialog';
+import { IgnoredFilesPanel } from '@/components/wordpress/IgnoredFilesPanel';
 import { PullFlowDialog } from '@/components/wordpress/PullFlowDialog';
 import { WordPressMark } from '@/components/wordpress/WordPressMark';
 import { queryKeys } from '@/lib/queryKeys';
@@ -65,6 +68,9 @@ export function WordPressProjectSection({ project }: { project: Project }): Reac
   const [pullOpen, setPullOpen] = useState(false);
   const [deployOpen, setDeployOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [newOpen, setNewOpen] = useState(false);
+  /** Only these items go into the review; all of them when undefined. */
+  const [deployItems, setDeployItems] = useState<WpItemRef[] | undefined>(undefined);
   const [relinkOpen, setRelinkOpen] = useState(false);
   const { unlinking, unlink: unlinkProject } = useUnlinkWordPressProject();
   const itemActions = useItemProjectActions(link?.siteId ?? '');
@@ -203,7 +209,14 @@ export function WordPressProjectSection({ project }: { project: Project }): Reac
               <CloudDownload className="h-3.5 w-3.5" /> Pull latest
             </Button>
             <SimpleTooltip label={readOnly ? READ_ONLY_HINT : null} wrapTrigger>
-              <Button size="sm" disabled={!site || readOnly} onClick={() => setDeployOpen(true)}>
+              <Button
+                size="sm"
+                disabled={!site || readOnly}
+                onClick={() => {
+                  setDeployItems(undefined);
+                  setDeployOpen(true);
+                }}
+              >
                 <CloudUpload className="h-3.5 w-3.5" /> Review and deploy
               </Button>
             </SimpleTooltip>
@@ -296,9 +309,21 @@ export function WordPressProjectSection({ project }: { project: Project }): Reac
               Only these are pulled and deployed. Everything else in the folder stays here.
             </p>
           </div>
-          <Button variant="outline" size="sm" disabled={!site} onClick={() => setAddOpen(true)}>
-            <Plus className="h-3.5 w-3.5" /> Add
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            <SimpleTooltip label={readOnly ? READ_ONLY_HINT : null} wrapTrigger>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!site || readOnly}
+                onClick={() => setNewOpen(true)}
+              >
+                <FilePlus className="h-3.5 w-3.5" /> New theme or plugin
+              </Button>
+            </SimpleTooltip>
+            <Button variant="outline" size="sm" disabled={!site} onClick={() => setAddOpen(true)}>
+              <Plus className="h-3.5 w-3.5" /> Add
+            </Button>
+          </div>
         </div>
         <ul className="overflow-hidden rounded-lg bg-foreground/[0.03] ring-1 ring-inset ring-foreground/[0.07]">
           {link.items.map((item) => {
@@ -354,6 +379,17 @@ export function WordPressProjectSection({ project }: { project: Project }): Reac
         </ul>
       </section>
 
+      <section aria-label="Ignored files" className={cn(CARD, 'space-y-3 p-4')}>
+        <div>
+          <h3 className="text-sm font-semibold">Ignored files and folders</h3>
+          <p className="text-xs text-muted-foreground">
+            Never deployed, and the site's copy of them is left alone. Kept for every deploy and
+            pull of this project.
+          </p>
+        </div>
+        <IgnoredFilesPanel project={project} />
+      </section>
+
       {site ? (
         <>
           <PullFlowDialog
@@ -373,6 +409,17 @@ export function WordPressProjectSection({ project }: { project: Project }): Reac
             }}
             projectId={project.id}
             siteId={site.id}
+            items={deployItems}
+          />
+          <NewItemDialog
+            open={newOpen}
+            onOpenChange={setNewOpen}
+            site={site}
+            project={project}
+            onAdded={(_updated, items) => {
+              setDeployItems(items);
+              setDeployOpen(true);
+            }}
           />
           <AddItemsDialog
             open={addOpen}

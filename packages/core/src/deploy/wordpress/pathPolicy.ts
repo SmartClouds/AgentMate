@@ -77,9 +77,16 @@ export const WP_HARD_DENY_FILES: readonly string[] = [
   'desktop.ini',
 ];
 
-/** Name prefixes: Aider's files, `.env.local` and friends, SSH private keys. */
+/**
+ * Name prefixes of an agent's or AgentMate's own files: Aider's, and any dot folder or file that
+ * starts with `.claude` or `.agentmate` (`.claude-plugin/`, `.agentmate-cache/`), so a name an
+ * agent or AgentMate invents later is kept here too.
+ */
+export const WP_AGENT_PREFIXES: readonly string[] = ['.aider', '.claude', '.agentmate'];
+
+/** Name prefixes: the agent ones above, `.env.local` and friends, SSH private keys. */
 export const WP_HARD_DENY_PREFIXES: readonly string[] = [
-  '.aider',
+  ...WP_AGENT_PREFIXES,
   '.env.',
   'id_rsa',
   'id_ed25519',
@@ -229,11 +236,48 @@ export function findWpCaseCollisions(paths: readonly string[]): string[][] {
 export type WpIgnoreLayer = IgnoreLayer;
 export type WpIgnoreRules = IgnoreRules;
 
+/** The text of the `.gitignore` files that apply to one item. */
+export interface WpGitignores {
+  /** The item's root in the project folder: `wp-content/themes/<slug>`. */
+  itemRoot: string;
+  /** The item folder's own `.gitignore`, which matches paths from the item root down. */
+  item?: string;
+  /** The project folder's `.gitignore`, which matches paths from the project root down. */
+  project?: string;
+}
+
 /**
  * Builds the ignore rules for one item from its layers, in order: the user's `.distignore` (from
  * the item root), then `.agentmateignore` from the project root, then `.agentmateignore` from the
  * item root. All of them match paths relative to the item root. The last matching line wins.
+ *
+ * What git ignores is left out by default too: the project's and the item's `.gitignore` count
+ * like the default list, so they leave a file out only until the site has it, a line that cannot
+ * be read is skipped, and a `!` line in one can never put a built-in default back. The user's
+ * layers still can. A project `.gitignore` that ignores the item's whole folder is not used.
  */
-export function createWpIgnoreRules(userLayers: readonly WpIgnoreLayer[]): IgnoreRulesResult {
-  return createIgnoreRules(userLayers, WP_DEFAULT_IGNORE);
+export function createWpIgnoreRules(
+  userLayers: readonly WpIgnoreLayer[],
+  git?: WpGitignores,
+): IgnoreRulesResult {
+  const defaultLayers: IgnoreLayer[] = [];
+  if (git?.project !== undefined) {
+    defaultLayers.push({
+      source: '.gitignore',
+      text: git.project,
+      lenient: true,
+      scope: 'ancestor',
+    });
+  }
+  if (git?.item !== undefined) {
+    defaultLayers.push({
+      source: `${git.itemRoot}/.gitignore`,
+      text: git.item,
+      lenient: true,
+    });
+  }
+  return createIgnoreRules(userLayers, WP_DEFAULT_IGNORE, {
+    defaultLayers,
+    ...(git ? { ancestorPath: git.itemRoot } : {}),
+  });
 }

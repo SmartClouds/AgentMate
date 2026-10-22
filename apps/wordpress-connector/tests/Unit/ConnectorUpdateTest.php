@@ -1,6 +1,7 @@
 <?php
 /**
- * /connector/update: the app sends a newer release and the plugin swaps its own folder.
+ * /connector/update: the app sends a newer release, or has the site download it from the GitHub
+ * release, and the plugin swaps its own folder.
  *
  * @package AgentMate\Connector
  */
@@ -9,6 +10,7 @@ namespace AgentMate\Connector\Tests\Unit;
 
 use AgentMate\Connector\Deploy\DeployService;
 use AgentMate\Connector\Tests\Support\DeployTestCase;
+use AgentMate\Connector\Tests\Support\ZipFixture;
 
 final class ConnectorUpdateTest extends DeployTestCase
 {
@@ -499,6 +501,154 @@ final class ConnectorUpdateTest extends DeployTestCase
     {
         $hello = $this->assertOk($this->call('/hello', null, array('unsigned' => true)));
         $this->assertContains('update', $hello['capabilities']);
+    }
+
+    // The site downloads the release ---------------------------------------------------------
+
+    private function releaseUrl(string $version = self::NEW): string
+    {
+        return 'https://github.com/SmartClouds/AgentMate/releases/download/v' . $version . '/agentmate-connector.zip';
+    }
+
+    /**
+     * An update the site downloads: the file list of $files, the release address, and no blobs.
+     *
+     * @param array<string, string> $files
+     * @return array<string, mixed> the call result
+     */
+    private function downloadUpdate(array $files, ?string $url = null): array
+    {
+        $body = $this->body($files);
+        $body['download'] = array('url' => $url !== null ? $url : $this->releaseUrl());
+        return $this->update($files, self::NEW, $body, array());
+    }
+
+    public function testTheSiteDownloadsTheReleaseItself(): void
+    {
+        $release = $this->release(self::NEW);
+        $this->env->downloads[$this->releaseUrl()] = ZipFixture::build($release);
+
+        $data = $this->assertOk($this->downloadUpdate($release));
+
+        $this->assertSame('updated', $data['state']);
+        $this->assertSame(count($release), $data['files']);
+        foreach ($release as $path => $bytes) {
+            $this->assertSame($bytes, $this->installed($path), $path);
+        }
+        $this->assertSame("<?php\nreturn array('abspath' => '/site/');\n", $this->installed('rescue-config.php'));
+        $this->assertSame(array(), $this->siblings());
+        $this->assertCount(1, $this->env->downloadCalls);
+        $this->assertSame($this->releaseUrl(), $this->env->downloadCalls[0]['url']);
+        $entries = array_values(array_filter($this->storage->listAudit(50, null), function ($row) {
+            return $row['event'] === 'connectorUpdated';
+        }));
+        $this->assertStringContainsString('downloaded by the site', $entries[0]['detail']);
+    }
+
+    public function testReadsAZipThatStoresItsFiles(): void
+    {
+        $release = $this->release(self::NEW);
+        $this->env->downloads[$this->releaseUrl()] = ZipFixture::build($release, 'agentmate-connector/', 0);
+        $this->assertSame('updated', $this->assertOk($this->downloadUpdate($release))['state']);
+    }
+
+    public function testADownloadThatFailsIsRefusedWithItsReason(): void
+    {
+        $result = $this->downloadUpdate($this->release(self::NEW));
+        $this->assertRefused('downloadFailed', $result);
+        $this->assertStringContainsString('Could not resolve host', $result['body']['error']['message']);
+        $this->assertSame(0, $this->env->healthCalls, 'Nothing was tried on the site.');
+    }
+
+    /**
+     * @return array<string, array{0: callable}>
+     */
+    public function notTheRelease(): array
+    {
+        return array(
+            'a file that differs' => array(function (array $files) {
+                $files['src/Plugin.php'] .= '// changed';
+                return ZipFixture::build($files);
+            }),
+            'a file more' => array(function (array $files) {
+                $files['src/Extra.php'] = '<?php';
+                return ZipFixture::build($files);
+            }),
+            'a file less' => array(function (array $files) {
+                unset($files['readme.txt']);
+                return ZipFixture::build($files);
+            }),
+            'another top folder' => array(function (array $files) {
+                return ZipFixture::build($files, 'something-else/');
+            }),
+            'an encrypted zip' => array(function (array $files) {
+                return ZipFixture::build($files, 'agentmate-connector/', 8, 0x0801);
+            }),
+            'a cut-off zip' => array(function (array $files) {
+                $zip = ZipFixture::build($files);
+                return substr($zip, 0, (int) (strlen($zip) / 2));
+            }),
+            'an HTML page' => array(function () {
+                return '<!doctype html><title>Not found</title>';
+            }),
+            'nothing' => array(function () {
+                return '';
+            }),
+        );
+    }
+
+    /**
+     * @dataProvider notTheRelease
+     */
+    public function testRefusesADownloadThatIsNotExactlyTheRelease(callable $zip): void
+    {
+        $release = $this->release(self::NEW);
+        $this->env->downloads[$this->releaseUrl()] = $zip($release);
+        $this->assertRefused('downloadFailed', $this->downloadUpdate($release));
+    }
+
+    public function testOnlyEverFetchesTheAgentMateReleaseOfTheVersionItInstalls(): void
+    {
+        $release = $this->release(self::NEW);
+        $urls = array(
+            'another version' => $this->releaseUrl('1.2.0'),
+            'plain HTTP' => 'http://github.com/SmartClouds/AgentMate/releases/download/v1.1.0/agentmate-connector.zip',
+            'another repository' => 'https://github.com/someone/AgentMate/releases/download/v1.1.0/agentmate-connector.zip',
+            'another host' => 'https://example.test/AgentMate/releases/download/v1.1.0/agentmate-connector.zip',
+            'another file' => 'https://github.com/SmartClouds/AgentMate/releases/download/v1.1.0/other.zip',
+            'a query' => $this->releaseUrl() . '?x=1',
+            'empty' => '',
+        );
+        foreach ($urls as $name => $url) {
+            $this->assertError('badRequest', $this->downloadUpdate($release, $url), 400);
+        }
+        $body = $this->body($release);
+        $body['download'] = 'yes';
+        $this->assertError('badRequest', $this->update($release, self::NEW, $body, array()), 400);
+
+        // A download carries no blobs.
+        $body = $this->body($release);
+        $body['download'] = array('url' => $this->releaseUrl());
+        $this->assertError('badRequest', $this->update($release, self::NEW, $body), 400);
+
+        $this->assertSame(array(), $this->env->downloadCalls);
+        $this->assertSame(self::OLD, $this->versionOnDisk());
+    }
+
+    public function testChecksTheFileListBeforeDownloading(): void
+    {
+        $release = $this->release(self::NEW);
+        unset($release['src/Plugin.php']);
+        $this->assertRefused('badPackage', $this->downloadUpdate($release));
+        $this->assertSame(array(), $this->env->downloadCalls);
+    }
+
+    public function testSiteInfoAndHelloSayTheSiteCanDownloadAnUpdate(): void
+    {
+        $info = $this->assertOk($this->call('/site/info', null, array('connectionId' => $this->write)));
+        $this->assertTrue($info['updateDownload']);
+        $hello = $this->assertOk($this->call('/hello', null, array('unsigned' => true)));
+        $this->assertContains('updateDownload', $hello['capabilities']);
     }
 
     public function testNeverTouchesOtherPlugins(): void

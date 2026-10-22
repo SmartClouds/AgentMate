@@ -19,6 +19,12 @@ public enum AlertKind
 
     /// <summary>The origin lock could not fetch Cloudflare's ranges or bring the firewall up to date with them (E14).</summary>
     OriginLockRefreshFailed,
+
+    /// <summary>A backup plan's run failed, or not every destination took it (E30). The resource is the plan.</summary>
+    BackupFailed,
+
+    /// <summary>A container keeps exiting and being started again (E30). The resource is the container's name.</summary>
+    ContainerCrashLoop,
 }
 
 [TranspilationSource]

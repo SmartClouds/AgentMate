@@ -12,7 +12,12 @@ import { Switch } from '@/components/ui/switch';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { useVirtualRows } from '@/hooks/useVirtualRows';
 import { useChartColors } from '@/lib/chartColors';
-import { clockTime, highlight } from '@/lib/deploy/containers/logs';
+import {
+  clockTime,
+  DEFAULT_TAIL,
+  highlight,
+  MAX_TEXT_LOG_TAIL,
+} from '@/lib/deploy/containers/logs';
 import {
   entriesAsText,
   filterEntries,
@@ -24,13 +29,15 @@ import {
 } from '@/lib/deploy/logs/entries';
 import { cn } from '@/lib/utils';
 import { LogSourcePicker, parseSourceValue } from './LogSourcePicker';
-import { type LogSource, useLogSource } from './useLogSource';
+import { TailPicker } from './TailPicker';
+import { type LogSource, MAX_STACK_SERVICES, useLogSource } from './useLogSource';
 
 /**
  * The logs center's viewer (E09 T1): one source at a time, followed live, with a search that
  * marks and steps through matches, a level filter (levels read from each line, shown in words),
- * a time range and a download of what is shown. Every line is plain text: it comes from the
- * server and could say anything.
+ * a time range, how many lines to start with, and a download of what is shown. Every line is
+ * plain text: it comes from the server and could say anything. Scoped to one app, it offers only
+ * that app's logs.
  */
 
 const LINE_HEIGHT = 20;
@@ -61,6 +68,7 @@ export function LogViewer({
   containers,
   sites,
   initial,
+  scope,
   onAskAi,
 }: {
   serverId: string;
@@ -68,11 +76,14 @@ export function LogViewer({
   sites: readonly SiteInfo[] | undefined;
   /** The source to start on, as LogSourcePicker writes it. */
   initial?: string;
+  /** 'stack' keeps the choice to the app in `containers`. */
+  scope?: 'stack';
   onAskAi?: (source: LogSource) => void;
 }): React.JSX.Element {
   const [value, setValue] = useState(initial ?? 'journal:docker.service');
   const [follow, setFollow] = useState(true);
   const [run, setRun] = useState(0);
+  const [tail, setTail] = useState(DEFAULT_TAIL);
   const [query, setQuery] = useState('');
   const [minLevel, setMinLevel] = useState<LogLevel>('debug');
   const [range, setRange] = useState<TimeRange>('all');
@@ -81,7 +92,8 @@ export function LogViewer({
     () => parseSourceValue(value, containers, sites),
     [value, containers, sites],
   );
-  const live = useLogSource(serverId, source, { follow, run });
+  const live = useLogSource(serverId, source, { follow, run, tail });
+  const textLog = source?.kind === 'journal' || source?.kind === 'site';
   const shown = useMemo(
     () => filterEntries(live.entries, { minLevel, since: rangeStart(range, Date.now()) }),
     [live.entries, minLevel, range],
@@ -120,7 +132,13 @@ export function LogViewer({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <LogSourcePicker value={value} containers={containers} sites={sites} onChange={setValue} />
+        <LogSourcePicker
+          value={value}
+          containers={containers}
+          sites={sites}
+          scope={scope}
+          onChange={setValue}
+        />
         <Combobox
           className="h-8 w-44 text-xs"
           value={minLevel}
@@ -135,6 +153,16 @@ export function LogViewer({
           options={TIME_RANGES.map((item) => ({ value: item.value, label: item.label }))}
           ariaLabel="Time range"
         />
+        {source?.kind !== 'audit' && (
+          <TailPicker
+            value={tail}
+            max={textLog ? MAX_TEXT_LOG_TAIL : undefined}
+            onChange={(next) => {
+              atBottom.current = true;
+              setTail(next);
+            }}
+          />
+        )}
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
           <Switch
             checked={follow}
@@ -291,6 +319,12 @@ export function LogViewer({
           </div>
         )}
       </div>
+      {source?.kind === 'stack' && source.containers.length > MAX_STACK_SERVICES && (
+        <p role="note" className="text-xs text-muted-foreground">
+          Showing the first {MAX_STACK_SERVICES} of {source.containers.length} services together.
+          Pick one service to read it alone.
+        </p>
+      )}
       {live.error && (
         <p role="status" className="text-xs text-destructive">
           {live.error}

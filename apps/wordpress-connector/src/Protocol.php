@@ -78,6 +78,15 @@ final class Protocol
     const UPDATE_FILE_PATTERN = '/\.(php|txt|md|css|js|json|xml|html)$/iD';
 
     /**
+     * The only address a site fetches an update from itself: the plugin zip on an AgentMate GitHub
+     * release. The tag must be the version being installed. Mirrors WP_UPDATE_DOWNLOAD_URL.
+     */
+    const UPDATE_DOWNLOAD_URL = '#^https://github\.com/SmartClouds/AgentMate/releases/download/v([0-9A-Za-z.+-]{1,40})/agentmate-connector\.zip$#D';
+    /** The release zip is compressed text, well under the files it holds. */
+    const UPDATE_DOWNLOAD_MAX_BYTES = 9437184;
+    const UPDATE_DOWNLOAD_TIMEOUT_SECONDS = 30;
+
+    /**
      * The HTTP status sent with each error code. The contract does not fix these; clients should
      * read the code in the body. 413 is only ever sent when the request body itself is too big,
      * so a client can safely halve its batch on it.

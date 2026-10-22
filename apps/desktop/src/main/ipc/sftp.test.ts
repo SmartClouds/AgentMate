@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, realpathSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { filesErrorCode } from '../../shared/deployFilesErrors';
+import { dockerFileTargetId, isDockerFileTargetId } from '../../shared/fileTargets';
 import { IPC } from '../../shared/ipcChannels';
 import {
   SFTP_EDIT_MAX_BYTES,
@@ -115,7 +116,9 @@ beforeEach(async () => {
         findServer: async (id) =>
           id === 'srv-1'
             ? { nickname: 'web', host: 'web.example.com', port: 22, username: 'deploy' }
-            : null,
+            : isDockerFileTargetId(id)
+              ? { nickname: 'shop-web-1 (container)', host: 'web', port: 0, username: 'root' }
+              : null,
         send: (ownerId, channel, payload) => contents.get(ownerId)?.send(channel, payload),
         keepAwake: () => undefined,
         tempDir: () => edits,
@@ -343,6 +346,19 @@ describe('sessions', () => {
     await refused(call(C.open, ''));
     await refused(call(C.open, 42));
     expect(filesErrorCode(await failure(call(C.open, 'srv-gone')))).toBe('siteUnknown');
+  });
+
+  it('opens a container or volume by its file target id, the longest one too (E27)', async () => {
+    const serverId = '9c4b7e0e-2f7a-4f43-9d55-6a1f6f5f1a10';
+    const byName = dockerFileTargetId({ serverId, kind: 'container', id: 'shop-web-1' });
+    const byId = dockerFileTargetId({ serverId, kind: 'container', id: 'a1'.repeat(32) });
+
+    const named = await call<SftpSessionInfo>(C.open, byName);
+    const long = await call<SftpSessionInfo>(C.open, byId);
+
+    expect(byId.length).toBeLessThanOrEqual(128);
+    expect(named).toMatchObject({ serverId: byName, kind: 'container', port: 0 });
+    expect(long.serverId).toBe(byId);
   });
 
   it('closes a session, and refuses a malformed session id without echoing it', async () => {

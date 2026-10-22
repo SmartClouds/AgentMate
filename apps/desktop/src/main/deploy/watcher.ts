@@ -64,6 +64,10 @@ function titleOf(alert: AlertInfo, server: string): string {
       return `A firewall change could not be rolled back on ${server}`;
     case 'originLockRefreshFailed':
       return `The Cloudflare lock could not be refreshed on ${server}`;
+    case 'backupFailed':
+      return `A backup failed on ${server}`;
+    case 'containerCrashLoop':
+      return `A container keeps restarting on ${server}`;
     default:
       return `Alert on ${server}`;
   }

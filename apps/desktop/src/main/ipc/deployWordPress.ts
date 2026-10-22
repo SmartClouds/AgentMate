@@ -4,6 +4,8 @@ import {
   isValidWpSlug,
   type ProjectWordPressItemKind,
   validateWpItemPath,
+  WP_IGNORE_MAX_LINE,
+  WP_IGNORE_MAX_LINES,
   WP_KEY_PREFIX,
   type WpItemRef,
   wpItemKey,
@@ -16,10 +18,12 @@ import type {
   DeployWordPressDeployResult,
   DeployWordPressDisconnectInput,
   DeployWordPressHttpAuth,
+  DeployWordPressIgnoreInput,
   DeployWordPressItemsInput,
   DeployWordPressLinkProjectInput,
   DeployWordPressLinkProjectResult,
   DeployWordPressLocalChanges,
+  DeployWordPressLocalItem,
   DeployWordPressPlan,
   DeployWordPressPlanInput,
   DeployWordPressPullResult,
@@ -68,6 +72,8 @@ export interface DeployWordPressApi {
   cancel(operationId: string): Promise<void>;
   createProject(input: DeployWordPressCreateProjectInput): Promise<Project>;
   setProjectItems(input: DeployWordPressItemsInput): Promise<Project>;
+  setProjectIgnore(input: DeployWordPressIgnoreInput): Promise<Project>;
+  localItems(projectId: string): Promise<DeployWordPressLocalItem[]>;
   linkProject(input: DeployWordPressLinkProjectInput): Promise<DeployWordPressLinkProjectResult>;
   unlinkProject(projectId: string): Promise<Project>;
   localChanges(projectId: string): Promise<DeployWordPressLocalChanges>;
@@ -115,6 +121,10 @@ const MAX_LABEL = 100;
 const MAX_USER = 255;
 const MAX_PASSWORD = 1024;
 const MAX_ITEMS = 200;
+/** Every item, plus a project's items. */
+const MAX_IGNORE_KEYS = MAX_ITEMS + 1;
+/** `mu-plugin:` and a slug of at most 100 characters. */
+const MAX_IGNORE_KEY = 120;
 const MAX_AUDIT = 500;
 const MAX_RESOLUTIONS = 20_000;
 const MAX_RESOLUTION_KEY = 700;
@@ -400,6 +410,12 @@ function createProjectInput(value: unknown): DeployWordPressCreateProjectInput {
   };
 }
 
+/** The items a caller says the site does not have yet; none given, or an empty list, is none. */
+function newItems(value: unknown): { newItems?: WpItemRef[] } {
+  if (value === undefined || (Array.isArray(value) && value.length === 0)) return {};
+  return { newItems: items(value) };
+}
+
 function itemsInput(value: unknown): DeployWordPressItemsInput {
   const input = object(value, 'the project items');
   return {
@@ -407,7 +423,38 @@ function itemsInput(value: unknown): DeployWordPressItemsInput {
     projectId: projectId(input.projectId),
     ...(input.siteId === undefined ? {} : { siteId: siteId(input.siteId) }),
     items: items(input.items),
+    ...newItems(input.newItems),
   };
+}
+
+/**
+ * The saved ignore list: keys are `*` or an item (`theme:slug`), each with lines of text. Only its
+ * shape is checked here; the service reads the lines against the project's items and the matcher.
+ */
+function ignoreInput(value: unknown): DeployWordPressIgnoreInput {
+  const input = object(value, 'the ignore list');
+  const list = object(input.ignore, 'the ignore list');
+  const entries = Object.entries(list);
+  if (entries.length > MAX_IGNORE_KEYS)
+    throw new Error('That is too many items to ignore files in.');
+  const ignore: Record<string, string[]> = {};
+  for (const [key, lines] of entries) {
+    if (key.length === 0 || key.length > MAX_IGNORE_KEY || CONTROL.test(key)) {
+      throw new Error('An ignore list belongs to every item or to one theme or plugin.');
+    }
+    if (!Array.isArray(lines) || lines.length > WP_IGNORE_MAX_LINES) {
+      throw new Error(`An item can ignore at most ${WP_IGNORE_MAX_LINES} lines.`);
+    }
+    ignore[key] = lines.map((entry) => {
+      if (typeof entry !== 'string' || entry.length > WP_IGNORE_MAX_LINE || CONTROL.test(entry)) {
+        throw new Error(
+          `An ignore line is text on one line, at most ${WP_IGNORE_MAX_LINE} characters.`,
+        );
+      }
+      return entry;
+    });
+  }
+  return { projectId: projectId(input.projectId), ignore };
 }
 
 function linkProjectInput(value: unknown): DeployWordPressLinkProjectInput {
@@ -417,6 +464,7 @@ function linkProjectInput(value: unknown): DeployWordPressLinkProjectInput {
     projectId: projectId(input.projectId),
     siteId: siteId(input.siteId),
     items: items(input.items),
+    ...newItems(input.newItems),
   };
 }
 
@@ -506,6 +554,10 @@ export function registerDeployWordPressHandlers({
   handle(IPC.deployWordPress.setProjectItems, async (input) =>
     service.setProjectItems(itemsInput(input)),
   );
+  handle(IPC.deployWordPress.setProjectIgnore, async (input) =>
+    service.setProjectIgnore(ignoreInput(input)),
+  );
+  handle(IPC.deployWordPress.localItems, async (id) => service.localItems(projectId(id)));
   handle(IPC.deployWordPress.linkProject, async (input) =>
     service.linkProject(linkProjectInput(input)),
   );

@@ -38,6 +38,7 @@ class FakeEditor {
   private model: FakeModel;
   /** The navigation calls made on this editor, for tests that check where it went. */
   readonly calls: { method: string; args: unknown[] }[] = [];
+  private readonly contentListeners = new Set<() => void>();
 
   constructor(
     readonly container: HTMLElement,
@@ -55,8 +56,10 @@ class FakeEditor {
   getValue(): string {
     return this.model.getValue();
   }
+  /** Like the real editor, a value set from code reports a content change too. */
   setValue(next: string): void {
     this.model.setValue(next);
+    for (const fn of this.contentListeners) fn();
   }
   getModel(): FakeModel {
     return this.model;
@@ -64,8 +67,9 @@ class FakeEditor {
   setModel(model: FakeModel): void {
     this.model = model;
   }
-  onDidChangeModelContent(): Listener {
-    return listener();
+  onDidChangeModelContent(fn: () => void): Listener {
+    this.contentListeners.add(fn);
+    return { dispose: () => void this.contentListeners.delete(fn) };
   }
   onDidBlurEditorWidget(): Listener {
     return listener();

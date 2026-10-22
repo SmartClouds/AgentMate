@@ -28,6 +28,8 @@ A backup includes:
 
 A backup does not include saved SSH and Remote Desktop servers, Deploy servers, API Client collections, your custom keyboard shortcuts, installed tools, downloaded voice models or the image files of pets you added yourself. Back those up separately if you rely on them.
 
+The servers you manage in Deploy are backed up on the servers themselves, from their **Backups** section, on a schedule and to places like SFTP, Google Drive or Telegram. See [Server backups](deploy-server-backups.md).
+
 Blueprint attachments travel inside the backup as files. A single attachment over 10 MB is left out (its name comes back, the file does not), and the total is capped at 100 MB.
 
 ## Export a backup
@@ -107,3 +109,4 @@ When you choose **Restore the Vault**, AgentMate locks the Vault, sets your curr
 - [Vault](vault.md)
 - [Projects](projects.md)
 - [Troubleshooting](troubleshooting.md)
+- [Server backups](deploy-server-backups.md)

@@ -233,6 +233,12 @@ export interface WpSiteInfo {
    * false when missing. File changes being switched off is reported by the fields above.
    */
   selfUpdate?: boolean;
+  /**
+   * The connector can fetch an update from the AgentMate GitHub release itself
+   * (`WpConnectorUpdateRequest.download`). Absent from connectors that only take the files from
+   * the app.
+   */
+  updateDownload?: boolean;
   sodium: 'native' | 'compat';
   limits: WpLimits;
   guard: { installed: boolean; rescueUrl: string | null };
@@ -527,6 +533,17 @@ export interface WpConnectorUpdateRequest {
   /** The version being installed; it must match the plugin header in the files. */
   version: string;
   files: WpConnectorUpdateFile[];
+  /**
+   * The site downloads the plugin zip from this release address instead, and the request carries
+   * no blobs. Each file in the zip must match `files` exactly, or the site refuses with
+   * `downloadFailed` and the app sends the files itself. Only `wpConnectorReleaseUrl(version)`.
+   */
+  download?: { url: string };
+}
+
+/** The plugin zip on the AgentMate GitHub release of a version. Mirrors UPDATE_DOWNLOAD_URL. */
+export function wpConnectorReleaseUrl(version: string): string {
+  return `https://github.com/SmartClouds/AgentMate/releases/download/v${version}/agentmate-connector.zip`;
 }
 
 /** Why a site refused an update, in `details.reason` of an `updateRefused` error. */
@@ -538,7 +555,9 @@ export type WpUpdateRefusal =
   /** The new version needs a newer PHP or WordPress than the site has. */
   | 'requirements'
   /** The plugin folder is a symlink, or PHP may not rename it. */
-  | 'notReplaceable';
+  | 'notReplaceable'
+  /** The site could not download the release, or what it got is not the files the app listed. */
+  | 'downloadFailed';
 
 export interface WpConnectorUpdateResponse {
   /** `rolledBack`: the new files made the site fail its health check, so the old ones are back. */

@@ -221,6 +221,27 @@ describe('useStepUp', () => {
     expect(work).toHaveBeenCalledTimes(2);
   });
 
+  it('also asks when the main process already named the refusal a missing step-up', async () => {
+    const work = vi
+      .fn<() => Promise<string>>()
+      .mockRejectedValueOnce(
+        new Error(
+          "Error invoking remote method 'x': Error: [core:stepUpRequired] Confirm your password.",
+        ),
+      )
+      .mockResolvedValueOnce('done');
+    const { user } = renderHarness(work, {
+      'deploy.account': async () => ({ stepUpUntilUnixMs: Date.now() + 5 * MINUTE }),
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Change something' }));
+    await user.type(await screen.findByLabelText('Password'), PASSWORD);
+    await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+    expect(await result()).toBe('done');
+    expect(work).toHaveBeenCalledTimes(2);
+  });
+
   it('drops the change when the user backs out of the dialog', async () => {
     const work = vi.fn(async () => 'done');
     const { user } = renderHarness(work);

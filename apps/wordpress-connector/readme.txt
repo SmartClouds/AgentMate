@@ -23,7 +23,7 @@ AgentMate Connector pairs this site with the AgentMate app on your computer. Age
 
 == Updating ==
 
-When the app ships a newer connector, it offers to update the one on your site. The app sends the new plugin's files over the same signed connection; the site never downloads anything. The connector checks each file's hash and path and parses every PHP file before it writes anything, builds the new folder beside the old one, swaps the two, and runs the same health checks a deploy does. If a check that passed before fails now, the old folder is put back and the app says so. Nothing else runs while a deploy is open.
+When the app ships a newer connector, it offers to update the one on your site. The site first tries to download that release itself, and only from the AgentMate GitHub release of that version (https://github.com/SmartClouds/AgentMate/releases). The app tells it the size and SHA-256 of every file over the signed connection, and the site takes the download only when every file matches. If the site can't reach GitHub, or what it gets differs, nothing is changed and the app sends the files itself over the same signed connection. Either way the connector checks each file's hash and path and parses every PHP file before it writes anything, builds the new folder beside the old one, swaps the two, and runs the same health checks a deploy does. If a check that passed before fails now, the old folder is put back and the app says so. Nothing else runs while a deploy is open.
 
 Updating needs a write key and the same rights as a deploy. You can still update by uploading the zip in Plugins > Add New; that always works.
 

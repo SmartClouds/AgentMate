@@ -8,6 +8,12 @@ import type { ContainerLogLine } from '@shared/deploy/protocol/generated/AgentMa
 
 export const MAX_LOG_LINES = 5_000;
 
+/** How many lines a log starts with, as the viewers offer them. */
+export const TAIL_CHOICES = [100, 500, 1_000, 2_000, 5_000] as const;
+export const DEFAULT_TAIL = 500;
+/** A unit's journal and a site's log read at most this many lines at the start. */
+export const MAX_TEXT_LOG_TAIL = 2_000;
+
 // biome-ignore lint/suspicious/noControlCharactersInRegex: escape sequences are what it removes
 const ANSI = /\u001b\[[0-9;?]*[ -/]*[@-~]|\u001b\][^\u0007]*(?:\u0007|\u001b\\)/g;
 

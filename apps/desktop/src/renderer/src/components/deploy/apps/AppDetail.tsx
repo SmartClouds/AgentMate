@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Docker,
   FileCode,
+  FileText,
   History,
   Pause,
   Play,
@@ -24,6 +25,7 @@ import {
   Rocket,
   RotateCw,
   Route,
+  TerminalSquare,
   Trash2,
 } from '@/components/icons';
 import {
@@ -52,6 +54,11 @@ import { confirmDialog } from '@/stores/confirmStore';
 import { JobLogDialog } from '../overview/JobLogDialog';
 import { RegistryPlanCard } from '../registries/RegistryPlanCard';
 import { dateTime } from '../security/format';
+import {
+  type StackToolsRequest,
+  StackToolsSheet,
+  stackContainers,
+} from '../stackTools/StackToolsSheet';
 import { OPERATOR_ONLY } from './AppsList';
 import { DeployTimeline } from './DeployTimeline';
 import type { AppsAccess } from './hooks';
@@ -64,6 +71,7 @@ import { StatusPill } from './StatusPill';
  */
 
 const ADMIN_ONLY = 'Deleting an app with its data needs the Admin role or higher.';
+const CONSOLE_ADMIN_ONLY = 'Consoles need the Admin role or higher.';
 
 const ACTIONS: ReadonlyArray<{
   action: StackAction;
@@ -113,6 +121,8 @@ function DetailSkeleton(): React.JSX.Element {
   );
 }
 
+const NO_CONTAINERS = 'Nothing runs yet. Deploy a revision first.';
+
 function Gate({
   allowed,
   reason,
@@ -129,7 +139,15 @@ function Gate({
   );
 }
 
-function ServicesCard({ services }: { services: StackServiceInfo[] }): React.JSX.Element {
+function ServicesCard({
+  services,
+  canAdmin,
+  onTools,
+}: {
+  services: StackServiceInfo[];
+  canAdmin: boolean;
+  onTools: (request: StackToolsRequest) => void;
+}): React.JSX.Element {
   return (
     <section className={cn(GLASS_CARD, 'space-y-3 p-4')}>
       <div className="space-y-1">
@@ -187,7 +205,33 @@ function ServicesCard({ services }: { services: StackServiceInfo[] }): React.JSX
                         {container.health !== 'none' ? `, ${container.health}` : ''}
                       </StatusPill>
                       <span className="font-mono text-foreground/90">{container.name}</span>
-                      <span className="truncate">{container.status}</span>
+                      <span className="min-w-0 flex-1 truncate">{container.status}</span>
+                      <SimpleTooltip label="Logs">
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          aria-label={`Logs of ${container.name}`}
+                          onClick={() => onTools({ tab: 'logs', containerId: container.id })}
+                        >
+                          <FileText />
+                        </Button>
+                      </SimpleTooltip>
+                      {container.state === 'running' && (
+                        <SimpleTooltip
+                          label={canAdmin ? 'Console' : CONSOLE_ADMIN_ONLY}
+                          wrapTrigger={!canAdmin}
+                        >
+                          <Button
+                            size="icon-sm"
+                            variant="ghost"
+                            aria-label={`Console in ${container.name}`}
+                            disabled={!canAdmin}
+                            onClick={() => onTools({ tab: 'console', containerId: container.id })}
+                          >
+                            <TerminalSquare />
+                          </Button>
+                        </SimpleTooltip>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -460,6 +504,7 @@ export function AppDetail({
   const [followJob, setFollowJob] = useState<string | null>(null);
   const [logJob, setLogJob] = useState<JobInfo | null>(null);
   const [working, setWorking] = useState<string | null>(null);
+  const [tools, setTools] = useState<StackToolsRequest | null>(null);
 
   const refresh = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.deployApps(serverId) });
@@ -590,6 +635,7 @@ export function AppDetail({
     : stackBusy
       ? 'A job is working on this app. Wait for it to finish.'
       : '';
+  const containers = stackContainers(data.services);
   const rollbackTarget =
     shown && shown.number !== latest && (shown.state === 'superseded' || shown.state === 'live')
       ? shown
@@ -678,6 +724,30 @@ export function AppDetail({
               <Trash2 className="h-3.5 w-3.5" /> Delete with its data
             </Button>
           </Gate>
+          <span className="flex-1" aria-hidden />
+          <Gate allowed={containers.length > 0} reason={NO_CONTAINERS}>
+            <Button
+              size="sm"
+              variant="soft"
+              disabled={containers.length === 0}
+              onClick={() => setTools({ tab: 'logs' })}
+            >
+              <FileText className="h-3.5 w-3.5" /> Logs
+            </Button>
+          </Gate>
+          <Gate
+            allowed={access.canAdmin && containers.length > 0}
+            reason={access.canAdmin ? NO_CONTAINERS : CONSOLE_ADMIN_ONLY}
+          >
+            <Button
+              size="sm"
+              variant="soft"
+              disabled={!access.canAdmin || containers.length === 0}
+              onClick={() => setTools({ tab: 'console' })}
+            >
+              <TerminalSquare className="h-3.5 w-3.5" /> Console
+            </Button>
+          </Gate>
         </div>
       </div>
       {shown && (
@@ -693,7 +763,7 @@ export function AppDetail({
         />
       )}
       <div className="grid gap-2 xl:grid-cols-2">
-        <ServicesCard services={data.services} />
+        <ServicesCard services={data.services} canAdmin={access.canAdmin} onTools={setTools} />
         <RevisionsList
           revisions={revisions}
           shown={shown?.number ?? null}
@@ -715,6 +785,14 @@ export function AppDetail({
         />
       )}
       {shown && <FilesCard serverId={serverId} stackId={stackId} revision={shown.number} />}
+      <StackToolsSheet
+        serverId={serverId}
+        project={stack.name}
+        containers={containers}
+        canAdmin={access.canAdmin}
+        request={tools}
+        onClose={() => setTools(null)}
+      />
       <JobLogDialog
         serverId={serverId}
         job={logJob}

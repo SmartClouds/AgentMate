@@ -60,6 +60,7 @@ final class SiteInfo
             'filesystemMethod' => $env->filesystemMethod(),
             'readOnlyByConstant' => $env->constantOn('AGENTMATE_CONNECTOR_READ_ONLY'),
             'selfUpdate' => ConnectorUpdater::replaceable($env),
+            'updateDownload' => true,
             'sodium' => $env->sodiumMode(),
             'limits' => Limits::forEnvironment($env),
             'guard' => array('installed' => is_file($guard), 'rescueUrl' => $env->rescueUrl()),

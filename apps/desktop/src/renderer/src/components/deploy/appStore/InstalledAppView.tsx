@@ -7,15 +7,18 @@ import {
   ArrowLeft,
   CircleCheck,
   CircleX,
+  FileText,
   Globe,
   Minus,
   Spinner,
   Store,
+  TerminalSquare,
   TriangleAlert,
 } from '@/components/icons';
 import { GLASS_CARD } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import type { UpdateOffer } from '@/lib/deploy/appStore/format';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
@@ -24,6 +27,11 @@ import { DeployTimeline } from '../apps/DeployTimeline';
 import { type AppsAccess, stackIsBusy } from '../apps/hooks';
 import { DeployCard, Notice } from '../deployKit';
 import { useProofStepUp } from '../overview/useProofStepUp';
+import {
+  type StackToolsRequest,
+  StackToolsSheet,
+  stackContainers,
+} from '../stackTools/StackToolsSheet';
 import { useInstalledApp } from './hooks';
 import { PostInstallCard } from './PostInstallCard';
 
@@ -115,6 +123,7 @@ export function InstalledAppView({
   const [revealed, setRevealed] = useState<Record<string, string> | null>(null);
   const [revealing, setRevealing] = useState(false);
   const [problem, setProblem] = useState<string | null>(notice ?? null);
+  const [tools, setTools] = useState<StackToolsRequest | null>(null);
   const stepUp = useProofStepUp(server);
   const app = useInstalledApp(serverId, stackId, access.signedIn, following);
   const details = app.details;
@@ -208,6 +217,7 @@ export function InstalledAppView({
     );
   }
 
+  const containers = stackContainers(details.services);
   const timeline =
     newest?.jobId && (following || busy || newest.state !== 'live') ? newest : undefined;
 
@@ -223,9 +233,40 @@ export function InstalledAppView({
           </div>
           <h3 className="truncate text-sm font-semibold">{details.stack.name}</h3>
         </div>
-        <Button size="sm" variant="soft" className="ml-auto" onClick={onOpenInApps}>
-          Open in Apps
-        </Button>
+        <div className="ml-auto flex flex-wrap gap-1.5">
+          <SimpleTooltip label={containers.length === 0 ? 'Nothing runs yet.' : null} wrapTrigger>
+            <Button
+              size="sm"
+              variant="soft"
+              disabled={containers.length === 0}
+              onClick={() => setTools({ tab: 'logs' })}
+            >
+              <FileText /> Logs
+            </Button>
+          </SimpleTooltip>
+          <SimpleTooltip
+            label={
+              !access.canAdmin
+                ? 'Consoles need the Admin role or higher.'
+                : containers.length === 0
+                  ? 'Nothing runs yet.'
+                  : null
+            }
+            wrapTrigger
+          >
+            <Button
+              size="sm"
+              variant="soft"
+              disabled={!access.canAdmin || containers.length === 0}
+              onClick={() => setTools({ tab: 'console' })}
+            >
+              <TerminalSquare /> Console
+            </Button>
+          </SimpleTooltip>
+          <Button size="sm" variant="soft" onClick={onOpenInApps}>
+            Open in Apps
+          </Button>
+        </div>
       </div>
       {timeline && (
         <DeployTimeline
@@ -263,6 +304,14 @@ export function InstalledAppView({
         </div>
       )}
       {stepUp.dialog}
+      <StackToolsSheet
+        serverId={serverId}
+        project={details.stack.name}
+        containers={containers}
+        canAdmin={access.canAdmin}
+        request={tools}
+        onClose={() => setTools(null)}
+      />
     </div>
   );
 }

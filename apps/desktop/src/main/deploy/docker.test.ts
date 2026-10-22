@@ -151,6 +151,30 @@ describe('DeployDocker', () => {
     );
   });
 
+  it('says which container or volume went, so its file sessions can close (E27)', async () => {
+    const core = new FakeCore(() => Date.now());
+    const hubs = fakeLiveHubs(core);
+    const removed: string[] = [];
+    const docker = new DeployDocker({
+      links: new CoreLinks({ open: async () => hubs.open() }),
+      roles: () => ['owner'],
+      removed: (serverId, kind, id) => removed.push(`${serverId} ${kind} ${id}`),
+    });
+
+    await docker.remove({
+      serverId: 'srv-1',
+      containerId: 'migrate-once',
+      removeVolumes: false,
+      force: false,
+    });
+    await docker.removeVolume({ serverId: 'srv-1', volume: 'old-cache', force: false });
+    await docker
+      .removeVolume({ serverId: 'srv-1', volume: 'nope', force: false })
+      .catch(() => undefined);
+
+    expect(removed).toEqual(['srv-1 container migrate-once', 'srv-1 volume old-cache']);
+  });
+
   it('lists, pulls and removes images, volumes and networks, and prunes', async () => {
     const { core, docker } = setup(['owner']);
     expect((await docker.listImages('srv-1')).map((image) => image.tags[0])).toContain(

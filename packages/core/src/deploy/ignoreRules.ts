@@ -43,6 +43,32 @@ export interface IgnoreLayer {
    * never put a default-ignored local file back into a deploy. Defaults to true.
    */
   negations?: boolean;
+  /**
+   * Skips a line that cannot be read instead of failing the whole set. For files the user keeps
+   * for another tool, like a `.gitignore`, whose odd line should never stop a deploy.
+   */
+  lenient?: boolean;
+  /**
+   * `ancestor`: the lines were written for a folder above the synced one (the project's
+   * `.gitignore`), so they match paths from there down. Only meaningful in `defaultLayers`.
+   * Defaults to `folder`: the lines are relative to the synced folder.
+   */
+  scope?: 'folder' | 'ancestor';
+}
+
+export interface IgnoreRulesOptions {
+  /**
+   * Default layers read from files (a `.gitignore`). They leave paths out only until the server
+   * has them, like `defaults`, but come before them, so a `!` line in one can never put a
+   * built-in default back; the user's own layers still can.
+   */
+  defaultLayers?: readonly IgnoreLayer[];
+  /**
+   * The synced folder's path inside the folder its `ancestor` layers were written for, with `/`
+   * separators (`wp-content/themes/foo`). Without it those layers are left out, and one that
+   * ignores the synced folder itself is left out too: the user chose to sync that folder.
+   */
+  ancestorPath?: string;
 }
 
 export interface IgnoreRules {
@@ -61,19 +87,29 @@ export type IgnoreRulesResult =
   | { ok: true; rules: IgnoreRules }
   | { ok: false; source: string; line: number; reason: string };
 
-function compileLayers(
-  layers: readonly IgnoreLayer[],
-):
+type Compiled =
   | { ok: true; matcher: DockerignoreMatcher }
-  | { ok: false; source: string; line: number; reason: string } {
+  | { ok: false; source: string; line: number; reason: string };
+
+/** A converted line with the synced folder's path in front, for a matcher that starts above it. */
+function rebase(line: string, base: string): string {
+  if (line === '') return line;
+  return line.startsWith('!') ? `!${base}/${line.slice(1)}` : `${base}/${line}`;
+}
+
+function compileLayers(layers: readonly IgnoreLayer[], base?: string): Compiled {
   const lines: string[] = [];
   for (const layer of layers) {
     const negations = layer.negations !== false;
-    const converted = layer.text.split('\n').map((line) => toDockerignoreLine(line, negations));
+    let converted = layer.text.split('\n').map((line) => toDockerignoreLine(line, negations));
+    if (layer.lenient) {
+      converted = converted.map((line) => (line === '' || parseDockerignore(line).ok ? line : ''));
+    }
     const parsed = parseDockerignore(converted.join('\n'));
     if (!parsed.ok)
       return { ok: false, source: layer.source, line: parsed.line, reason: parsed.reason };
-    lines.push(...converted);
+    const moved = base !== undefined && layer.scope !== 'ancestor';
+    lines.push(...(moved ? converted.map((line) => rebase(line, base)) : converted));
   }
   const parsed = parseDockerignore(lines.join('\n'));
   // Every layer parsed on its own, so the joined text cannot fail; kept as a guard.
@@ -85,24 +121,47 @@ function compileLayers(
 /**
  * Builds the ignore rules from the user's layers, in order, on top of the given defaults (a layer
  * named `default`). The last matching line wins, so a later layer can override an earlier one.
+ * Layers read from files can be added as `options.defaultLayers`, ahead of the defaults.
  */
 export function createIgnoreRules(
   userLayers: readonly IgnoreLayer[],
   defaults: readonly string[],
+  options: IgnoreRulesOptions = {},
 ): IgnoreRulesResult {
   const user = compileLayers(userLayers);
   if (!user.ok) return user;
-  const combined = compileLayers([{ source: 'default', text: defaults.join('\n') }, ...userLayers]);
+
+  const { ancestorPath } = options;
+  const fileLayers: IgnoreLayer[] = [];
+  let moved = false;
+  for (const layer of options.defaultLayers ?? []) {
+    if (layer.scope === 'ancestor') {
+      if (ancestorPath === undefined) continue;
+      const alone = compileLayers([layer]);
+      if (!alone.ok) return alone;
+      if (alone.matcher.excludes(ancestorPath)) continue;
+      moved = true;
+    }
+    fileLayers.push(layer);
+  }
+  const base = moved ? ancestorPath : undefined;
+
+  const combined = compileLayers(
+    [...fileLayers, { source: 'default', text: defaults.join('\n') }, ...userLayers],
+    base,
+  );
   if (!combined.ok) return combined;
   const userMatcher = user.matcher;
   const combinedMatcher = combined.matcher;
+  const inCombined = (path: string): string => (base === undefined ? path : `${base}/${path}`);
   return {
     ok: true,
     rules: {
       excluded: (path) => userMatcher.excludes(path),
-      excludedUnlessTracked: (path) => combinedMatcher.excludes(path),
+      excludedUnlessTracked: (path) => combinedMatcher.excludes(inCombined(path)),
       canSkipFolder: (path) =>
-        combinedMatcher.excludes(path) && combinedMatcher.canSkipFolder(path),
+        combinedMatcher.excludes(inCombined(path)) &&
+        combinedMatcher.canSkipFolder(inCombined(path)),
     },
   };
 }

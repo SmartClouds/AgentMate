@@ -129,6 +129,10 @@ internal sealed partial class FakeDockerDaemon : IAsyncDisposable
         Requests.Enqueue($"{method} {path}{context.Request.QueryString.Value}");
         var segments = path.Trim('/').Split('/');
         var query = context.Request.Query;
+        if (await HandleFilesAsync(context, method, segments, query))
+        {
+            return;
+        }
 
         switch (method, segments)
         {
@@ -171,16 +175,6 @@ internal sealed partial class FakeDockerDaemon : IAsyncDisposable
                 return;
             case ("DELETE", ["containers", var id]):
                 await RemoveContainerAsync(context, id, IsTrue(query["force"]));
-                return;
-            case ("POST", ["containers", var id, "exec"]):
-                using (var reader = new StreamReader(context.Request.Body))
-                {
-                    ExecBodies.Enqueue(await reader.ReadToEndAsync());
-                }
-
-                var created = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
-                _execExitCodes[created] = -1;
-                await JsonAsync(context, $$"""{"Id":"{{created}}"}""", 201);
                 return;
             case ("GET", ["exec", var inspected, "json"]):
                 var code = _execExitCodes.TryGetValue(inspected, out var known) ? known : -1;
@@ -416,7 +410,8 @@ internal sealed partial class FakeDockerDaemon : IAsyncDisposable
         if (ExecStart().Match(requestLine) is { Success: true } exec)
         {
             await replay.Writer.CompleteAsync();
-            await RunShellAsync(exec.Groups[1].Value, replay.Reader, original);
+            var execId = exec.Groups[1].Value;
+            await (IsCommandExec(execId) ? RunCommandAsync(execId, replay.Reader, original) : RunShellAsync(execId, replay.Reader, original));
             return;
         }
 

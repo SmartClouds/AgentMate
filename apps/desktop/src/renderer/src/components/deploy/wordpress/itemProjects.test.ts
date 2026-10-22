@@ -1,6 +1,11 @@
 import type { WpItemRef } from '@agentmat/core';
 import { describe, expect, it } from 'vitest';
-import { addItemPlan, projectChoicesFor, removeItemPlan } from './itemProjects';
+import {
+  addItemPlan,
+  projectChoicesFor,
+  projectChoicesForSite,
+  removeItemPlan,
+} from './itemProjects';
 import { wpProject, wpSite } from './testing/fixtures';
 
 /**
@@ -20,6 +25,23 @@ function linked(id: string, name: string, items: WpItemRef[], siteId = SITE) {
 function plain(id: string, name: string) {
   return wpProject({ id, name, wordpress: undefined });
 }
+
+describe('projectChoicesForSite', () => {
+  it('lists the projects linked to the site and the plain ones, each by name, and no other', () => {
+    const zed = linked('a', 'Zed', [THEME]);
+    const abe = linked('b', 'abe', [PLUGIN]);
+    const loose = plain('c', 'Loose');
+    const also = plain('d', 'Also loose');
+    const elsewhere = linked('e', 'Elsewhere', [PLUGIN], 'site-other');
+
+    const choices = projectChoicesForSite([zed, loose, elsewhere, abe, also], SITE);
+
+    expect(choices.siteProjects).toEqual([abe, zed]);
+    expect(choices.unlinked).toEqual([also, loose]);
+    expect(choices.otherSite).toEqual([{ project: elsewhere, siteId: 'site-other' }]);
+    expect(choices.holding).toEqual([]);
+  });
+});
 
 describe('projectChoicesFor', () => {
   it('sorts every project into its group', () => {

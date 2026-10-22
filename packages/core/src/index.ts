@@ -33,6 +33,7 @@ export * from './deploy/validation.js';
 export * from './deploy/wordpress/bundle.js';
 export * from './deploy/wordpress/canonical.js';
 export * from './deploy/wordpress/connectionKey.js';
+export * from './deploy/wordpress/ignoreList.js';
 export * from './deploy/wordpress/pathPolicy.js';
 export * from './deploy/wordpress/projectLink.js';
 export * from './deploy/wordpress/prompt.js';

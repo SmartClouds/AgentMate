@@ -1,3 +1,4 @@
+import type { SftpCapabilities } from '../../shared/sftpTypes';
 import type {
   SftpEntry,
   SftpOptions,
@@ -121,6 +122,21 @@ export interface SftpFileClient {
     localPath: string,
     options?: DownloadFileOptions,
   ): Promise<DownloadFileResult>;
+  /**
+   * What the remote side allows (E27: a stopped or shell-less container cannot rename, delete or
+   * chmod). Left out, everything is, as on SFTP.
+   */
+  capabilities?(): SftpCapabilities;
+  /** Why some actions are off, in a sentence for the page; null when nothing is. */
+  limitation?(): string | null;
+  /**
+   * `sftpListDetailed` with whether the listing was cut short (E27: a big folder in a stopped
+   * container). Left out, listings are always whole.
+   */
+  sftpListing?(
+    dir: string,
+    options?: SftpOptions,
+  ): Promise<{ entries: SftpDetailedEntry[]; partial: boolean }>;
 }
 
 /** A client lent out by the pool. */

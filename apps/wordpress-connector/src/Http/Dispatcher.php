@@ -42,7 +42,7 @@ use AgentMate\Connector\Storage\Storage;
 final class Dispatcher
 {
     /** Features a client can count on from this build. */
-    const CAPABILITIES = array('pair', 'read', 'audit', 'revoke', 'deploy', 'update', 'rescue');
+    const CAPABILITIES = array('pair', 'read', 'audit', 'revoke', 'deploy', 'update', 'updateDownload', 'rescue');
 
     /** @var Storage */
     private $storage;

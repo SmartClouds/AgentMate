@@ -215,6 +215,21 @@ export const queryKeys = {
   /** Everything the Firewall section reads (E13), dropped at once after a change. */
   deployFirewall: (serverId: string) => ['deploy', 'firewall', serverId] as const,
   deployDirectTls: (serverId: string) => ['deploy', 'directTls', serverId] as const,
+  /** How a server's core reports its warnings and errors to Sentry (E29); never the DSN. */
+  deployErrorReporting: (serverId: string) => ['deploy', 'errorReporting', serverId] as const,
+  deployTelegram: (serverId: string) => ['deploy', 'telegram', serverId] as const,
+  /** Prefix of a server's Backups section (E28): the secret, destinations, plans and runs. */
+  deployServerBackups: (serverId: string) => ['deploy', 'serverBackups', serverId] as const,
+  deployBackupSecret: (serverId: string) =>
+    ['deploy', 'serverBackups', serverId, 'secret'] as const,
+  deployBackupDestinations: (serverId: string) =>
+    ['deploy', 'serverBackups', serverId, 'destinations'] as const,
+  deployBackupPlans: (serverId: string) => ['deploy', 'serverBackups', serverId, 'plans'] as const,
+  deployBackupRuns: (serverId: string) => ['deploy', 'serverBackups', serverId, 'runs'] as const,
+  deployStoredBackups: (serverId: string, destinationId: string) =>
+    ['deploy', 'serverBackups', serverId, 'stored', destinationId] as const,
+  deployPendingRestore: (serverId: string) =>
+    ['deploy', 'serverBackups', serverId, 'pendingRestore'] as const,
   deployFirewallStatus: (serverId: string) => ['deploy', 'firewall', serverId, 'status'] as const,
   deployFirewallPresets: (serverId: string) => ['deploy', 'firewall', serverId, 'presets'] as const,
   deployFirewallHistory: (serverId: string) => ['deploy', 'firewall', serverId, 'history'] as const,
@@ -274,6 +289,9 @@ export const queryKeys = {
   /** How far a WordPress project's folder has moved from its last sync. */
   projectWordPressChanges: (projectId: string) =>
     ['deploy', 'wordpress', 'project', projectId, 'changes'] as const,
+  /** The theme and plugin folders found in a WordPress project's wp-content. */
+  projectWordPressLocalItems: (projectId: string) =>
+    ['deploy', 'wordpress', 'project', projectId, 'localItems'] as const,
   /** A site file for the diff view in a WordPress project. */
   projectWordPressRemoteFile: (projectId: string, itemKey: string, path: string) =>
     ['deploy', 'wordpress', 'project', projectId, 'remote-file', itemKey, path] as const,

@@ -1,5 +1,6 @@
 import { sampleJob } from '@shared/deploy/testing/fakeCoreData';
 import { screen, waitFor, within } from '@testing-library/react';
+import { useLocation } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { ConfirmDialogHost } from '@/components/ConfirmDialog';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
@@ -17,11 +18,17 @@ vi.mock('sonner', () => ({ toast }));
 
 const { ContainersPanel } = await import('./ContainersPanel');
 
+function LocationProbe(): React.JSX.Element {
+  const location = useLocation();
+  return <span data-testid="path">{`${location.pathname}${location.search}`}</span>;
+}
+
 async function openTab(tab: string, bridge: Record<string, unknown> = {}, roles?: string[]) {
   const view = renderWithProviders(
     <>
       <ContainersPanel server={SERVER} />
       <ConfirmDialogHost />
+      <LocationProbe />
     </>,
     { bridge: { ...dockerBridge(roles), ...bridge } },
   );
@@ -116,7 +123,7 @@ describe('Volumes and networks', () => {
     expect(within(list).getByRole('listitem', { name: 'shop_db-data' })).toHaveTextContent(
       'project shop, 512 MB, used by 1 container',
     );
-    expect(within(list).queryByRole('button')).toBeNull();
+    expect(within(list).queryByRole('button', { name: /Remove/ })).toBeNull();
   });
 
   it('says when volumes do not load or there are none', async () => {
@@ -165,6 +172,28 @@ describe('Volumes and networks', () => {
   it('says when there are no networks', async () => {
     await openTab('Networks', { 'deployDocker.listNetworks': [] });
     expect(await screen.findByText('No networks on this server.')).toBeInTheDocument();
+  });
+});
+
+describe('Volumes, Browse files (E27)', () => {
+  it('opens the Files section on a volume', async () => {
+    const { user } = await openTab('Volumes');
+    const list = await screen.findByRole('list', { name: 'Volumes' });
+    await user.click(within(list).getByRole('button', { name: 'Browse files in shop_db-data' }));
+    expect(screen.getByTestId('path').textContent).toBe(
+      '/deploy?server=srv-1&view=files&source=volume&target=shop_db-data',
+    );
+  });
+
+  it('is off below Admin, and says why', async () => {
+    const { user } = await openTab('Volumes', {}, ['operator']);
+    const list = await screen.findByRole('list', { name: 'Volumes' });
+    const button = within(list).getByRole('button', { name: 'Browse files in old-cache' });
+    expect(button).toBeDisabled();
+    await user.hover(button.parentElement as HTMLElement);
+    expect(
+      await screen.findByRole('tooltip', { name: 'Browsing files in a volume is for Admins.' }),
+    ).toBeTruthy();
   });
 });
 

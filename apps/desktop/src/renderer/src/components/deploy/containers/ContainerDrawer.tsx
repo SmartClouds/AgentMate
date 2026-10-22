@@ -6,7 +6,9 @@ import type {
 } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
+  FolderOpen,
   Globe,
   HardDrive,
   NetworkIcon,
@@ -27,6 +29,7 @@ import {
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { isPublic, portText } from '@/lib/deploy/containers/list';
 import { cpuText, type StatsHistory } from '@/lib/deploy/containers/stats';
 import { formatBytes } from '@/lib/format';
@@ -34,6 +37,7 @@ import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import type { ProofStepUp } from '../overview/useProofStepUp';
 import { ago } from '../security/format';
+import { serverFilesHref } from '../serverFiles/params';
 import { ContainerConsoleTab } from './ContainerConsoleTab';
 import { ContainerInspectTab } from './ContainerInspectTab';
 import { ActionMenu, type ContainerActions } from './ContainerList';
@@ -243,6 +247,7 @@ export function ContainerDrawer({
   onSendToCli: (container: ContainerSummary, revealed: ContainerEnvVariable[] | null) => void;
   onClose: () => void;
 }): React.JSX.Element {
+  const navigate = useNavigate();
   const [revealed, setRevealed] = useState<ContainerEnvVariable[] | null>(null);
   const id = container?.id ?? '';
   const details = useQuery({
@@ -336,6 +341,23 @@ export function ContainerDrawer({
                 <Button size="sm" variant="soft" onClick={() => onSendToCli(container, revealed)}>
                   <Wand2 className="h-3.5 w-3.5" /> Send logs to the project CLI
                 </Button>
+                <SimpleTooltip
+                  label={canAdmin ? undefined : 'Browsing files in a container is for Admins.'}
+                  wrapTrigger
+                >
+                  <Button
+                    size="sm"
+                    variant="soft"
+                    disabled={!canAdmin}
+                    onClick={() =>
+                      navigate(
+                        serverFilesHref(serverId, { source: 'container', target: container.name }),
+                      )
+                    }
+                  >
+                    <FolderOpen className="h-3.5 w-3.5" /> Browse files
+                  </Button>
+                </SimpleTooltip>
                 <ActionMenu container={container} actions={actions} align="start" />
               </div>
             </DialogHeader>

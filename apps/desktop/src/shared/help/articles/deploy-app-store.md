@@ -76,7 +76,7 @@ After the install starts, the app view shows three **Domain steps**: **Add the s
 
 ## After the install
 
-When you click Install, the section switches to the app's own view, which has an **App Store** back button, the app name and **Open in Apps** (jumps to the same app under **Apps**, where you find its services, revisions and files).
+When you click Install, the section switches to the app's own view, which has an **App Store** back button, the app name, **Logs**, **Console** and **Open in Apps** (jumps to the same app under **Apps**, where you find its services, revisions and files). **Logs** follows every service of the app live, and **Console** (Admins only) opens a shell or runs a command, such as `redis-cli` or `psql`, in one of its running containers. Both wait until something runs. See [Logs and consoles of an app](deploy-containers-stacks.md#logs-and-consoles-of-an-app).
 
 - **The deploy timeline** appears first while the install runs: Validate, Pull images, Build, Start containers and Health check, each with its log. See [Containers, apps and stacks](deploy-containers-stacks.md#deploy-timeline).
 - If the server refuses the files, the view shows why nothing was deployed.

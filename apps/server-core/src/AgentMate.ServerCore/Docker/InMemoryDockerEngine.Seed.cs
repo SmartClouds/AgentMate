@@ -6,7 +6,8 @@ namespace AgentMate.ServerCore.Docker;
 
 /// <summary>
 /// What the pretend engine starts with: a "shop" project (web, api, db, worker), a "monitoring"
-/// project (grafana, prometheus), a toolbox container and a one-off migration that has exited.
+/// project (grafana, prometheus, and a cloudflared tunnel whose distroless image has no shell), a
+/// toolbox container and a one-off migration that has exited.
 /// </summary>
 internal sealed partial class InMemoryDockerEngine
 {
@@ -22,6 +23,7 @@ internal sealed partial class InMemoryDockerEngine
         Image("grafana/grafana:12.1.1", 734_003_200, now - (long)(day * 30));
         Image("prom/prometheus:v3.5.0", 313_524_224, now - (long)(day * 30));
         Image("debian:13", 120_586_240, now - (long)(day * 40));
+        Image("cloudflare/cloudflared:2025.9.1", 63_401_984, now - (long)(day * 25));
 
         _networks.AddRange(
         [
@@ -91,6 +93,7 @@ internal sealed partial class InMemoryDockerEngine
             Ports = [new(3000, "tcp", "0.0.0.0", 3001), new(3000, "tcp", "::", 3001)],
             Environment = [new("GF_SECURITY_ADMIN_PASSWORD", "grafana-admin-91ac"), new("GF_SERVER_ROOT_URL", "https://grafana.example.com")],
             Command = ["/run.sh"],
+            User = "472",
             Load = 0.03,
             MemoryBase = 88L * 1024 * 1024,
         });
@@ -101,6 +104,14 @@ internal sealed partial class InMemoryDockerEngine
             Command = ["/bin/prometheus", "--config.file=/etc/prometheus/prometheus.yml"],
             Load = 0.06,
             MemoryBase = 143L * 1024 * 1024,
+        });
+        Add(new Container(DistrolessContainer, "cloudflare/cloudflared:2025.9.1", "monitoring", "cloudflared", Kind.Tunnel)
+        {
+            Command = ["tunnel", "--no-autoupdate", "run"],
+            User = "65532",
+            Shell = false,
+            Load = 0.01,
+            MemoryBase = 24L * 1024 * 1024,
         });
         Add(new Container("toolbox", "debian:13", null, null, Kind.Quiet)
         {
@@ -145,6 +156,9 @@ internal sealed partial class InMemoryDockerEngine
         Quiet,
         Migration,
 
+        /// <summary>A distroless image: the binary and its certificates, no shell (E27).</summary>
+        Tunnel,
+
         /// <summary>Exits a few seconds after each start and is restarted: a crash loop (E09, DevHost only).</summary>
         Crashing,
     }
@@ -169,6 +183,14 @@ internal sealed partial class InMemoryDockerEngine
         private long? _finishedMs;
 
         public string Id { get; } = IdOf("container:" + name);
+
+        public Kind Kind => kind;
+
+        /// <summary>False for a distroless image: an exec finds no sh, stat or anything else.</summary>
+        public bool Shell { get; init; } = true;
+
+        /// <summary>The image's USER, or null for root.</summary>
+        public string? User { get; init; }
 
         public string Name { get; } = name;
 
@@ -274,7 +296,7 @@ internal sealed partial class InMemoryDockerEngine
             Tty,
             false,
             false,
-            null,
+            User,
             kind == Kind.Api || kind == Kind.Worker || kind == Kind.Migration ? "/srv/app" : null,
             Id[..12],
             _startedMs,

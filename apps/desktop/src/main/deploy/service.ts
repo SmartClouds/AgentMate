@@ -32,6 +32,7 @@ import type {
   DeploySignInInput,
   DeployStepUpInput,
   DeployTotpSetup,
+  DeployTransport,
   DeployUninstallInput,
 } from '../../shared/deployTypes';
 import { TunnelRefusedError } from '../ssh/connection';
@@ -554,7 +555,7 @@ export class DeployService {
    * once the core is installed there. The core restarts, so the lasting connection starts over.
    */
   async restore(
-    request: Omit<DeployRestoreInput, 'fileToken'> & { file: string },
+    request: Omit<DeployRestoreInput, 'fileToken'> & { file: string; fileOnServer?: boolean },
     onProgress: (progress: DeployRestoreProgress) => void,
   ): Promise<DeployRestoreResult> {
     this.refuseDevHost(request.serverId);
@@ -620,13 +621,25 @@ export class DeployService {
     });
   }
 
+  /**
+   * The Deploy page asks this every 30 seconds per server, so it goes the way the link does:
+   * through direct TLS when that is on and answering, which leaves the SSH login idle and the pool
+   * closes it after a minute. Over SSH only when direct TLS is off or did not answer lately.
+   */
   async health(serverId: string): Promise<DeployHealth> {
     let answer: HealthResponse;
-    if (serverId === DEV_SERVER_ID && this.deps.devCorePort !== null) {
+    let transport: DeployTransport;
+    const direct = await this.directHealth(serverId);
+    if (direct) {
+      answer = direct;
+      transport = 'direct-tls';
+    } else if (serverId === DEV_SERVER_ID && this.deps.devCorePort !== null) {
       answer = await this.healthOf(devTcpTransport(this.deps.devCorePort));
+      transport = 'dev-tcp';
     } else {
       const record = await this.deps.state.get(serverId);
       if (!record) throw new Error('The server core is not installed on this server yet.');
+      transport = record.transport;
       answer = await this.withLease(serverId, async (lease) => {
         if (record.transport === 'bridge') return this.healthOf(bridgeTransport(lease.connection));
         try {
@@ -636,6 +649,7 @@ export class DeployService {
           if (!(error instanceof TunnelRefusedError)) throw error;
           const bridged = await this.healthOf(bridgeTransport(lease.connection));
           await this.deps.state.set(serverId, { ...record, transport: 'bridge' });
+          transport = 'bridge';
           return bridged;
         }
       });
@@ -645,7 +659,27 @@ export class DeployService {
       apiVersion: answer.apiVersion,
       startedAtUnixMs: answer.startedAtUnixMs,
       checkedAt: this.now(),
+      transport,
     };
+  }
+
+  /**
+   * The core's health over direct TLS, or null when SSH should ask instead. Same rules as the
+   * link: a pin mismatch is thrown, a port that does not answer is left alone for a while.
+   */
+  private async directHealth(serverId: string): Promise<HealthResponse | null> {
+    const direct = await this.directRoute(serverId, { probe: false });
+    if (!direct) return null;
+    try {
+      const answer = await this.healthOf(direct);
+      this.directUp.set(serverId, this.now() + DIRECT_UP_MS);
+      return answer;
+    } catch (error) {
+      if (error instanceof PinMismatchError) throw new Error(error.message);
+      if (!this.worthSsh(error)) throw error;
+      this.directDown.set(serverId, this.now() + DIRECT_DOWN_MS);
+      return null;
+    }
   }
 
   /**

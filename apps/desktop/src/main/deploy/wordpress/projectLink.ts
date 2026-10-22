@@ -1,7 +1,10 @@
-import { readdir } from 'node:fs/promises';
+import { lstat, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
+  isValidWpSlug,
+  isWpFileItemSlug,
   normalizeProjectWordPressLink,
+  normalizeWpIgnore,
   type Project,
   type ProjectWordPressLink,
   type WpItemRef,
@@ -9,6 +12,7 @@ import {
   wpItemRoot,
 } from '@agentmat/core';
 import type { CreateProjectInput } from '../../../shared/apiTypes';
+import type { DeployWordPressLocalItem } from '../../../shared/deployWordPressTypes';
 import { wordPressError } from '../../../shared/wordpressErrors';
 import { itemRootKind } from './localManifest';
 
@@ -80,11 +84,15 @@ export function newWpLink(
   siteId: string,
   items: readonly WpItemRef[],
   now: number,
+  ignore?: ProjectWordPressLink['ignore'],
 ): ProjectWordPressLink {
+  const kept = normalizeWpIgnore(ignore, items);
   return {
     siteId,
     items: items.map((item) => ({ kind: item.kind, slug: item.slug })),
     linkedAt: new Date(now).toISOString(),
+    // What was ignored stays for the items that remain; a removed item's lines go with it.
+    ...(kept ? { ignore: kept } : {}),
   };
 }
 
@@ -104,6 +112,88 @@ export async function itemsWithFiles(
     taken.push(item);
   }
   return taken;
+}
+
+const LOCAL_ROOTS: readonly { kind: WpItemRef['kind']; folder: string; files: boolean }[] = [
+  { kind: 'theme', folder: 'themes', files: false },
+  { kind: 'plugin', folder: 'plugins', files: true },
+  { kind: 'mu-plugin', folder: 'mu-plugins', files: true },
+];
+
+/**
+ * The themes, plugins and must-use plugins in a project's wp-content, each as a folder with files
+ * in it or, for plugins, a `.php` file. Links are not followed, names the sync would refuse are
+ * left out, and so is the `index.php` WordPress puts in each folder to keep it from being listed.
+ */
+export async function listLocalItems(
+  projectRoot: string,
+  linked: ReadonlySet<string>,
+): Promise<DeployWordPressLocalItem[]> {
+  const found: DeployWordPressLocalItem[] = [];
+  for (const root of LOCAL_ROOTS) {
+    const folder = join(projectRoot, 'wp-content', root.folder);
+    const info = await lstat(folder).catch(() => null);
+    if (!info?.isDirectory()) continue;
+    const entries = await readdir(folder, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isSymbolicLink() || !isValidWpSlug(entry.name)) continue;
+      const item = { kind: root.kind, slug: entry.name };
+      if (entry.isDirectory()) {
+        const inside = await readdir(join(folder, entry.name)).catch(() => []);
+        if (inside.length === 0) continue;
+        found.push({ ...item, isFile: false, linked: linked.has(wpItemKey(item)) });
+      } else if (root.files && entry.isFile() && isWpFileItemSlug(entry.name)) {
+        if (entry.name.toLowerCase() === 'index.php') continue;
+        found.push({ ...item, isFile: true, linked: linked.has(wpItemKey(item)) });
+      }
+    }
+  }
+  const order = LOCAL_ROOTS.map((root) => root.kind);
+  return found.sort(
+    (a, b) => order.indexOf(a.kind) - order.indexOf(b.kind) || a.slug.localeCompare(b.slug, 'en'),
+  );
+}
+
+/**
+ * Checks the items a caller calls new: each must be one of the items asked for, not linked yet,
+ * missing on the site, and already hold files in the project.
+ */
+export async function assertNewItems(options: {
+  projectRoot: string;
+  items: readonly WpItemRef[];
+  newItems: readonly WpItemRef[];
+  linked: ReadonlySet<string>;
+  onSite: ReadonlySet<string>;
+}): Promise<void> {
+  const asked = new Set(options.items.map(wpItemKey));
+  const withFiles = new Set(
+    (await itemsWithFiles(options.projectRoot, options.newItems)).map(wpItemKey),
+  );
+  for (const item of options.newItems) {
+    const key = wpItemKey(item);
+    const root = wpItemRoot(item);
+    if (!asked.has(key)) {
+      throw wordPressError(
+        'badRequest',
+        `${root} is new, but it is not one of the items asked for.`,
+      );
+    }
+    if (options.linked.has(key)) {
+      throw wordPressError('badRequest', `${root} is already in this project.`);
+    }
+    if (options.onSite.has(key)) {
+      throw wordPressError(
+        'badRequest',
+        `The site already has ${root}. Add it as an existing ${item.kind === 'theme' ? 'theme' : 'plugin'} instead.`,
+      );
+    }
+    if (!withFiles.has(key)) {
+      throw wordPressError(
+        'badRequest',
+        `${root} has no files yet. Put the files of the new ${item.kind === 'theme' ? 'theme' : 'plugin'} there first.`,
+      );
+    }
+  }
 }
 
 /** Each item's folder (or file) in the project must be missing or an empty folder. */

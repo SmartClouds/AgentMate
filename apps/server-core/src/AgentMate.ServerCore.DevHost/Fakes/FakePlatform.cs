@@ -54,6 +54,9 @@ internal static class FakePlatform
         services.AddSingleton<IDockerEngine>(provider => provider.GetRequiredService<InMemoryDockerEngine>());
         services.AddSingleton<IDockerSetup, FakeDockerSetup>();
 
+        // Server backups (E28): Docker as the pretend engine shows it, destinations in memory.
+        FakeBackups.Add(services);
+
         // Compose stacks (E07): docker compose on the pretend engine, a few lines a second.
         services.AddSingleton(provider => new SimulatedCompose(
             provider.GetRequiredService<InMemoryDockerEngine>(),

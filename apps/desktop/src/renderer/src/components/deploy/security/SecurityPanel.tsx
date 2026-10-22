@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { CoreAccessCard } from '../CoreAccessCard';
+import { ErrorReportingCard } from '../errorReporting/ErrorReportingCard';
 import { AuditCard } from './AuditCard';
 import { BackupCard } from './backup/BackupCard';
 import { RestoreDialog } from './backup/RestoreDialog';
@@ -26,8 +27,9 @@ const TAB =
 /**
  * A server's Security area: the security checklist (Admins and Owners), who can sign in (Owners),
  * the computers enrolled and the sessions signed in (everyone's own; Admins see every computer),
- * the audit trail (Admins and Owners), backups (Owners) and how the app reaches the core (direct
- * TLS, which Owners change). It shows only what the signed-in role may use, and the core checks
+ * the audit trail (Admins and Owners), backups (Owners), error reporting to Sentry (Admins read
+ * it, Owners change it) and how the app reaches the core (direct TLS, which Owners change). It
+ * shows only what the signed-in role may use, and the core checks
  * every call again. A backup can be restored without signing in, since that goes over SSH as
  * root: the way back for a core nobody can sign in to.
  */
@@ -119,6 +121,11 @@ export function SecurityPanel({
             Backups
           </TabsTrigger>
         )}
+        {admin && (
+          <TabsTrigger value="errorReporting" className={TAB}>
+            Error reporting
+          </TabsTrigger>
+        )}
         <TabsTrigger value="connection" className={TAB}>
           Connection
         </TabsTrigger>
@@ -145,6 +152,11 @@ export function SecurityPanel({
       {owner && (
         <TabsContent value="backups" className="mt-0">
           <BackupCard server={server} userName={access.data.user?.userName} />
+        </TabsContent>
+      )}
+      {admin && (
+        <TabsContent value="errorReporting" className="mt-0">
+          <ErrorReportingCard server={server} owner={owner} onUpdateCore={onUpdateCore} />
         </TabsContent>
       )}
       <TabsContent value="connection" className="mt-0">

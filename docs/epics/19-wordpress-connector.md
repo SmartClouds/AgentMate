@@ -40,6 +40,10 @@ the computer.
 - [x] T13 Connector update from the app: `/connector/update` (write scope) swaps the plugin's own
   folder with the files of the zip the app ships, health checks the site and undoes the swap by
   itself on a regression; `selfUpdate` in `/site/info`; an Update button in the site overview.
+- [x] T14 The site downloads the update itself: a connector that reports `updateDownload` is asked
+  to fetch the plugin zip from the GitHub release of that version and checks every file against
+  the list the app signs; on `downloadFailed` (or no answer and no swap) the app sends the files
+  as before. Development builds name no release and always send the files.
 
 ## Acceptance criteria
 
@@ -69,8 +73,10 @@ the computer.
 - Recovery when deployed code fatals every request: the client asks `/rescue/status` first (the
   guard answers it before themes and plugins load) and rolls back through `/rescue/rollback`, so
   the result is "rolled back, fatal error" rather than an error page.
-- The connector can update itself. A write connection sends the files of the plugin zip the app
-  ships (no download from the site, no ZipArchive), and the plugin builds the new folder beside
+- The connector can update itself. A write connection lists the files of the plugin zip the app
+  ships; the site downloads that release from GitHub when it can (only that address, and only
+  when every file matches the signed list), and otherwise the app sends the files as blobs. No
+  ZipArchive either way. The plugin builds the new folder beside
   the old one, parses it, swaps with two renames and health checks the site, putting the old
   folder back on a regression. This gives a write key no new power: it can already deploy PHP
   into any active plugin or theme. The first update of a connector that predates the route still

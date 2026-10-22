@@ -21,6 +21,7 @@ import { useDeployConnection } from '../overview/hooks';
 import { JobLogDialog } from '../overview/JobLogDialog';
 import { useProofStepUp } from '../overview/useProofStepUp';
 import { hasRole } from '../security/format';
+import { StackToolsSheet } from '../stackTools/StackToolsSheet';
 import { ContainerDrawer, type DrawerTab } from './ContainerDrawer';
 import { type ContainerActions, ContainerList } from './ContainerList';
 import { DockerInstallCard } from './DockerInstallCard';
@@ -95,6 +96,7 @@ export function ContainersPanel({ server }: { server: DeployServer }): React.JSX
   } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [job, setJob] = useState<JobInfo | null>(null);
+  const [stackLogs, setStackLogs] = useState<string | null>(null);
 
   const access = useQuery({
     queryKey: queryKeys.deployAccess(serverId),
@@ -193,6 +195,7 @@ export function ContainersPanel({ server }: { server: DeployServer }): React.JSX
     act: canOperate ? (container, action) => void act(container, action) : undefined,
     remove: canOperate ? (container) => setRemoving(container) : undefined,
     busyId,
+    openStackLogs: setStackLogs,
   };
 
   const jobDialog = (
@@ -335,6 +338,14 @@ export function ContainersPanel({ server }: { server: DeployServer }): React.JSX
         stepUp={stepUp}
         onSendToCli={(container, revealed) => setSending({ container, revealed })}
         onClose={() => setOpenId(null)}
+      />
+      <StackToolsSheet
+        serverId={serverId}
+        project={stackLogs ?? ''}
+        containers={all.filter((container) => container.composeProject === stackLogs)}
+        canAdmin={canAdmin}
+        request={stackLogs ? { tab: 'logs' } : null}
+        onClose={() => setStackLogs(null)}
       />
       <RemoveContainerDialog
         container={removing}

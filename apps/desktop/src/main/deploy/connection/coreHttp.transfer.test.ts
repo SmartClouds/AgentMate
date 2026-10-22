@@ -154,24 +154,26 @@ describe('CoreHttpClient.download for file transfers', () => {
 describe('CoreHttpClient.putStream for file transfers', () => {
   it('stops sending when its signal aborts, and the core sees the body cut off', async () => {
     let cutOff = false;
+    const controller = new AbortController();
     const client = await serve((request) => {
-      request.on('aborted', () => {
-        cutOff = true;
-      });
       request.on('close', () => {
         if (!request.complete) cutOff = true;
       });
+      // Cancelled once the core has the first bytes, so there is a body to cut off.
+      request.once('data', () => controller.abort());
       request.resume();
     });
-    const controller = new AbortController();
-    const body = new Readable({ read() {} });
+    const body = new Readable({
+      read() {
+        // The test pushes the bytes itself.
+      },
+    });
     body.push(Buffer.alloc(1000));
 
     const upload = client.putStream('/up', body, {
       contentType: 'application/octet-stream',
       contentLength: 5000,
       signal: controller.signal,
-      onProgress: () => controller.abort(),
     });
 
     await expect(upload).rejects.toBeInstanceOf(CoreHttpAbortError);
@@ -203,12 +205,16 @@ describe('CoreHttpClient.putStream for file transfers', () => {
       });
     });
 
-    const answer = await client.putStream<{ size: number }>('/ok', Readable.from([Buffer.alloc(7)]), {
-      contentType: 'application/octet-stream',
-      contentLength: 7,
-      stallTimeoutMs: 1_000,
-      headers: { 'x-extra': 'yes' },
-    });
+    const answer = await client.putStream<{ size: number }>(
+      '/ok',
+      Readable.from([Buffer.alloc(7)]),
+      {
+        contentType: 'application/octet-stream',
+        contentLength: 7,
+        stallTimeoutMs: 1_000,
+        headers: { 'x-extra': 'yes' },
+      },
+    );
 
     expect(answer).toEqual({ size: 7 });
     expect(seen[0].headers['x-extra']).toBe('yes');

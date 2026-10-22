@@ -25,11 +25,18 @@ import { createFetchTransport } from './transport';
  * network stack, progress to the main window, and the IPC handlers.
  */
 
+/** The store the WordPress section runs on, once it is up; a restore moves its addresses (E28). */
+let liveState: WordPressState | null = null;
+export function wordPressState(): WordPressState | null {
+  return liveState;
+}
+
 export function registerDeployWordPressIpc(deps: {
   guard: (event: IpcMainInvokeEvent) => boolean;
 }): void {
   const data = join(app.getPath('userData'), 'data');
   const state = new WordPressState(wordPressStateFilePort(join(data, 'deploy-wordpress.json')));
+  liveState = state;
   registerSealedSecretStore(state.sealedKeys);
   const service = new WordPressProjectService({
     state,

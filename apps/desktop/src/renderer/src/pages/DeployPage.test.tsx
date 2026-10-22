@@ -841,6 +841,42 @@ describe('DeployPage containers', () => {
   });
 });
 
+describe('DeployPage files', () => {
+  it('opens the Files section from the section bar, on the server disk', async () => {
+    const { user } = renderPage({
+      'deploy.listServers': async () => [server({ core: CORE, enrolled: true })],
+      'deploy.access': async (): Promise<DeployAccess> => ({ state: 'needs-sign-in' }),
+      // No saved server of that id, so the file manager settles without a session.
+      'ssh.listServers': [],
+    });
+    const sections = await screen.findByRole('navigation', { name: 'Server sections' });
+    await user.click(within(sections).getByRole('button', { name: /Files/ }));
+    expect(await screen.findByRole('combobox', { name: 'Source' })).toHaveTextContent(
+      'Server disk',
+    );
+    expect(screen.getByTestId('path').textContent).toBe('/deploy?server=srv-1&view=files');
+    expect(
+      within(sections).getByRole('button', { name: /Files/ }).getAttribute('aria-current'),
+    ).toBe('page');
+  });
+
+  it('opens a container from a link, and asks to sign in first', async () => {
+    renderPage(
+      {
+        'deploy.listServers': async () => [server({ core: CORE, enrolled: true })],
+        'deploy.access': async (): Promise<DeployAccess> => ({ state: 'needs-sign-in' }),
+      },
+      '/deploy?server=srv-1&view=files&source=container&target=shop-api-1',
+    );
+    expect(
+      await screen.findByText(
+        'Sign in to Production to browse the files in its containers and volumes.',
+      ),
+    ).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: 'Source' })).toHaveTextContent('Container');
+  });
+});
+
 describe('DeployPage logs', () => {
   it('opens the Logs section on its problems feed', async () => {
     const { user } = renderPage({

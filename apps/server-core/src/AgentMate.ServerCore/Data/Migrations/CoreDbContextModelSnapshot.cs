@@ -15,7 +15,7 @@ namespace AgentMate.ServerCore.Data.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.13");
 
             modelBuilder.Entity("AgentMate.ServerCore.Data.AcmeAccountRecord", b =>
                 {
@@ -177,6 +177,236 @@ namespace AgentMate.ServerCore.Data.Migrations
                     b.HasIndex("At");
 
                     b.ToTable("AuditEvents");
+                });
+
+            modelBuilder.Entity("AgentMate.ServerCore.Data.BackupDestinationRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("LastTestedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("MaxPartBytes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProtectedSecret")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Settings")
+                        .IsRequired()
+                        .HasMaxLength(8192)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("BackupDestinations");
+                });
+
+            modelBuilder.Entity("AgentMate.ServerCore.Data.BackupKeyRingRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("KeyId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PublicKey")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Slot")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BackupKeyRing");
+                });
+
+            modelBuilder.Entity("AgentMate.ServerCore.Data.BackupPlanDestinationRecord", b =>
+                {
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("DestinationId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("PlanId", "DestinationId");
+
+                    b.HasIndex("DestinationId");
+
+                    b.ToTable("BackupPlanDestinations");
+                });
+
+            modelBuilder.Entity("AgentMate.ServerCore.Data.BackupPlanRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Cron")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("KeepDays")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("KeepLast")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TimeZone")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("BackupPlans");
+                });
+
+            modelBuilder.Entity("AgentMate.ServerCore.Data.BackupRunRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("FinishedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("KeepForDownload")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("PlanId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlanName")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestedByName")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Sha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("SizeBytes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("StartedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Trigger")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlanId");
+
+                    b.HasIndex("StartedAt");
+
+                    b.ToTable("BackupRuns");
+                });
+
+            modelBuilder.Entity("AgentMate.ServerCore.Data.BackupRunTargetRecord", b =>
+                {
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("DestinationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DestinationName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("FinishedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Pruned")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("RunId", "DestinationId");
+
+                    b.ToTable("BackupRunTargets");
                 });
 
             modelBuilder.Entity("AgentMate.ServerCore.Data.CoreRole", b =>
@@ -1186,6 +1416,30 @@ namespace AgentMate.ServerCore.Data.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("AgentMate.ServerCore.Data.BackupPlanDestinationRecord", b =>
+                {
+                    b.HasOne("AgentMate.ServerCore.Data.BackupDestinationRecord", null)
+                        .WithMany()
+                        .HasForeignKey("DestinationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AgentMate.ServerCore.Data.BackupPlanRecord", null)
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AgentMate.ServerCore.Data.BackupRunTargetRecord", b =>
+                {
+                    b.HasOne("AgentMate.ServerCore.Data.BackupRunRecord", null)
+                        .WithMany()
+                        .HasForeignKey("RunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("AgentMate.ServerCore.Data.Device", b =>

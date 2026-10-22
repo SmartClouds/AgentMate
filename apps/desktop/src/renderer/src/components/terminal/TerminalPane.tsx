@@ -42,7 +42,10 @@ export function TerminalPane({ meta, active, onExit }: TerminalPaneProps): React
     const remote = meta.kind === 'ssh' || meta.kind === 'container';
     const client =
       meta.kind === 'container' && meta.container
-        ? containerConsoleAdapter(meta.container.serverId, meta.container.containerId)
+        ? containerConsoleAdapter(meta.container.serverId, meta.container.containerId, {
+            command: meta.container.command,
+            user: meta.container.user,
+          })
         : meta.kind === 'ssh' && meta.sshServerId
           ? sshTerminalAdapter(meta.sshServerId)
           : window.agentmat.terminal;

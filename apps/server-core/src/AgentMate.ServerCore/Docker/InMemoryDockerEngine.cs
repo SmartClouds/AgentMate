@@ -13,7 +13,7 @@ namespace AgentMate.ServerCore.Docker;
 /// a small shell, images, volumes and networks, and the events every change raises. Nothing here
 /// touches a real engine. It lives in the core next to InMemoryAcme so both hosts share one.
 /// </summary>
-internal sealed partial class InMemoryDockerEngine : IDockerEngine
+internal sealed partial class InMemoryDockerEngine : IDockerEngine, IDisposable
 {
     public const string EngineVersionText = "29.1.3";
 

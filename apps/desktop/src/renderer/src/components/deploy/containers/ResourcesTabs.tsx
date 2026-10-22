@@ -10,10 +10,12 @@ import type {
 import { isImageReference } from '@shared/dockerNames';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   CloudDownload,
   Docker,
+  FolderOpen,
   HardDrive,
   NetworkIcon,
   Package,
@@ -31,6 +33,7 @@ import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { confirmDialog } from '@/stores/confirmStore';
 import { ago } from '../security/format';
+import { serverFilesHref } from '../serverFiles/params';
 
 /**
  * Docker's resources on a server (E06 T7): images (pull one, with its layers in a live log, or
@@ -238,6 +241,7 @@ export function VolumesTab({
   roles: ResourceRoles;
 }): React.JSX.Element {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const volumes = useQuery({
     queryKey: queryKeys.deployVolumes(serverId),
     queryFn: () => window.agentmat.deployDocker.listVolumes(serverId),
@@ -290,6 +294,22 @@ export function VolumesTab({
                 .join(', ')}
             </p>
           </div>
+          <SimpleTooltip
+            label={roles.canAdmin ? 'Browse files' : 'Browsing files in a volume is for Admins.'}
+            wrapTrigger
+          >
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Browse files in ${volume.name}`}
+              disabled={!roles.canAdmin}
+              onClick={() =>
+                navigate(serverFilesHref(serverId, { source: 'volume', target: volume.name }))
+              }
+            >
+              <FolderOpen />
+            </Button>
+          </SimpleTooltip>
           {roles.canAdmin && (
             <RemoveButton
               label={`Remove ${volume.name}`}

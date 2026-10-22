@@ -144,6 +144,8 @@ describe('deniedReasonForSync', () => {
     ['AGENTS.md', 'agentFiles'],
     ['.aider.chat.history.md', 'agentFiles'],
     ['.agentmateignore', 'agentFiles'],
+    ['.claude-plugin/plugin.json', 'agentFiles'],
+    ['sub/.agentmate-cache/x', 'agentFiles'],
     ['.curſor/rules/r.mdc', 'agentFiles'],
     ['.git/HEAD', 'hardDenied'],
     ['.env', 'hardDenied'],

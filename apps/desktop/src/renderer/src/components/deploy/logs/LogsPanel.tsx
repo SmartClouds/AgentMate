@@ -5,10 +5,9 @@ import { GLASS_CARD } from '@/components/pageKit';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
-import { useDeployAssistantStore } from '@/stores/deployAssistantStore';
 import { LogViewer } from './LogViewer';
 import { ProblemsFeed } from './ProblemsFeed';
-import type { LogSource } from './useLogSource';
+import { useAskAboutLog } from './useAskAboutLog';
 
 /** The tab strip as a pill track whose selection is the main menu's tinted pill. */
 const TAB_LIST = 'search-pill mb-0 h-auto w-auto gap-0.5 rounded-full p-0.5';
@@ -24,7 +23,6 @@ const TAB = cn(
 
 export function LogsPanel({ server }: { server: DeployServer }): React.JSX.Element {
   const [tab, setTab] = useState<'problems' | 'logs'>('problems');
-  const open = useDeployAssistantStore((state) => state.open);
   const containers = useQuery({
     queryKey: queryKeys.deployContainers(server.id),
     queryFn: () => window.agentmat.deployDocker.listContainers(server.id),
@@ -40,22 +38,7 @@ export function LogsPanel({ server }: { server: DeployServer }): React.JSX.Eleme
     meta: { silentLoading: true },
   });
 
-  const askAi = (source: LogSource) =>
-    open(server.id, {
-      prompt: 'Read this log and tell me what is going wrong.',
-      context: {
-        title: `Logs: ${source.label}`,
-        ...(source.kind === 'container' ? { containerId: source.containerId } : {}),
-        facts:
-          source.kind === 'journal'
-            ? [`The systemd unit ${source.unit}. journalctl -u ${source.unit} reads its journal.`]
-            : source.kind === 'stack'
-              ? [
-                  `The compose project ${source.project}, services ${source.containers.map((c) => c.service).join(', ')}.`,
-                ]
-              : [],
-      },
-    });
+  const askAi = useAskAboutLog(server.id);
 
   return (
     <Tabs

@@ -28,6 +28,21 @@ changes back through the connector after a review that shows exactly what goes a
   hold files are linked as they are and the next pull compares them), and switching to regular
   unlinks it, like Unlink in the WordPress section. The site's block in the standing prompt is
   added on link and taken out on unlink.
+- [x] T9 Leave files and folders out of a deploy from the review: tick rows (or a whole theme or
+  plugin) and use the selection bar, or use a row's menu to ignore the file, a folder above it, or
+  every file with the same ending. The choices are saved on the project (`ProjectWordPressLink.ignore`,
+  lines for every item or for one), listed under the review and in the project's WordPress section
+  with a way to take each back and a field for a pattern, and applied to pulls too. Saving offers an
+  undo and works the changes out again without leaving the review.
+- [x] T10 What git ignores is left out by default: the project's and the item's `.gitignore` count
+  like the default list (left out until the site has the file, a `!` line in them cannot put a
+  built-in default back, an unreadable line is skipped, and a project `.gitignore` that ignores the
+  whole item folder is not used). Any name that starts with `.claude` or `.agentmate` joins the hard
+  deny list on both sides, with shared vectors.
+- [x] T11 Deploy a theme or plugin the site does not have yet: "New theme or plugin" in Deploy's
+  Themes and plugins and in the project's WordPress section lists the theme and plugin folders in
+  the project that the site lacks, links the ticked ones as new (nothing is pulled), and opens the
+  review of their first deploy, which creates them on the site.
 
 ## Acceptance criteria
 
@@ -41,3 +56,7 @@ changes back through the connector after a review that shows exactly what goes a
    the site's, and the other version is kept under `.agentmate/wordpress/conflicts/`.
 5. Unlinking keeps the files; only the link goes.
 6. Linking an existing project never overwrites a file already in it.
+7. A file or folder ignored in one review stays out of every later review, deploy and pull of that
+   project, is never deleted on the site because of it, and can be taken back from a list.
+8. A new theme or plugin made in the project reaches the site only after the user has picked its
+   folder, seen it in a review that says it adds a folder to the site, and confirmed the deploy.

@@ -46,13 +46,13 @@ The project comes from the container's compose project name when a project with 
 
 ## The Log viewer
 
-The **Log viewer** tab reads one log at a time and follows it live. It keeps the latest 5,000 lines and starts with the last 500.
+The **Log viewer** tab reads one log at a time and follows it live. It keeps the latest 5,000 lines and starts with the last 500 (change that with **Lines to read**).
 
 ### Choose a log
 
 The **Log source** picker lists these (type in its search box to filter):
 
-- **App (name): every service**: all services of a compose app together, each with its own colour and name in the line. At most four services are followed at once.
+- **App (name): every service**: all services of a compose app together, each with its own colour and name in the line. At most four services are followed at once; an app with more says so under the log, and you can pick any one of its containers to read it alone. An app's page also opens its logs on their own, see [Logs and consoles of an app](deploy-containers-stacks.md#logs-and-consoles-of-an-app).
 - **Container (name)**: a single container.
 - **Journal** of a systemd unit: docker.service, nginx.service, ssh.service and agentmate-core.service are listed. Type any other unit name in the search box and pick **Journal of (name)**.
 - **Site (domain): access log** and **error log** for each website with nginx.
@@ -66,6 +66,7 @@ The viewer starts on the Docker journal.
 | --- | --- |
 | **Level** | **Every level**, **Info and above**, **Warnings and errors** or **Errors only**. The level is read from each line. |
 | **Time range** | **Everything kept**, **Last 15 minutes**, **Last hour**, **Last 6 hours** or **Last 24 hours**. |
+| **Lines to read** | Starts the log with the last 100, 500, 1,000 or 2,000 lines, and 5,000 for a container or an app. A journal or a site log reads at most 2,000. Not shown for the audit trail. |
 | **Follow** switch | Keeps the view at the bottom as new lines arrive. Scrolling up pauses the auto scroll. |
 | **Read again** | Reads the log again from the server. |
 | **Download** | Saves the lines now shown as a `.log` text file. |
