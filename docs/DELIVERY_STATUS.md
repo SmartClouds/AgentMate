@@ -20,7 +20,7 @@ Plan: docs/ROADMAP.md
 | Server core tests | `pnpm server-core:test` (Linux-only socket tests run in the .NET SDK container or CI) |
 | Contracts | `pnpm server-core:contracts`, then no diff under `apps/desktop/src/shared/deploy/protocol/generated` |
 | System tests | `pnpm server-core:publish linux-x64`, then `AGENTMATE_SYSTEM_TESTS=1 pnpm --filter @agentmat/desktop exec vitest run src/main/deploy/deploy.int.test.ts` (Docker with Linux containers; CI job "Server core on test servers", on every CI run) |
-| e2e | `pnpm test:e2e`, on every CI run (Linux, self-hosted); Windows and macOS only in CD when the tagged commit carries `[e2e]` |
+| e2e | `pnpm test:e2e`, on every CI run (Linux, self-hosted); Windows and macOS only on a manual run of the Tests workflow with `github-hosted` ticked |
 | Full server matrix | `.github/workflows/nightly.yml` (nightly and `gh workflow run nightly.yml`): every Deploy system test once per test server (`AGENTMATE_TEST_SERVER_IMAGES`), plus the server core's nginx and Pebble system tests |
 
 ## Epics

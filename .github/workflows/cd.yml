@@ -9,12 +9,13 @@ name: CD
 #   - Pushing a tag like "v1.2.3" builds and releases automatically.
 #   - Manual "Run workflow" dispatch also works; supply the tag to release as.
 #
-# Unit, integration and mobile tests always run first. The end-to-end matrix is
-# opt-in here: tag [e2e] in the commit the release tag points at, or tick the
-# box on a manual run.
+# CD runs no tests of its own. CI already ran every check on the commit being
+# released, so the first job here waits for CI on that commit and only lets the
+# builds start once it passed. A tag on a commit CI failed on, or never ran on,
+# releases nothing.
 #
-# Everything here runs on GitHub's hosted runners, the tests included. CI has
-# the self-hosted Linux runner to itself.
+# Everything here runs on GitHub's hosted runners. CI has the self-hosted Linux
+# runner to itself.
 
 on:
   push:
@@ -25,10 +26,6 @@ on:
       tag:
         description: "Release tag to publish to (e.g. v0.1.0). Required for manual runs."
         required: true
-      e2e:
-        description: Run the Electron end-to-end matrix
-        type: boolean
-        default: false
 
 permissions:
   contents: write
@@ -38,18 +35,47 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Everything CI runs, before a single installer is built. A release is the one place where a
-  # failing test must never be shipped past.
-  #
-  # The E2E matrix is slow (three OSes) and opt-in, since a release usually tags a commit that
-  # already passed CI's Linux end-to-end run: put [e2e] in the message of the commit the tag points
-  # at, or tick the e2e box on a manual run. It is the only place Windows and macOS e2e run.
-  tests:
-    name: Tests
-    uses: ./.github/workflows/test.yml
-    with:
-      github-hosted: true
-      e2e: ${{ (github.event_name == 'push' && contains(github.event.head_commit.message, '[e2e]')) || (github.event_name == 'workflow_dispatch' && inputs.e2e) }}
+  # Waits for CI on the commit this release builds from, instead of running the tests again. Any
+  # CI run on that commit counts: the push to master, a pull request, or CI run by hand on the tag.
+  # A tag pushed together with its commit starts here before CI is even listed, and CI may still
+  # be queued behind other work on the self-hosted runner, hence the polling.
+  ci-passed:
+    name: CI passed
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    permissions:
+      actions: read
+    steps:
+      - name: Wait for CI on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          waited=0
+          while true; do
+            runs="$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$SHA&per_page=20")"
+            passed="$(jq -r '[.workflow_runs[] | select(.conclusion == "success")][0].html_url // empty' <<< "$runs")"
+            if [ -n "$passed" ]; then
+              echo "CI passed on $SHA: $passed"
+              exit 0
+            fi
+            running="$(jq -r '[.workflow_runs[] | select(.status != "completed")][0].html_url // empty' <<< "$runs")"
+            latest="$(jq -r '(.workflow_runs[0] // empty) | "\(.conclusion) \(.html_url)"' <<< "$runs")"
+            if [ -n "$running" ]; then
+              echo "CI is still running on $SHA: $running"
+            elif [ -n "$latest" ]; then
+              # A newer push to master cancels CI on the commit before it, so a tag on that commit
+              # needs CI run on the tag itself (Actions, CI, Run workflow, pick the tag).
+              echo "::error::CI did not pass on $SHA (${latest%% *}): ${latest#* }. Fix it, or run CI on the tag, then re-run this workflow."
+              exit 1
+            elif [ "$waited" -ge 300 ]; then
+              echo "::error::CI never ran on $SHA. Push the commit to master, or run CI on the tag (Actions, CI, Run workflow), then re-run this workflow."
+              exit 1
+            fi
+            sleep 30
+            waited=$((waited + 30))
+          done
 
   # The server core the Deploy section installs over SSH: self-contained single-file builds for
   # both Linux architectures, each a tar.gz with its SHA-256, and the manifest listing those
@@ -57,7 +83,7 @@ jobs:
   # whose hash it already knows. Attested, so a download can be traced back to this workflow.
   build-server-core:
     name: Build server core
-    needs: tests
+    needs: ci-passed
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -122,7 +148,7 @@ jobs:
 
   build:
     name: Build (${{ matrix.os }})
-    needs: [tests, build-server-core]
+    needs: [ci-passed, build-server-core]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -289,7 +315,7 @@ jobs:
 
   build-android:
     name: Build Android APK
-    needs: tests
+    needs: ci-passed
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

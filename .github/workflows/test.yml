@@ -1,11 +1,11 @@
 name: Tests
 
-# Unit, integration, mobile and end-to-end tests. Called by CI on every push and pull request,
-# and by CD before anything is built for a release, so a broken test cannot ship.
+# Unit, integration, mobile and end-to-end tests. Called by CI on every push and pull request.
+# CD does not run them again: it waits for CI to pass on the commit it releases.
 #
-# CI runs everything on our self-hosted Linux runner. CD runs on GitHub's hosted runners only
-# (github-hosted: true), which is also the one place the end-to-end tests run on Windows and
-# macOS, since we have no self-hosted runner for either.
+# CI runs everything on our self-hosted Linux runner. Running this by hand with github-hosted
+# ticked runs it on GitHub's hosted runners instead, which is the one place the end-to-end tests
+# run on Windows and macOS, since we have no self-hosted runner for either.
 #
 # Every job here is independent of the others (only the merge and WordPress sync jobs wait for
 # another), so they all start at once when there are enough runners. The slow suites are split
@@ -454,8 +454,8 @@ jobs:
           if-no-files-found: ignore
           path: apps/mobile/coverage
 
-  # On the self-hosted runner this is Linux only. Windows and macOS run only when CD calls this on
-  # GitHub's hosted runners.
+  # On the self-hosted runner this is Linux only. Windows and macOS run only on a manual run with
+  # github-hosted ticked.
   #
   # The specs run one Electron at a time (see e2e/playwright.config.ts), so the suite is split into
   # shards by spec file instead, each on its own runner.
