@@ -19,10 +19,10 @@ import { FakeCoreConnection } from './fakeCoreConnection';
 import { metricsSample, sampleServices, sampleSystemInfo, sampleUpdates } from './fakeCoreData';
 import { FakeDocker } from './fakeDocker';
 import { FakeErrorReporting } from './fakeErrorReporting';
-import { FakeTelegram } from './fakeTelegram';
 import { FakeFiles } from './fakeFiles';
 import { FakeFirewall } from './fakeFirewall';
 import { FakeNginx } from './fakeNginx';
+import { FakeTelegram } from './fakeTelegram';
 
 /**
  * A server core in memory for tests (T11): the machine behind the hub. Tests move it along by

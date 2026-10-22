@@ -10,21 +10,22 @@ import { registerDeployHandlers } from '../ipc/deploy';
 import { registerDeployAppStoreHandlers } from '../ipc/deployAppStore';
 import { registerDeployAssistantHandlers } from '../ipc/deployAssistant';
 import { registerDeployDirectTlsHandlers } from '../ipc/deployDirectTls';
-import { registerDeployErrorReportingHandlers } from '../ipc/deployErrorReporting';
 import { registerDeployDockerHandlers } from '../ipc/deployDocker';
+import { registerDeployErrorReportingHandlers } from '../ipc/deployErrorReporting';
 import { registerDeployFirewallHandlers } from '../ipc/deployFirewall';
 import { registerDeployHardeningHandlers } from '../ipc/deployHardening';
 import { registerDeploySecurityHandlers } from '../ipc/deploySecurity';
 import { registerDeployServerBackupsHandlers } from '../ipc/deployServerBackups';
 import { registerDeploySitesHandlers } from '../ipc/deploySites';
 import { registerDeployStacksHandlers } from '../ipc/deployStacks';
-import { registerDeployTelegramHandlers } from '../ipc/deployTelegram';
 import { registerDeploySystemHandlers, subscriptionOwners } from '../ipc/deploySystem';
+import { registerDeployTelegramHandlers } from '../ipc/deployTelegram';
 import { resolveProjectEnvironment } from '../ipc/environments';
 import { broadcastToWindows, sendToWindow } from '../ipc/send';
 import { getMainWindow } from '../mainWindow';
 import { showOsNotification } from '../notifications/osNotification';
 import { detectLatestChatId } from '../notifications/telegramApi';
+import { closeDockerFileSessions } from '../sftp';
 import { getSshPool } from '../ssh/sharedPool';
 import {
   decryptSecret,
@@ -48,6 +49,7 @@ import {
 import { registerCloudflareIpc } from './cloudflare';
 import { DeployDirectTls } from './directTls/service';
 import { DeployDocker } from './docker';
+import { setDockerFilesHost } from './dockerFiles/backend';
 import { DeployErrorReporting } from './errorReporting/service';
 import { registerDeployFilesIpc } from './files';
 import { mutateFileSites } from './files/store';
@@ -73,8 +75,6 @@ import { DeployTelegram } from './telegram/service';
 import { appNotificationInbox, DeployAlertWatcher } from './watcher';
 import { registerDeployWordPressIpc, wordPressState } from './wordpress';
 import type { StoredWpSite } from './wordpress/state';
-import { closeDockerFileSessions } from '../sftp';
-import { setDockerFilesHost } from './dockerFiles/backend';
 
 /**
  * Wires the Deploy service into Electron. Packaged builds install the core release published

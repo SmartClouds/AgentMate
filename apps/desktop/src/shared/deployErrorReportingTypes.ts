@@ -1,8 +1,8 @@
+import type { ErrorReportingLevel } from './deploy/errorReportingValidation';
 import type {
   ErrorReportingStatus,
   ErrorReportingTestResult,
 } from './deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ErrorReportingLevel } from './deploy/errorReportingValidation';
 
 /**
  * Error reporting (E29): a server core sends its own warnings and errors to a Sentry project as

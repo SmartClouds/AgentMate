@@ -17,11 +17,14 @@ const SECTIONS = [
   'Overview',
   'Apps',
   'Containers',
+  'Files',
   'App Store',
   'Websites',
   'Firewall',
   'Logs',
+  'Backups',
   'Security',
+  'Notifications',
 ];
 const SECURITY_TABS = [
   'Checklist',
@@ -29,6 +32,7 @@ const SECURITY_TABS = [
   'Devices and sessions',
   'Audit trail',
   'Backups',
+  'Error reporting',
   'Connection',
 ];
 
@@ -141,7 +145,12 @@ test('reaches and operates every Deploy screen by keyboard alone', async () => {
     expect(await unnamedButtons(page), `buttons without a name on ${section}`).toEqual([]);
   }
 
-  // The Security tabs: the arrow keys move between them, Tab goes into the open one.
+  // The Security tabs: the arrow keys move between them, Tab goes into the open one. Security is
+  // not the last section any more, so open it again first.
+  const security = strip.getByRole('button', { name: 'Security', exact: true });
+  await security.focus();
+  await page.keyboard.press('Enter');
+  await expect(security).toHaveAttribute('aria-current', 'page');
   const first = page.getByRole('tab', { name: SECURITY_TABS[0] });
   await first.focus();
   for (const [index, name] of SECURITY_TABS.entries()) {

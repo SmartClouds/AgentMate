@@ -265,6 +265,9 @@ describe('what the proxy tells a session window', () => {
       true,
     );
 
+    // Connecting also records when it happened, in a write nothing waits for. Let it land before
+    // the test ends, or it lands in the next test's folder and overwrites what that test saved.
+    await vi.waitFor(() => expect(savedServer().lastConnectedAt).not.toBeNull());
     expect(savedServer().certFingerprint).toBe('BB:99:88');
   });
 

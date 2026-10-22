@@ -144,7 +144,7 @@ test("shows the DevHost's Overview live, lists its updates, and comes back after
   const banner = page.getByText(/DevHost is about to reboot|Waiting for DevHost to come back/);
   await expect(proof.or(banner)).toBeVisible({ timeout: 30_000 });
   if (await proof.isVisible()) {
-    await proof.getByLabel('Password').fill(DEV_PASSWORD);
+    await proof.getByLabel('Password', { exact: true }).fill(DEV_PASSWORD);
     await proof.getByRole('button', { name: 'Confirm' }).click();
   }
   await expect(page.getByRole('status', { name: 'Live connection: Reconnecting' })).toBeVisible({

@@ -1,13 +1,13 @@
-import type {
-  ErrorReportingRequest,
-  ErrorReportingTestResult,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
 import {
   checkEnvironment,
   checkServerName,
   parseSentryDsn,
 } from '../../../shared/deploy/errorReportingValidation';
+import type {
+  ErrorReportingRequest,
+  ErrorReportingTestResult,
+} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
 import type {
   DeployErrorReportingProof,
   DeployErrorReportingRemoveInput,

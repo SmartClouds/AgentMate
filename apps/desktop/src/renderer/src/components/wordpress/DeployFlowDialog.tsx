@@ -37,9 +37,9 @@ import { cn } from '@/lib/utils';
 import { findWordPressRun, useWordPressOperationStore } from '@/stores/wordpressOperationStore';
 import { ChangeDiff, ChangeList, changeKey } from './ChangeList';
 import { ConflictResolver } from './ConflictResolver';
-import { type IgnoreAddition, ignoreSummary, linesForFiles } from './ignoreChoices';
 import { IgnoredFilesPanel } from './IgnoredFilesPanel';
 import { IgnoreSelectionBar } from './IgnoreSelectionBar';
+import { type IgnoreAddition, ignoreSummary, linesForFiles } from './ignoreChoices';
 import { LeftOutList } from './LeftOutList';
 import { useProjectIgnore } from './useProjectIgnore';
 

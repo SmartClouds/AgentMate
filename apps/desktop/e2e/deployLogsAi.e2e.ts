@@ -90,7 +90,7 @@ test('a crash loop, diagnosed: a check runs by itself, a change waits for approv
   // Auto-run diagnostics takes a step-up.
   await drawer.getByRole('radio', { name: /Auto-run diagnostics/ }).click();
   const confirm = page.getByRole('dialog', { name: /Confirm it is you/ });
-  await confirm.getByLabel('Password').fill(DEV_PASSWORD);
+  await confirm.getByLabel('Password', { exact: true }).fill(DEV_PASSWORD);
   await confirm.getByRole('button', { name: 'Confirm' }).click();
   await expect(drawer.getByRole('radio', { name: /Auto-run diagnostics/ })).toHaveAttribute(
     'aria-checked',

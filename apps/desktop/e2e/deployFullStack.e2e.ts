@@ -527,7 +527,7 @@ async function applyReviewed(page: Page): Promise<void> {
   const keep = page.getByRole('heading', { name: 'Keep changes?' });
   await expect(proof.or(keep)).toBeVisible({ timeout: 2 * MINUTE });
   if (await proof.isVisible()) {
-    await proof.getByLabel('Password').fill(PASSWORD);
+    await proof.getByLabel('Password', { exact: true }).fill(PASSWORD);
     await proof.getByRole('button', { name: 'Confirm' }).click();
   }
   await expect(keep).toBeVisible({ timeout: 2 * MINUTE });

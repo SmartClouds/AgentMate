@@ -100,7 +100,7 @@ test('turns direct TLS on, connects over it with the device key, and turns it of
   await expect(details.getByText(/^sha256\/[A-Za-z0-9+/]{43}=$/)).toBeVisible();
 
   const port = await freePort();
-  await page.getByLabel('Port').fill(String(port));
+  await page.getByLabel('Port', { exact: true }).fill(String(port));
   await page.getByRole('button', { name: 'Turn on direct TLS' }).click();
   const listening = details.getByText(`On, listening on port ${port}`);
   await stepUpIfAsked(page, listening);
