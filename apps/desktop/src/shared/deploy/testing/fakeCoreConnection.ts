@@ -31,6 +31,14 @@ import type {
   DockerStatus,
   ExecOutput,
   ExecRequest,
+  FileChmodRequest,
+  FileEntry,
+  FileListing,
+  FilePathRequest,
+  FileRemoveRequest,
+  FileRenameRequest,
+  FileSessionInfo,
+  FileTarget,
   FirewallChangeRequest,
   FirewallChangeSetQuery,
   ImageInfo,
@@ -63,6 +71,7 @@ import type {
 import type { ICoreHub } from '../protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
 import type { FakeCore } from './fakeCore';
 import type { FakeConsoleSession } from './fakeDocker';
+import { FakeFilesError } from './fakeFiles';
 import type { FakeFirewall, FakeFirewallCaller } from './fakeFirewall';
 import {
   connectionClosedError,
@@ -741,6 +750,45 @@ export class FakeCoreConnection implements ICoreHub {
     return job;
   };
 
+  // Files (E27): Admins only, like the console, on the core's file trees (fakeFiles.ts).
+
+  filesOpen = async (target: FileTarget): Promise<FileSessionInfo> =>
+    this.files('FilesOpen', () => this.core.files.open(target));
+
+  filesClose = async (sessionId: string): Promise<void> =>
+    this.files('FilesClose', () => this.core.files.close(sessionId));
+
+  filesList = async (request: FilePathRequest): Promise<FileListing> =>
+    this.files('FilesList', () => this.core.files.list(request.sessionId, request.path));
+
+  // The core answers null for nothing there; the generated type lost the `?`.
+  filesStat = async (request: FilePathRequest): Promise<FileEntry> =>
+    this.files(
+      'FilesStat',
+      () => this.core.files.stat(request.sessionId, request.path) as FileEntry,
+    );
+
+  filesRealpath = async (request: FilePathRequest): Promise<string> =>
+    this.files('FilesRealpath', () => this.core.files.realpath(request.sessionId, request.path));
+
+  filesMkdir = async (request: FilePathRequest): Promise<void> =>
+    this.files('FilesMkdir', () => this.core.files.mkdir(request.sessionId, request.path));
+
+  filesRename = async (request: FileRenameRequest): Promise<void> =>
+    this.files('FilesRename', () =>
+      this.core.files.rename(request.sessionId, request.from, request.to),
+    );
+
+  filesRemove = async (request: FileRemoveRequest): Promise<void> =>
+    this.files('FilesRemove', () =>
+      this.core.files.remove(request.sessionId, request.path, request.directory),
+    );
+
+  filesChmod = async (request: FileChmodRequest): Promise<void> =>
+    this.files('FilesChmod', () =>
+      this.core.files.chmod(request.sessionId, request.path, request.mode),
+    );
+
   streamContainerStats = (request: ContainerStatsRequest): IStreamResult<ContainerStatsBatch> => {
     const ids = request.containerIds?.map((id) => this.docker.find(id)?.summary.id ?? id);
     return this.open<ContainerStatsBatch>(
@@ -990,6 +1038,18 @@ export class FakeCoreConnection implements ICoreHub {
 
   private assertRole(method: string, allowed: ReadonlySet<string>): void {
     if (!this.core.roles.some((role) => allowed.has(role))) throw unauthorizedError(method);
+  }
+
+  /** A file call: refused for anyone but an Admin, the core's coded refusals as HubExceptions. */
+  private files<T>(method: string, work: () => T): T {
+    this.assertOpen();
+    this.assertRole(method, ADMINS);
+    try {
+      return structuredClone(work());
+    } catch (error) {
+      if (error instanceof FakeFilesError) throw invocationError(method, error.message);
+      throw error;
+    }
   }
 
   private async unused(method: string): Promise<never> {

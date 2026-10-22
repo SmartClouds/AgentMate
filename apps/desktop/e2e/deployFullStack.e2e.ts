@@ -274,9 +274,11 @@ for (const image of IMAGES) {
       await openSection(app, 'Apps');
       await expect(app.getByText('No apps on this server yet')).toBeVisible({ timeout: 60_000 });
       await app.getByRole('button', { name: 'New app' }).click();
-      await app.getByLabel('Project').selectOption({ label: 'e2e project' });
+      await app.getByRole('combobox', { name: 'Project', exact: true }).click();
+      await app.getByRole('option', { name: 'e2e project' }).click();
       await app.getByRole('radio', { name: /compose\.yaml/ }).check();
-      await app.getByLabel('Environment').selectOption({ label: 'Production' });
+      await app.getByRole('combobox', { name: 'Environment', exact: true }).click();
+      await app.getByRole('option', { name: /^Production/ }).click();
       await app.getByLabel('App name').fill('shop');
       await throughTheWizard(app);
       await app.getByRole('button', { name: 'Deploy shop' }).click();

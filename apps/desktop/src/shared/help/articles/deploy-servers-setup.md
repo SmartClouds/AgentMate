@@ -118,7 +118,7 @@ The **Your access** card (on the Overview, and on the Security section when you 
 
 | State | What you see | Button |
 | --- | --- | --- |
-| Signed in | "Signed in as (name)" with your roles, and whether two-factor is on | **Turn on two-factor** or **Turn off two-factor**, and **Sign out** |
+| Signed in | "Signed in as (name)" with your roles, and whether two-factor is on. If this computer remembers your password, it says so | **Turn on two-factor** or **Turn off two-factor**, **Sign out**, and **Forget it** when a password is remembered |
 | Needs a password | "Sign in to manage this core." | **Sign in** |
 | Not enrolled yet | "This computer is not enrolled on this core yet." | **Enroll this computer**, **Use an enrollment code** |
 | Revoked or removed | "The core no longer accepts this computer…" | **Enroll again**, **Use an enrollment code** |

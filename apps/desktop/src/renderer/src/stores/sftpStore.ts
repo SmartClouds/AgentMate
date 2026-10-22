@@ -1,4 +1,5 @@
 import { filesErrorCode } from '@shared/deployFilesErrors';
+import { parseDockerFileTargetId } from '@shared/fileTargets';
 import { isValidEntryName } from '@shared/sftpNames';
 import type {
   SftpBatchFinished,
@@ -20,6 +21,7 @@ import { sshErrorCode } from '@shared/sshErrors';
 import { toast } from 'sonner';
 import { create } from 'zustand';
 import { sftpBridge } from '@/lib/sftp/bridge';
+import { refusalFor } from '@/lib/sftp/capabilities';
 import { DEFAULT_SORT, type SortKey, type SortState, visibleEntries } from '@/lib/sftp/entries';
 import { editRefusal, sftpProblem } from '@/lib/sftp/messages';
 import {
@@ -59,6 +61,8 @@ export interface PaneState<E extends SftpLocalEntry | SftpRemoteEntry> {
   error: string | null;
   /** The folder that failed to list, for Retry. */
   errorPath: string | null;
+  /** Main listed only part of the folder (E27, a stopped or shell-less container). */
+  partial: boolean;
   selection: Selection;
   sort: SortState;
   filter: string;
@@ -191,6 +195,7 @@ function emptyPane<E extends SftpLocalEntry | SftpRemoteEntry>(): PaneState<E> {
     loading: false,
     error: null,
     errorPath: null,
+    partial: false,
     selection: EMPTY_SELECTION,
     sort: DEFAULT_SORT,
     filter: '',
@@ -407,6 +412,7 @@ export const useSftpStore = create<SftpState>()((set, get) => {
       loading: false,
       error: null,
       errorPath: null,
+      partial: listing.partial === true,
       selection,
       filter: view.filter,
     });
@@ -536,6 +542,13 @@ export const useSftpStore = create<SftpState>()((set, get) => {
     return session?.sessionId ?? null;
   }
 
+  /** Says why when the session does not allow `action` on the server, and answers true then. */
+  function refuse(serverId: string, action: 'rename' | 'remove'): boolean {
+    const refused = refusalFor(files(serverId).session, action);
+    if (refused) toast.error(refused);
+    return refused !== null;
+  }
+
   /** The session id, or a rejection saying there is none, for callers that tell it themselves. */
   function requireSession(serverId: string): string {
     const session = files(serverId).session;
@@ -570,12 +583,21 @@ export const useSftpStore = create<SftpState>()((set, get) => {
       patch(serverId, { status: 'connecting', error: null });
       ensureSubscribed();
 
+      // A container or volume on a Deploy server (E27) is no saved server: main knows it from
+      // the id alone, and there is no host key to trust on the way.
+      const docker = parseDockerFileTargetId(serverId);
+      if (docker) {
+        patch(serverId, { server: { nickname: docker.id, host: '', port: 0, username: '' } });
+      }
+
       // The saved server tells the gate what to call it, and an unknown one never gets opened.
       let saved: Awaited<ReturnType<typeof window.agentmat.ssh.listServers>> | null = null;
-      try {
-        saved = await window.agentmat.ssh.listServers();
-      } catch {
-        saved = null;
+      if (!docker) {
+        try {
+          saved = await window.agentmat.ssh.listServers();
+        } catch {
+          saved = null;
+        }
       }
       if (Array.isArray(saved)) {
         const server = saved.find((one) => one.id === serverId);
@@ -595,7 +617,9 @@ export const useSftpStore = create<SftpState>()((set, get) => {
 
       let session: SftpSessionInfo;
       try {
-        session = await withHostKeyTrust(serverId, () => sftpBridge().open(serverId));
+        session = docker
+          ? await sftpBridge().open(serverId)
+          : await withHostKeyTrust(serverId, () => sftpBridge().open(serverId));
       } catch (error) {
         if (sshErrorCode(error) === 'vault-locked' || filesErrorCode(error) === 'vaultLocked') {
           patch(serverId, { status: 'locked', error: null });
@@ -777,6 +801,7 @@ export const useSftpStore = create<SftpState>()((set, get) => {
         toast.error(problem);
         return false;
       }
+      if (side === 'remote' && refuse(serverId, 'rename')) return false;
       try {
         if (side === 'remote') {
           const sessionId = sessionOf(serverId);
@@ -799,6 +824,7 @@ export const useSftpStore = create<SftpState>()((set, get) => {
     },
 
     async removeRemote(serverId, paths) {
+      if (refuse(serverId, 'remove')) return null;
       const sessionId = sessionOf(serverId);
       if (!sessionId || paths.length === 0) return null;
       try {
@@ -825,6 +851,8 @@ export const useSftpStore = create<SftpState>()((set, get) => {
     async chmod(serverId, input) {
       const session = files(serverId).session;
       if (!session) throw new Error(`Not connected to ${nickname(serverId)}.`);
+      const refused = refusalFor(session, 'chmod');
+      if (refused) throw new Error(refused);
       try {
         await sftpBridge().chmod(session.sessionId, input);
       } catch (error) {
@@ -853,9 +881,14 @@ export const useSftpStore = create<SftpState>()((set, get) => {
     },
 
     async openEditor(serverId, path) {
+      const name = baseName(path);
+      const refused = refusalFor(files(serverId).session, 'edit');
+      if (refused) {
+        toast.error(`Can't edit ${name} here`, { description: refused });
+        return;
+      }
       const sessionId = sessionOf(serverId);
       if (!sessionId) return;
-      const name = baseName(path);
       // A quick read says nothing; a slow one says it is on its way.
       let waiting: string | number | undefined;
       const slow = setTimeout(() => {

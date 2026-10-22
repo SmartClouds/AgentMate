@@ -4,6 +4,7 @@ import {
   ContextMenuSeparator,
   ContextMenuShortcut,
 } from '@/components/ui/context-menu';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { isRemoteEntry, type PaneEntry } from '@/lib/sftp/entries';
 
 export interface PaneMenuActions {
@@ -19,12 +20,20 @@ export interface PaneMenuActions {
   onRefresh: () => void;
 }
 
+/** Why the server side does not allow an action; null or missing means it is allowed. */
+export type PaneRefusals = Partial<Record<'edit' | 'rename' | 'remove', string | null>>;
+
 export interface PaneContextMenuProps extends PaneMenuActions {
   side: 'local' | 'remote';
   /** What the menu is about: the selected rows, or none for the empty space. */
   entries: PaneEntry[];
   /** The other side has a folder open, so a transfer has somewhere to go. */
   canTransfer: boolean;
+  /**
+   * Why the server side does not allow an action (E27, a stopped container); a null or missing
+   * reason means it is allowed. The item stays in the menu, off, with the reason in a tooltip.
+   */
+  refusals?: PaneRefusals;
 }
 
 function Item({
@@ -33,18 +42,32 @@ function Item({
   onSelect,
   disabled,
   danger,
+  refusal,
 }: {
   label: string;
   shortcut?: string;
   onSelect: () => void;
   disabled?: boolean;
   danger?: boolean;
+  /** Why the item is off. It turns the item off and shows in a tooltip on hover. */
+  refusal?: string | null;
 }): React.JSX.Element {
-  return (
-    <ContextMenuItem onSelect={onSelect} disabled={disabled} tone={danger ? 'danger' : 'default'}>
+  const item = (
+    <ContextMenuItem
+      onSelect={onSelect}
+      disabled={disabled || Boolean(refusal)}
+      tone={danger ? 'danger' : 'default'}
+    >
       <span className="truncate">{label}</span>
       {shortcut ? <ContextMenuShortcut>{shortcut}</ContextMenuShortcut> : null}
     </ContextMenuItem>
+  );
+  if (!refusal) return item;
+  // A disabled item takes no pointer events, so the tooltip hangs on a wrapper around it.
+  return (
+    <SimpleTooltip label={refusal} side="right">
+      <div>{item}</div>
+    </SimpleTooltip>
   );
 }
 
@@ -68,6 +91,7 @@ export function PaneContextMenu({
   onProperties,
   onCopyPath,
   onRefresh,
+  refusals = {},
 }: PaneContextMenuProps): React.JSX.Element {
   const single = entries.length === 1 ? entries[0] : undefined;
   const editable =
@@ -87,19 +111,26 @@ export function PaneContextMenu({
             disabled={!canTransfer}
           />
           {remote ? (
-            <Item label="Edit" onSelect={() => single && onEdit(single)} disabled={!editable} />
+            <Item
+              label="Edit"
+              onSelect={() => single && onEdit(single)}
+              disabled={!editable}
+              refusal={refusals.edit}
+            />
           ) : null}
           <Item
             label="Rename"
             shortcut="F2"
             onSelect={later(() => single && onRename(single))}
             disabled={!single}
+            refusal={refusals.rename}
           />
           <Item
             label={remote ? 'Delete' : 'Move to Trash'}
             shortcut="Del"
             danger
             onSelect={later(onDelete)}
+            refusal={refusals.remove}
           />
           <ContextMenuSeparator />
         </>

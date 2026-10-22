@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { Ban, Plus, Spinner, Trash2 } from '@/components/icons';
 import { Chip, type ChipTone, FOOTER_HAIRLINE } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SimpleTooltip } from '@/components/ui/tooltip';
@@ -18,7 +19,7 @@ import { ACCESS_MODES, accessModeLabel, accessTargetLabel } from '@/lib/cloudfla
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { confirmDialog } from '@/stores/confirmStore';
-import { CardBody, CloudflareCard, Field, NativeSelect, Problem } from './fields';
+import { CardBody, CloudflareCard, Field, Problem } from './fields';
 
 /** Block reads as danger, a challenge as caution, and an allow as the safe one. */
 const MODE_TONE: Record<CloudflareAccessMode, ChipTone> = {
@@ -171,17 +172,16 @@ export function AccessRulesCard({ zone }: { zone: CloudflareZone }): React.JSX.E
               />
             </Field>
             <Field label="Action" htmlFor={`${id}-mode`}>
-              <NativeSelect
+              <Combobox
                 id={`${id}-mode`}
+                searchable={false}
+                options={ACCESS_MODES.map((candidate) => ({
+                  value: candidate,
+                  label: accessModeLabel(candidate),
+                }))}
                 value={mode}
-                onChange={(event) => setMode(event.target.value as CloudflareAccessMode)}
-              >
-                {ACCESS_MODES.map((candidate) => (
-                  <option key={candidate} value={candidate}>
-                    {accessModeLabel(candidate)}
-                  </option>
-                ))}
-              </NativeSelect>
+                onChange={(next) => setMode(next as CloudflareAccessMode)}
+              />
             </Field>
           </div>
           <Field label="Notes" htmlFor={`${id}-notes`}>

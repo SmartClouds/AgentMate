@@ -48,7 +48,7 @@ describe('StatusHero', () => {
     for (const value of settings.querySelectorAll('dd')) {
       expect(value.className).not.toContain('truncate');
     }
-    // The select is the value itself, so nothing clips it either.
+    // The dropdown is the value itself, so nothing clips it either.
     expect(screen.getByLabelText('Incoming by default').closest('dd')).toBeTruthy();
   });
 
@@ -56,7 +56,8 @@ describe('StatusHero', () => {
     const onDefaultIncoming = vi.fn();
     const { user } = hero({ onDefaultIncoming });
 
-    await user.selectOptions(screen.getByLabelText('Incoming by default'), 'reject');
+    await user.click(screen.getByRole('combobox', { name: 'Incoming by default' }));
+    await user.click(await screen.findByRole('option', { name: 'Reject by default' }));
     expect(onDefaultIncoming).toHaveBeenCalledWith('reject');
   });
 
@@ -241,9 +242,11 @@ describe('RuleDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Stage the rule' }));
     expect(screen.getByRole('alert').textContent).toMatch(/Give a port or a source/);
 
-    await user.selectOptions(screen.getByLabelText('Action'), 'limit');
+    await user.click(screen.getByRole('combobox', { name: 'Action' }));
+    await user.click(await screen.findByRole('option', { name: 'Limit' }));
     expect(screen.getByText(/connects 6 times in 30 seconds/)).toBeTruthy();
-    await user.selectOptions(screen.getByLabelText('Protocol'), 'udp');
+    await user.click(screen.getByRole('combobox', { name: 'Protocol' }));
+    await user.click(await screen.findByRole('option', { name: 'UDP' }));
     await user.type(screen.getByLabelText('Ports'), '51820');
     await user.type(screen.getByLabelText('Comment'), 'wireguard');
     await user.click(screen.getByRole('button', { name: 'Stage the rule' }));

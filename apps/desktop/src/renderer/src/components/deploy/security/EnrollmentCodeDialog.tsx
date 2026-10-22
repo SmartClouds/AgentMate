@@ -3,9 +3,9 @@ import type { EnrollmentCodeInfo } from '@shared/deploy/protocol/generated/Agent
 import type { DeployServer } from '@shared/deployTypes';
 import { useEffect, useId, useState } from 'react';
 import { toast } from 'sonner';
-import { NativeSelect } from '@/components/cloudflare/fields';
 import { Copy, Key, Spinner, TriangleAlert } from '@/components/icons';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,11 @@ const VALIDITY = [
   { minutes: 8 * 60, label: '8 hours' },
   { minutes: 24 * 60, label: '24 hours' },
 ] as const;
+
+const VALIDITY_OPTIONS = VALIDITY.map((option) => ({
+  value: String(option.minutes),
+  label: option.label,
+}));
 
 /**
  * An Owner's single-use code that lets one more computer join the core as a user, together with
@@ -140,18 +145,14 @@ export function EnrollmentCodeDialog({
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor={validityId}>Valid for</Label>
-              <NativeSelect
+              <Combobox
                 id={validityId}
-                value={minutes}
-                onChange={(event) => setMinutes(Number(event.target.value))}
+                searchable={false}
+                options={VALIDITY_OPTIONS}
+                value={String(minutes)}
+                onChange={(value) => setMinutes(Number(value))}
                 className="max-w-48"
-              >
-                {VALIDITY.map((option) => (
-                  <option key={option.minutes} value={option.minutes}>
-                    {option.label}
-                  </option>
-                ))}
-              </NativeSelect>
+              />
             </div>
             {problem && (
               <p role="alert" className="text-sm text-destructive">

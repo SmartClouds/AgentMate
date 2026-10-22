@@ -45,6 +45,7 @@ The page has two parts.
 | Gitea | Developer tools | Lightweight self-hosted Git | about 512 MB |
 | Meilisearch | Search | Fast, typo-tolerant search engine | about 512 MB |
 | RabbitMQ | Messaging | Message broker with its management UI | about 512 MB |
+| Apache Kafka | Messaging | Event streaming on a single node, with a password on every connection | about 1.5 GB |
 | Nextcloud | Storage | File sync and sharing, with MariaDB | about 2 GB |
 
 ## Install an app

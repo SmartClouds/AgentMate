@@ -117,11 +117,14 @@ describe('AuditCard', () => {
     const { user } = renderCard({ 'deploySecurity.queryAudit': queryAudit });
     await screen.findByText('user.create');
 
-    await user.selectOptions(screen.getByLabelText('Action'), 'user.');
-    await user.selectOptions(screen.getByLabelText('Result'), 'failed');
+    await user.click(screen.getByRole('combobox', { name: 'Action' }));
+    await user.click(await screen.findByRole('option', { name: 'Users' }));
+    await user.click(screen.getByRole('combobox', { name: 'Result' }));
+    await user.click(await screen.findByRole('option', { name: 'Failed' }));
     queryAudit.mockResolvedValue({ events: [] });
     await user.type(screen.getByLabelText('Who'), 'sam{Enter}');
-    await user.selectOptions(screen.getByLabelText('When'), '24h');
+    await user.click(screen.getByRole('combobox', { name: 'When' }));
+    await user.click(await screen.findByRole('option', { name: 'Last 24 hours' }));
 
     expect(await screen.findByText('Nothing matches these filters.')).toBeTruthy();
     const last = queryAudit.mock.calls.at(-1)?.[0] as Record<string, unknown>;
@@ -199,7 +202,8 @@ describe('AuditCard', () => {
       .mockResolvedValueOnce({ saved: true, path: '/tmp/a.json', count: 50000, truncated: true });
     const { user } = renderCard({ 'deploySecurity.exportAudit': exportAudit });
     await screen.findByText('user.create');
-    await user.selectOptions(screen.getByLabelText('Result'), 'denied');
+    await user.click(screen.getByRole('combobox', { name: 'Result' }));
+    await user.click(await screen.findByRole('option', { name: 'Refused' }));
 
     await user.click(screen.getByRole('button', { name: /Export/ }));
     await user.click(await screen.findByRole('menuitem', { name: 'As CSV' }));

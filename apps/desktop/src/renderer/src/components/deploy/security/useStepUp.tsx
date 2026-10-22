@@ -15,13 +15,16 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SecretInput } from '@/components/ui/secret-input';
+import { rememberPassword, stepUpWithSavedPassword } from '@/lib/deploy/savedPassword';
 import { queryKeys } from '@/lib/queryKeys';
+import { RememberPasswordOption } from '../RememberPasswordOption';
 
 /**
  * The core's step-up for sensitive changes: the password, or a code from the authenticator app,
- * entered within the last ten minutes. The app asks only when that window has passed (or is about
- * to), remembers the new one for the next change, and asks once more if the core turns a change
- * down anyway, since its clock is the one that counts.
+ * entered within the last ten minutes. The app only steps up when that window has passed (or is
+ * about to), remembers the new one for the next change, and steps up once more if the core turns
+ * a change down anyway, since its clock is the one that counts. Each time it uses the password
+ * the computer was asked to remember, and asks only when there is none or the core refuses it.
  */
 
 export interface StepUp {
@@ -69,28 +72,45 @@ export function useStepUp(server: DeployServer): StepUp {
     [],
   );
 
+  const keep = useCallback(
+    (until: number) =>
+      queryClient.setQueryData<Known>(queryKeys.deployStepUp(serverId), (old) => ({
+        twoFactor: old?.twoFactor ?? false,
+        until,
+      })),
+    [queryClient, serverId],
+  );
+
+  /** Steps up with the remembered password when there is one, and asks for it when there is not. */
+  const confirm = useCallback(
+    async (twoFactor: boolean): Promise<boolean> => {
+      const until = await stepUpWithSavedPassword(serverId);
+      if (until === null) return ask(twoFactor);
+      keep(until);
+      return true;
+    },
+    [serverId, ask, keep],
+  );
+
   const run = useCallback(
     async <T,>(work: () => Promise<T>): Promise<T | undefined> => {
       const state = await known();
-      if (state.until - Date.now() < MARGIN_MS && !(await ask(state.twoFactor))) return undefined;
+      if (state.until - Date.now() < MARGIN_MS && !(await confirm(state.twoFactor))) {
+        return undefined;
+      }
       try {
         return await work();
       } catch (error) {
         if (!UNAUTHORIZED.test(error instanceof Error ? error.message : String(error))) throw error;
-        if (!(await ask(state.twoFactor))) return undefined;
+        if (!(await confirm(state.twoFactor))) return undefined;
         return await work();
       }
     },
-    [known, ask],
+    [known, confirm],
   );
 
   const finish = (confirmed: boolean, until?: number) => {
-    if (until !== undefined) {
-      queryClient.setQueryData<Known>(queryKeys.deployStepUp(serverId), (old) => ({
-        twoFactor: old?.twoFactor ?? false,
-        until,
-      }));
-    }
+    if (until !== undefined) keep(until);
     asking?.resolve(confirmed);
     setAsking(null);
   };
@@ -125,14 +145,17 @@ function StepUpDialog({
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [useCode, setUseCode] = useState(false);
+  const [remember, setRemember] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!open) return;
     setPassword('');
     setCode('');
     setUseCode(false);
+    setRemember(false);
     setProblem(null);
   }, [open]);
 
@@ -148,6 +171,7 @@ function StepUpDialog({
         serverId: server.id,
         ...(useCode ? { totpCode: answer } : { password: answer }),
       });
+      if (remember && !useCode) await rememberPassword(queryClient, server.id, answer);
       onConfirmed(confirmed.stepUpUntilUnixMs);
     } catch (error) {
       setProblem(coreErrorMessage(error));
@@ -194,6 +218,14 @@ function StepUpDialog({
                 autoFocus
               />
             </div>
+          )}
+          {!useCode && (
+            <RememberPasswordOption
+              id={`stepup-remember-${server.id}`}
+              checked={remember}
+              disabled={busy}
+              onCheckedChange={setRemember}
+            />
           )}
           {twoFactor && (
             <Button

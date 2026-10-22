@@ -53,6 +53,12 @@ export interface PropertiesDialogProps {
    * this resolves, and stays open with the error shown when it rejects.
    */
   onApply: (input: SftpChmodInput) => Promise<void>;
+  /**
+   * Why permissions cannot change here (E27, a stopped or shell-less container). When set, the
+   * dialog only shows: the boxes and the octal field are off, the reason is shown, and there is
+   * no Apply.
+   */
+  readOnlyReason?: string | null;
 }
 
 /** RemoteEditorDialog.tsx: a remote text file in Monaco, loaded lazily. */

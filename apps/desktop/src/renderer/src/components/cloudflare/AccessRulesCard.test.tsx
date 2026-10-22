@@ -81,7 +81,8 @@ describe('AccessRulesCard', () => {
       '203.0.113.0/24',
     );
     expect(screen.getByText('Read as: IP range')).toBeInTheDocument();
-    await user.selectOptions(screen.getByLabelText('Action'), 'whitelist');
+    await user.click(screen.getByRole('combobox', { name: 'Action' }));
+    await user.click(await screen.findByRole('option', { name: 'Allow' }));
     await user.type(screen.getByLabelText('Notes'), 'Office');
     await user.click(screen.getByRole('button', { name: 'Add access rule' }));
 

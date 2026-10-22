@@ -105,7 +105,7 @@ describe('the install sheet', () => {
     const images = within(sheet).getByRole('list', { name: 'Images' });
     expect(within(images).getByText('Docker Official Image')).toBeTruthy();
     expect(within(images).getByText(/redis:8\.10\.\d+ @/)).toBeTruthy();
-    expect(within(sheet).getByLabelText('Version')).toHaveProperty('value', '8.10');
+    expect(within(sheet).getByLabelText('Version')).toHaveTextContent('Redis 8.10');
     // "cache" is taken by the Redis already there; the template id is not.
     expect(within(sheet).getByLabelText('App name')).toHaveProperty('value', 'redis');
     const password = within(sheet).getByLabelText(/^Password/) as HTMLInputElement;

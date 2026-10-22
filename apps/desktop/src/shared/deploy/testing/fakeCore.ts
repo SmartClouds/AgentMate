@@ -18,6 +18,7 @@ import { FakeCloudflareCore } from './fakeCloudflareCore';
 import { FakeCoreConnection } from './fakeCoreConnection';
 import { metricsSample, sampleServices, sampleSystemInfo, sampleUpdates } from './fakeCoreData';
 import { FakeDocker } from './fakeDocker';
+import { FakeFiles } from './fakeFiles';
 import { FakeFirewall } from './fakeFirewall';
 import { FakeNginx } from './fakeNginx';
 
@@ -81,6 +82,8 @@ export class FakeCore {
   updates: UpdatesInfo = sampleUpdates();
   /** Docker on the pretend server (E06): containers, logs, stats, events and resources. */
   readonly docker: FakeDocker = new FakeDocker(this);
+  /** The files in its containers and volumes (E27). */
+  readonly files: FakeFiles = new FakeFiles(this);
   /** nginx, its sites and certificates (E10, E11). */
   readonly nginx: FakeNginx = new FakeNginx({
     now: () => this.now(),

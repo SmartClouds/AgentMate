@@ -239,6 +239,31 @@ public interface ICoreHub
     /// </summary>
     Task<JobInfo> InstallDocker(DockerInstallRequest request);
 
+    // Files in a container or a volume (E27), Admin. Every change and download lands in the audit
+    // trail. Downloads and uploads go over REST: /api/v1/files/{SessionId}/content?path=.
+
+    /// <summary>A volume starts its helper container first, pulling the helper image if it is missing.</summary>
+    Task<FileSessionInfo> FilesOpen(FileTarget target);
+
+    Task FilesClose(Guid sessionId);
+
+    Task<FileListing> FilesList(FilePathRequest request);
+
+    /// <summary>The entry itself (a link is not followed), or null when nothing is there.</summary>
+    Task<FileEntry?> FilesStat(FilePathRequest request);
+
+    /// <summary>The absolute path with links resolved where the session has a shell, normalized otherwise.</summary>
+    Task<string> FilesRealpath(FilePathRequest request);
+
+    Task FilesMkdir(FilePathRequest request);
+
+    /// <summary>Refused when something is already at To.</summary>
+    Task FilesRename(FileRenameRequest request);
+
+    Task FilesRemove(FileRemoveRequest request);
+
+    Task FilesChmod(FileChmodRequest request);
+
     // Websites and certificates (E10, E11). Reads are open to every role.
 
     Task<NginxStatus> GetNginxStatus();

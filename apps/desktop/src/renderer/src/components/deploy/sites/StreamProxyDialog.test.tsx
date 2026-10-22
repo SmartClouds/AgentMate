@@ -64,7 +64,8 @@ describe('StreamProxyDialog', () => {
       },
     });
     await user.type(within(dialog).getByLabelText('Id'), 'dns');
-    await user.selectOptions(within(dialog).getByLabelText('Protocol'), 'udp');
+    await user.click(within(dialog).getByRole('combobox', { name: 'Protocol' }));
+    await user.click(await screen.findByRole('option', { name: 'UDP' }));
     await user.type(within(dialog).getByLabelText('Public port'), '53');
     await user.type(within(dialog).getByLabelText('Passes to'), '127.0.0.1:5353');
     await user.click(within(dialog).getByRole('button', { name: /Save the proxy/ }));

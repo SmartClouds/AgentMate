@@ -259,3 +259,29 @@ describe('PropertiesDialog', () => {
     expect(octal()).toHaveValue('644');
   });
 });
+
+describe('PropertiesDialog, where permissions cannot change (E27)', () => {
+  const REASON = 'The container is stopped. Start it to rename, delete or change permissions.';
+
+  it('shows the details and the permissions, and says why they cannot change', async () => {
+    const { user, props } = renderDialog([folder], { readOnlyReason: REASON });
+    const dialog = screen.getByRole('dialog', { name: 'site' });
+    expect(within(dialog).getByText('/var/www/site')).toBeInTheDocument();
+    expect(within(dialog).getByText(REASON)).toBeInTheDocument();
+    expect(box('Owner read')).toBeChecked();
+    expect(box('Owner read')).toBeDisabled();
+    expect(box('Others write')).toBeDisabled();
+    expect(octal()).toHaveValue('755');
+    expect(octal()).toBeDisabled();
+    expect(within(dialog).queryByRole('button', { name: 'Apply' })).toBeNull();
+    expect(within(dialog).queryByText('Also apply inside')).toBeNull();
+    await user.click(within(dialog).getByRole('button', { name: 'Done' }));
+    expect(props.onOpenChange).toHaveBeenCalledWith(false);
+    expect(props.onApply).not.toHaveBeenCalled();
+  });
+
+  it('describes itself as details only', () => {
+    renderDialog([entry()], { readOnlyReason: REASON });
+    expect(screen.getByText('Details and permissions, read only.')).toBeInTheDocument();
+  });
+});

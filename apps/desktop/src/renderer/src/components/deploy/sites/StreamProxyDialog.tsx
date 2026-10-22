@@ -8,6 +8,7 @@ import type {
 import { useEffect, useId, useState } from 'react';
 import { Save, Spinner } from '@/components/icons';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import {
   Dialog,
   DialogContent,
@@ -20,7 +21,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { problemsFor } from '@/lib/deploy/sites/problems';
 import { splitList } from '@/lib/deploy/sites/settings';
-import { FieldError, SELECT_CLASS, TextField } from './fields';
+import { FieldError, TextField } from './fields';
 
 /**
  * A public TCP or UDP port that nginx passes on to an address behind it, such as a database
@@ -162,15 +163,16 @@ export function StreamProxyDialog({
           />
           <div className="space-y-1.5">
             <Label htmlFor={protocolId}>Protocol</Label>
-            <select
+            <Combobox
               id={protocolId}
+              searchable={false}
+              options={[
+                { value: 'tcp', label: 'TCP' },
+                { value: 'udp', label: 'UDP' },
+              ]}
               value={draft.protocol}
-              onChange={(event) => set({ protocol: event.target.value as StreamProxyProtocol })}
-              className={SELECT_CLASS}
-            >
-              <option value="tcp">TCP</option>
-              <option value="udp">UDP</option>
-            </select>
+              onChange={(protocol) => set({ protocol: protocol as StreamProxyProtocol })}
+            />
           </div>
           <TextField
             label="Public port"

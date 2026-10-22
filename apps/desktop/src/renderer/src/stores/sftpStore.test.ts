@@ -1253,3 +1253,110 @@ describe('the conflict answer asked for', () => {
     expect(useSftpStore.getState().conflictFocus).toBeNull();
   });
 });
+
+describe('what the remote side allows (E27)', () => {
+  const LIMITATION = 'The container is stopped. Start it to rename, delete or change permissions.';
+  const LIMITED: SftpSessionInfo = {
+    ...SESSION,
+    kind: 'container',
+    capabilities: { rename: false, remove: false, chmod: false, edit: false },
+    limitation: LIMITATION,
+  };
+
+  beforeEach(async () => {
+    install({ 'sftp.open': LIMITED });
+    await useSftpStore.getState().connect('srv-1');
+    await waitFor(() => expect(files().remote.entries).toHaveLength(2));
+  });
+
+  it('never opens the editor, and says why without reading the file', async () => {
+    await useSftpStore.getState().openEditor('srv-1', '/home/deploy/a.txt');
+    expect(files().editingPath).toBeNull();
+    expect(() => bridge.$fn('sftp.readText')).toThrow();
+    expect(toast.error).toHaveBeenCalledWith("Can't edit a.txt here", {
+      description: LIMITATION,
+    });
+  });
+
+  it('refuses a rename, a delete and a chmod without asking main', async () => {
+    const state = useSftpStore.getState();
+    expect(await state.rename('srv-1', 'remote', '/home/deploy/a.txt', 'c.txt')).toBe(false);
+    expect(await state.removeRemote('srv-1', ['/home/deploy/a.txt'])).toBeNull();
+    await expect(
+      state.chmod('srv-1', { paths: ['/home/deploy/a.txt'], mode: 0o600, recursive: 'none' }),
+    ).rejects.toThrow(LIMITATION);
+    expect(toast.error).toHaveBeenCalledWith(LIMITATION);
+    for (const path of ['sftp.rename', 'sftp.remove', 'sftp.chmod']) {
+      expect(() => bridge.$fn(path)).toThrow();
+    }
+  });
+
+  it('still renames on this computer', async () => {
+    install({
+      'sftp.localRename': async () => 'C:\Users\me\renamed.txt',
+    });
+    await useSftpStore.getState().initLocal('srv-1');
+    expect(
+      await useSftpStore
+        .getState()
+        .rename('srv-1', 'local', 'C:\Users\me\notes.txt', 'renamed.txt'),
+    ).toBe(true);
+  });
+});
+
+describe('a partial listing (E27)', () => {
+  it('keeps the mark from main, and drops it on a listing that is whole', async () => {
+    install({
+      'sftp.list': async (_s: string, path: string) => ({
+        ...remoteListing(path === '~' ? '/home/deploy' : path, ['a.txt']),
+        partial: path !== '/srv',
+      }),
+    });
+    await useSftpStore.getState().connect('srv-1');
+    await waitFor(() => expect(files().remote.path).toBe('/home/deploy'));
+    expect(files().remote.partial).toBe(true);
+    await useSftpStore.getState().navigate('srv-1', 'remote', '/srv');
+    expect(files().remote.partial).toBe(false);
+  });
+
+  it('counts a listing without the mark as whole', async () => {
+    await useSftpStore.getState().connect('srv-1');
+    await waitFor(() => expect(files().remote.path).toBe('/home/deploy'));
+    expect(files().remote.partial).toBe(false);
+  });
+});
+
+describe('a container or volume on a Deploy server (E27)', () => {
+  const TARGET = 'docker~srv-1~container~web-1';
+  const DOCKER_SESSION: SftpSessionInfo = {
+    ...SESSION,
+    serverId: TARGET,
+    nickname: 'web-1 (container)',
+    host: 'prod',
+    port: 0,
+    username: 'root',
+    home: '/',
+    kind: 'container',
+  };
+  const target = () => serverFiles(useSftpStore.getState(), TARGET);
+
+  it('opens without looking for a saved server of that id', async () => {
+    install({ 'sftp.open': DOCKER_SESSION });
+    await useSftpStore.getState().connect(TARGET);
+    expect(target().status).toBe('ready');
+    expect(bridge.$fn('sftp.open')).toHaveBeenCalledWith(TARGET);
+    expect(() => bridge.$fn('ssh.listServers')).toThrow();
+    expect(target().session?.nickname).toBe('web-1 (container)');
+  });
+
+  it('says missing when main no longer knows the container', async () => {
+    install({
+      'sftp.open': async () => {
+        throw new Error(encodeFilesError('siteUnknown', 'gone'));
+      },
+    });
+    await useSftpStore.getState().connect(TARGET);
+    expect(target().status).toBe('missing');
+    expect(target().server?.nickname).toBe('web-1');
+  });
+});

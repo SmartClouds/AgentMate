@@ -20,6 +20,8 @@ export interface ChartSeries {
   label: string;
   color: string;
   values: number[];
+  /** Words for the reading at an index, shown under its value, e.g. "7.3 GB of 8 GB". */
+  detail?: (index: number) => string;
 }
 
 const WIDTH = 600;
@@ -73,7 +75,10 @@ export function MetricChart({
       ? ''
       : `${line(values)} L${x(values.length - 1).toFixed(1)} ${height} L${x(0).toFixed(1)} ${height} Z`;
 
-  const latest = series.map((item) => `${item.label} ${formatValue(item.values[n - 1] ?? 0)}`);
+  const latest = series.map(
+    (item) =>
+      `${item.label} ${formatValue(item.values[n - 1] ?? 0)}${n > 0 && item.detail ? ` (${item.detail(n - 1)})` : ''}`,
+  );
   const summary =
     n === 0
       ? `${title}: no readings yet`
@@ -235,15 +240,22 @@ export function MetricChart({
                 {formatTime(times[shown])}
               </div>
               {series.map((item) => (
-                <div key={item.key} className="flex items-center gap-1.5">
-                  <span
-                    className="inline-block h-0.5 w-3 rounded-full"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="font-semibold text-popover-foreground">
-                    {formatValue(item.values[shown] ?? 0)}
-                  </span>
-                  <span className="text-muted-foreground">{item.label}</span>
+                <div key={item.key}>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className="inline-block h-0.5 w-3 rounded-full"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="font-semibold text-popover-foreground">
+                      {formatValue(item.values[shown] ?? 0)}
+                    </span>
+                    <span className="text-muted-foreground">{item.label}</span>
+                  </div>
+                  {item.detail && (
+                    <div className="pl-[1.125rem] text-[11px] tabular-nums text-muted-foreground">
+                      {item.detail(shown)}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

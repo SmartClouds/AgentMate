@@ -70,6 +70,21 @@ describe('MetricChart', () => {
     expect(screen.queryByRole('tooltip')).toBeNull();
   });
 
+  it('adds a detail line under a series in the readout and in the label', () => {
+    const detail = (i: number) => `${i + 1} of 50`;
+    renderChart({ series: [{ ...series[0], detail }, series[1]] });
+    expect(
+      screen.getByRole('img', {
+        name: 'Network, 4 readings from t0 to t3000. Latest: Received 40 B/s (4 of 50), Sent 4 B/s.',
+      }),
+    ).toBeInTheDocument();
+    const plot = screen.getByRole('img');
+    fireEvent.keyDown(plot, { key: 'Home' });
+    expect(screen.getByRole('tooltip')).toHaveTextContent('t010 B/sReceived1 of 501 B/sSent');
+    fireEvent.keyDown(plot, { key: 'ArrowRight' });
+    expect(screen.getByRole('tooltip')).toHaveTextContent('t100020 B/sReceived2 of 502 B/sSent');
+  });
+
   it('says when there are no readings and ignores the keys then', () => {
     renderChart({ times: [], series: [{ ...series[0], values: [] }], yMax: 0 });
     const plot = screen.getByRole('img', { name: 'Network: no readings yet' });

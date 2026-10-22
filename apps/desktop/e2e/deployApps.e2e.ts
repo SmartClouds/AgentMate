@@ -108,9 +108,11 @@ test('deploys an app from a project, follows its timeline and rolls back', async
   await page.getByRole('button', { name: 'New app' }).click();
 
   // Source: the project, its compose file and its environment, and a name.
-  await page.getByLabel('Project').selectOption({ label: 'e2e project' });
+  await page.getByRole('combobox', { name: 'Project', exact: true }).click();
+  await page.getByRole('option', { name: 'e2e project' }).click();
   await page.getByRole('radio', { name: /compose\.yaml/ }).check();
-  await page.getByLabel('Environment').selectOption({ label: 'Production' });
+  await page.getByRole('combobox', { name: 'Environment', exact: true }).click();
+  await page.getByRole('option', { name: /^Production/ }).click();
   await page.getByLabel('App name').fill('e2e-site');
   await throughTheWizard(page);
   await page.getByRole('button', { name: 'Deploy e2e-site' }).click();

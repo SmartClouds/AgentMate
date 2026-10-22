@@ -11,8 +11,8 @@ it on a domain with SSL, and see how to connect to it afterwards.
 
 - [x] T1 Catalog in `packages/core/src/deploy/catalog/`: MySQL, MariaDB, PostgreSQL, Redis,
   MongoDB, WordPress (with MySQL), Ghost, Ollama (optional Open WebUI and GPU), n8n, Uptime Kuma,
-  Adminer, phpMyAdmin, Gitea, Grafana, Prometheus, Nextcloud, Meilisearch, RabbitMQ. Official
-  or verified-publisher images only, pinned by tag and digest.
+  Adminer, phpMyAdmin, Gitea, Grafana, Prometheus, Nextcloud, Meilisearch, RabbitMQ, Apache
+  Kafka. Official or verified-publisher images only, pinned by tag and digest.
 - [x] T2 Parameter schemas (zod) with UI hints, generated secrets, compose builder, post-install
   notes (connection strings), resource hints.
 - [x] T3 Install sheet: official-image badge, version picker, secrets, expose on a domain (E10,
@@ -32,7 +32,7 @@ it on a domain with SSL, and see how to connect to it afterwards.
 
 Catalog (T1, T2):
 
-- 18 templates. MinIO was planned but is left out: as of 2026-10-01 neither `docker.io/minio/minio` nor
+- 19 templates (Apache Kafka joined on 2026-10-22). MinIO was planned but is left out: as of 2026-10-01 neither `docker.io/minio/minio` nor
   `quay.io/minio/minio` can be pulled anonymously, and the catalog only takes official or vendor
   images.
 - Every rendered compose file carries a top-level `x-agentmate` block (template, version,

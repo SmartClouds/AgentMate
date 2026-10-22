@@ -103,7 +103,8 @@ describe('UsersCard', () => {
     await user.click(await screen.findByRole('button', { name: /Add a user/ }));
     const dialog = await screen.findByRole('dialog', { name: 'Add a user' });
     await user.type(within(dialog).getByLabelText('User name'), 'ana');
-    await user.selectOptions(within(dialog).getByLabelText('Role'), 'admin');
+    await user.click(within(dialog).getByRole('combobox', { name: 'Role' }));
+    await user.click(await screen.findByRole('option', { name: 'Admin' }));
     expect(within(dialog).getByText(/Runs the server/)).toBeTruthy();
     await user.type(within(dialog).getByLabelText('First password'), PASSWORD);
     await user.type(within(dialog).getByLabelText('Confirm the password'), PASSWORD);

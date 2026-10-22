@@ -113,9 +113,11 @@ test('adds a registry sign-in and deploys an app from a private image', async ()
 
   // The New App wizard, its review naming the sign-in that goes with the deploy.
   await page.getByRole('button', { name: 'New app' }).click();
-  await page.getByLabel('Project').selectOption({ label: 'e2e project' });
+  await page.getByRole('combobox', { name: 'Project', exact: true }).click();
+  await page.getByRole('option', { name: 'e2e project' }).click();
   await page.getByRole('radio', { name: /compose\.yaml/ }).check();
-  await page.getByLabel('Environment').selectOption({ label: 'Production' });
+  await page.getByRole('combobox', { name: 'Environment', exact: true }).click();
+  await page.getByRole('option', { name: /^Production/ }).click();
   await page.getByLabel('App name').fill('private-site');
   await expect(page.getByRole('list', { name: 'New app steps' })).toBeVisible();
   await page.getByRole('button', { name: 'Next' }).click();

@@ -174,8 +174,10 @@ describe('SiteEditor performance and security', () => {
       bridge: { 'deploySites.save': { problems: [], site: SHOP } },
     });
     await user.click(screen.getByRole('switch', { name: 'Add security headers' }));
-    await user.selectOptions(screen.getByLabelText('X-Frame-Options'), 'deny');
-    await user.selectOptions(screen.getByLabelText('Referrer-Policy'), 'noReferrer');
+    await user.click(screen.getByRole('combobox', { name: 'X-Frame-Options' }));
+    await user.click(await screen.findByRole('option', { name: 'No site may frame it' }));
+    await user.click(screen.getByRole('combobox', { name: 'Referrer-Policy' }));
+    await user.click(await screen.findByRole('option', { name: 'no-referrer' }));
     await user.click(screen.getByRole('switch', { name: /nosniff/ }));
     await user.click(screen.getByRole('button', { name: /Add a header/ }));
     await user.type(screen.getByRole('textbox', { name: 'Header 1 name' }), 'X-Robots-Tag');
@@ -185,7 +187,8 @@ describe('SiteEditor performance and security', () => {
     await user.click(screen.getByRole('switch', { name: 'Basic auth' }));
     await user.click(screen.getByRole('button', { name: /Add a user/ }));
     await user.click(screen.getByRole('switch', { name: 'Limit requests' }));
-    await user.selectOptions(screen.getByLabelText('Per'), 'minute');
+    await user.click(screen.getByRole('combobox', { name: 'Per' }));
+    await user.click(await screen.findByRole('option', { name: 'minute' }));
     await user.click(screen.getByRole('switch', { name: 'Serve a burst at once' }));
     await user.click(screen.getByRole('button', { name: /Save changes/ }));
     expect(await screen.findByText(/^nope: /)).toBeInTheDocument();

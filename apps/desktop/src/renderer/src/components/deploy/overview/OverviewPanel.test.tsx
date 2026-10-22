@@ -223,6 +223,88 @@ describe('OverviewPanel actions', () => {
     expect(upgradeAll).toHaveBeenLastCalledWith({ serverId: SERVER.id, password: 'right' });
   });
 
+  it('does not ask for the password when this computer remembers it', async () => {
+    const upgradeAll = vi
+      .fn()
+      .mockRejectedValueOnce(STEP_UP_REFUSAL)
+      .mockResolvedValueOnce(sampleJob({ kind: 'packagesUpgrade', title: 'Install every update' }));
+    const stepUpSaved = vi.fn(async () => ({ stepUpUntilUnixMs: Date.now() + 600_000 }));
+    const { user } = renderPanel({
+      'deploySystem.upgradeAll': upgradeAll,
+      'deploy.stepUpSaved': stepUpSaved,
+    });
+    await user.click(await screen.findByRole('button', { name: /Install all/ }));
+    await user.click(screen.getByRole('button', { name: 'Install 2 updates' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Install every update' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: /Confirm it is you/ })).toBeNull();
+    expect(stepUpSaved).toHaveBeenCalledWith(SERVER.id);
+    expect(upgradeAll).toHaveBeenCalledTimes(2);
+    expect(upgradeAll).toHaveBeenLastCalledWith({ serverId: SERVER.id });
+  });
+
+  it('asks for the password after all when the remembered one is not accepted', async () => {
+    const upgradeAll = vi.fn().mockRejectedValue(STEP_UP_REFUSAL);
+    const { user } = renderPanel({
+      'deploySystem.upgradeAll': upgradeAll,
+      'deploy.stepUpSaved': async () => null,
+    });
+    await user.click(await screen.findByRole('button', { name: /Install all/ }));
+    await user.click(screen.getByRole('button', { name: 'Install 2 updates' }));
+
+    expect(await screen.findByRole('dialog', { name: /Confirm it is you/ })).toBeInTheDocument();
+    expect(upgradeAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('remembers the password once the user ticks the box and it works', async () => {
+    const upgradeAll = vi
+      .fn()
+      .mockRejectedValueOnce(STEP_UP_REFUSAL)
+      .mockResolvedValueOnce(sampleJob({ kind: 'packagesUpgrade', title: 'Install every update' }));
+    const rememberPassword = vi.fn(async () => undefined);
+    const { user } = renderPanel({
+      'deploySystem.upgradeAll': upgradeAll,
+      'deploy.rememberPassword': rememberPassword,
+    });
+    await user.click(await screen.findByRole('button', { name: /Install all/ }));
+    await user.click(screen.getByRole('button', { name: 'Install 2 updates' }));
+
+    const proof = await screen.findByRole('dialog', { name: /Confirm it is you/ });
+    const box = within(proof).getByRole('checkbox', { name: /Remember my password/ });
+    expect(box).not.toBeChecked();
+    await user.type(within(proof).getByLabelText('Password'), 'right');
+    await user.click(box);
+    await user.click(within(proof).getByRole('button', { name: 'Confirm' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Install every update' })).toBeInTheDocument();
+    expect(rememberPassword).toHaveBeenCalledExactlyOnceWith({
+      serverId: SERVER.id,
+      password: 'right',
+    });
+  });
+
+  it('does not remember a password that did not work', async () => {
+    const upgradeAll = vi
+      .fn()
+      .mockRejectedValueOnce(STEP_UP_REFUSAL)
+      .mockRejectedValueOnce(new Error('[core:invalidCredentials] The password is not right.'));
+    const rememberPassword = vi.fn();
+    const { user } = renderPanel({
+      'deploySystem.upgradeAll': upgradeAll,
+      'deploy.rememberPassword': rememberPassword,
+    });
+    await user.click(await screen.findByRole('button', { name: /Install all/ }));
+    await user.click(screen.getByRole('button', { name: 'Install 2 updates' }));
+
+    const proof = await screen.findByRole('dialog', { name: /Confirm it is you/ });
+    await user.type(within(proof).getByLabelText('Password'), 'wrong');
+    await user.click(within(proof).getByRole('checkbox', { name: /Remember my password/ }));
+    await user.click(within(proof).getByRole('button', { name: 'Confirm' }));
+
+    expect(await within(proof).findByRole('alert')).toHaveTextContent('The password is not right.');
+    expect(rememberPassword).not.toHaveBeenCalled();
+  });
+
   it('turns away a role refusal with its words, without asking for a password', async () => {
     const { user } = renderPanel({
       'deploySystem.upgradeAll': () =>

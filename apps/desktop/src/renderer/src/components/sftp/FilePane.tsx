@@ -1,11 +1,12 @@
 import { useCallback, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ArrowDown, ArrowUp, FolderOpen, Monitor, Server } from '@/components/icons';
-import { EmptyState, NoMatches, Problem, SECTION_HEADING } from '@/components/pageKit';
+import { EmptyState, NoMatches, Notice, Problem, SECTION_HEADING } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
 import { ContextMenu, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useVirtualRows } from '@/hooks/useVirtualRows';
+import { limitationOf, refusalFor } from '@/lib/sftp/capabilities';
 import { dragKind, readDragPayload, writeDragPayload } from '@/lib/sftp/dnd';
 import {
   isRemoteEntry,
@@ -26,7 +27,7 @@ import { cn } from '@/lib/utils';
 import { confirmDialog } from '@/stores/confirmStore';
 import { type PaneSide, type PaneState, serverFiles, useSftpStore } from '@/stores/sftpStore';
 import { COLUMN, COMPACT_ROW_HEIGHT, FileRow, NAME_FIELD, PANE_CARD, ROW_HEIGHT } from './FileRow';
-import { PaneContextMenu } from './PaneContextMenu';
+import { PaneContextMenu, type PaneRefusals } from './PaneContextMenu';
 import { PaneToolbar } from './PaneToolbar';
 import { PathBar } from './PathBar';
 
@@ -184,6 +185,7 @@ export function FilePane({
   const pane = useSftpStore((state) => serverFiles(state, serverId)[side]) as PaneState<PaneEntry>;
   const otherPath = useSftpStore((state) => serverFiles(state, serverId)[otherSide].path);
   const status = useSftpStore((state) => serverFiles(state, serverId).status);
+  const session = useSftpStore((state) => serverFiles(state, serverId).session);
   const nickname = useSftpStore((state) => {
     const files = serverFiles(state, serverId);
     return files.session?.nickname ?? files.server?.nickname ?? 'Server';
@@ -192,6 +194,19 @@ export function FilePane({
   const store = useSftpStore.getState;
   const otherReady = otherPath !== null && (otherSide === 'local' || status === 'ready');
   const remote = side === 'remote';
+  // What the server side does not allow (E27); this computer allows everything.
+  const refusals = useMemo<PaneRefusals>(
+    () =>
+      remote
+        ? {
+            edit: refusalFor(session, 'edit'),
+            rename: refusalFor(session, 'rename'),
+            remove: refusalFor(session, 'remove'),
+          }
+        : {},
+    [remote, session],
+  );
+  const limitation = remote ? limitationOf(session) : null;
 
   const [editingPath, setEditingPath] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -381,8 +396,13 @@ export function FilePane({
     else if (key === 'End') move('end', event.shiftKey);
     else if (key === 'Enter') {
       if (focused) openEntry(focused);
-    } else if (key === 'F2') startRename(focused);
-    else if (key === 'Delete') void deleteEntries(selectedEntries);
+    } else if (key === 'F2') {
+      if (refusals.rename && focused) toast.info(refusals.rename);
+      else startRename(focused);
+    } else if (key === 'Delete') {
+      if (refusals.remove && selectedEntries.length > 0) toast.info(refusals.remove);
+      else void deleteEntries(selectedEntries);
+    }
     else if (key === 'F5') void store().refresh(serverId, side);
     else if (key === 'Escape') setSelection(EMPTY_SELECTION);
     else if (key === 'Tab') {
@@ -698,6 +718,7 @@ export function FilePane({
           side={side}
           entries={menuEntries}
           canTransfer={otherReady}
+          refusals={refusals}
           onTransfer={() => transfer(menuEntries)}
           onEdit={(entry) => void store().openEditor(serverId, entry.path)}
           onRename={startRename}
@@ -759,6 +780,21 @@ export function FilePane({
           onSubmit={(text) => store().goTo(serverId, side, text)}
         />
       </PaneToolbar>
+      {limitation ? (
+        <div className="px-2.5 pt-2">
+          <Notice role="note" size="sm">
+            {limitation}
+          </Notice>
+        </div>
+      ) : null}
+      {hasListing && pane.partial ? (
+        <div className="px-2.5 pt-2">
+          <Notice role="status" tone="warning" size="sm">
+            Only part of this folder is listed, because it is too large to read in full without a
+            shell. Start the container, or open a folder further down.
+          </Notice>
+        </div>
+      ) : null}
       {hasListing && pane.error ? (
         <div className="px-2.5 pt-2">
           <Problem message={pane.error} onRetry={() => void store().retryListing(serverId, side)} />

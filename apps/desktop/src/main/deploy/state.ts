@@ -23,6 +23,11 @@ export interface DeviceCredentials {
   privateKey: SecretEnvelope;
   /** The current device session, renewed with a signature; not a secret on its own. */
   sessionId?: string;
+  /**
+   * The account password, sealed with the Servers vault, only when the user asked this computer
+   * to remember it. It answers the core's step-up for them; sign-in never uses it.
+   */
+  password?: SecretEnvelope;
 }
 
 /**
@@ -89,7 +94,8 @@ function isDevice(value: unknown): value is DeviceCredentials {
     typeof device.deviceId === 'string' &&
     typeof device.userName === 'string' &&
     isEnvelope(device.privateKey) &&
-    (device.sessionId === undefined || typeof device.sessionId === 'string')
+    (device.sessionId === undefined || typeof device.sessionId === 'string') &&
+    (device.password === undefined || isEnvelope(device.password))
   );
 }
 
@@ -167,20 +173,26 @@ function parse(value: unknown): DeployStateFile {
 export class DeployState {
   private queue: Promise<unknown> = Promise.resolve();
 
-  /** Moves every sealed device key when the Servers passkey changes (see vault.ts). */
+  /**
+   * Moves every sealed device key, and every remembered password, when the Servers passkey
+   * changes (see vault.ts).
+   */
   readonly sealedKeys: SealedSecretStore = {
     prepare: async (move) => {
       const devices = (await this.read()).devices;
-      const moved: Record<string, SecretEnvelope> = {};
+      const moved: Record<string, Pick<DeviceCredentials, 'privateKey' | 'password'>> = {};
       for (const [serverId, device] of Object.entries(devices)) {
-        moved[serverId] = await move(device.privateKey);
+        moved[serverId] = {
+          privateKey: await move(device.privateKey),
+          ...(device.password ? { password: await move(device.password) } : {}),
+        };
       }
       return () =>
         this.update((file) => {
           const next = { ...file.devices };
-          for (const [serverId, privateKey] of Object.entries(moved)) {
+          for (const [serverId, sealed] of Object.entries(moved)) {
             const device = next[serverId];
-            if (device) next[serverId] = { ...device, privateKey };
+            if (device) next[serverId] = { ...device, ...sealed };
           }
           return { ...file, devices: next };
         });
@@ -241,6 +253,19 @@ export class DeployState {
 
   setDevice(serverId: string, device: DeviceCredentials): Promise<void> {
     return this.update((file) => ({ ...file, devices: { ...file.devices, [serverId]: device } }));
+  }
+
+  /** Remembers the device's sealed password, or forgets it with null. With no device, nothing changes. */
+  setPassword(serverId: string, password: SecretEnvelope | null): Promise<void> {
+    return this.update((file) => {
+      const device = file.devices[serverId];
+      if (!device) return file;
+      const { password: _old, ...rest } = device;
+      return {
+        ...file,
+        devices: { ...file.devices, [serverId]: password ? { ...rest, password } : rest },
+      };
+    });
   }
 
   removeDevice(serverId: string): Promise<void> {

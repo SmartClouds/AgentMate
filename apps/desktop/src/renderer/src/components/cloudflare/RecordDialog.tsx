@@ -17,6 +17,7 @@ import { useEffect, useId, useState } from 'react';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/icons';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import {
   Dialog,
   DialogContent,
@@ -31,7 +32,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { cloudflareFailureText } from '@/lib/cloudflare/feedback';
 import { relativeName, ttlLabel } from '@/lib/cloudflare/labels';
 import { queryKeys } from '@/lib/queryKeys';
-import { Field, NativeSelect } from './fields';
+import { Field } from './fields';
 
 interface Draft {
   type: CloudflareRecordType;
@@ -49,6 +50,8 @@ interface Draft {
   srvTarget: string;
   comment: string;
 }
+
+const TTL_OPTIONS = TTL_CHOICES.map((ttl) => ({ value: String(ttl), label: ttlLabel(ttl) }));
 
 const CONTENT_LABEL: Partial<Record<CloudflareRecordType, string>> = {
   A: 'IPv4 address',
@@ -264,20 +267,14 @@ export function RecordDialog({
           <div className="-mx-1 min-h-0 space-y-4 overflow-y-auto px-1">
             <div className="grid gap-3 sm:grid-cols-[8rem_minmax(0,1fr)]">
               <Field label="Type" htmlFor={field('type')}>
-                <NativeSelect
+                <Combobox
                   id={field('type')}
+                  searchable={false}
+                  options={CLOUDFLARE_RECORD_TYPES.map((type) => ({ value: type, label: type }))}
                   value={draft.type}
                   disabled={Boolean(record)}
-                  onChange={(event) =>
-                    update({ type: event.target.value as CloudflareRecordType, content: '' })
-                  }
-                >
-                  {CLOUDFLARE_RECORD_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </NativeSelect>
+                  onChange={(type) => update({ type: type as CloudflareRecordType, content: '' })}
+                />
               </Field>
               <Field
                 label="Name"
@@ -331,17 +328,17 @@ export function RecordDialog({
               <div className="grid gap-3 sm:grid-cols-[6rem_9rem_minmax(0,1fr)]">
                 {numberField('caaFlags', 'Flags')}
                 <Field label="Tag" htmlFor={field('caaTag')}>
-                  <NativeSelect
+                  <Combobox
                     id={field('caaTag')}
+                    searchable={false}
+                    options={[
+                      { value: 'issue', label: 'issue' },
+                      { value: 'issuewild', label: 'issuewild' },
+                      { value: 'iodef', label: 'iodef' },
+                    ]}
                     value={draft.caaTag}
-                    onChange={(event) =>
-                      update({ caaTag: event.target.value as CloudflareCaaData['tag'] })
-                    }
-                  >
-                    <option value="issue">issue</option>
-                    <option value="issuewild">issuewild</option>
-                    <option value="iodef">iodef</option>
-                  </NativeSelect>
+                    onChange={(tag) => update({ caaTag: tag as CloudflareCaaData['tag'] })}
+                  />
                 </Field>
                 <Field label="Value" htmlFor={field('caaValue')}>
                   <Input
@@ -396,18 +393,14 @@ export function RecordDialog({
                 htmlFor={field('ttl')}
                 hint={proxied ? 'Proxied records always use Auto.' : undefined}
               >
-                <NativeSelect
+                <Combobox
                   id={field('ttl')}
-                  value={proxied ? 1 : draft.ttl}
+                  searchable={false}
+                  options={TTL_OPTIONS}
+                  value={String(proxied ? 1 : draft.ttl)}
                   disabled={proxied}
-                  onChange={(event) => update({ ttl: Number(event.target.value) })}
-                >
-                  {TTL_CHOICES.map((ttl) => (
-                    <option key={ttl} value={ttl}>
-                      {ttlLabel(ttl)}
-                    </option>
-                  ))}
-                </NativeSelect>
+                  onChange={(ttl) => update({ ttl: Number(ttl) })}
+                />
               </Field>
             </div>
 

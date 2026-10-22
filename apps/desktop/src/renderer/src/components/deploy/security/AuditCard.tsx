@@ -12,7 +12,6 @@ import type { DeployServer } from '@shared/deployTypes';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 import { toast } from 'sonner';
-import { NativeSelect } from '@/components/cloudflare/fields';
 import {
   Ban,
   CircleCheck,
@@ -26,6 +25,7 @@ import {
 } from '@/components/icons';
 import { Chip, type ChipTone, EmptyState, FOOTER_HAIRLINE } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -389,51 +389,39 @@ export function AuditCard({ server }: { server: DeployServer }): React.JSX.Eleme
           </div>
           <div className="space-y-1.5">
             <Label htmlFor={`${id}-action`}>Action</Label>
-            <NativeSelect
+            <Combobox
               id={`${id}-action`}
+              options={ACTIONS}
               value={filters.action}
-              onChange={(event) => set({ action: event.target.value })}
-            >
-              {ACTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </NativeSelect>
+              onChange={(action) => set({ action })}
+              searchPlaceholder="Search actions…"
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor={`${id}-result`}>Result</Label>
-            <NativeSelect
+            <Combobox
               id={`${id}-result`}
+              searchable={false}
+              options={RESULTS}
               value={filters.result}
-              onChange={(event) => set({ result: event.target.value as Filters['result'] })}
-            >
-              {RESULTS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </NativeSelect>
+              onChange={(result) => set({ result: result as Filters['result'] })}
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor={`${id}-range`}>When</Label>
-            <NativeSelect
+            <Combobox
               id={`${id}-range`}
+              searchable={false}
+              options={RANGES}
               value={filters.range}
-              onChange={(event) => {
-                const range = RANGES.find((option) => option.value === event.target.value);
+              onChange={(value) => {
+                const range = RANGES.find((option) => option.value === value);
                 set({
                   range: range?.value ?? 'all',
                   fromUnixMs: range?.ms ? Date.now() - range.ms : undefined,
                 });
               }}
-            >
-              {RANGES.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </NativeSelect>
+            />
           </div>
         </form>
       </div>

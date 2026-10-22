@@ -55,6 +55,17 @@ export function CoreAccessCard({ server }: { server: DeployServer }): React.JSX.
     }
   }
 
+  async function forgetPassword(): Promise<void> {
+    try {
+      await window.agentmat.deploy.forgetPassword(server.id);
+      toast.success(`Your password for ${server.nickname} is forgotten on this computer.`);
+    } catch (error) {
+      toast.error(coreErrorMessage(error));
+    } finally {
+      refresh();
+    }
+  }
+
   const state = access.data?.state;
   let body: React.ReactNode;
   if (access.isPending) {
@@ -94,6 +105,20 @@ export function CoreAccessCard({ server }: { server: DeployServer }): React.JSX.
               ? 'Two-factor is on: signing in also takes a code from your authenticator app.'
               : 'Two-factor is off. Turn it on so a stolen password alone cannot get in.'}
           </p>
+          {access.data?.passwordSaved && (
+            <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
+              This computer remembers your password, so it answers the confirmation questions.
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="h-auto rounded-sm p-0 text-xs"
+                onClick={() => void forgetPassword()}
+              >
+                Forget it
+              </Button>
+            </p>
+          )}
         </div>
         <Button
           size="sm"

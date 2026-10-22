@@ -232,7 +232,7 @@ Deploy turns a Linux server you can SSH into into one you can manage from AgentM
 | Overview | Live CPU, memory, disk and network, a health score, alerts, package updates and reboots |
 | Apps | Deploy a project's compose file with its environment, follow each deploy step by step, roll back to an earlier revision, and sign in to private registries (GitHub Packages, Docker Hub, your own) |
 | Containers | Docker's containers, images, volumes and networks, with live stats, logs and a console. Docker itself installs from here |
-| App Store | Eighteen ready-made apps (databases, WordPress, monitoring and more), pinned by image digest, installed from one sheet |
+| App Store | Nineteen ready-made apps (databases, WordPress, Kafka, monitoring and more), pinned by image digest, installed from one sheet |
 | Websites | nginx sites and TCP or UDP proxies in front of your apps, checked with `nginx -t` before they go live, and Let's Encrypt certificates that renew themselves |
 | Firewall | ufw or firewalld rules, a list of containers that publish ports past the firewall with a "make private" fix, and a change that rolls itself back unless you confirm it |
 | Logs | A problems feed (crash loops, failed deploys, expiring certificates, exposed ports), any log on the server, and the Deploy AI drawer to diagnose a problem |

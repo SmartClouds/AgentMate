@@ -1,8 +1,9 @@
 import { coreErrorMessage } from '@shared/coreErrors';
 import { useQuery } from '@tanstack/react-query';
 import { useId } from 'react';
-import { Field, NativeSelect, Problem } from '@/components/cloudflare/fields';
+import { Field, Problem } from '@/components/cloudflare/fields';
 import { FileCode } from '@/components/icons';
+import { Combobox } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { queryKeys } from '@/lib/queryKeys';
@@ -48,27 +49,27 @@ export function SourceStep({
         {projects.isPending ? (
           <Skeleton className="h-9 w-full rounded-full" aria-busy="true" />
         ) : (
-          <NativeSelect
+          <Combobox
             id={`${ids}-project`}
+            options={(projects.data ?? []).map((project) => ({
+              value: project.id,
+              label: project.name,
+            }))}
             value={source.projectId}
-            onChange={(event) => {
-              const project = projects.data?.find((item) => item.id === event.target.value);
+            placeholder="Pick a project"
+            searchPlaceholder="Search projects…"
+            emptyText="No project matches."
+            onChange={(projectId) => {
+              const project = projects.data?.find((item) => item.id === projectId);
               onChange({
-                projectId: event.target.value,
+                projectId,
                 projectName: project?.name ?? '',
                 projectFolder: project?.folderPath ?? '',
                 composePath: '',
                 environmentId: null,
               });
             }}
-          >
-            <option value="">Pick a project</option>
-            {(projects.data ?? []).map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </NativeSelect>
+          />
         )}
       </Field>
 
@@ -150,26 +151,26 @@ export function SourceStep({
           htmlFor={`${ids}-environment`}
           hint="Its files become the app's .env on the server. Values stay out of this window."
         >
-          <NativeSelect
+          <Combobox
             id={`${ids}-environment`}
+            searchable={false}
+            options={[
+              { value: '', label: 'No environment' },
+              ...(environments.data ?? []).map((environment) => ({
+                value: environment.id,
+                label: `${environment.name}${environment.files.length === 0 ? ' (no files)' : ''}`,
+              })),
+            ]}
             value={source.environmentId ?? ''}
             disabled={environments.isPending}
-            onChange={(event) => {
-              const environment = environments.data?.find((item) => item.id === event.target.value);
+            onChange={(environmentId) => {
+              const environment = environments.data?.find((item) => item.id === environmentId);
               onChange({
-                environmentId: event.target.value === '' ? null : event.target.value,
+                environmentId: environmentId === '' ? null : environmentId,
                 environmentName: environment?.name ?? null,
               });
             }}
-          >
-            <option value="">No environment</option>
-            {(environments.data ?? []).map((environment) => (
-              <option key={environment.id} value={environment.id}>
-                {environment.name}
-                {environment.files.length === 0 ? ' (no files)' : ''}
-              </option>
-            ))}
-          </NativeSelect>
+          />
         </Field>
       )}
 

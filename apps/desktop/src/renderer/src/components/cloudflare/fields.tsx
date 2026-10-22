@@ -4,22 +4,6 @@ import { cn } from '@/lib/utils';
 
 /** Form pieces the Cloudflare dialog shares, in the look of the app's own inputs. */
 
-export function NativeSelect({
-  className,
-  ...props
-}: React.SelectHTMLAttributes<HTMLSelectElement>): React.JSX.Element {
-  return (
-    <select
-      {...props}
-      className={cn(
-        // The shared field surface (see index.css), so it matches ui/input and the combobox.
-        'field-surface flex h-9 w-full cursor-pointer rounded-full pl-3 pr-2 text-sm disabled:cursor-not-allowed',
-        className,
-      )}
-    />
-  );
-}
-
 export function Field({
   label,
   htmlFor,

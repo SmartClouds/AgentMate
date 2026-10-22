@@ -892,6 +892,12 @@ export const IPC = {
     signOut: 'deploy:signOut',
     account: 'deploy:account',
     stepUp: 'deploy:stepUp',
+    /** (serverId) -> StepUpResponse | null: steps up with the remembered password, if there is one. */
+    stepUpSaved: 'deploy:stepUpSaved',
+    /** (DeployStepUpInput) -> void: checks the password with the core, then remembers it sealed. */
+    rememberPassword: 'deploy:rememberPassword',
+    /** (serverId) -> void: forgets the remembered password. */
+    forgetPassword: 'deploy:forgetPassword',
     beginTotp: 'deploy:beginTotp',
     confirmTotp: 'deploy:confirmTotp',
     disableTotp: 'deploy:disableTotp',

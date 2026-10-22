@@ -171,6 +171,8 @@ export interface DeployAccess {
   user?: { userName: string; roles: string[]; twoFactorEnabled: boolean };
   /** For 'unreachable' and a locked account: what went wrong. */
   message?: string;
+  /** This computer remembers the account password, and answers the core's confirmations with it. */
+  passwordSaved?: boolean;
 }
 
 /** A new authenticator key, as text and as a QR code image (a data URL). */

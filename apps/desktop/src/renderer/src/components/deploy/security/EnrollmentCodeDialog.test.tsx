@@ -48,7 +48,8 @@ describe('EnrollmentCodeDialog', () => {
     });
 
     expect(screen.getByText(/together with sam's password/)).toBeTruthy();
-    await user.selectOptions(screen.getByLabelText('Valid for'), '60');
+    await user.click(screen.getByRole('combobox', { name: 'Valid for' }));
+    await user.click(await screen.findByRole('option', { name: '1 hour' }));
     await user.click(screen.getByRole('button', { name: 'Make the code' }));
 
     expect((await screen.findByLabelText('Enrollment code')).textContent).toBe(CODE.code);

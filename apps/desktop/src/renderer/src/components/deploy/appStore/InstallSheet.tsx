@@ -1,8 +1,8 @@
 import type { AnyCatalogTemplate } from '@agentmat/core';
 import { useMemo, useState } from 'react';
-import { NativeSelect } from '@/components/cloudflare/fields';
 import { CircleCheck, CircleInfo, Rocket, Spinner } from '@/components/icons';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import {
   Dialog,
   DialogContent,
@@ -138,20 +138,19 @@ export function InstallSheet({
                 />
                 <div className="space-y-1.5">
                   <Label htmlFor="store-version">Version</Label>
-                  <NativeSelect
+                  <Combobox
                     id="store-version"
+                    searchable={false}
+                    options={template.versions.map((version) => ({
+                      value: version.id,
+                      label:
+                        template.versions.length > 1 && version.id === template.defaultVersion
+                          ? `${version.label} (recommended)`
+                          : version.label,
+                    }))}
                     value={draft.version}
-                    onChange={(event) => change({ version: event.target.value })}
-                  >
-                    {template.versions.map((version) => (
-                      <option key={version.id} value={version.id}>
-                        {version.label}
-                        {template.versions.length > 1 && version.id === template.defaultVersion
-                          ? ' (recommended)'
-                          : ''}
-                      </option>
-                    ))}
-                  </NativeSelect>
+                    onChange={(version) => change({ version })}
+                  />
                 </div>
               </div>
               <ParamFields

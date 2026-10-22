@@ -46,8 +46,8 @@ describe('ZoneSettingsCard', () => {
   it('shows each setting in words, with the SSL/TLS suggestion', async () => {
     renderCard({ 'cloudflare.zoneSettings': async () => SETTINGS });
 
-    expect(await screen.findByLabelText('Security level')).toHaveValue('medium');
-    expect(screen.getByLabelText('SSL/TLS mode')).toHaveValue('full');
+    expect(await screen.findByLabelText('Security level')).toHaveTextContent('Medium');
+    expect(screen.getByLabelText('SSL/TLS mode')).toHaveTextContent(/^Full$/);
     expect(screen.getByRole('switch', { name: 'Development mode' })).not.toBeChecked();
     expect(screen.getByText(/certificate is not checked/)).toBeInTheDocument();
     expect(screen.getAllByText('Off')).not.toHaveLength(0);
@@ -63,7 +63,8 @@ describe('ZoneSettingsCard', () => {
       'cloudflare.changeSetting': async () => changed,
     });
 
-    await user.selectOptions(await screen.findByLabelText('Security level'), 'under_attack');
+    await user.click(await screen.findByRole('combobox', { name: 'Security level' }));
+    await user.click(await screen.findByRole('option', { name: "I'm Under Attack" }));
     expect(bridge.$fn('cloudflare.changeSetting')).toHaveBeenLastCalledWith(ZONE.id, {
       setting: 'securityLevel',
       value: 'under_attack',
@@ -116,7 +117,8 @@ describe('ZoneSettingsCard', () => {
     });
 
     expect(await screen.findByText(/every visitor sees a short check/)).toBeInTheDocument();
-    await user.selectOptions(screen.getByLabelText('SSL/TLS mode'), 'flexible');
+    await user.click(screen.getByRole('combobox', { name: 'SSL/TLS mode' }));
+    await user.click(await screen.findByRole('option', { name: 'Flexible' }));
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith('Cloudflare said: Invalid value (code 1007)'),
     );
@@ -130,6 +132,8 @@ describe('ZoneSettingsCard', () => {
       }),
     });
     expect(await screen.findByLabelText('SSL/TLS mode')).toBeDisabled();
-    expect(screen.getByLabelText('SSL/TLS mode')).toHaveValue('origin_pull');
+    expect(screen.getByLabelText('SSL/TLS mode')).toHaveTextContent(
+      'Strict (SSL-only origin pull)',
+    );
   });
 });

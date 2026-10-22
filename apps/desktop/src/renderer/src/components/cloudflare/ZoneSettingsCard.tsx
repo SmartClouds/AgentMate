@@ -11,13 +11,14 @@ import { toast } from 'sonner';
 import { SettingsIcon } from '@/components/icons';
 import { Chip, FOOTER_HAIRLINE } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { cloudflareFailureText, useCloudflareError } from '@/lib/cloudflare/feedback';
 import { formatRemaining, SECURITY_LEVEL_LABELS, SSL_MODE_LABELS } from '@/lib/cloudflare/labels';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
-import { CardBody, CloudflareCard, NativeSelect, Notice, Problem } from './fields';
+import { CardBody, CloudflareCard, Notice, Problem } from './fields';
 
 const SECURITY_LEVELS = Object.keys(SECURITY_LEVEL_LABELS) as CloudflareSecurityLevel[];
 const SETTABLE_SSL_MODES: Exclude<CloudflareSslMode, 'origin_pull'>[] = [
@@ -157,25 +158,24 @@ export function ZoneSettingsCard({ zone }: { zone: CloudflareZone }): React.JSX.
             )
           }
         >
-          <NativeSelect
+          <Combobox
             id={`${id}-security`}
             className="w-48"
+            searchable={false}
+            options={SECURITY_LEVELS.map((level) => ({
+              value: level,
+              label: SECURITY_LEVEL_LABELS[level],
+            }))}
             value={securityLevel.value}
             disabled={!securityLevel.editable || saving === 'securityLevel'}
-            onChange={(event) => {
-              const value = event.target.value as CloudflareSecurityLevel;
+            onChange={(next) => {
+              const value = next as CloudflareSecurityLevel;
               void change(
                 { setting: 'securityLevel', value },
                 `Security level is ${SECURITY_LEVEL_LABELS[value]} now.`,
               );
             }}
-          >
-            {SECURITY_LEVELS.map((level) => (
-              <option key={level} value={level}>
-                {SECURITY_LEVEL_LABELS[level]}
-              </option>
-            ))}
-          </NativeSelect>
+          />
         </Row>
         <Row
           title="SSL/TLS mode"
@@ -215,28 +215,27 @@ export function ZoneSettingsCard({ zone }: { zone: CloudflareZone }): React.JSX.
             </Notice>
           }
         >
-          <NativeSelect
+          <Combobox
             id={`${id}-ssl`}
             className="w-48"
+            searchable={false}
+            options={[
+              // Only Cloudflare can set this one, so it shows only while it is the value.
+              ...(ssl.value === 'origin_pull'
+                ? [{ value: 'origin_pull', label: SSL_MODE_LABELS.origin_pull }]
+                : []),
+              ...SETTABLE_SSL_MODES.map((mode) => ({ value: mode, label: SSL_MODE_LABELS[mode] })),
+            ]}
             value={ssl.value}
             disabled={!ssl.editable || saving === 'ssl'}
-            onChange={(event) => {
-              const value = event.target.value as Exclude<CloudflareSslMode, 'origin_pull'>;
+            onChange={(next) => {
+              const value = next as Exclude<CloudflareSslMode, 'origin_pull'>;
               void change(
                 { setting: 'ssl', value },
                 `SSL/TLS mode is ${SSL_MODE_LABELS[value]} now.`,
               );
             }}
-          >
-            {ssl.value === 'origin_pull' && (
-              <option value="origin_pull">{SSL_MODE_LABELS.origin_pull}</option>
-            )}
-            {SETTABLE_SSL_MODES.map((mode) => (
-              <option key={mode} value={mode}>
-                {SSL_MODE_LABELS[mode]}
-              </option>
-            ))}
-          </NativeSelect>
+          />
         </Row>
         <Row
           title="Always Use HTTPS"

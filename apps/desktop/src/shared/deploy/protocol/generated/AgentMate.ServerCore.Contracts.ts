@@ -1178,6 +1178,122 @@ export type DockerEvent = {
     exitCode?: number;
 }
 
+/** Transpiled from AgentMate.ServerCore.Contracts.FileTargetKind */
+export type FileTargetKind = "container" | "volume";
+
+/** Transpiled from AgentMate.ServerCore.Contracts.FileTarget */
+export type FileTarget = {
+    /** Transpiled from AgentMate.ServerCore.Contracts.FileTargetKind */
+    kind: FileTargetKind;
+    /** Transpiled from string */
+    id: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.FileCapabilities */
+export type FileCapabilities = {
+    /** Transpiled from bool */
+    rename: boolean;
+    /** Transpiled from bool */
+    remove: boolean;
+    /** Transpiled from bool */
+    chmod: boolean;
+    /** Transpiled from bool */
+    atomicUpload: boolean;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.FileSessionInfo */
+export type FileSessionInfo = {
+    /** Transpiled from System.Guid */
+    sessionId: string;
+    /** Transpiled from AgentMate.ServerCore.Contracts.FileTarget */
+    target: FileTarget;
+    /** Transpiled from string */
+    displayName: string;
+    /** Transpiled from string */
+    home: string;
+    /** Transpiled from string */
+    user: string;
+    /** Transpiled from AgentMate.ServerCore.Contracts.FileCapabilities */
+    capabilities: FileCapabilities;
+    /** Transpiled from string? */
+    limitation?: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.FileEntryKind */
+export type FileEntryKind = "file" | "directory" | "symlink" | "other";
+
+/** Transpiled from AgentMate.ServerCore.Contracts.FileEntry */
+export type FileEntry = {
+    /** Transpiled from string */
+    name: string;
+    /** Transpiled from AgentMate.ServerCore.Contracts.FileEntryKind */
+    kind: FileEntryKind;
+    /** Transpiled from long */
+    size: number;
+    /** Transpiled from long */
+    mtimeUnixMs?: number;
+    /** Transpiled from int */
+    mode: number;
+    /** Transpiled from int */
+    uid: number;
+    /** Transpiled from int */
+    gid: number;
+    /** Transpiled from string? */
+    linkTarget?: string;
+    /** Transpiled from bool */
+    linkIsDirectory: boolean;
+    /** Transpiled from bool */
+    brokenLink: boolean;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.FileListing */
+export type FileListing = {
+    /** Transpiled from string */
+    path: string;
+    /** Transpiled from AgentMate.ServerCore.Contracts.FileEntry[] */
+    entries: FileEntry[];
+    /** Transpiled from bool */
+    partial: boolean;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.FilePathRequest */
+export type FilePathRequest = {
+    /** Transpiled from System.Guid */
+    sessionId: string;
+    /** Transpiled from string */
+    path: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.FileRenameRequest */
+export type FileRenameRequest = {
+    /** Transpiled from System.Guid */
+    sessionId: string;
+    /** Transpiled from string */
+    from: string;
+    /** Transpiled from string */
+    to: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.FileRemoveRequest */
+export type FileRemoveRequest = {
+    /** Transpiled from System.Guid */
+    sessionId: string;
+    /** Transpiled from string */
+    path: string;
+    /** Transpiled from bool */
+    directory: boolean;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.FileChmodRequest */
+export type FileChmodRequest = {
+    /** Transpiled from System.Guid */
+    sessionId: string;
+    /** Transpiled from string */
+    path: string;
+    /** Transpiled from int */
+    mode: number;
+}
+
 /** Transpiled from AgentMate.ServerCore.Contracts.FirewallBackendKind */
 export type FirewallBackendKind = "none" | "ufw" | "firewalld";
 

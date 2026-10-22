@@ -6,8 +6,8 @@ import {
 } from '@shared/deploy/firewallValidation';
 import type { FirewallRuleSpec } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
 import { useEffect, useState } from 'react';
-import { NativeSelect } from '@/components/cloudflare/fields';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import {
   Dialog,
   DialogContent,
@@ -78,31 +78,29 @@ export function RuleDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="rule-action">Action</Label>
-              <NativeSelect
+              <Combobox
                 id="rule-action"
+                searchable={false}
+                options={FIREWALL_ACTIONS.map((action) => ({
+                  value: action,
+                  label: ACTION_LABEL[action],
+                }))}
                 value={draft.action}
-                onChange={(event) => set({ action: event.target.value as RuleDraft['action'] })}
-              >
-                {FIREWALL_ACTIONS.map((action) => (
-                  <option key={action} value={action}>
-                    {ACTION_LABEL[action]}
-                  </option>
-                ))}
-              </NativeSelect>
+                onChange={(action) => set({ action: action as RuleDraft['action'] })}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="rule-protocol">Protocol</Label>
-              <NativeSelect
+              <Combobox
                 id="rule-protocol"
+                searchable={false}
+                options={FIREWALL_PROTOCOLS.map((protocol) => ({
+                  value: protocol,
+                  label: PROTOCOL_LABEL[protocol],
+                }))}
                 value={draft.protocol}
-                onChange={(event) => set({ protocol: event.target.value as RuleDraft['protocol'] })}
-              >
-                {FIREWALL_PROTOCOLS.map((protocol) => (
-                  <option key={protocol} value={protocol}>
-                    {PROTOCOL_LABEL[protocol]}
-                  </option>
-                ))}
-              </NativeSelect>
+                onChange={(protocol) => set({ protocol: protocol as RuleDraft['protocol'] })}
+              />
             </div>
           </div>
           <p className="-mt-2 text-xs text-muted-foreground">{ACTION_HINT[draft.action]}</p>

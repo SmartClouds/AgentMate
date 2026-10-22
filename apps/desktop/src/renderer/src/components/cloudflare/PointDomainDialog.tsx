@@ -21,6 +21,7 @@ import {
   TriangleAlert,
 } from '@/components/icons';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import {
   Dialog,
   DialogContent,
@@ -34,7 +35,7 @@ import { Switch } from '@/components/ui/switch';
 import { cloudflareFailureText } from '@/lib/cloudflare/feedback';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
-import { Field, NativeSelect } from './fields';
+import { Field } from './fields';
 
 const ACTION_TEXT: Record<CloudflarePlannedChange['action'], string> = {
   create: 'Add',
@@ -234,17 +235,18 @@ export function PointDomainDialog({
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Server" htmlFor={`${id}-server`}>
-                  <NativeSelect
+                  <Combobox
                     id={`${id}-server`}
+                    options={servers.map((candidate) => ({
+                      value: candidate.id,
+                      label: candidate.nickname,
+                    }))}
                     value={server?.id ?? ''}
-                    onChange={(event) => reset(setServerId)(event.target.value)}
-                  >
-                    {servers.map((candidate) => (
-                      <option key={candidate.id} value={candidate.id}>
-                        {candidate.nickname}
-                      </option>
-                    ))}
-                  </NativeSelect>
+                    onChange={(serverId) => reset(setServerId)(serverId)}
+                    placeholder="Pick a server"
+                    searchPlaceholder="Search servers…"
+                    emptyText="No server matches."
+                  />
                 </Field>
                 <Field
                   label="Name"

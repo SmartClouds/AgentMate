@@ -8,14 +8,6 @@ import { cn } from '@/lib/utils';
 
 /** The small form pieces every tab of the site editor is made of. */
 
-/**
- * A native select in the shared field look (see `.field-surface` in index.css), the same pill
- * as ui/input and the Cloudflare dialog's NativeSelect. The `.dark .field-surface` rule sets the
- * colour scheme, so the option popup follows the theme too.
- */
-export const SELECT_CLASS =
-  'field-surface flex h-9 w-full cursor-pointer rounded-full pl-3 pr-2 text-sm text-foreground disabled:cursor-not-allowed';
-
 /** A problem with a field, marked with an icon and announced, not only coloured. */
 export function FieldError({
   id,

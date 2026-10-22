@@ -520,3 +520,79 @@ describe('SshFilesView, as a view of its own', () => {
     expect(files().visible).toBe(0);
   });
 });
+
+describe('SshFilesView, embedded in a Deploy section (E27)', () => {
+  it('draws the full two panes, not the compact dock', async () => {
+    const { container } = renderView({}, { variant: 'embedded' });
+    const remote = await screen.findByRole('grid', { name: 'Files on prod' });
+    expect(container.querySelector('[data-sftp-view="embedded"]')).not.toBeNull();
+    expect(remotePane().hasAttribute('data-compact')).toBe(false);
+    expect(within(remote).getByRole('columnheader', { name: 'Permissions' })).toBeTruthy();
+    expect(screen.getByRole('grid', { name: 'Files on this computer' })).toBeTruthy();
+  });
+});
+
+describe('SshFilesView, where the remote side allows less (E27)', () => {
+  const LIMITATION = 'The container is stopped. Start it to rename, delete or change permissions.';
+
+  it('opens the properties read only, with the reason', async () => {
+    renderView({
+      'sftp.open': {
+        ...SESSION,
+        kind: 'container',
+        capabilities: { rename: false, remove: false, chmod: false, edit: false },
+        limitation: LIMITATION,
+      },
+    });
+    await screen.findByText('index.html');
+    act(() => useSftpStore.getState().openProperties('srv-1', ['/home/deploy/index.html']));
+    const props = seen.properties.at(-1) as PropertiesDialogProps;
+    expect(props.readOnlyReason).toBe(LIMITATION);
+  });
+
+  it('opens the properties to change when chmod is allowed', async () => {
+    renderView({
+      'sftp.open': {
+        ...SESSION,
+        capabilities: { rename: false, remove: false, chmod: true, edit: false },
+        limitation: 'No shell in this container.',
+      },
+    });
+    await screen.findByText('index.html');
+    act(() => useSftpStore.getState().openProperties('srv-1', ['/home/deploy/index.html']));
+    const props = seen.properties.at(-1) as PropertiesDialogProps;
+    expect(props.readOnlyReason ?? null).toBeNull();
+  });
+});
+
+describe('SshFilesView, a container or volume (E27)', () => {
+  const TARGET = 'docker~srv-1~volume~shop_db-data';
+
+  it('offers no way to the saved server settings when it cannot connect', async () => {
+    renderView(
+      {
+        'sftp.open': async () => {
+          throw new Error(encodeFilesError('timeout', ''));
+        },
+      },
+      { serverId: TARGET },
+    );
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toMatch(/Couldn't connect to shop_db-data/);
+    expect(screen.queryByRole('button', { name: 'Edit server' })).toBeNull();
+    expect(within(alert).getByRole('button', { name: 'Try again' })).toBeTruthy();
+  });
+
+  it('says it is gone when main no longer knows it, without sending anyone to Remote', async () => {
+    renderView(
+      {
+        'sftp.open': async () => {
+          throw new Error(encodeFilesError('siteUnknown', ''));
+        },
+      },
+      { serverId: TARGET },
+    );
+    expect(await screen.findByText('shop_db-data is not there anymore')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Open Remote' })).toBeNull();
+  });
+});

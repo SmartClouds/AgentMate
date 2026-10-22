@@ -430,8 +430,8 @@ describe('DeployService access', () => {
 });
 
 describe('DeployService account and two-factor', () => {
-  async function signedIn() {
-    const context = setup({ coreUsers: [{ userName: 'maria', roles: ['owner'] }] });
+  async function signedIn(overrides: Partial<DeployServiceDeps> = {}) {
+    const context = setup({ coreUsers: [{ userName: 'maria', roles: ['owner'] }] }, overrides);
     await context.service.install({ serverId: 'srv-1', sudoPassword: 'deployer-pw' });
     await context.service.enroll({
       serverId: 'srv-1',
@@ -460,6 +460,126 @@ describe('DeployService account and two-factor', () => {
 
     expect(hub.hub.stepUp).toHaveBeenNthCalledWith(1, { password: PASSWORD });
     expect(hub.hub.stepUp).toHaveBeenNthCalledWith(2, { totpCode: '123456' });
+  });
+
+  describe('a remembered password', () => {
+    const HUB_REFUSAL = new Error(
+      "An unexpected error occurred invoking 'StepUp' on the server. HubException: That is not right.",
+    );
+
+    it('is checked with the core, then kept sealed and never as plain text', async () => {
+      const { service, hub, state, sealed } = await signedIn();
+
+      await service.rememberPassword({ serverId: 'srv-1', password: PASSWORD });
+
+      expect(hub.hub.stepUp).toHaveBeenCalledWith({ password: PASSWORD });
+      expect(sealed).toContain(PASSWORD);
+      const device = await state.device('srv-1');
+      expect(device?.password).toMatchObject({ mode: 'safeStorage' });
+      expect(JSON.stringify(device)).not.toContain(`"${PASSWORD}"`);
+      expect(await service.access('srv-1')).toMatchObject({
+        state: 'signed-in',
+        passwordSaved: true,
+      });
+    });
+
+    it('is not kept when the core says it is wrong', async () => {
+      const { service, hub, state } = await signedIn();
+      vi.mocked(hub.hub.stepUp).mockRejectedValueOnce(HUB_REFUSAL);
+
+      await expect(
+        service.rememberPassword({ serverId: 'srv-1', password: 'wrong' }),
+      ).rejects.toThrow('That is not right.');
+
+      expect((await state.device('srv-1'))?.password).toBeUndefined();
+      expect((await service.access('srv-1')).passwordSaved).toBeUndefined();
+    });
+
+    it('answers the core for the user, so nobody is asked', async () => {
+      const { service, hub } = await signedIn();
+      await service.rememberPassword({ serverId: 'srv-1', password: PASSWORD });
+      vi.mocked(hub.hub.stepUp).mockClear();
+
+      await expect(service.stepUpWithSavedPassword('srv-1')).resolves.toEqual({
+        stepUpUntilUnixMs: 1,
+      });
+      expect(hub.hub.stepUp).toHaveBeenCalledExactlyOnceWith({ password: PASSWORD });
+    });
+
+    it('has nothing to answer with when none was kept, and does not call the core', async () => {
+      const { service, hub } = await signedIn();
+
+      await expect(service.stepUpWithSavedPassword('srv-1')).resolves.toBeNull();
+      expect(hub.hub.stepUp).not.toHaveBeenCalled();
+    });
+
+    it('is forgotten when the core no longer accepts it, so it is not tried over and over', async () => {
+      const { service, hub, state } = await signedIn();
+      await service.rememberPassword({ serverId: 'srv-1', password: PASSWORD });
+      vi.mocked(hub.hub.stepUp).mockRejectedValueOnce(HUB_REFUSAL);
+
+      await expect(service.stepUpWithSavedPassword('srv-1')).resolves.toBeNull();
+
+      expect((await state.device('srv-1'))?.password).toBeUndefined();
+      await expect(service.stepUpWithSavedPassword('srv-1')).resolves.toBeNull();
+    });
+
+    it('is kept when the core could not be reached, since the password may still be right', async () => {
+      const { service, hub, state } = await signedIn();
+      await service.rememberPassword({ serverId: 'srv-1', password: PASSWORD });
+      vi.mocked(hub.hub.stepUp).mockRejectedValueOnce(new Error('WebSocket closed'));
+
+      await expect(service.stepUpWithSavedPassword('srv-1')).resolves.toBeNull();
+
+      expect((await state.device('srv-1'))?.password).toBeDefined();
+    });
+
+    it('asks instead when the vault is locked', async () => {
+      let locked = false;
+      const { service, hub } = await signedIn({
+        unseal: async (envelope) => {
+          if (locked) throw new Error('The vault is locked.');
+          return Buffer.from(envelope.ciphertext, 'base64').toString();
+        },
+      });
+      await service.rememberPassword({ serverId: 'srv-1', password: PASSWORD });
+      vi.mocked(hub.hub.stepUp).mockClear();
+      locked = true;
+
+      await expect(service.stepUpWithSavedPassword('srv-1')).resolves.toBeNull();
+      expect(hub.hub.stepUp).not.toHaveBeenCalled();
+    });
+
+    it('can be forgotten by the user', async () => {
+      const { service, state } = await signedIn();
+      await service.rememberPassword({ serverId: 'srv-1', password: PASSWORD });
+
+      await service.forgetPassword('srv-1');
+
+      expect((await state.device('srv-1'))?.password).toBeUndefined();
+      expect((await service.access('srv-1')).passwordSaved).toBeUndefined();
+      // The device itself stays enrolled.
+      expect(await state.device('srv-1')).not.toBeNull();
+    });
+
+    it('goes with signing out, which leaves the device enrolled', async () => {
+      const { service, state } = await signedIn();
+      await service.rememberPassword({ serverId: 'srv-1', password: PASSWORD });
+
+      await service.signOut('srv-1');
+
+      const device = await state.device('srv-1');
+      expect(device).not.toBeNull();
+      expect(device?.password).toBeUndefined();
+    });
+
+    it('is not asked to be remembered without a password', async () => {
+      const { service } = await signedIn();
+
+      await expect(
+        service.rememberPassword({ serverId: 'srv-1', totpCode: '123456' }),
+      ).rejects.toThrow(/Enter your password/);
+    });
   });
 
   it('reads the account through a hub connection it closes again', async () => {

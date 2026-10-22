@@ -80,7 +80,7 @@ export function AccountFields({
     onChange({ ...draft, [field]: value });
   const note =
     mode === 'create'
-      ? 'AgentMate signs in to the core with this account and a key only this computer has. The password is set up on the server over SSH and never saved here; the core refuses passwords that are too common.'
+      ? 'AgentMate signs in to the core with this account and a key only this computer has. The password is set up on the server over SSH and is not saved here unless you ask for that later; the core refuses passwords that are too common.'
       : optional
         ? 'This core is already set up. Enter your account there to enroll this computer, or leave it empty and do it later from the server card.'
         : null;

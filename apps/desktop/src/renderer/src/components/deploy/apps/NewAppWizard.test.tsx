@@ -46,13 +46,18 @@ function renderWizard(
   return { ...view, onCancel, onOpenApp };
 }
 
+async function pickProject(user: ReturnType<typeof renderWizard>['user']) {
+  await user.click(await screen.findByRole('combobox', { name: 'Project' }));
+  await user.click(await screen.findByRole('option', { name: 'Shop' }));
+}
+
 async function pickSource(user: ReturnType<typeof renderWizard>['user']) {
-  await user.selectOptions(await screen.findByLabelText('Project'), 'proj-1');
+  await pickProject(user);
   await user.click(await screen.findByRole('radio', { name: /compose\.yaml/ }));
-  await waitFor(() =>
-    expect(screen.getByRole('option', { name: 'Production' })).toBeInTheDocument(),
-  );
-  await user.selectOptions(screen.getByLabelText('Environment'), 'env-1');
+  const environment = screen.getByRole('combobox', { name: 'Environment' });
+  await waitFor(() => expect(environment).toBeEnabled());
+  await user.click(environment);
+  await user.click(await screen.findByRole('option', { name: 'Production' }));
 }
 
 async function toReview(user: ReturnType<typeof renderWizard>['user']) {
@@ -105,7 +110,7 @@ describe('NewAppWizard source', () => {
         truncated: false,
       },
     });
-    await user.selectOptions(await screen.findByLabelText('Project'), 'proj-1');
+    await pickProject(user);
     expect(await screen.findByText(/This project has no compose.yaml/)).toBeInTheDocument();
   });
 
@@ -123,7 +128,7 @@ describe('NewAppWizard source', () => {
         };
       },
     });
-    await user.selectOptions(await screen.findByLabelText('Project'), 'proj-1');
+    await pickProject(user);
     expect(await screen.findByText(/could not be listed: The folder is gone/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByText('1 service')).toBeInTheDocument();

@@ -146,6 +146,9 @@ export function registerDeployHandlers({ ipc, service, guard }: DeployHandlerDep
   handle(IPC.deploy.signOut, (id) => service.signOut(serverId(id)));
   handle(IPC.deploy.account, (id) => service.account(serverId(id)));
   handle(IPC.deploy.stepUp, (input) => service.stepUp(stepUpInput(input)));
+  handle(IPC.deploy.stepUpSaved, (id) => service.stepUpWithSavedPassword(serverId(id)));
+  handle(IPC.deploy.rememberPassword, (input) => service.rememberPassword(stepUpInput(input)));
+  handle(IPC.deploy.forgetPassword, (id) => service.forgetPassword(serverId(id)));
   handle(IPC.deploy.beginTotp, (id) => service.beginTotp(serverId(id)));
   handle(IPC.deploy.confirmTotp, (id, code) =>
     service.confirmTotp(serverId(id), text(code, MAX_CODE, 'authenticator code')),

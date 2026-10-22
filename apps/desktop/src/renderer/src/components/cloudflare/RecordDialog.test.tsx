@@ -49,13 +49,18 @@ describe('RecordDialog', () => {
 
   it('shows the fields each type needs', async () => {
     const { user, bridge } = renderDialog({ 'cloudflare.createRecord': async () => A_RECORD });
-    const type = screen.getByLabelText('Type');
+    const type = screen.getByRole('combobox', { name: 'Type' });
+    const pickType = async (name: string) => {
+      await user.click(type);
+      await user.click(await screen.findByRole('option', { name }));
+    };
 
-    await user.selectOptions(type, 'MX');
+    await pickType('MX');
     await user.type(screen.getByLabelText('Mail server'), 'mail.example.com');
     expect(screen.getByLabelText('Priority')).toHaveValue(10);
     expect(screen.queryByRole('switch')).toBeNull();
-    await user.selectOptions(screen.getByLabelText('TTL'), '3600');
+    await user.click(screen.getByRole('combobox', { name: 'TTL' }));
+    await user.click(await screen.findByRole('option', { name: '1 hr' }));
     await user.type(screen.getByLabelText('Comment'), 'Mail');
     await user.click(screen.getByRole('button', { name: 'Save record' }));
     expect(bridge.$fn('cloudflare.createRecord')).toHaveBeenLastCalledWith(ZONE.id, {
@@ -67,8 +72,8 @@ describe('RecordDialog', () => {
       comment: 'Mail',
     });
 
-    await user.selectOptions(type, 'CAA');
-    expect(screen.getByLabelText('Tag')).toHaveValue('issue');
+    await pickType('CAA');
+    expect(screen.getByLabelText('Tag')).toHaveTextContent('issue');
     await user.type(screen.getByLabelText('Value'), 'letsencrypt.org');
     await user.click(screen.getByRole('button', { name: 'Save record' }));
     expect(bridge.$fn('cloudflare.createRecord')).toHaveBeenLastCalledWith(
@@ -79,7 +84,7 @@ describe('RecordDialog', () => {
       }),
     );
 
-    await user.selectOptions(type, 'SRV');
+    await pickType('SRV');
     await user.clear(screen.getByLabelText('Name'));
     await user.type(screen.getByLabelText('Name'), '_sip._tcp');
     await user.type(screen.getByLabelText('Port'), '5060');
@@ -94,7 +99,7 @@ describe('RecordDialog', () => {
       }),
     );
 
-    await user.selectOptions(type, 'TXT');
+    await pickType('TXT');
     await user.type(screen.getByLabelText('Content'), 'v=spf1 -all');
     await user.click(screen.getByRole('button', { name: 'Save record' }));
     expect(bridge.$fn('cloudflare.createRecord')).toHaveBeenLastCalledWith(
@@ -106,10 +111,12 @@ describe('RecordDialog', () => {
   it('turns the proxy off for a DNS-only record, which can then have its own TTL', async () => {
     const { user, bridge } = renderDialog({ 'cloudflare.createRecord': async () => A_RECORD });
 
-    await user.selectOptions(screen.getByLabelText('Type'), 'CNAME');
+    await user.click(screen.getByRole('combobox', { name: 'Type' }));
+    await user.click(await screen.findByRole('option', { name: 'CNAME' }));
     await user.type(screen.getByLabelText('Target'), 'example.net');
     await user.click(screen.getByRole('switch', { name: 'Proxy through Cloudflare' }));
-    await user.selectOptions(screen.getByLabelText('TTL'), '300');
+    await user.click(screen.getByRole('combobox', { name: 'TTL' }));
+    await user.click(await screen.findByRole('option', { name: '5 min' }));
     await user.click(screen.getByRole('button', { name: 'Save record' }));
 
     expect(bridge.$fn('cloudflare.createRecord')).toHaveBeenCalledWith(ZONE.id, {
@@ -176,7 +183,7 @@ describe('RecordDialog', () => {
         caa: { flags: 0, tag: 'issuewild', value: 'x.org' },
       },
     );
-    expect(screen.getByLabelText('Tag')).toHaveValue('issuewild');
+    expect(screen.getByLabelText('Tag')).toHaveTextContent('issuewild');
   });
 
   it("shows Cloudflare's answer when it refuses the record", async () => {

@@ -25,6 +25,9 @@ function harness(trusted = true) {
     signOut: vi.fn(async () => undefined),
     account: vi.fn(async () => ({})),
     stepUp: vi.fn(async () => ({})),
+    stepUpWithSavedPassword: vi.fn(async () => null),
+    rememberPassword: vi.fn(async () => undefined),
+    forgetPassword: vi.fn(async () => undefined),
     beginTotp: vi.fn(async () => ({})),
     confirmTotp: vi.fn(async () => ({ codes: [] })),
     disableTotp: vi.fn(async () => undefined),
@@ -136,6 +139,43 @@ describe('registerDeployHandlers', () => {
     expect(service.stepUp).toHaveBeenCalledWith({ serverId: 'srv-1', totpCode: '123456' });
     expect(service.confirmTotp).toHaveBeenCalledWith('srv-1', '123 456');
     expect(service.access).toHaveBeenCalledWith('srv-1');
+  });
+
+  it('keeps, uses and forgets a remembered password through the service only', async () => {
+    const { service, call } = harness();
+
+    expect(await call(IPC.deploy.stepUpSaved, 'srv-1')).toBeNull();
+    await call(IPC.deploy.rememberPassword, { serverId: 'srv-1', password: 'pw' });
+    await call(IPC.deploy.forgetPassword, 'srv-1');
+
+    expect(service.stepUpWithSavedPassword).toHaveBeenCalledWith('srv-1');
+    expect(service.rememberPassword).toHaveBeenCalledWith({ serverId: 'srv-1', password: 'pw' });
+    expect(service.forgetPassword).toHaveBeenCalledWith('srv-1');
+  });
+
+  it('refuses a remembered-password call with a bad server or password', async () => {
+    const { service, call } = harness();
+
+    await expect(call(IPC.deploy.stepUpSaved, '../x')).rejects.toThrow(/server/);
+    await expect(call(IPC.deploy.forgetPassword, 42)).rejects.toThrow(/server/);
+    await expect(
+      call(IPC.deploy.rememberPassword, { serverId: 'srv-1', password: 'a'.repeat(5000) }),
+    ).rejects.toThrow(/password/);
+    expect(service.stepUpWithSavedPassword).not.toHaveBeenCalled();
+    expect(service.rememberPassword).not.toHaveBeenCalled();
+    expect(service.forgetPassword).not.toHaveBeenCalled();
+  });
+
+  it('keeps the remembered password to the main window', async () => {
+    const { service, call } = harness(false);
+
+    await expect(call(IPC.deploy.stepUpSaved, 'srv-1')).rejects.toThrow(/main window/);
+    await expect(
+      call(IPC.deploy.rememberPassword, { serverId: 'srv-1', password: 'pw' }),
+    ).rejects.toThrow(/main window/);
+    await expect(call(IPC.deploy.forgetPassword, 'srv-1')).rejects.toThrow(/main window/);
+    expect(service.stepUpWithSavedPassword).not.toHaveBeenCalled();
+    expect(service.rememberPassword).not.toHaveBeenCalled();
   });
 
   it("tells a server's connection state, and tries it again on request", async () => {

@@ -80,6 +80,11 @@ export interface SftpListing<E extends SftpRemoteEntry | SftpLocalEntry> {
   /** The folder above, or null at a root (`/`, `C:\`). */
   parent: string | null;
   entries: E[];
+  /**
+   * Only part of the folder came back (E27): a stopped or shell-less container's folder is read
+   * from Docker's archive, which stops after a byte cap. Missing means the listing is whole.
+   */
+  partial?: boolean;
 }
 
 /** A place the local pane's Places menu offers. */
@@ -102,6 +107,29 @@ export interface SftpSessionInfo {
   username: string;
   /** The login user's home folder on the server, where the remote pane starts. */
   home: string;
+  /**
+   * What the remote side is (E27): a saved server's disk over SFTP, or a container or volume
+   * through the server core. Missing means `ssh`.
+   */
+  kind?: SftpTargetKind;
+  /** What the remote side allows. Missing means everything (SFTP). */
+  capabilities?: SftpCapabilities;
+  /** Why some actions are off, in a sentence for the page; null or missing when nothing is. */
+  limitation?: string | null;
+}
+
+export type SftpTargetKind = 'ssh' | 'container' | 'volume';
+
+/**
+ * The actions a remote side allows. Listing, transfers and new folders always work; a stopped or
+ * shell-less container cannot rename, delete or change permissions, and so cannot be edited in
+ * place either (a save is a rename over the old file).
+ */
+export interface SftpCapabilities {
+  rename: boolean;
+  remove: boolean;
+  chmod: boolean;
+  edit: boolean;
 }
 
 /**

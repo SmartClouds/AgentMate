@@ -82,6 +82,113 @@ describe('useStepUp', () => {
     await waitFor(() => expect(dialog.isConnected).toBe(false));
   });
 
+  describe('with a remembered password', () => {
+    it('steps up with it instead of asking, then goes ahead', async () => {
+      const work = vi.fn(async () => 'done');
+      const stepUp = vi.fn();
+      const { user, bridge } = renderHarness(work, {
+        'deploy.stepUp': stepUp,
+        'deploy.stepUpSaved': async () => ({ stepUpUntilUnixMs: Date.now() + 10 * MINUTE }),
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Change something' }));
+
+      expect(await result()).toBe('done');
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(bridge.$fn('deploy.stepUpSaved')).toHaveBeenCalledWith('srv-1');
+      expect(stepUp).not.toHaveBeenCalled();
+    });
+
+    it('counts that step-up as the new window, so the next change does not step up again', async () => {
+      const work = vi.fn(async () => 'done');
+      const { user, bridge } = renderHarness(work, {
+        'deploy.stepUpSaved': async () => ({ stepUpUntilUnixMs: Date.now() + 10 * MINUTE }),
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Change something' }));
+      await waitFor(() => expect(work).toHaveBeenCalledTimes(1));
+      await user.click(screen.getByRole('button', { name: 'Change something' }));
+
+      await waitFor(() => expect(work).toHaveBeenCalledTimes(2));
+      expect(bridge.$fn('deploy.stepUpSaved')).toHaveBeenCalledTimes(1);
+    });
+
+    it('steps up with it when the core turns the change down anyway', async () => {
+      const work = vi
+        .fn<() => Promise<string>>()
+        .mockRejectedValueOnce(new Error(UNAUTHORIZED))
+        .mockResolvedValueOnce('done');
+      const { user } = renderHarness(work, {
+        'deploy.account': async () => ({ stepUpUntilUnixMs: Date.now() + 5 * MINUTE }),
+        'deploy.stepUpSaved': async () => ({ stepUpUntilUnixMs: Date.now() + 10 * MINUTE }),
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Change something' }));
+
+      expect(await result()).toBe('done');
+      expect(work).toHaveBeenCalledTimes(2);
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('asks for the password after all when the core did not take the remembered one', async () => {
+      const work = vi.fn(async () => 'done');
+      const { user } = renderHarness(work, { 'deploy.stepUpSaved': async () => null });
+
+      await user.click(screen.getByRole('button', { name: 'Change something' }));
+
+      expect(await screen.findByRole('dialog', { name: 'Confirm it is you' })).toBeInTheDocument();
+      expect(work).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('the remember option', () => {
+    it('keeps the password the user typed when it is ticked', async () => {
+      const work = vi.fn(async () => 'done');
+      const { user, bridge } = renderHarness(work, {
+        'deploy.rememberPassword': async () => undefined,
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Change something' }));
+      await user.type(await screen.findByLabelText('Password'), PASSWORD);
+      await user.click(screen.getByRole('checkbox', { name: /Remember my password/ }));
+      await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+      expect(await result()).toBe('done');
+      expect(bridge.$fn('deploy.rememberPassword')).toHaveBeenCalledWith({
+        serverId: 'srv-1',
+        password: PASSWORD,
+      });
+    });
+
+    it('is off until the user ticks it', async () => {
+      const work = vi.fn(async () => 'done');
+      const remember = vi.fn();
+      const { user } = renderHarness(work, { 'deploy.rememberPassword': remember });
+
+      await user.click(screen.getByRole('button', { name: 'Change something' }));
+      expect(
+        await screen.findByRole('checkbox', { name: /Remember my password/ }),
+      ).not.toBeChecked();
+      await user.type(screen.getByLabelText('Password'), PASSWORD);
+      await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+      expect(await result()).toBe('done');
+      expect(remember).not.toHaveBeenCalled();
+    });
+
+    it('is not offered for an authenticator code, which is not worth keeping', async () => {
+      const work = vi.fn(async () => 'done');
+      const { user } = renderHarness(work, {
+        'deploy.account': async () => ({ twoFactorEnabled: true }),
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Change something' }));
+      await user.click(await screen.findByRole('button', { name: /Use a code/ }));
+
+      expect(screen.queryByRole('checkbox', { name: /Remember my password/ })).toBeNull();
+    });
+  });
+
   it('remembers the new window, so the next change does not ask again', async () => {
     const work = vi.fn(async () => 'done');
     const { user, bridge } = renderHarness(work);

@@ -14,7 +14,7 @@ export interface ComboboxOption {
 }
 
 export interface ComboboxProps {
-  options: ComboboxOption[];
+  options: readonly ComboboxOption[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -44,6 +44,11 @@ export interface ComboboxProps {
    * one. Utilities can't strip it, since the rule is unlayered.
    */
   variant?: 'default' | 'bare';
+  /**
+   * False drops the search box, for short fixed lists where typing to filter is noise. The
+   * list then takes focus itself, so the arrow keys and Enter still work.
+   */
+  searchable?: boolean;
 }
 
 export function Combobox({
@@ -63,9 +68,11 @@ export function Combobox({
   ariaDescribedBy,
   invalid,
   variant = 'default',
+  searchable = true,
 }: ComboboxProps): React.JSX.Element {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
+  const listRef = React.useRef<HTMLDivElement>(null);
   const selected =
     options.find((o) => o.value === value) ??
     (allowCustom && value ? { value, label: value } : undefined);
@@ -127,26 +134,43 @@ export function Combobox({
         <PopoverPrimitive.Content
           align="start"
           sideOffset={6}
+          onOpenAutoFocus={
+            searchable
+              ? undefined
+              : (event) => {
+                  event.preventDefault();
+                  listRef.current?.focus();
+                }
+          }
           className={cn(
             OVERLAY_SURFACE,
             OVERLAY_MOTION,
             'z-50 w-[var(--radix-popover-trigger-width)] overflow-hidden origin-[var(--radix-popover-content-transform-origin)]',
           )}
         >
-          <CommandPrimitive className="flex flex-col" filter={cmdkFilter}>
-            {/* The search box is the same soft pill as the field that opened the list. */}
-            <div className="p-1 pb-0">
-              <div className={LIST_SEARCH}>
-                <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <CommandPrimitive.Input
-                  autoFocus
-                  value={search}
-                  onValueChange={setSearch}
-                  placeholder={searchPlaceholder}
-                  className="h-full w-full bg-transparent text-[13px] outline-none placeholder:text-muted-foreground"
-                />
+          <CommandPrimitive
+            ref={listRef}
+            className="flex flex-col outline-none"
+            filter={cmdkFilter}
+            tabIndex={searchable ? undefined : -1}
+            // Without a search box, the highlight starts on the current value, as a select's does.
+            defaultValue={searchable || !selected ? undefined : itemValue(selected)}
+          >
+            {searchable ? (
+              // The search box is the same soft pill as the field that opened the list.
+              <div className="p-1 pb-0">
+                <div className={LIST_SEARCH}>
+                  <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <CommandPrimitive.Input
+                    autoFocus
+                    value={search}
+                    onValueChange={setSearch}
+                    placeholder={searchPlaceholder}
+                    className="h-full w-full bg-transparent text-[13px] outline-none placeholder:text-muted-foreground"
+                  />
+                </div>
               </div>
-            </div>
+            ) : null}
             <CommandPrimitive.List className="rail-scroll max-h-64 overflow-y-auto p-1">
               <CommandPrimitive.Empty className="py-6 text-center text-sm text-muted-foreground">
                 {emptyText}
@@ -169,7 +193,7 @@ export function Combobox({
               {options.map((option) => (
                 <CommandPrimitive.Item
                   key={option.value}
-                  value={[option.label, ...(option.keywords ?? [])].join(' ')}
+                  value={itemValue(option)}
                   onSelect={() => {
                     onChange(option.value);
                     setOpen(false);
@@ -193,6 +217,10 @@ export function Combobox({
       </PopoverPrimitive.Portal>
     </PopoverPrimitive.Root>
   );
+}
+
+function itemValue(option: ComboboxOption): string {
+  return [option.label, ...(option.keywords ?? [])].join(' ');
 }
 
 function cmdkFilter(value: string, search: string): number {

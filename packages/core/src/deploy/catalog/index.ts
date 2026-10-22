@@ -2,6 +2,7 @@ import { adminer } from './templates/adminer.js';
 import { ghost } from './templates/ghost.js';
 import { gitea } from './templates/gitea.js';
 import { grafana } from './templates/grafana.js';
+import { kafka } from './templates/kafka.js';
 import { mariadb } from './templates/mariadb.js';
 import { meilisearch } from './templates/meilisearch.js';
 import { mongodb } from './templates/mongodb.js';
@@ -50,6 +51,7 @@ export const CATALOG_TEMPLATES: readonly AnyCatalogTemplate[] = [
   nextcloud,
   meilisearch,
   rabbitmq,
+  kafka,
 ];
 
 export function findCatalogTemplate(id: string): AnyCatalogTemplate | null {

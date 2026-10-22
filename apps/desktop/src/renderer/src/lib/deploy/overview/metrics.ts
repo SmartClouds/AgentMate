@@ -97,6 +97,11 @@ export function memoryPercent(sample: MetricsSample): number {
   return share(sample.memoryUsedBytes, sample.memoryTotalBytes);
 }
 
+/** What the memory percentage stands for: "7.30 GB of 8.00 GB". */
+export function memoryAmounts(sample: MetricsSample): string {
+  return `${formatBytes(sample.memoryUsedBytes)} of ${formatBytes(sample.memoryTotalBytes)}`;
+}
+
 export function swapPercent(sample: MetricsSample): number {
   return share(sample.swapUsedBytes, sample.swapTotalBytes);
 }

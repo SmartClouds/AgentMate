@@ -15,12 +15,15 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SecretInput } from '@/components/ui/secret-input';
+import { rememberPassword, stepUpWithSavedPassword } from '@/lib/deploy/savedPassword';
 import { queryKeys } from '@/lib/queryKeys';
+import { RememberPasswordOption } from '../RememberPasswordOption';
 
 /**
  * Upgrading every package and rebooting need a fresh step-up. The Overview tries first without
  * one (a step-up from the last ten minutes still counts); when the core says it needs one, this
- * asks for the password, or a code from the authenticator app, and tries again with it.
+ * uses the password the computer was asked to remember, if it has one, and otherwise asks for the
+ * password, or a code from the authenticator app, and tries again with it.
  */
 
 export interface Proof {
@@ -43,7 +46,8 @@ interface Asking {
 export function useProofStepUp(server: DeployServer): ProofStepUp {
   const queryClient = useQueryClient();
   const [asking, setAsking] = useState<Asking | null>(null);
-  const access = queryClient.getQueryData<DeployAccess>(queryKeys.deployAccess(server.id));
+  const serverId = server.id;
+  const access = queryClient.getQueryData<DeployAccess>(queryKeys.deployAccess(serverId));
   const twoFactor = access?.user?.twoFactorEnabled ?? false;
 
   const run = useCallback(
@@ -53,12 +57,19 @@ export function useProofStepUp(server: DeployServer): ProofStepUp {
       } catch (error) {
         if (coreErrorCode(error) !== 'stepUpRequired') throw error;
       }
+      if ((await stepUpWithSavedPassword(serverId)) !== null) {
+        try {
+          return await work();
+        } catch (error) {
+          if (coreErrorCode(error) !== 'stepUpRequired') throw error;
+        }
+      }
       const answer = await new Promise<{ ok: true; result: unknown } | { ok: false }>((settle) =>
         setAsking({ what, attempt: work, settle }),
       );
       return answer.ok ? (answer.result as T) : undefined;
     },
-    [],
+    [serverId],
   );
 
   return {
@@ -91,8 +102,10 @@ function ProofDialog({
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [useCode, setUseCode] = useState(false);
+  const [remember, setRemember] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const queryClient = useQueryClient();
   const open = asking !== null;
   const opened = useRef(open);
 
@@ -101,6 +114,7 @@ function ProofDialog({
       setPassword('');
       setCode('');
       setUseCode(false);
+      setRemember(false);
       setProblem(null);
     }
     opened.current = open;
@@ -115,6 +129,7 @@ function ProofDialog({
     setProblem(null);
     try {
       const result = await asking.attempt(useCode ? { totpCode: answer } : { password: answer });
+      if (remember && !useCode) await rememberPassword(queryClient, server.id, answer);
       onDone({ ok: true, result });
     } catch (error) {
       setProblem(coreErrorMessage(error));
@@ -161,6 +176,14 @@ function ProofDialog({
                 autoFocus
               />
             </div>
+          )}
+          {!useCode && (
+            <RememberPasswordOption
+              id={`proof-remember-${server.id}`}
+              checked={remember}
+              disabled={busy}
+              onCheckedChange={setRemember}
+            />
           )}
           {twoFactor && (
             <button

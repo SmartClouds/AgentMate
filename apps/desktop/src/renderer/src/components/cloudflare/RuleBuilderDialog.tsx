@@ -5,6 +5,7 @@ import { useId, useState } from 'react';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/icons';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import {
   Dialog,
   DialogContent,
@@ -19,7 +20,7 @@ import { cloudflareFailureText } from '@/lib/cloudflare/feedback';
 import { ruleActionLabel, splitList } from '@/lib/cloudflare/labels';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
-import { Field, NativeSelect } from './fields';
+import { Field } from './fields';
 
 type Kind = CloudflareRuleSpec['kind'];
 
@@ -188,16 +189,16 @@ export function RuleBuilderDialog({
                   />
                 </Field>
                 <Field label="Match" htmlFor={`${id}-match`}>
-                  <NativeSelect
+                  <Combobox
                     id={`${id}-match`}
+                    searchable={false}
+                    options={[
+                      { value: 'exact', label: 'Exactly this path' },
+                      { value: 'prefix', label: 'This path and everything under it' },
+                    ]}
                     value={match}
-                    onChange={(event) =>
-                      changed(setMatch)(event.target.value as 'exact' | 'prefix')
-                    }
-                  >
-                    <option value="exact">Exactly this path</option>
-                    <option value="prefix">This path and everything under it</option>
-                  </NativeSelect>
+                    onChange={(next) => changed(setMatch)(next as 'exact' | 'prefix')}
+                  />
                 </Field>
               </div>
             )}

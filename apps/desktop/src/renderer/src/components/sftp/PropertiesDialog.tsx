@@ -4,7 +4,13 @@ import { useId, useState } from 'react';
 import { toast } from 'sonner';
 import { filesProblem } from '@/components/deploy/files/messages';
 import { ChevronRight, Copy, Spinner } from '@/components/icons';
-import { Problem, SECTION_HEADING, SEGMENT_TRACK, segmentClass } from '@/components/pageKit';
+import {
+  Notice,
+  Problem,
+  SECTION_HEADING,
+  SEGMENT_TRACK,
+  segmentClass,
+} from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -152,6 +158,7 @@ export function PropertiesDialog({
   entries,
   onOpenChange,
   onApply,
+  readOnlyReason,
 }: PropertiesDialogProps): React.JSX.Element {
   return (
     <Dialog open={open && entries.length > 0} onOpenChange={onOpenChange}>
@@ -162,6 +169,7 @@ export function PropertiesDialog({
           entries={entries}
           onOpenChange={onOpenChange}
           onApply={onApply}
+          readOnlyReason={readOnlyReason}
         />
       )}
     </Dialog>
@@ -172,6 +180,7 @@ function PropertiesBody({
   entries,
   onOpenChange,
   onApply,
+  readOnlyReason,
 }: Omit<PropertiesDialogProps, 'open'>): React.JSX.Element {
   const [initial] = useState(() => masks(mergeModes(entries.map((e) => e.mode))));
   const [grid, setGrid] = useState<MixedModeGrid>(() => mergeModes(entries.map((e) => e.mode)));
@@ -187,7 +196,9 @@ function PropertiesBody({
   const specialId = useId();
 
   const single = entries.length === 1 ? entries[0]! : null;
-  const offersInside = entries.some((e) => e.isDirectory && !e.isSymlink);
+  const readOnly = Boolean(readOnlyReason);
+  const locked = applying || readOnly;
+  const offersInside = !readOnly && entries.some((e) => e.isDirectory && !e.isSymlink);
   const { on, mixed } = masks(grid);
   const valid = octalText.trim() === '' ? mixed !== 0 : parseOctal(octalText) !== null;
   // The same bits again change nothing, unless they now reach inside a folder.
@@ -216,7 +227,7 @@ function PropertiesBody({
   }
 
   async function apply(): Promise<void> {
-    if (!valid || !changed || applying) return;
+    if (!valid || !changed || applying || readOnly) return;
     setApplying(true);
     setError(null);
     const recursive: SftpChmodScope = offersInside && inside ? scope : 'none';
@@ -254,7 +265,7 @@ function PropertiesBody({
         // The first focusable is the path's copy button, whose tooltip would pop up and eat the
         // first Escape. The octal field is what people come here to change.
         const field = document.getElementById(octalId);
-        if (field instanceof HTMLInputElement) {
+        if (field instanceof HTMLInputElement && !field.disabled) {
           event.preventDefault();
           field.focus();
           field.select();
@@ -266,9 +277,11 @@ function PropertiesBody({
           {single ? single.name : `${entries.length} items`}
         </DialogTitle>
         <DialogDescription>
-          {single
-            ? 'Details and permissions on the server.'
-            : 'Permissions for everything selected.'}
+          {readOnly
+            ? 'Details and permissions, read only.'
+            : single
+              ? 'Details and permissions on the server.'
+              : 'Permissions for everything selected.'}
         </DialogDescription>
       </DialogHeader>
 
@@ -330,6 +343,11 @@ function PropertiesBody({
 
         <section aria-label="Permissions" className="space-y-3">
           <h3 className={SECTION_HEADING}>Permissions</h3>
+          {readOnlyReason && (
+            <Notice role="note" size="sm">
+              {readOnlyReason}
+            </Notice>
+          )}
           <table className="w-full max-w-sm text-xs">
             <thead>
               <tr className="text-muted-foreground">
@@ -355,7 +373,7 @@ function PropertiesBody({
                         <BitBox
                           label={`${CLASS_LABEL[cls]} ${perm}`}
                           state={grid[cls][perm]}
-                          disabled={applying}
+                          disabled={locked}
                           onToggle={() => toggle(cls, perm)}
                         />
                       </div>
@@ -390,7 +408,7 @@ function PropertiesBody({
                     <BitBox
                       label={SPECIAL_LABEL[special].label}
                       state={grid.special[special]}
-                      disabled={applying}
+                      disabled={locked}
                       onToggle={() => toggle('special', special)}
                     />
                     <SimpleTooltip label={SPECIAL_LABEL[special].hint} align="start">
@@ -419,7 +437,7 @@ function PropertiesBody({
                 maxLength={4}
                 spellCheck={false}
                 autoComplete="off"
-                disabled={applying}
+                disabled={locked}
                 aria-invalid={!valid}
                 aria-describedby={!valid ? octalHelpId : undefined}
                 className="h-8 w-20 font-mono tabular-nums"
@@ -483,13 +501,21 @@ function PropertiesBody({
       </div>
 
       <DialogFooter>
-        <Button variant="soft" disabled={applying} onClick={() => onOpenChange(false)}>
-          Cancel
-        </Button>
-        <Button disabled={!valid || !changed || applying} onClick={() => void apply()}>
-          {applying && <Spinner className="motion-safe:animate-spin" />}
-          Apply
-        </Button>
+        {readOnly ? (
+          <Button variant="soft" onClick={() => onOpenChange(false)}>
+            Done
+          </Button>
+        ) : (
+          <>
+            <Button variant="soft" disabled={applying} onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button disabled={!valid || !changed || applying} onClick={() => void apply()}>
+              {applying && <Spinner className="motion-safe:animate-spin" />}
+              Apply
+            </Button>
+          </>
+        )}
       </DialogFooter>
     </DialogContent>
   );

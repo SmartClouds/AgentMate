@@ -1,5 +1,7 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import type { MetricsSample } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { memoryAmounts } from '@/lib/deploy/overview/metrics';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
 import { MetricsCard } from './MetricsCard';
 import { SERVER, samples } from './testing/fixtures';
@@ -27,6 +29,17 @@ describe('MetricsCard', () => {
     expect(screen.getAllByRole('img')).toHaveLength(4);
     expect(screen.getAllByRole('list', { name: 'Legend' })).toHaveLength(2);
     expect(screen.getByText(/the last 15 minutes/)).toBeInTheDocument();
+  });
+
+  it('reads the memory used and total at the reading under the pointer', () => {
+    renderCard();
+    const memory = screen.getByRole('img', { name: /^Memory, 4 readings/ });
+    fireEvent.keyDown(memory, { key: 'End' });
+    const reading = samples(4).at(-1);
+    expect(screen.getByRole('tooltip')).toHaveTextContent(memoryAmounts(reading as MetricsSample));
+    expect(memory.getAttribute('aria-label')).toContain(
+      `(${memoryAmounts(reading as MetricsSample)})`,
+    );
   });
 
   it('shimmers until the live readings are in, and waits for the first one', () => {

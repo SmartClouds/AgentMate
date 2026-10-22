@@ -28,6 +28,7 @@ const EXPECTED = [
   'nextcloud',
   'meilisearch',
   'rabbitmq',
+  'kafka',
 ];
 
 /** Every on/off combination of a template's toggles, so each branch of its build is rendered. */

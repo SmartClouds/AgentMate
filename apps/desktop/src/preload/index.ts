@@ -1752,6 +1752,14 @@ const deploy = {
   /** Confirms the password (or a code) again, for ten minutes of sensitive changes. */
   stepUp: (input: DeployStepUpInput): Promise<StepUpResponse> =>
     ipcRenderer.invoke(IPC.deploy.stepUp, input),
+  /** Confirms with the password this computer remembers; null when there is none to use. */
+  stepUpSaved: (serverId: string): Promise<StepUpResponse | null> =>
+    ipcRenderer.invoke(IPC.deploy.stepUpSaved, serverId),
+  /** Remembers the password (sealed on this computer) once the core has confirmed it is right. */
+  rememberPassword: (input: DeployStepUpInput): Promise<void> =>
+    ipcRenderer.invoke(IPC.deploy.rememberPassword, input),
+  forgetPassword: (serverId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.deploy.forgetPassword, serverId),
   beginTotp: (serverId: string): Promise<DeployTotpSetup> =>
     ipcRenderer.invoke(IPC.deploy.beginTotp, serverId),
   confirmTotp: (serverId: string, code: string): Promise<RecoveryCodes> =>

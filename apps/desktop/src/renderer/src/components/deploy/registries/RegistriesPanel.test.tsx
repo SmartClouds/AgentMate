@@ -265,7 +265,7 @@ describe('RegistriesPanel', () => {
     renderPanel({ 'deployRegistry.list': [GITHUB], 'deployRegistry.serverSave': serverSave });
     await user.click(await screen.findByRole('button', { name: /Store a credential/ }));
     const dialog = await screen.findByRole('dialog', { name: /Store a credential on Production/ });
-    expect(within(dialog).getByLabelText('Credential')).toHaveDisplayValue(/from this computer/);
+    expect(within(dialog).getByLabelText('Credential')).toHaveTextContent(/from this computer/);
     await user.click(within(dialog).getByRole('button', { name: /Store on the server/ }));
     const proof = await screen.findByRole('dialog', { name: /Confirm it is you/ });
     await user.type(within(proof).getByLabelText('Password'), 'correct horse');
@@ -327,7 +327,7 @@ describe('RegistriesPanel', () => {
     renderPanel({ 'deployRegistry.serverSave': serverSave });
     await user.click(await screen.findByRole('button', { name: /Store a credential/ }));
     const dialog = await screen.findByRole('dialog', { name: /Store a credential on Production/ });
-    expect(within(dialog).getByLabelText('Credential')).toHaveDisplayValue('Type one in');
+    expect(within(dialog).getByLabelText('Credential')).toHaveTextContent('Type one in');
     await user.type(within(dialog).getByLabelText('Registry host'), 'not a host');
     await user.click(within(dialog).getByRole('button', { name: /Store on the server/ }));
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(/registry host/);

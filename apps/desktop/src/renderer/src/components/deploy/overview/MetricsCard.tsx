@@ -12,6 +12,7 @@ import {
   formatPointTime,
   formatRate,
   type MetricsRange,
+  memoryAmounts,
   memoryPercent,
   niceRateMax,
   RANGES,
@@ -30,7 +31,13 @@ const TABLE_ROWS = 60;
 interface ChartSpec {
   key: string;
   title: string;
-  series: Array<{ key: string; label: string; pick: (sample: MetricsSample) => number }>;
+  series: Array<{
+    key: string;
+    label: string;
+    pick: (sample: MetricsSample) => number;
+    /** Words for the reading under the pointer, such as the amounts behind a percentage. */
+    detail?: (sample: MetricsSample) => string;
+  }>;
   percent: boolean;
 }
 
@@ -45,7 +52,7 @@ const CHARTS: ChartSpec[] = [
     key: 'memory',
     title: 'Memory',
     percent: true,
-    series: [{ key: 'memory', label: 'In use', pick: memoryPercent }],
+    series: [{ key: 'memory', label: 'In use', pick: memoryPercent, detail: memoryAmounts }],
   },
   {
     key: 'network',
@@ -227,11 +234,12 @@ export function MetricsCard({
       ) : (
         <div className={cn('grid gap-6 transition-opacity md:grid-cols-2', dimmed && 'opacity-50')}>
           {CHARTS.map((chart) => {
-            const series: ChartSeries[] = chart.series.map((item, slot) => ({
+            const series: ChartSeries[] = chart.series.map(({ detail, ...item }, slot) => ({
               key: item.key,
               label: item.label,
               color: categorical[slot],
               values: samples.map(item.pick),
+              detail: detail && ((at) => detail(samples[at])),
             }));
             const yMax = chart.percent ? 100 : niceRateMax(series.flatMap((item) => item.values));
             const format = chart.percent ? formatPercent : formatRate;

@@ -64,7 +64,10 @@ describe('RuleBuilderDialog', () => {
 
     await user.click(screen.getByRole('radio', { name: 'Challenge a path' }));
     await user.type(screen.getByLabelText('Path'), '/admin');
-    await user.selectOptions(screen.getByLabelText('Match'), 'prefix');
+    await user.click(screen.getByRole('combobox', { name: 'Match' }));
+    await user.click(
+      await screen.findByRole('option', { name: 'This path and everything under it' }),
+    );
 
     expect(screen.getByLabelText('Expression')).toHaveTextContent(
       '(starts_with(http.request.uri.path, "/admin"))',

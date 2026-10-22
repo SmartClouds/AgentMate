@@ -3,9 +3,9 @@ import type { UserInfo } from '@shared/deploy/protocol/generated/AgentMate.Serve
 import { DEPLOY_ROLES, type DeployRole } from '@shared/deploySecurityTypes';
 import type { DeployServer } from '@shared/deployTypes';
 import { useEffect, useId, useState } from 'react';
-import { NativeSelect } from '@/components/cloudflare/fields';
 import { Lock, Spinner, UserPlus } from '@/components/icons';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import {
   Dialog,
   DialogContent,
@@ -180,17 +180,16 @@ export function CreateUserDialog({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor={`${id}-role`}>Role</Label>
-              <NativeSelect
+              <Combobox
                 id={`${id}-role`}
+                searchable={false}
+                options={DEPLOY_ROLES.map((option) => ({
+                  value: option,
+                  label: ROLE_LABEL[option],
+                }))}
                 value={role}
-                onChange={(event) => setRole(event.target.value as DeployRole)}
-              >
-                {DEPLOY_ROLES.map((option) => (
-                  <option key={option} value={option}>
-                    {ROLE_LABEL[option]}
-                  </option>
-                ))}
-              </NativeSelect>
+                onChange={(value) => setRole(value as DeployRole)}
+              />
             </div>
           </div>
           <p className="text-xs text-muted-foreground">{ROLE_SUMMARY[role]}</p>

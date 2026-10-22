@@ -74,6 +74,34 @@ describe('CoreAccessCard', () => {
     expect(screen.getByText(/Two-factor is on/)).toBeTruthy();
   });
 
+  it('says nothing about a password until this computer remembers one', async () => {
+    renderCard(async () => SIGNED_IN);
+
+    await screen.findByText('maria');
+
+    expect(screen.queryByText(/remembers your password/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Forget it' })).toBeNull();
+  });
+
+  it('says it remembers the password, and forgets it on request', async () => {
+    const { user, bridge } = renderCard(
+      async () => ({ ...SIGNED_IN, passwordSaved: true }),
+      SERVER,
+      {
+        'deploy.forgetPassword': async () => undefined,
+      },
+    );
+
+    expect(await screen.findByText(/remembers your password/)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Forget it' }));
+
+    expect(bridge.$fn('deploy.forgetPassword')).toHaveBeenCalledWith('srv-1');
+    expect(toast.success).toHaveBeenCalledWith(
+      'Your password for Production is forgotten on this computer.',
+    );
+    await waitFor(() => expect(bridge.$fn('deploy.access')).toHaveBeenCalledTimes(2));
+  });
+
   it('signs out and asks the core again', async () => {
     const { user, bridge } = renderCard(async () => SIGNED_IN, SERVER, {
       'deploy.signOut': async () => undefined,

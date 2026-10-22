@@ -4,6 +4,7 @@ import { Power } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { ResizeHandle } from '@/components/ui/ResizeHandle';
 import { SimpleTooltip } from '@/components/ui/tooltip';
+import { refusalFor } from '@/lib/sftp/capabilities';
 import { cn } from '@/lib/utils';
 import { confirmDialog } from '@/stores/confirmStore';
 import { PANEL_WIDTHS, usePanelWidth } from '@/stores/panelWidthStore';
@@ -93,6 +94,9 @@ function QueueArea({
 function PropertiesArea({ serverId }: { serverId: string }): React.JSX.Element {
   const paths = useSftpStore((state) => serverFiles(state, serverId).propertiesPaths);
   const listed = useSftpStore((state) => serverFiles(state, serverId).remote.entries);
+  const readOnlyReason = useSftpStore((state) =>
+    refusalFor(serverFiles(state, serverId).session, 'chmod'),
+  );
   const store = useSftpStore.getState;
   const entries = useMemo(() => {
     const wanted = new Set(paths ?? []);
@@ -106,6 +110,7 @@ function PropertiesArea({ serverId }: { serverId: string }): React.JSX.Element {
         if (!open) store().closeProperties(serverId);
       }}
       onApply={(input) => store().chmod(serverId, input)}
+      readOnlyReason={readOnlyReason}
     />
   );
 }
@@ -142,9 +147,10 @@ function EditorArea({ serverId }: { serverId: string }): React.JSX.Element | nul
 
 /**
  * Where the file manager is drawn: the `/ssh-files/:serverId` page, a tab of the terminal drawer,
- * or the pop-out window.
+ * the pop-out window, or a section of another page (Deploy's Files, E27), which draws the full
+ * panes and leaves the header to the page around it.
  */
-export type SshFilesVariant = 'page' | 'dock' | 'window';
+export type SshFilesVariant = 'page' | 'dock' | 'window' | 'embedded';
 
 export interface SshFilesViewProps {
   serverId: string;

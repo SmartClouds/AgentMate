@@ -125,7 +125,7 @@ The **History** card draws four charts: **Processor**, **Memory**, **Network** (
 | **2 days** | One point a minute |
 | **30 days** | One point every 15 minutes |
 
-The longer ranges come from readings the core stores, starting from when it was installed, so a new core has no 30 day history yet. The **Table** button switches the charts to a table of readings (the newest 60), and **Charts** switches back. Hover a chart to read the values at a point in time.
+The longer ranges come from readings the core stores, starting from when it was installed, so a new core has no 30 day history yet. The **Table** button switches the charts to a table of readings (the newest 60), and **Charts** switches back. Hover a chart to read the values at a point in time. On the **Memory** chart the readout also gives the amount in use out of the total, such as 7.30 GB of 8.00 GB.
 
 ### System
 
@@ -156,6 +156,8 @@ At the bottom of the Overview are two cards about the core itself. **Server core
 ### Confirm it is you
 
 Some changes (installing every update, rebooting, and sensitive security changes) ask for your password again in a dialog called **Confirm it is you**. If your account uses two-factor you can switch to **Use a code from your authenticator app**. The confirmation counts for the next 10 minutes, so you are not asked again for each step.
+
+To skip the question altogether, tick **Remember my password on this computer** in that dialog. The password is kept sealed in the Servers vault, and from then on AgentMate answers **Confirm it is you** for you. It is only kept after the core accepted it, and it is never kept for an authenticator code. **Your access** says when a password is remembered and has **Forget it**. Signing out of the server forgets it too, and so does a password the core stops accepting. If the Servers vault is locked, you are asked as before.
 
 ## Tips
 

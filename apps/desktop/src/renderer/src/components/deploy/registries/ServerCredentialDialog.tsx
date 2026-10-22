@@ -11,9 +11,9 @@ import type {
 import type { DeployServer } from '@shared/deployTypes';
 import { useId, useState } from 'react';
 import { toast } from 'sonner';
-import { NativeSelect } from '@/components/cloudflare/fields';
 import { Server, Spinner } from '@/components/icons';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import {
   Dialog,
   DialogContent,
@@ -116,18 +116,19 @@ export function ServerCredentialDialog({
           </DialogHeader>
           <div className="space-y-1.5">
             <Label htmlFor={ids.from}>Credential</Label>
-            <NativeSelect
+            <Combobox
               id={ids.from}
+              searchable={false}
+              options={[
+                ...usable.map((credential) => ({
+                  value: credential.id,
+                  label: `${registryLabel(credential.registry)} (${credential.username}), from this computer`,
+                })),
+                { value: 'typed', label: 'Type one in' },
+              ]}
               value={chosen}
-              onChange={(event) => setFrom(event.target.value)}
-            >
-              {usable.map((credential) => (
-                <option key={credential.id} value={credential.id}>
-                  {registryLabel(credential.registry)} ({credential.username}), from this computer
-                </option>
-              ))}
-              <option value="typed">Type one in</option>
-            </NativeSelect>
+              onChange={setFrom}
+            />
           </div>
           {chosen === 'typed' && (
             <>

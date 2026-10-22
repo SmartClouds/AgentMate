@@ -6,11 +6,12 @@ import type {
 import { useId } from 'react';
 import { Plus, Trash2 } from '@/components/icons';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { AccessFields } from './AccessFields';
-import { FieldError, SELECT_CLASS, Section, TextField, ToggleRow } from './fields';
+import { FieldError, Section, TextField, ToggleRow } from './fields';
 import type { SiteTabProps } from './tabTypes';
 
 /** Response headers, who may reach the site, and how fast one visitor may ask. */
@@ -49,19 +50,14 @@ function Select<T extends string>({
   return (
     <div className="space-y-1.5">
       <Label htmlFor={id}>{label}</Label>
-      <select
+      <Combobox
         id={id}
+        searchable={false}
+        options={options}
         value={value}
-        onChange={(event) => onChange(event.target.value as T)}
+        onChange={(next) => onChange(next as T)}
         disabled={disabled}
-        className={SELECT_CLASS}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      />
     </div>
   );
 }

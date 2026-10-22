@@ -6,6 +6,7 @@ import {
   formatPointTime,
   formatRate,
   LIVE_WINDOW_MS,
+  memoryAmounts,
   memoryPercent,
   mergeSamples,
   niceRateMax,
@@ -62,6 +63,13 @@ describe('shares', () => {
     expect(memoryPercent(sample)).toBe(25);
     expect(swapPercent(sample)).toBe(0);
     expect(diskPercent(sample)).toBe(100);
+  });
+
+  it('says how much memory is in use out of the whole', () => {
+    const GB = 1024 * MB;
+    const sample = { ...metricsSample(0), memoryUsedBytes: 7.3 * GB, memoryTotalBytes: 8 * GB };
+    expect(memoryAmounts(sample)).toBe('7.30 GB of 8.00 GB');
+    expect(memoryAmounts({ ...sample, memoryUsedBytes: 512 * MB })).toBe('512 MB of 8.00 GB');
   });
 });
 

@@ -810,3 +810,92 @@ describe('the context menu, rename', () => {
     ).toBeTruthy();
   });
 });
+
+describe('what the remote side allows (E27)', () => {
+  const LIMITATION =
+    'The container is stopped. Start it to rename, delete or change permissions.';
+  const LIMITED: SftpSessionInfo = {
+    ...SESSION,
+    kind: 'container',
+    capabilities: { rename: false, remove: false, chmod: false, edit: false },
+    limitation: LIMITATION,
+  };
+
+  const item = (menu: HTMLElement, name: string) =>
+    within(menu).getByRole('menuitem', { name }) as HTMLElement;
+
+  it('turns off Edit, Rename and Delete in the menu, and keeps the rest', async () => {
+    await setup({ 'sftp.open': LIMITED });
+    fireEvent.contextMenu(remoteRow('a.txt') as HTMLElement);
+    const menu = await screen.findByRole('menu');
+    for (const name of ['Edit', 'RenameF2', 'DeleteDel']) {
+      expect(item(menu, name)).toHaveAttribute('data-disabled');
+    }
+    for (const name of ['Download', 'New folder', 'Permissions and properties', 'Copy path']) {
+      expect(item(menu, name)).not.toHaveAttribute('data-disabled');
+    }
+  });
+
+  it('says why on a turned off item, in a tooltip', async () => {
+    const { user } = await setup({ 'sftp.open': LIMITED });
+    fireEvent.contextMenu(remoteRow('a.txt') as HTMLElement);
+    const menu = await screen.findByRole('menu');
+    await user.hover(item(menu, 'RenameF2').parentElement as HTMLElement);
+    expect(await screen.findByRole('tooltip', { name: LIMITATION })).toBeTruthy();
+  });
+
+  it('ignores F2 and Del on the server, and says why', async () => {
+    const { bridge } = await setup({ 'sftp.open': LIMITED });
+    const grid = remoteGrid();
+    fireEvent.click(remoteRow('a.txt') as HTMLElement);
+    fireEvent.keyDown(grid, { key: 'F2' });
+    expect(within(remotePane()).queryByRole('textbox', { name: 'New name for a.txt' })).toBeNull();
+    fireEvent.keyDown(grid, { key: 'Delete' });
+    expect(useConfirmStore.getState().open).toBe(false);
+    expect(toast.info).toHaveBeenCalledWith(LIMITATION);
+    expect(() => bridge.$fn('sftp.remove')).toThrow();
+  });
+
+  it('shows the reason above the server pane, and nothing above this computer', async () => {
+    await setup({ 'sftp.open': LIMITED });
+    expect(within(remotePane()).getByText(LIMITATION)).toBeTruthy();
+    expect(within(localPane()).queryByText(LIMITATION)).toBeNull();
+  });
+
+  it('leaves this computer alone', async () => {
+    await setup({ 'sftp.open': LIMITED });
+    fireEvent.contextMenu(localRow('notes.txt'));
+    const menu = await screen.findByRole('menu');
+    expect(item(menu, 'RenameF2')).not.toHaveAttribute('data-disabled');
+    expect(item(menu, 'Move to TrashDel')).not.toHaveAttribute('data-disabled');
+  });
+
+  it('allows everything for a session that says nothing, with no notice', async () => {
+    await setup();
+    expect(within(remotePane()).queryByRole('note')).toBeNull();
+    fireEvent.contextMenu(remoteRow('a.txt') as HTMLElement);
+    const menu = await screen.findByRole('menu');
+    for (const name of ['Edit', 'RenameF2', 'DeleteDel']) {
+      expect(item(menu, name)).not.toHaveAttribute('data-disabled');
+    }
+  });
+
+  it('says so when only part of the folder is listed', async () => {
+    await setup({
+      'sftp.list': async (_session: string, path: string) => {
+        const resolved = path === '~' ? '/home/deploy' : path;
+        return {
+          path: resolved,
+          parent: parentOf(resolved),
+          entries: REMOTE[resolved] ?? [],
+          partial: resolved === '/home/deploy',
+        };
+      },
+    });
+    expect(within(remotePane()).getByText(/Only part of this folder is listed/)).toBeTruthy();
+    await act(async () => {
+      await useSftpStore.getState().navigate('srv-1', 'remote', '/var');
+    });
+    expect(within(remotePane()).queryByText(/Only part of this folder is listed/)).toBeNull();
+  });
+});

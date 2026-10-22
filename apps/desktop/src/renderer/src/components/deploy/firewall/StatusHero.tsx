@@ -3,10 +3,10 @@ import type {
   FirewallPolicy,
   FirewallStatus,
 } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import { NativeSelect } from '@/components/cloudflare/fields';
 import { Lock, LockOpen, TriangleAlert } from '@/components/icons';
 import { FOOTER_HAIRLINE, SECTION_HEADING } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BACKEND_LABEL, POLICY_LABEL } from '@/lib/deploy/firewall/format';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,11 @@ import { SECURITY_CARD } from '../security/SecurityCard';
  * the default policies, IPv6, and the SSH ports the guard keeps open. Admins turn it on or off
  * and change the incoming default from here; both go through the preview like any change.
  */
+
+const INCOMING_OPTIONS = FIREWALL_POLICIES.map((policy) => ({
+  value: policy,
+  label: `${POLICY_LABEL[policy]} by default`,
+}));
 
 /** A label over its value. Values wrap rather than cut off, so a narrow window loses no words. */
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
@@ -113,18 +118,14 @@ export function StatusHero({
           </Fact>
           <Fact label="Incoming">
             {canAdmin && !none && !busy ? (
-              <NativeSelect
-                aria-label="Incoming by default"
-                className="h-7 w-auto max-w-full pl-2.5 pr-1.5"
+              <Combobox
+                ariaLabel="Incoming by default"
+                className="h-7 w-44 max-w-full pl-3 pr-2"
+                searchable={false}
+                options={INCOMING_OPTIONS}
                 value={stagedIncoming ?? status.defaultIncoming}
-                onChange={(event) => onDefaultIncoming(event.target.value as FirewallPolicy)}
-              >
-                {FIREWALL_POLICIES.map((policy) => (
-                  <option key={policy} value={policy}>
-                    {POLICY_LABEL[policy]} by default
-                  </option>
-                ))}
-              </NativeSelect>
+                onChange={(policy) => onDefaultIncoming(policy as FirewallPolicy)}
+              />
             ) : (
               `${POLICY_LABEL[status.defaultIncoming]} by default`
             )}

@@ -20,6 +20,7 @@ function pin(
   digest: `sha256:${string}`,
   source: CatalogImageSource,
   publisher: string,
+  resolvedAt = CATALOG_RESOLVED_AT,
 ): PinnedImage {
   return {
     repository,
@@ -28,7 +29,7 @@ function pin(
     platforms: PLATFORMS,
     source,
     publisher,
-    resolvedAt: CATALOG_RESOLVED_AT,
+    resolvedAt,
   };
 }
 
@@ -171,5 +172,14 @@ export const CATALOG_IMAGES = {
     'sha256:1c9dc9b037162d59224a4fc8b1fadd96e343213acf7c828e5d380e28407443fb',
     'vendor',
     'Meilisearch',
+  ),
+  // Added after the rest, so it carries its own resolve date until the next refresh.
+  kafka43: pin(
+    'docker.io/apache/kafka',
+    '4.3.2',
+    'sha256:852a0d49fc4e656b022e7f23785411802c9a088c78a7c5e39f33969de9c227a7',
+    'vendor',
+    'Apache Software Foundation',
+    '2026-10-22',
   ),
 } as const satisfies Record<string, PinnedImage>;

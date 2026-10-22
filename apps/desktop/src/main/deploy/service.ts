@@ -154,6 +154,8 @@ function summary(user: SignedInUser): NonNullable<DeployAccess['user']> {
 const NO_CORE = 'This build of AgentMate has no server core to install.';
 const NOT_INSTALLED = 'The server core is not installed on this server yet.';
 const NOT_ENROLLED = 'This computer is not enrolled on this server core yet.';
+/** What the core says to a step-up with a password that is not the account's. */
+const WRONG_PASSWORD = /not right/i;
 
 export class DeployService {
   /** Each server's lasting connection, for live streams and short calls (live/coreLinks.ts). */
@@ -385,7 +387,8 @@ export class DeployService {
   /** Whether this computer can act on the core right now, renewing its session if it has to. */
   async access(serverId: string): Promise<DeployAccess> {
     if (this.isDevHost(serverId)) await this.ensureDevDevice();
-    if (!(await this.deps.state.device(serverId))) return { state: 'not-enrolled' };
+    const device = await this.deps.state.device(serverId);
+    if (!device) return { state: 'not-enrolled' };
     try {
       await this.sessions.accessToken(serverId);
     } catch (error) {
@@ -405,7 +408,11 @@ export class DeployService {
       }
     }
     const user = this.sessions.user(serverId);
-    return user ? { state: 'signed-in', user: summary(user) } : { state: 'signed-in' };
+    return {
+      state: 'signed-in',
+      ...(user ? { user: summary(user) } : {}),
+      ...(device.password ? { passwordSaved: true } : {}),
+    };
   }
 
   async signIn(input: DeploySignInInput): Promise<DeployAccess> {
@@ -427,8 +434,9 @@ export class DeployService {
     }
     this.sessions.forget(serverId);
     const device = await this.deps.state.device(serverId);
-    if (device?.sessionId) {
-      const { sessionId: _ended, ...rest } = device;
+    if (device?.sessionId || device?.password) {
+      // Signing out takes the remembered password with it.
+      const { sessionId: _ended, password: _saved, ...rest } = device;
       await this.deps.state.setDevice(serverId, rest);
     }
     // With no session left, the next connection waits for a sign-in instead of retrying.
@@ -451,6 +459,42 @@ export class DeployService {
         ...(input.totpCode ? { totpCode: input.totpCode } : {}),
       }),
     );
+  }
+
+  /**
+   * Steps up with the password this computer was asked to remember, so the user is not asked for
+   * it again. Null when none is saved, the vault is locked, or the core turned it down; a
+   * password the core says is wrong is forgotten, so it is not tried again and again.
+   */
+  async stepUpWithSavedPassword(serverId: string): Promise<StepUpResponse | null> {
+    const saved = (await this.deps.state.device(serverId))?.password;
+    if (!saved) return null;
+    let password: string;
+    try {
+      password = await this.deps.unseal(saved);
+    } catch {
+      return null;
+    }
+    try {
+      return await this.withHub(serverId, (hub) => hub.stepUp({ password }));
+    } catch (error) {
+      if (WRONG_PASSWORD.test(coreErrorMessage(error))) {
+        await this.deps.state.setPassword(serverId, null);
+      }
+      return null;
+    }
+  }
+
+  /** Remembers the password, sealed, once the core has confirmed it is the right one. */
+  async rememberPassword(input: DeployStepUpInput): Promise<void> {
+    if (!input.password) throw new Error('Enter your password to have it remembered.');
+    if (!(await this.deps.state.device(input.serverId))) throw new Error(NOT_ENROLLED);
+    await this.stepUp({ serverId: input.serverId, password: input.password });
+    await this.deps.state.setPassword(input.serverId, await this.deps.seal(input.password));
+  }
+
+  forgetPassword(serverId: string): Promise<void> {
+    return this.deps.state.setPassword(serverId, null);
   }
 
   async beginTotp(serverId: string): Promise<DeployTotpSetup> {

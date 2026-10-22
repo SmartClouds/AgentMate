@@ -146,6 +146,80 @@ describe('DeployState devices', () => {
     });
     expect((await state.device('srv-2'))?.privateKey).toMatchObject({ mode: 'passphrase' });
   });
+
+  describe('a remembered password', () => {
+    const SEALED = { mode: 'safeStorage' as const, ciphertext: 'cHc=' };
+
+    it('is kept on the device, and forgotten again without touching the rest', async () => {
+      const state = new DeployState(memoryFiles().port);
+      await state.setDevice('srv-1', { ...CREDENTIALS, sessionId: 's1' });
+
+      await state.setPassword('srv-1', SEALED);
+      expect(await state.device('srv-1')).toEqual({
+        ...CREDENTIALS,
+        sessionId: 's1',
+        password: SEALED,
+      });
+
+      await state.setPassword('srv-1', null);
+      expect(await state.device('srv-1')).toEqual({ ...CREDENTIALS, sessionId: 's1' });
+    });
+
+    it('is not kept for a server with no device', async () => {
+      const files = memoryFiles();
+      const state = new DeployState(files.port);
+
+      await state.setPassword('srv-1', SEALED);
+
+      expect(await state.device('srv-1')).toBeNull();
+      expect(await state.enrolledServers()).toEqual(new Set());
+    });
+
+    it('goes with the device when the server is removed', async () => {
+      const state = new DeployState(memoryFiles().port);
+      await state.setDevice('srv-1', CREDENTIALS);
+      await state.setPassword('srv-1', SEALED);
+
+      await state.remove('srv-1');
+      await state.setDevice('srv-1', CREDENTIALS);
+
+      expect((await state.device('srv-1'))?.password).toBeUndefined();
+    });
+
+    it('skips a device whose password is not a sealed envelope', async () => {
+      const state = new DeployState(
+        memoryFiles({
+          version: 1,
+          cores: {},
+          devices: { plain: { ...CREDENTIALS, password: 'hunter2' } },
+        }).port,
+      );
+
+      expect(await state.device('plain')).toBeNull();
+    });
+
+    it('moves with the device key when the passkey changes', async () => {
+      const state = new DeployState(memoryFiles().port);
+      await state.setDevice('srv-1', CREDENTIALS);
+      await state.setPassword('srv-1', SEALED);
+      await state.setDevice('srv-2', { ...CREDENTIALS, deviceId: 'd2' });
+
+      const commit = await state.sealedKeys.prepare(async (envelope) => ({
+        mode: 'passphrase' as const,
+        ciphertext: `moved:${envelope.ciphertext}`,
+        iv: 'iv',
+        authTag: 'tag',
+      }));
+      expect((await state.device('srv-1'))?.password).toEqual(SEALED);
+      await commit();
+
+      expect((await state.device('srv-1'))?.password).toMatchObject({
+        mode: 'passphrase',
+        ciphertext: 'moved:cHc=',
+      });
+      expect((await state.device('srv-2'))?.password).toBeUndefined();
+    });
+  });
 });
 
 describe('DeployState alert marks', () => {

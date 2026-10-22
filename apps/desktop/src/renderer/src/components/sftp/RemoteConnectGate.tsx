@@ -1,3 +1,4 @@
+import { isDockerFileTargetId } from '@shared/fileTargets';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Link, Lock, Pencil, Plug, Server } from '@/components/icons';
@@ -52,6 +53,8 @@ export function RemoteConnectGate({
   const connect = useSftpStore((state) => state.connect);
   const [unlockOpen, setUnlockOpen] = useState(false);
   const nickname = files.session?.nickname ?? files.server?.nickname ?? 'the server';
+  // A container or volume on a Deploy server (E27) has no saved server to edit or go back to.
+  const docker = isDockerFileTargetId(serverId);
 
   if (files.status === 'ready') return <>{children}</>;
 
@@ -96,19 +99,28 @@ export function RemoteConnectGate({
               retry={() => void connect(serverId)}
             />
           </div>
-          <Button
-            variant="link"
-            size="sm"
-            className="h-auto px-1"
-            onClick={() => navigate('/remote')}
-          >
-            <Pencil className="size-3" /> Edit server
-          </Button>
+          {docker ? null : (
+            <Button
+              variant="link"
+              size="sm"
+              className="h-auto px-1"
+              onClick={() => navigate('/remote')}
+            >
+              <Pencil className="size-3" /> Edit server
+            </Button>
+          )}
         </div>
       );
       break;
     case 'missing':
-      body = (
+      body = docker ? (
+        <EmptyState
+          icon={Server}
+          title={`${nickname} is not there anymore`}
+          description="It may have been removed from the server."
+          className="flex-1"
+        />
+      ) : (
         <EmptyState
           icon={Server}
           title="This server isn't saved anymore"
