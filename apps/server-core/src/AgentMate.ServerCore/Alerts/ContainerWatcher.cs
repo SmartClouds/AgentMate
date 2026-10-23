@@ -32,6 +32,19 @@ internal sealed partial class ContainerWatcher(
 
     private readonly Lock _gate = new();
 
+    private EventCursor _since;
+
+    /// <summary>
+    /// From the moment the core starts: crashes from before it are not counted again. Taken here and
+    /// not in ExecuteAsync, which .NET 10 runs on a thread of its own after StartAsync has returned,
+    /// so a crash in between would land before the cursor and never be seen.
+    /// </summary>
+    public override Task StartAsync(CancellationToken cancellationToken)
+    {
+        _since = new EventCursor(time.GetUtcNow().ToUnixTimeMilliseconds() * 1_000_000);
+        return base.StartAsync(cancellationToken);
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!options.RunInBackground)
@@ -39,9 +52,8 @@ internal sealed partial class ContainerWatcher(
             return;
         }
 
-        // From the moment the core starts: crashes from before it are not counted again. Taken before
-        // the first await, so nothing that happens while the open alerts are read is missed.
-        var since = new EventCursor(time.GetUtcNow().ToUnixTimeMilliseconds() * 1_000_000);
+        // Read before the open alerts are, so nothing that happens meanwhile is missed.
+        var since = _since;
         try
         {
             foreach (var open in await alerts.OpenAsync(AlertKind.ContainerCrashLoop, stoppingToken))
