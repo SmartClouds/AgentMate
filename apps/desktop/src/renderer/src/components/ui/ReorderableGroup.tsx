@@ -93,6 +93,10 @@ function toCss({ x, y }: Point): string {
 /**
  * A press that became a drag ends on the item it started on, so the browser would also send a
  * click there. This eats that one click, so releasing a dragged item doesn't also open it.
+ *
+ * Chromium sends that click in the same task as the pointerup, or not at all (as on the macOS CI
+ * runner). So the swallower goes on the next task: left up any longer, it ate the next real click
+ * instead, and a tile clicked right after a drag did not open.
  */
 function swallowClickAfterDrag(): void {
   const swallow = (event: MouseEvent): void => {
@@ -108,7 +112,7 @@ function swallowClickAfterDrag(): void {
     if (typeof view.removeEventListener === 'function') {
       view.removeEventListener('click', swallow, { capture: true });
     }
-  }, 300);
+  }, 0);
 }
 
 /**

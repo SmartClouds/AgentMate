@@ -150,8 +150,8 @@ function orderOf(container: HTMLElement): string[] {
 }
 
 afterEach(() => {
-  // A drop that travelled leaves a one-shot click swallower on the window for 300ms. Spend it, or
-  // it eats the first click of whichever test runs next.
+  // A drop that travelled leaves a one-shot click swallower on the window until the next task.
+  // Spend it, or it eats the first click of whichever test runs next.
   window.dispatchEvent(new MouseEvent('click'));
   vi.restoreAllMocks();
 });
@@ -348,6 +348,38 @@ describe('ReorderableGroup', () => {
       expect(onOpen).not.toHaveBeenCalled();
     });
 
+    // Chromium on the macOS runner sent no click after a drag, and the swallower, left up for
+    // 300ms, ate the user's next click on a tile instead.
+    it('lets the next click through when the browser sent none after the drag', () => {
+      vi.useFakeTimers();
+      try {
+        trackCapture();
+        const onOpen = vi.fn();
+        setup({
+          row: (item, motion) => (
+            <div {...motion.itemProps}>
+              <div onPointerDown={motion.onGripPointerDown}>
+                <button type="button" onClick={() => onOpen(item.id)}>
+                  {`Open ${item.name}`}
+                </button>
+              </div>
+            </div>
+          ),
+        });
+        const button = screen.getByRole('button', { name: 'Open Alpha' });
+
+        fireEvent.pointerDown(button, { button: 0, clientX: 0, clientY: 0, pointerId: 1 });
+        fireEvent.pointerMove(button, { clientX: 0, clientY: 70, pointerId: 1 });
+        fireEvent.pointerUp(button, { pointerId: 1 });
+        vi.advanceTimersByTime(1);
+        fireEvent.click(screen.getByRole('button', { name: 'Open Alpha' }));
+
+        expect(onOpen).toHaveBeenCalledWith('a');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     // Vitest's jsdom window is the global itself, and tearing the environment down deletes its
     // DOM methods. A drag at the end of a test file left the timer to fire after that and throw,
     // which failed the whole run as an unhandled error.
@@ -362,7 +394,7 @@ describe('ReorderableGroup', () => {
 
         // As teardown does: the method is gone from the global, not replaced.
         Reflect.deleteProperty(globalThis, 'removeEventListener');
-        expect(() => vi.advanceTimersByTime(300)).not.toThrow();
+        expect(() => vi.advanceTimersByTime(1)).not.toThrow();
       } finally {
         if (descriptor) Object.defineProperty(globalThis, 'removeEventListener', descriptor);
         vi.useRealTimers();
