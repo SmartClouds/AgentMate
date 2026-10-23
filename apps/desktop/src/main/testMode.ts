@@ -28,3 +28,7 @@ if (isE2E && process.platform === 'linux') {
  * developer is doing. Set AGENTMATE_E2E_SHOW=1 to watch a run.
  */
 export const keepWindowsHidden = isE2E && process.env.AGENTMATE_E2E_SHOW !== '1';
+
+// macOS gives every Electron process an icon in the Dock, window or not, so a run with hidden
+// windows still made one pop in and out of the Dock for each test.
+if (keepWindowsHidden && process.platform === 'darwin') app.dock?.hide();

@@ -152,6 +152,8 @@ export async function launchApp(seed: {
   const logFile = join(root, 'claude-launches.log');
   mkdirSync(join(userDataDir, 'data'), { recursive: true });
   mkdirSync(projectDir, { recursive: true });
+  const zdotdir = join(root, 'zdotdir');
+  mkdirSync(zdotdir);
   writeFakeClaude(binDir, logFile, seed.claudeScript);
 
   writeFileSync(
@@ -185,6 +187,10 @@ export async function launchApp(seed: {
       // reaches outside the profile (the docker scan sweep, update checks) stays off.
       AGENTMATE_USER_DATA_DIR: userDataDir,
       AGENTMATE_E2E: '1',
+      // Terminal tabs run zsh on macOS, which reads the user's .zshenv and .zshrc. Claude Code's
+      // installer puts ~/.local/bin at the front of PATH in there, so on a machine that has it the
+      // real CLI started in place of the fake one above. An empty folder keeps those files out.
+      ZDOTDIR: zdotdir,
       ...seed.env,
     },
   });

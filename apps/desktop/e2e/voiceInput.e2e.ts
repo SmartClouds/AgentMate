@@ -54,6 +54,9 @@ async function launchWithMicrophone(settings: Record<string, unknown>): Promise<
       '--use-fake-ui-for-media-stream',
       '--use-fake-device-for-media-stream',
       `--use-file-for-fake-audio-capture=${wav}`,
+      // macOS sandboxes the audio service, and from there the tone file cannot be read, so the
+      // fake microphone records silence.
+      ...(process.platform === 'darwin' ? ['--no-sandbox'] : []),
     ],
   });
   await app.app.evaluate(({ ipcMain }) => {
