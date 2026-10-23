@@ -58,10 +58,20 @@ function seedConversations(projectDir: string): void {
   mkdirSync(dir, { recursive: true });
   const now = new Date();
   const twoMonthsAgo = new Date(now.getTime() - 60 * DAY_MS);
+  // The chart's last bar is today. An hour or two ago is yesterday just after midnight (CI failed
+  // at 00:30), so early in the day the recent messages go into the part of today that has passed.
+  const startOfToday = new Date(now).setHours(0, 0, 0, 0);
+  const hoursAgo = (hours: number): Date =>
+    new Date(
+      Math.max(
+        now.getTime() - hours * 3_600_000,
+        startOfToday + ((now.getTime() - startOfToday) * (3 - hours)) / 3,
+      ),
+    );
 
   const first: Message = {
     id: 'msg_recent_1',
-    at: new Date(now.getTime() - 2 * 3_600_000),
+    at: hoursAgo(2),
     usage: { input_tokens: 1000, output_tokens: 2000, cache_read_input_tokens: 3_000_000 },
   };
   writeFileSync(
@@ -86,7 +96,7 @@ function seedConversations(projectDir: string): void {
       first,
       {
         id: 'msg_resumed_2',
-        at: new Date(now.getTime() - 3_600_000),
+        at: hoursAgo(1),
         usage: { input_tokens: 10, output_tokens: 20 },
       },
     ]),
