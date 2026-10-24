@@ -7,7 +7,7 @@ namespace AgentMate.ServerCore.Tests;
 /// <summary>
 /// A container is in a crash loop when it exits on its own, again and again, in a short time: three
 /// crashes inside ten minutes. Stopping it by hand, a clean exit, or another container's crashes do
-/// not count, and ten quiet minutes (or removing it) clear it.
+/// not count, and ten quiet minutes, a minute up after a start, or removing it clear it.
 /// </summary>
 public sealed class CrashLoopDetectorTests
 {
@@ -125,6 +125,62 @@ public sealed class CrashLoopDetectorTests
 
         Assert.Equal("shop-api-1", Assert.Single(_detector.Sweep()).Container);
         Assert.Empty(_detector.Sweep());
+    }
+
+    [Fact]
+    public void Staying_up_a_minute_after_a_start_clears_it()
+    {
+        Crash();
+        Crash();
+        Crash();
+        _detector.Observe(Event("start"));
+        _clock.Advance(TimeSpan.FromSeconds(50));
+        Assert.Empty(_detector.Sweep());
+
+        _clock.Advance(TimeSpan.FromSeconds(10));
+
+        Assert.Equal("shop-api-1", Assert.Single(_detector.Sweep()).Container);
+        Assert.Empty(_detector.Sweep());
+    }
+
+    [Fact]
+    public void After_staying_up_the_count_starts_again()
+    {
+        Crash();
+        Crash();
+        Crash();
+        _detector.Observe(Event("start"));
+        _clock.Advance(TimeSpan.FromMinutes(1));
+        _detector.Sweep();
+
+        Assert.Null(Crash());
+        Assert.Null(Crash());
+        Assert.IsType<CrashLoopRaised>(Crash());
+    }
+
+    [Fact]
+    public void A_start_that_crashes_again_does_not_clear_it()
+    {
+        Crash();
+        Crash();
+        Crash();
+        _detector.Observe(Event("start"));
+        Crash();
+        _clock.Advance(TimeSpan.FromMinutes(2));
+
+        Assert.Empty(_detector.Sweep());
+    }
+
+    [Fact]
+    public void Staying_up_does_not_forget_crashes_short_of_a_loop()
+    {
+        Crash();
+        Crash();
+        _detector.Observe(Event("start"));
+        _clock.Advance(TimeSpan.FromMinutes(2));
+        _detector.Sweep();
+
+        Assert.IsType<CrashLoopRaised>(Crash());
     }
 
     [Fact]

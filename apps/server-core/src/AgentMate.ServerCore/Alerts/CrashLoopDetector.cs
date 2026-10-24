@@ -19,9 +19,11 @@ internal sealed record CrashLoopCleared(string Container) : CrashLoopChange(Cont
 /// <summary>
 /// Spots containers that keep crashing from Docker's events (E30). A crash is a "die" with a non-zero
 /// exit code that nobody asked for: a stop or kill just before it means a person or a deploy did it.
-/// <see cref="Threshold"/> crashes inside <see cref="Window"/> make a loop, and a loop clears after a
-/// whole window without a crash, or when the container is removed. Containers are known by name,
-/// which stays the same when compose recreates them. Not thread-safe: one watcher feeds it.
+/// <see cref="Threshold"/> crashes inside <see cref="Window"/> make a loop. A loop clears after a whole
+/// window without a crash, when the container has stayed up for <see cref="UpLongEnough"/> since it
+/// last started (someone fixed it, and counting starts again from zero), or when the container is
+/// removed. Containers are known by name, which stays the same when compose recreates them. Not
+/// thread-safe: one watcher feeds it.
 /// </summary>
 internal sealed class CrashLoopDetector(TimeProvider time)
 {
@@ -31,6 +33,9 @@ internal sealed class CrashLoopDetector(TimeProvider time)
 
     /// <summary>How long after a stop or kill an exit still counts as asked for.</summary>
     public static readonly TimeSpan StopGrace = TimeSpan.FromSeconds(60);
+
+    /// <summary>How long a looping container has to stay up after a start for the loop to be over.</summary>
+    public static readonly TimeSpan UpLongEnough = TimeSpan.FromMinutes(1);
 
     private readonly Dictionary<string, Tracked> _containers = new(StringComparer.Ordinal);
 
@@ -48,6 +53,13 @@ internal sealed class CrashLoopDetector(TimeProvider time)
         {
             case "kill" or "stop":
                 TrackedOf(name).AskedToStopAt = Now;
+                return null;
+            case "start":
+                if (_containers.TryGetValue(name, out var started))
+                {
+                    started.UpSince = Now;
+                }
+
                 return null;
             case "destroy":
                 var wasLooping = _containers.Remove(name, out var gone) && gone.Looping;
@@ -67,11 +79,22 @@ internal sealed class CrashLoopDetector(TimeProvider time)
         foreach (var (name, tracked) in _containers)
         {
             tracked.Crashes.RemoveAll(at => at < cutoff);
-            if (tracked.Looping && tracked.LastCrashAt < cutoff)
+            if (!tracked.Looping)
             {
-                tracked.Looping = false;
-                cleared.Add(new CrashLoopCleared(name));
+                continue;
             }
+
+            if (tracked.UpSince is { } upSince && Now - upSince >= UpLongEnough)
+            {
+                tracked.Crashes.Clear();
+            }
+            else if (tracked.LastCrashAt >= cutoff)
+            {
+                continue;
+            }
+
+            tracked.Looping = false;
+            cleared.Add(new CrashLoopCleared(name));
         }
 
         foreach (var name in _containers.Where(c => c.Value is { Looping: false, Crashes.Count: 0 }).Select(c => c.Key).ToList())
@@ -95,6 +118,7 @@ internal sealed class CrashLoopDetector(TimeProvider time)
         var tracked = TrackedOf(name);
         var askedFor = tracked.AskedToStopAt is { } stoppedAt && Now - stoppedAt <= StopGrace;
         tracked.AskedToStopAt = null;
+        tracked.UpSince = null;
         if (askedFor || exitCode == "0")
         {
             return null;
@@ -131,6 +155,9 @@ internal sealed class CrashLoopDetector(TimeProvider time)
         public DateTimeOffset? AskedToStopAt { get; set; }
 
         public DateTimeOffset LastCrashAt { get; set; }
+
+        /// <summary>When it last started, while it has not exited since.</summary>
+        public DateTimeOffset? UpSince { get; set; }
 
         public bool Looping { get; set; }
     }

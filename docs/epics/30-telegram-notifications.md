@@ -31,7 +31,8 @@ whether or not the app is open.
   - `ContainerCrashLoop`: `ContainerWatcher` follows Docker's events in the background and feeds
     `CrashLoopDetector`. Three exits with a non-zero code inside ten minutes make a loop (critical).
     An exit within a minute of a `stop` or `kill` was asked for and does not count. Ten quiet minutes,
-    or removing the container, resolve it. Without Docker the watcher waits and retries, up to a
+    the container staying up for a minute after a start (its crash count then starts again from
+    zero), or removing the container, resolve it. Without Docker the watcher waits and retries, up to a
     minute apart. Loops left open from before a restart clear the same way.
 - **Bot API, plain text.** `TelegramBotClient` posts `sendMessage` to `api.telegram.org` (no redirects),
   in plain text so nothing in an alert needs escaping, with link previews off. Answers become words a
