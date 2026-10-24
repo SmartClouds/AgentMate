@@ -224,8 +224,12 @@ test('a target goes healthy, shows a failing service, and turns a rotated key do
   await expect(page.getByText('Key rejected').first()).toBeVisible({ timeout: 20_000 });
 
   // And once the server has the new hash, it is healthy again.
+  // The list behind the panel still says Healthy from the first check, so a page-wide match
+  // passed before this check had even reached the server. The panel's header shows this one.
   server.setHash(rotatedHash);
   await checkNow(page);
-  await expect(page.getByText('Healthy').first()).toBeVisible({ timeout: 20_000 });
-  expect(server.requests()).toBeGreaterThanOrEqual(5);
+  await expect.poll(() => server.requests(), { timeout: 20_000 }).toBeGreaterThanOrEqual(5);
+  await expect(panel.getByRole('heading', { name: 'API' }).locator('..')).toContainText('Healthy', {
+    timeout: 20_000,
+  });
 });
