@@ -5,9 +5,12 @@ name: CI
 # and every test suite: unit, integration, mobile, the system tests on Docker
 # test servers and the end-to-end run on Linux and macOS.
 #
-# All of it runs on our self-hosted Linux runner, apart from the macOS
-# end-to-end shards, which run on our self-hosted Mac mini (CI only, CD never
-# uses it). GitHub's hosted runners are for CD, which packages the installers.
+# It runs on our two self-hosted runners (CD never uses them). Everything that
+# does not care about the OS (lint, types, the build, the unit suites and
+# mobile) runs on the Mac mini, which is much faster. The Linux runner keeps
+# what needs Linux: Docker, the server core and the Linux end-to-end shards.
+# The macOS end-to-end shards run on the Mac too. GitHub's hosted runners are
+# for CD, which packages the installers.
 #
 # The jobs do not wait for each other, and the desktop unit and end-to-end
 # suites are split into shards, so a run is only as fast as the number of
@@ -42,7 +45,7 @@ jobs:
   check:
     name: Lint, types, build
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: [self-hosted, macOS, ARM64]
     steps:
       - name: Checkout
         uses: actions/checkout@v7

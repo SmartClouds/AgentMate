@@ -3,10 +3,17 @@ name: Tests
 # Unit, integration, mobile and end-to-end tests. Called by CI on every push and pull request.
 # CD does not run them again: it waits for CI to pass on the commit it releases.
 #
-# CI runs everything on our self-hosted Linux runner, and the end-to-end tests on our self-hosted
-# Mac as well. Running this by hand with github-hosted ticked runs it on GitHub's hosted runners
-# instead, which is the one place the end-to-end tests run on Windows, since we have no
-# self-hosted Windows runner.
+# CI runs the suites that do not care about the OS (core, protocol, desktop unit and mobile) on
+# our self-hosted Mac mini, which runs them several times faster than the Linux runner. The Linux
+# runner keeps everything that needs Linux or Docker: the WordPress jobs, the server core (a Linux
+# product, its tests assume Linux wherever they are not on Windows), the system tests on test
+# servers and the Linux end-to-end shards. The end-to-end tests run on both. Running this by hand
+# with github-hosted ticked runs it on GitHub's hosted runners instead, which is the one place the
+# end-to-end tests run on Windows, since we have no self-hosted Windows runner.
+#
+# The Mac is a machine people also use, so the jobs there keep git's identity in a global config
+# of the job's own (GIT_CONFIG_GLOBAL) and run the tests with HOME in the job's temp folder, so a
+# test that reaches for ~ cannot touch its user's real files.
 #
 # Every job here is independent of the others (only the merge and WordPress sync jobs wait for
 # another), so they all start at once when there are enough runners. The slow suites are split
@@ -24,7 +31,7 @@ on:
         type: boolean
         default: true
       github-hosted:
-        description: Run on GitHub's hosted runners instead of the self-hosted Linux runner
+        description: Run on GitHub's hosted runners instead of our self-hosted ones
         type: boolean
         default: false
   workflow_dispatch:
@@ -34,7 +41,7 @@ on:
         type: boolean
         default: true
       github-hosted:
-        description: Run on GitHub's hosted runners instead of the self-hosted Linux runner
+        description: Run on GitHub's hosted runners instead of our self-hosted ones
         type: boolean
         default: false
 
@@ -49,7 +56,7 @@ env:
 jobs:
   unit:
     name: Unit and integration (core, protocol)
-    runs-on: ${{ inputs.github-hosted && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","X64"]') }}
+    runs-on: ${{ inputs.github-hosted && 'ubuntu-latest' || fromJSON('["self-hosted","macOS","ARM64"]') }}
     timeout-minutes: 30
     steps:
       - name: Checkout
@@ -74,14 +81,18 @@ jobs:
       # to do without an identity.
       - name: Git identity for fixtures
         run: |
-          git config --global user.name "AgentMate CI"
-          git config --global user.email "ci@agentmate.invalid"
-          git config --global init.defaultBranch main
+          echo "GIT_CONFIG_GLOBAL=$RUNNER_TEMP/gitconfig" >> "$GITHUB_ENV"
+          git config --file "$RUNNER_TEMP/gitconfig" user.name "AgentMate CI"
+          git config --file "$RUNNER_TEMP/gitconfig" user.email "ci@agentmate.invalid"
+          git config --file "$RUNNER_TEMP/gitconfig" init.defaultBranch main
+          mkdir -p "$RUNNER_TEMP/home"
 
       - name: Build workspace packages
         run: pnpm build:packages
 
       - name: Core and protocol
+        env:
+          HOME: ${{ runner.temp }}/home
         run: pnpm --filter @agentmat/core --filter @agentmat/protocol test:coverage
 
       - name: Coverage summary
@@ -106,7 +117,7 @@ jobs:
   # them. The coverage thresholds are checked only there (vitest.config.mts skips them in a shard).
   desktop-unit-shard:
     name: Desktop unit (${{ matrix.shard }}/3)
-    runs-on: ${{ inputs.github-hosted && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","X64"]') }}
+    runs-on: ${{ inputs.github-hosted && 'ubuntu-latest' || fromJSON('["self-hosted","macOS","ARM64"]') }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -133,9 +144,11 @@ jobs:
 
       - name: Git identity for fixtures
         run: |
-          git config --global user.name "AgentMate CI"
-          git config --global user.email "ci@agentmate.invalid"
-          git config --global init.defaultBranch main
+          echo "GIT_CONFIG_GLOBAL=$RUNNER_TEMP/gitconfig" >> "$GITHUB_ENV"
+          git config --file "$RUNNER_TEMP/gitconfig" user.name "AgentMate CI"
+          git config --file "$RUNNER_TEMP/gitconfig" user.email "ci@agentmate.invalid"
+          git config --file "$RUNNER_TEMP/gitconfig" init.defaultBranch main
+          mkdir -p "$RUNNER_TEMP/home"
 
       # The desktop tests import @agentmat/core and @agentmat/protocol from their build output.
       - name: Build workspace packages
@@ -145,6 +158,8 @@ jobs:
       # character per test, then every failure in full. The merge job adds the annotations.
       - name: Desktop main and renderer
         working-directory: apps/desktop
+        env:
+          HOME: ${{ runner.temp }}/home
         run: pnpm exec vitest run --coverage --shard=${{ matrix.shard }}/3 --reporter=blob --reporter=dot
 
       - name: Upload blob report
@@ -160,7 +175,7 @@ jobs:
     name: Desktop unit (merge and coverage)
     if: ${{ !cancelled() }}
     needs: desktop-unit-shard
-    runs-on: ${{ inputs.github-hosted && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","X64"]') }}
+    runs-on: ${{ inputs.github-hosted && 'ubuntu-latest' || fromJSON('["self-hosted","macOS","ARM64"]') }}
     timeout-minutes: 15
     steps:
       - name: Checkout
@@ -193,7 +208,7 @@ jobs:
       - name: Merge reports and check coverage
         working-directory: apps/desktop
         run: |
-          count="$(find .vitest/blob -name 'blob-*.json' | wc -l)"
+          count="$(find .vitest/blob -name 'blob-*.json' | wc -l | tr -d ' ')"
           if [ "$count" -ne 3 ]; then
             echo "::error title=Missing shard::Expected 3 desktop blob reports, found $count."
             exit 1
@@ -436,7 +451,7 @@ jobs:
 
   mobile:
     name: Mobile
-    runs-on: ${{ inputs.github-hosted && 'ubuntu-latest' || fromJSON('["self-hosted","Linux","X64"]') }}
+    runs-on: ${{ inputs.github-hosted && 'ubuntu-latest' || fromJSON('["self-hosted","macOS","ARM64"]') }}
     timeout-minutes: 20
     steps:
       - name: Checkout
@@ -474,8 +489,8 @@ jobs:
           path: apps/mobile/coverage
 
   # On our own runners this is Linux and macOS (the self-hosted Mac mini, Apple Silicon). With one
-  # Mac the three macOS shards take turns on it. Windows runs only on a manual run with
-  # github-hosted ticked.
+  # Mac the three macOS shards take turns on it, along with the unit suites above. Windows runs
+  # only on a manual run with github-hosted ticked.
   #
   # The specs run one Electron at a time (see e2e/playwright.config.ts), so the suite is split into
   # shards by spec file instead, each on its own runner.
