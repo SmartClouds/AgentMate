@@ -2,6 +2,7 @@ import { release } from 'node:os';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { Terminal as HeadlessTerminal } from '@xterm/headless';
 import * as pty from 'node-pty';
+import { type InitialInput, sendInitialInput } from './initialInput';
 import { killShellTree } from './killTree';
 import {
   consoleClients,
@@ -57,6 +58,8 @@ interface Session {
    */
   attaching: PendingAttach[];
   exitCode: number | null;
+  /** The first command, while it waits for the shell's prompt. */
+  initialInput: InitialInput | null;
 }
 
 interface PendingAttach {
@@ -139,6 +142,7 @@ export class PtySessionManager {
     if (!session) return;
     this.sessions.delete(sessionId);
     session.listener = null;
+    session.initialInput?.dispose();
     const { pty: shell } = session;
     killShellTree(shell.pid, () => shell.kill());
     session.emulator.dispose();
@@ -215,16 +219,19 @@ export class PtySessionManager {
       listener,
       attaching: [],
       exitCode: null,
+      initialInput: null,
     };
     this.sessions.set(session.id, session);
 
     ptyProcess.onData((data) => {
+      session.initialInput?.onOutput(data);
       emulator.write(data);
       for (const pending of session.attaching) pending.held.push(data);
       session.listener?.onData(session.id, data);
     });
     ptyProcess.onExit(({ exitCode }) => {
       session.exitCode = exitCode;
+      session.initialInput?.dispose();
       // A shell that dies this fast never started: a missing binary, or a pty backend that
       // cannot run its helper. The pane just goes blank, so say so somewhere.
       if (Date.now() - session.createdAt < IMMEDIATE_EXIT_MS) {
@@ -234,7 +241,11 @@ export class PtySessionManager {
       if (session.attaching.length === 0) this.finish(session);
     });
 
-    if (options.initialInput) ptyProcess.write(options.initialInput);
+    if (options.initialInput) {
+      session.initialInput = sendInitialInput(options.initialInput, (data) =>
+        this.write(session.id, data),
+      );
+    }
     this.pasteBoost?.consolesChanged();
     this.onSessionsChanged();
   }
