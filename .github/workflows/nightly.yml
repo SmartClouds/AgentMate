@@ -48,13 +48,15 @@ jobs:
         with:
           dotnet-version: 10.0.4xx
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-
+      # Node first: pnpm's installer runs npm from PATH, and without one it falls back to the
+      # runner's own npm, which a runner self-update leaves broken (actions/runner#2094).
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: "22"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -158,13 +160,15 @@ jobs:
         with:
           dotnet-version: 10.0.4xx
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-
+      # Node first: pnpm's installer runs npm from PATH, and without one it falls back to the
+      # runner's own npm, which a runner self-update leaves broken (actions/runner#2094).
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: "22"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
 
       - name: Cache Electron binary
         uses: actions/cache@v6
@@ -276,13 +280,15 @@ jobs:
           fi
           sudo -n sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-
+      # Node first: pnpm's installer runs npm from PATH, and without one it falls back to the
+      # runner's own npm, which a runner self-update leaves broken (actions/runner#2094).
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: "22"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
 
       - name: Cache Electron binary
         uses: actions/cache@v6

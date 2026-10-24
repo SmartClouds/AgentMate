@@ -55,14 +55,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-
+      # Node first: pnpm's installer runs npm from PATH, and without one it falls back to the
+      # runner's own npm, which a runner self-update leaves broken (actions/runner#2094).
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: "22"
-          cache: ${{ inputs.github-hosted && 'pnpm' || '' }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          cache: ${{ inputs.github-hosted }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -113,14 +116,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-
+      # Node first: pnpm's installer runs npm from PATH, and without one it falls back to the
+      # runner's own npm, which a runner self-update leaves broken (actions/runner#2094).
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: "22"
-          cache: ${{ inputs.github-hosted && 'pnpm' || '' }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          cache: ${{ inputs.github-hosted }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -160,14 +166,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-
+      # Node first: pnpm's installer runs npm from PATH, and without one it falls back to the
+      # runner's own npm, which a runner self-update leaves broken (actions/runner#2094).
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: "22"
-          cache: ${{ inputs.github-hosted && 'pnpm' || '' }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          cache: ${{ inputs.github-hosted }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -252,14 +261,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-
+      # Node first: pnpm's installer runs npm from PATH, and without one it falls back to the
+      # runner's own npm, which a runner self-update leaves broken (actions/runner#2094).
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: "22"
-          cache: ${{ inputs.github-hosted && 'pnpm' || '' }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          cache: ${{ inputs.github-hosted }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -359,14 +371,17 @@ jobs:
           cache: ${{ inputs.github-hosted }}
           cache-dependency-path: apps/server-core/**/packages.lock.json
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-
+      # Node first: pnpm's installer runs npm from PATH, and without one it falls back to the
+      # runner's own npm, which a runner self-update leaves broken (actions/runner#2094).
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: "22"
-          cache: ${{ inputs.github-hosted && 'pnpm' || '' }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          cache: ${{ inputs.github-hosted }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -427,14 +442,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-
+      # Node first: pnpm's installer runs npm from PATH, and without one it falls back to the
+      # runner's own npm, which a runner self-update leaves broken (actions/runner#2094).
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: "22"
-          cache: ${{ inputs.github-hosted && 'pnpm' || '' }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          cache: ${{ inputs.github-hosted }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -510,14 +528,17 @@ jobs:
           # Electron refuse to start. The fixture can fall back to --no-sandbox if this fails.
           sudo -n sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-
+      # Node first: pnpm's installer runs npm from PATH, and without one it falls back to the
+      # runner's own npm, which a runner self-update leaves broken (actions/runner#2094).
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: "22"
-          cache: ${{ inputs.github-hosted && 'pnpm' || '' }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          cache: ${{ inputs.github-hosted }}
 
       - name: Cache Electron binary
         uses: actions/cache@v6
