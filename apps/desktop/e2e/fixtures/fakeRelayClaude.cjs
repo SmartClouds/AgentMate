@@ -249,14 +249,26 @@ async function execute() {
   const tokens = Array.isArray(contexts) ? contexts[Math.min(legNo, contexts.length) - 1] : null;
   let note = null;
   if (typeof tokens === 'number') {
+    // Each call prints a line, as the real CLI keeps printing while it works. Four quiet seconds
+    // read as idle, and the guard only speaks to a session that is still working.
+    const read = () => {
+      process.stdout.write('  Read(README.md)\r\n');
+      return runHooks('PostToolUse', { tool_name: 'Read', tool_input: { file_path: 'README.md' } });
+    };
+    // AgentMate measures the transcript when the prompt is submitted and every 5 seconds while the
+    // session works. Jumping straight to the leg's size raced the first of those on a fast Mac,
+    // and a leg already past the guard at its first reading has the guard turned off, so it never
+    // handed off. A real session grows slowly, so this one works at its starting size past one
+    // of those readings first.
+    for (let second = 0; second < 6; second += 1) {
+      read();
+      await sleep(1000);
+    }
     writeTranscript(tokens);
-    // The first tool call lets AgentMate measure the transcript and arm the guard, the next ones
-    // are where the guard speaks (PostToolUse), the way it reaches a real session mid-work.
+    // The next reading arms the guard, and the guard speaks on the PostToolUse after that, the
+    // way it reaches a real session mid-work.
     for (let call = 0; call < 20 && !note; call += 1) {
-      const outputs = runHooks('PostToolUse', {
-        tool_name: 'Read',
-        tool_input: { file_path: 'README.md' },
-      });
+      const outputs = read();
       note = outputs.find((out) => out?.hookSpecificOutput?.additionalContext) ?? null;
       if (!note) await sleep(700);
     }
