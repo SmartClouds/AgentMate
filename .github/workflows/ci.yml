@@ -100,7 +100,7 @@ jobs:
       # @agentmat/protocol declaration output, so those have to be built first.
       - name: Build workspace packages
         if: ${{ !cancelled() }}
-        run: pnpm --filter @agentmat/core --filter @agentmat/protocol build
+        run: pnpm --filter @agentmat/core --filter @agentmat/protocol --filter @agentmat/studio build
 
       - name: Typecheck
         if: ${{ !cancelled() }}

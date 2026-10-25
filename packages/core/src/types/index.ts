@@ -45,6 +45,7 @@ export const STARTUP_PAGES = [
   '/projects',
   '/workspace',
   '/api-client',
+  '/studio',
   '/pipelines',
   '/deploy',
   '/monitoring',

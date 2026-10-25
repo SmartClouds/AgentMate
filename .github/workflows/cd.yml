@@ -221,6 +221,9 @@ jobs:
       - name: Build protocol package
         run: pnpm --filter @agentmat/protocol build
 
+      - name: Build studio package
+        run: pnpm --filter @agentmat/studio build
+
       - name: Rebuild native modules for Electron
         run: pnpm --filter @agentmat/desktop rebuild:native
 

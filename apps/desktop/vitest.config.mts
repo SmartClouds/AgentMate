@@ -307,6 +307,14 @@ export default defineConfig({
               functions: 80,
               branches: 75,
             },
+            // Studio (E31): the desktop side of the service, its IPC, and the library and editor.
+            'src/main/studio/**': { lines: 90, branches: 80 },
+            'src/main/ipc/studio.ts': { lines: 95, branches: 75 },
+            'src/renderer/src/components/studio/**': {
+              lines: 90,
+              functions: 85,
+              branches: 80,
+            },
           },
     },
   },

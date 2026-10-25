@@ -11,6 +11,7 @@ import {
   Bell,
   Blocks,
   ChartColumn,
+  Clapperboard,
   CloudUpload,
   Copy,
   Docker,
@@ -78,6 +79,8 @@ export const PROJECT_SECTION_IDS = [
   'monitoring',
   // The FTP and SFTP sites attached to the project (E23).
   'deploy',
+  // The project's videos and the folder they are kept in (E31).
+  'studio',
   // Only shown for a project linked to a WordPress site (E21).
   'wordpress',
   // Old links: the schedule now lives under Prompts, and the page redirects there.
@@ -112,6 +115,7 @@ const SECTIONS: {
   { id: 'docker', label: 'Docker', icon: Docker, group: 'work' },
   { id: 'monitoring', label: 'Monitoring', icon: HeartPulse, group: 'work' },
   { id: 'deploy', label: 'Deploy', icon: CloudUpload, group: 'work' },
+  { id: 'studio', label: 'Studio', icon: Clapperboard, group: 'work' },
   { id: 'wordpress', label: 'WordPress', icon: WordPressSectionIcon, group: 'work' },
   { id: 'terminal', label: 'Terminal', icon: TerminalSquare, group: 'work' },
   { id: 'bootstrap', label: 'Bootstrap', icon: Wand2, group: 'setup' },

@@ -686,6 +686,57 @@ export const IPC = {
     // main -> renderer: HealthChangedEvent
     onChanged: 'health:changed',
   },
+  /**
+   * Studio (E31): AI video projects, where each project keeps them, and their edit history. Every
+   * input is checked against the schemas in @agentmat/studio before the service sees it.
+   */
+  studio: {
+    // () -> StudioSettingsView
+    settings: 'studio:settings',
+    // (StudioSettingsPatch) -> StudioSettingsView
+    updateSettings: 'studio:updateSettings',
+    // ({ projectId }) -> ProjectStorageView
+    projectStorage: 'studio:projectStorage',
+    // ({ projectId, path | null }) -> ProjectStorageView; null goes back to the default folder
+    setProjectRoot: 'studio:setProjectRoot',
+    // ({ path, projectId | null }) -> RootCheckView, while the user is choosing a folder
+    checkRoot: 'studio:checkRoot',
+    // ({ defaultPath? }) -> string | null: the system folder picker
+    pickFolder: 'studio:pickFolder',
+    // ({ projectId? }) -> VideoSummary[]
+    list: 'studio:list',
+    // (CreateVideoInput) -> VideoSummary
+    create: 'studio:create',
+    // ({ videoId }) -> OpenVideoResult
+    open: 'studio:open',
+    // ({ videoId }) -> OpenVideoResult, taking over a lock whose holder stopped answering
+    takeOver: 'studio:takeOver',
+    close: 'studio:close',
+    // ({ videoId, baseSeq, ops, label }) -> ApplyResult
+    apply: 'studio:apply',
+    // ({ videoId }) -> EditResponse | null
+    undo: 'studio:undo',
+    redo: 'studio:redo',
+    // ({ videoId, before?, limit }) -> HistoryEntryView[]
+    history: 'studio:history',
+    // ({ videoId, seq }) -> StudioDocument
+    version: 'studio:version',
+    // ({ videoId, seq }) -> EditResponse
+    restore: 'studio:restore',
+    // ({ folder }) -> VideoSummary
+    addExisting: 'studio:addExisting',
+    // ({ videoId, folder }) -> VideoSummary
+    locate: 'studio:locate',
+    removeFromLibrary: 'studio:removeFromLibrary',
+    // ({ videoId, toRoot }) -> MoveResult
+    move: 'studio:move',
+    // ({ folder }) -> void: only a folder a move in this session left behind
+    trashOldFolder: 'studio:trashOldFolder',
+    // ({ videoId }) -> void: opens the video's folder in the file manager
+    revealVideo: 'studio:revealVideo',
+    // main -> renderer: StudioEvent
+    onEvent: 'studio:onEvent',
+  },
   /** Relay (E26): context-sized tasks in the project, run one session each, with handoffs. */
   relay: {
     // (projectId) -> RelayBoard

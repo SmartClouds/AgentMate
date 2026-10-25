@@ -304,7 +304,7 @@ describe('ProjectDetailPage sections', () => {
   });
 
   it('mounts every section in the nav without falling over', async () => {
-    // The page is mostly a router between eighteen sections, so the thing worth proving is that
+    // The page is mostly a router between nineteen sections, so the thing worth proving is that
     // each one can be reached and rendered with nothing but a project behind the bridge.
     const { user } = renderPage({
       'tools.detectAll': [{ id: 'diffray', installed: true }],
@@ -315,7 +315,7 @@ describe('ProjectDetailPage sections', () => {
     const labels = within(sectionNav())
       .getAllByRole('button')
       .map((button) => button.textContent?.trim() ?? '');
-    expect(labels.length).toBe(18);
+    expect(labels.length).toBe(19);
 
     for (const label of labels) {
       const button = within(sectionNav()).getByRole('button', { name: label });

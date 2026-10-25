@@ -134,6 +134,7 @@ import {
   SkillSecurityDialog,
   type SkillSecurityTarget,
 } from '@/components/skills/SkillSecurityDialog';
+import { ProjectStudioSection } from '@/components/studio/project/ProjectStudioSection';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -1192,6 +1193,14 @@ export default function ProjectDetailPage(): React.JSX.Element {
           {section === 'monitoring' && <MonitoringView key={project.id} projectId={project.id} />}
 
           {section === 'deploy' && <ProjectDeploySection key={project.id} project={project} />}
+
+          {section === 'studio' && (
+            <ProjectStudioSection
+              key={project.id}
+              projectId={project.id}
+              onOpen={(video) => navigate(`/studio/${video.id}`)}
+            />
+          )}
 
           {section === 'wordpress' && project.wordpress && (
             <WordPressProjectSection project={project} />

@@ -34,6 +34,7 @@ import {
   Bell,
   Blocks,
   CircleQuestion,
+  Clapperboard,
   Clock,
   Code,
   Docker,
@@ -85,6 +86,7 @@ import { ShortcutSettings } from '@/components/settings/ShortcutSettings';
 import { StatusBarUsageSettings } from '@/components/settings/StatusBarUsageSettings';
 import { WorktreeSettingsForm } from '@/components/settings/WorktreeSettings';
 import { WritingCheckSettings } from '@/components/settings/WritingCheckSettings';
+import { StudioSettingsSection } from '@/components/studio/settings/StudioSettingsSection';
 import { formatUpdateBytes, UpdateProgressTrack, updatePercent } from '@/components/UpdateManager';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -394,6 +396,11 @@ const SECTIONS = {
     tab: 'agents',
     title: 'Worktrees',
     keywords: 'worktree worktrees git branch parallel folder env copy setup location',
+  },
+  studio: {
+    tab: 'agents',
+    title: 'Studio',
+    keywords: 'studio video videos library folder storage location cache render resume gpu encode',
   },
   reviewCommands: {
     tab: 'agents',
@@ -2112,6 +2119,16 @@ export default function SettingsPage(): React.JSX.Element {
                     description="Where new git worktrees go, which local files they start with, and how removing one tidies up."
                   >
                     <WorktreeSettingsForm />
+                  </SettingsCard>
+                )}
+
+                {show('studio') && (
+                  <SettingsCard
+                    icon={Clapperboard}
+                    title="Studio"
+                    description="Where your videos are kept, how much room working files may take, and how renders run."
+                  >
+                    <StudioSettingsSection />
                   </SettingsCard>
                 )}
 

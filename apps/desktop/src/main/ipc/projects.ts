@@ -37,6 +37,7 @@ import {
 } from '../projectIcons';
 import { pruneOrphanRelays } from '../relay/store';
 import { logActivity, pruneOrphanBlueprints, pruneOrphanEnvironments, store } from '../store';
+import { pruneStudioProjects } from '../studio';
 
 /**
  * The folder the user set as their projects root, if it is still there. A path
@@ -216,6 +217,9 @@ export function registerProjectHandlers(): void {
     await pruneOrphanRelays({ projectIds: [projectId] });
     await pruneOrphanErrorLinks({ projectIds: [projectId] });
     await pruneOrphanFileSites({ projectIds: [projectId] });
+    // The project's videos stay where they are (they are the user's files); only the folder
+    // setting goes.
+    await pruneStudioProjects();
   });
 
   /**

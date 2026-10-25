@@ -7,7 +7,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "pnpm build:packages && pnpm --parallel --filter @agentmat/core --filter @agentmat/protocol --filter @agentmat/desktop dev",
+    "dev": "pnpm build:packages && pnpm --parallel --filter @agentmat/core --filter @agentmat/protocol --filter @agentmat/studio --filter @agentmat/desktop dev",
     "build": "pnpm build:packages && pnpm --filter @agentmat/desktop build",
     "package": "pnpm --filter @agentmat/desktop package",
     "mobile": "pnpm --filter @agentmat/protocol build && pnpm --filter @agentmat/mobile start",
@@ -21,10 +21,10 @@
     "biome:ci": "biome ci .",
     "check:deprecated-deps": "node scripts/check-deprecated-deps.mjs",
     "check:deprecated-code": "biome lint --only=suspicious/noDeprecatedImports .",
-    "test:coverage": "pnpm build:packages && pnpm --filter @agentmat/core --filter @agentmat/protocol --filter @agentmat/desktop test:coverage && node scripts/coverage-summary.mjs",
+    "test:coverage": "pnpm build:packages && pnpm --filter @agentmat/core --filter @agentmat/protocol --filter @agentmat/studio --filter @agentmat/desktop test:coverage && node scripts/coverage-summary.mjs",
     "test:e2e": "pnpm build:packages && pnpm --filter @agentmat/desktop exec install-electron && pnpm --filter @agentmat/desktop rebuild:native && pnpm --filter @agentmat/desktop test:e2e",
-    "build:packages": "pnpm --filter @agentmat/core --filter @agentmat/protocol build",
-    "test:unit": "pnpm build:packages && pnpm --filter @agentmat/core --filter @agentmat/protocol --filter @agentmat/desktop test",
+    "build:packages": "pnpm --filter @agentmat/core --filter @agentmat/protocol --filter @agentmat/studio build",
+    "test:unit": "pnpm build:packages && pnpm --filter @agentmat/core --filter @agentmat/protocol --filter @agentmat/studio --filter @agentmat/desktop test",
     "test:mobile": "pnpm --filter @agentmat/mobile test",
     "server-core:build": "node scripts/server-core.mjs build",
     "server-core:test": "node scripts/server-core.mjs test",

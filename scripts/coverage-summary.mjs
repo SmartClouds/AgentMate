@@ -6,7 +6,13 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const DEFAULT_PACKAGES = ['packages/core', 'packages/protocol', 'apps/desktop', 'apps/mobile'];
+const DEFAULT_PACKAGES = [
+  'packages/core',
+  'packages/protocol',
+  'packages/studio',
+  'apps/desktop',
+  'apps/mobile',
+];
 
 const packages = process.argv.slice(2).length > 0 ? process.argv.slice(2) : DEFAULT_PACKAGES;
 

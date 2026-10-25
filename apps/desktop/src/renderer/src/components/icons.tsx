@@ -35,6 +35,7 @@ import {
   faCirclePlay,
   faCircleQuestion,
   faCircleXmark,
+  faClapperboard,
   faClock,
   faClockRotateLeft,
   faCloudArrowDown,
@@ -117,6 +118,7 @@ import {
   faRocket,
   faRotate,
   faRotateLeft,
+  faRotateRight,
   faRoute,
   faSatelliteDish,
   faServer,
@@ -342,6 +344,8 @@ export const Tablet = makeIcon(faTabletScreenButton);
 export const RotateCw = makeIcon(faRotate);
 export const Camera = makeIcon(faCamera);
 export const Video = makeIcon(faVideo);
+export const Clapperboard = makeIcon(faClapperboard);
+export const Redo = makeIcon(faRotateRight);
 
 /** Android's robot mark, inlined so we don't need the brands icon package. */
 export const Android = React.forwardRef<SVGSVGElement, IconProps>(

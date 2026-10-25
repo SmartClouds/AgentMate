@@ -58,6 +58,7 @@ const ApiClientPage = lazy(() => import('./pages/ApiClientPage'));
 const DeployPage = lazy(() => import('./pages/DeployPage'));
 /** Health checks (E22) load on first visit, like Deploy. */
 const HealthPage = lazy(() => import('./pages/HealthPage'));
+const StudioPage = lazy(() => import('./pages/StudioPage'));
 /** Carries the IronRDP WebAssembly engine, which only Remote Desktop session windows need. */
 const RdpSessionRoute = lazy(() => import('./components/rdp/RdpSessionRoute'));
 /** The SFTP file manager for saved SSH servers (E25), loaded on first visit. */
@@ -193,6 +194,21 @@ export default function App(): React.JSX.Element {
                     </Suspense>
                   }
                 />
+                {['studio', 'studio/:videoId'].map((path) => (
+                  <Route
+                    key={path}
+                    path={path}
+                    element={
+                      <Suspense
+                        fallback={
+                          <div className="p-6 text-sm text-muted-foreground">Loading Studio…</div>
+                        }
+                      >
+                        <StudioPage />
+                      </Suspense>
+                    }
+                  />
+                ))}
                 <Route
                   path="monitoring"
                   element={

@@ -144,8 +144,13 @@ export async function launchApp(seed: {
   args?: string[];
   /** A Node script that plays `claude` in place of the plain recorder. */
   claudeScript?: string;
+  /**
+   * The temp folder of an earlier launch to start again on, for tests of what survives a restart
+   * or a crash. Its profile is kept as it is; `settings` is ignored.
+   */
+  reuseRoot?: string;
 }): Promise<LaunchedApp> {
-  const root = mkdtempSync(join(tmpdir(), 'agentmate-e2e-'));
+  const root = seed.reuseRoot ?? mkdtempSync(join(tmpdir(), 'agentmate-e2e-'));
   const userDataDir = join(root, 'user-data');
   const projectDir = join(root, 'project');
   const binDir = join(root, 'bin');
@@ -153,20 +158,21 @@ export async function launchApp(seed: {
   mkdirSync(join(userDataDir, 'data'), { recursive: true });
   mkdirSync(projectDir, { recursive: true });
   const zdotdir = join(root, 'zdotdir');
-  mkdirSync(zdotdir);
+  mkdirSync(zdotdir, { recursive: true });
   writeFakeClaude(binDir, logFile, seed.claudeScript);
 
-  writeFileSync(
-    join(userDataDir, 'data', 'settings.json'),
-    JSON.stringify({
-      // Shells end with the app, so no terminal host is left running after a test.
-      keepTerminalsRunning: false,
-      // Deploy lists only the servers the user chose, and a launch with the DevHost is there to
-      // work on it, so it starts out chosen. A test of the choice itself passes its own list.
-      ...(seed.env?.AGENTMATE_DEPLOY_DEV_CORE ? { deployServerIds: ['devhost'] } : {}),
-      ...seed.settings,
-    }),
-  );
+  if (!seed.reuseRoot)
+    writeFileSync(
+      join(userDataDir, 'data', 'settings.json'),
+      JSON.stringify({
+        // Shells end with the app, so no terminal host is left running after a test.
+        keepTerminalsRunning: false,
+        // Deploy lists only the servers the user chose, and a launch with the DevHost is there to
+        // work on it, so it starts out chosen. A test of the choice itself passes its own list.
+        ...(seed.env?.AGENTMATE_DEPLOY_DEV_CORE ? { deployServerIds: ['devhost'] } : {}),
+        ...seed.settings,
+      }),
+    );
 
   const pathKey = Object.keys(process.env).find((key) => key.toLowerCase() === 'path') ?? 'PATH';
   const app = await electron.launch({

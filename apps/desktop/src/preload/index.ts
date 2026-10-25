@@ -482,6 +482,7 @@ import { createErrorTracking } from './errorTracking';
 import { createHealth } from './health';
 import { createRelay } from './relay';
 import { createSftp } from './sftp';
+import { createStudio } from './studio';
 
 interface TerminalDataPayload {
   sessionId: string;
@@ -1947,6 +1948,7 @@ const deployAppStore = {
 /** Private registries (E08): sign-ins on this computer and credentials stored on a server. */
 const deployRegistry = createDeployRegistry();
 const health = createHealth();
+const studio = createStudio();
 const relay = createRelay();
 const errorTracking = createErrorTracking();
 
@@ -2783,6 +2785,7 @@ const agentmatApi = {
   deployAppStore,
   deployRegistry,
   health,
+  studio,
   relay,
   errorTracking,
   cloudflare,

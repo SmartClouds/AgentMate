@@ -30,6 +30,7 @@
     "src/preload/deployWordPress.ts",
     "src/preload/deployFiles.ts",
     "src/preload/health.ts",
+    "src/preload/studio.ts",
     "src/preload/relay.ts",
     "src/preload/errorTracking.ts",
     "src/preload/sftp.ts"

@@ -67,6 +67,7 @@ import { registerSkillHandlers } from './ipc/skills';
 import { registerSpeechHandlers, shutdownSpeech } from './ipc/speech';
 import { killAllSshSessions, registerSshHandlers } from './ipc/ssh';
 import { registerSshAgentHandlers } from './ipc/sshAgent';
+import { registerStudioHandlers } from './ipc/studio';
 import { registerSystemStatsHandlers } from './ipc/systemStats';
 import { registerTemplateHandlers } from './ipc/templates';
 import { registerTerminalHandlers, startTerminalBackend, terminalsHoldQuit } from './ipc/terminal';
@@ -129,6 +130,7 @@ import {
   pruneOrphanEnvironments,
   store,
 } from './store';
+import { pruneStudioProjects, shutdownStudio } from './studio';
 import { showRosettaNotice } from './system/rosettaNotice';
 import { isE2E, keepWindowsHidden } from './testMode';
 import { startToolUpdateWatcher, stopToolUpdateWatcher } from './toolUpdates/watcher';
@@ -404,6 +406,16 @@ function registerAllIpcHandlers(): void {
   registerSftpIpc({
     guard: (event) => sftpSenderAllowed(event, getMainWindow(), isSftpWindow),
   });
+  // Studio (E31) moves and trashes folders and writes video files, so it answers the main window
+  // only, like the stores holding secrets above.
+  registerStudioHandlers({
+    guard: (event) => {
+      const win = getMainWindow();
+      return (
+        !!win && event.sender === win.webContents && event.senderFrame === win.webContents.mainFrame
+      );
+    },
+  });
 }
 
 app.whenReady().then(async () => {
@@ -491,6 +503,7 @@ app.whenReady().then(async () => {
   void pruneOrphanRelays();
   void pruneOrphanErrorLinks();
   void pruneOrphanFileSites();
+  void pruneStudioProjects();
   // Relay legs report through the hook server, so it starts first; neither blocks the window.
   void startHookServer().then(() => startRelayService().catch(() => undefined));
   setMainWindowFactory(createMainWindow);
@@ -579,4 +592,7 @@ app.on('before-quit', (event) => {
   void getVaultService().shutdown();
   shutdownApiClient();
   shutdownSpeech();
+  // Every edit is already committed to its video's history; this writes document.json and
+  // releases the folders' locks. A lock left behind by a crash is taken over on the next start.
+  void shutdownStudio();
 });
