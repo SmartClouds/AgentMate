@@ -59,9 +59,9 @@ import {
   devTcpTransport,
   streamLocalTransport,
 } from './connection/transport';
+import { updateCoreLive } from './coreUpdate';
 import { clientCertificate } from './directTls/clientCertificate';
 import { directTlsTransport, PinMismatchError, type TlsConnect } from './directTls/transport';
-import { updateCoreLive } from './coreUpdate';
 import { CoreLinks } from './live/coreLinks';
 import { LinkBlockedError } from './live/linkFailures';
 import type { DeployState } from './state';

@@ -1,7 +1,7 @@
 import { sameFolder } from '@agentmat/core';
+import { opencodeSessionTable } from './opencodeStore';
 import { conversationKey, type ListedConversation, type RecordedUsage } from './projectUsageReport';
 import { localDay } from './projectUsageScan';
-import { opencodeSessionTable } from './opencodeStore';
 import { findOpencodeDb, type HistoryFs } from './sessionHistory';
 import { opencodeModelId } from './sessionUsage';
 

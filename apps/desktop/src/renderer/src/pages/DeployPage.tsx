@@ -12,6 +12,7 @@ import { AppsPanel } from '@/components/deploy/apps/AppsPanel';
 import { AssistantLauncher } from '@/components/deploy/assistant/AssistantLauncher';
 import { BackupsPanel } from '@/components/deploy/backups/BackupsPanel';
 import { ChooseServersDialog } from '@/components/deploy/ChooseServersDialog';
+import { CoreUpdatePanel } from '@/components/deploy/CoreUpdatePanel';
 import { ContainersPanel } from '@/components/deploy/containers/ContainersPanel';
 import { Notice } from '@/components/deploy/deployKit';
 import { FileSiteView, fileSectionFromView } from '@/components/deploy/files/FileSiteView';
@@ -19,7 +20,6 @@ import { useFileSiteListUpdate, useFileSites } from '@/components/deploy/files/h
 import { filesProblem } from '@/components/deploy/files/messages';
 import { SiteFormDialog } from '@/components/deploy/files/SiteFormDialog';
 import { FirewallPanel } from '@/components/deploy/firewall/FirewallPanel';
-import { CoreUpdatePanel } from '@/components/deploy/CoreUpdatePanel';
 import { InstallPanel } from '@/components/deploy/InstallPanel';
 import { LogsPanel } from '@/components/deploy/logs/LogsPanel';
 import { NotificationsPanel } from '@/components/deploy/notifications/NotificationsPanel';
