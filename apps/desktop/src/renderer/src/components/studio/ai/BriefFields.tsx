@@ -77,7 +77,9 @@ export function BriefFields({
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label id={`${id}-length`}>Length</Label>
+          <Label id={`${id}-length`} className="block">
+            Length
+          </Label>
           <div className={SEGMENT_TRACK} role="radiogroup" aria-labelledby={`${id}-length`}>
             {LENGTHS.map((length) => (
               <button
@@ -94,7 +96,7 @@ export function BriefFields({
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label>Style</Label>
+          <Label className="block">Style</Label>
           <Combobox
             ariaLabel="Style"
             options={styles}

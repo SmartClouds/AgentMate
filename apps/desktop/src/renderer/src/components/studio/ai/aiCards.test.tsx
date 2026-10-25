@@ -80,7 +80,11 @@ describe('GenerationCard', () => {
     const h = handlers();
     const lines = ['one', 'two', 'three', 'four', 'five', 'six'];
     const { user } = renderWithProviders(
-      <GenerationCard generation={generation()} output={lines} {...h} />,
+      <GenerationCard
+        generation={generation({ startedAt: Date.now() - 30_000 })}
+        output={lines}
+        {...h}
+      />,
     );
     const card = screen.getByRole('region', { name: 'AI run' });
     expect(card).toHaveAttribute('aria-busy', 'true');
