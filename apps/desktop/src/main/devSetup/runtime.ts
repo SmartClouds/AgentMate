@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { access, readdir, readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
+import { join } from 'node:path';
 import type {
   DevArch,
   DevDetection,
@@ -11,6 +12,7 @@ import type {
   DevSetupEnvironment,
   DevUpdateCheck,
 } from '@agentmat/core';
+import { app } from 'electron';
 import { IPC } from '../../shared/ipcChannels';
 import { runSdkManagerStreaming } from '../android/exec';
 import { getAndroidSdk, refreshAndroidSdk } from '../android/sdk';
@@ -158,6 +160,7 @@ function createService(): DevSetupService {
     findExecutable: (command) =>
       findExecutable(command, { env: env(), os, exists: isExecutableFile }),
     androidSdk: () => getAndroidSdk(),
+    studioToolsDir: join(app.getPath('userData'), 'studio-tools'),
     now: Date.now,
   });
 

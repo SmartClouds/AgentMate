@@ -26,7 +26,14 @@ export interface DevStack {
  * detector in the app. They exist because the answer lives in a file layout or in output that
  * needs special reading, not in a version line.
  */
-export type DevResolverId = 'flutter' | 'wsl' | 'android-sdk-piece';
+export type DevResolverId = 'flutter' | 'wsl' | 'android-sdk-piece' | 'studio-tool';
+
+/**
+ * What Studio installs into its own folder (`<userData>/studio-tools`): Python environments for its
+ * local voice engines and the model files they speak with. Found by the marker each install writes
+ * last, so a half-finished install never counts.
+ */
+export type StudioToolId = 'piper' | 'piper-voices' | 'omnivoice' | 'omnivoice-weights';
 
 export type AndroidSdkPiece =
   | 'cmdline-tools'
@@ -62,14 +69,18 @@ export type DetectSpec =
     }
   /** Installed when any of these exists (an app bundle, an IDE launcher). Templates as above. */
   | { kind: 'paths'; anyOf: readonly string[] }
-  | { kind: 'resolver'; id: DevResolverId; piece?: AndroidSdkPiece };
+  | { kind: 'resolver'; id: DevResolverId; piece?: AndroidSdkPiece; tool?: StudioToolId };
 
 export type DevManagedInstaller =
   | 'flutter-archive'
   | 'android-cmdline-tools'
   | 'android-package'
   | 'android-licenses'
-  | 'docker-launch';
+  | 'docker-launch'
+  /** A pinned Python and wheels, downloaded resumably and installed offline with checked hashes. */
+  | 'studio-python-env'
+  /** Model files pinned by hash, downloaded resumably. */
+  | 'studio-model-files';
 
 /** One way to install an item on one OS. Static data, never built from user input. */
 export type DevRecipe =
@@ -86,7 +97,7 @@ export type DevRecipe =
   | { kind: 'npm-global'; pkg: string }
   | { kind: 'dotnet-tool'; pkg: string }
   /** AgentMate runs its own installer (download, verify, unpack, or drive sdkmanager). */
-  | { kind: 'managed'; installer: DevManagedInstaller; sdkPackage?: string }
+  | { kind: 'managed'; installer: DevManagedInstaller; sdkPackage?: string; target?: StudioToolId }
   /** Arrives with another item, so there is nothing to run. */
   | { kind: 'bundled'; with: DevItemId }
   /** Needs a password, an interactive prompt or a system dialog, so it goes to the terminal. */

@@ -59,6 +59,19 @@ export async function startFakeTtsApis(): Promise<FakeTtsApis> {
         response.end(JSON.stringify({ error: { message: 'Invalid key' } }));
         return;
       }
+      if (path === '/v1/voices/add' && request.method === 'POST') {
+        const body = Buffer.concat(chunks).toString('latin1');
+        requests.push({ path: `POST ${path}`, text: body.includes('RIFF') ? 'wav' : 'none' });
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ voice_id: 'v-cloned', requires_verification: false }));
+        return;
+      }
+      if (path.startsWith('/v1/voices/') && request.method === 'DELETE') {
+        requests.push({ path: `DELETE ${path}`, text: '' });
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ status: 'ok' }));
+        return;
+      }
       if (path === '/v1/voices') {
         response.writeHead(200, { 'Content-Type': 'application/json' });
         response.end(JSON.stringify({ voices: [{ voice_id: 'v-rachel', name: 'Rachel' }] }));

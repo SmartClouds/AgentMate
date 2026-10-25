@@ -92,7 +92,14 @@ const MAX_STALLED_RECONNECTS = 6;
  * `gaveUp` is how an installer finds out that this stopped it for a dead connection, as opposed
  * to the person cancelling.
  */
-export function createDownloadHooks(run: RunHooks): {
+export function createDownloadHooks(
+  run: RunHooks,
+  /**
+   * For one file of several: the bytes of the files before it and of all of them, so the bar and
+   * the line under it count the whole set instead of starting again for each file.
+   */
+  batch?: { before: number; total: number },
+): {
   hooks: DownloadHooks;
   gaveUp: () => boolean;
 } {
@@ -102,12 +109,15 @@ export function createDownloadHooks(run: RunHooks): {
   let stalled = 0;
   return {
     hooks: {
-      onProgress: (transferred, total) =>
+      onProgress: (transferred, total) => {
+        const done = (batch?.before ?? 0) + transferred;
+        const all = batch?.total ?? total;
         run.onProgress({
           phase: 'downloading',
-          fraction: total > 0 ? transferred / total : null,
-          detail: describeTransfer(transferred, total),
-        }),
+          fraction: all > 0 ? Math.min(1, done / all) : null,
+          detail: describeTransfer(done, all),
+        });
+      },
       registerAbort: (abort) => {
         stop = abort;
         run.onCancel?.(abort);

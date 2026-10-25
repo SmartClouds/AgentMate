@@ -74,6 +74,7 @@ function job(overrides: Partial<RenderJobView> = {}): RenderJobView {
     reusedChunks: 0,
     capturedChunks: 8,
     hardware: null,
+    nonCommercial: [],
     ...overrides,
   };
 }
@@ -113,6 +114,20 @@ function renderDialog(
   );
   return { ...view, apply, onOpenDevSetup, doc };
 }
+
+describe('non-commercial narration in renders', () => {
+  it('warns before rendering a video narrated with a non-commercial voice, and marks the file', async () => {
+    const doc = withScenes('One', 'Two');
+    (doc.scenario.scenes[0] as { voiceRef: string | null }).voiceRef = 'omnivoice:p1';
+    renderDialog({ document: doc, jobs: [job({ nonCommercial: ['OmniVoice'] })] });
+    expect(
+      await screen.findByText(
+        'This video is for non-commercial use only: its narration uses OmniVoice.',
+      ),
+    ).toBeTruthy();
+    expect(await screen.findByText('Non-commercial')).toBeTruthy();
+  });
+});
 
 describe('RenderDialog', () => {
   it('says what the render makes and starts it with the file name typed', async () => {

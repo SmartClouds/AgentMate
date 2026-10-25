@@ -24,20 +24,31 @@ const BUSY_CODES = new Set(['EPERM', 'EBUSY']);
 const RENAME_RETRIES = 4;
 const RENAME_RETRY_DELAY_MS = 250;
 
+/**
+ * Where Studio's local voices come from (E37): Python builds (GitHub releases), wheels (PyPI,
+ * PyTorch and NVIDIA's CUDA libraries) and models (Hugging Face).
+ */
+export const STUDIO_TOOL_HOSTS: ReadonlySet<string> = new Set([
+  'github.com',
+  'files.pythonhosted.org',
+  'download.pytorch.org',
+  'download-r2.pytorch.org',
+  'pypi.nvidia.com',
+  'huggingface.co',
+]);
+
 /** Throws unless the address is https on a host the installers are allowed to fetch from. */
-export function assertAllowedUrl(address: string): URL {
+export function assertAllowedUrl(address: string, hosts: ReadonlySet<string> = ALLOWED_HOSTS): URL {
   let url: URL;
   try {
     url = new URL(address);
   } catch {
     throw new Error(REFUSED);
   }
-  if (
-    url.protocol !== 'https:' ||
-    !ALLOWED_HOSTS.has(url.hostname) ||
-    url.username ||
-    url.password
-  ) {
+  // Plain http only for a loopback fake server that a test run put on the list itself.
+  const secure =
+    url.protocol === 'https:' || (url.protocol === 'http:' && url.hostname === '127.0.0.1');
+  if (!secure || !hosts.has(url.hostname) || url.username || url.password) {
     throw new Error(REFUSED);
   }
   return url;
@@ -50,6 +61,8 @@ export interface ManagedSystemDeps {
     abort: () => void;
   };
   spawn: (options: SpawnStreamingOptions) => Promise<SpawnStreamingResult>;
+  /** The hosts this kit may download from; Flutter and Android's by default. */
+  allowedHosts?: ReadonlySet<string>;
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -100,12 +113,12 @@ export function createManagedKit(env: ManagedEnvironment, deps: ManagedSystemDep
 
     // async, so a refused address is a rejected promise like any other failure, not a throw.
     fetchText: async (url) => {
-      assertAllowedUrl(url);
+      assertAllowedUrl(url, deps.allowedHosts);
       return deps.netFetchText(url);
     },
 
     download: async (request, hooks) => {
-      assertAllowedUrl(request.url);
+      assertAllowedUrl(request.url, deps.allowedHosts);
       await mkdir(dirname(request.destPath), { recursive: true });
       const download = deps.createDownload();
       hooks.registerAbort(() => download.abort());

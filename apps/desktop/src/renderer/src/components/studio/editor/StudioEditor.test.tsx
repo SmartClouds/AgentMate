@@ -296,6 +296,7 @@ describe('StudioEditor rendering', () => {
       reusedChunks: 0,
       capturedChunks: 0,
       hardware: null,
+      nonCommercial: [],
     };
     const { user } = renderEditor({
       'studioRender.jobs': async () => [running],

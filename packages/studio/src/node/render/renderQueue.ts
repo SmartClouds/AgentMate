@@ -23,6 +23,7 @@ import {
   type RenderPlan,
 } from '../../render/plan.js';
 import { safeFolderName } from '../../text/names.js';
+import { nonCommercialNarration } from '../../voice/voices.js';
 import { BlobStore } from '../blobs/blobStore.js';
 import { JsonStore } from '../settings/jsonStore.js';
 import { pruneSceneCache } from './cachePrune.js';
@@ -128,6 +129,8 @@ const jobSchema = z.object({
   reusedChunks: z.number(),
   capturedChunks: z.number(),
   hardware: z.string().nullable(),
+  // Added in E37; older renders have none.
+  nonCommercial: z.array(z.string()).default([]),
 });
 type JobRecord = z.infer<typeof jobSchema>;
 const fileSchema = z.object({ version: z.literal(1), jobs: z.array(jobSchema) });
@@ -157,6 +160,7 @@ function view(job: JobRecord): RenderJobView {
     reusedChunks: job.reusedChunks,
     capturedChunks: job.capturedChunks,
     hardware: job.hardware,
+    nonCommercial: job.nonCommercial,
   };
 }
 
@@ -524,6 +528,7 @@ export function createStudioRender(deps: StudioRenderDeps): StudioRender {
         reusedChunks: 0,
         capturedChunks: 0,
         hardware: null,
+        nonCommercial: nonCommercialNarration(document.scenario.scenes.map((s) => s.voiceRef)),
       };
       await store.mutate((file) => {
         file.jobs.push(record);

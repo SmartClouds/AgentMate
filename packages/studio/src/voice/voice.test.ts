@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { CMN, YUE, ZH } from '../test/chineseTags.js';
 import { ZWNJ } from '../timeline/captions.js';
 import { speechChunks, timeLines, wordsByLength, wordsFromCharacters } from './text.js';
-import { formatVoiceRef, parseVoiceRef, voicesFor, voicesWithoutChinese } from './voices.js';
+import {
+  formatVoiceRef,
+  nonCommercialNarration,
+  parseVoiceRef,
+  piperVoicesFor,
+  voicesFor,
+  voicesWithoutChinese,
+} from './voices.js';
 import { encodeWav, parseWav } from './wav.js';
 
 const WANT = `می${ZWNJ}خواهم`;
@@ -133,5 +140,32 @@ describe('voices', () => {
     ];
     expect(voicesWithoutChinese(voices).map((v) => v.id)).toEqual(['5']);
     expect(voicesFor('elevenlabs', 'en', voices).map((v) => v.id)).toEqual([]);
+  });
+});
+
+describe('non-commercial narration', () => {
+  it('names OmniVoice and the non-commercial Piper voices, and nothing for free ones', () => {
+    expect(
+      nonCommercialNarration([
+        'omnivoice:p1',
+        'omnivoice:p2',
+        'piper:fa_IR-amir-medium',
+        'piper:en_US-hfc_female-medium',
+        'openai:marin',
+        'recording',
+        null,
+      ]),
+    ).toEqual(['OmniVoice', 'Piper HFC Female']);
+    expect(nonCommercialNarration(['piper:fa_IR-ganji-medium', 'azure:fa-IR-FaridNeural'])).toEqual(
+      [],
+    );
+  });
+
+  it('offers only the Piper voices installed, for the language', () => {
+    expect(piperVoicesFor('fa').map((v) => v.id)).toHaveLength(3);
+    expect(piperVoicesFor('fa-IR', ['fa_IR-ganji-medium']).map((v) => v.id)).toEqual([
+      'fa_IR-ganji-medium',
+    ]);
+    expect(piperVoicesFor('de')).toEqual([]);
   });
 });

@@ -117,6 +117,7 @@ describe('the render queue', () => {
       hardware: null,
       error: null,
       resumed: false,
+      nonCommercial: [],
     });
     expect(JSON.parse(await readFile(job.output as string, 'utf8'))).toMatchObject({ frames: 48 });
     expect(s.events.filter((e) => e.type === 'render-changed').length).toBeGreaterThanOrEqual(3);
@@ -134,6 +135,19 @@ describe('the render queue', () => {
     expect(progress.at(-1)).toMatchObject({ phase: 'encode', done: 48, total: 48 });
     // The code was served for the render's length only.
     expect(s.served).toEqual(['+v1', '-v1']);
+  });
+
+  it('records which voices in it are for non-commercial use only', async () => {
+    const s = await setup();
+    const job = await startAndWait(
+      s,
+      video((doc) => {
+        (doc.scenario.scenes[0] as { voiceRef: string | null }).voiceRef = 'omnivoice:p1';
+        (doc.scenario.scenes[1] as { voiceRef: string | null }).voiceRef =
+          'piper:en_US-hfc_female-medium';
+      }),
+    );
+    expect(job.nonCommercial).toEqual(['OmniVoice', 'Piper HFC Female']);
   });
 
   it('runs one render at a time, in the order they were asked for', async () => {

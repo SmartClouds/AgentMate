@@ -15,14 +15,20 @@ import type { CommandResult } from './managed';
 export function runCommand(
   command: string,
   args: readonly string[],
-  options: { token: CancelToken; onLine: (line: string) => void; idleMs: number },
+  options: {
+    token: CancelToken;
+    onLine: (line: string) => void;
+    idleMs: number;
+    /** Added to the app's own environment. */
+    env?: Record<string, string>;
+  },
 ): Promise<CommandResult> {
   return new Promise((resolve) => {
     let child: ReturnType<typeof spawn>;
     try {
       const { file, argv, verbatim } = toolSpawn(command, [...args]);
       child = spawn(file, argv, {
-        env: process.env,
+        env: options.env ? { ...process.env, ...options.env } : process.env,
         windowsHide: true,
         windowsVerbatimArguments: verbatim,
         // Its own process group off Windows, so stopping it takes down what it started too.

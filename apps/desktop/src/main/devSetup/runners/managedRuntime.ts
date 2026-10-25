@@ -1,17 +1,21 @@
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { mkdir, readFile, statfs, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { join, win32 } from 'node:path';
+import { dirname, join, win32 } from 'node:path';
 import {
   androidPackagesFor,
   type DevArch,
   type DevOs,
   defaultSdkInstallRoot,
 } from '@agentmat/core';
+import { parseNvidiaSmi } from '@agentmat/studio';
 import { app, net } from 'electron';
 import { runSdkManagerStreaming } from '../../android/exec';
 import { getAndroidSdk, refreshAndroidSdk } from '../../android/sdk';
 import { killProcessTree, spawnStreaming } from '../../process/spawnStreaming';
+import { studioPackageRoot } from '../../studio/host';
+import { isE2E } from '../../testMode';
 import { ResumableDownload } from '../../updater/resumableDownload';
 import { runProbe } from '../probe';
 import { addToUserPath } from '../userPath';
@@ -21,7 +25,8 @@ import { runCommand } from './commandRunner';
 import { createFlutterInstaller } from './flutterInstaller';
 import { createDockerLauncher } from './launchDocker';
 import type { ManagedRunners } from './managedDispatch';
-import { createManagedKit } from './managedSystem';
+import { createManagedKit, STUDIO_TOOL_HOSTS } from './managedSystem';
+import { createStudioToolsInstaller } from './studioTools';
 
 /**
  * Builds the installers that fetch and unpack things themselves (Flutter, the Android tools,
@@ -125,5 +130,67 @@ export function createManagedRunners(): ManagedRunners {
       now: Date.now,
     }),
     androidPackages: androidPackagesFor(arch),
+    studioTools: createStudioToolsInstaller({
+      kit: createManagedKit(
+        { os, arch, home, workDir: join(app.getPath('userData'), 'studio-tools', 'downloads') },
+        {
+          netFetchText,
+          createDownload: () => new ResumableDownload(),
+          spawn: spawnStreaming,
+          allowedHosts: studioToolHosts(),
+        },
+      ),
+      root: studioToolsRoot(),
+      readLock: async (name) =>
+        JSON.parse(
+          await readFile(join(studioPackageRoot(), 'assets', 'tools', 'locks', name), 'utf8'),
+        ),
+      gpu: async () => {
+        const answer = await runProbe('nvidia-smi', [
+          '--query-gpu=name,driver_version,memory.total',
+          '--format=csv,noheader,nounits',
+        ]);
+        return answer.ok ? parseNvidiaSmi(answer.output) : null;
+      },
+      runCommand,
+      writeText: async (path, text) => {
+        await mkdir(dirname(path), { recursive: true });
+        await writeFile(path, text, 'utf8');
+      },
+      freeBytes: async (path) => {
+        try {
+          await mkdir(path, { recursive: true });
+          const stats = await statfs(path);
+          return stats.bavail * stats.bsize;
+        } catch {
+          return null;
+        }
+      },
+      now: Date.now,
+      mapUrl: studioToolsUrl(),
+    }),
   };
+}
+
+/** Where Studio installs its local voices: `<userData>/studio-tools`. */
+export function studioToolsRoot(): string {
+  return join(app.getPath('userData'), 'studio-tools');
+}
+
+/**
+ * The e2e suite serves Studio's tools from a fake server on loopback (AGENTMATE_STUDIO_TOOLS_URL),
+ * as `<base>/<host>/<path>`. Only in a test run; a real install fetches from the real hosts.
+ */
+function studioToolsUrl(): ((url: string) => string) | undefined {
+  const base = isE2E ? process.env.AGENTMATE_STUDIO_TOOLS_URL : undefined;
+  if (!base) return undefined;
+  return (url) => {
+    const parsed = new URL(url);
+    return `${base}/${parsed.hostname}${parsed.pathname}`;
+  };
+}
+
+function studioToolHosts(): ReadonlySet<string> {
+  const base = isE2E ? process.env.AGENTMATE_STUDIO_TOOLS_URL : undefined;
+  return base ? new Set([...STUDIO_TOOL_HOSTS, new URL(base).hostname]) : STUDIO_TOOL_HOSTS;
 }

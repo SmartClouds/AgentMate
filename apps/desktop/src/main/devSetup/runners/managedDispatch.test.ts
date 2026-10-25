@@ -36,6 +36,16 @@ function runners(): ManagedRunners & { calls: string[] } {
       }),
     },
     dockerLaunch: { run: done('docker-launch') },
+    studioTools: {
+      runEnv: vi.fn(async (env: string) => {
+        calls.push(`env:${env}`);
+        return OK;
+      }),
+      runModels: vi.fn(async (target: string) => {
+        calls.push(`models:${target}`);
+        return OK;
+      }),
+    },
     androidPackages: {
       'android-emulator': 'emulator',
       'android-system-image': 'system-images;android-36;google_apis;x86_64',
@@ -47,6 +57,32 @@ const managed = (installer: Extract<DevRecipe, { kind: 'managed' }>['installer']
   ({ kind: 'managed', installer }) as Extract<DevRecipe, { kind: 'managed' }>;
 
 describe('runManagedRecipe', () => {
+  it("runs Studio's environment and model installers for their targets, installing again to update", async () => {
+    const r = runners();
+    const studio = (installer: 'studio-python-env' | 'studio-model-files', target?: string) =>
+      ({ kind: 'managed', installer, target }) as Extract<DevRecipe, { kind: 'managed' }>;
+    await runManagedRecipe('studio-piper', studio('studio-python-env', 'piper'), hooks, r);
+    await runManagedRecipe('studio-omnivoice', studio('studio-python-env', 'omnivoice'), hooks, r, {
+      intent: 'update',
+      path: null,
+    });
+    await runManagedRecipe(
+      'studio-piper-voices',
+      studio('studio-model-files', 'piper-voices'),
+      hooks,
+      r,
+    );
+    expect(r.calls).toEqual(['env:piper', 'env:omnivoice', 'models:piper-voices']);
+    const wrong = await runManagedRecipe(
+      'x',
+      studio('studio-python-env', 'piper-voices'),
+      hooks,
+      r,
+    );
+    expect(wrong.message).toBe('There is no Studio tool set for that item.');
+    expect((await runManagedRecipe('x', studio('studio-model-files'), hooks, r)).ok).toBe(false);
+  });
+
   it('runs the Flutter installer for the Flutter archive', async () => {
     const r = runners();
 

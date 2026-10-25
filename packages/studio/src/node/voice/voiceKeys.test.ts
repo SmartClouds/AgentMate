@@ -44,6 +44,12 @@ describe('voice engine keys', () => {
       ['gemini', 'app', 'Add a Gemini API key in Settings > AI.'],
       ['elevenlabs', 'studio', 'Add an ElevenLabs key in Settings > Studio.'],
       ['azure', 'studio', 'Add an Azure Speech key and region in Settings > Studio.'],
+      ['piper', 'none', 'Install Piper and its voices from Agent Tools, Dev Setup (Studio).'],
+      [
+        'omnivoice',
+        'none',
+        'Install OmniVoice and its model from Agent Tools, Dev Setup (Studio).',
+      ],
     ]);
     expect(engines[0]).toMatchObject({ pricePerMillionChars: 15, retiresOn: '2027-01-06' });
     expect((await voices.keys()).openai).toBe('sk-1');
@@ -99,5 +105,67 @@ describe('voice engine keys', () => {
     await expect(voices.setKey({ engine: 'elevenlabs', key: 'x' })).rejects.toThrow(
       'Voices are not available',
     );
+  });
+});
+
+describe('local engines', () => {
+  const profile = (id: string, at: number) => ({ id, name: `Voice ${id}`, consent: { at } });
+
+  it('offers the installed Piper voices for the language, flagged when non-commercial', async () => {
+    const { host } = fakeHost();
+    host.local = async () => ({
+      piper: {
+        python: 'py',
+        voicesDir: 'v',
+        voices: ['fa_IR-amir-medium', 'en_US-hfc_female-medium'],
+      },
+      omnivoice: null,
+    });
+    const voices = createVoiceKeys(host);
+    const piper = (await voices.engines()).find((e) => e.id === 'piper');
+    expect(piper).toMatchObject({
+      problem: null,
+      local: true,
+      keyIn: 'none',
+      nonCommercial: false,
+    });
+    expect(await voices.voices({ engine: 'piper', lang: 'fa' })).toEqual([
+      {
+        id: 'fa_IR-amir-medium',
+        label: 'Amir',
+        locale: 'fa-IR',
+        gender: 'male',
+        nonCommercial: false,
+        license: 'CC0',
+      },
+    ]);
+    expect((await voices.voices({ engine: 'piper', lang: 'en' }))[0]).toMatchObject({
+      nonCommercial: true,
+      license: 'CC BY-NC-SA 4.0',
+    });
+  });
+
+  it('asks for the voices when only Piper is there, and a profile before OmniVoice can speak', async () => {
+    const { host } = fakeHost();
+    host.local = async () => ({
+      piper: { python: 'py', voicesDir: 'v', voices: [] },
+      omnivoice: { python: 'py', modelDir: 'm' },
+    });
+    const none = createVoiceKeys(host, async () => [profile('p0', 0)]);
+    const engines = await none.engines();
+    expect(engines.find((e) => e.id === 'piper')?.problem).toBe(
+      'Install the Piper voices from Agent Tools, Dev Setup (Studio).',
+    );
+    expect(engines.find((e) => e.id === 'omnivoice')).toMatchObject({
+      problem: 'Make a voice profile first: Voices, then New voice.',
+      nonCommercial: true,
+      clones: true,
+    });
+    const some = createVoiceKeys(host, async () => [profile('p0', 0), profile('p1', 5)]);
+    expect((await some.engines()).find((e) => e.id === 'omnivoice')?.problem).toBeNull();
+    // Only profiles made with consent are offered.
+    expect(await some.voices({ engine: 'omnivoice', lang: 'fa' })).toEqual([
+      { id: 'p1', label: 'Voice p1', nonCommercial: true, license: 'CC BY-NC 4.0' },
+    ]);
   });
 });

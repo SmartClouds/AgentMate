@@ -37,6 +37,7 @@ import type {
   VideoSession,
   VideoSummary,
   VoiceEngineView,
+  VoiceProfileView,
   VoiceView,
 } from '../api.js';
 import type { EditOp } from '../document/ops.js';
@@ -46,7 +47,7 @@ import { sceneUrl } from '../scenes/url.js';
 import { directionOf } from '../text/languages.js';
 import { newId, safeFolderName } from '../text/names.js';
 import { flicksToSeconds } from '../time/flicks.js';
-import type { TtsEngineId } from '../voice/voices.js';
+import type { VoiceEngineId } from '../voice/voices.js';
 import {
   createStudioAi,
   type SceneCheckHost,
@@ -70,8 +71,11 @@ import { createStudioRender, type StudioRenderHost } from './render/renderQueue.
 import { type StudioAssets, studioAssets } from './scenes/assets.js';
 import { readTree, type TreeManifest, treeFile, treeFromFiles } from './scenes/codeTree.js';
 import { JsonStore } from './settings/jsonStore.js';
+import { cloneElevenLabsVoice, deleteElevenLabsVoice } from './voice/engines.js';
+import { createLocalVoices } from './voice/localVoices.js';
 import { createNarrator } from './voice/narrator.js';
 import { createVoiceKeys, type StudioKeyEngine, type StudioVoiceHost } from './voice/voiceKeys.js';
+import { type VoiceProfile, VoiceProfiles } from './voice/voiceProfiles.js';
 
 /**
  * Studio's service: the library of videos, where each project keeps them, and the open videos
@@ -222,7 +226,7 @@ export interface StudioService {
     variant: MediaVariant;
   }): Promise<string | null>;
   voiceEngines(): Promise<VoiceEngineView[]>;
-  voices(input: { engine: TtsEngineId; lang: string }): Promise<VoiceView[]>;
+  voices(input: { engine: VoiceEngineId; lang: string }): Promise<VoiceView[]>;
   setVoiceKey(input: {
     engine: StudioKeyEngine;
     key: string | null;
@@ -245,6 +249,33 @@ export interface StudioService {
   }): Promise<EditResponse>;
   /** Captions a scene from its narration, where its words are spoken when it has a voice. */
   captionScene(input: { videoId: string; sceneId: string }): Promise<EditResponse>;
+  voiceProfiles(): Promise<VoiceProfileView[]>;
+  /** What a take says and how long it is, before a profile is made from it. */
+  transcribeTake(input: {
+    bytes: Uint8Array;
+    mimeType: string;
+    lang: string;
+  }): Promise<{ text: string; seconds: number }>;
+  createVoiceProfile(input: {
+    bytes: Uint8Array;
+    mimeType: string;
+    name: string;
+    lang: string;
+    transcript: string;
+    consent: true;
+  }): Promise<VoiceProfileView>;
+  updateVoiceProfile(input: {
+    profileId: string;
+    name?: string;
+    transcript?: string;
+  }): Promise<VoiceProfileView>;
+  /** Uploads the profile's recording to ElevenLabs as an instant voice clone. */
+  cloneVoiceProfile(input: {
+    profileId: string;
+    acknowledgeUpload: true;
+  }): Promise<VoiceProfileView>;
+  /** Removes a profile, and its clone in ElevenLabs first when there is one. */
+  removeVoiceProfile(input: { profileId: string }): Promise<void>;
   renderTools(): Promise<RenderToolsView>;
   renderEstimate(input: { videoId: string }): Promise<RenderEstimateView>;
   startRender(input: StartRenderInput): Promise<RenderJobView>;
@@ -629,11 +660,46 @@ export function createStudioService(host: StudioHost): StudioService {
     now,
   });
 
-  const voiceKeys = createVoiceKeys(host.voice);
+  const voiceProfiles = new VoiceProfiles(join(host.dataDir, 'voices'), now, newId);
+  const voiceKeys = createVoiceKeys(host.voice, () => voiceProfiles.list());
   const narrationCache = async (videoId: string) => {
     const file = await settingsStore.read();
     return join(file.cacheDir ?? host.defaultCacheDir, videoId, 'voice');
   };
+  const localVoices = createLocalVoices({
+    host: host.voice,
+    profiles: voiceProfiles,
+    workDir: async () =>
+      join((await settingsStore.read()).cacheDir ?? host.defaultCacheDir, 'voice'),
+    assetsRoot: assets.root,
+    tools: ffmpegTools,
+    newId,
+  });
+
+  function profileView(profile: VoiceProfile): VoiceProfileView {
+    return {
+      id: profile.id,
+      name: profile.name,
+      lang: profile.lang,
+      seconds: profile.seconds,
+      transcript: profile.transcript,
+      createdAt: profile.createdAt,
+      consentAt: profile.consent.at,
+      elevenlabsVoiceId: profile.bindings.elevenlabs ?? null,
+    };
+  }
+
+  async function requireProfile(profileId: string): Promise<VoiceProfile> {
+    const profile = await voiceProfiles.get(profileId);
+    if (!profile) throw new Error('That voice profile is not there any more.');
+    return profile;
+  }
+
+  async function elevenLabsKey(): Promise<string> {
+    const key = (await voiceKeys.keys()).elevenlabs;
+    if (!key) throw new Error('Add an ElevenLabs key in Settings > Studio first.');
+    return key;
+  }
   const narrator = createNarrator({
     tools: ffmpegTools,
     keys: () => voiceKeys.keys(),
@@ -645,6 +711,7 @@ export function createStudioService(host: StudioHost): StudioService {
     notify: host.notify,
     newId,
     now,
+    local: () => localVoices.speakers(),
   });
 
   async function closeSession(videoId: string): Promise<void> {
@@ -1123,6 +1190,74 @@ export function createStudioService(host: StudioHost): StudioService {
       return response(store, store.seq, document);
     },
 
+    async voiceProfiles() {
+      return (await voiceProfiles.list()).map(profileView);
+    },
+
+    async transcribeTake({ bytes, mimeType, lang }) {
+      const take = await localVoices.prepareTake(bytes, mimeType);
+      try {
+        const text = (await host.voice?.transcribe?.({ wav: take.wav, lang })) ?? null;
+        return { text: text?.trim() ?? '', seconds: take.seconds };
+      } finally {
+        await rm(take.wav, { force: true });
+      }
+    },
+
+    async createVoiceProfile({ bytes, mimeType, name, lang, transcript, consent }) {
+      const take = await localVoices.prepareTake(bytes, mimeType);
+      try {
+        const profile = await voiceProfiles.create({
+          name,
+          lang,
+          wav: take.wav,
+          seconds: take.seconds,
+          transcript,
+          consent,
+        });
+        return profileView(profile);
+      } finally {
+        await rm(take.wav, { force: true });
+      }
+    },
+
+    async updateVoiceProfile({ profileId, name, transcript }) {
+      return profileView(await voiceProfiles.update(profileId, { name, transcript }));
+    },
+
+    async cloneVoiceProfile({ profileId, acknowledgeUpload }) {
+      const profile = await requireProfile(profileId);
+      if (acknowledgeUpload !== true) {
+        throw new Error('Confirm that the recording may be uploaded to ElevenLabs.');
+      }
+      if (!profile.consent?.at) {
+        throw new Error('This voice profile has no consent recorded, so it cannot be cloned.');
+      }
+      if (profile.bindings.elevenlabs) return profileView(profile);
+      const voiceId = await cloneElevenLabsVoice({
+        key: await elevenLabsKey(),
+        name: profile.name,
+        wav: new Uint8Array(await readFile(voiceProfiles.recording(profile.id))),
+        fetch: host.voice?.fetch ?? fetch,
+        baseUrl: host.voice?.baseUrl,
+      });
+      return profileView(await voiceProfiles.update(profile.id, { elevenlabs: voiceId }));
+    },
+
+    async removeVoiceProfile({ profileId }) {
+      const profile = await requireProfile(profileId);
+      // The copy in ElevenLabs goes first; if it cannot, the profile stays so nothing is orphaned.
+      if (profile.bindings.elevenlabs) {
+        await deleteElevenLabsVoice({
+          key: await elevenLabsKey(),
+          voiceId: profile.bindings.elevenlabs,
+          fetch: host.voice?.fetch ?? fetch,
+          baseUrl: host.voice?.baseUrl,
+        });
+      }
+      await voiceProfiles.remove(profile.id);
+    },
+
     async renderTools() {
       return render.tools();
     },
@@ -1173,6 +1308,7 @@ export function createStudioService(host: StudioHost): StudioService {
 
     async shutdown() {
       await narrator.shutdown();
+      await localVoices.stop();
       await media.shutdown();
       await render.shutdown();
       await ai.shutdown();

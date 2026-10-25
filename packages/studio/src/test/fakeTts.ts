@@ -54,6 +54,25 @@ export async function startFakeTts(): Promise<FakeTtsServer> {
         res.end(JSON.stringify({ error: { message: 'Incorrect API key provided.' } }));
         return;
       }
+      if (path === '/v1/voices/add' && req.method === 'POST') {
+        // Multipart: the name field and a WAV file, which is all that is checked here.
+        const named = /name="name"\r\n\r\n([^\r]*)/.exec(body)?.[1];
+        const hasFile = /name="files"; filename="[^"]+\.wav"/.test(body) && body.includes('RIFF');
+        res.writeHead(named && hasFile ? 200 : 400, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify(
+            named && hasFile
+              ? { voice_id: `cloned-${named}`, requires_verification: false }
+              : { detail: { message: 'A name and at least one file are required.' } },
+          ),
+        );
+        return;
+      }
+      if (path.startsWith('/v1/voices/') && req.method === 'DELETE') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ status: 'ok' }));
+        return;
+      }
       if (path === '/v1/voices') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(

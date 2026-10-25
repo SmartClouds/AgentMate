@@ -32,6 +32,7 @@ import type {
   StyleReferenceView,
   VideoSummary,
   VoiceEngineView,
+  VoiceProfileView,
   VoiceView,
 } from '@agentmat/studio';
 import { ipcRenderer } from 'electron';
@@ -169,6 +170,30 @@ export function createStudioAudio() {
     }): Promise<EditResponse> => ipcRenderer.invoke(IPC.studioAudio.record, input),
     captionScene: (videoId: string, sceneId: string): Promise<EditResponse> =>
       ipcRenderer.invoke(IPC.studioAudio.captionScene, { videoId, sceneId }),
+    profiles: (): Promise<VoiceProfileView[]> => ipcRenderer.invoke(IPC.studioAudio.profiles),
+    transcribeTake: (input: {
+      bytes: Uint8Array;
+      mimeType: string;
+      lang: string;
+    }): Promise<{ text: string; seconds: number }> =>
+      ipcRenderer.invoke(IPC.studioAudio.transcribeTake, input),
+    createProfile: (input: {
+      bytes: Uint8Array;
+      mimeType: string;
+      name: string;
+      lang: string;
+      transcript: string;
+      consent: true;
+    }): Promise<VoiceProfileView> => ipcRenderer.invoke(IPC.studioAudio.createProfile, input),
+    updateProfile: (input: {
+      profileId: string;
+      name?: string;
+      transcript?: string;
+    }): Promise<VoiceProfileView> => ipcRenderer.invoke(IPC.studioAudio.updateProfile, input),
+    cloneProfile: (profileId: string): Promise<VoiceProfileView> =>
+      ipcRenderer.invoke(IPC.studioAudio.cloneProfile, { profileId, acknowledgeUpload: true }),
+    removeProfile: (profileId: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.studioAudio.removeProfile, { profileId }),
   };
 }
 

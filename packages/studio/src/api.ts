@@ -409,11 +409,22 @@ export interface ImportResult {
   skipped: { path: string; reason: string }[];
 }
 
+const recording = {
+  /** The recording as the browser made it (WebM with Opus, usually). */
+  bytes: z
+    .instanceof(Uint8Array)
+    .refine(
+      (b) => b.length > 0 && b.length <= 200 * 1024 * 1024,
+      'The recording is empty or too long.',
+    ),
+  mimeType: z.string().max(100),
+};
+
 const voiceRef = z
   .string()
   .max(200)
   .regex(
-    /^(openai|gemini|elevenlabs|azure):[A-Za-z0-9_.-]{1,100}$/,
+    /^(openai|gemini|elevenlabs|azure|piper|omnivoice):[A-Za-z0-9_.-]{1,100}$/,
     'Pick one of the offered voices.',
   );
 
@@ -422,21 +433,29 @@ export const studioAudioInputs = {
   jobs: z.object({ videoId: id }),
   jobRef: z.object({ videoId: id, jobId: id }),
   voices: z.object({
-    engine: z.enum(['openai', 'gemini', 'elevenlabs', 'azure']),
+    engine: z.enum(['openai', 'gemini', 'elevenlabs', 'azure', 'piper', 'omnivoice']),
     lang: z.string().min(2).max(35),
   }),
-  record: z.object({
-    videoId: id,
-    sceneId: id,
-    /** The recording as the browser made it (WebM with Opus, usually). */
-    bytes: z
-      .instanceof(Uint8Array)
-      .refine(
-        (b) => b.length > 0 && b.length <= 200 * 1024 * 1024,
-        'The recording is empty or too long.',
-      ),
-    mimeType: z.string().max(100),
+  record: z.object({ videoId: id, sceneId: id, ...recording }),
+  /** What a take for a voice profile says, by speech recognition, before the profile is made. */
+  transcribeTake: z.object({ ...recording, lang: z.string().min(2).max(35) }),
+  createProfile: z.object({
+    ...recording,
+    name: z.string().trim().min(1).max(80),
+    lang: z.string().min(2).max(35),
+    transcript: z.string().max(5000),
+    consent: z.literal(true, {
+      error: 'Confirm that this is your voice, or that you have permission to use it.',
+    }),
   }),
+  profileRef: z.object({ profileId: id }),
+  updateProfile: z.object({
+    profileId: id,
+    name: z.string().trim().min(1).max(80).optional(),
+    transcript: z.string().max(5000).optional(),
+  }),
+  /** Uploads the profile's recording to the person's ElevenLabs account, once they agreed to it. */
+  cloneProfile: z.object({ profileId: id, acknowledgeUpload: z.literal(true) }),
   captionScene: z.object({ videoId: id, sceneId: id }),
   setKey: z.object({
     engine: z.enum(['elevenlabs', 'azure']),
@@ -473,14 +492,23 @@ export interface NarrationJobView {
 }
 
 export interface VoiceEngineView {
-  id: 'openai' | 'gemini' | 'elevenlabs' | 'azure';
+  id: 'openai' | 'gemini' | 'elevenlabs' | 'azure' | 'piper' | 'omnivoice';
   label: string;
   /** Why it cannot be used yet (no key, the vault is locked), or null when it can. */
   problem: string | null;
   /** The vault holds its key and is locked; unlocking it makes the engine usable. */
   locked: boolean;
-  /** Where its key is set: the app's AI settings (OpenAI, Gemini) or Studio's own (the rest). */
-  keyIn: 'app' | 'studio';
+  /**
+   * Where its key is set: the app's AI settings (OpenAI, Gemini) or Studio's own (ElevenLabs,
+   * Azure); none for an engine on this computer.
+   */
+  keyIn: 'app' | 'studio' | 'none';
+  /** Runs on this computer, installed from Dev Setup. */
+  local: boolean;
+  /** Everything it speaks is for non-commercial use only (OmniVoice's weights). */
+  nonCommercial: boolean;
+  /** Speaks with voice profiles, cloned from a recording. */
+  clones: boolean;
   pricePerMillionChars: number | null;
   retiresOn: string | null;
 }
@@ -490,6 +518,26 @@ export interface VoiceView {
   label: string;
   locale?: string;
   gender?: 'female' | 'male';
+  /** For non-commercial use only (the voice's license, or the engine's). */
+  nonCommercial?: boolean;
+  license?: string;
+}
+
+/** What the person agrees to before a voice profile is made, shown beside the checkbox and stored. */
+export const CONSENT_STATEMENT =
+  'This is my own voice, or I have the permission of the person whose voice it is to make and use a copy of it.';
+
+/** A recording of someone's voice that cloning engines speak with, made with their consent. */
+export interface VoiceProfileView {
+  id: string;
+  name: string;
+  lang: string;
+  seconds: number;
+  transcript: string;
+  createdAt: number;
+  consentAt: number;
+  /** Uploaded to the person's ElevenLabs account, where it can be picked as a voice. */
+  elevenlabsVoiceId: string | null;
 }
 
 export const studioRenderInputs = {
@@ -543,6 +591,11 @@ export interface RenderJobView {
   capturedChunks: number;
   /** The hardware encoder used, or null for the software one. */
   hardware: string | null;
+  /**
+   * The voices in it that are for non-commercial use only (OmniVoice, some Piper voices), as the
+   * render recorded them when it started; empty when the file is free to use commercially.
+   */
+  nonCommercial: string[];
 }
 
 export interface RenderToolsView {

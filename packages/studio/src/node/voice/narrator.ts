@@ -17,6 +17,7 @@ import {
 import { speechChunks, timeLines, type WordTiming, wordsByLength } from '../../voice/text.js';
 import {
   formatVoiceRef,
+  isLocalEngine,
   parseVoiceRef,
   RECORDED_VOICE,
   type VoiceRef,
@@ -25,7 +26,7 @@ import { parseWav } from '../../voice/wav.js';
 import type { VideoStore } from '../project/videoStore.js';
 import { type FfmpegTools, runTool } from '../render/ffmpegTool.js';
 import { concatList } from '../render/renderJob.js';
-import { type EngineKeys, speak, TtsError } from './engines.js';
+import { type EngineKeys, type LocalSpeakers, speak, TtsError } from './engines.js';
 
 /**
  * Narration for a video's scenes. Each scene's text is cut into pieces and spoken by the chosen
@@ -51,6 +52,8 @@ export interface NarratorDeps {
   now(): number;
   /** Waits between tries after a rate limit or a server error. */
   retryDelaysMs?: readonly number[];
+  /** The engines installed on this computer (Piper, OmniVoice). */
+  local?: () => Promise<LocalSpeakers>;
 }
 
 export interface Narrator {
@@ -112,7 +115,8 @@ export function createNarrator(deps: NarratorDeps): Narrator {
     keys: EngineKeys,
     signal: AbortSignal,
   ) {
-    const model = STUDIO_TTS[ref.engine].model ?? '';
+    // A local engine's voice names its model (a Piper voice file, an OmniVoice profile).
+    const model = isLocalEngine(ref.engine) ? ref.engine : (STUDIO_TTS[ref.engine].model ?? '');
     const key = createHash('sha256')
       .update(JSON.stringify([ref.engine, ref.voice, model, lang, text]))
       .digest('hex')
@@ -137,6 +141,7 @@ export function createNarrator(deps: NarratorDeps): Narrator {
           fetch: deps.fetch,
           signal,
           baseUrl: deps.baseUrl,
+          local: await deps.local?.(),
         });
         if (spoken.words) await writeFile(wordsFile, JSON.stringify(spoken.words));
         const temp = `${wav}.part`;

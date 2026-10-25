@@ -83,6 +83,10 @@ function rig(
     listDir: async (path) => dirs.get(path) ?? [],
     findExecutable: async (command) => onPath.get(command) ?? null,
     androidSdk: async () => sdk.value,
+    studioToolsDir:
+      os === 'win32'
+        ? 'C:\\Users\\me\\AppData\\Roaming\\AgentMate\\studio-tools'
+        : '/home/me/.config/AgentMate/studio-tools',
     now: () => clock.now,
   };
   return { deps, probe, files, dirs, clock, sdk, onPath };
@@ -649,5 +653,58 @@ describe('the detector as a whole', () => {
     expect(detector.peek(['node']).node).toBeUndefined();
     await detector.detect('node');
     expect(r.probe).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("Studio's local voices", () => {
+  const TOOLS = 'C:\\Users\\me\\AppData\\Roaming\\AgentMate\\studio-tools';
+
+  it('finds Piper once its install marker and its Python are both there', async () => {
+    const r = rig();
+    expect(await detect(r, 'studio-piper')).toEqual({ state: 'absent' });
+    r.files.set(
+      `${TOOLS}\\piper.installed.json`,
+      JSON.stringify({
+        tool: 'piper',
+        version: '1.8.0',
+        installedAt: 1,
+        lock: 'piper-win-x64-cpu.json',
+      }),
+    );
+    // A marker without its environment (deleted by hand) does not count.
+    expect(await detect(r, 'studio-piper')).toEqual({ state: 'absent' });
+    r.files.set(`${TOOLS}\\envs\\piper\\Scripts\\python.exe`, '');
+    expect(await detect(r, 'studio-piper')).toEqual({
+      state: 'found',
+      version: '1.8.0',
+      path: `${TOOLS}\\envs\\piper\\Scripts\\python.exe`,
+      onPath: true,
+    });
+  });
+
+  it('finds model files only while every file the marker lists is in place, and ignores a broken marker', async () => {
+    const r = rig({ os: 'linux' });
+    const tools = '/home/me/.config/AgentMate/studio-tools';
+    r.files.set(
+      `${tools}/omnivoice-weights.installed.json`,
+      JSON.stringify({
+        tool: 'omnivoice-weights',
+        version: null,
+        installedAt: 1,
+        files: [
+          { path: 'model.safetensors', size: 10 },
+          { path: 'audio_tokenizer/model.safetensors', size: 5 },
+        ],
+      }),
+    );
+    r.files.set(`${tools}/models/omnivoice-weights/model.safetensors`, '');
+    expect(await detect(r, 'studio-omnivoice-weights')).toEqual({ state: 'absent' });
+    r.files.set(`${tools}/models/omnivoice-weights/audio_tokenizer/model.safetensors`, '');
+    expect(await detect(r, 'studio-omnivoice-weights')).toMatchObject({
+      state: 'found',
+      path: `${tools}/models/omnivoice-weights`,
+    });
+    r.files.set(`${tools}/piper-voices.installed.json`, '{ broken');
+    expect(await detect(r, 'studio-piper-voices')).toEqual({ state: 'absent' });
   });
 });

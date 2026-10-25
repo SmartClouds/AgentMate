@@ -19,6 +19,14 @@ export interface ManagedRunners {
     runPackage: (sdkPackage: string, hooks: RunHooks) => Promise<RunResult>;
   };
   dockerLaunch: { run: (hooks: RunHooks) => Promise<RunResult> };
+  /** Studio's local voices: Python environments and model files (E37). */
+  studioTools: {
+    runEnv: (env: 'piper' | 'omnivoice', hooks: RunHooks) => Promise<RunResult>;
+    runModels: (
+      target: 'piper-voices' | 'omnivoice-weights',
+      hooks: RunHooks,
+    ) => Promise<RunResult>;
+  };
   /** The sdkmanager package for each Android item, for this CPU. */
   androidPackages: Readonly<Record<DevItemId, string>>;
 }
@@ -37,6 +45,15 @@ function cannotUpdate(): Promise<RunResult> {
     code: null,
     cancelled: false,
     message: 'This step cannot be updated.',
+  });
+}
+
+function noTarget(): Promise<RunResult> {
+  return Promise.resolve({
+    ok: false,
+    code: null,
+    cancelled: false,
+    message: 'There is no Studio tool set for that item.',
   });
 }
 
@@ -71,5 +88,16 @@ export function runManagedRecipe(
     }
     case 'docker-launch':
       return updating ? cannotUpdate() : runners.dockerLaunch.run(hooks);
+    // Installing again is the update: it follows the lock file this copy of AgentMate carries.
+    case 'studio-python-env':
+      if (recipe.target === 'piper' || recipe.target === 'omnivoice') {
+        return runners.studioTools.runEnv(recipe.target, hooks);
+      }
+      return noTarget();
+    case 'studio-model-files':
+      if (recipe.target === 'piper-voices' || recipe.target === 'omnivoice-weights') {
+        return runners.studioTools.runModels(recipe.target, hooks);
+      }
+      return noTarget();
   }
 }

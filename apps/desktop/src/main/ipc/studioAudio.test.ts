@@ -179,6 +179,44 @@ describe('voice channels', () => {
     ).rejects.toThrow(/ffmpeg/);
   });
 
+  it('lists voice profiles, needs ffmpeg for a take, and checks consent before making one', async () => {
+    expect(await invoke(IPC.studioAudio.profiles)).toEqual([]);
+    const take = { bytes: new Uint8Array([1, 2, 3]), mimeType: 'audio/webm' };
+    await expect(invoke(IPC.studioAudio.transcribeTake, { ...take, lang: 'fa' })).rejects.toThrow(
+      /^Voice profiles need ffmpeg/,
+    );
+    await expect(
+      invoke(IPC.studioAudio.createProfile, {
+        ...take,
+        name: 'Me',
+        lang: 'fa',
+        transcript: '',
+        consent: false,
+      }),
+    ).rejects.toThrow('That Studio request is not valid (consent)');
+    await expect(
+      invoke(IPC.studioAudio.createProfile, {
+        ...take,
+        name: 'Me',
+        lang: 'fa',
+        transcript: '',
+        consent: true,
+      }),
+    ).rejects.toThrow(/^Voice profiles need ffmpeg/);
+    for (const [channel, input] of [
+      [IPC.studioAudio.updateProfile, { profileId: 'p1', name: 'X' }],
+      [IPC.studioAudio.cloneProfile, { profileId: 'p1', acknowledgeUpload: true }],
+      [IPC.studioAudio.removeProfile, { profileId: 'p1' }],
+    ] as const) {
+      await expect(invoke(channel, input)).rejects.toThrow(
+        'That voice profile is not there any more.',
+      );
+    }
+    await expect(invoke(IPC.studioAudio.cloneProfile, { profileId: 'p1' })).rejects.toThrow(
+      'That Studio request is not valid (acknowledgeUpload)',
+    );
+  });
+
   it('answers only the main window', async () => {
     allowed.value = false;
     await expect(invokeFrom(fakeWebContents(), IPC.studioAudio.engines)).rejects.toThrow(

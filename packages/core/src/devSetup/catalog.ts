@@ -34,7 +34,8 @@ export const DEV_STACKS: readonly DevStack[] = [
   {
     id: 'studio',
     name: 'Studio',
-    description: 'ffmpeg and ffprobe, which Studio renders and measures videos with.',
+    description:
+      'ffmpeg and ffprobe, which Studio renders and measures videos with, and its local voices.',
   },
 ];
 
@@ -542,6 +543,63 @@ export const DEV_ITEMS: readonly DevItem[] = [
     },
     recipes: everyOs({ kind: 'bundled', with: 'ffmpeg' }),
     manualUrl: 'https://ffmpeg.org/download.html',
+  },
+  {
+    id: 'studio-piper',
+    name: 'Piper',
+    description:
+      'Speaks narration on this computer, offline, in Persian and English. Installed in its own Python inside AgentMate, nothing system-wide.',
+    stack: 'studio',
+    optional: true,
+    detect: { kind: 'resolver', id: 'studio-tool', tool: 'piper' },
+    recipes: everyOs({ kind: 'managed', installer: 'studio-python-env', target: 'piper' }),
+    consent: {
+      title: 'Piper is GPL-3.0 software, and so is espeak-ng, which it uses',
+      url: 'https://github.com/OHF-Voice/piper1-gpl',
+    },
+  },
+  {
+    id: 'studio-piper-voices',
+    name: 'Piper voices',
+    description:
+      'Three Persian voices, free for any use, and one English voice for non-commercial use (about 250 MB).',
+    stack: 'studio',
+    optional: true,
+    dependsOn: ['studio-piper'],
+    detect: { kind: 'resolver', id: 'studio-tool', tool: 'piper-voices' },
+    recipes: everyOs({ kind: 'managed', installer: 'studio-model-files', target: 'piper-voices' }),
+  },
+  {
+    id: 'studio-omnivoice',
+    name: 'OmniVoice',
+    description:
+      'Clones your own voice from a few seconds of speech and narrates with it, on this computer. For non-commercial use only. Needs an NVIDIA graphics card or a Mac with Apple silicon to be quick.',
+    stack: 'studio',
+    optional: true,
+    detect: { kind: 'resolver', id: 'studio-tool', tool: 'omnivoice' },
+    recipes: everyOs({ kind: 'managed', installer: 'studio-python-env', target: 'omnivoice' }),
+    consent: {
+      title: 'OmniVoice model weights are CC BY-NC 4.0: non-commercial use only',
+      url: 'https://huggingface.co/k2-fsa/OmniVoice',
+    },
+  },
+  {
+    id: 'studio-omnivoice-weights',
+    name: 'OmniVoice model',
+    description: 'The model OmniVoice speaks with (about 3.3 GB, downloaded so it can resume).',
+    stack: 'studio',
+    optional: true,
+    dependsOn: ['studio-omnivoice'],
+    detect: { kind: 'resolver', id: 'studio-tool', tool: 'omnivoice-weights' },
+    recipes: everyOs({
+      kind: 'managed',
+      installer: 'studio-model-files',
+      target: 'omnivoice-weights',
+    }),
+    consent: {
+      title: 'OmniVoice model weights are CC BY-NC 4.0: non-commercial use only',
+      url: 'https://huggingface.co/k2-fsa/OmniVoice',
+    },
   },
 ];
 

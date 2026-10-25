@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { CLI_REGISTRY, launchPickArgs } from '@agentmat/core';
@@ -9,6 +10,7 @@ import { IPC } from '../../shared/ipcChannels';
 import { streamHeadlessCliPrompt } from '../cli/headlessStream';
 import { getDevSetupService } from '../devSetup/runtime';
 import { broadcastToWindows } from '../ipc/send';
+import { transcribeSamples } from '../ipc/speech';
 import { showOsNotification } from '../notifications/osNotification';
 import {
   decryptSecret,
@@ -17,8 +19,10 @@ import {
   registerSealedSecretStore,
 } from '../ssh/vault';
 import { store } from '../store';
+import { isE2E } from '../testMode';
 import { createOffscreenSource, sceneWindowsMemoryBytes } from './capture/offscreenSource';
 import { openBetterSqlite } from './db';
+import { findLocalVoiceTools, wavToWhisperSamples } from './localTools';
 import { createStudioSecrets } from './secrets';
 
 /** Scenes are checked small: a quarter of the design size is plenty to see blank or changing frames. */
@@ -110,6 +114,19 @@ export function createDesktopStudioHost(): StudioHost {
       fetch: (url, init) => net.fetch(url as string, init),
       // The e2e suite points every engine at its fake servers.
       baseUrl: process.env.AGENTMATE_STUDIO_TTS_URL || undefined,
+      local: () =>
+        findLocalVoiceTools(join(app.getPath('userData'), 'studio-tools'), process.platform),
+      async transcribe({ wav, lang }) {
+        // The e2e suite answers for Whisper, whose model it would otherwise have to download.
+        const canned = isE2E ? process.env.AGENTMATE_STUDIO_TRANSCRIPT : undefined;
+        if (canned !== undefined) return canned;
+        const result = await transcribeSamples({
+          samples: wavToWhisperSamples(new Uint8Array(await readFile(wav))),
+          language: lang,
+          requestId: '',
+        });
+        return result.ok ? result.text : null;
+      },
     },
     scenes: {
       async check(input) {

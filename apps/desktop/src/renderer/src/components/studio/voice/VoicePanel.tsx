@@ -35,12 +35,15 @@ import {
 } from '../kit';
 import { studioKeys } from '../queryKeys';
 import { RecordDialog } from './RecordDialog';
+import { VoiceProfilesDialog } from './VoiceProfilesDialog';
 
 export interface VoicePanelProps {
   videoId: string;
   document: StudioDocument;
   apply: (ops: EditOp[], label: string) => Promise<boolean>;
   adopt: (result: EditResponse) => Promise<void>;
+  /** Opens Dev Setup on Studio's tools, where the local voices install. */
+  onOpenDevSetup: () => void;
 }
 
 /** "$0.02", or "under a cent", for the estimate before speaking. */
@@ -59,6 +62,7 @@ export function VoicePanel({
   document,
   apply,
   adopt,
+  onOpenDevSetup,
 }: VoicePanelProps): React.JSX.Element {
   const id = useId();
   const queryClient = useQueryClient();
@@ -70,6 +74,7 @@ export function VoicePanel({
   const [engineId, setEngineId] = useState<VoiceEngineView['id'] | null>(firstRef?.engine ?? null);
   const [voiceId, setVoiceId] = useState<string>(firstRef?.voice ?? '');
   const [unlocking, setUnlocking] = useState(false);
+  const [profilesOpen, setProfilesOpen] = useState(false);
   const [recordTarget, setRecordTarget] = useState<{ scene: Scene; index: number } | null>(null);
   const [captioning, setCaptioning] = useState<string | null>(null);
 
@@ -95,6 +100,7 @@ export function VoicePanel({
     queryFn: () => studioAudioClient().jobs(videoId),
   });
   const latest: NarrationJobView | undefined = jobs.data?.[0];
+  const pickedVoice = voices.data?.find((v) => v.id === voiceId);
   const running = latest?.status === 'running';
 
   const scenes = document.scenario.scenes;
@@ -170,7 +176,7 @@ export function VoicePanel({
               onChange={(value) => setEngineId(value as VoiceEngineView['id'])}
               options={engines.data.map((e) => ({
                 value: e.id,
-                label: e.problem ? `${e.label} (not set up)` : e.label,
+                label: `${e.label}${e.local ? ' (on this computer)' : ''}${e.problem ? ' (not set up)' : ''}`,
               }))}
             />
           ) : (
@@ -194,7 +200,7 @@ export function VoicePanel({
               placeholder={engine?.problem ? 'Set up the engine first' : 'No voices'}
               options={(voices.data ?? []).map((v) => ({
                 value: v.id,
-                label: v.locale ? `${v.label} (${v.locale})` : v.label,
+                label: `${v.locale ? `${v.label} (${v.locale})` : v.label}${v.nonCommercial ? ', non-commercial' : ''}`,
                 keywords: [v.id],
               }))}
             />
@@ -205,6 +211,9 @@ export function VoicePanel({
           onClick={() => void speak(spoken.map((s) => s.id))}
         >
           <Play /> Speak every scene
+        </Button>
+        <Button variant="soft" onClick={() => setProfilesOpen(true)}>
+          <Microphone /> Voices
         </Button>
         {cost && spoken.length > 0 && (
           <span className="pb-2 text-xs text-muted-foreground">
@@ -222,10 +231,25 @@ export function VoicePanel({
               <Button size="sm" variant="soft" onClick={() => setUnlocking(true)}>
                 <Lock /> Unlock
               </Button>
+            ) : engine.local && engine.problem.startsWith('Install') ? (
+              <Button size="sm" variant="soft" onClick={onOpenDevSetup}>
+                Open Dev Setup
+              </Button>
+            ) : engine.clones ? (
+              <Button size="sm" variant="soft" onClick={() => setProfilesOpen(true)}>
+                Voices
+              </Button>
             ) : undefined
           }
         >
           {engine.problem}
+        </Notice>
+      )}
+      {(engine?.nonCommercial || pickedVoice?.nonCommercial) && (
+        <Notice tone="warning" size="sm">
+          {engine?.nonCommercial
+            ? `Everything ${engine.label} speaks is for non-commercial use only (its model is ${pickedVoice?.license ?? 'CC BY-NC 4.0'}).`
+            : `${pickedVoice?.label} is for non-commercial use only (${pickedVoice?.license}).`}
         </Notice>
       )}
       {engine?.retiresOn && (
@@ -367,6 +391,11 @@ export function VoicePanel({
         )}
       </div>
 
+      <VoiceProfilesDialog
+        open={profilesOpen}
+        onOpenChange={setProfilesOpen}
+        lang={document.language}
+      />
       <RecordDialog
         videoId={videoId}
         target={recordTarget}

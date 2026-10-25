@@ -56,29 +56,33 @@ function host(): SpeechHost {
   return speechHost;
 }
 
+/** Speech to text with the model chosen in Settings: 16 kHz mono samples in, words out. */
+export async function transcribeSamples(
+  input: TranscribeAudioInput,
+): Promise<TranscribeAudioResult> {
+  try {
+    const settings = await store.getSettings();
+    const model = resolveModel(settings.speechModel);
+    return await host().transcribe(input.requestId || randomUUID(), {
+      samples: input.samples,
+      // Always a real language. Left out, transformers.js does not detect one, it assumes
+      // English, and Persian speech comes back as made-up English words.
+      language: resolveSpeechLanguage(input.language, app.getLocale()),
+      model: { hubId: model.hubId, ...(model.dtype ? { dtype: model.dtype } : {}) },
+      cacheDir: join(app.getPath('userData'), 'whisper-models'),
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      text: '',
+      error: (error as Error).message || 'Transcription failed.',
+    };
+  }
+}
+
 export function registerSpeechHandlers(): void {
-  ipcMain.handle(
-    IPC.speech.transcribe,
-    async (_event, input: TranscribeAudioInput): Promise<TranscribeAudioResult> => {
-      try {
-        const settings = await store.getSettings();
-        const model = resolveModel(settings.speechModel);
-        return await host().transcribe(input.requestId || randomUUID(), {
-          samples: input.samples,
-          // Always a real language. Left out, transformers.js does not detect one, it assumes
-          // English, and Persian speech comes back as made-up English words.
-          language: resolveSpeechLanguage(input.language, app.getLocale()),
-          model: { hubId: model.hubId, ...(model.dtype ? { dtype: model.dtype } : {}) },
-          cacheDir: join(app.getPath('userData'), 'whisper-models'),
-        });
-      } catch (error) {
-        return {
-          ok: false,
-          text: '',
-          error: (error as Error).message || 'Transcription failed.',
-        };
-      }
-    },
+  ipcMain.handle(IPC.speech.transcribe, (_event, input: TranscribeAudioInput) =>
+    transcribeSamples(input),
   );
 
   ipcMain.handle(IPC.speech.cancel, (_event, requestId: unknown) => {

@@ -33,6 +33,9 @@ const ALLOWED_HOSTS = new Set([
   'learn.microsoft.com',
   'aka.ms',
   'apps.microsoft.com',
+  // Studio's local voices: Piper's home and OmniVoice's model card.
+  'github.com',
+  'huggingface.co',
 ]);
 
 function allRecipes(item: DevItem): DevRecipe[] {

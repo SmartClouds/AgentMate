@@ -3,6 +3,7 @@ import {
   CODECS,
   type EditOp,
   FRAME_RATES,
+  nonCommercialNarration,
   QUALITIES,
   RESOLUTIONS,
   type RenderEstimateView,
@@ -119,6 +120,7 @@ export function RenderDialog({
   const fileId = useId();
   const hwId = useId();
   const settings = document.renderSettings;
+  const nonCommercial = nonCommercialNarration(document.scenario.scenes.map((s) => s.voiceRef));
   const [fileName, setFileName] = useState('');
   const [startAspect, setStartAspect] = useState(settings.aspect);
   // biome-ignore lint/correctness/useExhaustiveDependencies: only when the dialog opens
@@ -200,6 +202,12 @@ export function RenderDialog({
             >
               Rendering needs ffmpeg, which is not installed yet. Dev Setup installs it in a click
               (the Studio stack).
+            </Notice>
+          )}
+          {nonCommercial.length > 0 && (
+            <Notice tone="warning" size="sm">
+              This video is for non-commercial use only: its narration uses{' '}
+              {nonCommercial.join(' and ')}.
             </Notice>
           )}
           <Segments

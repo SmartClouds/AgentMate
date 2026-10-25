@@ -44,6 +44,8 @@ export default defineConfig({
         // E36: narration text and WAV handling, the voice engines and the narrator.
         'src/voice/**': { lines: 98, branches: 90 },
         'src/node/voice/**': { lines: 95, branches: 78 },
+        // E37: the lock files Studio's local voices install from.
+        'src/tools/**': { lines: 98, branches: 85 },
       },
     },
   },

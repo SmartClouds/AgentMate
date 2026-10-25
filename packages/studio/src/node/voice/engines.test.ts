@@ -2,8 +2,15 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ZH } from '../../test/chineseTags.js';
 import { type FakeTtsServer, GOOD_KEY, startFakeTts } from '../../test/fakeTts.js';
 import type { TtsEngineId } from '../../voice/voices.js';
-import { parseWav } from '../../voice/wav.js';
-import { type EngineKeys, elevenLabsVoices, speak, TtsError } from './engines.js';
+import { encodeWav, parseWav } from '../../voice/wav.js';
+import {
+  cloneElevenLabsVoice,
+  deleteElevenLabsVoice,
+  type EngineKeys,
+  elevenLabsVoices,
+  speak,
+  TtsError,
+} from './engines.js';
 
 let server: FakeTtsServer;
 beforeAll(async () => {
@@ -117,5 +124,26 @@ describe('voice engines', () => {
       { id: 'v-rachel', label: 'Rachel', gender: 'female' },
       { id: 'v-yun', label: 'Yun', locale: ZH },
     ]);
+  });
+});
+
+describe('cloning with ElevenLabs', () => {
+  it('uploads the recording with a name and gives back the voice id, then deletes it', async () => {
+    const wav = encodeWav(new Uint8Array(48_000), 24_000);
+    const id = await cloneElevenLabsVoice({
+      key: GOOD_KEY,
+      name: 'Amin',
+      wav,
+      fetch,
+      baseUrl: server.url,
+    });
+    expect(id).toBe('cloned-Amin');
+    const upload = server.requests.at(-1);
+    expect(upload?.headers['content-type']).toMatch(/^multipart\/form-data; boundary=/);
+    await deleteElevenLabsVoice({ key: GOOD_KEY, voiceId: id, fetch, baseUrl: server.url });
+    expect(server.requests.at(-1)?.path).toBe('/v1/voices/cloned-Amin');
+    await expect(
+      cloneElevenLabsVoice({ key: 'wrong', name: 'A', wav, fetch, baseUrl: server.url }),
+    ).rejects.toThrow(/^ElevenLabs refused the key/);
   });
 });

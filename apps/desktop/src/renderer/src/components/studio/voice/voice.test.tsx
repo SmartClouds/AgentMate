@@ -3,6 +3,7 @@ import {
   type NarrationJobView,
   type StudioDocument,
   type VoiceEngineView,
+  type VoiceProfileView,
 } from '@agentmat/studio';
 import { screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -11,11 +12,16 @@ import { renderWithProviders } from '../../../../../test/renderer/renderWithProv
 import { VoiceKeysFields } from '../settings/VoiceKeysFields';
 import { document, NOW, status } from '../testing/fixtures';
 import { VoicePanel } from './VoicePanel';
+import { VoiceProfilesDialog } from './VoiceProfilesDialog';
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), info: vi.fn() }));
 vi.mock('sonner', () => ({ toast }));
+const confirm = vi.hoisted(() => vi.fn(async () => true));
+vi.mock('@/stores/confirmStore', () => ({ confirmDialog: confirm }));
 
 beforeEach(() => {
+  confirm.mockClear();
+  confirm.mockResolvedValue(true);
   toast.success.mockClear();
   toast.error.mockClear();
   installFakeMicrophone();
@@ -28,6 +34,9 @@ function engine(overrides: Partial<VoiceEngineView> = {}): VoiceEngineView {
     problem: null,
     locked: false,
     keyIn: 'app',
+    local: false,
+    nonCommercial: false,
+    clones: false,
     pricePerMillionChars: 15,
     retiresOn: null,
     ...overrides,
@@ -89,20 +98,40 @@ function narrated(): StudioDocument {
 }
 
 function renderPanel(
-  options: { engines?: VoiceEngineView[]; jobs?: NarrationJobView[]; doc?: StudioDocument } = {},
+  options: {
+    engines?: VoiceEngineView[];
+    jobs?: NarrationJobView[];
+    doc?: StudioDocument;
+    voices?: { id: string; label: string; nonCommercial?: boolean; license?: string }[];
+    profiles?: VoiceProfileView[];
+  } = {},
 ) {
   const apply = vi.fn(async () => true);
   const adopt = vi.fn(async () => undefined);
+  const onOpenDevSetup = vi.fn();
   const doc = options.doc ?? narrated();
   const view = renderWithProviders(
-    <VoicePanel videoId="v1" document={doc} apply={apply} adopt={adopt} />,
+    <VoicePanel
+      videoId="v1"
+      document={doc}
+      apply={apply}
+      adopt={adopt}
+      onOpenDevSetup={onOpenDevSetup}
+    />,
     {
       bridge: {
         'studioAudio.engines': async () => options.engines ?? ENGINES,
-        'studioAudio.voices': async () => [
-          { id: 'marin', label: 'marin' },
-          { id: 'cedar', label: 'cedar' },
-        ],
+        'studioAudio.voices': async () =>
+          options.voices ?? [
+            { id: 'marin', label: 'marin' },
+            { id: 'cedar', label: 'cedar' },
+          ],
+        'studioAudio.profiles': async () => options.profiles ?? [],
+        'studioAudio.transcribeTake': async () => ({ text: 'سلام، این صدای من است.', seconds: 6 }),
+        'studioAudio.createProfile': async (input: { name: string }) =>
+          profile({ name: input.name }),
+        'studioAudio.cloneProfile': async () => profile({ elevenlabsVoiceId: 'v-1' }),
+        'studioAudio.removeProfile': async () => undefined,
         'studioAudio.jobs': async () => options.jobs ?? [],
         'studioAudio.speak': async () => job(),
         'studioAudio.cancel': async () => undefined,
@@ -112,8 +141,42 @@ function renderPanel(
       },
     },
   );
-  return { ...view, apply, adopt, doc };
+  return { ...view, apply, adopt, doc, onOpenDevSetup };
 }
+
+function profile(overrides: Partial<VoiceProfileView> = {}): VoiceProfileView {
+  return {
+    id: 'p1',
+    name: 'Amin',
+    lang: 'fa',
+    seconds: 6,
+    transcript: 'سلام',
+    createdAt: NOW,
+    consentAt: NOW,
+    elevenlabsVoiceId: null,
+    ...overrides,
+  };
+}
+
+const LOCAL: VoiceEngineView[] = [
+  engine({
+    id: 'piper',
+    label: 'Piper',
+    keyIn: 'none',
+    local: true,
+    pricePerMillionChars: null,
+    problem: 'Install Piper and its voices from Agent Tools, Dev Setup (Studio).',
+  }),
+  engine({
+    id: 'omnivoice',
+    label: 'OmniVoice',
+    keyIn: 'none',
+    local: true,
+    clones: true,
+    nonCommercial: true,
+    pricePerMillionChars: null,
+  }),
+];
 
 const row = (n: number) => screen.getByRole('listitem', { name: `Scene ${n}` });
 
@@ -275,5 +338,121 @@ describe('VoiceKeysFields', () => {
       key: 'az',
       region: 'westeurope',
     });
+  });
+});
+
+describe('local voices in the panel', () => {
+  it('sends the user to Dev Setup for an engine that is not installed', async () => {
+    const { user, onOpenDevSetup } = renderPanel({
+      engines: [LOCAL[0] as VoiceEngineView],
+      doc: { ...narrated(), scenario: { ...narrated().scenario, scenes: [] } },
+    });
+    expect(
+      await screen.findByText('Install Piper and its voices from Agent Tools, Dev Setup (Studio).'),
+    ).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Open Dev Setup' }));
+    expect(onOpenDevSetup).toHaveBeenCalled();
+  });
+
+  it('says OmniVoice is for non-commercial use, and a non-commercial Piper voice too', async () => {
+    const omni = renderPanel({
+      engines: [LOCAL[1] as VoiceEngineView],
+      doc: { ...narrated(), scenario: { ...narrated().scenario, scenes: [] } },
+      voices: [{ id: 'p1', label: 'Amin', nonCommercial: true, license: 'CC BY-NC 4.0' }],
+    });
+    expect(
+      await screen.findByText(
+        'Everything OmniVoice speaks is for non-commercial use only (its model is CC BY-NC 4.0).',
+      ),
+    ).toBeTruthy();
+    omni.unmount();
+    renderPanel({
+      engines: [{ ...(LOCAL[0] as VoiceEngineView), problem: null }],
+      doc: { ...narrated(), scenario: { ...narrated().scenario, scenes: [] } },
+      voices: [
+        {
+          id: 'en_US-hfc_female-medium',
+          label: 'HFC Female',
+          nonCommercial: true,
+          license: 'CC BY-NC-SA 4.0',
+        },
+      ],
+    });
+    expect(
+      await screen.findByText('HFC Female is for non-commercial use only (CC BY-NC-SA 4.0).'),
+    ).toBeTruthy();
+  });
+});
+
+describe('VoiceProfilesDialog', () => {
+  function renderDialog(profiles: VoiceProfileView[] = []) {
+    return renderWithProviders(<VoiceProfilesDialog open onOpenChange={vi.fn()} lang="fa" />, {
+      bridge: {
+        'studioAudio.profiles': async () => profiles,
+        'studioAudio.transcribeTake': async () => ({ text: 'سلام، این صدای من است.', seconds: 6 }),
+        'studioAudio.createProfile': async (input: { name: string }) =>
+          profile({ name: input.name }),
+        'studioAudio.cloneProfile': async () => profile({ elevenlabsVoiceId: 'v-1' }),
+        'studioAudio.removeProfile': async () => undefined,
+      },
+    });
+  }
+
+  it('records a take, fills in what it says, and saves it only with a name and consent', async () => {
+    const { user, bridge } = renderDialog();
+    expect(await screen.findByText('No voices yet')).toBeTruthy();
+    expect(screen.getByLabelText('Text to read').textContent).toMatch(/^امروز/);
+    await user.type(screen.getByRole('textbox', { name: 'New voice' }), 'Amin');
+    await user.click(screen.getByRole('button', { name: 'Record' }));
+    await user.click(await screen.findByRole('button', { name: 'Stop' }));
+    const said = await screen.findByLabelText('What the take says');
+    expect((said as HTMLTextAreaElement).value).toBe('سلام، این صدای من است.');
+    expect(bridge.$fn('studioAudio.transcribeTake')).toHaveBeenCalledWith({
+      bytes: expect.any(Uint8Array),
+      mimeType: 'audio/webm',
+      lang: 'fa',
+    });
+    const save = screen.getByRole('button', { name: 'Save voice' });
+    expect(save).toHaveProperty('disabled', true);
+    await user.click(screen.getByRole('checkbox'));
+    expect(save).toHaveProperty('disabled', false);
+    await user.click(save);
+    await waitFor(() =>
+      expect(bridge.$fn('studioAudio.createProfile')).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Amin',
+          lang: 'fa',
+          consent: true,
+          transcript: 'سلام، این صدای من است.',
+        }),
+      ),
+    );
+    expect(toast.success).toHaveBeenCalledWith('Amin is ready to speak with.');
+  });
+
+  it('uploads to ElevenLabs and deletes only after asking', async () => {
+    const { user, bridge } = renderDialog([
+      profile(),
+      profile({ id: 'p2', name: 'Sara', elevenlabsVoiceId: 'v-2' }),
+    ]);
+    const amin = await screen.findByRole('listitem', { name: 'Amin' });
+    confirm.mockResolvedValueOnce(false);
+    await user.click(within(amin).getByRole('button', { name: 'Upload to ElevenLabs' }));
+    await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1));
+    await user.click(within(amin).getByRole('button', { name: 'Upload to ElevenLabs' }));
+    // Declined once, so the one upload is the second, agreed one.
+    await waitFor(() => expect(bridge.$fn('studioAudio.cloneProfile')).toHaveBeenCalledTimes(1));
+    expect(bridge.$fn('studioAudio.cloneProfile')).toHaveBeenCalledWith('p1');
+    const sara = screen.getByRole('listitem', { name: 'Sara' });
+    expect(within(sara).getByText('In ElevenLabs')).toBeTruthy();
+    await user.click(within(sara).getByRole('button', { name: 'Delete Sara' }));
+    expect(confirm).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        title: 'Delete Sara?',
+        description: expect.stringMatching(/removed from your ElevenLabs account/),
+        variant: 'destructive',
+      }),
+    );
+    await waitFor(() => expect(bridge.$fn('studioAudio.removeProfile')).toHaveBeenCalledWith('p2'));
   });
 });

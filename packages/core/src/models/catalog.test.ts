@@ -22,6 +22,8 @@ import {
   OPENAI_API_MODELS,
   resolveSpeechLanguage,
   SPEECH_LANGUAGES,
+  STUDIO_OMNIVOICE,
+  STUDIO_PIPER,
   STUDIO_TTS,
   speechModelTooSmallFor,
   WHISPER_MODEL_LARGE_TURBO,
@@ -238,5 +240,38 @@ describe('Studio narration engines', () => {
         expect(voice.label).not.toMatch(/\p{Script=Han}/u);
       }
     }
+  });
+});
+
+describe('Studio local voices', () => {
+  const pinned = (
+    files: readonly { url: string; sha256: string; size: number; path: string }[],
+  ) => {
+    for (const file of files) {
+      expect(file.sha256, file.path).toMatch(/^[0-9a-f]{64}$/);
+      expect(file.size, file.path).toBeGreaterThan(0);
+      // A fixed revision, never a branch, so the hash keeps matching what is downloaded.
+      expect(file.url, file.path).toMatch(
+        /^https:\/\/huggingface\.co\/[^/]+\/[^/]+\/resolve\/[0-9a-f]{40}\//,
+      );
+      expect(file.url.endsWith(file.path), file.path).toBe(true);
+    }
+  };
+
+  it('pins every Piper voice file, offers Persian voices free to use, and flags the rest', () => {
+    for (const voice of STUDIO_PIPER.voices) pinned(voice.files);
+    const persian = STUDIO_PIPER.voices.filter((v) => v.locale === 'fa-IR');
+    expect(persian.length).toBeGreaterThanOrEqual(3);
+    expect(persian.every((v) => !v.nonCommercial)).toBe(true);
+    for (const voice of STUDIO_PIPER.voices) {
+      expect(voice.nonCommercial, voice.id).toBe(/NC/.test(voice.license));
+      expect(voice.locale, voice.id).not.toMatch(/^(zh|cmn|yue)\b/);
+    }
+  });
+
+  it('pins every OmniVoice file and says its weights are non-commercial', () => {
+    pinned(STUDIO_OMNIVOICE.files);
+    expect(STUDIO_OMNIVOICE.weightsLicense).toBe('CC BY-NC 4.0');
+    expect(STUDIO_OMNIVOICE.files.map((f) => f.path)).toContain('model.safetensors');
   });
 });

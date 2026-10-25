@@ -13,7 +13,9 @@ import {
   licensesAccepted,
   parsePackageRevision,
   parseVersion,
+  type StudioToolId,
 } from '@agentmat/core';
+import { installMarkerSchema, type StudioEnvId, studioToolPaths } from '@agentmat/studio';
 import type { ProbeResult } from './probe';
 
 /**
@@ -51,6 +53,8 @@ export interface DetectorDeps {
   /** Where on PATH a command lives, without starting it. */
   findExecutable: (command: string) => Promise<string | null>;
   androidSdk: () => Promise<DetectorAndroidSdk>;
+  /** Where Studio installs its local voices (`<userData>/studio-tools`). */
+  studioToolsDir: string;
   now: () => number;
   /** How many items are checked at once. Fifteen Node tools starting together slow each other. */
   concurrency?: number;
@@ -252,6 +256,31 @@ export function createDevSetupDetector(deps: DetectorDeps): DevSetupDetector {
     }
   }
 
+  /**
+   * Studio's tools count once the marker their install writes last is there, and what it names is
+   * still in place: the environment's Python, or every model file.
+   */
+  async function detectStudioTool(tool: StudioToolId): Promise<DevDetection> {
+    const paths = studioToolPaths(deps.studioToolsDir, deps.os);
+    const text = await deps.readFile(paths.marker(tool));
+    if (text === null) return ABSENT;
+    let marker: ReturnType<typeof installMarkerSchema.parse>;
+    try {
+      marker = installMarkerSchema.parse(JSON.parse(text));
+    } catch {
+      return ABSENT;
+    }
+    if (tool === 'piper' || tool === 'omnivoice') {
+      const python = paths.envPython(tool as StudioEnvId);
+      return (await deps.exists(python)) ? found(marker.version, python, true) : ABSENT;
+    }
+    const dir = paths.modelsDir(tool);
+    for (const file of marker.files ?? []) {
+      if (!(await deps.exists(path.join(dir, ...file.path.split('/'))))) return ABSENT;
+    }
+    return found(null, dir, true);
+  }
+
   async function runDetection(item: DevItem): Promise<DevDetection> {
     const spec = item.detect;
     switch (spec.kind) {
@@ -262,6 +291,7 @@ export function createDevSetupDetector(deps: DetectorDeps): DevSetupDetector {
       case 'resolver':
         if (spec.id === 'flutter') return detectFlutter();
         if (spec.id === 'wsl') return detectWsl();
+        if (spec.id === 'studio-tool') return detectStudioTool(spec.tool ?? 'piper');
         return detectAndroidPiece(spec.piece ?? 'cmdline-tools');
     }
   }

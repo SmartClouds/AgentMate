@@ -3,7 +3,7 @@ title: Studio
 category: Build
 order: 40
 summary: Studio makes videos for your projects, or on their own. An AI CLI on your computer writes the scenario from your brief, you edit it by hand or by asking AI, and every video keeps its edits and full history in a folder you choose, always outside the project's source. Nothing in the history is ever deleted, and you can go back to any earlier version.
-keywords: studio, video, videos, film, movie, scenario, script, brief, animate, animation, motion graphics, style, styles, preview, scene code, code, versions, check, network, ai, write with ai, ask ai, edit by typing, proposal, recipe, recipes, cli, model, effort, claude code, codex, gemini, grok, cursor, opencode, scene, scenes, narration, voice over, voice, voices, text to speech, tts, record, microphone, openai, elevenlabs, azure speech, captions, ducking, history, undo, redo, restore, version, versions, storage, folder, location, library, standalone, project videos, lock, another agentmate, take over, move, locate, persian, rtl
+keywords: studio, video, videos, film, movie, scenario, script, brief, animate, animation, motion graphics, style, styles, preview, scene code, code, versions, check, network, ai, write with ai, ask ai, edit by typing, proposal, recipe, recipes, cli, model, effort, claude code, codex, gemini, grok, cursor, opencode, scene, scenes, narration, voice over, voice, voices, text to speech, tts, record, microphone, openai, elevenlabs, azure speech, captions, ducking, piper, omnivoice, local voices, offline, clone, cloning, voice profile, my voice, consent, non-commercial, history, undo, redo, restore, version, versions, storage, folder, location, library, standalone, project videos, lock, another agentmate, take over, move, locate, persian, rtl
 route: /studio
 ---
 
@@ -79,6 +79,15 @@ Switch the editor to **Voice** in its toolbar to give the scenes their narration
 - **Lower the music while someone speaks** turns music down by about 10 dB under the voice in the render.
 
 Long narration is sent in pieces. If a run stops part way (no connection, a refused key, the app closing), speaking again sends only the pieces still missing. Studio never lists a Chinese voice.
+
+## Voices on this computer, and your own voice
+
+Two engines run on your computer instead of online. Install them from **Agent Tools > Dev Setup**, in the **Studio** stack (the Voice view's **Open Dev Setup** button goes there). Each one installs into its own Python inside AgentMate, nothing system-wide. Downloads carry on after a dropped connection or a restart, and every file is checked against its fingerprint before it is used.
+
+- **Piper** speaks offline. **Piper voices** adds three Persian voices, free for any use, and one English voice for non-commercial use. Piper is GPL-3.0 software.
+- **OmniVoice** speaks in a voice it clones from a few seconds of recording. Its model is licensed for **non-commercial use only**, and Studio says so wherever it is offered and on every render that uses it. It is quick with an NVIDIA graphics card or a Mac with Apple silicon and slow without one. The model is about 3.3 GB.
+
+**Voices** in the Voice view keeps voice profiles: a short recording of your voice, or of someone who gave you permission. Read the text shown for six to ten seconds. Studio trims the silence, fills in what you said (correct it if needed), and saves the profile only after you confirm the voice is yours or that you may use it. OmniVoice speaks with any profile; **Upload to ElevenLabs** sends the recording to your ElevenLabs account, after asking, where it becomes a voice to pick. Deleting a profile also removes it from ElevenLabs.
 
 ## The timeline
 

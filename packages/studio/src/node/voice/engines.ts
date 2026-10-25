@@ -1,6 +1,6 @@
 import { STUDIO_TTS, type StudioTtsVoice } from '@agentmat/core';
 import { type WordTiming, wordsFromCharacters } from '../../voice/text.js';
-import type { TtsEngineId } from '../../voice/voices.js';
+import { isLocalEngine, type TtsEngineId, type VoiceEngineId } from '../../voice/voices.js';
 import { encodeWav, parseWav } from '../../voice/wav.js';
 
 /**
@@ -29,8 +29,22 @@ export class TtsError extends Error {
   }
 }
 
+/**
+ * The engines on this computer, as the host found them installed. Each takes the text of one
+ * piece and gives back a WAV file.
+ */
+export interface LocalSpeakers {
+  piper?: (input: { voice: string; text: string; signal?: AbortSignal }) => Promise<Uint8Array>;
+  omnivoice?: (input: {
+    voice: string;
+    text: string;
+    lang: string;
+    signal?: AbortSignal;
+  }) => Promise<Uint8Array>;
+}
+
 export interface SpeakInput {
-  engine: TtsEngineId;
+  engine: VoiceEngineId;
   voice: string;
   text: string;
   lang: string;
@@ -39,6 +53,7 @@ export interface SpeakInput {
   signal?: AbortSignal;
   /** Sends every engine's requests here instead (tests and the e2e fake servers). */
   baseUrl?: string;
+  local?: LocalSpeakers;
 }
 
 export interface SpokenAudio {
@@ -118,8 +133,23 @@ function escapeXml(text: string): string {
   );
 }
 
+const LOCAL_MISSING = {
+  piper:
+    'Piper is not installed yet. Install Piper and its voices from Agent Tools, Dev Setup (Studio).',
+  omnivoice:
+    'OmniVoice is not installed yet. Install OmniVoice and its model from Agent Tools, Dev Setup (Studio).',
+} as const;
+
 export async function speak(input: SpeakInput): Promise<SpokenAudio> {
-  const { engine, keys, text } = input;
+  const { engine: anyEngine, keys, text } = input;
+  if (isLocalEngine(anyEngine)) {
+    const speaker = input.local?.[anyEngine];
+    if (!speaker) throw new TtsError(LOCAL_MISSING[anyEngine], false);
+    const wav = await speaker({ voice: input.voice, text, lang: input.lang, signal: input.signal });
+    parseWav(wav);
+    return { wav, words: null };
+  }
+  const engine: TtsEngineId = anyEngine;
   if (engine === 'openai') {
     const key = keys.openai ?? needKey(engine);
     const response = await request(
@@ -223,6 +253,47 @@ export async function speak(input: SpeakInput): Promise<SpokenAudio> {
   const wav = new Uint8Array(await response.arrayBuffer());
   parseWav(wav);
   return { wav, words: null };
+}
+
+/**
+ * Makes an instant voice clone in the user's ElevenLabs account from a voice profile's recording,
+ * and gives back its voice id. Only called once the person agreed to upload the recording.
+ */
+export async function cloneElevenLabsVoice(input: {
+  key: string;
+  name: string;
+  wav: Uint8Array;
+  fetch: typeof fetch;
+  baseUrl?: string;
+}): Promise<string> {
+  const form = new FormData();
+  form.append('name', input.name);
+  form.append('files', new Blob([new Uint8Array(input.wav)], { type: 'audio/wav' }), 'voice.wav');
+  form.append('description', 'Made from an AgentMate Studio voice profile.');
+  const response = await request(
+    'elevenlabs',
+    { engine: 'elevenlabs', voice: '', text: '', lang: '', keys: {}, fetch: input.fetch },
+    `${input.baseUrl ?? 'https://api.elevenlabs.io'}/v1/voices/add`,
+    { method: 'POST', headers: { 'xi-api-key': input.key }, body: form },
+  );
+  const answer = (await response.json()) as { voice_id?: string };
+  if (!answer.voice_id) throw new TtsError('ElevenLabs answered without a voice id.', false);
+  return answer.voice_id;
+}
+
+/** Removes a voice this app cloned from the user's ElevenLabs account. */
+export async function deleteElevenLabsVoice(input: {
+  key: string;
+  voiceId: string;
+  fetch: typeof fetch;
+  baseUrl?: string;
+}): Promise<void> {
+  await request(
+    'elevenlabs',
+    { engine: 'elevenlabs', voice: '', text: '', lang: '', keys: {}, fetch: input.fetch },
+    `${input.baseUrl ?? 'https://api.elevenlabs.io'}/v1/voices/${encodeURIComponent(input.voiceId)}`,
+    { method: 'DELETE', headers: { 'xi-api-key': input.key } },
+  );
 }
 
 /** The voices in the user's ElevenLabs account, with the language its labels name. */

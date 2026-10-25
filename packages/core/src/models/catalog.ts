@@ -453,6 +453,182 @@ export const STUDIO_TTS: Record<'openai' | 'gemini' | 'elevenlabs' | 'azure', St
   },
 };
 
+/** One file a local voice engine needs, pinned by its hash so a download is checked exactly. */
+export interface StudioModelFile {
+  /** Where it goes under the engine's model folder (forward slashes). */
+  path: string;
+  url: string;
+  size: number;
+  sha256: string;
+}
+
+export interface StudioLocalVoice extends StudioTtsVoice {
+  locale: string;
+  /** The voice's own license, from its model card. */
+  license: string;
+  /** Usable for non-commercial work only, which Studio says wherever the voice is offered. */
+  nonCommercial: boolean;
+  files: readonly StudioModelFile[];
+}
+
+const PIPER_VOICES_AT =
+  'https://huggingface.co/rhasspy/piper-voices/resolve/5041a7a49ae5b3a0f30e6837769eb03fdbb231bd';
+
+function piperVoice(
+  voice: Omit<StudioLocalVoice, 'files'>,
+  folder: string,
+  onnx: { size: number; sha256: string },
+  config: { size: number; sha256: string },
+): StudioLocalVoice {
+  const name = voice.id;
+  return {
+    ...voice,
+    files: [
+      { path: `${name}.onnx`, url: `${PIPER_VOICES_AT}/${folder}/${name}.onnx`, ...onnx },
+      {
+        path: `${name}.onnx.json`,
+        url: `${PIPER_VOICES_AT}/${folder}/${name}.onnx.json`,
+        ...config,
+      },
+    ],
+  };
+}
+
+/**
+ * Piper (piper-tts, GPL-3.0, installed by Dev Setup into Studio's own Python) and the voices
+ * Studio offers with it. The Persian voices are CC0; Piper's English voices are almost all
+ * non-commercial, and the one here is marked so.
+ */
+export const STUDIO_PIPER = {
+  label: 'Piper',
+  license: 'GPL-3.0-or-later',
+  voices: [
+    piperVoice(
+      {
+        id: 'fa_IR-amir-medium',
+        label: 'Amir',
+        locale: 'fa-IR',
+        gender: 'male',
+        license: 'CC0',
+        nonCommercial: false,
+      },
+      'fa/fa_IR/amir/medium',
+      {
+        size: 63_531_379,
+        sha256: 'fb815380d969ea372b0b21b0de14421f58fe481047e153e69685d079b6e1a9d1',
+      },
+      { size: 4958, sha256: '75f918a3bf0f57a9179abe725af529f2a5c79d6c899e2a84aec76c685d5dfb9a' },
+    ),
+    piperVoice(
+      {
+        id: 'fa_IR-ganji-medium',
+        label: 'Ganji',
+        locale: 'fa-IR',
+        gender: 'male',
+        license: 'CC0',
+        nonCommercial: false,
+      },
+      'fa/fa_IR/ganji/medium',
+      {
+        size: 63_516_050,
+        sha256: '6a98504bb77dc2fd3a863c977d37e67a6a525fdf661917385d569a3ff78e6cae',
+      },
+      { size: 4958, sha256: '9d3e0c0cf00156d8bf38fb7f96bdfbcb21911b37e062a328da0632e3c2cbc465' },
+    ),
+    piperVoice(
+      {
+        id: 'fa_IR-reza_ibrahim-medium',
+        label: 'Reza Ibrahim',
+        locale: 'fa-IR',
+        gender: 'male',
+        license: 'CC0',
+        nonCommercial: false,
+      },
+      'fa/fa_IR/reza_ibrahim/medium',
+      {
+        size: 63_511_038,
+        sha256: '99f0c31464a2120831ca87d079e10a9a2b3e426cc1ee662d80ff9042df15cd3c',
+      },
+      { size: 4967, sha256: 'e9866c88c16245f8b8f4d0eaeaa6eab4f2e193db69a2ab4683d83fe78a30b6ca' },
+    ),
+    piperVoice(
+      {
+        id: 'en_US-hfc_female-medium',
+        label: 'HFC Female',
+        locale: 'en-US',
+        gender: 'female',
+        license: 'CC BY-NC-SA 4.0',
+        nonCommercial: true,
+      },
+      'en/en_US/hfc_female/medium',
+      {
+        size: 63_201_294,
+        sha256: '914c473788fc1fa8b63ace1cdcdb44588f4ae523d3ab37df1536616835a140b7',
+      },
+      { size: 5033, sha256: '03f1fa0622b80463283592d97aca9f6e89aec345a5c56b7257723e0093c58b6c' },
+    ),
+  ] as readonly StudioLocalVoice[],
+} as const;
+
+const OMNIVOICE_AT =
+  'https://huggingface.co/k2-fsa/OmniVoice/resolve/c5fdb5ccb189668d56333f77ba2629f4cd7535f4';
+
+/**
+ * OmniVoice (Xiaomi Next-gen Kaldi): an optional local engine that clones a voice from a few
+ * seconds of speech. Its code is Apache-2.0, but its weights are CC BY-NC 4.0 because of their
+ * training data, so everything spoken with it is for non-commercial use only. It speaks at 24 kHz.
+ */
+export const STUDIO_OMNIVOICE = {
+  label: 'OmniVoice',
+  weightsLicense: 'CC BY-NC 4.0',
+  licenseUrl: 'https://huggingface.co/k2-fsa/OmniVoice',
+  sampleRate: 24_000,
+  /** Shortest and longest reference recording it clones well from. */
+  referenceSeconds: { min: 3, max: 10 },
+  files: [
+    {
+      path: 'config.json',
+      size: 2238,
+      sha256: '5e359117e13b420c5e0c925d4aba650d624767131f1d1746928f8b850d5dc372',
+    },
+    {
+      path: 'chat_template.jinja',
+      size: 4168,
+      sha256: 'a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8',
+    },
+    {
+      path: 'tokenizer_config.json',
+      size: 533,
+      sha256: '49f78845596a82bf15c83673794bdf9f76f812b11f60ab6a2239d9be65b00676',
+    },
+    {
+      path: 'tokenizer.json',
+      size: 11_423_986,
+      sha256: '408f669b7e2b045fdf54201d815bd364e6667dbd845115da81239c40bc6dcfd1',
+    },
+    {
+      path: 'model.safetensors',
+      size: 2_450_344_112,
+      sha256: '730839316de585f4c8298ec0e1712efc10fb19c6fa4e36eb741cb8d51ebcf6aa',
+    },
+    {
+      path: 'audio_tokenizer/config.json',
+      size: 2531,
+      sha256: 'eefb20806f7104e77c9a5277c9df0f9bb8826b08eb1d4e8ab2b9829b6ef9fac1',
+    },
+    {
+      path: 'audio_tokenizer/preprocessor_config.json',
+      size: 206,
+      sha256: 'ae61eea88558608ee2fa86d2aec9fce8d99a5ff75d09cb7651ccce21ae1d9084',
+    },
+    {
+      path: 'audio_tokenizer/model.safetensors',
+      size: 805_665_628,
+      sha256: 'fe7c5e8785e0a05833e1bfc3e002ec7f55af21e306b2e7154a448c1f54ccfb0d',
+    },
+  ].map((file) => ({ ...file, url: `${OMNIVOICE_AT}/${file.path}` })) as readonly StudioModelFile[],
+} as const;
+
 // Prices
 
 export interface ModelPrice {

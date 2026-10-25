@@ -11,7 +11,12 @@ import {
   spawnStreaming,
 } from '../../process/spawnStreaming';
 import type { ResumableDownloadOptions } from '../../updater/resumableDownload';
-import { assertAllowedUrl, createManagedKit, renameWithRetry } from './managedSystem';
+import {
+  assertAllowedUrl,
+  createManagedKit,
+  renameWithRetry,
+  STUDIO_TOOL_HOSTS,
+} from './managedSystem';
 
 /**
  * The real-machine pieces under the Flutter and Android installers. Downloads and the network are
@@ -68,6 +73,19 @@ describe('assertAllowedUrl', () => {
     ['something that is not an address', 'not a url'],
   ])('refuses %s', (_label, url) => {
     expect(() => assertAllowedUrl(url)).toThrow('Refusing to download from that address.');
+  });
+
+  it("takes Studio's hosts when given them, and plain http only from a listed loopback server", () => {
+    const pypi =
+      'https://files.pythonhosted.org/packages/12/piper_tts-1.8.0-cp39-abi3-win_amd64.whl';
+    expect(() => assertAllowedUrl(pypi)).toThrow('Refusing to download from that address.');
+    expect(assertAllowedUrl(pypi, STUDIO_TOOL_HOSTS).hostname).toBe('files.pythonhosted.org');
+    expect(() =>
+      assertAllowedUrl('http://files.pythonhosted.org/x.whl', STUDIO_TOOL_HOSTS),
+    ).toThrow();
+    const test = new Set([...STUDIO_TOOL_HOSTS, '127.0.0.1']);
+    expect(assertAllowedUrl('http://127.0.0.1:4100/github.com/x.tar.gz', test).port).toBe('4100');
+    expect(() => assertAllowedUrl('http://127.0.0.1:4100/x', STUDIO_TOOL_HOSTS)).toThrow();
   });
 });
 

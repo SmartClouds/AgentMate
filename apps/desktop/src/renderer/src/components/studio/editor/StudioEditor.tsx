@@ -337,6 +337,7 @@ export function StudioEditor({
             document={document}
             apply={video.apply}
             adopt={video.adopt}
+            onOpenDevSetup={onOpenDevSetup}
           />
         </ErrorBoundary>
       )}

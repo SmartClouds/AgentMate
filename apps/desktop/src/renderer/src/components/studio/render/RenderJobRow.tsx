@@ -84,6 +84,15 @@ export function RenderJobRow({ job }: { job: RenderJobView }): React.JSX.Element
           {status.label}
         </Chip>
         {job.resumed && <Chip tone="neutral">Resumed</Chip>}
+        {job.nonCommercial.length > 0 && (
+          <SimpleTooltip
+            label={`Narration by ${job.nonCommercial.join(' and ')}: not for commercial use.`}
+          >
+            <span className="inline-flex">
+              <Chip tone="warning">Non-commercial</Chip>
+            </span>
+          </SimpleTooltip>
+        )}
         <div className="flex items-center gap-0.5">
           {isActive(job) && (
             <SimpleTooltip label="Cancel the render. Finished parts are kept for next time.">

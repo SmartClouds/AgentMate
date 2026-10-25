@@ -225,6 +225,22 @@ export function registerStudioHandlers(
   handle(IPC.studioAudio.captionScene, (value) =>
     service().captionScene(parse(studioAudioInputs.captionScene, value)),
   );
+  handle(IPC.studioAudio.profiles, () => service().voiceProfiles());
+  handle(IPC.studioAudio.transcribeTake, (value) =>
+    service().transcribeTake(parse(studioAudioInputs.transcribeTake, value)),
+  );
+  handle(IPC.studioAudio.createProfile, (value) =>
+    service().createVoiceProfile(parse(studioAudioInputs.createProfile, value)),
+  );
+  handle(IPC.studioAudio.updateProfile, (value) =>
+    service().updateVoiceProfile(parse(studioAudioInputs.updateProfile, value)),
+  );
+  handle(IPC.studioAudio.cloneProfile, (value) =>
+    service().cloneVoiceProfile(parse(studioAudioInputs.cloneProfile, value)),
+  );
+  handle(IPC.studioAudio.removeProfile, (value) =>
+    service().removeVoiceProfile(parse(studioAudioInputs.profileRef, value)),
+  );
   handle(IPC.studioRender.tools, () => service().renderTools());
   handle(IPC.studioRender.estimate, (value) =>
     service().renderEstimate(parse(studioRenderInputs.videoRef, value)),

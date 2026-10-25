@@ -809,6 +809,18 @@ export const IPC = {
     record: 'studioAudio:record',
     // ({ videoId, sceneId }) -> EditResponse, captions where the scene's words are spoken
     captionScene: 'studioAudio:captionScene',
+    // () -> VoiceProfileView[], the voices cloning engines speak with (E37)
+    profiles: 'studioAudio:profiles',
+    // ({ bytes, mimeType, lang }) -> { text, seconds }, what a take says before it becomes a profile
+    transcribeTake: 'studioAudio:transcribeTake',
+    // ({ bytes, mimeType, name, lang, transcript, consent: true }) -> VoiceProfileView
+    createProfile: 'studioAudio:createProfile',
+    // ({ profileId, name?, transcript? }) -> VoiceProfileView
+    updateProfile: 'studioAudio:updateProfile',
+    // ({ profileId, acknowledgeUpload: true }) -> VoiceProfileView, uploaded to ElevenLabs
+    cloneProfile: 'studioAudio:cloneProfile',
+    // ({ profileId }) -> void, its ElevenLabs copy removed first
+    removeProfile: 'studioAudio:removeProfile',
   },
   /** Studio rendering (E34): finished video files, one render at a time, resumed after a crash. */
   studioRender: {

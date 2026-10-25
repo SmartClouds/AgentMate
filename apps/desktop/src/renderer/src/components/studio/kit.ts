@@ -73,6 +73,7 @@ export {
 } from '@/components/pageKit';
 export { SshVaultUnlockDialog as VaultUnlockDialog } from '@/components/remote/SshVaultUnlockDialog';
 export { Button } from '@/components/ui/button';
+export { Checkbox } from '@/components/ui/checkbox';
 export { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 export {
   Dialog,
