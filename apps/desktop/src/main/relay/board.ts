@@ -40,7 +40,17 @@ export async function buildRelayBoard(projectId: string): Promise<RelayBoard> {
           }
         : null;
       const { body: _body, ...card } = task;
-      return { ...card, handoff, legCount: legs.filter((leg) => leg.taskId === task.id).length };
+      const own = legs.filter((leg) => leg.taskId === task.id);
+      return {
+        ...card,
+        handoff,
+        legCount: own.length,
+        legPeaks: own.flatMap((leg) =>
+          leg.peakContextTokens !== null && leg.peakContextTokens > 0
+            ? [leg.peakContextTokens]
+            : [],
+        ),
+      };
     }),
   );
   return {

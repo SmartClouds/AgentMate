@@ -185,6 +185,44 @@ describe('RelayTrack', () => {
     expect(bridge.$fn('relay.pause')).toHaveBeenCalledWith('r1');
   });
 
+  /** Hovers a finished station's "Done ~estimate" and gives back its tooltip. */
+  async function doneTooltip(task: ReturnType<typeof card>, text: string) {
+    const { user } = renderWithProviders(<RelayTrack project={project} />, {
+      bridge: { 'relay.board': board({ tasks: [task] }) },
+    });
+    const track = await screen.findByRole('list', { name: 'Relay track' });
+    await user.hover(within(track).getByText(text));
+    return screen.findByRole('tooltip');
+  }
+
+  it('shows a finished task’s tokens used against its estimate on hover', async () => {
+    const tip = await doneTooltip(
+      card('T001', { status: 'done', estimate: 60_000, legCount: 1, legPeaks: [52_000] }),
+      '~60K',
+    );
+    expect(tip).toHaveTextContent('Tokens used1 session');
+    expect(tip).toHaveTextContent('52Kof ~60K estimated');
+    expect(tip).toHaveTextContent('8K under the estimate (13%)');
+    expect(tip).not.toHaveTextContent('Session 1');
+  });
+
+  it('adds up a task’s sessions and lists them when it took more than one', async () => {
+    const tip = await doneTooltip(
+      card('T001', { status: 'done', estimate: 100_000, legCount: 3, legPeaks: [90_000, 40_000] }),
+      '~100K',
+    );
+    expect(tip).toHaveTextContent('Tokens used2 sessions');
+    expect(tip).toHaveTextContent('130Kof ~100K estimated');
+    expect(tip).toHaveTextContent('30K over the estimate (30%)');
+    expect(tip).toHaveTextContent('Session 190KSession 240K');
+    expect(tip).toHaveTextContent('1 more session left no reading.');
+  });
+
+  it('says why a finished task has no count to compare', async () => {
+    const tip = await doneTooltip(card('T001', { status: 'done', estimate: 80_000 }), '~80K');
+    expect(tip).toHaveTextContent(/Finished outside a Relay session/);
+  });
+
   it('never uses the native title attribute', async () => {
     const { container } = renderWithProviders(<RelayTrack project={project} />, {
       bridge: { 'relay.board': board({ tasks, active: live() }) },

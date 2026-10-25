@@ -7,6 +7,7 @@ import { SimpleTooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { FuelRing } from './FuelRing';
 import { choiceFor, choiceLabel, epicHue, legPhaseLabel } from './relayView';
+import { tokensUsedLabel } from './TokensUsed';
 import { useRelayContext } from './useRelay';
 
 /** The drag payload's type, so a drop elsewhere in the app ignores a card. */
@@ -175,9 +176,15 @@ export function RelayTaskCard({
           <div className="mt-2 flex items-center gap-2">
             <SimpleTooltip
               label={
-                card.estimate === null
+                (card.status === 'done' ? tokensUsedLabel(card) : null) ??
+                (card.estimate === null
                   ? 'No estimate yet'
-                  : `About ${formatTokenCount(card.estimate)} of a ${formatTokenCount(budget)} session`
+                  : `About ${formatTokenCount(card.estimate)} of a ${formatTokenCount(budget)} session`)
+              }
+              className={
+                card.status === 'done' && card.legPeaks.length > 0
+                  ? 'max-w-none px-3 py-2.5'
+                  : undefined
               }
             >
               <span

@@ -54,6 +54,11 @@ export type RelayTaskCard = Omit<RelayTask, 'body'> & {
   handoff: RelayHandoffSummary | null;
   /** Sessions run on this task so far, across relays and single runs. */
   legCount: number;
+  /**
+   * The most context each of those sessions held, oldest first, to set against the estimate.
+   * Sessions with no reading (quiet detection, a CLI without a transcript) are left out.
+   */
+  legPeaks: number[];
 };
 
 export interface RelayBoard {

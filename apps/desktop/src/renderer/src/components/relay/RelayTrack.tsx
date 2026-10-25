@@ -1,5 +1,5 @@
 import { budgetLevel, formatTokenCount, type Project } from '@agentmat/core';
-import type { RelayBoard, RelayRunView } from '@shared/relayTypes';
+import type { RelayBoard, RelayRunView, RelayTaskCard } from '@shared/relayTypes';
 import { useQueryClient } from '@tanstack/react-query';
 import { useReducedMotion } from 'framer-motion';
 import { useState } from 'react';
@@ -41,6 +41,7 @@ import {
   type TrackStation,
   trackStations,
 } from './relayView';
+import { tokensUsed, tokensUsedLabel } from './TokensUsed';
 import {
   runTaskInNewSession,
   useRelayActions,
@@ -124,6 +125,37 @@ const STATE_WORDS: Record<TrackStation['state'], string> = {
   blocked: 'Blocked',
   idle: 'Not in a relay',
 };
+
+/**
+ * A finished station's "Done ~60K": hovering it shows what the task really took next to the
+ * estimate. The dotted underline on the estimate hints that there is more to see.
+ */
+function DoneMeta({ task }: { task: RelayTaskCard }): React.JSX.Element {
+  const label = tokensUsedLabel(task);
+  const measured = task.legPeaks.length > 0;
+  return (
+    <SimpleTooltip label={label} side="left" className="max-w-none px-3 py-2.5">
+      <span className="inline-flex cursor-default items-center gap-1.5">
+        <span>{STATE_WORDS.done}</span>
+        {task.estimate !== null ? (
+          <span
+            className={cn(
+              'tabular-nums',
+              measured && 'underline decoration-foreground/30 decoration-dotted underline-offset-2',
+            )}
+          >
+            ~{formatTokenCount(task.estimate)}
+          </span>
+        ) : null}
+        {task.estimate === null && measured ? (
+          <span className="tabular-nums underline decoration-foreground/30 decoration-dotted underline-offset-2">
+            {formatTokenCount(tokensUsed(task.legPeaks))} used
+          </span>
+        ) : null}
+      </span>
+    </SimpleTooltip>
+  );
+}
 
 function Station({
   station,
@@ -209,15 +241,19 @@ function Station({
           </span>
         </button>
         <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[10.5px] text-muted-foreground">
-          <span
-            className={cn(
-              station.state === 'waiting' && 'text-amber-600 dark:text-amber-400',
-              station.state === 'blocked' && 'text-rose-600 dark:text-rose-400',
-            )}
-          >
-            {STATE_WORDS[station.state]}
-          </span>
-          {task.estimate !== null ? (
+          {station.state === 'done' ? (
+            <DoneMeta task={task} />
+          ) : (
+            <span
+              className={cn(
+                station.state === 'waiting' && 'text-amber-600 dark:text-amber-400',
+                station.state === 'blocked' && 'text-rose-600 dark:text-rose-400',
+              )}
+            >
+              {STATE_WORDS[station.state]}
+            </span>
+          )}
+          {task.estimate !== null && station.state !== 'done' ? (
             <SimpleTooltip
               label={
                 level === 'over'

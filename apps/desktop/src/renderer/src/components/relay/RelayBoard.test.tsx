@@ -240,6 +240,20 @@ describe('RelayBoardHost', () => {
     expect(screen.queryByRole('button', { name: 'Run relay' })).toBeNull();
   });
 
+  it('shows a done card’s tokens used against its estimate on hover', async () => {
+    const { user } = open({
+      'relay.board': board({
+        tasks: [
+          card('T001', { status: 'done', estimate: 60_000, legCount: 1, legPeaks: [66_000] }),
+        ],
+      }),
+    });
+    await user.hover(await screen.findByRole('img', { name: 'Estimate 60K of 200K' }));
+    const tip = await screen.findByRole('tooltip');
+    expect(tip).toHaveTextContent('66Kof ~60K estimated');
+    expect(tip).toHaveTextContent('6K over the estimate (10%)');
+  });
+
   it('never uses the native title attribute', async () => {
     open();
     const dialog = await screen.findByRole('dialog', { name: 'CuraLink' });

@@ -18,6 +18,7 @@ export function card(id: string, overrides: Partial<RelayTaskCard> = {}): RelayT
     issues: [],
     handoff: null,
     legCount: 0,
+    legPeaks: [],
     ...overrides,
   };
 }

@@ -121,6 +121,36 @@ describe('the board', () => {
     expect(board.tasks[0]).not.toHaveProperty('body');
   });
 
+  it('adds up the context each session on a task used, skipping sessions with no reading', async () => {
+    await load();
+    const { addLegRecord } = await import('../relay/store');
+    const record = (legId: string, legNo: number, peakContextTokens: number | null) =>
+      addLegRecord('p1', {
+        legId,
+        relayId: 'r1',
+        taskId: 'T001',
+        legNo,
+        cliId: 'claude-code',
+        model: null,
+        effort: null,
+        tabId: null,
+        startedAt: 1,
+        endedAt: 2,
+        outcome: null,
+        tests: null,
+        result: 'continue',
+        peakContextTokens,
+      });
+    await record('l1', 1, 120_000);
+    await record('l2', 2, null);
+    await record('l3', 3, 45_000);
+    const board = await invoke<RelayBoard>(IPC.relay.board, 'p1');
+    expect(board.tasks.map((task) => [task.id, task.legCount, task.legPeaks])).toEqual([
+      ['T001', 3, [120_000, 45_000]],
+      ['T002', 0, []],
+    ]);
+  });
+
   it('gives one task with its body, and null for one that is not there', async () => {
     await load();
     const detail = await invoke<RelayTaskDetail>(IPC.relay.task, 'p1', 'T001');
