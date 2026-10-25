@@ -1,7 +1,7 @@
 import type { Project } from '@agentmat/core';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -106,6 +106,7 @@ export function ToastHistoryPanel(): React.JSX.Element {
   const [filter, setFilter] = useState<FilterId>('all');
   const [query, setQuery] = useState('');
   const [confirmingClear, setConfirmingClear] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -143,6 +144,12 @@ export function ToastHistoryPanel(): React.JSX.Element {
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-[80] bg-black/25 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
+          // Radix focuses the first focusable element, which is the close button, so it
+          // opened wearing a focus ring. Start in the search box instead.
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            searchRef.current?.focus();
+          }}
           className={cn(
             'fixed inset-y-0 right-0 z-[80] flex h-full w-full max-w-[22.5rem] flex-col border-l border-border bg-popover/90 text-popover-foreground shadow-2xl shadow-black/30 backdrop-blur-2xl',
             'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
@@ -158,7 +165,7 @@ export function ToastHistoryPanel(): React.JSX.Element {
                 Alerts that flashed in the corner, in case you missed one.
               </DialogPrimitive.Description>
             </div>
-            <DialogPrimitive.Close className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <DialogPrimitive.Close className="-mr-1 -mt-0.5 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full opacity-70 transition-colors hover:bg-accent hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <X className="h-4 w-4" />
               <span className="sr-only">Close</span>
             </DialogPrimitive.Close>
@@ -168,6 +175,7 @@ export function ToastHistoryPanel(): React.JSX.Element {
             <div className="relative">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
+                ref={searchRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search messages…"
