@@ -111,6 +111,14 @@ function forwardExit(sessionId: string, error?: string): void {
   exitSubscribers.delete(sessionId);
 }
 
+const serverRemovedListeners = new Set<(serverId: string) => void>();
+
+/** Calls `listener` with a saved server's id once it has been removed. Returns the unsubscribe. */
+export function onSshServerRemoved(listener: (serverId: string) => void): () => void {
+  serverRemovedListeners.add(listener);
+  return () => serverRemovedListeners.delete(listener);
+}
+
 /** The saved server a live session is connected to, or null once it has closed. */
 export function sshSessionServerId(sessionId: string): string | null {
   return sessions.get(sessionId)?.serverId ?? null;
@@ -243,6 +251,7 @@ export function registerSshHandlers(): void {
     await store.setSshServers(servers.filter((s) => s.id !== id));
     // After the write, so an SFTP open racing the removal no longer finds the server.
     closeSftpSessionsForServer(id);
+    for (const listener of serverRemovedListeners) listener(id);
   });
 
   ipcMain.handle(

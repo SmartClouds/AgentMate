@@ -32,20 +32,29 @@ import {
   Robot,
   Server,
   Spinner,
+  Trash2,
   TriangleAlert,
   X,
 } from '@/components/icons';
 import { SshAgentHistoryDialog } from '@/components/terminal/SshAgentHistoryDialog';
+import { serverContinuation } from '@/components/terminal/useTerminalContinuation';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SimpleTooltip } from '@/components/ui/tooltip';
+import { TruncatedText } from '@/components/ui/truncated-text';
 import { queryKeys } from '@/lib/queryKeys';
 import { withHostKeyTrust } from '@/lib/ssh/hostKeyTrust';
 import { timeAgo } from '@/lib/time';
 import { cn } from '@/lib/utils';
 import { openRemoteResume } from '@/lib/workspace/launch';
-import { useSshAgentSession, useSshAgentStore } from '@/stores/sshAgentStore';
+import { confirmDialog } from '@/stores/confirmStore';
+import {
+  isSshAgentWaitingOnUser,
+  type SshAgentSessionState,
+  useSshAgentSession,
+  useSshAgentStore,
+} from '@/stores/sshAgentStore';
 import { useTerminalStore } from '@/stores/terminalStore';
 
 /**
@@ -257,6 +266,30 @@ function HistorySheet({
     else setBrowseFolds(update);
   }
 
+  async function clearAskAi(): Promise<void> {
+    const agreed = await confirmDialog({
+      title: `Clear the AI task history of ${server.nickname}?`,
+      description:
+        'Every finished Ask AI task on this server is removed, here and from the saved history. A task still running stays.',
+      confirmLabel: 'Clear',
+      variant: 'destructive',
+    });
+    if (!agreed) return;
+    try {
+      await window.agentmat.sshAgent.clearServerHistory(server.id);
+      void refetchAskAi();
+    } catch {
+      toast.error('Could not clear the AI task history.');
+    }
+  }
+
+  // Picking a task back up happens in a terminal tab on the server, so this sheet steps aside.
+  const continuation = serverContinuation(server, () => {
+    setOpenRunId(null);
+    resumedRef.current = true;
+    onClose();
+  });
+
   function resume(session: AgentHistorySession): void {
     const wasOpen = openIds.has(session.id);
     const tabId = openRemoteResume(server, session);
@@ -377,7 +410,12 @@ function HistorySheet({
             prompt stretch rows past the sheet edge. Force it back to block. */}
         <ScrollArea className="min-h-0 flex-1 [&_[data-radix-scroll-area-viewport]>div]:!block">
           {askAiRuns.length > 0 ? (
-            <AskAiSection runs={askAiRuns} onOpen={(run) => setOpenRunId(run.id)} />
+            <AskAiSection
+              runs={askAiRuns}
+              live={agentProgress}
+              onOpen={(run) => setOpenRunId(run.id)}
+              onClear={() => void clearAskAi()}
+            />
           ) : null}
 
           {vaultLocked ? (
@@ -439,6 +477,7 @@ function HistorySheet({
             if (!next) setOpenRunId(null);
           }}
           initialRunId={openRunId}
+          continuation={continuation}
           source={{
             kind: 'ssh',
             queryKey: queryKeys.sshServerAgentHistory(server.id),
@@ -548,37 +587,67 @@ const RUN_STATUS: Record<SshAgentHistoryRun['status'], { label: string; dot: str
 };
 
 /** The Ask AI tasks run in this server's SSH tabs, newest first. Each opens its full timeline. */
+/** What a task still going waits for, for its row in the list. Null when it waits for nothing. */
+function waitingLabel(
+  run: SshAgentHistoryRun,
+  state: SshAgentSessionState | undefined,
+): string | null {
+  if ((run.status !== 'running' && run.status !== 'paused') || !isSshAgentWaitingOnUser(state)) {
+    return null;
+  }
+  return state?.phase === 'needs-input' ? 'Needs your answer' : 'Waiting for you';
+}
+
 function AskAiSection({
   runs,
+  live,
   onOpen,
+  onClear,
 }: {
   runs: SshAgentHistoryRun[];
+  /** Every terminal's live AI task state, to mark a task that waits on the user. */
+  live: Record<string, SshAgentSessionState>;
   onOpen: (run: SshAgentHistoryRun) => void;
+  onClear: () => void;
 }): React.JSX.Element {
   const regionId = useId();
   const [expanded, setExpanded] = useState(true);
 
   return (
     <section className="px-2 pt-1.5">
-      <button
-        type="button"
-        aria-expanded={expanded}
-        aria-controls={expanded ? regionId : undefined}
-        onClick={() => setExpanded((value) => !value)}
-        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-foreground/[0.05] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      >
-        <ChevronRight
-          className={cn(
-            'h-2.5 w-2.5 shrink-0 text-muted-foreground transition-transform duration-150 motion-reduce:transition-none',
-            expanded && 'rotate-90',
-          )}
-        />
-        <Robot className="h-3.5 w-3.5 shrink-0 text-primary/80" />
-        <span className="min-w-0 flex-1 text-[12px] font-medium leading-4">Ask AI tasks</span>
-        <span className="shrink-0 rounded-full bg-foreground/[0.06] px-1.5 py-px text-[10px] font-medium tabular-nums text-muted-foreground">
-          {runs.length}
-        </span>
-      </button>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-controls={expanded ? regionId : undefined}
+          onClick={() => setExpanded((value) => !value)}
+          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-foreground/[0.05] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <ChevronRight
+            className={cn(
+              'h-2.5 w-2.5 shrink-0 text-muted-foreground transition-transform duration-150 motion-reduce:transition-none',
+              expanded && 'rotate-90',
+            )}
+          />
+          <Robot className="h-3.5 w-3.5 shrink-0 text-primary/80" />
+          <span className="min-w-0 flex-1 text-[12px] font-medium leading-4">Ask AI tasks</span>
+          <span className="shrink-0 rounded-full bg-foreground/[0.06] px-1.5 py-px text-[10px] font-medium tabular-nums text-muted-foreground">
+            {runs.length}
+          </span>
+        </button>
+        <SimpleTooltip label="Clear AI task history">
+          <Button
+            type="button"
+            size="icon-xs"
+            variant="ghost"
+            aria-label="Clear AI task history"
+            onClick={onClear}
+            className="shrink-0 text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </SimpleTooltip>
+      </div>
       {expanded ? (
         <ul
           id={regionId}
@@ -588,6 +657,7 @@ function AskAiSection({
           {runs.map((run) => {
             const status = RUN_STATUS[run.status];
             const commands = run.entries.filter((entry) => entry.kind === 'command').length;
+            const waiting = waitingLabel(run, live[run.sessionId]);
             return (
               <li key={run.id} className="mx-1">
                 <button
@@ -597,8 +667,18 @@ function AskAiSection({
                 >
                   <span className={cn('mt-[5px] h-2 w-2 shrink-0 rounded-full', status.dot)} />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[12px] leading-4 text-foreground/90">
-                      {run.prompt}
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <TruncatedText
+                        text={run.prompt}
+                        side="right"
+                        focusable={false}
+                        className="flex-1 text-[12px] leading-4 text-foreground/90"
+                      />
+                      {waiting ? (
+                        <span className="shrink-0 rounded-full bg-warning/15 px-1.5 py-px text-[10px] font-medium text-warning">
+                          {waiting}
+                        </span>
+                      ) : null}
                     </span>
                     <span className="mt-0.5 block truncate text-[10px] leading-3 text-muted-foreground">
                       {[

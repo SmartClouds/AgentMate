@@ -252,6 +252,7 @@ export const IPC = {
     continue: 'sshAgent:continue',
     history: 'sshAgent:history',
     serverHistory: 'sshAgent:serverHistory',
+    clearServerHistory: 'sshAgent:clearServerHistory',
     notifyWaiting: 'sshAgent:notifyWaiting',
     // main -> renderer: the task's status changed (thinking, proposed a command, running it, ...)
     onProgress: 'sshAgent:onProgress',

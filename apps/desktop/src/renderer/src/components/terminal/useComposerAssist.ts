@@ -1,0 +1,139 @@
+import {
+  type AgentInstructionPurpose,
+  type AgentInstructionTarget,
+  buildAgentInstructionRequest,
+} from '@agentmat/core';
+import { useQuery } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
+import { promptProviderModel } from '@/lib/promptProvider';
+import { queryKeys } from '@/lib/queryKeys';
+
+export interface ComposerAssistOptions {
+  value: string;
+  onChange: (value: string) => void;
+  purpose: AgentInstructionPurpose;
+  target: AgentInstructionTarget;
+  /** The AI's question, when the text answers one. */
+  question?: string;
+}
+
+export type ComposerAssistJob = 'translate' | 'rewrite';
+
+interface RunningJob {
+  kind: ComposerAssistJob;
+  requestId: string;
+}
+
+/**
+ * Translate and "Write it for me" for an AI task box. Each replaces the text, and Undo brings back
+ * what was typed until the user edits the result. Cancel stops the request in main as well, and a
+ * result that lands after it is dropped.
+ */
+export function useComposerAssist({
+  value,
+  onChange,
+  purpose,
+  target,
+  question,
+}: ComposerAssistOptions) {
+  const settingsQuery = useQuery({
+    queryKey: queryKeys.settings,
+    queryFn: () => window.agentmat.settings.get(),
+    meta: { silentLoading: true },
+  });
+  const [busy, setBusy] = useState<ComposerAssistJob | null>(null);
+  const [undoState, setUndoState] = useState<{ before: string; after: string } | null>(null);
+  const jobRef = useRef<RunningJob | null>(null);
+
+  // Nothing comes back to a box that is gone, so main need not keep working on it.
+  useEffect(() => () => void stop(), []);
+
+  function begin(kind: ComposerAssistJob): RunningJob | null {
+    if (jobRef.current || !value.trim()) return null;
+    const job = { kind, requestId: crypto.randomUUID() };
+    jobRef.current = job;
+    setBusy(kind);
+    return job;
+  }
+
+  function finish(job: RunningJob): boolean {
+    if (jobRef.current !== job) return false;
+    jobRef.current = null;
+    setBusy(null);
+    return true;
+  }
+
+  function replace(before: string, after: string): void {
+    setUndoState({ before, after });
+    onChange(after);
+  }
+
+  async function translate(): Promise<void> {
+    const job = begin('translate');
+    if (!job) return;
+    const before = value;
+    try {
+      const translated = await window.agentmat.translate.text({
+        text: before,
+        targetLang: 'en',
+        requestId: job.requestId,
+      });
+      if (finish(job)) replace(before, translated.trim());
+    } catch {
+      if (finish(job)) {
+        toast.error('Translation failed. Check your internet connection and try again.');
+      }
+    }
+  }
+
+  async function rewrite(): Promise<void> {
+    const job = begin('rewrite');
+    if (!job) return;
+    const before = value;
+    try {
+      const settings = settingsQuery.data ?? (await window.agentmat.settings.get());
+      const { provider, model } = promptProviderModel(settings);
+      if (!model.trim()) {
+        if (finish(job)) toast.error(`Set a ${provider} model in Settings first.`);
+        return;
+      }
+      const result = await window.agentmat.ai.ask({
+        provider,
+        model,
+        prompt: buildAgentInstructionRequest({ text: before, purpose, target, question }),
+        requestId: job.requestId,
+      });
+      if (!finish(job) || result.cancelled) return;
+      if (!result.ok) {
+        toast.error(result.error || 'The AI could not write it.');
+        return;
+      }
+      replace(before, result.text.trim());
+    } catch (error) {
+      if (finish(job)) toast.error((error as Error).message || 'The AI could not write it.');
+    }
+  }
+
+  function stop(): boolean {
+    const job = jobRef.current;
+    if (!job) return false;
+    jobRef.current = null;
+    setBusy(null);
+    void (job.kind === 'translate'
+      ? window.agentmat.translate.cancel(job.requestId)
+      : window.agentmat.ai.cancel(job.requestId));
+    return true;
+  }
+
+  // Once the user edits the result, Undo would throw their typing away, so it is gone.
+  const canUndo = undoState !== null && undoState.after === value;
+
+  function undo(): void {
+    if (!canUndo || !undoState) return;
+    onChange(undoState.before);
+    setUndoState(null);
+  }
+
+  return { busy, translate, rewrite, cancel: stop, undo, canUndo };
+}

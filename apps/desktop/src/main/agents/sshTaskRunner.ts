@@ -8,6 +8,7 @@ import type {
   SshAgentMode,
   SshAgentPhase,
   SshAgentProgress,
+  SshAgentRunSettings,
   StartSshAgentTaskInput,
 } from '../../shared/apiTypes';
 import { MAX_SSH_AGENT_MESSAGE_CHARS } from '../../shared/sshAgentMessage';
@@ -51,6 +52,8 @@ import {
   type ShellFamily,
   shellFamily,
 } from './shellCommand';
+import { previousTaskContext } from './sshTaskContext';
+import { createSshHistoryStore } from './sshTaskHistoryStore';
 
 /** Refuses to loop forever if the AI never says FINISHED. */
 const MAX_STEPS = 40;
@@ -65,6 +68,8 @@ const MAX_HISTORY_RUNS = 20;
 const MAX_SERVER_HISTORY_RUNS = 50;
 /** Output kept per command in the history. The end is what explains how a command went. */
 const MAX_HISTORY_OUTPUT_CHARS = 8000;
+/** How far back a chain of continued tasks is followed for the AI's background. */
+const MAX_CONTINUED_CHAIN = 10;
 
 /**
  * An agent CLI would otherwise happily use its own tools, which run on the user's machine rather
@@ -195,18 +200,27 @@ function followUpBlock(run: RunState): string {
   return `\n\nThe user added these while you were working, oldest first. They take priority over anything earlier, so change course if one asks for it:\n${lines.join('\n')}`;
 }
 
+/**
+ * What happened in the earlier tasks this one continues, as a block for the end of the task. Like
+ * the follow-ups it goes in every prompt, since it is not in this run's transcript.
+ */
+function previousBlock(run: RunState): string {
+  if (!run.previousContext) return '';
+  return `\n\n${run.previousContext}\nThat is background. The task above is what to do now.`;
+}
+
 function buildPrompt(run: RunState): string {
   const tail = transcriptTail(run.transcript);
   if (run.buildPrompt) {
     return run.buildPrompt({
-      task: run.prompt + followUpBlock(run),
+      task: run.prompt + previousBlock(run) + followUpBlock(run),
       transcript: tail,
       viaCli: run.cliId !== null,
     });
   }
   return `${run.cliId ? cliPreamble(run.target) : ''}You are operating ${run.target.description}, on behalf of a user who is watching every command execute live in their terminal.
 
-User's task: "${run.prompt}"${followUpBlock(run)}
+User's task: "${run.prompt}"${previousBlock(run)}${followUpBlock(run)}
 
 Reply with EXACTLY one of these three forms, and nothing else:
 RUN: <a single shell command>
@@ -272,6 +286,8 @@ interface RunState {
   /** Set while a CLI is working out the next step, so Stop can kill it. */
   cliRequestId: string | null;
   prompt: string;
+  /** What happened in the earlier tasks this one continues, or empty for a fresh task. */
+  previousContext: string;
   /** Messages the user sent after starting, oldest first. Every later prompt carries them. */
   followUps: string[];
   /** How many of those the AI's current step was asked with. The rest are still waiting. */
@@ -299,6 +315,66 @@ interface RunState {
 const runs = new Map<string, RunState>();
 /** Every terminal's past and current tasks, newest last. Kept for as long as the app runs. */
 const histories = new Map<string, SshAgentHistoryRun[]>();
+/** Tasks read back from disk, run in tabs of an earlier session of the app. All on saved servers. */
+let restored: SshAgentHistoryRun[] = [];
+let restoring: Promise<void> | null = null;
+// Async wrappers, so a store without these (a test's) is a rejected read, not a throw.
+const savedHistory = createSshHistoryStore({
+  read: async () => store.getSshAgentHistory(),
+  write: async (list) => store.setSshAgentHistory(list),
+});
+
+function allHistory(): SshAgentHistoryRun[] {
+  return [...restored, ...[...histories.values()].flat()];
+}
+
+/** Writes the history soon, when the task belongs to a saved server. Nothing else is kept. */
+function persist(entry: SshAgentHistoryRun): void {
+  if (entry.serverId) savedHistory.save(allHistory());
+}
+
+/** Reads the saved history once, so earlier tasks can be listed and continued. */
+export function ensureSshHistoryRestored(): Promise<void> {
+  restoring ??= savedHistory.load().then((saved) => {
+    const live = new Set(allHistory().map((run) => run.id));
+    restored = saved.filter((run) => !live.has(run.id));
+  });
+  return restoring;
+}
+
+/** Writes any change still waiting, for when the app quits. */
+export function flushSshTaskHistory(): Promise<void> {
+  return savedHistory.flush();
+}
+
+/** Forgets every finished task on a saved server, here and on disk. A task still going stays. */
+export async function clearSshServerTaskHistory(serverId: string): Promise<void> {
+  await ensureSshHistoryRestored();
+  const gone = (run: SshAgentHistoryRun): boolean =>
+    run.serverId === serverId && run.status !== 'running' && run.status !== 'paused';
+  restored = restored.filter((run) => !gone(run));
+  for (const [sessionId, list] of histories)
+    histories.set(
+      sessionId,
+      list.filter((run) => !gone(run)),
+    );
+  savedHistory.save(allHistory());
+  await savedHistory.flush();
+}
+
+/** The task with this id and the ones it continued, oldest first. Empty when it is unknown. */
+function historyChain(runId: string): SshAgentHistoryRun[] {
+  const all = allHistory();
+  const chain: SshAgentHistoryRun[] = [];
+  let next: string | undefined = runId;
+  while (next && chain.length < MAX_CONTINUED_CHAIN) {
+    const found = all.find((run) => run.id === next);
+    if (!found || chain.includes(found)) break;
+    chain.unshift(found);
+    next = found.continuedFromRunId;
+  }
+  return chain;
+}
 
 /** Messages from the user the AI has not been asked with yet. */
 function queuedMessages(run: RunState): number {
@@ -336,17 +412,20 @@ type NewHistoryEntry = SshAgentHistoryEntry extends infer E
 
 function record(run: RunState, entry: NewHistoryEntry): void {
   run.history.entries.push({ ...entry, at: Date.now() } as SshAgentHistoryEntry);
+  persist(run.history);
 }
 
 function endHistory(run: RunState, status: SshAgentHistoryRun['status']): void {
   run.history.status = status;
   run.history.endedAt = Date.now();
+  persist(run.history);
 }
 
 function startHistory(
   sessionId: string,
   serverId: string | null,
   prompt: string,
+  extra: Pick<SshAgentHistoryRun, 'settings' | 'continuedFromRunId'>,
 ): SshAgentHistoryRun {
   const entry: SshAgentHistoryRun = {
     id: randomUUID(),
@@ -358,10 +437,13 @@ function startHistory(
     endedAt: null,
     status: 'running',
     entries: [],
+    ...(extra.settings ? { settings: extra.settings } : {}),
+    ...(extra.continuedFromRunId ? { continuedFromRunId: extra.continuedFromRunId } : {}),
   };
   const list = histories.get(sessionId) ?? [];
   list.push(entry);
   histories.set(sessionId, list.slice(-MAX_HISTORY_RUNS));
+  persist(entry);
   return entry;
 }
 
@@ -375,8 +457,7 @@ export function getSshTaskHistory(sessionId: string): SshAgentHistoryRun[] {
  * server's AI history still lists them after it closed.
  */
 export function getSshServerTaskHistory(serverId: string): SshAgentHistoryRun[] {
-  return [...histories.values()]
-    .flat()
+  return allHistory()
     .filter((run) => run.serverId === serverId)
     .sort((a, b) => b.startedAt - a.startedAt)
     .slice(0, MAX_SERVER_HISTORY_RUNS);
@@ -758,12 +839,29 @@ export function startSshTask(
 ): void {
   const { sessionId } = input;
   if (runs.has(sessionId)) throw new Error('An AI task is already running in this session.');
+  const chain = input.continueFromRunId ? historyChain(input.continueFromRunId) : [];
+  if (input.continueFromRunId && chain.length === 0) {
+    throw new Error('That earlier task is no longer in the history.');
+  }
   const target = input.target === 'local' ? localTarget(sessionId) : sshTarget(sessionId);
   startAgentTask(
     {
       key: sessionId,
       prompt: input.prompt,
       target,
+      settings: {
+        target: input.target === 'local' ? 'local' : 'ssh',
+        mode: input.mode,
+        cliId: input.cliId ?? null,
+        modelId: input.modelId ?? null,
+        effort: input.effort ?? null,
+      },
+      ...(input.continueFromRunId
+        ? {
+            continuedFromRunId: input.continueFromRunId,
+            previousContext: previousTaskContext(chain),
+          }
+        : {}),
       policy: modePolicy(input.mode),
       executor: (_run, command) => {
         const run = runs.get(sessionId);
@@ -790,6 +888,11 @@ export interface AgentTaskSpec {
   runArgs: string[];
   /** What it says when it is not connected; the SSH and local wording otherwise. */
   notConnectedMessage?: string;
+  /** How a terminal task was started, kept in its history so it can be run again. */
+  settings?: SshAgentRunSettings;
+  /** The earlier task this one continues, and what the AI is told happened in it. */
+  continuedFromRunId?: string;
+  previousContext?: string;
 }
 
 /** Starts the loop on any target with any executor. `startSshTask` is this for a terminal. */
@@ -819,6 +922,7 @@ export function startAgentTask(
     runArgs: spec.runArgs,
     cliRequestId: null,
     prompt: prompt.trim(),
+    previousContext: spec.previousContext ?? '',
     followUps: [],
     followUpsPrompted: 0,
     transcript: '',
@@ -836,6 +940,7 @@ export function startAgentTask(
       sessionId,
       target.kind === 'ssh' ? sshSessionServerId(sessionId) : null,
       prompt.trim(),
+      { settings: spec.settings, continuedFromRunId: spec.continuedFromRunId },
     ),
     lastProgress: null,
     // Replaced immediately below, once the real subscription exists.

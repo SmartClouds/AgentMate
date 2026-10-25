@@ -1,9 +1,12 @@
 import type { AgentHistorySession } from '@agentmat/core';
 import type { SshAgentHistoryRun, SshConversationsResult, SshSavedServer } from '@shared/apiTypes';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { installFakeMicrophone } from '../../../../test/renderer/fakeMicrophone';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
+import { resolveConfirm, useConfirmStore } from '../../stores/confirmStore';
+import { useSshAgentStore } from '../../stores/sshAgentStore';
 import { useTerminalStore } from '../../stores/terminalStore';
 
 const openRemoteResume = vi.fn((..._args: unknown[]): string | null => 'tab-new');
@@ -436,5 +439,84 @@ describe('SshHistoryPanel', () => {
     await user.keyboard('{Escape}');
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+});
+
+describe('picking an Ask AI task back up from the server history', () => {
+  beforeEach(() => {
+    installFakeMicrophone();
+    useTerminalStore.setState({ sessions: [], activeSessionId: null });
+    useSshAgentStore.setState({ sessions: {}, askAiRequest: null });
+  });
+
+  async function openTimeline(runs: SshAgentHistoryRun[]) {
+    const view = renderPanel(result({ sessions: [] }), runs);
+    await view.user.click(await screen.findByText(runs[0]?.prompt ?? ''));
+    return { ...view, timeline: await screen.findByRole('dialog', { name: 'AI task history' }) };
+  }
+
+  it('continues in a new tab on the server, with the follow-up waiting in Ask AI', async () => {
+    const { user, timeline } = await openTimeline([askAiRun()]);
+    await user.type(
+      within(timeline).getByRole('textbox', { name: 'What to do next' }),
+      'now check the inodes{Enter}',
+    );
+
+    const tab = useTerminalStore.getState().sessions.find((s) => s.sshServerId === server.id);
+    expect(tab).toMatchObject({ kind: 'ssh' });
+    expect(useTerminalStore.getState().activeSessionId).toBe(tab?.id);
+    expect(useSshAgentStore.getState().askAiRequest).toMatchObject({
+      sessionId: tab?.id,
+      prefill: { intent: 'continue', followUp: 'now check the inodes', run: { id: 'run-1' } },
+    });
+  });
+
+  it('uses a tab already open on the server instead of opening another', async () => {
+    useTerminalStore.setState({
+      sessions: [{ id: 'tab-open', title: 'prod', kind: 'ssh', sshServerId: server.id }],
+      activeSessionId: null,
+    });
+    const { user, timeline } = await openTimeline([askAiRun()]);
+    await user.click(within(timeline).getByRole('button', { name: 'Run again' }));
+
+    expect(useTerminalStore.getState().sessions).toHaveLength(1);
+    expect(useTerminalStore.getState().activeSessionId).toBe('tab-open');
+    expect(useSshAgentStore.getState().askAiRequest).toMatchObject({
+      sessionId: 'tab-open',
+      prefill: { intent: 'rerun' },
+    });
+  });
+
+  it('says where it will run', async () => {
+    const { timeline } = await openTimeline([askAiRun()]);
+    expect(within(timeline).getByText(/Runs in an SSH tab on prod/)).toBeInTheDocument();
+  });
+});
+
+describe('the Ask AI task list', () => {
+  it('marks a task that is waiting for an answer', async () => {
+    useSshAgentStore.setState({
+      sessions: {
+        'tab-live': { mode: 'approve-all', phase: 'needs-input', step: 1, message: 'Which?' },
+      },
+    });
+    renderPanel(result({ sessions: [] }), [
+      askAiRun({ id: 'run-live', sessionId: 'tab-live', status: 'running', endedAt: null }),
+    ]);
+    const tasks = await screen.findByRole('list', { name: 'Ask AI tasks' });
+    expect(within(tasks).getByText('Needs your answer')).toBeInTheDocument();
+  });
+
+  it('can be cleared, after asking', async () => {
+    const { user, bridge } = renderPanel(result({ sessions: [] }), [askAiRun()]);
+    bridge.$set('sshAgent.clearServerHistory', async () => undefined);
+    await screen.findByRole('list', { name: 'Ask AI tasks' });
+    await user.click(screen.getByRole('button', { name: 'Clear AI task history' }));
+    await waitFor(() => expect(useConfirmStore.getState().open).toBe(true));
+    expect(useConfirmStore.getState().title).toBe('Clear the AI task history of prod?');
+    act(() => resolveConfirm(true));
+    await waitFor(() =>
+      expect(bridge.$fn('sshAgent.clearServerHistory')).toHaveBeenCalledWith(server.id),
+    );
   });
 });

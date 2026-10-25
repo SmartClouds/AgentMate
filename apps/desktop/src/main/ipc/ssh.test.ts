@@ -75,6 +75,18 @@ describe('ssh:removeServer', () => {
     // The server is gone from the store first, so an open racing the removal cannot find it.
     expect(storedWhenClosed).toEqual(['srv-2']);
   });
+
+  it('tells whoever listens which server is gone, until they stop listening', async () => {
+    userData.writeData('ssh-servers.json', [saved(), saved({ id: 'srv-2', nickname: 'stage' })]);
+    const removed: string[] = [];
+    const stop = ssh.onSshServerRemoved((id) => removed.push(id));
+
+    await invoke(IPC.ssh.removeServer, 'srv-1');
+    stop();
+    await invoke(IPC.ssh.removeServer, 'srv-2');
+
+    expect(removed).toEqual(['srv-1']);
+  });
 });
 
 describe('ssh:reorderServers', () => {

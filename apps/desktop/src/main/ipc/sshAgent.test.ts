@@ -28,6 +28,8 @@ const runner = vi.hoisted(() => ({
   getSshTaskHistory: vi.fn(),
   getSshServerTaskHistory: vi.fn((): SshAgentHistoryRun[] => []),
   notifySshTaskWaiting: vi.fn(async () => undefined),
+  ensureSshHistoryRestored: vi.fn(async () => undefined),
+  clearSshServerTaskHistory: vi.fn(async () => undefined),
 }));
 
 vi.mock('../agents/sshTaskRunner', () => runner);
@@ -80,6 +82,17 @@ describe('starting a task', () => {
     progressListener()({ sessionId: 'ssh-1', phase: 'running', step: 1, queuedMessages: 2 });
 
     expect(owner.sentOn(IPC.sshAgent.onProgress)[0]?.[0]).toMatchObject({ queuedMessages: 2 });
+  });
+
+  it('reads the saved history before continuing an earlier task, and only then', async () => {
+    await invoke(IPC.sshAgent.start, input);
+    expect(runner.ensureSshHistoryRestored).not.toHaveBeenCalled();
+
+    await invoke(IPC.sshAgent.start, { ...input, continueFromRunId: 'run-1' });
+    expect(runner.ensureSshHistoryRestored).toHaveBeenCalledTimes(1);
+    expect(runner.ensureSshHistoryRestored.mock.invocationCallOrder[0]).toBeLessThan(
+      runner.startSshTask.mock.invocationCallOrder.at(-1) ?? 0,
+    );
   });
 });
 
@@ -142,6 +155,21 @@ describe('controlling a running task', () => {
     expect(await invoke(IPC.sshAgent.serverHistory, 42)).toEqual([]);
     expect(await invoke(IPC.sshAgent.serverHistory, '')).toEqual([]);
     expect(runner.getSshServerTaskHistory).not.toHaveBeenCalled();
+  });
+
+  it("reads the saved history before listing a server's tasks", async () => {
+    await invoke(IPC.sshAgent.serverHistory, 'srv-1');
+    expect(runner.ensureSshHistoryRestored).toHaveBeenCalled();
+  });
+
+  it("clears a saved server's tasks, and ignores a bad id", async () => {
+    await invoke(IPC.sshAgent.clearServerHistory, 'srv-1');
+    expect(runner.clearSshServerTaskHistory).toHaveBeenCalledWith('srv-1');
+
+    runner.clearSshServerTaskHistory.mockClear();
+    await invoke(IPC.sshAgent.clearServerHistory, 42);
+    await invoke(IPC.sshAgent.clearServerHistory, '');
+    expect(runner.clearSshServerTaskHistory).not.toHaveBeenCalled();
   });
 });
 

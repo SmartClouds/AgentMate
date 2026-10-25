@@ -53,7 +53,9 @@ describe('RdpAgentStatusBar', () => {
   it('sends an answer to a question', async () => {
     const { user, bridge } = renderBar({ phase: 'needs-input', message: 'Which file?' });
     expect(screen.getByText('Which file?')).toBeInTheDocument();
-    const send = screen.getByRole('button', { name: 'Send' });
+    expect(screen.getByText('Waiting for your answer')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'The AI asks' })).toHaveTextContent('Which file?');
+    const send = screen.getByRole('button', { name: 'Send answer' });
     expect(send).toBeDisabled();
 
     await user.type(screen.getByPlaceholderText(/Your answer/), 'report.docx{Enter}');

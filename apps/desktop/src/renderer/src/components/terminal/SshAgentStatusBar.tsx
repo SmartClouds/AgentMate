@@ -12,7 +12,7 @@ import {
   X,
 } from '@/components/icons';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { TruncatedText } from '@/components/ui/truncated-text';
 import { cn } from '@/lib/utils';
 import {
   answerSshAgentInput,
@@ -25,6 +25,7 @@ import {
   useSshAgentSession,
   useSshAgentStore,
 } from '@/stores/sshAgentStore';
+import { AgentAnswerPanel } from './AgentAnswerPanel';
 import { AgentMessageComposer } from './AgentMessageComposer';
 
 /** What the message box asks for, which depends on when the AI will get to read it. */
@@ -55,12 +56,38 @@ function sentNote(phase: SshAgentPhase, paused: boolean): string {
   }
 }
 
+/** The bar line as plain text, for the tooltip that shows it in full. */
+function lineText(state: {
+  phase: SshAgentPhase;
+  step: number;
+  command?: string;
+  message?: string;
+}): string {
+  switch (state.phase) {
+    case 'thinking':
+      return `Step ${state.step}: thinking…`;
+    case 'proposed':
+      return `Run ${state.command ?? ''}? ${state.message ?? ''}`.trim();
+    case 'running':
+      return `Running ${state.command ?? ''}`;
+    case 'needs-input':
+      return 'Waiting for your answer';
+    case 'finished':
+      return state.message || 'Task complete.';
+    default:
+      return state.message ?? '';
+  }
+}
+
 /** A slim bar above the terminal showing what the AI is doing, and any action it needs from you. */
 export function SshAgentStatusBar({
   sessionId,
+  target = 'ssh',
   onOpenHistory,
 }: {
   sessionId: string;
+  /** An SSH session, or a shell on this computer. It shapes what "Write it for me" writes. */
+  target?: 'ssh' | 'local';
   onOpenHistory: () => void;
 }): React.JSX.Element | null {
   const state = useSshAgentSession(sessionId);
@@ -69,6 +96,7 @@ export function SshAgentStatusBar({
   const [composerOpen, setComposerOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const messageButtonRef = useRef<HTMLButtonElement>(null);
+  const question = state?.phase === 'needs-input' ? (state.message ?? '') : null;
 
   // A paused run looks like an error but is still alive, waiting for Continue or Stop.
   const paused = state?.phase === 'error' && state.canContinue === true;
@@ -84,6 +112,12 @@ export function SshAgentStatusBar({
     setDraft('');
   }, [state, done]);
 
+  // Each question gets a fresh answer box, so half an answer to the last one never carries over.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the question is what changes
+  useEffect(() => {
+    setAnswer('');
+  }, [question]);
+
   if (!state) return null;
 
   const waitingOnUser =
@@ -94,11 +128,6 @@ export function SshAgentStatusBar({
   // A question has its own answer field, and what the user types there already reaches the AI.
   const canMessage = !done && state.phase !== 'needs-input';
   const queued = state.queuedMessages ?? 0;
-
-  function submitAnswer(): void {
-    answerSshAgentInput(sessionId, answer.trim());
-    setAnswer('');
-  }
 
   function closeComposer(): void {
     setComposerOpen(false);
@@ -132,7 +161,7 @@ export function SshAgentStatusBar({
           <Robot className={cn('h-3.5 w-3.5 shrink-0 text-primary', !done && 'animate-pulse')} />
         )}
 
-        <span className="min-w-0 flex-1 truncate text-foreground/85">
+        <TruncatedText text={lineText(state)} className="flex-1 text-foreground/85">
           {state.phase === 'thinking' && `Step ${state.step}: thinking…`}
           {state.phase === 'proposed' && (
             <>
@@ -151,11 +180,12 @@ export function SshAgentStatusBar({
               </code>
             </>
           )}
-          {(state.phase === 'needs-input' || state.phase === 'needs-password') && state.message}
+          {state.phase === 'needs-input' && 'Waiting for your answer'}
+          {state.phase === 'needs-password' && state.message}
           {state.phase === 'finished' && (state.message || 'Task complete.')}
           {state.phase === 'error' && state.message}
           {state.phase === 'stopped' && state.message}
-        </span>
+        </TruncatedText>
 
         {queued > 0 && (
           <span
@@ -173,24 +203,6 @@ export function SshAgentStatusBar({
             </Button>
             <Button size="sm" variant="ghost" onClick={() => skipSshAgentCommand(sessionId)}>
               Skip
-            </Button>
-          </div>
-        )}
-
-        {state.phase === 'needs-input' && (
-          <div className="flex shrink-0 items-center gap-1.5">
-            <Input
-              autoFocus
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') submitAnswer();
-              }}
-              placeholder="Your answer…"
-              className="h-7 w-48 text-xs"
-            />
-            <Button size="sm" onClick={submitAnswer} disabled={!answer.trim()}>
-              Send
             </Button>
           </div>
         )}
@@ -284,10 +296,21 @@ export function SshAgentStatusBar({
         )}
       </div>
 
+      {question !== null && (
+        <AgentAnswerPanel
+          question={question}
+          target={target}
+          draft={answer}
+          onDraftChange={setAnswer}
+          onAnswer={(text) => answerSshAgentInput(sessionId, text)}
+        />
+      )}
+
       {canMessage && composerOpen && (
         <AgentMessageComposer
           placeholder={composerPlaceholder(state.phase, paused)}
           sentNote={sentNote(state.phase, paused)}
+          target={target}
           onSend={(text) => sendSshAgentMessage(sessionId, text)}
           draft={draft}
           onDraftChange={setDraft}

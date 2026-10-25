@@ -2746,6 +2746,20 @@ export interface StartSshAgentTaskInput {
   modelId?: string | null;
   /** Reasoning effort, when the chosen model has one. */
   effort?: EffortLevel | null;
+  /**
+   * An earlier task (a history run id) this one carries on from. The AI is told what happened in
+   * it, and `prompt` is then what to do next.
+   */
+  continueFromRunId?: string | null;
+}
+
+/** How a terminal task was started, so it can be run again or continued the same way. */
+export interface SshAgentRunSettings {
+  target: 'ssh' | 'local';
+  mode: SshAgentMode;
+  cliId: string | null;
+  modelId: string | null;
+  effort: EffortLevel | null;
 }
 
 export type SshAgentPhase =
@@ -2822,6 +2836,10 @@ export interface SshAgentHistoryRun {
   endedAt: number | null;
   status: SshAgentRunStatus;
   entries: SshAgentHistoryEntry[];
+  /** Absent for a task that was not started from a terminal, such as Deploy's assistant. */
+  settings?: SshAgentRunSettings;
+  /** The earlier task this one continued, when it did. */
+  continuedFromRunId?: string;
 }
 
 /** Starts an AI task that operates a Remote Desktop session by looking at it and using mouse and keyboard. */

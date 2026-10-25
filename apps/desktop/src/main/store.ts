@@ -79,6 +79,7 @@ import type {
   FavoriteSkillRecord,
   LastRunInfoByCli,
   RemoteSavedServer,
+  SshAgentHistoryRun,
   SshVaultRecord,
   StoredProjectEnvironment,
   StoredRdpServer,
@@ -548,6 +549,11 @@ export const store = {
   getSshVault: (): Promise<SshVaultRecord | null> => readJsonFile('ssh-vault.json', null),
   setSshVault: (vault: SshVaultRecord | null): Promise<void> =>
     writeJsonFile('ssh-vault.json', vault),
+
+  /** The SSH AI task history, read back as is. The runner checks each entry before using it. */
+  getSshAgentHistory: (): Promise<unknown> => readJsonFile('ssh-agent-history.json', []),
+  setSshAgentHistory: (runs: SshAgentHistoryRun[]): Promise<void> =>
+    writeJsonFile('ssh-agent-history.json', runs),
 
   getAppNotifications: (): Promise<AppNotification[]> => readJsonFile('app-notifications.json', []),
   setAppNotifications: (notifications: AppNotification[]): Promise<void> =>

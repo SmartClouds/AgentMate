@@ -9,7 +9,9 @@ import {
   answerSshTaskInput,
   answerSshTaskPassword,
   approveSshTaskCommand,
+  clearSshServerTaskHistory,
   continueSshTask,
+  ensureSshHistoryRestored,
   getSshServerTaskHistory,
   getSshTaskHistory,
   notifySshTaskWaiting,
@@ -19,6 +21,7 @@ import {
   stopSshTask,
 } from '../agents/sshTaskRunner';
 import { sendToContents } from './send';
+import { onSshServerRemoved } from './ssh';
 
 /** The window that started each session's task, so progress events go back to it. */
 const owners = new Map<string, WebContents>();
@@ -38,7 +41,9 @@ function forwardProgress(progress: SshAgentProgress): void {
 export function registerSshAgentHandlers(): void {
   ipcMain.handle(
     IPC.sshAgent.start,
-    (event: IpcMainInvokeEvent, input: StartSshAgentTaskInput): void => {
+    async (event: IpcMainInvokeEvent, input: StartSshAgentTaskInput): Promise<void> => {
+      // A task continued from before a restart is only found once the saved history is read.
+      if (input.continueFromRunId) await ensureSshHistoryRestored();
       owners.set(input.sessionId, event.sender);
       startSshTask(input, forwardProgress);
     },
@@ -82,9 +87,21 @@ export function registerSshAgentHandlers(): void {
     getSshTaskHistory(sessionId),
   );
 
-  ipcMain.handle(IPC.sshAgent.serverHistory, (_event, serverId: unknown): SshAgentHistoryRun[] =>
-    typeof serverId === 'string' && serverId ? getSshServerTaskHistory(serverId) : [],
+  ipcMain.handle(
+    IPC.sshAgent.serverHistory,
+    async (_event, serverId: unknown): Promise<SshAgentHistoryRun[]> => {
+      if (typeof serverId !== 'string' || !serverId) return [];
+      await ensureSshHistoryRestored();
+      return getSshServerTaskHistory(serverId);
+    },
   );
+
+  ipcMain.handle(IPC.sshAgent.clearServerHistory, async (_event, serverId: unknown) => {
+    if (typeof serverId === 'string' && serverId) await clearSshServerTaskHistory(serverId);
+  });
+
+  // A server that is gone takes its AI history with it, on disk too.
+  onSshServerRemoved((serverId) => void clearSshServerTaskHistory(serverId));
 
   ipcMain.handle(
     IPC.sshAgent.notifyWaiting,

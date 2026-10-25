@@ -19,6 +19,7 @@ import { SftpDockPane } from '@/components/sftp/SftpDockPane';
 import { Button } from '@/components/ui/button';
 import { ReorderableGroup, type ReorderMotion } from '@/components/ui/ReorderableGroup';
 import { SimpleTooltip } from '@/components/ui/tooltip';
+import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { useRunPauseStore } from '@/stores/runPauseStore';
 import { closeTerminalTab } from '@/stores/runSessionStore';
@@ -34,8 +35,9 @@ import {
 import { PausedRunBanner } from './PausedRunBanner';
 import { SshAgentHistoryDialog } from './SshAgentHistoryDialog';
 import { SshAgentStatusBar } from './SshAgentStatusBar';
-import { SshAskAiDialog } from './SshAskAiDialog';
+import { SshAskAiDialog, type SshAskAiPrefill } from './SshAskAiDialog';
 import { TerminalPane } from './TerminalPane';
+import { useTerminalContinuation } from './useTerminalContinuation';
 
 function shellDisplayName(shell?: string): string {
   if (!shell) return defaultNewSession().title;
@@ -340,6 +342,7 @@ export function TerminalDrawer({
   const [isResizing, setIsResizing] = useState(false);
   const [askAiOpen, setAskAiOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [askAiPrefill, setAskAiPrefill] = useState<SshAskAiPrefill | null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const shellRef = useRef<HTMLElement>(null);
 
@@ -354,6 +357,31 @@ export function TerminalDrawer({
   // A file manager tab has no shell, so nothing that talks to one is offered on it.
   const onFiles = activeSession?.kind === 'sftp';
   const shellSession = onFiles ? null : activeSession;
+  const shellTarget = shellSession?.kind === 'ssh' ? 'ssh' : 'local';
+  // An SSH tab on a saved server lists the server's earlier tasks too, kept across restarts.
+  const shellServerId = shellSession?.kind === 'ssh' ? (shellSession.sshServerId ?? null) : null;
+  const shellLive = useSshAgentStore((s) =>
+    shellSession ? s.sessions[shellSession.id] : undefined,
+  );
+  // The server's history asks for this tab's Ask AI dialog on a past task. Taken once it shows.
+  const askAiRequest = useSshAgentStore((s) => s.askAiRequest);
+  useEffect(() => {
+    if (!askAiRequest || askAiRequest.sessionId !== shellSession?.id) return;
+    useSshAgentStore.setState({ askAiRequest: null });
+    setHistoryOpen(false);
+    setAskAiPrefill(askAiRequest.prefill);
+    setAskAiOpen(true);
+  }, [askAiRequest, shellSession?.id]);
+  const continuation = useTerminalContinuation({
+    sessionId: shellSession?.id ?? null,
+    title: shellSession?.title ?? '',
+    target: shellTarget,
+    openAskAi: (prefill) => {
+      setHistoryOpen(false);
+      setAskAiPrefill(prefill);
+      setAskAiOpen(true);
+    },
+  });
 
   function handleCloseDrawer(): void {
     setIsMaximized(false);
@@ -527,6 +555,7 @@ export function TerminalDrawer({
         {shellSession && (
           <SshAgentStatusBar
             sessionId={shellSession.id}
+            target={shellTarget}
             onOpenHistory={() => setHistoryOpen(true)}
           />
         )}
@@ -606,9 +635,14 @@ export function TerminalDrawer({
         {shellSession && (
           <SshAskAiDialog
             sessionId={shellSession.id}
-            target={shellSession.kind === 'ssh' ? 'ssh' : 'local'}
+            target={shellTarget}
+            serverId={shellServerId}
+            prefill={askAiPrefill}
             open={askAiOpen}
-            onOpenChange={setAskAiOpen}
+            onOpenChange={(next) => {
+              setAskAiOpen(next);
+              if (!next) setAskAiPrefill(null);
+            }}
           />
         )}
         {shellSession && (
@@ -617,6 +651,17 @@ export function TerminalDrawer({
             sessionTitle={shellSession.title}
             open={historyOpen}
             onOpenChange={setHistoryOpen}
+            continuation={continuation}
+            source={
+              shellServerId
+                ? {
+                    kind: 'ssh',
+                    queryKey: queryKeys.sshServerAgentHistory(shellServerId),
+                    load: () => window.agentmat.sshAgent.serverHistory(shellServerId),
+                    live: shellLive,
+                  }
+                : undefined
+            }
           />
         )}
       </div>

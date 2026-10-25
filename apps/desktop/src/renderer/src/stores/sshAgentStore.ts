@@ -1,5 +1,6 @@
 import type { EffortLevel } from '@agentmat/core';
 import type {
+  SshAgentHistoryRun,
   SshAgentMode,
   SshAgentPhase,
   SshAgentProgress,
@@ -21,6 +22,14 @@ export interface SshAgentSessionState {
   queuedMessages?: number;
 }
 
+/** A past task the Ask AI dialog opens on: to run it again, or to continue it. */
+export interface SshAskAiPrefill {
+  run: SshAgentHistoryRun;
+  intent: 'rerun' | 'continue';
+  /** What to do next, when it was already typed elsewhere (the server's history). */
+  followUp?: string;
+}
+
 /** The AI the user picked last time: a CLI with its model and effort, or null for Settings' provider. */
 export interface SshAgentAiChoice {
   cliId: string | null;
@@ -34,6 +43,11 @@ interface SshAgentStoreState {
   lastMode: SshAgentMode;
   /** Same for the AI choice. Undefined until the dialog has been used once. */
   lastAi: SshAgentAiChoice | undefined;
+  /**
+   * Set by a history that is not in a terminal (the server's) to have that tab's Ask AI dialog
+   * open on a past task. The terminal drawer takes it once the tab is showing.
+   */
+  askAiRequest: { sessionId: string; prefill: SshAskAiPrefill } | null;
   clear: (sessionId: string) => void;
 }
 
@@ -41,6 +55,7 @@ export const useSshAgentStore = create<SshAgentStoreState>((set) => ({
   sessions: {},
   lastMode: 'approve-all',
   lastAi: undefined,
+  askAiRequest: null,
   clear: (sessionId) =>
     set((state) => {
       if (!(sessionId in state.sessions)) return state;
@@ -89,6 +104,30 @@ export async function startSshAgentTask(input: StartSshAgentTaskInput): Promise<
     useSshAgentStore.getState().clear(sessionId);
     throw error;
   }
+}
+
+/**
+ * Starts a task in this terminal that carries on from an earlier one, run the way that one ran.
+ * A task saved before its settings were kept runs with the last choices instead.
+ */
+export function continueSshAgentTaskFrom(
+  sessionId: string,
+  target: 'ssh' | 'local',
+  run: SshAgentHistoryRun,
+  followUp: string,
+): Promise<void> {
+  const { lastMode, lastAi } = useSshAgentStore.getState();
+  const settings = run.settings;
+  return startSshAgentTask({
+    sessionId,
+    target,
+    prompt: followUp,
+    mode: settings?.mode ?? lastMode,
+    cliId: settings ? settings.cliId : (lastAi?.cliId ?? null),
+    modelId: settings ? settings.modelId : (lastAi?.modelId ?? null),
+    effort: settings ? settings.effort : (lastAi?.effort ?? null),
+    continueFromRunId: run.id,
+  });
 }
 
 export function approveSshAgentCommand(sessionId: string): void {

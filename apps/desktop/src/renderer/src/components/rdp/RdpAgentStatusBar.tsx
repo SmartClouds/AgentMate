@@ -10,9 +10,10 @@ import {
   TriangleAlert,
   X,
 } from '@/components/icons';
+import { AgentAnswerPanel } from '@/components/terminal/AgentAnswerPanel';
 import { AgentMessageComposer } from '@/components/terminal/AgentMessageComposer';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { TruncatedText } from '@/components/ui/truncated-text';
 import { cn } from '@/lib/utils';
 import {
   answerRdpAgentInput,
@@ -57,6 +58,29 @@ function sentNote(phase: RdpAgentPhase, paused: boolean): string {
   }
 }
 
+/** The bar line as plain text, for the tooltip that shows it in full. */
+function lineText(state: {
+  phase: RdpAgentPhase;
+  step: number;
+  action?: string;
+  message?: string;
+}): string {
+  switch (state.phase) {
+    case 'thinking':
+      return `Step ${state.step}: looking at the screen…`;
+    case 'proposed':
+      return `Step ${state.step}: do ${state.action ?? ''}? ${state.message ?? ''}`.trim();
+    case 'acting':
+      return `Step ${state.step}: ${state.action ?? ''}`;
+    case 'needs-input':
+      return 'Waiting for your answer';
+    case 'finished':
+      return state.message || 'Task complete.';
+    default:
+      return state.message ?? '';
+  }
+}
+
 /**
  * A slim row between the title bar and the remote screen showing what the AI is doing, and any
  * decision it needs from you. It sits outside the session area so it never covers the desktop.
@@ -74,6 +98,7 @@ export function RdpAgentStatusBar({
   const [composerOpen, setComposerOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const messageButtonRef = useRef<HTMLButtonElement>(null);
+  const question = state?.phase === 'needs-input' ? (state.message ?? '') : null;
 
   // A paused run looks like an error but is still alive, waiting for Continue or Stop.
   const paused = state?.phase === 'error' && state.canContinue === true;
@@ -89,17 +114,17 @@ export function RdpAgentStatusBar({
     setDraft('');
   }, [state, done]);
 
+  // Each question gets a fresh answer box, so half an answer to the last one never carries over.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the question is what changes
+  useEffect(() => {
+    setAnswer('');
+  }, [question]);
+
   if (!state) return null;
 
   // A question has its own answer field, and what the user types there already reaches the AI.
   const canMessage = !done && state.phase !== 'needs-input';
   const queued = state.queuedMessages ?? 0;
-
-  function submitAnswer(): void {
-    if (!answer.trim()) return;
-    answerRdpAgentInput(sessionId, answer.trim());
-    setAnswer('');
-  }
 
   function closeComposer(): void {
     setComposerOpen(false);
@@ -125,7 +150,7 @@ export function RdpAgentStatusBar({
           <Robot className={cn('h-3.5 w-3.5 shrink-0 text-primary', !done && 'animate-pulse')} />
         )}
 
-        <span className="min-w-0 flex-1 truncate text-foreground/85">
+        <TruncatedText text={lineText(state)} className="flex-1 text-foreground/85">
           {state.phase === 'thinking' && `Step ${state.step}: looking at the screen…`}
           {state.phase === 'proposed' && (
             <>
@@ -137,11 +162,11 @@ export function RdpAgentStatusBar({
               Step {state.step}: <ActionCode>{state.action}</ActionCode>
             </>
           )}
-          {state.phase === 'needs-input' && state.message}
+          {state.phase === 'needs-input' && 'Waiting for your answer'}
           {state.phase === 'finished' && (state.message || 'Task complete.')}
           {state.phase === 'error' && state.message}
           {state.phase === 'stopped' && state.message}
-        </span>
+        </TruncatedText>
 
         {queued > 0 && (
           <span
@@ -159,24 +184,6 @@ export function RdpAgentStatusBar({
             </Button>
             <Button size="sm" variant="ghost" onClick={() => skipRdpAgentAction(sessionId)}>
               Skip
-            </Button>
-          </div>
-        )}
-
-        {state.phase === 'needs-input' && (
-          <div className="flex shrink-0 items-center gap-1.5">
-            <Input
-              autoFocus
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') submitAnswer();
-              }}
-              placeholder="Your answer…"
-              className="h-7 w-48 text-xs"
-            />
-            <Button size="sm" onClick={submitAnswer} disabled={!answer.trim()}>
-              Send
             </Button>
           </div>
         )}
@@ -237,10 +244,21 @@ export function RdpAgentStatusBar({
         )}
       </div>
 
+      {question !== null && (
+        <AgentAnswerPanel
+          question={question}
+          target="rdp"
+          draft={answer}
+          onDraftChange={setAnswer}
+          onAnswer={(text) => answerRdpAgentInput(sessionId, text)}
+        />
+      )}
+
       {canMessage && composerOpen && (
         <AgentMessageComposer
           placeholder={composerPlaceholder(state.phase, paused)}
           sentNote={sentNote(state.phase, paused)}
+          target="rdp"
           onSend={(text) => sendRdpAgentMessage(sessionId, text)}
           draft={draft}
           onDraftChange={setDraft}

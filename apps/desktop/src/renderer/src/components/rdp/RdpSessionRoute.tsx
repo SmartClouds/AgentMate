@@ -36,7 +36,17 @@ import { formatBytes } from '@/lib/format';
 import { queryKeys } from '@/lib/queryKeys';
 import { isTitleBarBlankDoubleClick } from '@/lib/titleBar';
 import { cn } from '@/lib/utils';
-import { initRdpAgentStatus, isRdpAgentActive, useRdpAgentSession } from '@/stores/rdpAgentStore';
+import {
+  answerRdpAgentInput,
+  approveRdpAgentAction,
+  continueRdpAgentTask,
+  initRdpAgentStatus,
+  isRdpAgentActive,
+  sendRdpAgentMessage,
+  skipRdpAgentAction,
+  stopRdpAgentTask,
+  useRdpAgentSession,
+} from '@/stores/rdpAgentStore';
 import { RdpAgentOverlay } from './RdpAgentOverlay';
 import { RdpAgentStatusBar } from './RdpAgentStatusBar';
 import { RdpAskAiDialog } from './RdpAskAiDialog';
@@ -473,6 +483,21 @@ export default function RdpSessionRoute(): React.JSX.Element {
           queryKey: queryKeys.rdpAgentHistory(sessionId),
           load: () => window.agentmat.rdpAgent.history(sessionId),
           live: agentState,
+          // So the history can answer, message and stop the task, as the bar above does.
+          controls: agentState
+            ? {
+                phase: agentState.phase,
+                message: agentState.message,
+                command: agentState.action,
+                canContinue: agentState.canContinue,
+                answer: (text) => answerRdpAgentInput(sessionId, text),
+                send: (text) => sendRdpAgentMessage(sessionId, text),
+                approve: () => approveRdpAgentAction(sessionId),
+                skip: () => skipRdpAgentAction(sessionId),
+                resume: () => continueRdpAgentTask(sessionId),
+                stop: () => stopRdpAgentTask(sessionId),
+              }
+            : null,
         }}
       />
 

@@ -15,6 +15,7 @@ import {
   Copy,
   Crosshair,
   History,
+  Link,
   Play,
   Robot,
   StopCircle,
@@ -30,9 +31,26 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { SimpleTooltip } from '@/components/ui/tooltip';
+import { TruncatedText } from '@/components/ui/truncated-text';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
-import { useSshAgentSession } from '@/stores/sshAgentStore';
+import {
+  answerSshAgentInput,
+  answerSshAgentPassword,
+  approveSshAgentCommand,
+  continueSshAgentTask,
+  type SshAgentSessionState,
+  sendSshAgentMessage,
+  skipSshAgentCommand,
+  stopSshAgentTask,
+  useSshAgentSession,
+  useSshAgentStore,
+} from '@/stores/sshAgentStore';
+import {
+  AgentHistoryFooter,
+  type AgentLiveControls,
+  type AgentRunContinuation,
+} from './AgentHistoryFooter';
 
 /** A run from either kind of AI task: commands in a terminal, or actions on a remote desktop. */
 type AgentRun = SshAgentHistoryRun | RdpAgentHistoryRun;
@@ -48,6 +66,33 @@ export interface AgentHistorySource {
   load: () => Promise<AgentRun[]>;
   /** The task's live state; each change means the history has moved on and is read again. */
   live: unknown;
+  /**
+   * What the task going in that session needs, for a source whose live state the dialog cannot
+   * read on its own (Remote Desktop). A terminal's comes from its store.
+   */
+  controls?: AgentLiveControls | null;
+}
+
+/** A terminal task's live state as the history footer's controls. */
+function sshControls(
+  sessionId: string,
+  state: SshAgentSessionState | undefined,
+): AgentLiveControls | null {
+  if (!state) return null;
+  return {
+    phase: state.phase,
+    message: state.message,
+    command: state.command,
+    canContinue: state.canContinue,
+    hasSavedPassword: state.hasSavedPassword,
+    answer: (text) => answerSshAgentInput(sessionId, text),
+    send: (text) => sendSshAgentMessage(sessionId, text),
+    approve: () => approveSshAgentCommand(sessionId),
+    skip: () => skipSshAgentCommand(sessionId),
+    resume: () => continueSshAgentTask(sessionId),
+    stop: () => stopSshAgentTask(sessionId),
+    answerPassword: (approved) => answerSshAgentPassword(sessionId, approved),
+  };
 }
 
 /** Output taller than this starts folded, so one noisy command doesn't bury the rest. */
@@ -407,7 +452,16 @@ function Entry({ entry }: { entry: AgentEntry }): React.JSX.Element {
   }
 }
 
-function RunTimeline({ run }: { run: AgentRun }): React.JSX.Element {
+function RunTimeline({
+  run,
+  parent,
+  onOpenRun,
+}: {
+  run: AgentRun;
+  /** The earlier task this one continued, when it is still in the list. */
+  parent: AgentRun | null;
+  onOpenRun: (id: string) => void;
+}): React.JSX.Element {
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
 
@@ -430,6 +484,25 @@ function RunTimeline({ run }: { run: AgentRun }): React.JSX.Element {
       }}
       className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4"
     >
+      {'continuedFromRunId' in run && run.continuedFromRunId ? (
+        parent ? (
+          <button
+            type="button"
+            aria-label={`Continues: ${parent.prompt}`}
+            onClick={() => onOpenRun(parent.id)}
+            className="flex w-full min-w-0 items-center gap-2 rounded-lg bg-primary/5 px-3 py-2 text-left text-xs ring-1 ring-inset ring-primary/15 transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Link className="h-3 w-3 shrink-0 text-primary" />
+            <span className="shrink-0 text-muted-foreground">Continues</span>
+            <TruncatedText text={parent.prompt} focusable={false} className="flex-1 font-medium" />
+            <span className="shrink-0 text-[10px] text-muted-foreground">Open</span>
+          </button>
+        ) : (
+          <Note icon={<Link className="h-3.5 w-3.5" />} tone="muted">
+            Continues an earlier task that is no longer in this list.
+          </Note>
+        )
+      ) : null}
       <Bubble from="you" at={run.startedAt}>
         {run.prompt}
       </Bubble>
@@ -454,6 +527,7 @@ export function SshAgentHistoryDialog({
   onOpenChange,
   source,
   initialRunId = null,
+  continuation = null,
 }: {
   sessionId: string;
   sessionTitle: string;
@@ -463,6 +537,8 @@ export function SshAgentHistoryDialog({
   source?: AgentHistorySource;
   /** The task shown first. The newest one when absent. */
   initialRunId?: string | null;
+  /** How an ended terminal task is continued or run again from here. Read-only when absent. */
+  continuation?: AgentRunContinuation | null;
 }): React.JSX.Element {
   const sshLiveState = useSshAgentSession(sessionId);
   const liveState = source ? source.live : sshLiveState;
@@ -477,6 +553,31 @@ export function SshAgentHistoryDialog({
   const runs = historyQuery.data ?? [];
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = runs.find((run) => run.id === selectedId) ?? runs[0] ?? null;
+  const selectedState = useSshAgentStore((s) =>
+    selected ? s.sessions[selected.sessionId] : undefined,
+  );
+  // Only a session's newest task can be the one still going there.
+  const isNewestOfSession =
+    selected !== null && runs.find((run) => run.sessionId === selected.sessionId) === selected;
+  const liveControls =
+    !selected || !isNewestOfSession
+      ? null
+      : desktop
+        ? (source?.controls ?? null)
+        : sshControls(selected.sessionId, selectedState);
+  // Once the next task starts, the list jumps to it, the newest, so the user sees it run.
+  const footerContinuation: AgentRunContinuation | null = continuation && {
+    ...continuation,
+    continueWith: async (run, followUp) => {
+      const started = await continuation.continueWith(run, followUp);
+      if (started) setSelectedId(null);
+      return started;
+    },
+  };
+  const parentRun =
+    selected && 'continuedFromRunId' in selected && selected.continuedFromRunId
+      ? (runs.find((run) => run.id === selected.continuedFromRunId) ?? null)
+      : null;
 
   // Each progress event means the history changed (a command ended, a question was answered).
   useEffect(() => {
@@ -496,10 +597,16 @@ export function SshAgentHistoryDialog({
             <History className="h-4 w-4 text-primary" />
             AI task history
           </DialogTitle>
-          <DialogDescription className="truncate">
-            {desktop
-              ? `Every task the AI ran in ${sessionTitle || 'this desktop'}, with each action, how it went, and what you answered. Kept until AgentMate closes.`
-              : `Every task the AI ran in ${sessionTitle || 'this terminal'}, with each command, its output, and what you answered. Kept until AgentMate closes.`}
+          <DialogDescription asChild>
+            <div className="min-w-0">
+              <TruncatedText
+                text={
+                  desktop
+                    ? `Every task the AI ran in ${sessionTitle || 'this desktop'}, with each action, how it went, and what you answered. Answer, message or stop a task still going from here. Kept until AgentMate closes.`
+                    : `Every task the AI ran in ${sessionTitle || 'this terminal'}, with each command, its output, and what you answered. Answer a task still going, or continue one that ended, from here. Tasks on a saved server are kept after AgentMate closes.`
+                }
+              />
+            </div>
           </DialogDescription>
         </DialogHeader>
 
@@ -540,11 +647,21 @@ export function SshAgentHistoryDialog({
                       active ? 'bg-primary/10' : 'hover:bg-foreground/5',
                     )}
                   >
-                    <span className="flex items-center gap-2">
+                    <span className="flex min-w-0 items-center gap-2">
                       <StatusDot status={run.status} />
-                      <span className="line-clamp-2 min-w-0 flex-1 text-xs font-medium text-foreground">
-                        {run.prompt}
-                      </span>
+                      <TruncatedText
+                        text={run.prompt}
+                        lines={2}
+                        side="right"
+                        focusable={false}
+                        className="flex-1 text-xs font-medium text-foreground"
+                      />
+                      {'continuedFromRunId' in run && run.continuedFromRunId ? (
+                        <Link
+                          aria-label="Continues an earlier task"
+                          className="h-2.5 w-2.5 shrink-0 text-muted-foreground"
+                        />
+                      ) : null}
                     </span>
                     <span className="pl-4 text-[10px] text-muted-foreground">
                       {dayAndTime(run.startedAt)} · {count} {noun}
@@ -577,7 +694,24 @@ export function SshAgentHistoryDialog({
                     Copy transcript
                   </Button>
                 </div>
-                <RunTimeline key={selected.id} run={selected} />
+                <RunTimeline
+                  key={selected.id}
+                  run={selected}
+                  parent={parentRun}
+                  onOpenRun={setSelectedId}
+                />
+                <AgentHistoryFooter
+                  run={selected}
+                  target={
+                    desktop
+                      ? 'rdp'
+                      : 'settings' in selected && selected.settings?.target === 'local'
+                        ? 'local'
+                        : 'ssh'
+                  }
+                  live={liveControls}
+                  continuation={desktop ? null : footerContinuation}
+                />
               </section>
             )}
           </div>

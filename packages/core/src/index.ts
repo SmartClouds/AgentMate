@@ -55,6 +55,7 @@ export * from './mcp/types.js';
 export * from './models/catalog.js';
 export * from './network/proxy.js';
 export * from './projectBootstrap/templates.js';
+export * from './promptBuilder/agentInstruction.js';
 export * from './promptBuilder/promptTypeProfiles.js';
 export * from './promptBuilder/runRecommendation.js';
 export * from './promptBuilder/targetAiNotes.js';

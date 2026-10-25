@@ -8,6 +8,7 @@ import {
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
+import { promptProviderModel } from '@/lib/promptProvider';
 import { queryKeys } from '@/lib/queryKeys';
 import { queryClient } from '@/queryClient';
 import { useProjectPromptBuildStore } from '@/stores/projectPromptBuildStore';
@@ -167,13 +168,7 @@ export function useProjectPromptBuilder(
     }
 
     const settings = settingsQuery.data ?? (await window.agentmat.settings.get());
-    const provider = settings.promptBuilderProvider;
-    const model =
-      provider === 'openai'
-        ? settings.openaiModel
-        : provider === 'gemini'
-          ? settings.geminiModel
-          : settings.ollamaModel;
+    const { provider, model } = promptProviderModel(settings);
     if (!model.trim()) {
       toast.error(`Set a ${provider} model in Settings first.`);
       return;

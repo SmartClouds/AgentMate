@@ -677,6 +677,9 @@ const sshAgent = {
   /** The AI tasks run in any SSH tab on a saved server, newest first, including closed tabs. */
   serverHistory: (serverId: string): Promise<SshAgentHistoryRun[]> =>
     ipcRenderer.invoke(IPC.sshAgent.serverHistory, serverId),
+  /** Forgets the server's finished AI tasks, here and in the saved history. */
+  clearServerHistory: (serverId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.sshAgent.clearServerHistory, serverId),
   /** Raises a system notification for a run that is waiting on the user. */
   notifyWaiting: (sessionId: string, tabTitle: string): Promise<void> =>
     ipcRenderer.invoke(IPC.sshAgent.notifyWaiting, sessionId, tabTitle),

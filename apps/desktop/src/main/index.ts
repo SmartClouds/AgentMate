@@ -6,7 +6,7 @@ import { app, BrowserWindow, desktopCapturer, protocol, session, shell } from 'e
 import icon from '../../resources/icon.ico?asset';
 import { BROWSER_PARTITION } from '../shared/browserGuest';
 import { stopAllRdpTasks } from './agents/rdpTaskRunner';
-import { stopAllSshTasks } from './agents/sshTaskRunner';
+import { flushSshTaskHistory, stopAllSshTasks } from './agents/sshTaskRunner';
 import { stopEmulatorsOnQuit } from './android/runtime';
 import { registerBlueprintFileProtocol } from './blueprintFileStore';
 import { configureBrowserSession, setupBrowserGuests } from './browser/guestSession';
@@ -564,6 +564,8 @@ app.on('before-quit', (event) => {
     return;
   }
   cancelAllSecurityScans();
+  // The last second of AI task history may still be waiting on its debounce.
+  void flushSshTaskHistory();
   // An install the person started from Dev Setup would otherwise keep running with no window.
   disposeDevSetup();
   // Not awaited: emulators are left running by default, and a half-booted one must never be

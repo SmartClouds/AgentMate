@@ -359,3 +359,63 @@ describe('the rest of the bar', () => {
     expect(bridge.$fn('sshAgent.answerNeedsInput')).toHaveBeenCalledWith('s1', '/var/log');
   });
 });
+
+describe('a question from the AI', () => {
+  const LONG_QUESTION =
+    'I found three nginx sites: default, api.example.com and staging.example.com. Only staging changed today. Which one should I reload?';
+
+  it('shows in full under the bar, while the bar line says what it waits for', () => {
+    renderBar({ phase: 'needs-input', message: LONG_QUESTION });
+    expect(screen.getByText('Waiting for your answer')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'The AI asks' })).toHaveTextContent(LONG_QUESTION);
+  });
+
+  it('is answered from the panel, focused and ready to type', async () => {
+    const { user, bridge } = renderBar({ phase: 'needs-input', message: LONG_QUESTION });
+    const box = screen.getByRole('textbox', { name: 'Your answer' });
+    expect(box).toHaveFocus();
+    await user.type(box, 'staging');
+    await user.click(screen.getByRole('button', { name: 'Send answer' }));
+    expect(bridge.$fn('sshAgent.answerNeedsInput')).toHaveBeenCalledWith('s1', 'staging');
+  });
+
+  it('offers the same tools as Build Prompt for the answer', () => {
+    renderBar({ phase: 'needs-input', message: 'Which one?' });
+    expect(screen.getByRole('button', { name: /Write it for me/ })).toBeInTheDocument();
+  });
+
+  it('starts the next question with an empty answer box', async () => {
+    const { user } = renderBar({ phase: 'needs-input', message: 'First?' });
+    await user.type(screen.getByRole('textbox', { name: 'Your answer' }), 'unsent');
+    setState({ phase: 'thinking', message: undefined });
+    setState({ phase: 'needs-input', message: 'Second?' });
+    expect(screen.getByRole('textbox', { name: 'Your answer' })).toHaveValue('');
+  });
+});
+
+describe('a long line in the bar', () => {
+  it('shows all of itself in a tooltip on hover', async () => {
+    const summary =
+      'Cleaned 4.2 GB of rotated logs from /var/log/nginx and /var/log/journal, then restarted nginx and confirmed all three sites answer.';
+    const scrollWidth = vi.spyOn(Element.prototype, 'scrollWidth', 'get').mockReturnValue(900);
+    const clientWidth = vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(200);
+    try {
+      const { user } = renderBar({ phase: 'finished', message: summary });
+      await user.hover(screen.getByText(summary));
+      expect(await screen.findByRole('tooltip')).toHaveTextContent(summary);
+    } finally {
+      scrollWidth.mockRestore();
+      clientWidth.mockRestore();
+    }
+  });
+});
+
+describe('the message box tools', () => {
+  it('has dictation, translation and Write it for me, as Build Prompt does', async () => {
+    const { user } = renderBar({ phase: 'running', command: 'sleep 60' });
+    await user.click(screen.getByRole('button', { name: 'Message' }));
+    await user.type(screen.getByRole('textbox', { name: 'Message to the AI' }), 'صبر کن');
+    expect(screen.getByRole('button', { name: /Translate to English/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Write it for me/ })).toBeInTheDocument();
+  });
+});

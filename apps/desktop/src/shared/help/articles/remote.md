@@ -163,7 +163,35 @@ When the AI reads your message depends on what it is doing at that moment:
 - **While a command is running.** The command finishes first, then the AI reads your message. A **Message queued** badge shows in the bar until it has.
 - **While the task is paused on an error.** The message waits until you click **Continue**.
 
-Your messages are kept for the rest of the task and show up in **History** next to your answers. They count as new instructions, so they win over the original request if the two disagree. Once a task has finished or been stopped there is nobody to message, so start a new one with the robot button.
+Your messages are kept for the rest of the task and show up in **History** next to your answers. They count as new instructions, so they win over the original request if the two disagree. Once a task has finished or been stopped there is nobody to message, but you can continue it (see below).
+
+#### Writing to the AI: voice, Persian and Write it for me
+
+Every box where you write to the AI (the task in the robot dialog, a message, an answer to its question, and the box in History) has the same tools as Build Prompt:
+
+- **Dictate** (the microphone) adds what you say after what is typed. The chip next to it picks the language it listens for.
+- **English** shows once the box has Persian in it, and translates the text to English.
+- **Write it for me** has the AI provider from Settings turn a rough note into a clear instruction. For an answer, it answers the AI's question.
+- **Undo** puts back what you wrote, until you edit the result.
+
+`Esc` cancels a translation, a rewrite or a recording before it closes anything. The translate and generate shortcuts from Build Prompt work here too.
+
+#### When the AI asks a question
+
+The bar says **Waiting for your answer**, and a panel opens under it with the whole question and a box to answer it. A long question folds after a few lines behind **Show more**. Any line in the bar that is cut off shows all of itself when you hover over it or tab to it.
+
+You can also answer from **History**. Its bottom bar acts on the task you are looking at: answer its question, run or skip a proposed command, message it, or continue or stop it when it is paused.
+
+#### Running a task again or continuing it
+
+The robot dialog lists the last few tasks on this server (or in this terminal, for a local one):
+
+- **Run again** puts the prompt back in the box, with the CLI, model, effort and mode it ran with. If that CLI is not installed any more, the dialog says which one it uses instead.
+- **Continue** starts a new task that knows what the earlier one did: its commands and their output, your answers and messages, and how it ended. Type what to do next. The **Continuing** chip above the box shows which task it carries on, and the cross on it starts a fresh task instead.
+
+In **History**, an ended task has a box for what to do next. Sending it continues the task in the same terminal, the way it ran. **Run again** and **More options** open the robot dialog on it, so you can change how it runs first. A continued task starts with a link back to the task it continued. From a server's history sheet, these open the robot dialog in an SSH tab on that server, using one already open when there is one.
+
+Tasks run on a saved server are kept after AgentMate closes, up to 50 per server. Tasks in a local terminal are kept until AgentMate closes. The trash button next to **Ask AI tasks** in a server's history sheet clears its finished tasks, and removing the server clears them too.
 
 ## Remote Desktop: saved Windows servers
 

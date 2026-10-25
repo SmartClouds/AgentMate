@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import { type LaunchedApp, launchApp } from './app';
 import { type FakeOllama, startFakeOllama } from './fakeOllama';
@@ -100,7 +102,7 @@ async function startTask(page: Page, prompt: string): Promise<void> {
   await page.getByRole('button', { name: 'Ask AI to run a task here' }).click();
   // The CLI picker's popover is a dialog too, so match the task dialog by name.
   const dialog = page.getByRole('dialog', { name: 'Ask AI to run a task here' });
-  await dialog.getByRole('textbox').fill(prompt);
+  await dialog.getByRole('textbox', { name: 'Task for the AI' }).fill(prompt);
   const cli = dialog.getByRole('combobox').first();
   await expect(cli).toBeEnabled({ timeout: 30_000 });
   if (!(await cli.innerText()).includes('AI provider (Settings)')) {
@@ -231,4 +233,52 @@ test('shows a failing command with its error and passes the exit code on', async
   expect(text).toContain("ls: cannot access '/does-not-exist': No such file or directory");
   expect(text).not.toContain('AgentMate:');
   expect(ollama?.prompts.at(-1)).toContain('$ ls /does-not-exist [exit code 2]');
+});
+
+test('shows a long question in full, takes the answer, and continues the task from History', async () => {
+  const QUESTION =
+    'I found three nginx sites on this server: default, api.example.com and staging.example.com. Only staging.example.com changed today. Which one should I reload, and should I test the config first?';
+  const page = await openServerTab([
+    `NEEDS_INPUT: ${QUESTION}`,
+    'RUN: echo reloaded-staging',
+    'FINISHED: Reloaded staging.',
+    'FINISHED: Checked https on staging.',
+  ]);
+  await startTask(page, 'Reload the nginx site that changed');
+
+  // The bar line says what it waits for, and the whole question sits under it.
+  const bar = agentBar(page);
+  await expect(bar).toContainText('Waiting for your answer', { timeout: 60_000 });
+  await expect(bar.getByRole('region', { name: 'The AI asks' })).toContainText(QUESTION);
+  const answer = bar.getByRole('textbox', { name: 'Your answer' });
+  await expect(answer).toBeFocused();
+  await answer.fill('staging, and yes test it first');
+  await answer.press('Enter');
+  await expect(bar).toContainText('Reloaded staging.', { timeout: 60_000 });
+
+  // A task on a saved server is written to disk, so it outlives the app.
+  const historyFile = join(launched?.userDataDir ?? '', 'data', 'ssh-agent-history.json');
+  await expect
+    .poll(() => (existsSync(historyFile) ? readFileSync(historyFile, 'utf-8') : ''), {
+      timeout: 10_000,
+    })
+    .toContain('Reload the nginx site that changed');
+
+  // History picks the finished task back up with what to do next.
+  await bar.getByRole('button', { name: 'History' }).click();
+  const history = page.getByRole('dialog', { name: 'AI task history' });
+  const next = history.getByRole('textbox', { name: 'What to do next' });
+  await next.fill('now check that https works on it');
+  await next.press('Enter');
+
+  await expect(bar).toContainText('Checked https on staging.', { timeout: 60_000 });
+  // The new task was told what the first one did, and links back to it.
+  const prompt = ollama?.prompts.at(-1) ?? '';
+  expect(prompt).toContain('User\'s task: "now check that https works on it"');
+  expect(prompt).toContain('Earlier task: "Reload the nginx site that changed"');
+  expect(prompt).toContain('[You answered]: staging, and yes test it first');
+  expect(prompt).toContain('$ echo reloaded-staging [exit code 0]');
+  await expect(
+    history.getByRole('button', { name: 'Continues: Reload the nginx site that changed' }),
+  ).toBeVisible({ timeout: 20_000 });
 });
