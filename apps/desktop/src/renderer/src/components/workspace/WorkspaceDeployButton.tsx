@@ -2,7 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { CloudUpload, Spinner } from '@/components/icons';
 import { READ_ONLY_HINT } from '@/components/projects/wordpress/WordPressProjectSection';
-import { deployOutcome, PHASE_LABEL } from '@/components/projects/wordpress/wordpressCopy';
+import {
+  deployOutcome,
+  PHASE_LABEL,
+  PLANNED_PHASES,
+} from '@/components/projects/wordpress/wordpressCopy';
 import { Button } from '@/components/ui/button';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { DeployFlowDialog } from '@/components/wordpress/DeployFlowDialog';
@@ -94,8 +98,20 @@ export function WorkspaceDeployButton({
             <CloudUpload className="h-3.5 w-3.5" />
           )}
           <span className="text-xs">{running ? 'Deploying' : 'Deploy'}</span>
-          {progress?.count ? (
-            <span className="text-xs tabular-nums text-primary/70">{progress.count}</span>
+          {running ? (
+            // A bar, not a count, so the pill keeps its width while the numbers change and the
+            // header buttons beside it stay where they are. The tooltip has the count.
+            <span
+              data-testid="deploy-progress"
+              data-progress={progress?.percent ?? 0}
+              className="absolute inset-x-3 bottom-1 h-0.5 overflow-hidden rounded-full bg-primary/15"
+              aria-hidden
+            >
+              <span
+                className="block h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none"
+                style={{ width: `${progress?.percent ?? 0}%` }}
+              />
+            </span>
           ) : null}
           {finished ? (
             <span
@@ -115,15 +131,27 @@ export function WorkspaceDeployButton({
   );
 }
 
-/** The latest phase of a running deploy, and its count once it has one. */
-function runProgress(run: WordPressOperationRun): { label: string; count: string | null } | null {
+const DEPLOY_STEPS = PLANNED_PHASES.deploy;
+
+/**
+ * The latest phase of a running deploy, with its count once it has one, and how far the whole
+ * deploy has got: each planned step is an equal share, and the current one fills by its count.
+ */
+function runProgress(run: WordPressOperationRun): { label: string; percent: number } | null {
   const phase = run.phases.at(-1);
   if (!phase) return null;
   const step = run.progress[phase];
-  const count = step && step.total > 0 ? `${step.done}/${step.total}` : null;
+  const counted = step && step.total > 0 ? step : null;
+  // A phase off the plan (a rollback) leaves the bar where the last planned one got it.
+  const index = Math.max(...run.phases.map((seen) => DEPLOY_STEPS.indexOf(seen)));
+  const within = DEPLOY_STEPS[index] === phase && counted ? counted.done / counted.total : 0;
   return {
-    label: count ? `${PHASE_LABEL[phase]}, ${step?.done} of ${step?.total}` : PHASE_LABEL[phase],
-    count,
+    // Non-breaking spaces, so the tooltip never splits the count over two lines.
+    label: counted
+      ? `${PHASE_LABEL[phase]} (${counted.done} of ${counted.total})`
+      : PHASE_LABEL[phase],
+    percent:
+      index < 0 ? 0 : Math.round(((index + Math.min(within, 1)) / DEPLOY_STEPS.length) * 100),
   };
 }
 

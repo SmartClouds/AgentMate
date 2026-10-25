@@ -151,7 +151,7 @@ export function WorkspaceHeaderActions(): React.JSX.Element | null {
       />
       {wordpress ? (
         <WorkspaceDeployButton
-          key={parentId}
+          key={`deploy:${parentId}`}
           projectId={parentId}
           projectName={project.name}
           siteId={wordpress.siteId}
@@ -198,16 +198,15 @@ export function WorkspaceHeaderActions(): React.JSX.Element | null {
       />
       {/* Keyed by project so each one gets its own form, suggestion and tag run. One shared
           instance let a project's pending answer or finished tag land in the next project. */}
-      {wordpress ? null : (
-        <ProjectVersionDialogs
-          key={parentId}
-          projectId={parentId}
-          open={tagOpen}
-          onOpenChange={(next) =>
-            next ? openVersionDialog(parentId) : closeVersionDialog(parentId)
-          }
-        />
-      )}
+      {/* Mounted for WordPress projects too, with no button: a tag started from the project's Git
+          tab ends in a "version files updated" toast and notification, and their Review comes
+          back here to open it. */}
+      <ProjectVersionDialogs
+        key={parentId}
+        projectId={parentId}
+        open={tagOpen}
+        onOpenChange={(next) => (next ? openVersionDialog(parentId) : closeVersionDialog(parentId))}
+      />
     </>
   );
 }

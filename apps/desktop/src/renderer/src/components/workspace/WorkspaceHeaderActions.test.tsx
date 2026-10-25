@@ -154,12 +154,12 @@ describe('WorkspaceHeaderActions deploy for WordPress projects', () => {
     });
   }
 
-  it('shows Deploy where Tag a version would be, and mounts no tag dialogs', async () => {
+  it('shows Deploy where Tag a version would be', async () => {
     await renderWordPress([wordpressProject('a')]);
 
     expect(await screen.findByRole('button', { name: 'Deploy to site-a' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Tag a version' })).toBeNull();
-    expect(dialogs.mounts).toEqual([]);
+    expect(screen.queryByRole('dialog')).toBeNull();
     expect(deploy.props.at(-1)).toEqual({
       projectId: 'a',
       projectName: 'A',
@@ -200,7 +200,20 @@ describe('WorkspaceHeaderActions deploy for WordPress projects', () => {
 
     expect(await screen.findByRole('button', { name: 'Tag a version' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Deploy/ })).toBeNull();
-    expect(dialogs.mounts).toEqual(['b']);
+    expect(dialogs.mounts).toEqual(['a', 'b']);
+  });
+
+  it('still opens the tag flow when a version notification asks for it', async () => {
+    // A tag started from the project page's Git tab: its "version files updated" toast and OS
+    // notification come back to the Workspace and open the flow from the store.
+    await renderWordPress([wordpressProject('a')]);
+    await screen.findByRole('button', { name: 'Deploy to site-a' });
+
+    act(() => useVersionDialogStore.getState().open('a'));
+
+    expect(await screen.findByRole('dialog', { name: 'Tag a version of a' })).toBeInTheDocument();
+    act(() => dialogs.onOpenChange.a?.(false));
+    expect(useVersionDialogStore.getState().openProjectId).toBeNull();
   });
 
   it('gives each WordPress project its own Deploy, so one run never shows on another', async () => {

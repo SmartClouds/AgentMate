@@ -134,6 +134,8 @@ describe('WorkspaceDeployButton', () => {
     // The open dialog hides the rest of the window from the accessibility tree.
     const running = screen.getByRole('button', { name: 'Deploying to Acme Live', hidden: true });
     expect(running).toHaveTextContent('Deploying');
+    // Nothing reported yet, so the bar is there and empty.
+    expect(screen.getByTestId('deploy-progress')).toHaveAttribute('data-progress', '0');
 
     await act(async () => call.resolve(done));
     expect(await within(dialog).findByText('Deployed')).toBeTruthy();
@@ -142,9 +144,10 @@ describe('WorkspaceDeployButton', () => {
       hidden: true,
     });
     expect(after).toHaveTextContent(/^Deploy$/);
+    expect(screen.queryByTestId('deploy-progress')).toBeNull();
   });
 
-  it('counts the current phase on the button and spells it out in the tooltip', async () => {
+  it('fills a bar across the whole deploy and spells the step out in the tooltip', async () => {
     const call = deferred<DeployWordPressDeployResult>();
     const { user, bridge } = renderButton({ 'deployWordPress.deploy': () => call.promise });
     await deployFromHeader(user);
@@ -164,10 +167,25 @@ describe('WorkspaceDeployButton', () => {
     });
 
     const running = screen.getByRole('button', { name: 'Deploying to Acme Live' });
-    expect(running).toHaveTextContent('2/5');
+    // Upload is the third of seven steps, two fifths through: (2 + 0.4) / 7.
+    expect(screen.getByTestId('deploy-progress')).toHaveAttribute('data-progress', '34');
+    // No count on the pill, so its width holds while the numbers change.
+    expect(running).toHaveTextContent(/^Deploying$/);
     expect(await focusTooltip(running)).toHaveTextContent(
-      'Deploying to Acme Live: Uploading the changes, 2 of 5. Click to see progress',
+      'Deploying to Acme Live: Uploading the changes (2 of 5). Click to see progress',
     );
+
+    // A rollback is off the plan: the bar stays where the deploy got to.
+    act(() => {
+      bridge.$emit('deployWordPress.onProgress', { ...event, phase: 'verify', done: 0, total: 0 });
+      bridge.$emit('deployWordPress.onProgress', {
+        ...event,
+        phase: 'rollback',
+        done: 1,
+        total: 3,
+      });
+    });
+    expect(screen.getByTestId('deploy-progress')).toHaveAttribute('data-progress', '71');
 
     await act(async () => call.resolve(done));
   });
@@ -291,8 +309,7 @@ describe('WorkspaceDeployButton', () => {
         total: 4,
       });
     });
-    expect(await screen.findByRole('button', { name: 'Deploying to Acme Live' })).toHaveTextContent(
-      '1/4',
-    );
+    expect(await screen.findByRole('button', { name: 'Deploying to Acme Live' })).toBeEnabled();
+    expect(screen.getByTestId('deploy-progress')).toHaveAttribute('data-progress', '32');
   });
 });

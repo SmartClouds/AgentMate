@@ -245,8 +245,7 @@ test.describe('WordPress sites in Deploy and Projects', () => {
 
   test('deploys from the Workspace header, where Tag a version would be', async () => {
     const p = page();
-    writeSetup(`${SETUP_V4}
-`);
+    writeSetup(`${SETUP_V4}\n`);
 
     const projectId = await p.evaluate(async (projectFolder) => {
       const api = (
