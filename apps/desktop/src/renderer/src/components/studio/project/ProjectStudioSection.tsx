@@ -8,6 +8,7 @@ import { Button, Plus, SECTION_HEADING } from '../kit';
 import { studioKeys } from '../queryKeys';
 import { ProjectStorageCard } from '../storage/ProjectStorageCard';
 import { useStudioEvents } from '../useStudioEvents';
+import { SceneNetworkCard } from './SceneNetworkCard';
 
 export interface ProjectStudioSectionProps {
   projectId: string;
@@ -29,6 +30,7 @@ export function ProjectStudioSection({
   return (
     <div className="space-y-2">
       <ProjectStorageCard projectId={projectId} />
+      <SceneNetworkCard projectId={projectId} />
       <div className="flex items-center gap-2 px-1 pt-1">
         <h3 className={SECTION_HEADING}>Videos</h3>
         <Button size="sm" className="ml-auto" onClick={() => setCreating(true)}>

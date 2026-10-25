@@ -59,6 +59,9 @@ export function registerStudioHandlers(
   handle(IPC.studio.setProjectRoot, (value) =>
     service().setProjectRoot(parse(studioInputs.setProjectRoot, value)),
   );
+  handle(IPC.studio.setSceneHosts, (value) =>
+    service().setSceneHosts(parse(studioInputs.setSceneHosts, value)),
+  );
   handle(IPC.studio.checkRoot, (value) =>
     service().checkRoot(parse(studioInputs.checkRoot, value)),
   );
@@ -136,6 +139,31 @@ export function registerStudioHandlers(
   );
   handle(IPC.studioAi.deleteRecipe, (value) =>
     service().deleteRecipe(parse(studioAiInputs.recipeRef, value)),
+  );
+  handle(IPC.studioScenes.animate, (value) =>
+    service().startScene(parse(studioAiInputs.startScene, value)),
+  );
+  handle(IPC.studioScenes.code, (value) =>
+    service().sceneCode(parse(studioAiInputs.sceneRef, value)),
+  );
+  handle(IPC.studioScenes.saveFiles, (value) =>
+    service().saveSceneFiles(parse(studioAiInputs.saveSceneFiles, value)),
+  );
+  handle(IPC.studioScenes.useRevision, (value) =>
+    service().useCodeRevision(parse(studioAiInputs.useCodeRevision, value)),
+  );
+  handle(IPC.studioScenes.check, (value) =>
+    service().checkScene(parse(studioAiInputs.sceneRef, value)),
+  );
+  handle(IPC.studioScenes.thumbnail, async (value) => {
+    const png = await service().thumbnail(parse(studioAiInputs.thumbnail, value));
+    return png ? `data:image/png;base64,${Buffer.from(png).toString('base64')}` : null;
+  });
+  handle(IPC.studioScenes.styleReference, (value) =>
+    service().styleReference(parse(studioAiInputs.styleReference, value)),
+  );
+  handle(IPC.studioScenes.checkStyle, (value) =>
+    service().checkStyleReference(parse(studioAiInputs.styleReference, value)),
   );
   handle(IPC.studio.revealVideo, async (value) => {
     const { videoId } = parse(studioInputs.videoRef, value);

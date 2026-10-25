@@ -469,6 +469,11 @@ export const nativeImage = {
   createFromPath: () => nativeImage.createEmpty(),
   createFromBuffer: () => nativeImage.createEmpty(),
   createFromDataURL: () => nativeImage.createEmpty(),
+  // A frame from an offscreen window, turned into a PNG (Studio's scene thumbnails).
+  createFromBitmap: () => ({
+    ...nativeImage.createEmpty(),
+    toPNG: () => Buffer.from([137, 80, 78, 71]),
+  }),
 };
 
 export class Notification {

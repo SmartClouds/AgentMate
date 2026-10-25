@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background: #0B1026; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(9vmin); opacity: 0.75; }
+  .glass { position: absolute; left: 50%; top: 50%; width: 56vmin; padding: 5vmin; border-radius: 4vmin;
+    background: rgba(255, 255, 255, 0.10); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25), 0 3vmin 6vmin rgba(0,0,0,0.3);
+    color: #FFFFFF; text-align: center; font: 700 5.6vmin/1.3 Vazirmatn, Inter, sans-serif; }
+  .glass small { display: block; margin-top: 1.6vmin; font-weight: 400; font-size: 3vmin; opacity: 0.8; }
+</style>
+</head>
+<body>
+<div id="sky"></div>
+<div class="glass" id="glass"></div>
+<script>
+// Aurora glass: slow colored light drifting behind a frosted card that rises into place.
+const COPY = { fa: ['آرام و روشن', 'نسخه‌ی تازه آماده است'], en: ['Calm and clear', 'The new version is here'] };
+const sky = document.getElementById('sky');
+const glass = document.getElementById('glass');
+const W = innerWidth, H = innerHeight, M = Math.min(W, H);
+const colors = ['#7B5CFF', '#00D1FF', '#FF7AC6', '#4E9BFF'];
+sky.innerHTML = colors.map((c, i) => `<i class="blob" id="b${i}" style="background:${c}"></i>`).join('');
+
+Studio.scene({
+  setup(ctx) {
+    const [title, sub] = COPY[ctx.lang] ?? COPY.en;
+    glass.lang = ctx.lang; glass.dir = ctx.dir;
+    glass.innerHTML = `${title}<small>${sub}</small>`;
+  },
+  render(t, ctx) {
+    colors.forEach((_, i) => {
+      const r = M * (0.35 + 0.1 * ctx.noise(i * 3.1, t * 0.2));
+      const x = W * (0.2 + 0.6 * ctx.noise(i * 7.3, t * 0.12));
+      const y = H * (0.2 + 0.6 * ctx.noise(i * 5.7 + 40, t * 0.1));
+      const el = document.getElementById(`b${i}`);
+      el.style.cssText += `;left:${x - r}px;top:${y - r}px;width:${r * 2}px;height:${r * 2}px`;
+    });
+    const rise = ctx.ease.standard(ctx.between(0.3, 1.8));
+    glass.style.transform = `translate(-50%, ${-50 + (1 - rise) * 12}%)`;
+    glass.style.opacity = String(0.15 + 0.85 * rise);
+  },
+});
+</script>
+</body>
+</html>

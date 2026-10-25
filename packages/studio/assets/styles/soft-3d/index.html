@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden;
+    background: radial-gradient(circle at 50% 40%, #FFFFFF 0%, #F3EEF8 60%, #E7DFF2 100%); }
+  .ball { position: absolute; border-radius: 50%; }
+  .shadow { position: absolute; border-radius: 50%; background: rgba(60, 40, 120, 0.18); filter: blur(10px); }
+  .word { position: absolute; left: 0; right: 0; top: 12%; text-align: center; color: #5A4BB7;
+    font: 800 7vmin/1.2 Vazirmatn, Inter, sans-serif; }
+</style>
+</head>
+<body>
+<div class="word" id="word"></div>
+<div id="stage"></div>
+<script>
+// Soft 3D: rounded matte spheres in pastel light, dropping in on springs and floating gently.
+const COPY = { fa: 'نرم و دوستانه', en: 'Soft and friendly' };
+const W = innerWidth, H = innerHeight, M = Math.min(W, H);
+const stage = document.getElementById('stage');
+const word = document.getElementById('word');
+const balls = [
+  { x: 0.3, r: 0.13, c: ['#B8B8FF', '#9381FF'], delay: 0 },
+  { x: 0.5, r: 0.17, c: ['#FFD8BE', '#F5A97F'], delay: 0.35 },
+  { x: 0.7, r: 0.11, c: ['#C5F0E3', '#7FCDB5'], delay: 0.7 },
+];
+stage.innerHTML = balls.map((_, i) => `<div class="shadow" id="s${i}"></div><div class="ball" id="b${i}"></div>`).join('');
+
+Studio.scene({
+  setup(ctx) {
+    word.lang = ctx.lang;
+    word.dir = ctx.dir;
+    word.textContent = COPY[ctx.lang] ?? COPY.en;
+  },
+  render(t, ctx) {
+    balls.forEach((b, i) => {
+      const r = b.r * M;
+      const land = ctx.spring(t - b.delay, { stiffness: 120, damping: 9 });
+      const float = Math.sin((t + i) * 1.4) * M * 0.012 * ctx.between(1.5, 2.5);
+      const floorY = H * 0.72;
+      const y = floorY - r - (1 - land) * H * 0.55 + float;
+      const squash = 1 + Math.max(0, land - 1) * 0.6;
+      const el = document.getElementById(`b${i}`);
+      el.style.cssText = `left:${W * b.x - r}px;top:${y}px;width:${r * 2}px;height:${(r * 2) / squash}px;` +
+        `background:radial-gradient(circle at 35% 30%, #FFFFFF 0%, ${b.c[0]} 35%, ${b.c[1]} 100%);` +
+        `box-shadow: inset -${r * 0.15}px -${r * 0.2}px ${r * 0.4}px rgba(0,0,0,0.12)`;
+      const sh = document.getElementById(`s${i}`);
+      const near = Math.max(0.2, 1 - (floorY - r - y) / (H * 0.55));
+      sh.style.cssText = `left:${W * b.x - r * near}px;top:${floorY - r * 0.12}px;width:${r * 2 * near}px;height:${r * 0.3}px;opacity:${near}`;
+    });
+    word.style.opacity = String(0.3 + 0.7 * ctx.ease.out(ctx.between(1, 2)));
+  },
+});
+</script>
+</body>
+</html>

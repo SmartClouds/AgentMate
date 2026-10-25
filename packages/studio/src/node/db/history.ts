@@ -70,7 +70,19 @@ export type GenerationPatch = Partial<
   >
 >;
 
-const APPEND_ONLY = ['txs', 'snapshots', 'revisions'];
+/** One saved version of a scene's code: a tree in the blob store, and who made it. */
+export interface CodeRevision {
+  id: number;
+  sceneId: string;
+  treeHash: string;
+  parentId: number | null;
+  generationId: string | null;
+  author: 'ai' | 'user';
+  label: string;
+  at: number;
+}
+
+const APPEND_ONLY = ['txs', 'snapshots', 'revisions', 'code_revisions'];
 
 const DDL = `
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -117,6 +129,17 @@ CREATE TABLE IF NOT EXISTS generations (
   finished_at INTEGER
 );
 CREATE INDEX IF NOT EXISTS generations_started ON generations (started_at);
+CREATE TABLE IF NOT EXISTS code_revisions (
+  id INTEGER PRIMARY KEY,
+  scene_id TEXT NOT NULL,
+  tree_hash TEXT NOT NULL,
+  parent_id INTEGER,
+  generation_id TEXT,
+  author TEXT NOT NULL CHECK (author IN ('ai', 'user')),
+  label TEXT NOT NULL,
+  at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS code_revisions_scene ON code_revisions (scene_id, id);
 CREATE TRIGGER IF NOT EXISTS generations_no_delete BEFORE DELETE ON generations
   BEGIN SELECT RAISE(ABORT, 'Studio history is append-only.'); END;
 ${APPEND_ONLY.map(
@@ -377,6 +400,41 @@ export class HistoryDb {
         `UPDATE generations SET status = 'interrupted', finished_at = ? WHERE status = 'running'`,
       )
       .run(at).changes;
+  }
+
+  addCodeRevision(revision: Omit<CodeRevision, 'id'>): number {
+    const result = this.db
+      .prepare(
+        `INSERT INTO code_revisions (scene_id, tree_hash, parent_id, generation_id, author, label, at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        revision.sceneId,
+        revision.treeHash,
+        revision.parentId,
+        revision.generationId,
+        revision.author,
+        revision.label,
+        revision.at,
+      );
+    return Number(result.lastInsertRowid);
+  }
+
+  /** A scene's code revisions, newest first. */
+  codeRevisions(sceneId: string): CodeRevision[] {
+    return this.db
+      .prepare('SELECT * FROM code_revisions WHERE scene_id = ? ORDER BY id DESC')
+      .all(sceneId)
+      .map((row) => ({
+        id: Number(row.id),
+        sceneId: String(row.scene_id),
+        treeHash: String(row.tree_hash),
+        parentId: row.parent_id === null ? null : Number(row.parent_id),
+        generationId: nullable(row.generation_id),
+        author: row.author as CodeRevision['author'],
+        label: String(row.label),
+        at: Number(row.at),
+      }));
   }
 
   getMeta(key: string): string | null {

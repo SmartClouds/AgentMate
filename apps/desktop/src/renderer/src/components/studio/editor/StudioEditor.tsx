@@ -29,6 +29,8 @@ import {
   toast,
   Undo,
 } from '../kit';
+import { SceneCodeDialog } from '../scenes/SceneCodeDialog';
+import { SceneMotion } from '../scenes/SceneMotion';
 import { HistoryPanel } from './HistoryPanel';
 import { LockedCard } from './LockedCard';
 import { ScenarioPanel } from './ScenarioPanel';
@@ -59,6 +61,8 @@ export function StudioEditor({ videoId, onBack }: StudioEditorProps): React.JSX.
   const ai = useStudioAi(videoId, video.adopt);
   const [scenarioRun, setScenarioRun] = useRunSettings('scenario');
   const [editRun, setEditRun] = useRunSettings('edit');
+  const [sceneRun, setSceneRun] = useRunSettings('scene');
+  const [codeSceneId, setCodeSceneId] = useState<string | null>(null);
   const [detailsId, setDetailsId] = useState<string | null>(null);
   const [recipeFrom, setRecipeFrom] = useState<GenerationView | null>(null);
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
@@ -300,6 +304,7 @@ export function StudioEditor({ videoId, onBack }: StudioEditorProps): React.JSX.
                 // Starts again from the latest brief once the runs have loaded or a scenario lands.
                 key={`${ai.loading}-${hasScenes}-${lastScenario?.id ?? ''}`}
                 aspect={document.renderSettings.aspect}
+                language={document.language}
                 rewriting={hasScenes}
                 busy={busy}
                 initial={briefInitial}
@@ -309,6 +314,19 @@ export function StudioEditor({ videoId, onBack }: StudioEditorProps): React.JSX.
                 }}
               />
             }
+            renderMotion={(scene, index) => (
+              <SceneMotion
+                videoId={videoId}
+                document={document}
+                scene={scene}
+                index={index}
+                busy={busy}
+                run={sceneRun}
+                onRunChange={setSceneRun}
+                onAnimate={(instruction) => ai.startScene(scene.id, sceneRun, instruction)}
+                onOpenCode={() => setCodeSceneId(scene.id)}
+              />
+            )}
           />
         </ErrorBoundary>
         {showHistory && (
@@ -332,6 +350,13 @@ export function StudioEditor({ videoId, onBack }: StudioEditorProps): React.JSX.
         videoId={videoId}
         generationId={detailsId}
         onOpenChange={(open) => !open && setDetailsId(null)}
+      />
+      <SceneCodeDialog
+        videoId={videoId}
+        sceneId={codeSceneId}
+        sceneNumber={document.scenario.scenes.findIndex((s) => s.id === codeSceneId) + 1}
+        onOpenChange={(open) => !open && setCodeSceneId(null)}
+        onChanged={(result) => void video.adopt(result)}
       />
       <SaveRecipeDialog
         generation={recipeFrom}

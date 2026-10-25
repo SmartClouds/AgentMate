@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background: #000000; }
+  .bg { position: absolute; inset: 0; background: radial-gradient(circle at 50% 35%, #2A1A3A 0%, #000000 70%); }
+  .line { position: absolute; left: 6%; right: 6%; top: 38%; text-align: center; line-height: 1.15;
+    font: 900 11vmin/1.15 Vazirmatn, Inter, sans-serif; color: #FFFFFF; }
+  .w { display: inline-block; margin: 0 0.12em; transform-origin: 50% 80%;
+    text-shadow: 0 0.6vmin 0 #000, 0 0 2vmin rgba(0,0,0,0.6); -webkit-text-stroke: 0.25vmin #000; }
+  .w.key { color: #FFD60A; }
+  .tag { position: absolute; left: 50%; top: 22%; transform: translateX(-50%) rotate(-4deg); padding: 1vmin 3vmin;
+    background: #FF006E; color: #FFFFFF; border-radius: 1.6vmin; font: 800 5vmin/1.2 Vazirmatn, Inter, sans-serif; }
+</style>
+</head>
+<body>
+<div class="bg" id="bg"></div>
+<div class="tag" id="tag"></div>
+<div class="line" id="line"></div>
+<script>
+// Bold captions: huge captions word by word on the beat, key words in color, a zoom punch per line.
+// Made for vertical social video; captions stay clear of the bottom where apps draw their buttons.
+const COPY = {
+  fa: { tag: 'نکته', lines: [['این', '*یک', 'ترفند*'], ['وقتت', 'را', '*نجات', 'می‌دهد*']] },
+  en: { tag: 'TIP', lines: [['This', '*one', 'trick*'], ['saves', 'your', '*whole', 'day*']] },
+};
+const line = document.getElementById('line');
+const tag = document.getElementById('tag');
+let copy;
+
+Studio.scene({
+  setup(ctx) {
+    copy = COPY[ctx.lang] ?? COPY.en;
+    tag.lang = ctx.lang; tag.dir = ctx.dir; tag.textContent = copy.tag;
+    line.lang = ctx.lang; line.dir = ctx.dir;
+  },
+  render(t, ctx) {
+    const per = ctx.duration / copy.lines.length;
+    const index = Math.min(copy.lines.length - 1, Math.floor(t / per));
+    const local = t - index * per;
+    const words = copy.lines[index];
+    const beat = (per * 0.6) / words.length;
+    line.innerHTML = words.map((raw, i) => {
+      const key = raw.includes('*');
+      const text = raw.replace(/\*/g, '');
+      const p = ctx.between(i * beat, i * beat + beat * 0.6);
+      const s = local >= i * beat ? 0.4 + 0.6 * ctx.ease.outBack(p) : 0;
+      const grow = key ? 1 + 0.12 * Math.sin(Math.min(1, p) * Math.PI) : 1;
+      return `<span class="w${key ? ' key' : ''}" style="transform:scale(${(s * grow).toFixed(3)})">${text}</span>`;
+    }).join(' ');
+    const punch = 1 + 0.06 * (1 - ctx.ease.out(ctx.between(index * per, index * per + 0.25)));
+    line.style.transform = `scale(${punch})`;
+    tag.style.transform = `translateX(-50%) rotate(-4deg) scale(${ctx.ease.outBack(ctx.between(0, 0.5))})`;
+  },
+});
+</script>
+</body>
+</html>

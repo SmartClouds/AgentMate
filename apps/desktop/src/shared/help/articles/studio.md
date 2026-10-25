@@ -3,7 +3,7 @@ title: Studio
 category: Build
 order: 40
 summary: Studio makes videos for your projects, or on their own. An AI CLI on your computer writes the scenario from your brief, you edit it by hand or by asking AI, and every video keeps its edits and full history in a folder you choose, always outside the project's source. Nothing in the history is ever deleted, and you can go back to any earlier version.
-keywords: studio, video, videos, film, movie, scenario, script, brief, ai, write with ai, ask ai, edit by typing, proposal, recipe, recipes, cli, model, effort, claude code, codex, gemini, grok, cursor, opencode, scene, scenes, narration, voice over, history, undo, redo, restore, version, versions, storage, folder, location, library, standalone, project videos, lock, another agentmate, take over, move, locate, persian, rtl
+keywords: studio, video, videos, film, movie, scenario, script, brief, animate, animation, motion graphics, style, styles, preview, scene code, code, versions, check, network, ai, write with ai, ask ai, edit by typing, proposal, recipe, recipes, cli, model, effort, claude code, codex, gemini, grok, cursor, opencode, scene, scenes, narration, voice over, history, undo, redo, restore, version, versions, storage, folder, location, library, standalone, project videos, lock, another agentmate, take over, move, locate, persian, rtl
 route: /studio
 ---
 
@@ -45,6 +45,28 @@ A field saves when you leave it, and each save becomes one entry in the history,
 Type what you want changed in **Ask AI** above the scenario, for example "make the opening shorter" or "add a scene about pricing", and press Enter. The button beside it shows which AI makes the change; click it to pick another.
 
 The AI answers with a proposal: every change spelled out, with the text before and after. **Apply** makes all of it as one entry in the history, so one **Undo** takes it all back. **Discard** leaves the video as it is. If you edit the scenario before applying, and the proposal no longer fits, Studio says so; ask again.
+
+## Animate the scenes
+
+Each scene card has an animation section. **Animate with AI** asks the CLI to write the scene's motion graphics as a small web page, in the video's style if it has one. Studio then checks the page in a hidden window before using it: it must load, draw something on every frame, draw the same picture each time it is asked for the same moment, and make no errors. A page that fails is sent back with the problems, up to two times. The button beside it shows which AI animates the scenes.
+
+Once a scene has an animation:
+
+- Its **thumbnail** shows the middle of the scene.
+- **Preview** plays it, with a slider to move through it. A scene that takes longer than a frame to draw skips frames in the preview and says **Slow scene**; the final video draws every frame.
+- **Change** asks the AI for a change to the animation, such as a bigger title or slower motion.
+- **Check** runs the checks again. If it fails, **Fix with AI** sends the problems to the AI.
+- **Code** opens the scene's files. Edit them and **Save** (or Ctrl+S); every save is a new version, and **Use this version** goes back to any earlier one. **Check** works there too.
+
+A scene page runs with no internet access and cannot reach AgentMate or your files. Each video folder also keeps a copy of every scene's current code in `scenes/`, to open in an editor of your own; changes made there are not used.
+
+## Styles
+
+**See styles** next to the style picker shows all fifteen styles, each with a short example scene playing in your video's language and format. The style you pick guides the scenario, and the AI gets the style's example when it animates the scenes.
+
+## Scene network
+
+Animated scenes cannot reach the internet. If a project's scenes need files from a host of yours, such as its own CDN, add the host under **Scene network** in the project's **Studio** tab. Only https is allowed, and only those hosts. Leave it empty to keep scenes offline, which is the safest, since the code is written by AI.
 
 ## AI runs and recipes
 

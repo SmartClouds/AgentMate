@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background: #EEF2F7; }
+  .world { position: absolute; left: 50%; top: 56%; width: 0; height: 0; }
+  .tile { position: absolute; width: 0; height: 0; }
+  .tile i { position: absolute; display: block; }
+  .label { position: absolute; left: 0; right: 0; top: 9%; text-align: center; color: #3D5A80;
+    font: 800 6.4vmin/1.2 Vazirmatn, Inter, sans-serif; }
+</style>
+</head>
+<body>
+<div class="label" id="label"></div>
+<div class="world" id="world"></div>
+<script>
+// Isometric: blocks on a fixed 30 degree grid rise one after another, like a city being built.
+const COPY = { fa: 'ساختن، قدم به قدم', en: 'Built step by step' };
+const world = document.getElementById('world');
+const label = document.getElementById('label');
+const S = Math.min(innerWidth, innerHeight) * 0.07;
+const cells = [];
+for (let gx = 0; gx < 4; gx++) for (let gy = 0; gy < 4; gy++) cells.push({ gx, gy, h: 1 + ((gx * 7 + gy * 3) % 4) });
+
+function iso(gx, gy) {
+  return [(gx - gy) * S * 0.866, (gx + gy) * S * 0.5 - 2 * S];
+}
+
+function block(x, y, h, color) {
+  const top = `polygon(50% 0, 100% 25%, 50% 50%, 0 25%)`;
+  return `<div class="tile" style="left:${x}px;top:${y}px">
+    <i style="left:${-S * 0.866}px;top:${-h}px;width:${S * 0.866}px;height:${h + S * 0.5}px;background:#98C1D9;clip-path:polygon(0 0,100% ${(S * 0.5 / (h + S * 0.5)) * 100}%,100% 100%,0 ${(h / (h + S * 0.5)) * 100}%)"></i>
+    <i style="left:0;top:${-h}px;width:${S * 0.866}px;height:${h + S * 0.5}px;background:#3D5A80;clip-path:polygon(0 ${(S * 0.5 / (h + S * 0.5)) * 100}%,100% 0,100% ${(h / (h + S * 0.5)) * 100}%,0 100%)"></i>
+    <i style="left:${-S * 0.866}px;top:${-h - S * 0.5}px;width:${S * 1.732}px;height:${S}px;background:${color};clip-path:${top}"></i>
+  </div>`;
+}
+
+Studio.scene({
+  setup(ctx) {
+    label.lang = ctx.lang;
+    label.dir = ctx.dir;
+    label.textContent = COPY[ctx.lang] ?? COPY.en;
+  },
+  render(t, ctx) {
+    const order = [...cells].sort((a, b) => a.gx + a.gy - (b.gx + b.gy));
+    world.innerHTML = order.map((c, i) => {
+      const start = (i / order.length) * ctx.duration * 0.6;
+      const grow = ctx.ease.outBack(ctx.between(start, start + ctx.duration * 0.25));
+      const [x, y] = iso(c.gx, c.gy);
+      const h = Math.max(2, grow * c.h * S * 0.6);
+      return block(x, y, h, i % 5 === 0 ? '#EE6C4D' : '#E0FBFC');
+    }).join('');
+    label.style.transform = `translateY(${(1 - ctx.ease.out(ctx.between(0, 1))) * -30}px)`;
+  },
+});
+</script>
+</body>
+</html>

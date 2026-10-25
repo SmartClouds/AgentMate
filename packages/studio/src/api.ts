@@ -32,6 +32,22 @@ export const studioInputs = {
   }),
   checkRoot: z.object({ path: folderPath, projectId: projectId.nullable() }),
   setProjectRoot: z.object({ projectId, path: folderPath.nullable() }),
+  setSceneHosts: z.object({
+    projectId,
+    /** Host names only, like cdn.example.com; scenes may load from them over https. */
+    hosts: z
+      .array(
+        z
+          .string()
+          .trim()
+          .toLowerCase()
+          .regex(
+            /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/,
+            'Enter a host name such as cdn.example.com.',
+          ),
+      )
+      .max(20),
+  }),
   updateSettings: z
     .object({
       defaultRoot: folderPath.nullable(),
@@ -90,6 +106,13 @@ export const studioAiInputs = {
     instruction: z.string().trim().min(1).max(20_000),
     run: runSettingsSchema,
   }),
+  startScene: z.object({
+    videoId: id,
+    sceneId: id,
+    /** What to change; without it the scene is animated from scratch. */
+    instruction: z.string().trim().min(1).max(20_000).optional(),
+    run: runSettingsSchema,
+  }),
   generationRef: z.object({ videoId: id, generationId: id }),
   generations: z.object({ videoId: id, limit: z.number().int().min(1).max(500) }),
   saveRecipe: z.object({
@@ -103,10 +126,62 @@ export const studioAiInputs = {
     scenario: runSettingsSchema,
   }),
   recipeRef: z.object({ recipeId: id }),
+  sceneRef: z.object({ videoId: id, sceneId: id }),
+  saveSceneFiles: z.object({
+    videoId: id,
+    sceneId: id,
+    files: z
+      .array(z.object({ path: z.string().min(1).max(300), content: z.string().max(5_000_000) }))
+      .min(1)
+      .max(50),
+  }),
+  useCodeRevision: z.object({ videoId: id, sceneId: id, revisionId: z.number().int().positive() }),
+  thumbnail: z.object({ videoId: id, treeHash: z.string().regex(/^[0-9a-f]{64}$/) }),
+  styleReference: z.object({
+    styleId: z
+      .string()
+      .max(64)
+      .refine((value) => styleById(value) !== undefined, 'Pick one of the offered styles.'),
+    aspect: z.enum(ASPECTS),
+    language: z.string().refine(isContentLanguage, 'Pick one of the offered languages.'),
+  }),
 };
+
+/** A style's reference scene, ready to preview: its tree and the config to load it with. */
+export interface StyleReferenceView {
+  styleId: string;
+  treeHash: string;
+  url: string;
+}
+
+export type SaveSceneFilesInput = z.infer<typeof studioAiInputs.saveSceneFiles>;
+
+export interface CodeRevisionView {
+  id: number;
+  treeHash: string;
+  author: 'ai' | 'user';
+  label: string;
+  generationId: string | null;
+  at: number;
+}
+
+export interface SceneCodeView {
+  sceneId: string;
+  treeHash: string | null;
+  /** Text files carry their content; other files (images, fonts) only their size. */
+  files: { path: string; size: number; text: string | null }[];
+  revisions: CodeRevisionView[];
+}
+
+export interface SceneCheckView {
+  ok: boolean;
+  problems: string[];
+  notes: string[];
+}
 
 export type StartScenarioInput = z.infer<typeof studioAiInputs.startScenario>;
 export type StartEditInput = z.infer<typeof studioAiInputs.startEdit>;
+export type StartSceneInput = z.infer<typeof studioAiInputs.startScene>;
 export type SaveRecipeInput = z.infer<typeof studioAiInputs.saveRecipe>;
 
 /** A saved way of making a video: the brief, the look, the format and the AI picks per stage. */
@@ -167,6 +242,8 @@ export interface ProjectStorageView {
   /** False while the project uses the default folder under the Studio library. */
   isCustom: boolean;
   check: RootCheckView;
+  /** Hosts this project's scenes may load from; empty means no network at all. */
+  sceneHosts: string[];
 }
 
 export interface VideoStatusView {
@@ -223,7 +300,7 @@ export interface MoveResult {
   oldFolder: string;
 }
 
-export type GenerationStage = 'scenario' | 'edit';
+export type GenerationStage = 'scenario' | 'edit' | 'scene';
 
 export type GenerationStatus =
   | 'running'
@@ -256,6 +333,8 @@ export type StoredProposal = EditProposal & { baseSeq: number };
 export interface GenerationParams {
   targetSeconds?: number;
   styleId?: string | null;
+  /** The scene a scene run writes the code of. */
+  sceneId?: string;
 }
 
 export interface GenerationView {

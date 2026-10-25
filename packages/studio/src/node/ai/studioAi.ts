@@ -15,6 +15,8 @@ import {
   type ScenarioAnswer,
   scenarioToOps,
 } from '../../ai/scenario/answer.js';
+import { type FencedFile, parseFencedFiles } from '../../ai/scene/files.js';
+import { buildSceneFixRequest, buildSceneRequest } from '../../ai/scene/prompt.js';
 import type {
   GenerationAttempt,
   GenerationDetail,
@@ -24,14 +26,21 @@ import type {
   RunSettingsInput,
   StartEditInput,
   StartScenarioInput,
+  StartSceneInput,
   StudioEvent,
 } from '../../api.js';
 import { type EditOp, OpError } from '../../document/ops.js';
-import { type StudioDocument, UNTITLED_TITLE } from '../../document/schema.js';
+import { DESIGN_SIZES, type StudioDocument, UNTITLED_TITLE } from '../../document/schema.js';
+import { sceneConfig } from '../../scenes/config.js';
+import { sceneUrl } from '../../scenes/url.js';
+import { flicksToSeconds } from '../../time/flicks.js';
 import type { EditResult, VideoStore } from '../project/videoStore.js';
+import type { SceneCheckResult } from '../scenes/check.js';
+import { readTree, treeFromFiles } from '../scenes/codeTree.js';
 
 /**
- * Studio's AI runs: a scenario from a brief, and scenario edits from typed instructions. Each run
+ * Studio's AI runs: a scenario from a brief, scenario edits from typed instructions, and each
+ * scene's motion graphics as code (E33), checked frame by frame before it is used. Each run
  * is a generation record in the video's history with every attempt's request, answer and log kept
  * as blobs, so any result can be traced back to exactly what produced it. The CLI itself is the
  * host's business (`StudioAiHost`); this file decides what to ask, checks what comes back, and
@@ -73,8 +82,20 @@ export interface StudioAiHost {
   ): Promise<AiRunResult>;
 }
 
+/** Checks a scene page in a real browser; the desktop app does it in a hidden offscreen window. */
+export interface SceneCheckHost {
+  check(input: {
+    url: string;
+    width: number;
+    height: number;
+    duration: number;
+    fps: number;
+  }): Promise<SceneCheckResult & { thumbnailPng: Uint8Array | null }>;
+}
+
 export interface StudioAiDeps {
   ai: StudioAiHost | undefined;
+  scenes?: SceneCheckHost;
   now: () => number;
   newId: () => string;
   notify: (event: StudioEvent) => void;
@@ -84,12 +105,18 @@ export interface StudioAiDeps {
   afterEdit: (videoId: string, store: VideoStore) => Promise<void>;
   /** Called when a video's run has ended, however it ended. */
   onIdle?: (videoId: string) => void;
+  /** A style's reference scene, shown to the AI as an example. */
+  styleReference?: (styleId: string) => Promise<{ path: string; content: Uint8Array }[]>;
   maxRepairs?: number;
   outputFlushMs?: number;
 }
 
 const MINUTE = 60_000;
-const BASE_TIMEOUT: Record<GenerationStage, number> = { scenario: 10 * MINUTE, edit: 5 * MINUTE };
+const BASE_TIMEOUT: Record<GenerationStage, number> = {
+  scenario: 10 * MINUTE,
+  edit: 5 * MINUTE,
+  scene: 20 * MINUTE,
+};
 const EFFORT_TIME: Record<EffortLevel, number> = { low: 1, medium: 1, high: 1.5, xhigh: 2, max: 3 };
 const MAX_LINES_PER_EVENT = 200;
 const MAX_LINE_CHARS = 2000;
@@ -110,8 +137,29 @@ interface Plan<T> {
   run: RunSettingsInput;
   parentId: string | null;
   request: (doc: StudioDocument) => string;
-  read: (text: string, doc: StudioDocument) => AnswerRead<T>;
+  read: (text: string, doc: StudioDocument) => AnswerRead<T> | Promise<AnswerRead<T>>;
   accept: (value: T, store: VideoStore, generationId: string) => Promise<void>;
+  /** A fix round's request; the default quotes the answer back with the problems. */
+  repair?: (original: string, text: string, issues: string[]) => string;
+}
+
+/** What a scene run hands over once its code passed the checks. */
+interface SceneAnswer {
+  treeHash: string;
+  thumbnailPng: Uint8Array | null;
+}
+
+const TEXT_FILE = /\.(html|js|mjs|css|json|svg|txt)$/i;
+
+/** The text files of a tree, for showing the current code to the AI when changing a scene. */
+async function filesOfTree(store: VideoStore, treeHash: string): Promise<FencedFile[]> {
+  const manifest = await readTree(store.blobs, treeHash);
+  const files: FencedFile[] = [];
+  for (const file of manifest.files) {
+    if (TEXT_FILE.test(file.path))
+      files.push({ path: file.path, content: await store.blobs.text(file.hash) });
+  }
+  return files;
 }
 
 export function createStudioAi(deps: StudioAiDeps) {
@@ -208,7 +256,7 @@ export function createStudioAi(deps: StudioAiDeps) {
           finish({ attempts, cliName, status: 'failed', error: attempt.error });
           return;
         }
-        const read = plan.read(result.text, store.document);
+        const read = await plan.read(result.text, store.document);
         if (read.ok) {
           // Everything in the work folder is in the blobs by now.
           await rm(workDir, { recursive: true, force: true });
@@ -228,7 +276,7 @@ export function createStudioAi(deps: StudioAiDeps) {
         }
         store.updateGeneration(id, { attempts, cliName });
         output.push(`The answer did not fit (${read.issues[0]}). Asking for a fix...`);
-        request = buildRepairRequest(original, result.text, read.issues);
+        request = (plan.repair ?? buildRepairRequest)(original, result.text, read.issues);
       }
     } catch (error) {
       finish({
@@ -351,6 +399,112 @@ export function createStudioAi(deps: StudioAiDeps) {
     };
   }
 
+  function scenePlan(
+    input: Omit<StartSceneInput, 'videoId'>,
+    parentId: string | null,
+    current: FencedFile[] | undefined,
+    example: FencedFile[] | undefined,
+  ): Plan<SceneAnswer> {
+    let lastFiles: FencedFile[] = [];
+    return {
+      stage: 'scene',
+      instruction: input.instruction ?? 'Animate this scene.',
+      params: { sceneId: input.sceneId },
+      run: input.run,
+      parentId,
+      request: (doc) =>
+        buildSceneRequest({
+          document: doc,
+          sceneId: input.sceneId,
+          instruction: input.instruction,
+          current,
+          example,
+        }),
+      read: async (text, doc) => {
+        const files = parseFencedFiles(text);
+        if (files.length === 0) {
+          return {
+            ok: false,
+            issues: [
+              'The answer has no files. Put each file in a fenced block with its name on the fence line, like ```html file:index.html.',
+            ],
+          };
+        }
+        lastFiles = files;
+        const scene = doc.scenario.scenes.find((s) => s.id === input.sceneId);
+        if (!scene) throw new Error('That scene is not in the video any more.');
+        const store = deps.store(doc.id);
+        let tree: Awaited<ReturnType<typeof treeFromFiles>>;
+        try {
+          tree = await treeFromFiles(files, store.blobs);
+        } catch (error) {
+          return { ok: false, issues: [error instanceof Error ? error.message : String(error)] };
+        }
+        const size = DESIGN_SIZES[doc.renderSettings.aspect];
+        const duration = flicksToSeconds(scene.targetDuration);
+        const checked = await (deps.scenes as SceneCheckHost).check({
+          url: sceneUrl(tree.treeHash, sceneConfig(doc, scene)),
+          width: size.width,
+          height: size.height,
+          duration,
+          fps: doc.renderSettings.fps,
+        });
+        if (!checked.ok) return { ok: false, issues: checked.problems.slice(0, 20) };
+        return { ok: true, value: { treeHash: tree.treeHash, thumbnailPng: checked.thumbnailPng } };
+      },
+      repair: (original, _text, issues) => buildSceneFixRequest(original, lastFiles, issues),
+      accept: async (answer, store, generationId) => {
+        const position = store.document.scenario.scenes.findIndex((s) => s.id === input.sceneId);
+        const result = store.setSceneCode({
+          sceneId: input.sceneId,
+          treeHash: answer.treeHash,
+          author: 'ai',
+          label: input.instruction
+            ? `AI changed the animation of scene ${position + 1}`
+            : `AI animated scene ${position + 1}`,
+          generationId,
+        });
+        if (answer.thumbnailPng) {
+          store.setThumbnail(answer.treeHash, await store.blobs.put(answer.thumbnailPng));
+        }
+        await store.mirrorScene(input.sceneId);
+        store.updateGeneration(generationId, {
+          status: 'done',
+          resultSeq: result.seq,
+          finishedAt: deps.now(),
+        });
+        await deps.afterEdit(store.manifest.id, store);
+      },
+    };
+  }
+
+  async function startScene(
+    videoId: string,
+    input: Omit<StartSceneInput, 'videoId'>,
+    parentId: string | null,
+  ): Promise<GenerationView> {
+    if (!deps.scenes) throw new Error('This copy of Studio cannot check scenes.');
+    const store = deps.store(videoId);
+    const scene = store.document.scenario.scenes.find((s) => s.id === input.sceneId);
+    if (!scene) throw new Error('That scene is not in the video any more.');
+    const current =
+      input.instruction && scene.code.treeHash
+        ? await filesOfTree(store, scene.code.treeHash)
+        : undefined;
+    const example =
+      store.document.styleId && deps.styleReference
+        ? await deps
+            .styleReference(store.document.styleId)
+            .then((files) =>
+              files
+                .filter((f) => TEXT_FILE.test(f.path))
+                .map((f) => ({ path: f.path, content: Buffer.from(f.content).toString('utf8') })),
+            )
+            .catch(() => undefined)
+        : undefined;
+    return start(videoId, scenePlan(input, parentId, current, example));
+  }
+
   function proposed(videoId: string, generationId: string) {
     const store = deps.store(videoId);
     const generation = store.generation(generationId);
@@ -374,12 +528,19 @@ export function createStudioAi(deps: StudioAiDeps) {
 
     startEdit: ({ videoId, ...input }: StartEditInput) => start(videoId, editPlan(input, null)),
 
+    startScene: ({ videoId, ...input }: StartSceneInput) => startScene(videoId, input, null),
+
     /** Runs a finished generation again with the same request and AI picks, as a new record. */
     async retry({ videoId, generationId }: { videoId: string; generationId: string }) {
       const old = deps.store(videoId).generation(generationId);
       if (!old) throw new Error('That AI run is not in this video.');
       if (old.status === 'running') throw new Error('That AI run is still working.');
       const run = { cliId: old.cliId, model: old.model, effort: old.effort };
+      if (old.stage === 'scene') {
+        const sceneId = old.params.sceneId ?? '';
+        const instruction = old.instruction === 'Animate this scene.' ? undefined : old.instruction;
+        return startScene(videoId, { sceneId, instruction, run }, old.id);
+      }
       if (old.stage === 'edit')
         return start(videoId, editPlan({ instruction: old.instruction, run }, old.id));
       return start(
@@ -481,3 +642,5 @@ export function createStudioAi(deps: StudioAiDeps) {
 }
 
 export type StudioAi = ReturnType<typeof createStudioAi>;
+
+export { sceneConfig } from '../../scenes/config.js';

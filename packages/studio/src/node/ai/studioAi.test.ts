@@ -527,3 +527,261 @@ describe('editing by typing', () => {
     expect(opened.session.document).toEqual(s.doc);
   });
 });
+
+describe('animating a scene', () => {
+  const FILES = [
+    '```html file:index.html',
+    '<div id="t" lang="fa" dir="rtl">هر قطره</div>',
+    '```',
+    '```js file:scene.js',
+    'Studio.scene({ render(t, ctx) { document.getElementById("t").style.opacity = ctx.progress; } });',
+    '```',
+  ].join('\n');
+
+  type CheckInput = { url: string; width: number; height: number; duration: number; fps: number };
+
+  function checker(results: { ok: boolean; problems?: string[] }[]) {
+    const calls: CheckInput[] = [];
+    return {
+      calls,
+      check: async (input: CheckInput) => {
+        calls.push(input);
+        const next = results.shift() ?? { ok: true };
+        return {
+          ok: next.ok,
+          problems: next.problems ?? [],
+          notes: [],
+          thumbnail: null,
+          thumbnailPng: next.ok ? new Uint8Array([137, 80, 78, 71]) : null,
+        };
+      },
+    };
+  }
+
+  async function withScenes(
+    replies: Reply[],
+    results: { ok: boolean; problems?: string[] }[] = [],
+  ) {
+    const scenes = checker(results);
+    const s = await setup([() => answer(JSON.stringify(SCENARIO)), ...replies], { scenes });
+    const g = await s.service.startScenario({
+      videoId: s.video.id,
+      brief: 'x',
+      targetSeconds: 10,
+      styleId: null,
+      run,
+    });
+    await settle(s.service, s.video.id, g.id);
+    const opened = await s.service.open({ videoId: s.video.id });
+    if (opened.state !== 'open') throw new Error('closed');
+    const sceneId = opened.session.document.scenario.scenes[0]?.id ?? '';
+    return { ...s, scenes, sceneId };
+  }
+
+  it('writes the scene code, checks it, and keeps it as a revision with a thumbnail and a mirror', async () => {
+    const s = await withScenes([() => answer(FILES)]);
+    const g = await s.service.startScene({ videoId: s.video.id, sceneId: s.sceneId, run });
+    const done = await settle(s.service, s.video.id, g.id);
+    expect(done).toMatchObject({ stage: 'scene', status: 'done', params: { sceneId: s.sceneId } });
+    expect(s.requests.at(-1)?.prompt).toContain('# Animate a scene of a video');
+    // Scene runs get twenty minutes, half again for high effort.
+    expect(s.requests.at(-1)?.timeoutMs).toBe(30 * 60_000);
+    expect(s.scenes.calls[0]?.url).toMatch(/^studio-scene:\/\/t-[0-9a-f]{64}\/index\.html\?c=/);
+    expect(s.scenes.calls[0]?.duration).toBe(5);
+
+    const code = await s.service.sceneCode({ videoId: s.video.id, sceneId: s.sceneId });
+    expect(code.files.map((f) => f.path)).toEqual(['index.html', 'scene.js']);
+    expect(code.files[0]?.text).toContain('هر قطره');
+    expect(code.revisions).toHaveLength(1);
+    expect(code.revisions[0]).toMatchObject({
+      author: 'ai',
+      generationId: g.id,
+      label: 'AI animated scene 1',
+    });
+    const thumb = await s.service.thumbnail({
+      videoId: s.video.id,
+      treeHash: code.treeHash as string,
+    });
+    expect([...(thumb ?? [])]).toEqual([137, 80, 78, 71]);
+    const mirrored = await readdir(join(s.video.folder, 'scenes', s.sceneId));
+    expect(mirrored.sort()).toEqual(['index.html', 'scene.js']);
+
+    const [entry] = await s.service.history({ videoId: s.video.id, limit: 1 });
+    expect(entry).toMatchObject({ actor: 'ai', label: 'AI animated scene 1', generationId: g.id });
+  });
+
+  it('sends the problems of a failed check back with the files, and accepts the fixed scene', async () => {
+    const s = await withScenes(
+      [() => answer(FILES), () => answer(FILES.replace('ctx.progress', 'ctx.progress * 0.9'))],
+      [{ ok: false, problems: ['The frame at 0 s is blank: nothing is drawn.'] }, { ok: true }],
+    );
+    const g = await s.service.startScene({ videoId: s.video.id, sceneId: s.sceneId, run });
+    const done = await settle(s.service, s.video.id, g.id);
+    expect(done.status).toBe('done');
+    const fix = s.requests.at(-1)?.prompt ?? '';
+    expect(fix).toContain('# Fix the scene');
+    expect(fix).toContain('- The frame at 0 s is blank: nothing is drawn.');
+    expect(fix).toContain('```html file:index.html');
+  });
+
+  it('asks again when the answer has no files', async () => {
+    const s = await withScenes([() => answer('Here is the idea, no code.'), () => answer(FILES)]);
+    const g = await s.service.startScene({ videoId: s.video.id, sceneId: s.sceneId, run });
+    const done = await settle(s.service, s.video.id, g.id);
+    expect(done.status).toBe('done');
+    expect(done.attempts[0]?.issues[0]).toMatch(/no files/);
+  });
+
+  it('shows the current code when asked to change it, and retries a failed scene run', async () => {
+    const s = await withScenes([
+      () => answer(FILES),
+      () => ({ ok: false, text: '', log: '', cliName: 'Claude Code', error: 'offline' }),
+      () => answer(FILES.replace('هر قطره', 'هر قطره مهم است')),
+    ]);
+    const first = await s.service.startScene({ videoId: s.video.id, sceneId: s.sceneId, run });
+    await settle(s.service, s.video.id, first.id);
+    const change = await s.service.startScene({
+      videoId: s.video.id,
+      sceneId: s.sceneId,
+      instruction: 'Make the text bigger',
+      run,
+    });
+    expect((await settle(s.service, s.video.id, change.id)).status).toBe('failed');
+    expect(s.requests.at(-1)?.prompt).toContain('# Change a scene of a video');
+    expect(s.requests.at(-1)?.prompt).toContain('## The scene now');
+    const again = await s.service.retryGeneration({
+      videoId: s.video.id,
+      generationId: change.id,
+    });
+    expect(again).toMatchObject({
+      stage: 'scene',
+      instruction: 'Make the text bigger',
+      parentId: change.id,
+    });
+    expect((await settle(s.service, s.video.id, again.id)).status).toBe('done');
+    const code = await s.service.sceneCode({ videoId: s.video.id, sceneId: s.sceneId });
+    expect(code.revisions[0]?.label).toBe('AI changed the animation of scene 1');
+  });
+
+  it('saves hand edits as a new revision, keeping other files, and goes back to an earlier one', async () => {
+    const s = await withScenes(
+      [() => answer(FILES)],
+      [{ ok: true }, { ok: false, problems: ['Error: x is not defined'] }],
+    );
+    const g = await s.service.startScene({ videoId: s.video.id, sceneId: s.sceneId, run });
+    await settle(s.service, s.video.id, g.id);
+    const before = await s.service.sceneCode({ videoId: s.video.id, sceneId: s.sceneId });
+
+    const saved = await s.service.saveSceneFiles({
+      videoId: s.video.id,
+      sceneId: s.sceneId,
+      files: [{ path: 'scene.js', content: 'Studio.scene({ render() { x(); } });' }],
+    });
+    expect(saved.status.undoLabel).toBe('Edited the code of scene 1');
+    const after = await s.service.sceneCode({ videoId: s.video.id, sceneId: s.sceneId });
+    expect(after.files.map((f) => f.path)).toEqual(['index.html', 'scene.js']);
+    expect(after.revisions.map((r) => r.author)).toEqual(['user', 'ai']);
+    expect(await s.service.checkScene({ videoId: s.video.id, sceneId: s.sceneId })).toEqual({
+      ok: false,
+      problems: ['Error: x is not defined'],
+      notes: [],
+    });
+
+    const back = await s.service.useCodeRevision({
+      videoId: s.video.id,
+      sceneId: s.sceneId,
+      revisionId: before.revisions[0]?.id ?? 0,
+    });
+    expect(back.document.scenario.scenes[0]?.code.treeHash).toBe(before.treeHash);
+    await expect(
+      s.service.useCodeRevision({ videoId: s.video.id, sceneId: s.sceneId, revisionId: 999 }),
+    ).rejects.toThrow(/not in this video/);
+    await expect(
+      s.service.saveSceneFiles({
+        videoId: s.video.id,
+        sceneId: s.sceneId,
+        files: [{ path: 'run.exe', content: 'x' }],
+      }),
+    ).rejects.toThrow(/Not saved/);
+  });
+
+  it('says so when this host cannot check scenes, or the scene has no code', async () => {
+    const s = await setup([() => answer(JSON.stringify(SCENARIO))]);
+    const g = await s.service.startScenario({
+      videoId: s.video.id,
+      brief: 'x',
+      targetSeconds: 10,
+      styleId: null,
+      run,
+    });
+    await settle(s.service, s.video.id, g.id);
+    const opened = await s.service.open({ videoId: s.video.id });
+    if (opened.state !== 'open') throw new Error('closed');
+    const sceneId = opened.session.document.scenario.scenes[0]?.id ?? '';
+    await expect(s.service.startScene({ videoId: s.video.id, sceneId, run })).rejects.toThrow(
+      /cannot check scenes/,
+    );
+    await expect(s.service.checkScene({ videoId: s.video.id, sceneId })).rejects.toThrow(
+      /cannot check scenes/,
+    );
+    expect((await s.service.sceneCode({ videoId: s.video.id, sceneId })).treeHash).toBeNull();
+    expect(await s.service.thumbnail({ videoId: s.video.id, treeHash: 'a'.repeat(64) })).toBeNull();
+  });
+});
+
+describe('animating a scene, the edges', () => {
+  const GOOD =
+    '```html file:index.html\n<p>x</p>\n```\n```js file:scene.js\nStudio.scene({ render() {} });\n```';
+  const checker = () => ({
+    check: async () => ({
+      ok: true,
+      problems: [],
+      notes: [],
+      thumbnail: null,
+      thumbnailPng: null,
+    }),
+  });
+
+  async function scenario(replies: Reply[], styleId: string | null) {
+    const s = await setup([() => answer(JSON.stringify(SCENARIO)), ...replies], {
+      scenes: checker(),
+    });
+    const g = await s.service.startScenario({
+      videoId: s.video.id,
+      brief: 'x',
+      targetSeconds: 10,
+      styleId,
+      run,
+    });
+    await settle(s.service, s.video.id, g.id);
+    const opened = await s.service.open({ videoId: s.video.id });
+    if (opened.state !== 'open') throw new Error('closed');
+    return { ...s, sceneId: opened.session.document.scenario.scenes[0]?.id ?? '' };
+  }
+
+  it('sends back an answer whose files are all refused', async () => {
+    const s = await scenario(
+      [() => answer('```bash file:run.sh\necho hi\n```'), () => answer(GOOD)],
+      null,
+    );
+    const g = await s.service.startScene({ videoId: s.video.id, sceneId: s.sceneId, run });
+    const done = await settle(s.service, s.video.id, g.id);
+    expect(done.status).toBe('done');
+    expect(done.attempts[0]?.issues[0]).toMatch(/no usable files/);
+  });
+
+  it("shows the AI the style's reference scene when the video has a style", async () => {
+    const s = await scenario([() => answer(GOOD)], 'hud');
+    const g = await s.service.startScene({ videoId: s.video.id, sceneId: s.sceneId, run });
+    await settle(s.service, s.video.id, g.id);
+    expect(s.requests.at(-1)?.prompt).toContain('## An example in this style');
+    expect(s.requests.at(-1)?.prompt).toContain('Studio.scene(');
+  });
+
+  it('refuses a scene that is not in the video', async () => {
+    const s = await scenario([], null);
+    await expect(
+      s.service.startScene({ videoId: s.video.id, sceneId: 'gone', run }),
+    ).rejects.toThrow(/not in the video/);
+  });
+});

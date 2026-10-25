@@ -50,6 +50,8 @@ export interface SceneCardProps {
   fps: number;
   apply: (ops: EditOp[], label: string) => Promise<boolean>;
   onRemove: (scene: Scene, index: number) => void;
+  /** The scene's motion graphics: preview, animate with AI, code. */
+  motion?: React.ReactNode;
 }
 
 /**
@@ -63,6 +65,7 @@ export function SceneCard({
   fps,
   apply,
   onRemove,
+  motion,
 }: SceneCardProps): React.JSX.Element {
   const id = useId();
   const number = index + 1;
@@ -251,6 +254,7 @@ export function SceneCard({
           </p>
         )}
       </div>
+      {motion}
     </section>
   );
 }

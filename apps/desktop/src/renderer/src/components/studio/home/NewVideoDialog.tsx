@@ -253,7 +253,9 @@ export function NewVideoDialog({
             <Switch id={aiId} checked={useAi} onCheckedChange={setUseAi} />
             <Label htmlFor={aiId}>Write the scenario with AI</Label>
           </div>
-          {useAi && <BriefFields value={brief} onChange={setBrief} aspect={aspect} />}
+          {useAi && (
+            <BriefFields value={brief} onChange={setBrief} aspect={aspect} language={language} />
+          )}
           {where && (
             <p className="text-xs text-muted-foreground">
               Saved in <span className="break-all font-mono">{where}</span>

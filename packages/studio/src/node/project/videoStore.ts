@@ -1,5 +1,5 @@
-import { mkdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { z } from 'zod';
 import type { GenerationView } from '../../api.js';
 import { applyOps, type EditOp } from '../../document/ops.js';
@@ -13,6 +13,7 @@ import { pushTx, type TxRef, type UndoStacks } from '../../document/undo.js';
 import { videoFolderName } from '../../text/names.js';
 import { BlobStore } from '../blobs/blobStore.js';
 import {
+  type CodeRevision,
   type GenerationPatch,
   HistoryDb,
   type HistoryEntry,
@@ -22,6 +23,7 @@ import {
 } from '../db/history.js';
 import type { OpenSqlDriver } from '../db/sqlDriver.js';
 import { readJsonFile, writeFileAtomic } from '../fs/atomicWrite.js';
+import { readTree } from '../scenes/codeTree.js';
 
 /**
  * One Studio video on disk: a folder holding the manifest (`studio.json`), the history
@@ -36,6 +38,11 @@ import { readJsonFile, writeFileAtomic } from '../fs/atomicWrite.js';
 export const MANIFEST_FILE = 'studio.json';
 export const DOCUMENT_FILE = 'document.json';
 export const DB_FILE = 'studio.db';
+/**
+ * Copies of each scene's current code, to open in an editor of one's own. Only a copy: a change
+ * there is not used until it is brought in through Studio as a new revision.
+ */
+export const SCENES_DIR = 'scenes';
 
 const manifestSchema = z.object({
   formatVersion: z.literal(1),
@@ -360,6 +367,78 @@ export class VideoStore {
 
   history(options: { before?: number; limit: number }): HistoryEntry[] {
     return this.db.entries(options);
+  }
+
+  /**
+   * Points a scene at a code tree (already in the blob store), as one history entry, and records
+   * the revision. Undo puts the scene back on its previous tree; the revision list keeps them all.
+   */
+  setSceneCode(input: {
+    sceneId: string;
+    treeHash: string;
+    author: CodeRevision['author'];
+    label: string;
+    generationId?: string | null;
+  }): EditResult {
+    this.assertOpen();
+    const scene = this.current.scenario.scenes.find((s) => s.id === input.sceneId);
+    if (!scene) throw new Error('That scene is not in the video any more.');
+    const result = this.commit(
+      'edit',
+      null,
+      [
+        {
+          op: 'scene.update',
+          sceneId: input.sceneId,
+          patch: { code: { treeHash: input.treeHash } },
+        },
+      ],
+      input.label,
+      input.author,
+      input.generationId ?? null,
+    );
+    const parent = this.db.codeRevisions(input.sceneId)[0];
+    this.db.addCodeRevision({
+      sceneId: input.sceneId,
+      treeHash: input.treeHash,
+      parentId: parent?.id ?? null,
+      generationId: input.generationId ?? null,
+      author: input.author,
+      label: input.label,
+      at: this.deps.now(),
+    });
+    return result;
+  }
+
+  /** A code tree's thumbnail (a PNG blob), from the check that passed it. */
+  setThumbnail(treeHash: string, pngHash: string): void {
+    this.db.setMeta(`thumbnail:${treeHash}`, pngHash);
+  }
+
+  thumbnail(treeHash: string): string | null {
+    return this.db.getMeta(`thumbnail:${treeHash}`);
+  }
+
+  codeRevisions(sceneId: string): CodeRevision[] {
+    return this.db.codeRevisions(sceneId);
+  }
+
+  /** Rewrites `scenes/<id>/` from the scene's current tree. Best effort: it is only a copy. */
+  async mirrorScene(sceneId: string): Promise<void> {
+    const dir = join(this.folder, SCENES_DIR, sceneId);
+    const treeHash = this.current.scenario.scenes.find((s) => s.id === sceneId)?.code.treeHash;
+    try {
+      await rm(dir, { recursive: true, force: true });
+      if (!treeHash) return;
+      const manifest = await readTree(this.blobs, treeHash);
+      for (const file of manifest.files) {
+        const target = join(dir, ...file.path.split('/'));
+        await mkdir(dirname(target), { recursive: true });
+        await writeFile(target, await this.blobs.bytes(file.hash));
+      }
+    } catch {
+      // The history and the blobs hold the code; a copy that could not be written costs nothing.
+    }
   }
 
   revisions(): Revision[] {

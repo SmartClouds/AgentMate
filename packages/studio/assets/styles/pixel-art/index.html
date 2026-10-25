@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background: #1B1B2F; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+  .box { position: absolute; left: 50%; bottom: 8%; transform: translateX(-50%); padding: 1.6vmin 3vmin;
+    background: #1B1B2F; box-shadow: 0 0 0 0.8vmin #F9F871, 0 0 0 1.6vmin #1B1B2F;
+    color: #F9F871; font: 700 4.8vmin/1.3 Vazirmatn, Inter, sans-serif; white-space: nowrap; }
+</style>
+</head>
+<body>
+<canvas id="c" width="160" height="90"></canvas>
+<div class="box" id="box"></div>
+<script>
+// Pixel art: a tiny canvas scaled up without smoothing, eight colors, a sprite that steps in place.
+const COPY = { fa: 'مرحله‌ی بعد!', en: 'Next level!' };
+const c = document.getElementById('c');
+const g = c.getContext('2d');
+const box = document.getElementById('box');
+const coin = ['..XX..', '.XYYX.', 'XYXXYX', 'XYXXYX', '.XYYX.', '..XX..'];
+const hero = [
+  ['..RRR...', '.RRRRR..', '.SSSS...', 'SSSSSS..', '.BBBB...', 'BBBBBB..', '.B..B...', '.B..B...'],
+  ['..RRR...', '.RRRRR..', '.SSSS...', 'SSSSSS..', '.BBBB...', 'BBBBBB..', 'B....B..', '........'],
+];
+const palette = { X: '#F9F871', Y: '#E43F5A', R: '#E43F5A', S: '#F2C6A0', B: '#4ECCA3' };
+
+function sprite(rows, x, y) {
+  rows.forEach((row, j) => [...row].forEach((ch, i) => {
+    if (palette[ch]) { g.fillStyle = palette[ch]; g.fillRect(x + i, y + j, 1, 1); }
+  }));
+}
+
+Studio.scene({
+  setup(ctx) {
+    box.lang = ctx.lang; box.dir = ctx.dir;
+    box.textContent = COPY[ctx.lang] ?? COPY.en;
+  },
+  render(t, ctx) {
+    g.fillStyle = '#1B1B2F'; g.fillRect(0, 0, 160, 90);
+    g.fillStyle = '#2D2D52';
+    for (let i = 0; i < 20; i++) g.fillRect((i * 37 + Math.floor(t * 8) * (i % 3)) % 160, (i * 19) % 50, 1, 1);
+    g.fillStyle = '#4ECCA3'; g.fillRect(0, 70, 160, 20);
+    g.fillStyle = '#3A9E80';
+    for (let x = 0; x < 160; x += 8) g.fillRect((x - Math.floor(t * 16)) % 160 + (x < Math.floor(t * 16) % 160 ? 160 : 0), 70, 4, 2);
+    const step = Math.floor(t * 8);
+    const hx = Math.floor(20 + ctx.between(0, ctx.duration * 0.6) * 90);
+    const jump = Math.max(0, Math.sin(ctx.between(ctx.duration * 0.6, ctx.duration * 0.8) * Math.PI)) * 14;
+    sprite(hero[step % 2], hx, 62 - Math.floor(jump));
+    if (ctx.between(0, ctx.duration * 0.7) < 1) sprite(coin, 116, 40 + (step % 2));
+  },
+});
+</script>
+</body>
+</html>

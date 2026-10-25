@@ -44,4 +44,17 @@ export class BlobStore {
   async text(hash: string): Promise<string> {
     return readFile(this.path(hash), 'utf8');
   }
+
+  async bytes(hash: string): Promise<Buffer> {
+    return readFile(this.path(hash));
+  }
+
+  async has(hash: string): Promise<boolean> {
+    try {
+      await access(this.path(hash));
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }

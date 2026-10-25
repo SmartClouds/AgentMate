@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background: #EDE6D6; }
+  .piece { position: absolute; transform-origin: center; box-shadow: 0 0.8vmin 1.6vmin rgba(0,0,0,0.18); }
+  .tape { position: absolute; width: 9vmin; height: 3vmin; background: rgba(255, 245, 200, 0.75); }
+  .headline { position: absolute; padding: 1.6vmin 3vmin; background: #2E2E2E; color: #EDE6D6;
+    font: 800 6vmin/1.15 Vazirmatn, Inter, sans-serif; transform-origin: center; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div id="board"></div>
+<script>
+// Collage: torn paper, cut shapes and tape, settling in at twelve frames a second like stop motion.
+const COPY = { fa: 'داستان ما، تکه به تکه', en: 'Our story, piece by piece' };
+const W = innerWidth, H = innerHeight;
+const board = document.getElementById('board');
+const pieces = [
+  { x: 0.28, y: 0.38, w: 0.32, h: 0.42, color: '#669BBC', rot: -6 },
+  { x: 0.66, y: 0.34, w: 0.28, h: 0.36, color: '#C1121F', rot: 5 },
+  { x: 0.52, y: 0.62, w: 0.36, h: 0.22, color: '#F4D58D', rot: -3 },
+];
+function torn(seed) {
+  const pts = [];
+  for (let i = 0; i <= 10; i++) pts.push(`${i * 10}% ${((seed * (i + 3) * 37) % 6)}%`);
+  for (let i = 10; i >= 0; i--) pts.push(`${i * 10}% ${100 - ((seed * (i + 5) * 29) % 6)}%`);
+  return `polygon(${pts.join(',')})`;
+}
+let els = [];
+let headline;
+
+Studio.scene({
+  setup(ctx) {
+    board.innerHTML = pieces.map((p, i) =>
+      `<div class="piece" style="background:${p.color};width:${p.w * W}px;height:${p.h * H}px;clip-path:${torn(i + 2)}"></div>` +
+      `<div class="tape"></div>`).join('') +
+      `<div class="headline" lang="${ctx.lang}" dir="${ctx.dir}">${COPY[ctx.lang] ?? COPY.en}</div>`;
+    els = [...board.querySelectorAll('.piece')];
+    headline = board.querySelector('.headline');
+  },
+  render(t, ctx) {
+    const step = Math.floor(t * 12) / 12;
+    const tapes = [...board.querySelectorAll('.tape')];
+    els.forEach((el, i) => {
+      const p = pieces[i];
+      const arrive = ctx.ease.outCubic(ctx.between(i * 0.45, i * 0.45 + 0.8));
+      const jitter = (((Math.floor(t * 12) + i * 5) % 3) - 1) * (1 - arrive) * 2;
+      const dx = (1 - arrive) * (i % 2 ? 1 : -1) * W * 0.4;
+      el.style.left = `${p.x * W - (p.w * W) / 2 + dx}px`;
+      el.style.top = `${p.y * H - (p.h * H) / 2}px`;
+      el.style.transform = `rotate(${p.rot + jitter + (1 - arrive) * 25}deg)`;
+      tapes[i].style.left = `${p.x * W - W * 0.045 + dx}px`;
+      tapes[i].style.top = `${p.y * H - (p.h * H) / 2 - H * 0.02}px`;
+      tapes[i].style.transform = `rotate(${p.rot * 2}deg)`;
+      tapes[i].style.opacity = String(arrive > 0.95 ? 1 : 0);
+    });
+    const h = ctx.ease.outBack(ctx.between(ctx.duration * 0.45, ctx.duration * 0.6));
+    headline.style.left = `${W * 0.5}px`;
+    headline.style.top = `${H * 0.84}px`;
+    headline.style.transform = `translate(-50%, -50%) rotate(${-2 + (step % 0.25 > 0.12 ? 0.4 : -0.4)}deg) scale(${h})`;
+  },
+});
+</script>
+</body>
+</html>

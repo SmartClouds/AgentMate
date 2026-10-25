@@ -30,6 +30,10 @@ export default defineConfig({
         'src/ai/**': { lines: 95, branches: 85 },
         'src/node/ai/**': { lines: 92, branches: 78 },
         'src/node/recipes/**': { lines: 92, branches: 85 },
+        // E33: the scene runtime, code trees, the scene server and the checks.
+        'src/runtime/**': { lines: 92, branches: 80 },
+        'src/node/scenes/**': { lines: 95, branches: 88 },
+        'src/scenes/**': { lines: 95, branches: 80 },
       },
     },
   },

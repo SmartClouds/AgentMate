@@ -18,17 +18,22 @@ export {
   ChevronUp,
   CircleCheck,
   Clapperboard,
+  Code,
   EllipsisVertical,
   FileText,
   Folder,
   FolderOpen,
   FolderPlus,
   History,
+  ImageIcon,
   Lock,
+  Pause,
   Pencil,
+  Play,
   Plus,
   Redo,
   RefreshCw,
+  Save,
   Send,
   Sparkles,
   Spinner,
@@ -36,8 +41,16 @@ export {
   Trash2,
   TriangleAlert,
   Undo,
+  Wand2,
   X,
 } from '@/components/icons';
+
+import { lazy } from 'react';
+
+/** Monaco is large, so the code view loads it only when it opens. */
+export const MonacoEditor = lazy(() =>
+  import('@/components/editor/MonacoEditor').then((m) => ({ default: m.MonacoEditor })),
+);
 export {
   CARD_GRID,
   CatalogCardShimmer,

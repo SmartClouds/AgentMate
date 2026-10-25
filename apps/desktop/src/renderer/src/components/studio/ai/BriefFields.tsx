@@ -1,7 +1,8 @@
 import { type Aspect, STYLE_PRESETS, styleById } from '@agentmat/studio';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { scriptClass } from '../format';
 import {
+  Button,
   Combobox,
   Label,
   type RunSettings,
@@ -10,6 +11,7 @@ import {
   segmentClass,
   Textarea,
 } from '../kit';
+import { StylesDialog } from '../scenes/StylesDialog';
 
 export interface BriefValue {
   brief: string;
@@ -37,15 +39,19 @@ export function BriefFields({
   value,
   onChange,
   aspect,
+  language,
   autoFocus,
 }: {
   value: BriefValue;
   onChange: (next: BriefValue) => void;
   /** The video's format, to point out the styles made for it. */
   aspect: Aspect;
+  /** The video's language, for the style examples. */
+  language: string;
   autoFocus?: boolean;
 }): React.JSX.Element {
   const id = useId();
+  const [browsing, setBrowsing] = useState(false);
   const style = styleById(value.styleId);
   const styles = [
     { value: NO_STYLE, label: 'Let the AI choose', keywords: ['none', 'any'] },
@@ -97,11 +103,25 @@ export function BriefFields({
         </div>
         <div className="space-y-1.5">
           <Label className="block">Style</Label>
-          <Combobox
-            ariaLabel="Style"
-            options={styles}
-            value={value.styleId ?? NO_STYLE}
-            onChange={(next) => onChange({ ...value, styleId: next === NO_STYLE ? null : next })}
+          <div className="flex gap-2">
+            <Combobox
+              ariaLabel="Style"
+              className="min-w-0 flex-1"
+              options={styles}
+              value={value.styleId ?? NO_STYLE}
+              onChange={(next) => onChange({ ...value, styleId: next === NO_STYLE ? null : next })}
+            />
+            <Button type="button" variant="outline" onClick={() => setBrowsing(true)}>
+              See styles
+            </Button>
+          </div>
+          <StylesDialog
+            open={browsing}
+            onOpenChange={setBrowsing}
+            value={value.styleId}
+            aspect={aspect}
+            language={language}
+            onPick={(styleId) => onChange({ ...value, styleId })}
           />
         </div>
       </div>

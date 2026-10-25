@@ -80,6 +80,7 @@ export function storage(overrides: Partial<ProjectStorageView> = {}): ProjectSto
     root: 'C:\\Users\\me\\Videos\\AgentMate Studio\\Projects\\Shop',
     isCustom: false,
     check: ok(),
+    sceneHosts: [],
     ...overrides,
   };
 }

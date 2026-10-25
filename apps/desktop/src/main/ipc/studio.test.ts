@@ -234,3 +234,19 @@ describe('who may call', () => {
     await expect(invokeFrom(fakeWebContents(), IPC.studio.list)).rejects.toThrow(/main window/);
   });
 });
+
+describe('scene network', () => {
+  it('saves the hosts a project lets its scenes reach, and refuses anything that is not a host name', async () => {
+    const view = await invoke<ProjectStorageView>(IPC.studio.setSceneHosts, {
+      projectId: 'p1',
+      hosts: ['CDN.Example.com'],
+    });
+    expect(view.sceneHosts).toEqual(['cdn.example.com']);
+    await expect(
+      invoke(IPC.studio.setSceneHosts, { projectId: 'p1', hosts: ['https://evil.com/path'] }),
+    ).rejects.toThrow(/host name/);
+    await expect(
+      invoke(IPC.studio.setSceneHosts, { projectId: 'p1', hosts: ['localhost'] }),
+    ).rejects.toThrow(/host name/);
+  });
+});

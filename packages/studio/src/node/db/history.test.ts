@@ -233,3 +233,42 @@ describe('HistoryDb generations', () => {
     expect(() => db.unsafeExec("DELETE FROM generations WHERE id = 'g1'")).toThrow(/append-only/);
   });
 });
+
+describe('HistoryDb code revisions', () => {
+  it('keeps every revision of a scene, newest first, and never lets one be changed', async () => {
+    const db = await openDb();
+    const first = db.addCodeRevision({
+      sceneId: 's1',
+      treeHash: 'a'.repeat(64),
+      parentId: null,
+      generationId: 'g1',
+      author: 'ai',
+      label: 'Wrote the scene',
+      at: 1,
+    });
+    db.addCodeRevision({
+      sceneId: 's1',
+      treeHash: 'b'.repeat(64),
+      parentId: first,
+      generationId: null,
+      author: 'user',
+      label: 'Edited scene.js',
+      at: 2,
+    });
+    db.addCodeRevision({
+      sceneId: 's2',
+      treeHash: 'c'.repeat(64),
+      parentId: null,
+      generationId: null,
+      author: 'user',
+      label: 'x',
+      at: 3,
+    });
+    expect(db.codeRevisions('s1').map((r) => [r.treeHash[0], r.parentId, r.author])).toEqual([
+      ['b', first, 'user'],
+      ['a', null, 'ai'],
+    ]);
+    expect(() => db.unsafeExec('DELETE FROM code_revisions')).toThrow(/append-only/);
+    expect(() => db.unsafeExec("UPDATE code_revisions SET label = 'x'")).toThrow(/append-only/);
+  });
+});

@@ -6,6 +6,7 @@ import { type ScenarioRequest, toRunInput } from './runSettings';
 
 export interface BriefCardProps {
   aspect: Aspect;
+  language: string;
   /** The video already has scenes, so this rewrites them; folded until the user opens it. */
   rewriting: boolean;
   /** An AI run is working on the video. */
@@ -18,6 +19,7 @@ export interface BriefCardProps {
 /** The brief step: the user says what the video is about, and the AI writes the scenario. */
 export function BriefCard({
   aspect,
+  language,
   rewriting,
   busy,
   initial,
@@ -76,7 +78,13 @@ export function BriefCard({
           void submit();
         }}
       >
-        <BriefFields value={value} onChange={setValue} aspect={aspect} autoFocus={!rewriting} />
+        <BriefFields
+          value={value}
+          onChange={setValue}
+          aspect={aspect}
+          language={language}
+          autoFocus={!rewriting}
+        />
         <div className="flex flex-wrap items-center gap-2">
           <Button type="submit" disabled={!ready}>
             <Sparkles /> {busy ? 'AI is busy' : rewriting ? 'Rewrite scenario' : 'Write scenario'}

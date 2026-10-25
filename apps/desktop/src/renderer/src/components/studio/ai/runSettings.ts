@@ -36,7 +36,7 @@ export function fromRunInput(run: RunSettingsInput): RunSettings {
 }
 
 const STORAGE_KEY = 'studio.runSettings';
-type Stage = 'scenario' | 'edit';
+type Stage = 'scenario' | 'edit' | 'scene';
 
 function readAll(): Partial<Record<Stage, RunSettings>> {
   try {

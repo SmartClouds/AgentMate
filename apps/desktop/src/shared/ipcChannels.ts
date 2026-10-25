@@ -700,6 +700,8 @@ export const IPC = {
     projectStorage: 'studio:projectStorage',
     // ({ projectId, path | null }) -> ProjectStorageView; null goes back to the default folder
     setProjectRoot: 'studio:setProjectRoot',
+    // ({ projectId, hosts }) -> ProjectStorageView; the hosts the project's scenes may load from
+    setSceneHosts: 'studio:setSceneHosts',
     // ({ path, projectId | null }) -> RootCheckView, while the user is choosing a folder
     checkRoot: 'studio:checkRoot',
     // ({ defaultPath? }) -> string | null: the system folder picker
@@ -760,6 +762,25 @@ export const IPC = {
     saveRecipe: 'studioAi:saveRecipe',
     // ({ recipeId }) -> void
     deleteRecipe: 'studioAi:deleteRecipe',
+  },
+  /** Studio scene code (E33): motion graphics written by AI or by hand, checked and versioned. */
+  studioScenes: {
+    // (StartSceneInput) -> GenerationView, an AI run that writes or changes the scene's code
+    animate: 'studioScenes:animate',
+    // ({ videoId, sceneId }) -> SceneCodeView
+    code: 'studioScenes:code',
+    // (SaveSceneFilesInput) -> EditResponse, a new revision from hand edits
+    saveFiles: 'studioScenes:saveFiles',
+    // ({ videoId, sceneId, revisionId }) -> EditResponse
+    useRevision: 'studioScenes:useRevision',
+    // ({ videoId, sceneId }) -> SceneCheckView
+    check: 'studioScenes:check',
+    // ({ videoId, treeHash }) -> string | null, a PNG data URL
+    thumbnail: 'studioScenes:thumbnail',
+    // ({ styleId, aspect, language }) -> StyleReferenceView, for previewing a style
+    styleReference: 'studioScenes:styleReference',
+    // ({ styleId, aspect, language }) -> SceneCheckView
+    checkStyle: 'studioScenes:checkStyle',
   },
   /** Relay (E26): context-sized tasks in the project, run one session each, with handoffs. */
   relay: {

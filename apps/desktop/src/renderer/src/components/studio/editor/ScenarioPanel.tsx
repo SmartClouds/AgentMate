@@ -19,10 +19,17 @@ export interface ScenarioPanelProps {
   apply: (ops: EditOp[], label: string) => Promise<boolean>;
   /** The AI brief card, shown above the scenario. */
   brief?: React.ReactNode;
+  /** Each scene's motion graphics section. */
+  renderMotion?: (scene: Scene, index: number) => React.ReactNode;
 }
 
 /** The scenario, scene by scene: written by AI from the brief, or by hand, and edited either way. */
-export function ScenarioPanel({ document, apply, brief }: ScenarioPanelProps): React.JSX.Element {
+export function ScenarioPanel({
+  document,
+  apply,
+  brief,
+  renderMotion,
+}: ScenarioPanelProps): React.JSX.Element {
   const id = useId();
   const scenes = document.scenario.scenes;
   const [logline, setLogline] = useState(document.scenario.logline);
@@ -95,6 +102,7 @@ export function ScenarioPanel({ document, apply, brief }: ScenarioPanelProps): R
               fps={document.renderSettings.fps}
               apply={apply}
               onRemove={(s, i) => void remove(s, i)}
+              motion={renderMotion?.(scene, index)}
             />
           ))}
           <Button variant="outline" onClick={() => void addScene()}>

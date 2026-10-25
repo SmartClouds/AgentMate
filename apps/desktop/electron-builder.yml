@@ -23,6 +23,12 @@ files:
 extraResources:
   - from: resources/example-skill-repo
     to: example-skill-repo
+  # Studio's fonts, style reference scenes and scene runtime (E33). Its code is bundled into the
+  # main process, which then reads these from resources/studio (see main/studio/host.ts).
+  - from: ../../packages/studio/assets
+    to: studio/assets
+  - from: ../../packages/studio/dist/bundle
+    to: studio/dist/bundle
   # The server core release manifest, which CD downloads into build/ before packaging. The app
   # only installs a server core whose hash is listed here. A local build without it packages
   # fine (electron-builder only warns) and its Deploy section says it has no core to install.

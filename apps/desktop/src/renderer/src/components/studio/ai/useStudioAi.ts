@@ -1,7 +1,7 @@
 import type { EditResponse, GenerationView } from '@agentmat/studio';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { studioAiClient, studioClient } from '../client';
+import { studioAiClient, studioClient, studioScenesClient } from '../client';
 import { errorMessage } from '../format';
 import { type RunSettings, toast } from '../kit';
 import { studioKeys } from '../queryKeys';
@@ -19,6 +19,8 @@ export interface StudioAi {
   running: GenerationView | null;
   startScenario: (request: ScenarioRequest) => Promise<boolean>;
   startEdit: (instruction: string, run: RunSettings) => Promise<boolean>;
+  /** Animates a scene, or changes its animation when given what to change. */
+  startScene: (sceneId: string, run: RunSettings, instruction?: string) => Promise<boolean>;
   cancel: (generationId: string) => Promise<void>;
   retry: (generationId: string) => Promise<void>;
   applyProposal: (generationId: string) => Promise<boolean>;
@@ -95,6 +97,15 @@ export function useStudioAi(
     startEdit: async (instruction, run) =>
       (await attempt(() => client().startEdit({ videoId, instruction, run: toRunInput(run) }))) !==
       null,
+    startScene: async (sceneId, runSettings, instruction) =>
+      (await attempt(() =>
+        studioScenesClient().animate({
+          videoId,
+          sceneId,
+          instruction,
+          run: toRunInput(runSettings),
+        }),
+      )) !== null,
     cancel: async (id) => {
       await attempt(() => client().cancel(videoId, id));
     },

@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background: #05080F; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .readout { position: absolute; right: 7%; top: 12%; color: #00E5FF; text-align: right;
+    font: 500 3vmin/1.5 "Inter", sans-serif; letter-spacing: 0.08em; }
+  .readout b { display: block; font-size: 8vmin; font-weight: 700; color: #7CFFCB; letter-spacing: 0; }
+  .label { position: absolute; left: 7%; bottom: 12%; color: #FFFFFF; font: 600 4.5vmin/1.3 Vazirmatn, Inter, sans-serif; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="readout"><span id="caption"></span><b id="num">0%</b></div>
+<div class="label" id="label"></div>
+<script>
+// HUD: thin glowing lines, rings that turn, readouts that count up and a scan line sweeping across.
+const COPY = { fa: ['دقت', 'سامانه آماده است'], en: ['ACCURACY', 'System ready'] };
+const c = document.getElementById('c');
+const g = c.getContext('2d');
+const W = innerWidth, H = innerHeight;
+c.width = W * devicePixelRatio; c.height = H * devicePixelRatio;
+g.scale(devicePixelRatio, devicePixelRatio);
+const num = document.getElementById('num');
+
+Studio.scene({
+  setup(ctx) {
+    const [cap, text] = COPY[ctx.lang] ?? COPY.en;
+    document.getElementById('caption').textContent = cap;
+    const label = document.getElementById('label');
+    label.lang = ctx.lang; label.dir = ctx.dir; label.textContent = text;
+  },
+  render(t, ctx) {
+    const cx = W * 0.42, cy = H * 0.5, R = Math.min(W, H) * 0.3;
+    g.clearRect(0, 0, W, H);
+    g.strokeStyle = 'rgba(0,229,255,0.12)';
+    g.lineWidth = 1;
+    for (let x = 0; x < W; x += 60) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
+    for (let y = 0; y < H; y += 60) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+    g.shadowColor = '#00E5FF'; g.shadowBlur = 12;
+    [[1, 0.9, 1], [0.78, -1.4, 0.6], [0.56, 2.1, 0.35]].forEach(([k, speed, arc]) => {
+      g.strokeStyle = '#00E5FF'; g.lineWidth = 3;
+      const a0 = t * speed;
+      g.beginPath(); g.arc(cx, cy, R * k, a0, a0 + Math.PI * 2 * arc * (0.3 + 0.7 * ctx.ease.out(ctx.between(0, 1.5)))); g.stroke();
+      for (let i = 0; i < 48; i++) {
+        const a = a0 + (i / 48) * Math.PI * 2;
+        const l = i % 4 === 0 ? 14 : 6;
+        g.beginPath(); g.moveTo(cx + Math.cos(a) * (R * k + 6), cy + Math.sin(a) * (R * k + 6));
+        g.lineTo(cx + Math.cos(a) * (R * k + 6 + l), cy + Math.sin(a) * (R * k + 6 + l)); g.stroke();
+      }
+    });
+    const scan = (t * 0.45) % 1;
+    g.strokeStyle = 'rgba(124,255,203,0.7)'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(0, scan * H); g.lineTo(W, scan * H); g.stroke();
+    const lock = ctx.ease.outBack(ctx.between(ctx.duration * 0.5, ctx.duration * 0.7));
+    g.strokeStyle = '#FF3864'; g.lineWidth = 4;
+    const b = R * 0.25 * (2 - lock);
+    [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([sx, sy]) => {
+      g.beginPath(); g.moveTo(cx + sx * b, cy + sy * b * 0.4); g.lineTo(cx + sx * b, cy + sy * b); g.lineTo(cx + sx * b * 0.6, cy + sy * b); g.stroke();
+    });
+    g.shadowBlur = 0;
+    num.textContent = `${Math.round(99.7 * ctx.ease.outCubic(ctx.between(0.3, ctx.duration * 0.8)) * 10) / 10}%`;
+  },
+});
+</script>
+</body>
+</html>

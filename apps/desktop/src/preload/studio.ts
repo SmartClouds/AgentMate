@@ -12,12 +12,17 @@ import type {
   RecipeView,
   RootCheckView,
   SaveRecipeInput,
+  SaveSceneFilesInput,
+  SceneCheckView,
+  SceneCodeView,
   StartEditInput,
   StartScenarioInput,
+  StartSceneInput,
   StudioDocument,
   StudioEvent,
   StudioSettingsPatch,
   StudioSettingsView,
+  StyleReferenceView,
   VideoSummary,
 } from '@agentmat/studio';
 import { ipcRenderer } from 'electron';
@@ -33,6 +38,8 @@ export function createStudio() {
       ipcRenderer.invoke(IPC.studio.projectStorage, { projectId }),
     setProjectRoot: (projectId: string, path: string | null): Promise<ProjectStorageView> =>
       ipcRenderer.invoke(IPC.studio.setProjectRoot, { projectId, path }),
+    setSceneHosts: (projectId: string, hosts: string[]): Promise<ProjectStorageView> =>
+      ipcRenderer.invoke(IPC.studio.setSceneHosts, { projectId, hosts }),
     checkRoot: (path: string, projectId: string | null): Promise<RootCheckView> =>
       ipcRenderer.invoke(IPC.studio.checkRoot, { path, projectId }),
     pickFolder: (defaultPath?: string): Promise<string | null> =>
@@ -82,6 +89,34 @@ export function createStudio() {
       ipcRenderer.on(IPC.studio.onEvent, listener);
       return () => ipcRenderer.removeListener(IPC.studio.onEvent, listener);
     },
+  };
+}
+
+/** Studio's scene code (E33): animate with AI, read, edit by hand, go back, check. */
+export function createStudioScenes() {
+  return {
+    animate: (input: StartSceneInput): Promise<GenerationView> =>
+      ipcRenderer.invoke(IPC.studioScenes.animate, input),
+    code: (videoId: string, sceneId: string): Promise<SceneCodeView> =>
+      ipcRenderer.invoke(IPC.studioScenes.code, { videoId, sceneId }),
+    saveFiles: (input: SaveSceneFilesInput): Promise<EditResponse> =>
+      ipcRenderer.invoke(IPC.studioScenes.saveFiles, input),
+    useRevision: (videoId: string, sceneId: string, revisionId: number): Promise<EditResponse> =>
+      ipcRenderer.invoke(IPC.studioScenes.useRevision, { videoId, sceneId, revisionId }),
+    check: (videoId: string, sceneId: string): Promise<SceneCheckView> =>
+      ipcRenderer.invoke(IPC.studioScenes.check, { videoId, sceneId }),
+    thumbnail: (videoId: string, treeHash: string): Promise<string | null> =>
+      ipcRenderer.invoke(IPC.studioScenes.thumbnail, { videoId, treeHash }),
+    styleReference: (input: {
+      styleId: string;
+      aspect: string;
+      language: string;
+    }): Promise<StyleReferenceView> => ipcRenderer.invoke(IPC.studioScenes.styleReference, input),
+    checkStyle: (input: {
+      styleId: string;
+      aspect: string;
+      language: string;
+    }): Promise<SceneCheckView> => ipcRenderer.invoke(IPC.studioScenes.checkStyle, input),
   };
 }
 

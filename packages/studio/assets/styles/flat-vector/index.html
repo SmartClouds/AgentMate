@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background: #FFFFFF; }
+  .sun { position: absolute; border-radius: 50%; background: #EF233C; }
+  .hill { position: absolute; border-radius: 50% 50% 0 0; background: #8D99AE; }
+  .card { position: absolute; left: 50%; top: 40%; transform-origin: center; color: #2B2D42; text-align: center;
+    font: 800 8vmin/1.15 Vazirmatn, Inter, sans-serif; white-space: nowrap; }
+  .sub { display: block; font-weight: 500; font-size: 3.6vmin; color: #8D99AE; margin-top: 1.5vmin; }
+</style>
+</head>
+<body>
+<div class="sun" id="sun"></div>
+<div class="hill" id="hill1"></div>
+<div class="hill" id="hill2"></div>
+<div class="card" id="card"></div>
+<script>
+// Flat vector: big simple shapes that pop in with a little overshoot, plenty of empty space.
+const COPY = {
+  fa: ['ساده بگو', 'یک ایده، یک تصویر'],
+  en: ['Say it simply', 'One idea, one picture'],
+};
+const W = innerWidth, H = innerHeight, M = Math.min(W, H);
+const sun = document.getElementById('sun');
+const hills = [document.getElementById('hill1'), document.getElementById('hill2')];
+const card = document.getElementById('card');
+
+Studio.scene({
+  setup(ctx) {
+    const [title, sub] = COPY[ctx.lang] ?? COPY.en;
+    card.lang = ctx.lang;
+    card.dir = ctx.dir;
+    card.innerHTML = `${title}<span class="sub">${sub}</span>`;
+  },
+  render(t, ctx) {
+    const pop = ctx.ease.outBack(ctx.between(0, 0.9));
+    const r = M * 0.18 * (0.3 + 0.7 * pop);
+    sun.style.cssText = `left:${W * 0.78 - r}px;top:${H * 0.22 - r}px;width:${r * 2}px;height:${r * 2}px`;
+    hills.forEach((hill, i) => {
+      const rise = ctx.ease.outCubic(ctx.between(0.2 + i * 0.25, 1.2 + i * 0.25));
+      const w = W * (0.7 + i * 0.3);
+      const h = H * (0.32 - i * 0.08) * (0.25 + 0.75 * rise);
+      hill.style.cssText = `left:${i ? W * 0.35 : -W * 0.1}px;width:${w}px;height:${h}px;top:${H - h}px;opacity:${i ? 0.6 : 1}`;
+    });
+    const s = ctx.ease.outBack(ctx.between(0.5, 1.3));
+    card.style.transform = `translate(-50%, -50%) scale(${0.6 + 0.4 * s})`;
+    card.style.opacity = String(0.2 + 0.8 * ctx.ease.out(ctx.between(0.5, 1)));
+  },
+});
+</script>
+</body>
+</html>

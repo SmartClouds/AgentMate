@@ -6,6 +6,7 @@ import { createDocument, createScene } from '../../document/schema.js';
 import { openNodeSqlite } from '../../test/nodeSqlite.js';
 import { useTempDirs } from '../../test/tempDir.js';
 import { HistoryDb } from '../db/history.js';
+import { treeFromFiles } from '../scenes/codeTree.js';
 import {
   createVideoFolder,
   DOCUMENT_FILE,
@@ -329,5 +330,61 @@ describe('VideoStore on disk', () => {
     expect(() => store.apply({ baseSeq: 1, ops: [addScene('s1')], label: 'late' })).toThrow(
       /closed/,
     );
+  });
+});
+
+describe('VideoStore scene code', () => {
+  async function withScene() {
+    const { folder } = await newVideo();
+    const store = await open(folder);
+    store.apply({ baseSeq: store.seq, ops: [addScene('s1', 0)], label: 'Added a scene' });
+    const tree = await treeFromFiles(
+      [
+        { path: 'index.html', content: '<div>سلام</div>' },
+        { path: 'js/scene.js', content: 'Studio.scene({ render() {} })' },
+      ],
+      store.blobs,
+    );
+    return { folder, store, tree };
+  }
+
+  it('points a scene at a tree as one undoable entry and keeps every revision', async () => {
+    const { store, tree } = await withScene();
+    const first = store.setSceneCode({
+      sceneId: 's1',
+      treeHash: tree.treeHash,
+      author: 'ai',
+      label: 'Wrote the scene',
+      generationId: 'g1',
+    });
+    expect(first.document.scenario.scenes[0]?.code.treeHash).toBe(tree.treeHash);
+    const second = await treeFromFiles([{ path: 'index.html', content: 'v2' }], store.blobs);
+    store.setSceneCode({
+      sceneId: 's1',
+      treeHash: second.treeHash,
+      author: 'user',
+      label: 'Edited',
+    });
+    expect(store.codeRevisions('s1').map((r) => [r.treeHash, r.author, r.generationId])).toEqual([
+      [second.treeHash, 'user', null],
+      [tree.treeHash, 'ai', 'g1'],
+    ]);
+    expect(store.codeRevisions('s1')[0]?.parentId).toBe(store.codeRevisions('s1')[1]?.id);
+    expect(store.undo()?.document.scenario.scenes[0]?.code.treeHash).toBe(tree.treeHash);
+    expect(() =>
+      store.setSceneCode({ sceneId: 'gone', treeHash: tree.treeHash, author: 'ai', label: 'x' }),
+    ).toThrow(/not in the video/);
+  });
+
+  it('mirrors the current code into scenes/<id>, and clears it when the scene has none', async () => {
+    const { folder, store, tree } = await withScene();
+    store.setSceneCode({ sceneId: 's1', treeHash: tree.treeHash, author: 'ai', label: 'x' });
+    await store.mirrorScene('s1');
+    const dir = join(folder, 'scenes', 's1');
+    expect(await readFile(join(dir, 'index.html'), 'utf8')).toBe('<div>سلام</div>');
+    expect(await readFile(join(dir, 'js', 'scene.js'), 'utf8')).toContain('Studio.scene');
+    store.undo();
+    await store.mirrorScene('s1');
+    await expect(readdir(dir)).rejects.toThrow();
   });
 });

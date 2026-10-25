@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background: #F4F1E8; }
+  .cell { position: absolute; transform-origin: center; }
+  .type { position: absolute; color: #1D1D1B; font: 900 10vmin/0.95 Vazirmatn, Inter, sans-serif; }
+</style>
+</head>
+<body>
+<div id="grid"></div>
+<div class="type" id="type"></div>
+<script>
+// Bauhaus: primary shapes slide along a strict grid with even, mechanical timing, in quarter turns.
+const COPY = { fa: 'فرم و کارکرد', en: 'Form follows function' };
+const grid = document.getElementById('grid');
+const type = document.getElementById('type');
+const W = innerWidth, H = innerHeight;
+const U = Math.min(W / 9, H / 5);
+const ox = (W - U * 8) / 2, oy = H * 0.5 - U * 2;
+const parts = [
+  { c: 2, r: 0, kind: 'circle', color: '#E63946' },
+  { c: 3, r: 0, kind: 'square', color: '#1D1D1B' },
+  { c: 4, r: 1, kind: 'quarter', color: '#F4A261' },
+  { c: 5, r: 0, kind: 'square', color: '#E63946' },
+  { c: 6, r: 1, kind: 'circle', color: '#1D1D1B' },
+  { c: 2, r: 1, kind: 'quarter', color: '#1D1D1B' },
+  { c: 7, r: 0, kind: 'quarter', color: '#E63946' },
+];
+grid.innerHTML = parts.map((p) => {
+  const radius = p.kind === 'circle' ? '50%' : p.kind === 'quarter' ? `${U}px 0 0 0` : '0';
+  return `<div class="cell" style="width:${U}px;height:${U}px;background:${p.color};border-radius:${radius}"></div>`;
+}).join('');
+const cells = [...grid.children];
+
+Studio.scene({
+  setup(ctx) {
+    type.lang = ctx.lang; type.dir = ctx.dir;
+    type.textContent = COPY[ctx.lang] ?? COPY.en;
+  },
+  render(t, ctx) {
+    const beat = ctx.duration / 8;
+    cells.forEach((el, i) => {
+      const p = parts[i];
+      const slide = ctx.ease.inOutCubic(ctx.between(i * beat * 0.5, i * beat * 0.5 + beat));
+      const turns = Math.floor(ctx.between(0, ctx.duration) * 4 + i) % 4;
+      const x = ox + (p.c - (1 - slide) * 6) * U;
+      el.style.left = `${x}px`;
+      el.style.top = `${oy + p.r * U}px`;
+      el.style.transform = `rotate(${turns * 90}deg)`;
+    });
+    const show = ctx.ease.inOutCubic(ctx.between(ctx.duration * 0.25, ctx.duration * 0.45));
+    type.style.left = `${ox + U * (ctx.dir === 'rtl' ? 2 : 0.2)}px`;
+    type.style.right = ctx.dir === 'rtl' ? `${ox + U * 0.2}px` : 'auto';
+    type.style.top = `${oy + U * 2.5}px`;
+    // The words wipe in from where they start: the left in English, the right in Persian.
+    const hidden = `${(1 - show) * 100}%`;
+    type.style.clipPath = ctx.dir === 'rtl' ? `inset(0 0 0 ${hidden})` : `inset(0 ${hidden} 0 0)`;
+  },
+});
+</script>
+</body>
+</html>

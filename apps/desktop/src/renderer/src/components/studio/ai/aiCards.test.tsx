@@ -253,6 +253,7 @@ describe('BriefCard', () => {
     const onStart = vi.fn(async () => true);
     const { user } = renderWithProviders(
       <BriefCard
+        language="en"
         aspect="16:9"
         rewriting={false}
         busy={false}
@@ -279,6 +280,7 @@ describe('BriefCard', () => {
     const onStart = vi.fn(async () => true);
     const { user } = renderWithProviders(
       <BriefCard
+        language="en"
         aspect="9:16"
         rewriting
         busy={false}
@@ -298,6 +300,7 @@ describe('BriefCard', () => {
   it('points out the styles made for the format and shows the chosen one', async () => {
     const { user } = renderWithProviders(
       <BriefCard
+        language="en"
         aspect="9:16"
         rewriting={false}
         busy={false}
@@ -313,6 +316,7 @@ describe('BriefCard', () => {
   it('waits while another run is busy', () => {
     renderWithProviders(
       <BriefCard
+        language="en"
         aspect="16:9"
         rewriting={false}
         busy

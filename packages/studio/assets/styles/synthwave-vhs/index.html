@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background: #14001F; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .title { position: absolute; left: 0; right: 0; top: 18%; text-align: center;
+    font: 900 10vmin/1.1 Vazirmatn, Inter, sans-serif; color: #F9C80E;
+    text-shadow: 0 0 2vmin #FF2A6D, 0.4vmin 0 0 #05D9E8, -0.4vmin 0 0 #FF2A6D; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="title" id="title"></div>
+<script>
+// Synthwave VHS: a neon sun, a grid floor scrolling to the horizon, and type that flickers in.
+const COPY = { fa: 'شب‌های نئونی', en: 'Neon nights' };
+const c = document.getElementById('c');
+const g = c.getContext('2d');
+const W = innerWidth, H = innerHeight;
+c.width = W * devicePixelRatio; c.height = H * devicePixelRatio;
+g.scale(devicePixelRatio, devicePixelRatio);
+const title = document.getElementById('title');
+
+Studio.scene({
+  setup(ctx) {
+    title.lang = ctx.lang; title.dir = ctx.dir;
+    title.textContent = COPY[ctx.lang] ?? COPY.en;
+  },
+  render(t, ctx) {
+    const hy = H * 0.58;
+    const sky = g.createLinearGradient(0, 0, 0, hy);
+    sky.addColorStop(0, '#14001F'); sky.addColorStop(1, '#3A0D4A');
+    g.fillStyle = sky; g.fillRect(0, 0, W, hy);
+    const r = Math.min(W, H) * 0.22;
+    const sun = g.createLinearGradient(0, hy - r * 2, 0, hy);
+    sun.addColorStop(0, '#F9C80E'); sun.addColorStop(1, '#FF2A6D');
+    g.save(); g.beginPath(); g.arc(W / 2, hy, r * 1.0, Math.PI, 0); g.clip();
+    g.fillStyle = sun; g.fillRect(W / 2 - r, hy - r, r * 2, r);
+    g.fillStyle = '#14001F';
+    for (let i = 0; i < 6; i++) { const y = hy - r * 0.08 - i * r * 0.15; g.fillRect(W / 2 - r, y, r * 2, 2 + i * 1.5); }
+    g.restore();
+    g.fillStyle = '#0B0014'; g.fillRect(0, hy, W, H - hy);
+    g.strokeStyle = '#FF2A6D'; g.lineWidth = 2; g.shadowColor = '#FF2A6D'; g.shadowBlur = 10;
+    for (let i = -20; i <= 20; i++) { g.beginPath(); g.moveTo(W / 2 + i * W * 0.02, hy); g.lineTo(W / 2 + i * W * 0.25, H); g.stroke(); }
+    const scroll = (t * 0.6) % 1;
+    for (let k = 0; k < 14; k++) {
+      const d = (k + scroll) / 14;
+      const y = hy + (H - hy) * d * d;
+      g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
+    }
+    g.shadowBlur = 0;
+    for (let y = 0; y < H; y += 4) { g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(0, y, W, 1); }
+    const on = ctx.between(0.4, 1.6);
+    const flicker = on < 1 ? (ctx.random() > on ? 0.15 : 1) : 1;
+    title.style.opacity = String(on === 0 ? 0 : flicker);
+    title.style.transform = `translateX(${on < 1 ? (ctx.random() - 0.5) * 12 : 0}px)`;
+  },
+});
+</script>
+</body>
+</html>

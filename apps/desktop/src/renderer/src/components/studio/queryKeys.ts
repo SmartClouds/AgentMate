@@ -18,4 +18,10 @@ export const studioKeys = {
   generationDetail: (videoId: string, generationId: string) =>
     ['studio', 'generations', videoId, generationId] as const,
   recipes: ['studio', 'recipes'] as const,
+  thumbnail: (videoId: string, treeHash: string | null) =>
+    ['studio', 'thumbnail', videoId, treeHash] as const,
+  sceneCode: (videoId: string, sceneId: string) =>
+    ['studio', 'scene-code', videoId, sceneId] as const,
+  styleReference: (styleId: string, aspect: string, language: string) =>
+    ['studio', 'style-reference', styleId, aspect, language] as const,
 };

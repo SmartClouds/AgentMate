@@ -1,0 +1,19 @@
+/* The fonts every Studio scene can use, served from the scene's own origin. All SIL OFL 1.1. */
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('/__studio/fonts/Vazirmatn.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: block;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/__studio/fonts/Inter.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: block;
+}
+@font-face {
+  font-family: 'Noto Naskh Arabic';
+  src: url('/__studio/fonts/NotoNaskhArabic.ttf') format('truetype');
+  font-weight: 400 700;
+  font-display: block;
+}

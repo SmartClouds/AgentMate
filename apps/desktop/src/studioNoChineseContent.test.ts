@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 const REPO = resolve(__dirname, '..', '..', '..');
 const ROOTS = [
   'packages/studio/src',
+  'packages/studio/assets',
   'apps/desktop/src/main/studio',
   'apps/desktop/src/renderer/src/components/studio',
   'apps/desktop/src/preload/studio.ts',

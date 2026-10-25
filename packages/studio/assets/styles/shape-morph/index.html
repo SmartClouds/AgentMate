@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background: #111111; }
+  svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .caption { position: absolute; left: 0; right: 0; bottom: 10%; text-align: center; color: #FFFFFF;
+    font: 700 5.5vmin/1.2 Vazirmatn, Inter, sans-serif; }
+</style>
+</head>
+<body>
+<svg viewBox="-500 -300 1000 600" preserveAspectRatio="xMidYMid meet"><path id="shape"/></svg>
+<div class="caption" id="caption"></div>
+<script>
+// Shape morph: one shape turns into the next to carry the story: circle, then a chart, then a phone.
+const COPY = {
+  fa: ['ایده', 'رشد', 'در دست شما'],
+  en: ['An idea', 'Growth', 'In your hand'],
+};
+const N = 64;
+const shape = document.getElementById('shape');
+const caption = document.getElementById('caption');
+
+function circle() {
+  return Array.from({ length: N }, (_, i) => {
+    const a = (i / N) * Math.PI * 2 - Math.PI / 2;
+    return [Math.cos(a) * 180, Math.sin(a) * 180];
+  });
+}
+/** Points around a closed outline given as corners, spread evenly by length. */
+function outline(corners) {
+  const segs = corners.map((p, i) => [p, corners[(i + 1) % corners.length]]);
+  const lens = segs.map(([a, b]) => Math.hypot(b[0] - a[0], b[1] - a[1]));
+  const total = lens.reduce((s, l) => s + l, 0);
+  return Array.from({ length: N }, (_, i) => {
+    let d = (i / N) * total;
+    let k = 0;
+    while (d > lens[k]) { d -= lens[k]; k++; }
+    const [a, b] = segs[k];
+    const f = d / lens[k];
+    return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+  });
+}
+const chart = outline([[-240, 180], [-240, 40], [-120, 40], [-120, -60], [0, -60], [0, -140], [120, -140], [120, -220], [240, -220], [240, 180]]);
+const phone = outline([[-110, -230], [110, -230], [110, 230], [-110, 230]]);
+const shapes = [circle(), chart, phone];
+const colors = ['#FF4D6D', '#4CC9F0', '#FFFFFF'];
+
+function mix(a, b, f) {
+  return a.map((p, i) => [p[0] + (b[i][0] - p[0]) * f, p[1] + (b[i][1] - p[1]) * f]);
+}
+
+Studio.scene({
+  setup(ctx) {
+    caption.lang = ctx.lang;
+    caption.dir = ctx.dir;
+  },
+  render(t, ctx) {
+    const seg = ctx.duration / 3;
+    const stage = Math.min(2, Math.floor(t / seg));
+    const local = (t - stage * seg) / seg;
+    const next = Math.min(2, stage + 1);
+    const f = stage === 2 ? 0 : ctx.ease.inOutCubic(Math.max(0, (local - 0.55) / 0.45));
+    const pts = mix(shapes[stage], shapes[next], f);
+    shape.setAttribute('d', `M${pts.map((p) => p.map((v) => v.toFixed(1)).join(' ')).join(' L')} Z`);
+    shape.setAttribute('fill', f < 0.5 ? colors[stage] : colors[next]);
+    shape.setAttribute('transform', `rotate(${(1 - ctx.ease.outBack(ctx.between(0, 0.8))) * -30})`);
+    const words = COPY[ctx.lang] ?? COPY.en;
+    caption.textContent = words[f < 0.5 ? stage : next];
+    caption.style.opacity = String(1 - Math.sin(f * Math.PI) * 0.8);
+  },
+});
+</script>
+</body>
+</html>

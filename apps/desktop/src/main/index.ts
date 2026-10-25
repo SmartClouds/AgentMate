@@ -8,6 +8,7 @@ import { BROWSER_PARTITION } from '../shared/browserGuest';
 import { stopAllRdpTasks } from './agents/rdpTaskRunner';
 import { flushSshTaskHistory, stopAllSshTasks } from './agents/sshTaskRunner';
 import { stopEmulatorsOnQuit } from './android/runtime';
+import { appCsp, keepsOwnCsp } from './appCsp';
 import { registerBlueprintFileProtocol } from './blueprintFileStore';
 import { configureBrowserSession, setupBrowserGuests } from './browser/guestSession';
 import { registerDeployIpc } from './deploy';
@@ -131,6 +132,7 @@ import {
   store,
 } from './store';
 import { pruneStudioProjects, shutdownStudio } from './studio';
+import { handleStudioScenes, STUDIO_SCHEME_PRIVILEGES } from './studio/protocol';
 import { showRosettaNotice } from './system/rosettaNotice';
 import { isE2E, keepWindowsHidden } from './testMode';
 import { startToolUpdateWatcher, stopToolUpdateWatcher } from './toolUpdates/watcher';
@@ -164,6 +166,7 @@ protocol.registerSchemesAsPrivileged([
     scheme: BLUEPRINT_FILE_SCHEME,
     privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
   },
+  STUDIO_SCHEME_PRIVILEGES,
 ]);
 
 app.commandLine.appendSwitch('disable-background-timer-throttling');
@@ -442,24 +445,21 @@ app.whenReady().then(async () => {
   await Promise.all([applyProxySettingsFromStore(), splashUp, prepareStartupRoute()]);
 
   const isDev = !!process.env.ELECTRON_RENDERER_URL;
-  // Vite's dev server needs an inline HMR/preamble script and a websocket
-  // connection back to itself; the packaged app never talks to either, so
-  // production stays locked down to 'self' only.
-  // Blueprint attachments are served from the app's own scheme, so it has to be
-  // named in img-src and media-src; media-src would otherwise fall back to
-  // default-src and silently refuse to play an attached video.
-  const files = `${BLUEPRINT_FILE_SCHEME}:`;
-  // Remote Desktop runs Devolutions' IronRDP as WebAssembly: compiling it needs
-  // 'wasm-unsafe-eval', the module ships inline so it is fetched from a data: URL, and the
-  // session reaches its server through the loopback-only proxy in main/rdp/proxy.ts.
-  const rdp = { script: "'wasm-unsafe-eval'", connect: 'data: ws://127.0.0.1:*' };
-  const csp = isDev
-    ? `default-src 'self' http://localhost:5173 ws://localhost:5173; script-src 'self' 'unsafe-inline' ${rdp.script} http://localhost:5173; style-src 'self' 'unsafe-inline'; img-src 'self' data: ${files}; media-src 'self' ${files}; font-src 'self' data:; connect-src 'self' ${rdp.connect} http://localhost:5173 ws://localhost:5173; worker-src 'self' blob:;`
-    : `default-src 'self'; script-src 'self' ${rdp.script}; style-src 'self' 'unsafe-inline'; img-src 'self' data: ${files}; media-src 'self' ${files}; font-src 'self' data:; connect-src 'self' ${rdp.connect}; worker-src 'self' blob:;`;
+  // The policy and why each part is there are in appCsp.ts, with a test that spells it out.
+  const csp = appCsp({
+    isDev,
+    blueprintScheme: BLUEPRINT_FILE_SCHEME,
+    studioSceneScheme: STUDIO_SCHEME_PRIVILEGES.scheme,
+  });
 
   configureBrowserSession(session.fromPartition(BROWSER_PARTITION));
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    // A Studio scene page keeps its own, stricter policy (no network at all).
+    if (keepsOwnCsp(details.url, STUDIO_SCHEME_PRIVILEGES.scheme)) {
+      callback({});
+      return;
+    }
     callback({
       responseHeaders: {
         ...details.responseHeaders,
@@ -492,6 +492,7 @@ app.whenReady().then(async () => {
   setSplashStatus('Starting services...');
   configureSpellChecker();
   registerBlueprintFileProtocol();
+  handleStudioScenes(protocol);
   registerAllIpcHandlers();
   void store.getSettings().then(startVault);
   startTerminalBackend();

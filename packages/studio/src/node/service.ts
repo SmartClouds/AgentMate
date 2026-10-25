@@ -15,18 +15,33 @@ import type {
   RecipeView,
   RootCheckView,
   SaveRecipeInput,
+  SaveSceneFilesInput,
+  SceneCheckView,
+  SceneCodeView,
   StartEditInput,
   StartScenarioInput,
+  StartSceneInput,
   StudioEvent,
   StudioSettingsPatch,
   StudioSettingsView,
+  StyleReferenceView,
   VideoSession,
   VideoSummary,
 } from '../api.js';
 import type { EditOp } from '../document/ops.js';
 import type { StudioDocument } from '../document/schema.js';
+import { type Aspect, DESIGN_SIZES } from '../document/schema.js';
+import { sceneUrl } from '../scenes/url.js';
+import { directionOf } from '../text/languages.js';
 import { newId, safeFolderName } from '../text/names.js';
-import { createStudioAi, type StudioAiHost } from './ai/studioAi.js';
+import { flicksToSeconds } from '../time/flicks.js';
+import {
+  createStudioAi,
+  type SceneCheckHost,
+  type StudioAiHost,
+  sceneConfig,
+} from './ai/studioAi.js';
+import { BlobStore } from './blobs/blobStore.js';
 import type { OpenSqlDriver } from './db/sqlDriver.js';
 import { acquireVideoLock, type HeldLock, LOCK_FILE, type LockOptions } from './project/lock.js';
 import { checkStorageRoot } from './project/storageRoot.js';
@@ -38,6 +53,8 @@ import {
   type VideoStoreDeps,
 } from './project/videoStore.js';
 import { RecipeStore } from './recipes/recipeStore.js';
+import { type StudioAssets, studioAssets } from './scenes/assets.js';
+import { readTree, type TreeManifest, treeFile, treeFromFiles } from './scenes/codeTree.js';
 import { JsonStore } from './settings/jsonStore.js';
 
 /**
@@ -68,6 +85,13 @@ export interface StudioHost {
   notify(event: StudioEvent): void;
   /** Runs AI CLIs. Without it, Studio works but every AI action says it is unavailable. */
   ai?: StudioAiHost;
+  /** Checks scene pages in a real browser. Without it, scenes cannot be animated or checked. */
+  scenes?: SceneCheckHost;
+  /**
+   * Where Studio's own files (fonts, style scenes, the runtime) are. A host that bundles this
+   * package says where it shipped them; others leave it to the package folder.
+   */
+  packageRoot?: string;
   now?: () => number;
   pid?: number;
   hostname?: string;
@@ -82,6 +106,8 @@ const settingsSchema = z.object({
   autoResumeRenders: z.boolean(),
   hwEncode: z.boolean(),
   projectRoots: z.record(z.string(), z.string()),
+  // Added in E33; older settings files have none, which is the safe default.
+  projectSceneHosts: z.record(z.string(), z.array(z.string())).default({}),
 });
 type SettingsFile = z.infer<typeof settingsSchema>;
 
@@ -110,6 +136,9 @@ export interface StudioService {
   updateSettings(patch: StudioSettingsPatch): Promise<StudioSettingsView>;
   projectStorage(input: { projectId: string }): Promise<ProjectStorageView>;
   setProjectRoot(input: { projectId: string; path: string | null }): Promise<ProjectStorageView>;
+  setSceneHosts(input: { projectId: string; hosts: string[] }): Promise<ProjectStorageView>;
+  /** Hosts the video holding this tree may reach: its project's list, or none. */
+  sceneHosts(input: { treeHash: string }): Promise<string[]>;
   checkRoot(input: { path: string; projectId: string | null }): Promise<RootCheckView>;
   pruneProjects(known: ReadonlySet<string>): Promise<void>;
   list(input?: { projectId?: string | null }): Promise<VideoSummary[]>;
@@ -143,6 +172,38 @@ export interface StudioService {
   recipes(): Promise<RecipeView[]>;
   saveRecipe(input: SaveRecipeInput): Promise<RecipeView>;
   deleteRecipe(input: { recipeId: string }): Promise<void>;
+  startScene(input: StartSceneInput): Promise<GenerationView>;
+  sceneCode(input: { videoId: string; sceneId: string }): Promise<SceneCodeView>;
+  saveSceneFiles(input: SaveSceneFilesInput): Promise<EditResponse>;
+  useCodeRevision(input: {
+    videoId: string;
+    sceneId: string;
+    revisionId: number;
+  }): Promise<EditResponse>;
+  checkScene(input: { videoId: string; sceneId: string }): Promise<SceneCheckView>;
+  /** A style's reference scene, stored in the shared library, with the address to preview it. */
+  styleReference(input: {
+    styleId: string;
+    aspect: Aspect;
+    language: string;
+  }): Promise<StyleReferenceView>;
+  /** Checks a style's reference scene in a real browser (the styles gallery, and the tests). */
+  checkStyleReference(input: {
+    styleId: string;
+    aspect: Aspect;
+    language: string;
+  }): Promise<SceneCheckView>;
+  /** A code tree's thumbnail as PNG bytes, or null before it has been checked. */
+  thumbnail(input: { videoId: string; treeHash: string }): Promise<Uint8Array | null>;
+  /**
+   * A file of a scene's code tree, for the scene server: looked up in the open videos and in the
+   * shared library (the style reference scenes). Null when no one has that tree or that file.
+   */
+  sceneFile(input: { treeHash: string; path: string }): Promise<Uint8Array | null>;
+  /** The shared blob store, for trees that belong to no video. */
+  readonly libraryBlobs: BlobStore;
+  /** Studio's own files, where this host keeps them. */
+  readonly assets: StudioAssets;
   shutdown(): Promise<void>;
   /** Drops an open video as a crash would, keeping its lock file. Tests only. */
   abandonForTest(videoId: string): void;
@@ -194,6 +255,12 @@ async function listFiles(
   return files;
 }
 
+/** How long a style's reference scene runs in the gallery. */
+const REFERENCE_SECONDS = 6;
+
+/** Files whose content the code view shows and edits. */
+const TEXT_FILE = /\.(html|js|mjs|css|json|svg|txt)$/i;
+
 const skipOnCopy = (name: string) => name === LOCK_FILE || name.includes('.tmp-');
 
 export function createStudioService(host: StudioHost): StudioService {
@@ -209,6 +276,7 @@ export function createStudioService(host: StudioHost): StudioService {
       autoResumeRenders: true,
       hwEncode: true,
       projectRoots: {},
+      projectSceneHosts: {},
     }),
     now,
   );
@@ -222,6 +290,10 @@ export function createStudioService(host: StudioHost): StudioService {
   /** Videos the editor closed while an AI run was still working on them. */
   const closeAfterRun = new Set<string>();
   const recipeStore = new RecipeStore(join(host.dataDir, 'recipes.json'), now, newId);
+  const libraryBlobs = new BlobStore(join(host.dataDir, 'blobs'));
+  const assets = studioAssets(host.packageRoot);
+  /** Trees never change, so a manifest read once is good for the whole run. */
+  const manifests = new Map<string, TreeManifest>();
 
   const lockOptions = (takeOverStale = false): LockOptions => ({
     appId: host.appId,
@@ -280,7 +352,8 @@ export function createStudioService(host: StudioHost): StudioService {
 
   async function storageView(projectId: string): Promise<ProjectStorageView> {
     const { root, isCustom, project } = await projectRoot(projectId);
-    return { projectId, root, isCustom, check: await check(root, project.folderPath) };
+    const sceneHosts = (await settingsStore.read()).projectSceneHosts[projectId] ?? [];
+    return { projectId, root, isCustom, check: await check(root, project.folderPath), sceneHosts };
   }
 
   async function summarize(entry: RegistryEntry): Promise<VideoSummary> {
@@ -298,6 +371,41 @@ export function createStudioService(host: StudioHost): StudioService {
       file.videos[value.id] = value;
     });
     host.notify({ type: 'library-changed' });
+  }
+
+  /** Reference scenes are stored once per run; their trees never change while it runs. */
+  const references = new Map<string, Promise<string>>();
+
+  async function styleReference(input: {
+    styleId: string;
+    aspect: Aspect;
+    language: string;
+  }): Promise<StyleReferenceView> {
+    let treeHash = references.get(input.styleId);
+    if (!treeHash) {
+      treeHash = assets
+        .styleReference(input.styleId)
+        .then(async (files) => (await treeFromFiles(files, libraryBlobs)).treeHash);
+      references.set(input.styleId, treeHash);
+      treeHash.catch(() => references.delete(input.styleId));
+    }
+    const hash = await treeHash;
+    const size = DESIGN_SIZES[input.aspect];
+    const url = sceneUrl(hash, {
+      duration: REFERENCE_SECONDS,
+      width: size.width,
+      height: size.height,
+      lang: input.language,
+      dir: directionOf(input.language),
+      seed: input.styleId,
+    });
+    return { styleId: input.styleId, treeHash: hash, url };
+  }
+
+  function sceneOf(store: VideoStore, sceneId: string) {
+    const scene = store.document.scenario.scenes.find((s) => s.id === sceneId);
+    if (!scene) throw new Error('That scene is not in the video any more.');
+    return scene;
   }
 
   function session(videoId: string): Session {
@@ -360,11 +468,13 @@ export function createStudioService(host: StudioHost): StudioService {
 
   const ai = createStudioAi({
     ai: host.ai,
+    scenes: host.scenes,
     now,
     newId,
     notify: host.notify,
     store: (videoId) => session(videoId).store,
     afterEdit,
+    styleReference: assets.styleReference,
     onIdle: (videoId) => {
       if (closeAfterRun.delete(videoId)) void closeSession(videoId).catch(() => undefined);
     },
@@ -414,6 +524,26 @@ export function createStudioService(host: StudioHost): StudioService {
       return storageView(projectId);
     },
 
+    async setSceneHosts({ projectId, hosts }) {
+      await requireProject(projectId);
+      const unique = [...new Set(hosts)];
+      await settingsStore.mutate((file) => {
+        if (unique.length === 0) delete file.projectSceneHosts[projectId];
+        else file.projectSceneHosts[projectId] = unique;
+      });
+      return storageView(projectId);
+    },
+
+    async sceneHosts({ treeHash }) {
+      for (const open of sessions.values()) {
+        if (!(await open.store.blobs.has(treeHash))) continue;
+        const projectId = open.store.manifest.linkedProjectId;
+        if (!projectId) return [];
+        return (await settingsStore.read()).projectSceneHosts[projectId] ?? [];
+      }
+      return [];
+    },
+
     async checkRoot({ path, projectId }) {
       return check(path, projectId ? (await requireProject(projectId)).folderPath : null);
     },
@@ -422,6 +552,8 @@ export function createStudioService(host: StudioHost): StudioService {
       await settingsStore.mutate((file) => {
         for (const id of Object.keys(file.projectRoots))
           if (!known.has(id)) delete file.projectRoots[id];
+        for (const id of Object.keys(file.projectSceneHosts))
+          if (!known.has(id)) delete file.projectSceneHosts[id];
       });
     },
 
@@ -618,6 +750,137 @@ export function createStudioService(host: StudioHost): StudioService {
     recipes: () => recipeStore.list(),
     saveRecipe: (input) => recipeStore.save(input),
     deleteRecipe: ({ recipeId }) => recipeStore.remove(recipeId),
+
+    libraryBlobs,
+    assets,
+
+    startScene: (input) => ai.startScene(input),
+
+    styleReference: (input) => styleReference(input),
+
+    async checkStyleReference(input) {
+      if (!host.scenes) throw new Error('This copy of Studio cannot check scenes.');
+      const reference = await styleReference(input);
+      const size = DESIGN_SIZES[input.aspect];
+      const result = await host.scenes.check({
+        url: reference.url,
+        width: size.width,
+        height: size.height,
+        duration: REFERENCE_SECONDS,
+        fps: 30,
+      });
+      return { ok: result.ok, problems: result.problems, notes: result.notes };
+    },
+
+    async sceneCode({ videoId, sceneId }) {
+      const { store } = session(videoId);
+      const scene = sceneOf(store, sceneId);
+      const treeHash = scene.code.treeHash;
+      const files: SceneCodeView['files'] = [];
+      if (treeHash) {
+        for (const file of (await readTree(store.blobs, treeHash)).files) {
+          const text = TEXT_FILE.test(file.path) ? await store.blobs.text(file.hash) : null;
+          files.push({ path: file.path, size: file.size, text });
+        }
+      }
+      const revisions = store
+        .codeRevisions(sceneId)
+        .slice(0, 100)
+        .map(({ id, treeHash: hash, author, label, generationId, at }) => ({
+          id,
+          treeHash: hash,
+          author,
+          label,
+          generationId,
+          at,
+        }));
+      return { sceneId, treeHash, files, revisions };
+    },
+
+    async saveSceneFiles({ videoId, sceneId, files }) {
+      const { store } = session(videoId);
+      const scene = sceneOf(store, sceneId);
+      const position = store.document.scenario.scenes.indexOf(scene) + 1;
+      // Files the editor did not send (images, fonts) are carried over from the current tree.
+      const kept: { path: string; content: Uint8Array }[] = [];
+      if (scene.code.treeHash) {
+        for (const file of (await readTree(store.blobs, scene.code.treeHash)).files) {
+          if (!files.some((f) => f.path === file.path)) {
+            kept.push({ path: file.path, content: await store.blobs.bytes(file.hash) });
+          }
+        }
+      }
+      const tree = await treeFromFiles([...kept, ...files], store.blobs);
+      if (tree.skipped.length > 0) throw new Error(`Not saved: ${tree.skipped.join('; ')}`);
+      const result = store.setSceneCode({
+        sceneId,
+        treeHash: tree.treeHash,
+        author: 'user',
+        label: `Edited the code of scene ${position}`,
+      });
+      await store.mirrorScene(sceneId);
+      await afterEdit(videoId, store);
+      return response(store, result.seq, result.document);
+    },
+
+    async useCodeRevision({ videoId, sceneId, revisionId }) {
+      const { store } = session(videoId);
+      const scene = sceneOf(store, sceneId);
+      const revision = store.codeRevisions(sceneId).find((r) => r.id === revisionId);
+      if (!revision) throw new Error('That version of the code is not in this video.');
+      const position = store.document.scenario.scenes.indexOf(scene) + 1;
+      const result = store.setSceneCode({
+        sceneId,
+        treeHash: revision.treeHash,
+        author: 'user',
+        label: `Went back to an earlier version of the code of scene ${position}`,
+      });
+      await store.mirrorScene(sceneId);
+      await afterEdit(videoId, store);
+      return response(store, result.seq, result.document);
+    },
+
+    async checkScene({ videoId, sceneId }) {
+      if (!host.scenes) throw new Error('This copy of Studio cannot check scenes.');
+      const { store } = session(videoId);
+      const scene = sceneOf(store, sceneId);
+      const treeHash = scene.code.treeHash;
+      if (!treeHash) throw new Error('This scene has no code yet.');
+      const doc = store.document;
+      const size = DESIGN_SIZES[doc.renderSettings.aspect];
+      const result = await host.scenes.check({
+        url: sceneUrl(treeHash, sceneConfig(doc, scene)),
+        width: size.width,
+        height: size.height,
+        duration: flicksToSeconds(scene.targetDuration),
+        fps: doc.renderSettings.fps,
+      });
+      if (result.thumbnailPng) {
+        store.setThumbnail(treeHash, await store.blobs.put(result.thumbnailPng));
+      }
+      return { ok: result.ok, problems: result.problems, notes: result.notes };
+    },
+
+    async thumbnail({ videoId, treeHash }) {
+      const { store } = session(videoId);
+      const png = store.thumbnail(treeHash);
+      return png ? store.blobs.bytes(png) : null;
+    },
+
+    async sceneFile({ treeHash, path }) {
+      const stores = [...[...sessions.values()].map((s) => s.store.blobs), libraryBlobs];
+      for (const blobs of stores) {
+        if (!(await blobs.has(treeHash))) continue;
+        let manifest = manifests.get(treeHash);
+        if (!manifest) {
+          manifest = await readTree(blobs, treeHash);
+          manifests.set(treeHash, manifest);
+        }
+        const file = treeFile(manifest, path);
+        return file ? blobs.bytes(file.hash) : null;
+      }
+      return null;
+    },
 
     async shutdown() {
       await ai.shutdown();

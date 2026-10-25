@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background: #FFE66D; }
+  .sticker { position: absolute; padding: 2.2vmin 3.6vmin; border-radius: 3vmin; background: #FFFFFF;
+    box-shadow: 0 0 0 1.2vmin #FFFFFF, 0 1.6vmin 2.4vmin rgba(0, 0, 0, 0.25);
+    font: 800 5vmin/1.1 Vazirmatn, Inter, sans-serif; color: #1A535C; white-space: nowrap; transform-origin: center; }
+  .sticker.hot { background: #FF6B6B; color: #FFFFFF; }
+  .dot { position: absolute; border-radius: 50%; background: #1A535C; opacity: 0.12; }
+</style>
+</head>
+<body>
+<div id="board"></div>
+<script>
+// Sticker explainer: cut-out stickers with thick white borders slap onto a bright board.
+const COPY = {
+  fa: ['سریع', 'ساده', 'رایگان', 'همین حالا امتحان کن'],
+  en: ['Fast', 'Simple', 'Free', 'Try it now'],
+};
+const W = innerWidth, H = innerHeight;
+const board = document.getElementById('board');
+const places = [[0.24, 0.3], [0.62, 0.24], [0.4, 0.55], [0.5, 0.78]];
+let stickers = [];
+
+Studio.scene({
+  setup(ctx) {
+    const words = COPY[ctx.lang] ?? COPY.en;
+    const dots = Array.from({ length: 30 }, (_, i) => {
+      const x = ((i * 137) % 100) / 100, y = ((i * 71) % 100) / 100, r = 6 + (i % 5) * 4;
+      return `<i class="dot" style="left:${x * W}px;top:${y * H}px;width:${r}px;height:${r}px"></i>`;
+    }).join('');
+    board.innerHTML = dots + words.map((w, i) =>
+      `<div class="sticker${i === 3 ? ' hot' : ''}" lang="${ctx.lang}" dir="${ctx.dir}">${w}</div>`).join('');
+    stickers = [...board.querySelectorAll('.sticker')];
+  },
+  render(t, ctx) {
+    stickers.forEach((el, i) => {
+      const start = 0.15 + i * (ctx.duration * 0.16);
+      const slap = ctx.between(start, start + 0.35);
+      const s = slap === 0 ? 0 : ctx.ease.outBack(slap) * 1.0;
+      const tilt = ((i * 53) % 21) - 10;
+      const [x, y] = places[i];
+      el.style.left = `${x * W}px`;
+      el.style.top = `${y * H}px`;
+      el.style.transform = `translate(-50%, -50%) scale(${s * (i === 3 ? 1.25 : 1)}) rotate(${tilt * (2 - s)}deg)`;
+    });
+  },
+});
+</script>
+</body>
+</html>

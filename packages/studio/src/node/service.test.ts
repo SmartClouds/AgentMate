@@ -1,10 +1,12 @@
-import { access, mkdir, readdir, rm } from 'node:fs/promises';
+import { access, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
-import { createScene } from '../document/schema.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { StudioEvent } from '../api.js';
+import { createScene } from '../document/schema.js';
 import { openNodeSqlite } from '../test/nodeSqlite.js';
 import { useTempDirs } from '../test/tempDir.js';
+import { BlobStore } from './blobs/blobStore.js';
+import { treeFromFiles } from './scenes/codeTree.js';
 import { createStudioService, type StudioHost, type StudioService } from './service.js';
 
 const tempDir = useTempDirs();
@@ -362,5 +364,135 @@ describe('library upkeep', () => {
     await openSession(service, video.id);
     await service.shutdown();
     expect(await readdir(video.folder)).not.toContain('.studio.lock');
+  });
+});
+
+describe('scene files', () => {
+  it('serves a file of a tree in the shared library, and nothing for an unknown tree or path', async () => {
+    const { service } = await setup();
+    const tree = await treeFromFiles(
+      [
+        { path: 'index.html', content: '<p>سلام</p>' },
+        { path: 'scene.js', content: 'Studio.scene({ render() {} })' },
+      ],
+      service.libraryBlobs,
+    );
+    const file = await service.sceneFile({ treeHash: tree.treeHash, path: 'index.html' });
+    expect(Buffer.from(file ?? []).toString()).toBe('<p>سلام</p>');
+    // Read twice: the second comes from the cached manifest.
+    expect(await service.sceneFile({ treeHash: tree.treeHash, path: 'scene.js' })).not.toBeNull();
+    expect(await service.sceneFile({ treeHash: tree.treeHash, path: 'missing.js' })).toBeNull();
+    expect(await service.sceneFile({ treeHash: 'f'.repeat(64), path: 'index.html' })).toBeNull();
+  });
+});
+
+describe('style reference scenes', () => {
+  it('stores a reference scene once and gives its preview address in the language asked', async () => {
+    const { service } = await setup();
+    const fa = await service.styleReference({ styleId: 'bauhaus', aspect: '9:16', language: 'fa' });
+    expect(fa.url).toMatch(/^studio-scene:\/\/t-[0-9a-f]{64}\/index\.html\?c=/);
+    const again = await service.styleReference({
+      styleId: 'bauhaus',
+      aspect: '16:9',
+      language: 'en',
+    });
+    expect(again.treeHash).toBe(fa.treeHash);
+    expect(again.url).not.toBe(fa.url);
+    const html = await service.sceneFile({ treeHash: fa.treeHash, path: 'index.html' });
+    expect(Buffer.from(html ?? []).toString()).toContain('Studio.scene(');
+  });
+
+  it('checks a reference scene through the host', async () => {
+    const check = vi.fn(async () => ({
+      ok: true,
+      problems: [],
+      notes: [],
+      thumbnail: null,
+      thumbnailPng: null,
+    }));
+    const { service } = await setup({ scenes: { check } });
+    expect(
+      await service.checkStyleReference({ styleId: 'hud', aspect: '16:9', language: 'en' }),
+    ).toEqual({
+      ok: true,
+      problems: [],
+      notes: [],
+    });
+    expect(check).toHaveBeenCalledWith(
+      expect.objectContaining({ width: 1920, height: 1080, duration: 6, fps: 30 }),
+    );
+    const { service: bare } = await setup();
+    await expect(
+      bare.checkStyleReference({ styleId: 'hud', aspect: '16:9', language: 'en' }),
+    ).rejects.toThrow(/cannot check scenes/);
+  });
+});
+
+describe('scene network per project', () => {
+  it('keeps the hosts a project allows, shows them with its folder, and forgets them with the project', async () => {
+    const { service } = await setup();
+    expect((await service.projectStorage({ projectId: 'p1' })).sceneHosts).toEqual([]);
+    const view = await service.setSceneHosts({
+      projectId: 'p1',
+      hosts: ['cdn.example.com', 'cdn.example.com', 'fonts.example.org'],
+    });
+    expect(view.sceneHosts).toEqual(['cdn.example.com', 'fonts.example.org']);
+    expect((await service.setSceneHosts({ projectId: 'p1', hosts: [] })).sceneHosts).toEqual([]);
+    await service.setSceneHosts({ projectId: 'p1', hosts: ['cdn.example.com'] });
+    // A project that is gone from AgentMate loses its list along with its folder setting.
+    await service.pruneProjects(new Set());
+    expect((await service.projectStorage({ projectId: 'p1' })).sceneHosts).toEqual([]);
+    await expect(service.setSceneHosts({ projectId: 'ghost', hosts: [] })).rejects.toThrow(
+      /not in AgentMate/,
+    );
+  });
+
+  it("gives a scene the hosts of its video's project, and none to a standalone video", async () => {
+    const { service } = await setup();
+    await service.setSceneHosts({ projectId: 'p1', hosts: ['cdn.example.com'] });
+    const project = await newVideo(service, 'p1');
+    const standalone = await newVideo(service, null, 'Alone');
+    await openSession(service, project.id);
+    await openSession(service, standalone.id);
+    // A tree only one open video holds: written straight into that video's blob folder.
+    const projectTree = await treeFromFiles(
+      [{ path: 'index.html', content: 'p' }],
+      BlobStore.forVideo(project.folder),
+    );
+    const aloneTree = await treeFromFiles(
+      [{ path: 'index.html', content: 'a' }],
+      BlobStore.forVideo(standalone.folder),
+    );
+    expect(await service.sceneHosts({ treeHash: projectTree.treeHash })).toEqual([
+      'cdn.example.com',
+    ]);
+    expect(await service.sceneHosts({ treeHash: aloneTree.treeHash })).toEqual([]);
+    expect(await service.sceneHosts({ treeHash: 'f'.repeat(64) })).toEqual([]);
+  });
+
+  it('reads a settings file from before scene networks without losing anything in it', async () => {
+    const root = await tempDir();
+    const dataDir = join(root, 'userData', 'studio');
+    await mkdir(dataDir, { recursive: true });
+    const custom = join(root, 'media');
+    await writeFile(
+      join(dataDir, 'settings.json'),
+      JSON.stringify({
+        version: 1,
+        defaultRoot: null,
+        cacheDir: null,
+        cacheCapGb: 33,
+        autoResumeRenders: true,
+        hwEncode: true,
+        projectRoots: { p1: custom },
+      }),
+    );
+    const { service } = await setup({}, root);
+    expect((await service.settings()).cacheCapGb).toBe(33);
+    expect(await service.projectStorage({ projectId: 'p1' })).toMatchObject({
+      root: custom,
+      isCustom: true,
+      sceneHosts: [],
+    });
   });
 });

@@ -18,6 +18,13 @@ import { runLabel } from './runSettings';
 const WORKING: Record<GenerationView['stage'], string> = {
   scenario: 'Writing the scenario',
   edit: 'Working on your change',
+  scene: 'Animating the scene',
+};
+
+const FAILED: Record<GenerationView['stage'], string> = {
+  scenario: 'The scenario was not written.',
+  edit: 'The change was not made.',
+  scene: 'The scene was not animated.',
 };
 
 function elapsed(ms: number): string {
@@ -131,9 +138,7 @@ export function GenerationCard({
   if (g.status === 'failed') {
     return (
       <Notice tone="destructive" action={actions} aria-label="AI run failed">
-        <p className="font-medium">
-          {g.stage === 'scenario' ? 'The scenario was not written.' : 'The change was not made.'}
-        </p>
+        <p className="font-medium">{FAILED[g.stage]}</p>
         <p className="mt-0.5 text-xs" dir="auto">
           {g.error ?? 'The CLI did not answer.'}
         </p>
