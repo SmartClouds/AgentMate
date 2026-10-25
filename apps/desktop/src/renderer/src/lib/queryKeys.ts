@@ -134,6 +134,8 @@ export const queryKeys = {
   githubActionsActivity: ['github-actions-activity'] as const,
   /** Self-hosted runners behind the projects' repos, for the Pipelines page. */
   githubRunners: ['github-runners'] as const,
+  /** CPU, memory and disk of a runner's machine: `local`, or `ssh:<server id>`. */
+  runnerMachineStats: (machine: string) => ['runner-machine-stats', machine] as const,
   /** Annotations one finished Actions run left behind. */
   runAnnotations: (repo: string, runId: number) => ['run-annotations', repo, runId] as const,
   runFailure: (repo: string, runId: number) => ['pipeline-run-error', repo, runId] as const,

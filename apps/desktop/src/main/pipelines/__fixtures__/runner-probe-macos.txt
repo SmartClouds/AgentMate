@@ -1,0 +1,35 @@
+@@os
+Darwin
+@@sysctl
+17179869184
+10
+{ 2.31 2.05 1.98 }
+@@vmstat
+Mach Virtual Memory Statistics: (page size of 16384 bytes)
+Pages free:                                3452.
+Pages active:                            420000.
+Pages inactive:                          410000.
+Pages speculative:                         2943.
+Pages throttled:                              0.
+Pages wired down:                         120000.
+Pages purgeable:                           5000.
+"Translation faults":                 1126370549.
+Pages copy-on-write:                   36389183.
+Pages zero filled:                    491934584.
+Pages reactivated:                      8227958.
+Pages purged:                           2003399.
+File-backed pages:                       432943.
+Anonymous pages:                         400000.
+Pages stored in compressor:              300000.
+Pages occupied by compressor:            100000.
+Decompressions:                         9372466.
+Compressions:                          14857394.
+Pageins:                               48394651.
+Pageouts:                                 72811.
+Swapins:                                      0.
+Swapouts:                                     0.
+@@top
+CPU usage: 12.50% user, 6.25% sys, 81.25% idle 
+@@df
+Filesystem     1024-blocks      Used Available Capacity  Mounted on
+/dev/disk3s5     482797652 301234567 160000000    66%    /System/Volumes/Data

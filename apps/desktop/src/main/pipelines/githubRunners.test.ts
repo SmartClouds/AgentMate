@@ -1,3 +1,4 @@
+import os from 'node:os';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GithubRunnersRunRef } from '../../shared/apiTypes';
 
@@ -225,6 +226,28 @@ describe('fetchRunnerStatus', () => {
       expect(result).toMatchObject({ ok: true, hiddenOrgs: [] });
       if (!result.ok) return;
       expect(result.runners.map((item) => item.name)).toEqual(['org-box']);
+    });
+
+    it('marks a runner named after this computer, the name config.sh suggests', async () => {
+      const host = os.hostname().split('.')[0];
+      useRepos('acme/api');
+      scenario.api[repoRunnersPath('acme/api')] = runnerList(
+        ghRunner({ id: 1, name: host.toUpperCase() }),
+        ghRunner({ id: 2, name: `${host}-other` }),
+      );
+      scenario.apiErrors[orgRunnersPath('acme')] = NOT_FOUND;
+
+      const result = await runners.fetchRunnerStatus({ runs: [] });
+
+      if (!result.ok) throw new Error(result.error);
+      expect(
+        result.runners.map((item) => [item.name, item.onThisComputer ?? false]).sort(),
+      ).toEqual(
+        [
+          [host.toUpperCase(), true],
+          [`${host}-other`, false],
+        ].sort(),
+      );
     });
 
     it('also skips a repo list that answers 404', async () => {

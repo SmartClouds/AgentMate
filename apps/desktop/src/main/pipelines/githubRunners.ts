@@ -1,3 +1,4 @@
+import os from 'node:os';
 import type {
   GithubRunner,
   GithubRunnerJob,
@@ -392,8 +393,16 @@ export async function fetchRunnerStatus(input: GithubRunnersInput): Promise<Gith
   }
   waiting.sort((a, b) => Date.parse(a.queuedAt) - Date.parse(b.queuedAt));
 
-  const runners = [...live, ...[...seen.values()].map(toSeenRunner)].sort(
-    (a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state] || a.name.localeCompare(b.name),
-  );
+  const here = thisHostName();
+  const runners = [...live, ...[...seen.values()].map(toSeenRunner)]
+    .map((runner) =>
+      runner.name.toLowerCase() === here ? { ...runner, onThisComputer: true } : runner,
+    )
+    .sort((a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state] || a.name.localeCompare(b.name));
   return { ok: true, runners, waiting, hiddenOrgs };
+}
+
+/** This computer's short host name, lower case: `config.sh` names a runner after it by default. */
+function thisHostName(): string {
+  return os.hostname().split('.')[0].toLowerCase();
 }

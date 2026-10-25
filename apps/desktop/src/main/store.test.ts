@@ -362,6 +362,45 @@ describe('settings migrations', () => {
     });
   });
 
+  describe('runnerMachineLinks', () => {
+    it('links no runner to a machine until the user picks one', async () => {
+      const { store } = await loadStore();
+
+      expect((await store.getSettings()).runnerMachineLinks).toEqual({});
+    });
+
+    it('keeps SSH and local links and drops damaged ones', async () => {
+      userData.writeData('settings.json', {
+        runnerMachineLinks: {
+          'acme/smart': { kind: 'ssh', serverId: 'srv-1' },
+          'acme/here': { kind: 'local', serverId: 'ignored' },
+          'acme/no-id': { kind: 'ssh' },
+          'acme/empty-id': { kind: 'ssh', serverId: '' },
+          'acme/odd': { kind: 'rdp', serverId: 'srv-2' },
+          'acme/text': 'srv-3',
+          '': { kind: 'local' },
+        },
+      });
+      const { store } = await loadStore();
+
+      expect((await store.getSettings()).runnerMachineLinks).toEqual({
+        'acme/smart': { kind: 'ssh', serverId: 'srv-1' },
+        'acme/here': { kind: 'local' },
+      });
+    });
+
+    it.each([
+      ['a list', [{ kind: 'local' }]],
+      ['a string', 'srv-1'],
+      ['null', null],
+    ])('falls back to no links for %s', async (_name, value) => {
+      userData.writeData('settings.json', { runnerMachineLinks: value });
+      const { store } = await loadStore();
+
+      expect((await store.getSettings()).runnerMachineLinks).toEqual({});
+    });
+  });
+
   describe('autoPauseRunsWhileAgentWorks', () => {
     it('is off by default, so a run never freezes without the user asking for it', async () => {
       const { store } = await loadStore();

@@ -1,12 +1,16 @@
+import type { AppSettings } from '@agentmat/core';
 import type {
   GithubActionsHistoryItem,
   GithubRunner,
   GithubRunnerState,
   GithubRunnersResult,
   GithubRunnerWaitingJob,
+  RunnerMachineLink,
+  SshSavedServer,
 } from '@shared/apiTypes';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import {
   ArrowRight,
   ChevronDown,
@@ -26,6 +30,8 @@ import { useLastGoodData } from '@/hooks/useLastGoodData';
 import { queryKeys } from '@/lib/queryKeys';
 import { timeAgo } from '@/lib/time';
 import { cn } from '@/lib/utils';
+import { RunnerMachineLinkMenu } from './RunnerMachineLinkMenu';
+import { RunnerMachineStats } from './RunnerMachineStats';
 
 /** Where a click on a busy runner or a waiting job should take the user. */
 export interface RunnerRunTarget {
@@ -63,6 +69,14 @@ const GRANT_HINT =
   'Opens a terminal with gh auth refresh -s admin:org. You also need to be an admin of the org.';
 
 const CHECK_HINT = 'Once you have approved the new scope, ask GitHub for the runner list again.';
+
+const NO_LINKS: Record<string, RunnerMachineLink> = {};
+const NO_SERVERS: SshSavedServer[] = [];
+
+/** The key a runner's machine link is saved under, the same identity its tile is keyed by. */
+function runnerKey(runner: GithubRunner): string {
+  return `${runner.scope.name}/${runner.name}`;
+}
 
 function readCollapsed(): boolean {
   try {
@@ -326,11 +340,18 @@ function StatusLine({
 function RunnerTile({
   runner,
   onFocusRun,
+  link,
+  servers,
+  onLinkChange,
 }: {
   runner: GithubRunner;
   onFocusRun: (run: RunnerRunTarget) => void;
+  link: RunnerMachineLink | undefined;
+  servers: SshSavedServer[];
+  onLinkChange: (link: RunnerMachineLink | null) => void;
 }): React.JSX.Element {
   const platform = platformOf(runner);
+  const server = link?.kind === 'ssh' ? servers.find((item) => item.id === link.serverId) : null;
   const ScopeIcon = runner.scope.kind === 'org' ? Users : GitBranch;
   return (
     <li
@@ -345,17 +366,29 @@ function RunnerTile({
       <div className="flex min-w-0 items-center gap-2">
         <StatusDot state={runner.state} />
         <RunnerName name={runner.name} />
-        {platform ? (
-          <span className="ml-auto shrink-0 pl-1 text-[11px] text-muted-foreground">
-            {platform}
-          </span>
-        ) : null}
+        <span className="ml-auto flex shrink-0 items-center gap-1.5 pl-1">
+          {platform ? <span className="text-[11px] text-muted-foreground">{platform}</span> : null}
+          <RunnerMachineLinkMenu
+            runner={runner}
+            link={link}
+            servers={servers}
+            onChange={onLinkChange}
+          />
+        </span>
       </div>
       <div className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
         <ScopeIcon className="h-2.5 w-2.5 shrink-0 opacity-70" />
         <span className="truncate font-mono">{runner.scope.name}</span>
       </div>
       <StatusLine runner={runner} onFocusRun={onFocusRun} />
+      {link ? (
+        <RunnerMachineStats
+          link={link}
+          serverName={server?.nickname}
+          enabled={runner.state !== 'offline'}
+          onUnlink={() => onLinkChange(null)}
+        />
+      ) : null}
       {runner.customLabels.length > 0 ? (
         <div className="flex flex-wrap gap-1">
           {runner.customLabels.map((label) => (
@@ -412,6 +445,42 @@ export function RunnersPanel({
   const [granted, setGranted] = useState<string[]>([]);
   /** Read and cleared by the next lookup, so only that one call skips the refusal memory. */
   const askFresh = useRef(false);
+  const queryClient = useQueryClient();
+
+  const settingsQuery = useQuery({
+    queryKey: queryKeys.settings,
+    queryFn: () => window.agentmat.settings.get(),
+    meta: { silentLoading: true },
+  });
+  const links = settingsQuery.data?.runnerMachineLinks ?? NO_LINKS;
+  const serversQuery = useQuery({
+    queryKey: queryKeys.sshServers,
+    queryFn: () => window.agentmat.ssh.listServers(),
+    meta: { silentLoading: true },
+  });
+  const servers = serversQuery.data ?? NO_SERVERS;
+  const saveLinks = useMutation({
+    mutationFn: (next: Record<string, RunnerMachineLink>) =>
+      window.agentmat.settings.update({ runnerMachineLinks: next }),
+    meta: { silentLoading: true },
+    onError: (error) => {
+      toast.error(
+        `Could not save the runner's machine: ${ipcErrorMessage(error, 'unknown error')}`,
+      );
+      // The tile shows the link that failed to save, so read the saved ones back.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    },
+  });
+
+  /** The tile switches at once; saving goes on in the background. */
+  function setLink(runner: GithubRunner, link: RunnerMachineLink | null): void {
+    const { [runnerKey(runner)]: _old, ...rest } = links;
+    const next = link ? { ...rest, [runnerKey(runner)]: link } : rest;
+    queryClient.setQueryData<AppSettings>(queryKeys.settings, (current) =>
+      current ? { ...current, runnerMachineLinks: next } : current,
+    );
+    saveLinks.mutate(next);
+  }
 
   // Keyed on the unfinished runs, so a run starting or ending asks again straight away. The
   // previous answer stays on screen meanwhile instead of the panel dropping back to a skeleton.
@@ -584,9 +653,12 @@ export function RunnersPanel({
             <ul className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2">
               {shown.map((runner) => (
                 <RunnerTile
-                  key={`${runner.scope.name}/${runner.name}`}
+                  key={runnerKey(runner)}
                   runner={runner}
                   onFocusRun={onFocusRun}
+                  link={links[runnerKey(runner)]}
+                  servers={servers}
+                  onLinkChange={(link) => setLink(runner, link)}
                 />
               ))}
             </ul>

@@ -16,6 +16,8 @@ import type {
   GithubWorkflowDispatchRequest,
   GithubWorkflowRefsResult,
   ProjectPipelineStatus,
+  RunnerMachineLink,
+  RunnerMachineStatsResult,
 } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';
 import {
@@ -29,6 +31,7 @@ import {
   setProjectMutedActions,
 } from '../pipelines/githubActions';
 import { fetchRunnerStatus } from '../pipelines/githubRunners';
+import { readRunnerMachineStats } from '../pipelines/runnerMachineStats';
 import {
   forgetWatchedWorkflows,
   refreshProjectPipelineStatus,
@@ -120,6 +123,17 @@ export function registerPipelineHandlers(): void {
         runs: Array.isArray(input?.runs) ? input.runs : [],
         fresh: input?.fresh === true,
       });
+    },
+  );
+
+  ipcMain.handle(
+    IPC.pipelines.runnerMachineStats,
+    async (_event, link: RunnerMachineLink): Promise<RunnerMachineStatsResult> => {
+      if (link?.kind === 'local') return readRunnerMachineStats({ kind: 'local' });
+      if (link?.kind === 'ssh' && typeof link.serverId === 'string' && link.serverId !== '') {
+        return readRunnerMachineStats({ kind: 'ssh', serverId: link.serverId });
+      }
+      return { ok: false, reason: 'missing', error: 'No machine is linked to this runner.' };
     },
   );
 }

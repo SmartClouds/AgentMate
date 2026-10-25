@@ -25,6 +25,7 @@ import type {
   ProxyMode,
   PullRequestInfo,
   RunAssessment,
+  RunnerMachineLink,
   RunPauseReason,
   ScanPhase,
   ScheduledTask,
@@ -3230,6 +3231,8 @@ export interface GithubRunner {
   currentJob?: GithubRunnerJob;
   /** When the runner last finished a job, for `seen` runners. ISO timestamp. */
   lastSeenAt?: string;
+  /** The runner's name is this computer's host name, the default `config.sh` gives a runner. */
+  onThisComputer?: boolean;
 }
 
 /** A queued job asking for a self-hosted runner that no online runner can take. */
@@ -3279,6 +3282,37 @@ export type GithubRunnersResult =
       hiddenOrgs: string[];
     }
   | { ok: false; error: string };
+
+/** One reading of a runner machine's load, for the runner's tile on the Pipelines page. */
+export interface RunnerMachineSample {
+  /** Unix ms. */
+  at: number;
+  /** Null when the machine gave no CPU figure. */
+  cpuPercent: number | null;
+  cpuCount: number | null;
+  /** One-minute load average. Windows has none. */
+  load1: number | null;
+  memUsedBytes: number;
+  memTotalBytes: number;
+  diskUsedBytes: number;
+  /** Used plus available, so the share matches what `df` reports. */
+  diskTotalBytes: number;
+  /** The filesystem the disk numbers are for: `/`, `/System/Volumes/Data` or `C:`. */
+  diskMount: string;
+}
+
+/**
+ * `locked`: the Servers vault holds the login and is locked. `missing`: the saved server was
+ * removed. `unreachable`: the login or the command failed. `unsupported`: the machine answered
+ * with something that is not Linux, macOS or Windows output.
+ */
+export type RunnerMachineStatsFailure = 'locked' | 'missing' | 'unreachable' | 'unsupported';
+
+export type RunnerMachineStatsResult =
+  | { ok: true; sample: RunnerMachineSample }
+  | { ok: false; reason: RunnerMachineStatsFailure; error: string };
+
+export type { RunnerMachineLink };
 
 export interface GithubActionsRunErrorInput {
   repo: string;

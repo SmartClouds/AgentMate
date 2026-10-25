@@ -251,6 +251,8 @@ import type {
   RemoveWorktreeInput,
   RenameBranchInput,
   ResolveConflictWithAiResult,
+  RunnerMachineLink,
+  RunnerMachineStatsResult,
   RunProposal,
   RunProposalDecision,
   RunProposalDecisionResult,
@@ -1748,6 +1750,9 @@ const pipelines = {
   /** Self-hosted runners behind the projects' repos, and jobs stuck waiting for one. */
   runners: (input: GithubRunnersInput): Promise<GithubRunnersResult> =>
     ipcRenderer.invoke(IPC.pipelines.runners, input),
+  /** CPU, memory and disk of the machine a runner was linked to. */
+  runnerMachineStats: (link: RunnerMachineLink): Promise<RunnerMachineStatsResult> =>
+    ipcRenderer.invoke(IPC.pipelines.runnerMachineStats, link),
 };
 
 /** The Deploy section: saved servers with their server core, installing it, and its health. */

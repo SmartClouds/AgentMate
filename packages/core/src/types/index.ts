@@ -745,7 +745,15 @@ export interface AppSettings {
    * only these, so a server saved in Remote stays out of it until the user picks it.
    */
   deployServerIds: string[];
+  /**
+   * The machine each self-hosted runner runs on, so the Pipelines page can show its CPU, memory
+   * and disk. Keyed by the runner's scope and name (`owner/repo/name` or `org/name`).
+   */
+  runnerMachineLinks: Record<string, RunnerMachineLink>;
 }
+
+/** Which machine a self-hosted runner runs on: a saved SSH server, or this computer. */
+export type RunnerMachineLink = { kind: 'ssh'; serverId: string } | { kind: 'local' };
 
 export type AgentType = 'claude-code' | 'gemini' | 'opencode' | 'codex' | 'cursor' | 'generic';
 

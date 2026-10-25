@@ -12,6 +12,7 @@ import type {
   ProjectBlueprint,
   ProjectDraft,
   PromptTemplate,
+  RunnerMachineLink,
   ScheduledTask,
   SkillRepository,
   WorktreeRecord,
@@ -245,6 +246,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   idleResourceNotify: true,
   devSetupStacks: ['essentials'],
   deployServerIds: [],
+  runnerMachineLinks: {},
 };
 
 /**
@@ -295,6 +297,21 @@ function normalizeDeployServerIds(value: unknown): string[] {
   return [...new Set(value.filter((id): id is string => typeof id === 'string' && id !== ''))];
 }
 
+/** Runner links whose shape still makes sense. A link to a server that was since removed is kept. */
+function normalizeRunnerMachineLinks(value: unknown): Record<string, RunnerMachineLink> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const links: Record<string, RunnerMachineLink> = {};
+  for (const [key, link] of Object.entries(value)) {
+    if (key === '' || !link || typeof link !== 'object') continue;
+    const { kind, serverId } = link as { kind?: unknown; serverId?: unknown };
+    if (kind === 'local') links[key] = { kind: 'local' };
+    else if (kind === 'ssh' && typeof serverId === 'string' && serverId !== '') {
+      links[key] = { kind: 'ssh', serverId };
+    }
+  }
+  return links;
+}
+
 function withSettingsMigrations(settings: AppSettings): AppSettings {
   const alerts = normalizeUsageResetAlerts(settings.usageResetAlerts);
   const windows = alerts.windows.map((key) =>
@@ -311,6 +328,7 @@ function withSettingsMigrations(settings: AppSettings): AppSettings {
     idleResourceNotify: settings.idleResourceNotify !== false,
     devSetupStacks: normalizeDevSetupStacks(settings.devSetupStacks),
     deployServerIds: normalizeDeployServerIds(settings.deployServerIds),
+    runnerMachineLinks: normalizeRunnerMachineLinks(settings.runnerMachineLinks),
     cliArgs: normalizeCliArgs(settings.cliArgs),
     cliLaunchDefaults: normalizeCliLaunchDefaults(settings.cliLaunchDefaults),
     commitMessage: normalizeCommitMessageSettings(settings.commitMessage),

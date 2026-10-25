@@ -881,6 +881,8 @@ export const IPC = {
     dispatch: 'pipelines:dispatch',
     cancelRun: 'pipelines:cancelRun',
     runners: 'pipelines:runners',
+    /** (RunnerMachineLink) -> RunnerMachineStatsResult: CPU, memory and disk of a runner's machine. */
+    runnerMachineStats: 'pipelines:runnerMachineStats',
   },
   /** The Deploy section: saved servers, installing the server core, and its health. */
   deploy: {
