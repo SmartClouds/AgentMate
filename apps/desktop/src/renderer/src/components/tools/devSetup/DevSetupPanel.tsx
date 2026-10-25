@@ -1,5 +1,6 @@
 import { type ChecklistRow, DEV_STACKS, getDevItem, overallFraction } from '@agentmat/core';
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { GLASS_CARD, LoadFailure, Notice } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -54,6 +55,15 @@ function ChecklistSkeleton(): React.JSX.Element {
 export function DevSetupPanel(): React.JSX.Element {
   const devSetup = useDevSetup();
   const { checklist, environment, job, plan, updatePlan } = devSetup;
+  // A link from elsewhere in the app (Studio's "Install ffmpeg") names the stack it needs.
+  const [searchParams] = useSearchParams();
+  const askedStack = searchParams.get('stack');
+  const { showStack, stacksLoaded } = devSetup;
+  // Once per link: showStack changes with every choice, and the person may switch it off again.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: showStack is left out on purpose
+  useEffect(() => {
+    if (askedStack && stacksLoaded) showStack(askedStack);
+  }, [askedStack, stacksLoaded]);
   const updating = job.intent === 'update';
   const [logFor, setLogFor] = useState<string | null>(null);
 

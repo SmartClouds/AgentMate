@@ -41,7 +41,9 @@ export {
   Trash2,
   TriangleAlert,
   Undo,
+  Video,
   Wand2,
+  Wrench,
   X,
 } from '@/components/icons';
 
@@ -55,6 +57,7 @@ export {
   CARD_GRID,
   CatalogCardShimmer,
   Chip,
+  type ChipTone,
   EmptyState,
   GLASS_CARD,
   GLASS_PANEL,

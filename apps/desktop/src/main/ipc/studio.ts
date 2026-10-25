@@ -1,11 +1,11 @@
-import { studioAiInputs, studioInputs } from '@agentmat/studio';
+import { studioAiInputs, studioInputs, studioRenderInputs } from '@agentmat/studio';
 import { BrowserWindow, dialog, type IpcMainInvokeEvent, ipcMain, shell } from 'electron';
 import { z } from 'zod';
 import { IPC } from '../../shared/ipcChannels';
 import { studioService } from '../studio';
 
 /**
- * Studio's channels (E31), and its AI channels (E32). Every argument is checked against Studio's own input schemas before
+ * Studio's channels (E31), its AI channels (E32), scenes (E33) and rendering (E34). Every argument is checked against Studio's own input schemas before
  * the service sees it; the service then checks folders and edits again on its own terms.
  */
 
@@ -165,6 +165,39 @@ export function registerStudioHandlers(
   handle(IPC.studioScenes.checkStyle, (value) =>
     service().checkStyleReference(parse(studioAiInputs.styleReference, value)),
   );
+  handle(IPC.studioRender.tools, () => service().renderTools());
+  handle(IPC.studioRender.estimate, (value) =>
+    service().renderEstimate(parse(studioRenderInputs.videoRef, value)),
+  );
+  handle(IPC.studioRender.start, (value) =>
+    service().startRender(parse(studioRenderInputs.start, value)),
+  );
+  handle(IPC.studioRender.jobs, (value) =>
+    service().renderJobs(parse(studioRenderInputs.jobs, value ?? {})),
+  );
+  handle(IPC.studioRender.cancel, (value) =>
+    service().cancelRender(parse(studioRenderInputs.jobRef, value)),
+  );
+  handle(IPC.studioRender.retry, (value) =>
+    service().retryRender(parse(studioRenderInputs.jobRef, value)),
+  );
+  handle(IPC.studioRender.remove, (value) =>
+    service().removeRender(parse(studioRenderInputs.jobRef, value)),
+  );
+  // The path comes from the render's own record, never from the renderer.
+  const finishedFile = async (value: unknown) => {
+    const { jobId } = parse(studioRenderInputs.jobRef, value);
+    const job = (await service().renderJobs({})).find((j) => j.id === jobId);
+    if (!job?.output) throw new Error('That render has no finished file.');
+    return job.output;
+  };
+  handle(IPC.studioRender.reveal, async (value) => {
+    shell.showItemInFolder(await finishedFile(value));
+  });
+  handle(IPC.studioRender.openFile, async (value) => {
+    const problem = await shell.openPath(await finishedFile(value));
+    if (problem) throw new Error(problem);
+  });
   handle(IPC.studio.revealVideo, async (value) => {
     const { videoId } = parse(studioInputs.videoRef, value);
     const video = (await service().list()).find((v) => v.id === videoId);

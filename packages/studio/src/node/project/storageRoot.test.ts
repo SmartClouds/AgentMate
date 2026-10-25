@@ -129,6 +129,24 @@ describe('checkStorageRoot system folders', () => {
     expect(codes(home.problems)).not.toContain('system-folder');
   });
 
+  it("treats the user's own temp folder as theirs, though macOS keeps it under /private", async () => {
+    const tempDir = '/private/var/folders/ab/xyz/T';
+    const inTemp = await checkStorageRoot(`${tempDir}/agentmate-e2e-1/Videos`, {
+      platform: 'darwin',
+      tempDir,
+      probeWrite: async () => undefined,
+    });
+    expect(codes(inTemp.problems)).not.toContain('system-folder');
+    for (const root of ['/private/var/db/studio', '/private/etc/studio', '/var/log/studio']) {
+      const result = await checkStorageRoot(root, {
+        platform: 'darwin',
+        tempDir,
+        probeWrite: async () => undefined,
+      });
+      expect(codes(result.problems), root).toContain('system-folder');
+    }
+  });
+
   it('warns about a network share', async () => {
     const result = await checkStorageRoot('\\\\nas\\media\\studio', {
       platform: 'win32',

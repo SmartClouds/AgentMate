@@ -17,6 +17,15 @@ const state = vi.hoisted(() => ({
   handled: [] as string[],
   ready: true,
   pageErrors: [] as string[],
+  /**
+   * How long a page takes to paint a changed picture by itself. Until then, a paint asked for with
+   * invalidate still shows the moment before, as a heavy page's does.
+   */
+  paintDelay: 2,
+  /** Shows a picture on its way first (as canvas and blurred layers do), the final one this much later. */
+  midwayMs: 0,
+  /** A page that never shows the same picture twice. */
+  flicker: false,
   failExec: false,
 }));
 
@@ -41,8 +50,19 @@ vi.mock('electron', () => {
     constructor(readonly options: Record<string, unknown>) {
       state.windows.push(this as unknown as FakeWindow);
       const self = this;
-      let frame = 0;
+      // What the page shows; a changed moment shows once the page paints it by itself.
+      let shown = 0;
+      let flick = 0;
+      const paint = (value: number) => {
+        const image = {
+          getSize: () => ({ width: 4, height: 2 }),
+          toBitmap: () => Buffer.from(new Uint8Array(32).fill(value)),
+        };
+        queueMicrotask(() => self.listeners.paint?.({}, {}, image));
+      };
+      const pid = 1000 + state.windows.length;
       this.webContents = {
+        getOSProcessId: () => pid,
         setFrameRate: vi.fn(),
         on: (name: string, fn: Listener) => {
           self.listeners[name] = fn;
@@ -52,17 +72,26 @@ vi.mock('electron', () => {
         },
         loadURL: vi.fn(async () => undefined),
         invalidate: () => {
-          frame += 1;
-          const value = frame;
-          const image = {
-            getSize: () => ({ width: 4, height: 2 }),
-            toBitmap: () => Buffer.from(new Uint8Array(32).fill(value)),
-          };
-          queueMicrotask(() => self.listeners.paint?.({}, {}, image));
+          flick += 1;
+          paint(state.flicker ? flick % 256 : shown);
         },
         executeJavaScript: vi.fn(async (code: string) => {
           self.scripts.push(code);
           if (state.failExec) throw new Error('gone');
+          const moment = /renderAt\(([\d.]+)\)/.exec(code);
+          const target = moment ? Math.round(Number(moment[1]) * 30) + 1 : shown;
+          if (target !== shown) {
+            const midway = state.midwayMs;
+            setTimeout(() => {
+              shown = midway ? 200 : target;
+              paint(shown);
+              if (midway)
+                setTimeout(() => {
+                  shown = target;
+                  paint(shown);
+                }, midway);
+            }, state.paintDelay);
+          }
           if (code.includes('__studio.ready')) return state.ready;
           if (code.includes('errors.slice')) return state.pageErrors;
           return undefined;
@@ -96,11 +125,20 @@ vi.mock('electron', () => {
       state.permissionCheck = fn;
     },
   };
-  return { BrowserWindow, session: { fromPartition: () => fakeSession } };
+  const app = {
+    getAppMetrics: () => [
+      { pid: 1, memory: { workingSetSize: 999_999 } },
+      { pid: 1001, memory: { workingSetSize: 2048 } },
+      { pid: 1002, memory: { workingSetSize: 1024 } },
+    ],
+  };
+  return { app, BrowserWindow, session: { fromPartition: () => fakeSession } };
 });
 vi.mock('../index', () => ({ studioService: () => ({}) }));
 
-const { createOffscreenSource, SCENE_PARTITION } = await import('./offscreenSource');
+const { createOffscreenSource, SCENE_PARTITION, sceneWindowsMemoryBytes } = await import(
+  './offscreenSource'
+);
 
 const request = (url: string) =>
   new Promise<boolean>((resolve) => state.sessionRequests?.({ url }, (r) => resolve(r.cancel)));
@@ -110,9 +148,24 @@ beforeEach(() => {
   state.ready = true;
   state.pageErrors = [];
   state.failExec = false;
+  state.paintDelay = 2;
+  state.midwayMs = 0;
+  state.flicker = false;
 });
 
 describe('createOffscreenSource', () => {
+  it("adds up the memory of the open scene pages only, not the app's other processes", async () => {
+    const first = createOffscreenSource({ width: 8, height: 8, scale: 1 });
+    const second = createOffscreenSource({ width: 8, height: 8, scale: 1 });
+    await first.open('studio-scene://t-a/index.html');
+    await second.open('studio-scene://t-b/index.html');
+    expect(sceneWindowsMemoryBytes()).toBe((2048 + 1024) * 1024);
+    await first.close();
+    expect(sceneWindowsMemoryBytes()).toBe(1024 * 1024);
+    await second.close();
+    expect(sceneWindowsMemoryBytes()).toBe(0);
+  });
+
   it('opens a hidden offscreen window at the output size, zoomed to the design size, in its own session', async () => {
     const source = createOffscreenSource({ width: 1920, height: 1080, scale: 0.25 });
     await source.open('studio-scene://t-x/index.html');
@@ -178,6 +231,51 @@ describe('createOffscreenSource', () => {
     expect(frame.bitmap.length).toBe(32);
     expect(state.windows[0]?.scripts.at(-1)).toContain('renderAt(1.5)');
     expect(state.windows[0]?.scripts.at(-1)).toContain('afterPaint');
+  });
+
+  it('asks for each paint it waits on, so a frame takes milliseconds, not the time limit', async () => {
+    const source = createOffscreenSource({ width: 100, height: 100, scale: 1 });
+    await source.open('studio-scene://t-x/index.html');
+    const started = Date.now();
+    let last = await source.frame(0);
+    for (let i = 1; i < 10; i++) last = await source.frame(i / 30);
+    // A page paints once per invalidate; ten frames of a few paints each, well inside a second.
+    expect(Date.now() - started).toBeLessThan(800);
+    expect(last.bitmap[0]).toBe(10);
+  });
+
+  it('waits for the page to show the new moment, not a paint of the one before', async () => {
+    state.paintDelay = 30;
+    const source = createOffscreenSource({ width: 100, height: 100, scale: 1 });
+    await source.open('studio-scene://t-x/index.html');
+    expect((await source.frame(1)).bitmap[0]).toBe(31);
+    expect((await source.frame(0.5)).bitmap[0]).toBe(16);
+  });
+
+  it('waits out a picture on its way, which quick paints would show twice', async () => {
+    state.midwayMs = 15;
+    const source = createOffscreenSource({ width: 100, height: 100, scale: 1 });
+    await source.open('studio-scene://t-x/index.html');
+    expect((await source.frame(2)).bitmap[0]).toBe(61);
+  });
+
+  it('takes a moment that looks like the one before without waiting long', async () => {
+    const source = createOffscreenSource({ width: 100, height: 100, scale: 1 });
+    await source.open('studio-scene://t-x/index.html');
+    await source.frame(1);
+    const started = Date.now();
+    // The same moment again: nothing changes, so the page paints nothing by itself.
+    expect((await source.frame(1)).bitmap[0]).toBe(31);
+    expect(Date.now() - started).toBeLessThan(250);
+  });
+
+  it('gives up waiting for a page that never settles, within about a second', async () => {
+    state.flicker = true;
+    const source = createOffscreenSource({ width: 100, height: 100, scale: 1 });
+    await source.open('studio-scene://t-x/index.html');
+    const started = Date.now();
+    await source.frame(0);
+    expect(Date.now() - started).toBeLessThan(1500);
   });
 
   it('refuses navigation and new windows, and reports them with console errors and a crash', async () => {

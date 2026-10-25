@@ -573,6 +573,25 @@ jobs:
           # Electron refuse to start. The fixture can fall back to --no-sandbox if this fails.
           sudo -n sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
 
+      # Studio's render spec renders real videos with ffmpeg and skips itself without it. The
+      # self-hosted runners keep what they installed, so this only reaches for a package manager
+      # when ffmpeg is missing, and warns instead of failing where it cannot install.
+      - name: ffmpeg for the Studio render spec
+        shell: bash
+        run: |
+          if command -v ffmpeg > /dev/null && command -v ffprobe > /dev/null; then
+            ffmpeg -hide_banner -version | head -1
+            exit 0
+          fi
+          if [ "$RUNNER_OS" = "Linux" ] && sudo -n true 2> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y ffmpeg && exit 0
+          elif [ "$RUNNER_OS" = "macOS" ] && command -v brew > /dev/null; then
+            brew install ffmpeg && exit 0
+          elif [ "$RUNNER_OS" = "Windows" ] && command -v choco > /dev/null; then
+            choco install ffmpeg -y --no-progress && exit 0
+          fi
+          echo "::warning::ffmpeg is not installed, so the Studio render spec is skipped. Install it on the runner host (sudo apt-get install -y ffmpeg, or brew install ffmpeg)."
+
       # Node first: pnpm's installer runs npm from PATH, and without one it falls back to the
       # runner's own npm, which a runner self-update leaves broken (actions/runner#2094).
       - name: Setup Node.js

@@ -48,4 +48,9 @@ describe('safeFolderName', () => {
     expect(safeFolderName('My App', 'project')).toBe('My-App');
     expect(safeFolderName('***', 'project')).toBe('project');
   });
+
+  it('never lets a backslash or a slash make a subfolder', () => {
+    expect(safeFolderName('a' + String.fromCharCode(92) + 'b/c', 'video')).toBe('abc');
+    expect(safeFolderName('..' + String.fromCharCode(92) + '..', 'video')).toBe('video');
+  });
 });

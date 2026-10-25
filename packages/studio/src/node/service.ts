@@ -1,5 +1,6 @@
-import { access, cp, mkdir, readdir, stat } from 'node:fs/promises';
-import { hostname as osHostname } from 'node:os';
+import { createHash } from 'node:crypto';
+import { access, cp, mkdir, readdir, readFile, stat } from 'node:fs/promises';
+import { hostname as osHostname, totalmem } from 'node:os';
 import { basename, join, relative } from 'node:path';
 import { z } from 'zod';
 import type {
@@ -13,12 +14,16 @@ import type {
   OpenVideoResult,
   ProjectStorageView,
   RecipeView,
+  RenderEstimateView,
+  RenderJobView,
+  RenderToolsView,
   RootCheckView,
   SaveRecipeInput,
   SaveSceneFilesInput,
   SceneCheckView,
   SceneCodeView,
   StartEditInput,
+  StartRenderInput,
   StartScenarioInput,
   StartSceneInput,
   StudioEvent,
@@ -53,6 +58,7 @@ import {
   type VideoStoreDeps,
 } from './project/videoStore.js';
 import { RecipeStore } from './recipes/recipeStore.js';
+import { createStudioRender, type StudioRenderHost } from './render/renderQueue.js';
 import { type StudioAssets, studioAssets } from './scenes/assets.js';
 import { readTree, type TreeManifest, treeFile, treeFromFiles } from './scenes/codeTree.js';
 import { JsonStore } from './settings/jsonStore.js';
@@ -87,6 +93,8 @@ export interface StudioHost {
   ai?: StudioAiHost;
   /** Checks scene pages in a real browser. Without it, scenes cannot be animated or checked. */
   scenes?: SceneCheckHost;
+  /** Renders videos with ffmpeg and scene windows. Without it, the Render button says why not. */
+  render?: StudioRenderHost;
   /**
    * Where Studio's own files (fonts, style scenes, the runtime) are. A host that bundles this
    * package says where it shipped them; others leave it to the package folder.
@@ -193,6 +201,15 @@ export interface StudioService {
     aspect: Aspect;
     language: string;
   }): Promise<SceneCheckView>;
+  renderTools(): Promise<RenderToolsView>;
+  renderEstimate(input: { videoId: string }): Promise<RenderEstimateView>;
+  startRender(input: StartRenderInput): Promise<RenderJobView>;
+  renderJobs(input: { videoId?: string }): Promise<RenderJobView[]>;
+  cancelRender(input: { jobId: string }): Promise<void>;
+  retryRender(input: { jobId: string }): Promise<RenderJobView>;
+  removeRender(input: { jobId: string }): Promise<void>;
+  /** Picks up renders the app stopped in the middle of; the host calls it once the app is ready. */
+  resumeRenders(): Promise<void>;
   /** A code tree's thumbnail as PNG bytes, or null before it has been checked. */
   thumbnail(input: { videoId: string; treeHash: string }): Promise<Uint8Array | null>;
   /**
@@ -480,6 +497,58 @@ export function createStudioService(host: StudioHost): StudioService {
     },
   });
 
+  /** Videos with a render running, whose code the scene server serves even when they are closed. */
+  const rendering = new Map<string, { blobs: BlobStore; holds: number }>();
+  let runtimeVersion: Promise<string> | null = null;
+
+  async function projectHosts(projectId: string | null): Promise<string[]> {
+    if (!projectId) return [];
+    return (await settingsStore.read()).projectSceneHosts[projectId] ?? [];
+  }
+
+  const render = createStudioRender({
+    host: host.render,
+    dataDir: host.dataDir,
+    now,
+    newId,
+    notify: host.notify,
+    async video(videoId) {
+      const found = await entry(videoId);
+      return { folder: found.folder, title: found.title };
+    },
+    async cache() {
+      const file = await settingsStore.read();
+      return { dir: file.cacheDir ?? host.defaultCacheDir, capBytes: file.cacheCapGb * 1024 ** 3 };
+    },
+    async autoResume() {
+      return (await settingsStore.read()).autoResumeRenders;
+    },
+    serveTrees(videoId, folder) {
+      const held = rendering.get(videoId) ?? { blobs: BlobStore.forVideo(folder), holds: 0 };
+      held.holds += 1;
+      rendering.set(videoId, held);
+      return () => {
+        held.holds -= 1;
+        if (held.holds === 0) rendering.delete(videoId);
+      };
+    },
+    runtimeVersion() {
+      // The runtime bundle and the fonts are what a scene's pixels depend on besides its own code.
+      runtimeVersion ??= Promise.all(
+        [assets.runtimeFile, join(assets.root, 'assets', 'fonts', 'fonts.css')].map((file) =>
+          readFile(file).catch(() => Buffer.from('missing')),
+        ),
+      ).then((files) => {
+        const hash = createHash('sha256');
+        for (const file of files) hash.update(file);
+        return hash.digest('hex').slice(0, 16);
+      });
+      return runtimeVersion;
+    },
+    // A quarter of the memory, at most 3 GB, for the scene windows of one render.
+    memoryCapBytes: Math.min(totalmem() / 4, 3 * 1024 ** 3),
+  });
+
   async function closeSession(videoId: string): Promise<void> {
     const open = sessions.get(videoId);
     if (!open) return;
@@ -698,6 +767,11 @@ export function createStudioService(host: StudioHost): StudioService {
         : null;
       const result = await check(toRoot, projectFolder);
       if (!result.ok) throw new Error(firstError(result));
+      if (await render.busy(videoId)) {
+        throw new Error(
+          'This video is rendering. Wait for the render to finish, or cancel it, then move it.',
+        );
+      }
 
       await closeSession(videoId);
       // Hold the old folder while copying, so no other copy of AgentMate opens it half-way.
@@ -868,7 +942,11 @@ export function createStudioService(host: StudioHost): StudioService {
     },
 
     async sceneFile({ treeHash, path }) {
-      const stores = [...[...sessions.values()].map((s) => s.store.blobs), libraryBlobs];
+      const stores = [
+        ...[...sessions.values()].map((s) => s.store.blobs),
+        ...[...rendering.values()].map((r) => r.blobs),
+        libraryBlobs,
+      ];
       for (const blobs of stores) {
         if (!(await blobs.has(treeHash))) continue;
         let manifest = manifests.get(treeHash);
@@ -882,7 +960,50 @@ export function createStudioService(host: StudioHost): StudioService {
       return null;
     },
 
+    async renderTools() {
+      return render.tools();
+    },
+
+    async renderEstimate({ videoId }) {
+      return render.estimate({ videoId, document: session(videoId).store.document });
+    },
+
+    async startRender({ videoId, fileName }) {
+      const { store } = session(videoId);
+      // The setting in Settings turns graphics card encoding off for every video.
+      const allowGpu = (await settingsStore.read()).hwEncode;
+      const document = structuredClone(store.document);
+      document.renderSettings.hwEncode &&= allowGpu;
+      return render.start({
+        videoId,
+        document,
+        allowedHosts: await projectHosts(store.manifest.linkedProjectId),
+        fileName,
+      });
+    },
+
+    async renderJobs({ videoId }) {
+      return render.jobs(videoId);
+    },
+
+    async cancelRender({ jobId }) {
+      await render.cancel(jobId);
+    },
+
+    async retryRender({ jobId }) {
+      return render.retry(jobId);
+    },
+
+    async removeRender({ jobId }) {
+      await render.remove(jobId);
+    },
+
+    async resumeRenders() {
+      await render.resumeAfterStart();
+    },
+
     async shutdown() {
+      await render.shutdown();
       await ai.shutdown();
       await Promise.all([...sessions.keys()].map(closeSession));
     },

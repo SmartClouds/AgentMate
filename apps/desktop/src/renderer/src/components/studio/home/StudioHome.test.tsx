@@ -10,7 +10,7 @@ const { StudioHome } = await import('./StudioHome');
 
 function renderHome(overrides: Record<string, unknown> = {}) {
   const onOpen = vi.fn();
-  const view = renderWithProviders(<StudioHome onOpen={onOpen} />, {
+  const view = renderWithProviders(<StudioHome onOpen={onOpen} onOpenDevSetup={vi.fn()} />, {
     bridge: {
       'projects.list': async () => [PROJECT],
       'studio.list': async () => [],

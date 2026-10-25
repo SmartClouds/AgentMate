@@ -31,6 +31,11 @@ export const DEV_STACKS: readonly DevStack[] = [
     name: 'Docker',
     description: 'Docker Desktop and what it needs, for running containers.',
   },
+  {
+    id: 'studio',
+    name: 'Studio',
+    description: 'ffmpeg and ffprobe, which Studio renders and measures videos with.',
+  },
 ];
 
 /** The same recipes on every OS, for the tools that install the same way everywhere. */
@@ -488,6 +493,55 @@ export const DEV_ITEMS: readonly DevItem[] = [
       darwin: [{ kind: 'managed', installer: 'docker-launch' }],
       linux: [{ kind: 'terminal-only', command: 'sudo systemctl enable --now docker' }],
     },
+  },
+
+  // ---------------------------------------------------------------- Studio
+  {
+    id: 'ffmpeg',
+    name: 'ffmpeg',
+    description: 'Encodes video and audio. Studio renders every video with it.',
+    stack: 'studio',
+    minVersion: '6.0.0',
+    detect: {
+      kind: 'command',
+      command: 'ffmpeg',
+      args: ['-version'],
+      firstLineOnly: true,
+      // winget links its command-line apps here, a folder a fresh install has not put on PATH yet.
+      fallbackPaths: ['%LOCALAPPDATA%\\Microsoft\\WinGet\\Links\\ffmpeg{exe}'],
+    },
+    recipes: {
+      // The full build: it has the subtitle, x265 and VP9 encoders Studio offers.
+      win32: [{ kind: 'winget', id: 'Gyan.FFmpeg' }],
+      darwin: [{ kind: 'brew', formula: 'ffmpeg' }],
+      linux: [
+        {
+          kind: 'pkg',
+          apt: ['ffmpeg'],
+          dnf: ['ffmpeg'],
+          pacman: ['ffmpeg'],
+          note: 'On Fedora the full ffmpeg comes from RPM Fusion; enable it first if dnf finds only ffmpeg-free.',
+        },
+      ],
+    },
+    manualUrl: 'https://ffmpeg.org/download.html',
+  },
+  {
+    id: 'ffprobe',
+    name: 'ffprobe',
+    description: 'Reads the length, size and streams of a video. It comes with ffmpeg.',
+    stack: 'studio',
+    minVersion: '6.0.0',
+    dependsOn: ['ffmpeg'],
+    detect: {
+      kind: 'command',
+      command: 'ffprobe',
+      args: ['-version'],
+      firstLineOnly: true,
+      fallbackPaths: ['%LOCALAPPDATA%\\Microsoft\\WinGet\\Links\\ffprobe{exe}'],
+    },
+    recipes: everyOs({ kind: 'bundled', with: 'ffmpeg' }),
+    manualUrl: 'https://ffmpeg.org/download.html',
   },
 ];
 

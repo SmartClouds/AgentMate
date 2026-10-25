@@ -55,6 +55,10 @@ export interface UseDevSetup {
   retryEnvironment: () => void;
   stacks: string[];
   toggleStack: (id: string) => void;
+  /** Switches a stack on, leaving it on if it already is (a link that asks for it). */
+  showStack: (id: string) => void;
+  /** True once the saved choice of stacks has been read, so a change cannot overwrite it. */
+  stacksLoaded: boolean;
   /** Undefined until the machine has been described. */
   checklist: Checklist | undefined;
   /** The install run, as main has reported it. */
@@ -396,6 +400,12 @@ export function useDevSetup(): UseDevSetup {
         : [...stacks, stack.id];
       saveStacks.mutate(normalizeDevSetupStacks(next));
     },
+    showStack: (id) => {
+      const stack = DEV_STACKS.find((one) => one.id === id);
+      if (!stack || stacks.includes(stack.id)) return;
+      saveStacks.mutate(normalizeDevSetupStacks([...stacks, stack.id]));
+    },
+    stacksLoaded: settingsQuery.isSuccess,
     checklist,
     job,
     plan,

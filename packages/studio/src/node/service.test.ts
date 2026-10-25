@@ -496,3 +496,151 @@ describe('scene network per project', () => {
     });
   });
 });
+
+describe('rendering', () => {
+  async function renderableVideo(s: Setup) {
+    await s.service.setSceneHosts({ projectId: 'p1', hosts: ['cdn.example.com'] });
+    const video = await newVideo(s.service, 'p1');
+    const session = await openSession(s.service, video.id);
+    const added = await s.service.apply({
+      videoId: video.id,
+      baseSeq: session.status.seq,
+      ops: [
+        {
+          op: 'scene.add',
+          scene: createScene({ id: 's1', targetDuration: 705_600_000 }),
+          index: 0,
+        },
+        { op: 'render.set', patch: { fps: 24, resolution: '720p', hwEncode: false } },
+      ],
+      label: 'Scene',
+    });
+    if (!added.ok) throw new Error('not applied');
+    const saved = await s.service.saveSceneFiles({
+      videoId: video.id,
+      sceneId: 's1',
+      files: [{ path: 'index.html', content: '<p>scene</p>' }],
+    });
+    const treeHash = saved.document.scenario.scenes[0]?.code.treeHash as string;
+    return { video, treeHash };
+  }
+
+  async function finished(s: StudioService, jobId: string) {
+    for (let i = 0; i < 400; i++) {
+      const job = (await s.renderJobs({})).find((j) => j.id === jobId);
+      if (job && !['queued', 'running'].includes(job.status)) return job;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    throw new Error('the render did not finish');
+  }
+
+  it('renders an open video, serving its code even after the editor closes it', async () => {
+    const { fakeFrameHost } = await import('../test/fakeFrames.js');
+    const { fakeTools } = await import('../test/ffmpegTools.js');
+    const served: (string | null)[] = [];
+    const hosts: (readonly string[])[] = [];
+    let service: StudioService | null = null;
+    const frames = fakeFrameHost({ fixedSize: { width: 16, height: 9 } });
+    const s = await setup({
+      render: {
+        tools: async () => fakeTools,
+        frames: {
+          open(input) {
+            hosts.push(input.allowedHosts);
+            const source = frames.open(input);
+            return {
+              ...source,
+              async open(url) {
+                const tree = /t-([0-9a-f]{64})/.exec(url)?.[1] as string;
+                const file = await (service as StudioService).sceneFile({
+                  treeHash: tree,
+                  path: 'index.html',
+                });
+                served.push(file ? Buffer.from(file).toString('utf8') : null);
+                await source.open(url);
+              },
+            };
+          },
+        },
+      },
+    });
+    service = s.service;
+    const { video, treeHash } = await renderableVideo(s);
+    expect((await s.service.renderTools()).codecs.h264).toBeNull();
+    const estimate = await s.service.renderEstimate({ videoId: video.id });
+    expect(estimate).toMatchObject({ ok: true, frames: 24, width: 1280, height: 720 });
+
+    const job = await s.service.startRender({ videoId: video.id, fileName: 'Teaser' });
+    await expect(
+      s.service.move({ videoId: video.id, toRoot: join(s.base, 'Archive') }),
+    ).rejects.toThrow(
+      'This video is rendering. Wait for the render to finish, or cancel it, then move it.',
+    );
+    await s.service.close({ videoId: video.id });
+    const done = await finished(s.service, job.id);
+    expect(done).toMatchObject({ status: 'done', fileName: 'Teaser.mp4' });
+    expect(done.output).toBe(join(video.folder, 'renders', 'Teaser.mp4'));
+    expect(served).toEqual(['<p>scene</p>']);
+    expect(hosts).toEqual([['cdn.example.com']]);
+    // Once the render is over, a closed video's code is no longer served.
+    expect(await s.service.sceneFile({ treeHash, path: 'index.html' })).toBeNull();
+
+    await s.service.removeRender({ jobId: job.id });
+    expect(await s.service.renderJobs({ videoId: video.id })).toEqual([]);
+  });
+
+  it('encodes on the graphics card only when Settings allows it as well as the video', async () => {
+    const { fakeFrameHost } = await import('../test/fakeFrames.js');
+    const { fakeTools } = await import('../test/ffmpegTools.js');
+    const s = await setup({
+      render: {
+        tools: async () => fakeTools,
+        frames: fakeFrameHost({ fixedSize: { width: 16, height: 9 } }),
+      },
+    });
+    const { video } = await renderableVideo(s);
+    const session = await openSession(s.service, video.id);
+    await s.service.apply({
+      videoId: video.id,
+      baseSeq: session.status.seq,
+      ops: [{ op: 'render.set', patch: { hwEncode: true } }],
+      label: 'GPU',
+    });
+    const onGpu = await s.service.startRender({ videoId: video.id });
+    expect((await finished(s.service, onGpu.id)).hardware).toBe('h264_nvenc');
+    await s.service.updateSettings({ hwEncode: false });
+    const offGpu = await s.service.startRender({ videoId: video.id });
+    expect(offGpu.settings.hwEncode).toBe(false);
+    expect((await finished(s.service, offGpu.id)).hardware).toBeNull();
+    // The video keeps its own choice for when Settings allows it again.
+    expect((await openSession(s.service, video.id)).document.renderSettings.hwEncode).toBe(true);
+  });
+
+  it('cancels and retries through the service, and resumes on request', async () => {
+    const { fakeFrameHost } = await import('../test/fakeFrames.js');
+    const { fakeTools } = await import('../test/ffmpegTools.js');
+    const s = await setup({
+      render: {
+        tools: async () => fakeTools,
+        frames: fakeFrameHost({ fixedSize: { width: 16, height: 9 } }),
+      },
+    });
+    const { video } = await renderableVideo(s);
+    const job = await s.service.startRender({ videoId: video.id });
+    await s.service.cancelRender({ jobId: job.id });
+    expect((await finished(s.service, job.id)).status).toBe('cancelled');
+    await s.service.retryRender({ jobId: job.id });
+    expect((await finished(s.service, job.id)).status).toBe('done');
+    await s.service.resumeRenders();
+    expect((await s.service.renderJobs({}))[0]?.status).toBe('done');
+  });
+
+  it('says rendering is unavailable on a host without it', async () => {
+    const s = await setup();
+    const { video } = await renderableVideo(s);
+    await expect(s.service.startRender({ videoId: video.id })).rejects.toThrow(
+      'Rendering is not available here.',
+    );
+    expect((await s.service.renderTools()).ffmpeg.found).toBe(false);
+  });
+});

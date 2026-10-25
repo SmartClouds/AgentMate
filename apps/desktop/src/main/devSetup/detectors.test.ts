@@ -123,6 +123,27 @@ describe('command detection', () => {
     expect(await detect(r, 'jdk17')).toMatchObject({ state: 'found', version: '21' });
   });
 
+  it('reads ffmpeg from its first line, and leaves a nightly build without a version', async () => {
+    const release = rig({
+      script: {
+        'ffmpeg -version': OK(
+          'ffmpeg version 9.0.2-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers\nbuilt with gcc 14.2.0 (Rev2, Built by MSYS2 project)\n',
+        ),
+      },
+    });
+    expect(await detect(release, 'ffmpeg')).toMatchObject({ state: 'found', version: '9.0.2' });
+
+    // A git build names no release, and the gcc version on the next line is not ffmpeg's.
+    const nightly = rig({
+      script: {
+        'ffprobe -version': OK(
+          'ffprobe version N-118221-g3f0a3b0f9e-20260101 Copyright (c) 2007-2026\nbuilt with gcc 14.2.0\n',
+        ),
+      },
+    });
+    expect(await detect(nightly, 'ffprobe')).toMatchObject({ state: 'found', version: null });
+  });
+
   it('is absent when the command cannot be found anywhere', async () => {
     const r = rig();
 

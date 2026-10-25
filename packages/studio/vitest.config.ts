@@ -34,6 +34,9 @@ export default defineConfig({
         'src/runtime/**': { lines: 92, branches: 80 },
         'src/node/scenes/**': { lines: 95, branches: 88 },
         'src/scenes/**': { lines: 95, branches: 80 },
+        // E34: the render plan, the ffmpeg command lines, and the queue that runs them.
+        'src/render/**': { lines: 98, branches: 92 },
+        'src/node/render/**': { lines: 92, branches: 80 },
       },
     },
   },

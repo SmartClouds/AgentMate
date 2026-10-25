@@ -131,7 +131,7 @@ import {
   pruneOrphanEnvironments,
   store,
 } from './store';
-import { pruneStudioProjects, shutdownStudio } from './studio';
+import { pruneStudioProjects, resumeStudioRenders, shutdownStudio } from './studio';
 import { handleStudioScenes, STUDIO_SCHEME_PRIVILEGES } from './studio/protocol';
 import { showRosettaNotice } from './system/rosettaNotice';
 import { isE2E, keepWindowsHidden } from './testMode';
@@ -512,6 +512,11 @@ app.whenReady().then(async () => {
   if (isE2E) allowQuit();
   setSplashStatus('Loading your workspace...');
   const mainWin = createMainWindow();
+  // A render picked up again opens hidden scene windows, which wait until the main window is
+  // there, so the first window of the app is always the main one and startup has the machine.
+  mainWin.webContents.once('did-finish-load', () => {
+    void resumeStudioRenders(join(app.getPath('userData'), 'data', 'studio'));
+  });
   // The Intel build on an Apple Silicon Mac can't run git, so say so once the window is up.
   if (!isE2E) mainWin.once('show', () => void showRosettaNotice(mainWin));
   registerNotificationActivation();

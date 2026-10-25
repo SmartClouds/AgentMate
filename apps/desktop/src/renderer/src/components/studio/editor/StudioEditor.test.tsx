@@ -31,13 +31,16 @@ function applying(next: (doc: StudioDocument) => StudioDocument) {
 
 function renderEditor(overrides: Record<string, unknown> = {}) {
   const onBack = vi.fn();
-  const view = renderWithProviders(<StudioEditor videoId={ID} onBack={onBack} />, {
-    bridge: {
-      'studio.open': async () => opened(),
-      'studio.history': async () => [],
-      ...overrides,
+  const view = renderWithProviders(
+    <StudioEditor videoId={ID} onBack={onBack} onOpenDevSetup={vi.fn()} />,
+    {
+      bridge: {
+        'studio.open': async () => opened(),
+        'studio.history': async () => [],
+        ...overrides,
+      },
     },
-  });
+  );
   return { ...view, onBack };
 }
 
@@ -257,5 +260,61 @@ describe('StudioEditor undo and history', () => {
     const { user, bridge } = renderEditor();
     await user.click(await screen.findByRole('button', { name: "Open the video's folder" }));
     expect(bridge.$fn('studio.revealVideo')).toHaveBeenCalledWith(ID);
+  });
+});
+
+describe('StudioEditor rendering', () => {
+  it('opens the render dialog from the toolbar, and shows a render under way', async () => {
+    const running = {
+      id: 'j1',
+      videoId: ID,
+      title: 'Launch',
+      fileName: 'Launch.mp4',
+      status: 'running',
+      phase: 'capture',
+      done: 30,
+      total: 60,
+      settings: {
+        aspect: '16:9',
+        resolution: '1080p',
+        fps: 30,
+        quality: 'standard',
+        codec: 'h264',
+        hwEncode: true,
+        audio: { sampleRate: 48_000, lufs: -14 },
+      },
+      width: 1920,
+      height: 1080,
+      frames: 60,
+      durationSeconds: 2,
+      output: null,
+      error: null,
+      createdAt: 1,
+      startedAt: 1,
+      endedAt: null,
+      resumed: false,
+      reusedChunks: 0,
+      capturedChunks: 0,
+      hardware: null,
+    };
+    const { user } = renderEditor({
+      'studioRender.jobs': async () => [running],
+      'studioRender.tools': async () => ({
+        ffmpeg: { found: true, version: '9.0.2' },
+        ffprobe: { found: true },
+        codecs: { h264: null, h265: null, vp9: null },
+      }),
+      'studioRender.estimate': async () => ({
+        ok: false,
+        problems: ['The video has no scenes yet.'],
+      }),
+    });
+    const strip = await screen.findByRole('region', { name: 'Render under way' });
+    expect(
+      within(strip).getByRole('progressbar', { name: 'Drawing frames: 30 of 60' }),
+    ).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Render' }));
+    expect(await screen.findByRole('dialog', { name: 'Render the video' })).toBeTruthy();
+    expect(await screen.findByText('The video has no scenes yet.')).toBeTruthy();
   });
 });

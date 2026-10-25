@@ -35,7 +35,7 @@ describe('reference scenes', () => {
 
   it('ships the fonts every scene may name', async () => {
     const css = await readFile(new URL('../../assets/fonts/fonts.css', import.meta.url), 'utf8');
-    for (const family of ['Vazirmatn', 'Inter', 'Noto Naskh Arabic'])
-      expect(css).toContain(`'${family}'`);
+    const families = [...css.matchAll(/font-family:\s*["']([^"']+)["']/g)].map((m) => m[1]);
+    expect(families).toEqual(['Vazirmatn', 'Inter', 'Noto Naskh Arabic']);
   });
 });

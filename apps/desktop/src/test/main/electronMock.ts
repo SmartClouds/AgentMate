@@ -311,6 +311,8 @@ export const app = {
     electronState.paths.set(name, value);
   },
   getAppPath: (): string => electronTempRoot(),
+  /** No child processes in a test: nothing is using memory. */
+  getAppMetrics: (): { pid: number; memory: { workingSetSize: number } }[] => [],
   getVersion: (): string => electronState.version,
   getName: (): string => electronState.name,
   setName: (value: string): void => {

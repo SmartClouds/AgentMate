@@ -20,6 +20,10 @@ export function studioScenesClient() {
   return window.agentmat.studioScenes;
 }
 
+export function studioRenderClient() {
+  return window.agentmat.studioRender;
+}
+
 /** The projects AgentMate knows, for choosing which one a video belongs to. */
 export async function listProjects(): Promise<Project[]> {
   return (await window.agentmat.projects.list()) ?? [];

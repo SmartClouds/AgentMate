@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { realpath, statfs, unlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 /**
@@ -40,6 +41,11 @@ export interface RootCheckContext {
   env?: Record<string, string | undefined>;
   /** Below this much free space the folder gets a warning. */
   minFreeBytes?: number;
+  /**
+   * The user's temp folder, which is theirs even where it sits under a system folder (macOS keeps
+   * it in `/private/var/folders`). This system's own when left out.
+   */
+  tempDir?: string | null;
   probeWrite?: (existingFolder: string) => Promise<void>;
   freeBytes?: (existingFolder: string) => Promise<number>;
 }
@@ -195,9 +201,16 @@ export async function checkStorageRoot(
   }
 
   const isRoot = platform !== 'win32' && resolved === '/';
+  const tempDir =
+    context.tempDir !== undefined
+      ? context.tempDir
+      : platform === process.platform
+        ? (await resolveExisting(tmpdir(), platform)).resolved
+        : null;
+  const inTemp = tempDir !== null && isWithin(resolved, tempDir, platform);
   if (
     isRoot ||
-    systemFolders(platform, env).some((folder) => isWithin(resolved, folder, platform))
+    (!inTemp && systemFolders(platform, env).some((folder) => isWithin(resolved, folder, platform)))
   ) {
     add(
       'system-folder',

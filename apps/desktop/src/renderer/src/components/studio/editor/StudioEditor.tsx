@@ -28,7 +28,10 @@ import {
   TOOLBAR,
   toast,
   Undo,
+  Video,
 } from '../kit';
+import { RenderDialog } from '../render/RenderDialog';
+import { RenderStrip } from '../render/RenderStrip';
 import { SceneCodeDialog } from '../scenes/SceneCodeDialog';
 import { SceneMotion } from '../scenes/SceneMotion';
 import { HistoryPanel } from './HistoryPanel';
@@ -39,6 +42,7 @@ import { useStudioVideo } from './useStudioVideo';
 export interface StudioEditorProps {
   videoId: string;
   onBack: () => void;
+  onOpenDevSetup: () => void;
 }
 
 /** True when a key press belongs to a text field, which keeps its own undo. */
@@ -55,7 +59,11 @@ const SHOWN_WHEN = new Set<GenerationView['status']>(['running', 'failed', 'inte
  * epics, in panels of their own, each behind its own error boundary so one failing panel never
  * takes the editor down.
  */
-export function StudioEditor({ videoId, onBack }: StudioEditorProps): React.JSX.Element {
+export function StudioEditor({
+  videoId,
+  onBack,
+  onOpenDevSetup,
+}: StudioEditorProps): React.JSX.Element {
   const video = useStudioVideo(videoId);
   const { view } = video;
   const ai = useStudioAi(videoId, video.adopt);
@@ -68,6 +76,7 @@ export function StudioEditor({ videoId, onBack }: StudioEditorProps): React.JSX.
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
   const [applying, setApplying] = useState(false);
   const [showHistory, setShowHistory] = useState(true);
+  const [rendering, setRendering] = useState(false);
   const [title, setTitle] = useState('');
   const openTitle = view.state === 'open' ? view.document.title : '';
   useEffect(() => setTitle(openTitle), [openTitle]);
@@ -260,8 +269,14 @@ export function StudioEditor({ videoId, onBack }: StudioEditorProps): React.JSX.
           >
             <History /> History
           </Button>
+          <Button size="sm" onClick={() => setRendering(true)}>
+            <Video /> Render
+          </Button>
         </div>
       </div>
+      <ErrorBoundary title="Render">
+        <RenderStrip videoId={videoId} onOpen={() => setRendering(true)} />
+      </ErrorBoundary>
       <Notice tone="neutral" size="sm">
         Every change is saved as you make it, and the full history is kept in the video's own
         folder.
@@ -357,6 +372,15 @@ export function StudioEditor({ videoId, onBack }: StudioEditorProps): React.JSX.
         sceneNumber={document.scenario.scenes.findIndex((s) => s.id === codeSceneId) + 1}
         onOpenChange={(open) => !open && setCodeSceneId(null)}
         onChanged={(result) => void video.adopt(result)}
+      />
+      <RenderDialog
+        videoId={videoId}
+        document={document}
+        seq={view.status.seq}
+        open={rendering}
+        onOpenChange={setRendering}
+        apply={video.apply}
+        onOpenDevSetup={onOpenDevSetup}
       />
       <SaveRecipeDialog
         generation={recipeFrom}

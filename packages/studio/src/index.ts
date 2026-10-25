@@ -10,6 +10,8 @@ export * from './api.js';
 export * from './document/ops.js';
 export * from './document/schema.js';
 export * from './document/undo.js';
+export * from './render/ffmpeg.js';
+export * from './render/plan.js';
 export * from './runtime/motion.js';
 export type { SceneConfig, SceneContext, SceneDefinition, StudioState } from './runtime/runtime.js';
 export * from './scenes/config.js';

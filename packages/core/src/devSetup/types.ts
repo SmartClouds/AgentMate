@@ -9,7 +9,7 @@ import type { InstallIntent } from './recipes.js';
 export type DevOs = 'win32' | 'darwin' | 'linux';
 export type DevArch = 'x64' | 'arm64' | 'other';
 
-export type DevStackId = 'essentials' | 'dotnet' | 'flutter' | 'docker';
+export type DevStackId = 'essentials' | 'dotnet' | 'flutter' | 'docker' | 'studio';
 export type DevItemId = string;
 
 export interface DevStack {
@@ -43,6 +43,12 @@ export type DetectSpec =
       args: readonly string[];
       /** A JDK general-availability build prints only its major version. */
       majorOnly?: boolean;
+      /**
+       * Read the version from the first line only. ffmpeg names its version there and the
+       * compiler it was built with on the next line, which a nightly build (no release number)
+       * would otherwise report as its own version.
+       */
+      firstLineOnly?: boolean;
       /** Exit code 0 is the whole answer (`xcode-select -p`, `gh auth status`). */
       noVersion?: boolean;
       /**

@@ -10,12 +10,16 @@ import type {
   OpenVideoResult,
   ProjectStorageView,
   RecipeView,
+  RenderEstimateView,
+  RenderJobView,
+  RenderToolsView,
   RootCheckView,
   SaveRecipeInput,
   SaveSceneFilesInput,
   SceneCheckView,
   SceneCodeView,
   StartEditInput,
+  StartRenderInput,
   StartScenarioInput,
   StartSceneInput,
   StudioDocument,
@@ -117,6 +121,30 @@ export function createStudioScenes() {
       aspect: string;
       language: string;
     }): Promise<SceneCheckView> => ipcRenderer.invoke(IPC.studioScenes.checkStyle, input),
+  };
+}
+
+/** Studio rendering (E34): what can be rendered here, the render queue, and finished files. */
+export function createStudioRender() {
+  const ref = (jobId: string) => ({ jobId });
+  return {
+    tools: (): Promise<RenderToolsView> => ipcRenderer.invoke(IPC.studioRender.tools),
+    estimate: (videoId: string): Promise<RenderEstimateView> =>
+      ipcRenderer.invoke(IPC.studioRender.estimate, { videoId }),
+    start: (input: StartRenderInput): Promise<RenderJobView> =>
+      ipcRenderer.invoke(IPC.studioRender.start, input),
+    jobs: (videoId?: string): Promise<RenderJobView[]> =>
+      ipcRenderer.invoke(IPC.studioRender.jobs, videoId ? { videoId } : {}),
+    cancel: (jobId: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.studioRender.cancel, ref(jobId)),
+    retry: (jobId: string): Promise<RenderJobView> =>
+      ipcRenderer.invoke(IPC.studioRender.retry, ref(jobId)),
+    remove: (jobId: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.studioRender.remove, ref(jobId)),
+    reveal: (jobId: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.studioRender.reveal, ref(jobId)),
+    openFile: (jobId: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.studioRender.openFile, ref(jobId)),
   };
 }
 

@@ -2,7 +2,13 @@ import type { EffortLevel } from '@agentmat/core';
 import { z } from 'zod';
 import type { EditProposal } from './ai/edit/answer.js';
 import { editOpSchema } from './document/ops.js';
-import { ASPECTS, type Aspect, type StudioDocument } from './document/schema.js';
+import {
+  ASPECTS,
+  type Aspect,
+  type Codec,
+  type RenderSettings,
+  type StudioDocument,
+} from './document/schema.js';
 import { styleById } from './styles/presets.js';
 import { isContentLanguage } from './text/languages.js';
 
@@ -364,9 +370,108 @@ export interface GenerationDetail extends GenerationView {
   texts: { request: string; output: string | null; log: string | null }[];
 }
 
+export const studioRenderInputs = {
+  videoRef: z.object({ videoId: id }),
+  start: z.object({
+    videoId: id,
+    /** The file name without its extension; a name from the title and format when left out. */
+    fileName: z.string().trim().min(1).max(120).optional(),
+  }),
+  jobs: z.object({ videoId: id.optional() }),
+  jobRef: z.object({ jobId: id }),
+};
+export type StartRenderInput = z.infer<typeof studioRenderInputs.start>;
+
+export const RENDER_STATUSES = [
+  'queued',
+  'running',
+  'done',
+  'failed',
+  'cancelled',
+  'interrupted',
+] as const;
+export type RenderStatus = (typeof RENDER_STATUSES)[number];
+
+export interface RenderJobView {
+  id: string;
+  videoId: string;
+  /** The video's title when the render was asked for. */
+  title: string;
+  fileName: string;
+  status: RenderStatus;
+  /** What a running render is doing; null otherwise. */
+  phase: 'capture' | 'encode' | null;
+  done: number;
+  total: number;
+  settings: RenderSettings;
+  width: number;
+  height: number;
+  frames: number;
+  durationSeconds: number;
+  /** The finished file, once there is one. */
+  output: string | null;
+  error: string | null;
+  createdAt: number;
+  startedAt: number | null;
+  endedAt: number | null;
+  /** Picked up again after the app stopped in the middle of it. */
+  resumed: boolean;
+  /** Chunks taken from the cache instead of being drawn again. */
+  reusedChunks: number;
+  capturedChunks: number;
+  /** The hardware encoder used, or null for the software one. */
+  hardware: string | null;
+}
+
+export interface RenderToolsView {
+  ffmpeg: { found: boolean; version: string | null };
+  ffprobe: { found: boolean };
+  /** Why each codec cannot be used here, or null when it can. */
+  codecs: Record<Codec, string | null>;
+}
+
+export type RenderEstimateView =
+  | { ok: false; problems: string[] }
+  | {
+      ok: true;
+      width: number;
+      height: number;
+      frames: number;
+      durationSeconds: number;
+      outputBytes: number;
+      cacheBytes: number;
+      seconds: number;
+      /** Things to know before starting, such as space running low. Rendering is still allowed. */
+      warnings: string[];
+      /** The name the file gets when none is given. */
+      fileName: string;
+      extension: 'mp4' | 'webm';
+    };
+
 export type StudioEvent =
   | { type: 'library-changed' }
   | { type: 'video-changed'; videoId: string; seq: number }
   | { type: 'generation-changed'; videoId: string; generationId: string }
   /** New lines of a running CLI's output, batched. */
-  | { type: 'generation-output'; videoId: string; generationId: string; lines: string[] };
+  | { type: 'generation-output'; videoId: string; generationId: string; lines: string[] }
+  | { type: 'render-changed'; jobId: string; videoId: string }
+  /** A render ended on its own (not cancelled), for a notice the user sees wherever they are. */
+  | {
+      type: 'render-finished';
+      jobId: string;
+      videoId: string;
+      fileName: string;
+      ok: boolean;
+      error: string | null;
+    }
+  /** A render the app stopped in the middle of was picked up again at startup. */
+  | { type: 'render-resumed'; jobId: string; videoId: string; fileName: string }
+  /** A running render's progress, a few times a second. */
+  | {
+      type: 'render-progress';
+      jobId: string;
+      videoId: string;
+      phase: 'capture' | 'encode';
+      done: number;
+      total: number;
+    };

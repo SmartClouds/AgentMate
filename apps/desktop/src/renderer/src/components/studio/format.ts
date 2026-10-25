@@ -39,6 +39,29 @@ export function fieldSecondsToFlicks(text: string): number | null {
   return secondsToFlicks(Math.round(seconds * 10) / 10);
 }
 
+const BYTE_UNITS = ['KB', 'MB', 'GB', 'TB'];
+
+/** "1.2 GB", "640 KB": one decimal below 10, none above. */
+export function formatBytes(bytes: number): string {
+  let value = bytes / 1024;
+  let unit = 0;
+  while (value >= 1024 && unit < BYTE_UNITS.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return `${value < 10 ? value.toFixed(1) : Math.round(value)} ${BYTE_UNITS[unit]}`;
+}
+
+/** "45 s", "3 min 20 s", "1 h 5 min": a length or a wait, as people say it. */
+export function formatSeconds(total: number): string {
+  const seconds = Math.max(0, Math.round(total));
+  if (seconds < 60) return `${seconds} s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return seconds % 60 ? `${minutes} min ${seconds % 60} s` : `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  return minutes % 60 ? `${hours} h ${minutes % 60} min` : `${hours} h`;
+}
+
 /** Persian text in a field gets the app's Persian font; the field's direction follows its text. */
 export function scriptClass(text: string): string | undefined {
   return /[؀-ۿ]/.test(text) ? 'font-vazirmatn' : undefined;

@@ -18,6 +18,7 @@ import {
 import { studioKeys } from '../queryKeys';
 import { NewVideoDialog } from './NewVideoDialog';
 import { RecipesDialog } from './RecipesDialog';
+import { StudioSetupCard } from './StudioSetupCard';
 import { VideoGrid } from './VideoGrid';
 
 type Filter = 'all' | 'standalone' | 'project';
@@ -31,8 +32,10 @@ const FILTERS: { value: Filter; label: string }[] = [
 /** Studio's library: every video, standalone or made for a project. */
 export function StudioHome({
   onOpen,
+  onOpenDevSetup,
 }: {
   onOpen: (video: VideoSummary) => void;
+  onOpenDevSetup: () => void;
 }): React.JSX.Element {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<Filter>('all');
@@ -109,6 +112,7 @@ export function StudioHome({
           </Button>
         </div>
       </div>
+      <StudioSetupCard onOpenDevSetup={onOpenDevSetup} />
       <VideoGrid
         videos={videos.data}
         loading={videos.isLoading}

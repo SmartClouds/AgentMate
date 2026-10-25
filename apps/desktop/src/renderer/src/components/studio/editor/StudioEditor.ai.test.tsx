@@ -25,18 +25,21 @@ function renderEditor(
 ) {
   const runs = { current: options.runs ?? [] };
   const listeners: ((event: StudioEvent) => void)[] = [];
-  const view = renderWithProviders(<StudioEditor videoId={ID} onBack={vi.fn()} />, {
-    bridge: {
-      'studio.open': options.open ?? (async () => opened()),
-      'studio.history': async () => [],
-      'studio.onEvent': (listener: (event: StudioEvent) => void) => {
-        listeners.push(listener);
-        return () => listeners.splice(listeners.indexOf(listener), 1);
+  const view = renderWithProviders(
+    <StudioEditor videoId={ID} onBack={vi.fn()} onOpenDevSetup={vi.fn()} />,
+    {
+      bridge: {
+        'studio.open': options.open ?? (async () => opened()),
+        'studio.history': async () => [],
+        'studio.onEvent': (listener: (event: StudioEvent) => void) => {
+          listeners.push(listener);
+          return () => listeners.splice(listeners.indexOf(listener), 1);
+        },
+        'studioAi.generations': async () => runs.current,
+        ...options.overrides,
       },
-      'studioAi.generations': async () => runs.current,
-      ...options.overrides,
     },
-  });
+  );
   const emit = (event: StudioEvent) => act(() => listeners.forEach((l) => l(event)));
   return { ...view, runs, emit };
 }

@@ -96,8 +96,8 @@ const emit = (
   ...events: DevJobEvent[]
 ) => act(() => events.forEach((event) => bridge.$emit('devSetup.onEvent', event)));
 
-function renderPanel(bridge = bridgeFor()) {
-  return renderWithProviders(<DevSetupPanel />, { bridge });
+function renderPanel(bridge = bridgeFor(), route = '/') {
+  return renderWithProviders(<DevSetupPanel />, { bridge, route });
 }
 
 beforeEach(() => {
@@ -192,6 +192,32 @@ describe('DevSetupPanel: the checklist', () => {
       }),
     );
     expect(await screen.findByRole('region', { name: 'Docker' })).toBeTruthy();
+  });
+
+  it('switches on the stack a link asks for, keeping the stacks already chosen', async () => {
+    const { bridge } = renderPanel(
+      bridgeFor({ stacks: ['essentials', 'docker'] }),
+      '/tools?tab=dev-setup&stack=studio',
+    );
+    await waitFor(() =>
+      expect(bridge.$fn('settings.update')).toHaveBeenCalledWith({
+        devSetupStacks: ['essentials', 'docker', 'studio'],
+      }),
+    );
+    expect(await screen.findByRole('region', { name: 'Studio' })).toBeTruthy();
+    expect(screen.getByText('ffmpeg')).toBeTruthy();
+  });
+
+  it('leaves the choice alone when the stack a link asks for is already on, or is not a stack', async () => {
+    const on = renderPanel(bridgeFor({ stacks: ['essentials', 'studio'] }), '/tools?stack=studio');
+    await screen.findByRole('region', { name: 'Studio' });
+    on.unmount();
+    const other = renderPanel(bridgeFor(), '/tools?stack=nonsense');
+    await screen.findByRole('region', { name: 'Essentials' });
+    // Nothing ever saved the settings.
+    for (const { bridge } of [on, other]) {
+      expect(() => bridge.$fn('settings.update')).toThrow('has not been touched');
+    }
   });
 
   it('checks everything again from the summary card', async () => {

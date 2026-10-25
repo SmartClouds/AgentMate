@@ -1,0 +1,128 @@
+// A stand-in for ffmpeg and ffprobe, run by Node: `node fakeFfmpeg.mjs ffmpeg <args>`. It does
+// not encode anything. A chunk records how many frames it was sent and a hash of each, and the
+// finished "video" records the frames it was asked for, so tests can check what a render did
+// without a real ffmpeg. FAKE_FFMPEG (JSON in the environment) makes it misbehave on cue.
+import { createHash } from 'node:crypto';
+import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
+
+const [tool, ...args] = process.argv.slice(2);
+const cue = JSON.parse(process.env.FAKE_FFMPEG || '{}');
+const after = (flag) => args[args.indexOf(flag) + 1];
+if (cue.log) appendFileSync(cue.log, `${JSON.stringify([tool, ...args])}\n`);
+
+function fail(message) {
+  process.stderr.write(`${message}\n`);
+  process.exit(1);
+}
+
+if (tool === 'ffprobe') {
+  const file = args.at(-1);
+  const facts = JSON.parse(readFileSync(file, 'utf8'));
+  if (args.includes('csv=p=0')) {
+    process.stdout.write(`${cue.chunkFrames ?? facts.frames}\n`);
+  } else {
+    const streams = [
+      {
+        codec_type: 'video',
+        codec_name: facts.codec,
+        width: facts.width,
+        height: facts.height,
+        avg_frame_rate: `${facts.fps}/1`,
+        nb_read_packets: String(cue.outputFrames ?? facts.frames),
+      },
+    ];
+    if (!cue.noAudio) streams.push({ codec_type: 'audio', codec_name: facts.audio });
+    process.stdout.write(JSON.stringify({ streams }));
+  }
+} else if (args.includes('-version')) {
+  process.stdout.write('ffmpeg version 9.0.2-fake Copyright (c) 2000-2026\nbuilt with nothing\n');
+} else if (args.includes('-encoders')) {
+  process.stdout.write(
+    ' V..... = Video\n ------\n V....D libx264  x264\n V....D h264_nvenc  NVENC\n V....D ffv1  FFV1\n A....D aac  AAC\n',
+  );
+} else if (args.includes('-filters')) {
+  process.stdout.write(' T.. = Timeline\n ------\n .S xfade  VV->V  Cross fade.\n');
+} else if (args.includes('null')) {
+  // A test encode.
+  if (cue.brokenEncoders?.includes(after('-c:v'))) fail('Cannot load nvcuda.dll');
+} else if (args.includes('rawvideo')) {
+  const [width, height] = after('-s').split('x').map(Number);
+  const scale = args.includes('-vf') ? /scale=(\d+):(\d+)/.exec(after('-vf')) : null;
+  const size = width * height * 4;
+  const hashes = [];
+  let pending = Buffer.alloc(0);
+  let received = 0;
+  process.stdin.on('data', (data) => {
+    pending = Buffer.concat([pending, data]);
+    while (pending.length >= size) {
+      hashes.push(createHash('md5').update(pending.subarray(0, size)).digest('hex'));
+      pending = pending.subarray(size);
+      received += 1;
+      if (cue.dieAfterFrames === received) fail('Conversion failed!');
+    }
+  });
+  process.stdin.on('end', () => {
+    if (cue.failChunk) fail('Error while encoding a chunk');
+    writeFileSync(
+      args.at(-1),
+      JSON.stringify({
+        kind: 'chunk',
+        frames: hashes.length,
+        width: scale ? Number(scale[1]) : width,
+        height: scale ? Number(scale[2]) : height,
+        fps: Number(after('-r')),
+        codec: 'ffv1',
+        hashes,
+      }),
+    );
+  });
+} else if (args.includes('concat')) {
+  if (cue.failAssembly) fail(cue.failAssembly);
+  if (cue.failEncoder && after('-c:v') === cue.failEncoder)
+    fail('InitializeEncoder failed: out of memory');
+  const lists = args.flatMap((a, i) => (a === '-i' && args[i - 1] === '0' ? [args[i + 1]] : []));
+  const chunks = lists.flatMap((list) =>
+    readFileSync(list, 'utf8')
+      .trim()
+      .split('\n')
+      .map((line) =>
+        JSON.parse(readFileSync(/^file '(.*)'$/.exec(line)[1].replaceAll("'\\''", "'"), 'utf8')),
+      ),
+  );
+  const frames = Number(after('-frames:v'));
+  const step = Math.max(1, Math.floor(frames / 4));
+  const report = (frame, end) =>
+    new Promise((resolve) => {
+      process.stdout.write(
+        `frame=${frame}\nout_time_us=${frame * 1000}\nprogress=${end ? 'end' : 'continue'}\n`,
+      );
+      setTimeout(resolve, cue.slowAssembly ? 200 : 1);
+    });
+  (async () => {
+    for (let f = 0; f < frames; f += step) await report(f, false);
+    await report(frames, true);
+    const out = args.at(-1);
+    const webm = out.endsWith('.webm');
+    writeFileSync(
+      out,
+      JSON.stringify({
+        kind: 'video',
+        frames,
+        width: chunks[0].width,
+        height: chunks[0].height,
+        fps: Number(after('-r')),
+        codec: after('-c:v'),
+        audio: webm ? 'opus' : 'aac',
+        hashes: chunks.flatMap((c) => c.hashes),
+        graph: readFileSync(
+          args[
+            args.findIndex((x) => x === '-/filter_complex' || x === '-filter_complex_script') + 1
+          ],
+          'utf8',
+        ),
+      }),
+    );
+  })();
+} else {
+  fail(`fakeFfmpeg does not know ${args.join(' ')}`);
+}

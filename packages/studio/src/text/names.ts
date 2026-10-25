@@ -21,7 +21,7 @@ export function safeFolderName(name: string, fallback: string): string {
   let slug = name
     // Windows refuses these characters and every control character in a name.
     // biome-ignore lint/suspicious/noControlCharactersInRegex: removing them is the point
-    .replace(/[<>:"/|?*\u0000-\u001f\u007f]+/g, (match) => (/\s/.test(match) ? ' ' : ''))
+    .replace(/[<>:"/\\|?*\u0000-\u001f\u007f]+/g, (match) => (/\s/.test(match) ? ' ' : ''))
     .trim()
     .replace(/\s+/g, '-')
     .replace(/^[.-]+|[.-]+$/g, '');

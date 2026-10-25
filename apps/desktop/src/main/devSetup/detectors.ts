@@ -113,7 +113,14 @@ export function createDevSetupDetector(deps: DetectorDeps): DevSetupDetector {
   ): Promise<DevDetection> {
     const options = spec.timeoutMs ? { timeoutMs: spec.timeoutMs } : undefined;
     const versionOf = (result: ProbeResult): string | null =>
-      spec.noVersion ? null : parseVersion(result.output, { majorOnly: spec.majorOnly });
+      spec.noVersion
+        ? null
+        : parseVersion(
+            spec.firstLineOnly ? (result.output.split(/\r?\n/)[0] ?? '') : result.output,
+            {
+              majorOnly: spec.majorOnly,
+            },
+          );
 
     const result = await deps.probe(spec.command, spec.args, options);
     if (result.timedOut) return { state: 'error', message: 'It did not answer in time.' };

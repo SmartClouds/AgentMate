@@ -68,6 +68,21 @@ A scene page runs with no internet access and cannot reach AgentMate or your fil
 
 Animated scenes cannot reach the internet. If a project's scenes need files from a host of yours, such as its own CDN, add the host under **Scene network** in the project's **Studio** tab. Only https is allowed, and only those hosts. Leave it empty to keep scenes offline, which is the safest, since the code is written by AI.
 
+## Render the video
+
+Click **Render** in the editor's toolbar.
+
+- Pick the **Format** (landscape, vertical, square or portrait), the **Size** (720p to 4K), the **Frame rate** (24, 30 or 60) and the **Quality** (Draft to check timing, Standard for sharing, High for sharper detail, Master to edit further). Each choice is saved with the video and can be undone like any edit.
+- **Codec**: H.264 makes an MP4 that plays everywhere, H.265 an MP4 about half the size for newer players, VP9 a WebM for the web. A codec your ffmpeg cannot write is greyed out, with the reason on hover.
+- **Encode on the graphics card when it can** uses your GPU's encoder after a quick test that it works; if it fails on the video, Studio encodes it again on the processor by itself.
+- The dialog says how long the video is, its size, about how big the file will be and how long the render takes, and warns when either drive is low on space. Changing the format warns you that scenes lay out again at the new shape.
+
+The file goes in the video's `renders` folder, named from the title and format unless you type a name. Renders run one at a time; start more and they wait their turn. You can keep editing, or close the video, while one runs. Its progress shows under the toolbar, and the list in the Render dialog has **Cancel**, **Try again**, **Play**, **Show in folder** and **Remove** (which takes it off the list and keeps the file).
+
+A render is drawn in parts of about two seconds, each kept on this computer as it finishes. If AgentMate closes or crashes in the middle, the render carries on by itself the next time it starts, from the last finished part (turn that off in **Settings > Agents > Studio**). Rendering again after changing one scene draws only that scene again. A notification tells you when a render finishes, fails or is resumed.
+
+Rendering needs **ffmpeg**. If it is missing, Studio says so and **Open Dev Setup** takes you to **Agent Tools > Dev Setup** with the Studio stack switched on, where ffmpeg installs in a click.
+
 ## AI runs and recipes
 
 The History panel has two tabs. **Changes** lists every change to the video. **AI runs** lists every scenario and edit the AI was asked for, including the ones that failed or were discarded, with the CLI, model and effort used. **Details** on a run shows what you asked, the exact request sent to the CLI, its answer and its log, for the first try and each repair round.

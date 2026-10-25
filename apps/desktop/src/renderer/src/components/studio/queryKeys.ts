@@ -24,4 +24,11 @@ export const studioKeys = {
     ['studio', 'scene-code', videoId, sceneId] as const,
   styleReference: (styleId: string, aspect: string, language: string) =>
     ['studio', 'style-reference', styleId, aspect, language] as const,
+  renderTools: ['studio', 'render-tools'] as const,
+  /** Keyed by the video's edit number, so any edit asks again. */
+  renderEstimate: (videoId: string, seq: number) =>
+    ['studio', 'render-estimate', videoId, seq] as const,
+  renders: ['studio', 'renders'] as const,
+  /** Undefined for every video's renders. */
+  renderList: (videoId: string | undefined) => ['studio', 'renders', videoId ?? 'all'] as const,
 };

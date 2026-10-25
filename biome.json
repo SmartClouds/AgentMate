@@ -177,6 +177,10 @@
     {
       "includes": ["scripts/**", ".github/actions/**"],
       "linter": { "rules": { "suspicious": { "noConsole": "off" } } }
+    },
+    {
+      "includes": ["packages/studio/assets/**"],
+      "javascript": { "globals": ["Studio"] }
     }
   ],
   "assist": { "enabled": true, "actions": { "source": { "organizeImports": "on" } } }

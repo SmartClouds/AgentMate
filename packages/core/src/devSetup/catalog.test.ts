@@ -17,6 +17,7 @@ const OSES: DevOs[] = ['win32', 'darwin', 'linux'];
 const EM_DASH = String.fromCodePoint(0x2014);
 
 const ALLOWED_HOSTS = new Set([
+  'ffmpeg.org',
   'git-scm.com',
   'nodejs.org',
   'cli.github.com',

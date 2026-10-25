@@ -6,9 +6,11 @@ import { checkScene, type StudioHost, type StudioService } from '@agentmat/studi
 import { app, nativeImage } from 'electron';
 import { IPC } from '../../shared/ipcChannels';
 import { streamHeadlessCliPrompt } from '../cli/headlessStream';
+import { getDevSetupService } from '../devSetup/runtime';
 import { broadcastToWindows } from '../ipc/send';
+import { showOsNotification } from '../notifications/osNotification';
 import { store } from '../store';
-import { createOffscreenSource } from './capture/offscreenSource';
+import { createOffscreenSource, sceneWindowsMemoryBytes } from './capture/offscreenSource';
 import { openBetterSqlite } from './db';
 
 /** Scenes are checked small: a quarter of the design size is plenty to see blank or changing frames. */
@@ -61,7 +63,27 @@ export function createDesktopStudioHost(): StudioHost {
           : null;
       },
     },
-    notify: (event: StudioEvent) => broadcastToWindows(IPC.studio.onEvent, event),
+    notify: (event: StudioEvent) => {
+      broadcastToWindows(IPC.studio.onEvent, event);
+      const notice = noticeFor(event);
+      if (notice && 'videoId' in event) {
+        showOsNotification({ ...notice, route: `/studio/${event.videoId}` });
+      }
+    },
+    render: {
+      async tools() {
+        const [ffmpeg, ffprobe] = await Promise.all([
+          devSetupTool('ffmpeg'),
+          devSetupTool('ffprobe'),
+        ]);
+        return { ffmpeg, ffprobe };
+      },
+      frames: {
+        // Rendering draws at the output size: the design size times the resolution's scale.
+        open: (input) => createOffscreenSource(input),
+        memoryBytes: async () => sceneWindowsMemoryBytes(),
+      },
+    },
     scenes: {
       async check(input) {
         const treeHash = /^studio-scene:\/\/t-([0-9a-f]{64})\//.exec(input.url)?.[1];
@@ -116,6 +138,34 @@ export function createDesktopStudioHost(): StudioHost {
       },
     },
   };
+}
+
+/**
+ * Where ffmpeg and ffprobe are, as Dev Setup sees them: on PATH, or where its installer put them
+ * before PATH caught up. A miss is checked again afresh, since the user may have just installed it.
+ */
+async function devSetupTool(id: 'ffmpeg' | 'ffprobe'): Promise<{ file: string } | null> {
+  const devSetup = getDevSetupService();
+  let found = await devSetup.detect(id);
+  if (found.state !== 'found') found = await devSetup.detect(id, { force: true });
+  return found.state === 'found' ? { file: found.path ?? id } : null;
+}
+
+/**
+ * Renders take minutes, so their end (and a render picked up again at startup) is told with an OS
+ * notification, which reaches the user wherever they are. A click opens the video.
+ */
+function noticeFor(event: StudioEvent): { title: string; body: string } | null {
+  if (event.type === 'render-resumed') {
+    return {
+      title: 'Render resumed',
+      body: `Studio is carrying on with ${event.fileName} where it stopped.`,
+    };
+  }
+  if (event.type !== 'render-finished') return null;
+  return event.ok
+    ? { title: 'Render finished', body: `${event.fileName} is ready.` }
+    : { title: 'Render failed', body: `${event.fileName}: ${event.error ?? 'it stopped.'}` };
 }
 
 /** The ids of the projects AgentMate still has, for pruning Studio's per-project settings. */

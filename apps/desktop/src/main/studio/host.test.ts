@@ -6,6 +6,27 @@ import { useTempUserData } from '../../test/main/ipcHarness';
 
 /** The desktop side of Studio's host: where its folders are, and what it sees of the app. */
 
+const devSetup = vi.hoisted(() => ({
+  answers: {} as Record<string, { state: string; path?: string | null }[]>,
+  calls: [] as [string, unknown][],
+}));
+vi.mock('../devSetup/runtime', () => ({
+  getDevSetupService: () => ({
+    detect: async (id: string, options?: unknown) => {
+      devSetup.calls.push([id, options]);
+      return devSetup.answers[id]?.shift() ?? { state: 'absent' };
+    },
+  }),
+}));
+
+const notices = vi.hoisted(() => [] as { title: string; body: string; route: string }[]);
+vi.mock('../notifications/osNotification', () => ({
+  showOsNotification: (input: { title: string; body: string; route: string }) => {
+    notices.push(input);
+    return true;
+  },
+}));
+
 const userData = useTempUserData();
 
 async function load() {
@@ -43,6 +64,79 @@ describe('createDesktopStudioHost', () => {
     const win = new FakeBrowserWindow();
     createDesktopStudioHost().notify({ type: 'library-changed' });
     expect(win.webContents.sentOn(IPC.studio.onEvent)).toEqual([[{ type: 'library-changed' }]]);
+  });
+});
+
+describe('render notices', () => {
+  it('tells the user when a render ends or is picked up again, and opens the video on click', async () => {
+    const { createDesktopStudioHost } = await load();
+    notices.length = 0;
+    const host = createDesktopStudioHost();
+    host.notify({ type: 'render-changed', jobId: 'j1', videoId: 'v1' });
+    host.notify({
+      type: 'render-finished',
+      jobId: 'j1',
+      videoId: 'v1',
+      fileName: 'Launch.mp4',
+      ok: true,
+      error: null,
+    });
+    host.notify({
+      type: 'render-finished',
+      jobId: 'j2',
+      videoId: 'v1',
+      fileName: 'Teaser.mp4',
+      ok: false,
+      error: 'Scene 2 could not be drawn.',
+    });
+    host.notify({
+      type: 'render-finished',
+      jobId: 'j3',
+      videoId: 'v2',
+      fileName: 'Other.mp4',
+      ok: false,
+      error: null,
+    });
+    host.notify({ type: 'render-resumed', jobId: 'j1', videoId: 'v1', fileName: 'Launch.mp4' });
+    expect(notices).toEqual([
+      { title: 'Render finished', body: 'Launch.mp4 is ready.', route: '/studio/v1' },
+      {
+        title: 'Render failed',
+        body: 'Teaser.mp4: Scene 2 could not be drawn.',
+        route: '/studio/v1',
+      },
+      { title: 'Render failed', body: 'Other.mp4: it stopped.', route: '/studio/v2' },
+      {
+        title: 'Render resumed',
+        body: 'Studio is carrying on with Launch.mp4 where it stopped.',
+        route: '/studio/v1',
+      },
+    ]);
+  });
+});
+
+describe('the render host', () => {
+  it('finds ffmpeg and ffprobe where Dev Setup sees them, checking a miss again afresh', async () => {
+    const { createDesktopStudioHost } = await load();
+    devSetup.calls.length = 0;
+    devSetup.answers = {
+      ffmpeg: [{ state: 'found', path: 'C:/Links/ffmpeg.exe' }],
+      ffprobe: [{ state: 'absent' }, { state: 'found', path: null }],
+    };
+    const render = createDesktopStudioHost().render;
+    expect(await render?.tools()).toEqual({
+      ffmpeg: { file: 'C:/Links/ffmpeg.exe' },
+      // Found on PATH without a known location: run it by name.
+      ffprobe: { file: 'ffprobe' },
+    });
+    expect(devSetup.calls).toEqual([
+      ['ffmpeg', undefined],
+      ['ffprobe', undefined],
+      ['ffprobe', { force: true }],
+    ]);
+    devSetup.answers = {};
+    expect(await render?.tools()).toEqual({ ffmpeg: null, ffprobe: null });
+    expect(await render?.frames.memoryBytes?.()).toBe(0);
   });
 });
 

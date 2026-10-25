@@ -782,6 +782,27 @@ export const IPC = {
     // ({ styleId, aspect, language }) -> SceneCheckView
     checkStyle: 'studioScenes:checkStyle',
   },
+  /** Studio rendering (E34): finished video files, one render at a time, resumed after a crash. */
+  studioRender: {
+    // () -> RenderToolsView, whether ffmpeg is here and which codecs it can write
+    tools: 'studioRender:tools',
+    // ({ videoId }) -> RenderEstimateView, the size, length and time of a render, or what blocks it
+    estimate: 'studioRender:estimate',
+    // (StartRenderInput) -> RenderJobView, queued behind any render already running
+    start: 'studioRender:start',
+    // ({ videoId? }) -> RenderJobView[], newest first
+    jobs: 'studioRender:jobs',
+    // ({ jobId }) -> void
+    cancel: 'studioRender:cancel',
+    // ({ jobId }) -> RenderJobView, a failed, cancelled or stopped render queued again
+    retry: 'studioRender:retry',
+    // ({ jobId }) -> void, from the list only; the file stays
+    remove: 'studioRender:remove',
+    // ({ jobId }) -> void, shows the finished file in the file manager
+    reveal: 'studioRender:reveal',
+    // ({ jobId }) -> void, opens the finished file in the default player
+    openFile: 'studioRender:openFile',
+  },
   /** Relay (E26): context-sized tasks in the project, run one session each, with handoffs. */
   relay: {
     // (projectId) -> RelayBoard
