@@ -20,6 +20,11 @@ export interface FakeFrameHostOptions {
   displayScale?: number;
   /** Draws every frame at this size whatever is asked, to keep tests of big outputs quick. */
   fixedSize?: { width: number; height: number };
+  /**
+   * Pages whose address contains this draw as a caption would: see-through, with the bottom quarter
+   * half-white (premultiplied, as Chromium hands it over).
+   */
+  captionTree?: string;
 }
 
 export interface FakeFrameHost extends RenderFrameHost {
@@ -58,8 +63,13 @@ export function fakeFrameHost(options: FakeFrameHostOptions = {}): FakeFrameHost
           options.onFrame?.(host.drawn);
           if (options.failAtFrame === host.drawn)
             throw new Error('The scene page stopped (crashed).');
-          const [b, g, r] = colour(url, t);
           const bitmap = new Uint8Array(width * height * 4);
+          if (options.captionTree && url.includes(options.captionTree)) {
+            for (let i = Math.floor(height * 0.75) * width * 4; i < bitmap.length; i++)
+              bitmap[i] = 128;
+            return { width, height, bitmap };
+          }
+          const [b, g, r] = colour(url, t);
           for (let i = 0; i < bitmap.length; i += 4) {
             bitmap[i] = b;
             bitmap[i + 1] = g;

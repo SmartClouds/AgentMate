@@ -143,6 +143,8 @@ export function readTool(
   tool: ToolCommand,
   args: readonly string[],
   timeoutMs = 15_000,
+  /** Which output to return: ffmpeg prints measurements (loudnorm, ebur128) to stderr. */
+  stream: 'stdout' | 'stderr' = 'stdout',
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn(tool.file, [...(tool.args ?? []), ...args], {
@@ -151,6 +153,7 @@ export function readTool(
     });
     let out = '';
     let err = '';
+    let errAll = '';
     child.stdout.setEncoding('utf8');
     child.stdout.on('data', (chunk: string) => {
       out += chunk;
@@ -158,6 +161,8 @@ export function readTool(
     child.stderr.setEncoding('utf8');
     child.stderr.on('data', (chunk: string) => {
       err = (err + chunk).slice(-STDERR_KEEP);
+      // Measurements come at the very end; the last 64 KB is plenty and bounds a chatty run.
+      if (stream === 'stderr') errAll = (errAll + chunk).slice(-65_536);
     });
     const timer = setTimeout(() => {
       child.kill();
@@ -175,7 +180,7 @@ export function readTool(
     });
     child.once('close', (code) => {
       clearTimeout(timer);
-      if (code === 0) resolve(out);
+      if (code === 0) resolve(stream === 'stdout' ? out : errAll);
       else
         reject(new FfmpegError(err.trim().split(/\r?\n/).pop() || `Exit code ${code}.`, err, code));
     });
@@ -276,5 +281,64 @@ export async function probeVideo(tools: FfmpegTools, file: string): Promise<Vide
     fps: den ? num / den : 0,
     videoCodec: String(video.codec_name),
     audioCodec: audio ? String(audio.codec_name) : null,
+  };
+}
+
+export interface MediaProbe {
+  kind: 'video' | 'audio' | 'image';
+  /** Seconds; null for a still image. */
+  seconds: number | null;
+  width: number | null;
+  height: number | null;
+  fps: number | null;
+  hasAudio: boolean;
+  hasVideo: boolean;
+}
+
+/**
+ * What an imported file is. Cover art in a music file comes back as a video stream marked as an
+ * attached picture, so it does not make the file a video; a picture format with no length is a
+ * still image.
+ */
+export async function probeMedia(tools: FfmpegTools, file: string): Promise<MediaProbe> {
+  const out = await readTool(tools.ffprobe, [
+    '-v',
+    'error',
+    '-show_entries',
+    'format=duration,format_name:stream=codec_type,codec_name,width,height,avg_frame_rate:stream_disposition=attached_pic',
+    '-of',
+    'json',
+    file,
+  ]);
+  const parsed = JSON.parse(out) as {
+    format?: { duration?: string; format_name?: string };
+    streams?: {
+      codec_type?: string;
+      width?: number;
+      height?: number;
+      avg_frame_rate?: string;
+      disposition?: { attached_pic?: number };
+    }[];
+  };
+  const streams = parsed.streams ?? [];
+  const video = streams.find((s) => s.codec_type === 'video' && !s.disposition?.attached_pic);
+  const hasAudio = streams.some((s) => s.codec_type === 'audio');
+  const format = parsed.format?.format_name ?? '';
+  const duration = Number(parsed.format?.duration);
+  const timed = Number.isFinite(duration) && duration > 0;
+  const still = !!video && !hasAudio && (/(^|,)image2|_pipe$/.test(format) || !timed);
+  if (!video && !hasAudio)
+    throw new FfmpegError(`${file} has no picture or sound Studio can use.`, out, 0);
+  const [num = 0, den = 1] = String(video?.avg_frame_rate ?? '0/1')
+    .split('/')
+    .map(Number);
+  return {
+    kind: still ? 'image' : video ? 'video' : 'audio',
+    seconds: still || !timed ? null : duration,
+    width: video?.width ?? null,
+    height: video?.height ?? null,
+    fps: video && !still && den ? num / den : null,
+    hasAudio,
+    hasVideo: !!video,
   };
 }

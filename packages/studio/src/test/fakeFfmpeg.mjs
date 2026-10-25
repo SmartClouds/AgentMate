@@ -18,7 +18,10 @@ function fail(message) {
 if (tool === 'ffprobe') {
   const file = args.at(-1);
   const facts = JSON.parse(readFileSync(file, 'utf8'));
-  if (args.includes('csv=p=0')) {
+  if (facts.probe) {
+    // A media file for import: its JSON says what ffprobe should report about it.
+    process.stdout.write(JSON.stringify(facts.probe));
+  } else if (args.includes('csv=p=0')) {
     process.stdout.write(`${cue.chunkFrames ?? facts.frames}\n`);
   } else {
     const streams = [
@@ -42,6 +45,22 @@ if (tool === 'ffprobe') {
   );
 } else if (args.includes('-filters')) {
   process.stdout.write(' T.. = Timeline\n ------\n .S xfade  VV->V  Cross fade.\n');
+} else if (args.includes('null') && args.includes('[aout]')) {
+  // loudnorm's measuring pass prints its findings on stderr.
+  process.stderr.write(
+    cue.loudnorm ??
+      [
+        '[Parsed_loudnorm_0 @ 0x1]',
+        '{',
+        '"input_i" : "-35.75",',
+        '"input_tp" : "-35.05",',
+        '"input_lra" : "0.00",',
+        '"input_thresh" : "-45.75",',
+        '"target_offset" : "0.03"',
+        '}',
+        '',
+      ].join('\n'),
+  );
 } else if (args.includes('null')) {
   // A test encode.
   if (cue.brokenEncoders?.includes(after('-c:v'))) fail('Cannot load nvcuda.dll');
@@ -123,6 +142,16 @@ if (tool === 'ffprobe') {
       }),
     );
   })();
+} else if (args.includes('s16le') && args.at(-1) === '-') {
+  // Waveform samples: a second of a soft sound at 8 kHz, 16-bit mono.
+  if (cue.failDerivative === 'peaks') fail('Invalid data found when processing input');
+  const samples = new Int16Array(8000).map((_, i) => (i % 80 === 0 ? 16384 : 100));
+  process.stdout.write(Buffer.from(samples.buffer));
+} else if (args.includes('-i') && /\.(mp4|jpg)$/.test(args.at(-1))) {
+  // A preview file: proxy, poster or thumbnail strip.
+  const out = args.at(-1);
+  if (cue.failDerivative && out.includes(cue.failDerivative)) fail(`Could not make ${out}`);
+  writeFileSync(out, JSON.stringify({ kind: 'derivative', args }));
 } else {
   fail(`fakeFfmpeg does not know ${args.join(' ')}`);
 }

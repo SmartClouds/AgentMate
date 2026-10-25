@@ -318,3 +318,14 @@ describe('StudioEditor rendering', () => {
     expect(await screen.findByText('The video has no scenes yet.')).toBeTruthy();
   });
 });
+
+describe('StudioEditor views', () => {
+  it('switches between the scenario and the timeline', async () => {
+    const { user } = renderEditor({ 'studioMedia.list': async () => [] });
+    await user.click(await screen.findByRole('radio', { name: 'Timeline' }));
+    expect(await screen.findByRole('region', { name: 'Timeline' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Media' })).toBeTruthy();
+    await user.click(screen.getByRole('radio', { name: 'Scenario' }));
+    expect(screen.queryByRole('region', { name: 'Timeline' })).toBeNull();
+  });
+});

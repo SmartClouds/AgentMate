@@ -7,8 +7,12 @@ import {
   assemblyGraph,
   chunkArgs,
   type FfmpegCapabilities,
+  type LoudnormMeasure,
+  loudnessArgs,
+  loudnessGraph,
+  parseLoudnorm,
 } from '../../render/ffmpeg.js';
-import type { PlannedScene, RenderPlan } from '../../render/plan.js';
+import type { PlannedCaption, PlannedScene, RenderPlan } from '../../render/plan.js';
 import { sceneUrl } from '../../scenes/url.js';
 import type { SceneFrame, SceneFrameSource } from '../scenes/check.js';
 import {
@@ -17,6 +21,7 @@ import {
   type FfmpegTools,
   probeVideo,
   RenderCancelledError,
+  readTool,
   startTool,
 } from './ffmpegTool.js';
 
@@ -57,8 +62,10 @@ export interface RenderJobInput {
   hardware: string | null;
   frames: RenderFrameHost;
   allowedHosts: readonly string[];
-  /** This video's chunk cache (`<cache>/<videoId>/scenes`). */
+  /** This video's chunk cache (`<cache>/<videoId>/scenes`); caption stills go beside it. */
   cacheDir: string;
+  /** Where an imported file is, by hash, for the clips that play one. */
+  mediaPath?: (hash: string) => string;
   /** Scratch files for this render: concat lists, the graph. */
   workDir: string;
   /** The finished file. Written beside itself first, renamed when checked. */
@@ -203,6 +210,85 @@ export async function writeChunk(input: WriteChunkInput): Promise<void> {
   }
 }
 
+function mediaFile(input: RenderJobInput, hash: string | null): string {
+  if (!hash || !input.mediaPath) throw new Error('A clip plays a file this render cannot find.');
+  return input.mediaPath(hash);
+}
+
+/** Chromium hands frames over with colour already multiplied by alpha; a PNG wants it apart. */
+export function unpremultiply(bgra: Uint8Array): Uint8Array {
+  const out = new Uint8Array(bgra.length);
+  for (let i = 0; i < bgra.length; i += 4) {
+    const a = bgra[i + 3] as number;
+    out[i + 3] = a;
+    if (a === 0) continue;
+    for (let c = 0; c < 3; c++)
+      out[i + c] = Math.min(255, Math.round(((bgra[i + c] as number) * 255) / a));
+  }
+  return out;
+}
+
+/**
+ * A caption drawn once by the built-in caption page in a scene window with a see-through
+ * background, kept as a PNG in the cache under what it shows.
+ */
+async function captionStill(input: RenderJobInput, caption: PlannedCaption): Promise<string> {
+  const { plan } = input;
+  const dir = join(dirname(input.cacheDir), 'captions');
+  const file = join(
+    dir,
+    `${createHash('sha256').update(caption.cacheInputs).digest('hex').slice(0, 40)}.png`,
+  );
+  if (await exists(file)) return file;
+  await mkdir(dir, { recursive: true });
+  const source = input.frames.open({
+    width: plan.design.width,
+    height: plan.design.height,
+    scale: plan.scale,
+    allowedHosts: [],
+  });
+  let frame: SceneFrame;
+  try {
+    await source.open(sceneUrl(caption.treeHash, caption.config));
+    if (!(await source.waitReady(input.readyTimeoutMs ?? 15_000))) {
+      throw new Error('The caption page did not get ready to draw.');
+    }
+    await source.frame(0);
+    frame = await source.frame(0);
+  } finally {
+    await source.close().catch(() => undefined);
+  }
+  const temp = file.replace(/\.png$/, '.part.png');
+  const args = [
+    '-hide_banner',
+    '-loglevel',
+    'error',
+    '-y',
+    '-f',
+    'rawvideo',
+    '-pix_fmt',
+    'bgra',
+    '-s',
+    `${frame.width}x${frame.height}`,
+    '-i',
+    '-',
+  ];
+  if (frame.width !== plan.width || frame.height !== plan.height) {
+    args.push('-vf', `scale=${plan.width}:${plan.height}:flags=lanczos`);
+  }
+  args.push('-frames:v', '1', temp);
+  const run = startTool(input.tools.ffmpeg, args, { stdin: true, signal: input.signal });
+  run.stdin?.end(unpremultiply(frame.bitmap));
+  try {
+    await run.done;
+    await rename(temp, file);
+  } catch (error) {
+    await rm(temp, { force: true });
+    throw error;
+  }
+  return file;
+}
+
 /** A concat demuxer list. Paths are quoted, with any quote in them escaped as the demuxer reads it. */
 export function concatList(files: readonly string[]): string {
   return `${files.map((f) => `file '${f.replaceAll('\\', '/').replaceAll("'", "'\\''")}'`).join('\n')}\n`;
@@ -304,8 +390,34 @@ export async function runRenderJob(input: RenderJobInput): Promise<RenderJobResu
   }
 
   throwIfCancelled(signal);
+  const overlayFiles: string[] = [];
+  for (const overlay of plan.overlays ?? []) {
+    throwIfCancelled(signal);
+    if (overlay.caption) overlayFiles.push(await captionStill(input, overlay.caption));
+    else overlayFiles.push(mediaFile(input, overlay.hash));
+  }
+  const audioFiles = (plan.audio ?? []).map((sound) => mediaFile(input, sound.hash));
+  let loudness: LoudnormMeasure | null = null;
+  if (audioFiles.length > 0) {
+    // The first pass measures the mix, so the second can bring it to the target exactly.
+    const measureGraph = join(input.workDir, 'loudness.txt');
+    await writeFile(measureGraph, loudnessGraph(plan));
+    const printed = await readTool(
+      input.tools.ffmpeg,
+      loudnessArgs({
+        plan,
+        audioFiles,
+        graphFile: measureGraph,
+        version: input.capabilities.version,
+      }),
+      10 * 60_000,
+      'stderr',
+    );
+    loudness = parseLoudnorm(printed);
+  }
+  throwIfCancelled(signal);
   const graphFile = join(input.workDir, 'graph.txt');
-  await writeFile(graphFile, assemblyGraph(plan));
+  await writeFile(graphFile, assemblyGraph(plan, loudness));
   const ext = extname(input.output);
   const temp = `${input.output.slice(0, -ext.length)}.part${ext}`;
   await mkdir(dirname(input.output), { recursive: true });
@@ -316,6 +428,8 @@ export async function runRenderJob(input: RenderJobInput): Promise<RenderJobResu
       assemblyArgs({
         plan,
         sceneLists,
+        overlayFiles,
+        audioFiles,
         graphFile,
         output: temp,
         version: input.capabilities.version,

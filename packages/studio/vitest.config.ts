@@ -37,6 +37,10 @@ export default defineConfig({
         // E34: the render plan, the ffmpeg command lines, and the queue that runs them.
         'src/render/**': { lines: 98, branches: 92 },
         'src/node/render/**': { lines: 92, branches: 80 },
+        // E35: the timeline model, imported media and its preview files.
+        'src/timeline/**': { lines: 98, branches: 90 },
+        'src/node/media/**': { lines: 92, branches: 80 },
+        'src/media/**': { lines: 100, branches: 95 },
       },
     },
   },

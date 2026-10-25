@@ -23,8 +23,10 @@ import {
   LoadFailure,
   Notice,
   Redo,
+  SEGMENT_TRACK,
   SimpleTooltip,
   Skeleton,
+  segmentClass,
   TOOLBAR,
   toast,
   Undo,
@@ -34,6 +36,7 @@ import { RenderDialog } from '../render/RenderDialog';
 import { RenderStrip } from '../render/RenderStrip';
 import { SceneCodeDialog } from '../scenes/SceneCodeDialog';
 import { SceneMotion } from '../scenes/SceneMotion';
+import { TimelineView } from '../timeline/TimelineView';
 import { HistoryPanel } from './HistoryPanel';
 import { LockedCard } from './LockedCard';
 import { ScenarioPanel } from './ScenarioPanel';
@@ -77,6 +80,7 @@ export function StudioEditor({
   const [applying, setApplying] = useState(false);
   const [showHistory, setShowHistory] = useState(true);
   const [rendering, setRendering] = useState(false);
+  const [mode, setMode] = useState<'scenario' | 'timeline'>('scenario');
   const [title, setTitle] = useState('');
   const openTitle = view.state === 'open' ? view.document.title : '';
   useEffect(() => setTitle(openTitle), [openTitle]);
@@ -198,6 +202,20 @@ export function StudioEditor({
     <div className="flex flex-col gap-2">
       <div className={TOOLBAR}>
         {back}
+        <div className={SEGMENT_TRACK} role="radiogroup" aria-label="View">
+          {(['scenario', 'timeline'] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={mode === value}
+              className={segmentClass(mode === value)}
+              onClick={() => setMode(value)}
+            >
+              {value === 'scenario' ? 'Scenario' : 'Timeline'}
+            </button>
+          ))}
+        </div>
         <Input
           aria-label="Video title"
           value={title}
@@ -309,7 +327,18 @@ export function StudioEditor({
           />
         )}
       </ErrorBoundary>
-      <div className={cn('grid gap-2', showHistory && 'lg:grid-cols-[minmax(0,1fr)_20rem]')}>
+      {mode === 'timeline' && (
+        <ErrorBoundary title="Timeline">
+          <TimelineView videoId={videoId} document={document} apply={video.apply} />
+        </ErrorBoundary>
+      )}
+      <div
+        className={cn(
+          'grid gap-2',
+          showHistory && 'lg:grid-cols-[minmax(0,1fr)_20rem]',
+          mode === 'timeline' && 'hidden',
+        )}
+      >
         <ErrorBoundary title="Scenario">
           <ScenarioPanel
             document={document}

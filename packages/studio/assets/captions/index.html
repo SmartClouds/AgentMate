@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
+  .line {
+    position: absolute; left: 50%; bottom: 8vh; transform: translateX(-50%);
+    max-width: 82vw; box-sizing: border-box; padding: 0.35em 0.8em; border-radius: 0.45em;
+    background: rgba(12, 14, 18, 0.62); color: #fff; text-align: center;
+    font: 600 4.6vh/1.5 Inter, sans-serif; overflow-wrap: anywhere;
+  }
+  .line[lang|="fa"], .line[lang|="ar"], .line[lang|="ur"] { font-family: Vazirmatn, 'Noto Naskh Arabic', sans-serif; }
+  :root[data-portrait] .line { font-size: 3.2vh; bottom: 14vh; }
+</style>
+</head>
+<body>
+<div class="line" id="line"></div>
+<script>
+// Studio's built-in caption: one line of text near the bottom of the frame, on a soft dark band,
+// drawn by Chromium so Persian and Arabic are shaped and run right to left. Rendered once per
+// caption with a see-through background and laid over the video.
+Studio.scene({
+  setup(ctx) {
+    const line = document.getElementById('line');
+    line.textContent = String(ctx.params.text ?? '');
+    line.lang = ctx.lang;
+    line.dir = ctx.dir;
+    if (ctx.height > ctx.width) document.documentElement.dataset.portrait = '';
+  },
+  render() {
+    // A caption is still: every moment shows the same line.
+  },
+});
+</script>
+</body>
+</html>

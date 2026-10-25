@@ -1,7 +1,7 @@
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { EffortLevel } from '@agentmat/core';
-import { type EditProposal, readEditAnswer } from '../../ai/edit/answer.js';
+import { type EditMedia, type EditProposal, readEditAnswer } from '../../ai/edit/answer.js';
 import {
   buildEditRequest,
   buildRepairRequest,
@@ -136,8 +136,12 @@ interface Plan<T> {
   params: GenerationParams;
   run: RunSettingsInput;
   parentId: string | null;
-  request: (doc: StudioDocument) => string;
-  read: (text: string, doc: StudioDocument) => AnswerRead<T> | Promise<AnswerRead<T>>;
+  request: (doc: StudioDocument, store: VideoStore) => string;
+  read: (
+    text: string,
+    doc: StudioDocument,
+    store: VideoStore,
+  ) => AnswerRead<T> | Promise<AnswerRead<T>>;
   accept: (value: T, store: VideoStore, generationId: string) => Promise<void>;
   /** A fix round's request; the default quotes the answer back with the problems. */
   repair?: (original: string, text: string, issues: string[]) => string;
@@ -150,6 +154,13 @@ interface SceneAnswer {
 }
 
 const TEXT_FILE = /\.(html|js|mjs|css|json|svg|txt)$/i;
+
+/** The video's imported files, as edits by typing name them. */
+function editMedia(store: VideoStore): EditMedia[] {
+  return store
+    .mediaList()
+    .map((m) => ({ hash: m.hash, name: m.name, kind: m.kind, duration: m.info.duration }));
+}
 
 /** The text files of a tree, for showing the current code to the AI when changing a scene. */
 async function filesOfTree(store: VideoStore, treeHash: string): Promise<FencedFile[]> {
@@ -204,7 +215,7 @@ export function createStudioAi(deps: StudioAiDeps) {
 
     try {
       await mkdir(workDir, { recursive: true });
-      const original = plan.request(store.document);
+      const original = plan.request(store.document, store);
       let request = original;
       for (let round = 0; round <= maxRepairs; round++) {
         await writeFile(join(workDir, REQUEST_FILE), request, 'utf8');
@@ -256,7 +267,7 @@ export function createStudioAi(deps: StudioAiDeps) {
           finish({ attempts, cliName, status: 'failed', error: attempt.error });
           return;
         }
-        const read = await plan.read(result.text, store.document);
+        const read = await plan.read(result.text, store.document, store);
         if (read.ok) {
           // Everything in the work folder is in the blobs by now.
           await rm(workDir, { recursive: true, force: true });
@@ -387,8 +398,14 @@ export function createStudioAi(deps: StudioAiDeps) {
       params: {},
       run: input.run,
       parentId,
-      request: (doc) => buildEditRequest({ instruction: input.instruction, document: doc }),
-      read: (text, doc) => readEditAnswer(text, doc, deps.newId),
+      request: (doc, store) =>
+        buildEditRequest({
+          instruction: input.instruction,
+          document: doc,
+          media: editMedia(store),
+        }),
+      read: (text, doc, store) =>
+        readEditAnswer(text, doc, deps.newId, { media: editMedia(store) }),
       accept: async (proposal, store, generationId) => {
         store.updateGeneration(generationId, {
           status: 'proposed',

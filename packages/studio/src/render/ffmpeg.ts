@@ -172,13 +172,22 @@ function seconds(frames: number, fps: number): string {
   return (frames / fps).toFixed(6);
 }
 
+/** Seconds with six decimals, as ffmpeg reads them. */
+function secs(value: number): string {
+  return value.toFixed(6);
+}
+
 /**
  * The filter graph that joins the scenes: each scene's frames, put on one time base, then joined
  * to the next with its `xfade` transition or a plain cut. Each transition starts where the video so
- * far ends less the transition's length, so its overlap comes out of both scenes.
+ * far ends less the transition's length, so its overlap comes out of both scenes. Then the clips
+ * over the scenes are laid on top, each for its own stretch of time, and the sound is mixed.
  */
-export function assemblyGraph(plan: RenderPlan): string {
+export function assemblyGraph(plan: RenderPlan, loudnorm: LoudnormMeasure | null = null): string {
+  const overlays = plan.overlays ?? [];
+  const audio = plan.audio ?? [];
   const lines: string[] = [];
+  const scenesOut = overlays.length > 0 ? 'vbase' : 'vout';
   plan.scenes.forEach((_, i) => {
     lines.push(`[${i}:v]settb=AVTB,fps=${plan.fps},setpts=PTS-STARTPTS,format=yuv420p[s${i}]`);
   });
@@ -188,7 +197,7 @@ export function assemblyGraph(plan: RenderPlan): string {
     const scene = plan.scenes[i];
     if (!scene) continue;
     const transition = plan.transitions.find((t) => t.after === i - 1);
-    const label = i === plan.scenes.length - 1 ? 'vout' : `j${i}`;
+    const label = i === plan.scenes.length - 1 ? scenesOut : `j${i}`;
     if (transition) {
       const offset = frames - transition.frames;
       lines.push(
@@ -201,8 +210,78 @@ export function assemblyGraph(plan: RenderPlan): string {
     }
     current = label;
   }
-  if (plan.scenes.length === 1) lines.push('[s0]null[vout]');
+  if (plan.scenes.length === 1) lines.push(`[s0]null[${scenesOut}]`);
+
+  // Each clip is fitted inside the frame (bars where its shape differs: black for a video,
+  // see-through for a picture or caption), faded, and shifted to start at its own time.
+  const first = plan.scenes.length;
+  current = scenesOut;
+  overlays.forEach((overlay, k) => {
+    const length = overlay.frames / plan.fps;
+    const start = overlay.startFrame / plan.fps;
+    const bars = overlay.kind === 'video' ? 'black' : 'black@0';
+    let chain = `[${first + k}:v]scale=${plan.width}:${plan.height}:force_original_aspect_ratio=decrease,pad=${plan.width}:${plan.height}:(ow-iw)/2:(oh-ih)/2:color=${bars},format=yuva420p,fps=${plan.fps}`;
+    if (overlay.fadeInSeconds > 0)
+      chain += `,fade=t=in:st=0:d=${secs(overlay.fadeInSeconds)}:alpha=1`;
+    if (overlay.fadeOutSeconds > 0)
+      chain += `,fade=t=out:st=${secs(length - overlay.fadeOutSeconds)}:d=${secs(overlay.fadeOutSeconds)}:alpha=1`;
+    lines.push(`${chain},setpts=PTS-STARTPTS+${secs(start)}/TB[o${k}]`);
+    const label = k === overlays.length - 1 ? 'vout' : `l${k}`;
+    lines.push(
+      `[${current}][o${k}]overlay=0:0:eof_action=pass:enable='between(t,${secs(start)},${secs(start + length)})'[${label}]`,
+    );
+    current = label;
+  });
+
+  if (audio.length > 0) {
+    lines.push(...audioGraphLines(plan, first + overlays.length, loudnorm ?? 'none'));
+  }
   return `${lines.join(';\n')}\n`;
+}
+
+/** loudnorm's first-pass measurements, which the second pass needs to hit the target exactly. */
+export interface LoudnormMeasure {
+  inputI: string;
+  inputTp: string;
+  inputLra: string;
+  inputThresh: string;
+  targetOffset: string;
+}
+
+/**
+ * The mix: each sound on one format, faded, set to its volume, delayed to its start; all summed
+ * without lowering any (amix would otherwise divide by the count); padded or cut to the video's
+ * length; then brought to the loudness target. `measure` prints loudnorm's measurements instead.
+ */
+function audioGraphLines(
+  plan: RenderPlan,
+  firstInput: number,
+  loudnorm: LoudnormMeasure | 'measure' | 'none',
+): string[] {
+  const audio = plan.audio ?? [];
+  const lines: string[] = [];
+  audio.forEach((sound, k) => {
+    let chain = `[${firstInput + k}:a]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,asetpts=PTS-STARTPTS`;
+    if (sound.fadeInSeconds > 0) chain += `,afade=t=in:st=0:d=${secs(sound.fadeInSeconds)}`;
+    if (sound.fadeOutSeconds > 0)
+      chain += `,afade=t=out:st=${secs(sound.seconds - sound.fadeOutSeconds)}:d=${secs(sound.fadeOutSeconds)}`;
+    chain += `,volume=${sound.gain.toFixed(4)},adelay=${Math.round(sound.startSeconds * 1000)}:all=1`;
+    lines.push(`${chain}[a${k}]`);
+  });
+  const inputs = audio.map((_, k) => `[a${k}]`).join('');
+  lines.push(
+    audio.length > 1
+      ? `${inputs}amix=inputs=${audio.length}:normalize=0:duration=longest:dropout_transition=0[amix]`
+      : `${inputs}anull[amix]`,
+  );
+  const target = plan.loudness ?? -14;
+  let tail = `[amix]apad,atrim=0:${secs(plan.totalFrames / plan.fps)},asetpts=PTS-STARTPTS`;
+  if (loudnorm === 'measure') tail += `,loudnorm=I=${target}:TP=-1.5:LRA=11:print_format=json`;
+  else if (loudnorm !== 'none') {
+    tail += `,loudnorm=I=${target}:TP=-1.5:LRA=11:measured_I=${loudnorm.inputI}:measured_TP=${loudnorm.inputTp}:measured_LRA=${loudnorm.inputLra}:measured_thresh=${loudnorm.inputThresh}:offset=${loudnorm.targetOffset}:linear=true,aresample=48000`;
+  }
+  lines.push(`${tail}[aout]`);
+  return lines;
 }
 
 /** Whether this ffmpeg takes a filter graph file as `-/filter_complex` (7.1 and later). */
@@ -212,10 +291,42 @@ export function readsFilterFileOption(version: string | null): boolean {
   return major > 7 || (major === 7 && minor >= 1);
 }
 
+function graphOption(version: string | null): string {
+  return readsFilterFileOption(version) ? '-/filter_complex' : '-filter_complex_script';
+}
+
+/** Inputs for the clips over the scenes: a video from where the clip starts, a still looped. */
+function overlayInputs(plan: RenderPlan, files: readonly string[]): string[] {
+  const args: string[] = [];
+  (plan.overlays ?? []).forEach((overlay, k) => {
+    const length = secs(overlay.frames / plan.fps);
+    const file = files[k] as string;
+    if (overlay.kind === 'video')
+      args.push('-ss', secs(overlay.inSeconds), '-t', length, '-i', file);
+    else args.push('-loop', '1', '-framerate', String(plan.fps), '-t', length, '-i', file);
+  });
+  return args;
+}
+
+function audioInputs(plan: RenderPlan, files: readonly string[]): string[] {
+  return (plan.audio ?? []).flatMap((sound, k) => [
+    '-ss',
+    secs(sound.inSeconds),
+    '-t',
+    secs(sound.seconds),
+    '-i',
+    files[k] as string,
+  ]);
+}
+
 export interface AssemblyInput {
   plan: RenderPlan;
   /** One concat list per scene, naming that scene's chunk files in order. */
   sceneLists: string[];
+  /** One per overlay in the plan: the media file, or the caption's still. */
+  overlayFiles?: string[];
+  /** One per sound in the plan. */
+  audioFiles?: string[];
   graphFile: string;
   output: string;
   version: string | null;
@@ -223,31 +334,76 @@ export interface AssemblyInput {
 }
 
 /**
- * The command that turns the scene chunks into the finished file. The graph goes in a file, which
- * keeps a long video's command line clear of the 32 KB limit on Windows. Until voice arrives (E36)
- * the video carries a silent stereo track, since some players and sites expect one.
+ * The command that turns the scene chunks and the clips into the finished file. The graph goes in
+ * a file, which keeps a long video's command line clear of the 32 KB limit on Windows. A video with
+ * no sound still carries a silent stereo track, since some players and sites expect one.
  */
 export function assemblyArgs(input: AssemblyInput): string[] {
   const { plan } = input;
   const args = ['-hide_banner', '-loglevel', 'error', '-nostats', '-progress', 'pipe:1', '-y'];
   for (const list of input.sceneLists) args.push('-f', 'concat', '-safe', '0', '-i', list);
-  const audioIndex = input.sceneLists.length;
-  args.push('-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo');
-  args.push(readsFilterFileOption(input.version) ? '-/filter_complex' : '-filter_complex_script');
-  args.push(input.graphFile);
-  args.push('-map', '[vout]', '-map', `${audioIndex}:a`);
+  args.push(...overlayInputs(plan, input.overlayFiles ?? []));
+  const silent = (plan.audio ?? []).length === 0;
+  const silentIndex = input.sceneLists.length + (plan.overlays ?? []).length;
+  if (silent) args.push('-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo');
+  else args.push(...audioInputs(plan, input.audioFiles ?? []));
+  args.push(graphOption(input.version), input.graphFile);
+  args.push('-map', '[vout]', '-map', silent ? `${silentIndex}:a` : '[aout]');
   args.push(...videoEncoderArgs(plan.settings, input.hardware ?? null));
   if (containerFor(plan.settings.codec) === 'webm') args.push('-c:a', 'libopus', '-b:a', '128k');
   else args.push('-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart');
-  args.push(
-    '-r',
-    String(plan.fps),
-    '-frames:v',
-    String(plan.totalFrames),
-    '-shortest',
-    input.output,
-  );
+  args.push('-r', String(plan.fps), '-frames:v', String(plan.totalFrames));
+  if (silent) args.push('-shortest');
+  args.push(input.output);
   return args;
+}
+
+/** The mix alone, for loudnorm's measuring pass: its graph and its command. */
+export function loudnessGraph(plan: RenderPlan): string {
+  return `${audioGraphLines(plan, 0, 'measure').join(';\n')}\n`;
+}
+
+export function loudnessArgs(input: {
+  plan: RenderPlan;
+  audioFiles: string[];
+  graphFile: string;
+  version: string | null;
+}): string[] {
+  return [
+    '-hide_banner',
+    '-nostats',
+    ...audioInputs(input.plan, input.audioFiles),
+    graphOption(input.version),
+    input.graphFile,
+    '-map',
+    '[aout]',
+    '-f',
+    'null',
+    '-',
+  ];
+}
+
+/** Reads loudnorm's measurements from what it printed (the last JSON block in its output). */
+export function parseLoudnorm(output: string): LoudnormMeasure | null {
+  const start = output.lastIndexOf('{');
+  const end = output.lastIndexOf('}');
+  if (start < 0 || end < start) return null;
+  try {
+    const m = JSON.parse(output.slice(start, end + 1)) as Record<string, string>;
+    const fields = [m.input_i, m.input_tp, m.input_lra, m.input_thresh, m.target_offset];
+    if (fields.some((f) => typeof f !== 'string' || !/^-?(\d+(\.\d+)?|inf)$/.test(f))) return null;
+    // A silent mix measures -inf; there is nothing to bring to a loudness.
+    if (fields.some((f) => f?.includes('inf'))) return null;
+    return {
+      inputI: m.input_i as string,
+      inputTp: m.input_tp as string,
+      inputLra: m.input_lra as string,
+      inputThresh: m.input_thresh as string,
+      targetOffset: m.target_offset as string,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export interface FfmpegProgress {

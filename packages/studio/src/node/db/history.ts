@@ -140,6 +140,16 @@ CREATE TABLE IF NOT EXISTS code_revisions (
   at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS code_revisions_scene ON code_revisions (scene_id, id);
+CREATE TABLE IF NOT EXISTS media (
+  hash TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('video', 'audio', 'image')),
+  info TEXT NOT NULL,
+  bytes INTEGER NOT NULL,
+  imported_at INTEGER NOT NULL
+);
+CREATE TRIGGER IF NOT EXISTS media_no_delete BEFORE DELETE ON media
+  BEGIN SELECT RAISE(ABORT, 'Studio history is append-only.'); END;
 CREATE TRIGGER IF NOT EXISTS generations_no_delete BEFORE DELETE ON generations
   BEGIN SELECT RAISE(ABORT, 'Studio history is append-only.'); END;
 ${APPEND_ONLY.map(
@@ -155,6 +165,36 @@ export interface HistoryDbOptions {
   /** WAL needs shared memory that network drives do not give, so they use a rollback journal. */
   network?: boolean;
   busyTimeoutMs?: number;
+}
+
+export interface MediaInfo {
+  /** Flicks; null for a still image. */
+  duration: number | null;
+  width: number | null;
+  height: number | null;
+  fps: number | null;
+  hasAudio: boolean;
+  hasVideo: boolean;
+}
+
+export interface MediaRecord {
+  hash: string;
+  name: string;
+  kind: 'video' | 'audio' | 'image';
+  info: MediaInfo;
+  bytes: number;
+  importedAt: number;
+}
+
+function toMedia(row: SqlRow): MediaRecord {
+  return {
+    hash: String(row.hash),
+    name: String(row.name),
+    kind: row.kind as MediaRecord['kind'],
+    info: JSON.parse(String(row.info)) as MediaInfo,
+    bytes: Number(row.bytes),
+    importedAt: Number(row.imported_at),
+  };
 }
 
 function toTx(row: SqlRow): TxRecord {
@@ -435,6 +475,35 @@ export class HistoryDb {
         label: String(row.label),
         at: Number(row.at),
       }));
+  }
+
+  /** Records an imported file; importing the same file again keeps the first record. */
+  addMedia(media: MediaRecord): MediaRecord {
+    this.db
+      .prepare(
+        'INSERT OR IGNORE INTO media (hash, name, kind, info, bytes, imported_at) VALUES (?, ?, ?, ?, ?, ?)',
+      )
+      .run(
+        media.hash,
+        media.name,
+        media.kind,
+        JSON.stringify(media.info),
+        media.bytes,
+        media.importedAt,
+      );
+    return this.media(media.hash) as MediaRecord;
+  }
+
+  media(hash: string): MediaRecord | undefined {
+    const row = this.db.prepare('SELECT * FROM media WHERE hash = ?').get(hash);
+    return row ? toMedia(row) : undefined;
+  }
+
+  mediaList(): MediaRecord[] {
+    return this.db
+      .prepare('SELECT * FROM media ORDER BY imported_at DESC, hash')
+      .all()
+      .map(toMedia);
   }
 
   getMeta(key: string): string | null {

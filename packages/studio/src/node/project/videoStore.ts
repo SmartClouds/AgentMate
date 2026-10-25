@@ -17,6 +17,7 @@ import {
   type GenerationPatch,
   HistoryDb,
   type HistoryEntry,
+  type MediaRecord,
   type NewGeneration,
   type Revision,
   type TxActor,
@@ -408,6 +409,18 @@ export class VideoStore {
       at: this.deps.now(),
     });
     return result;
+  }
+
+  addMedia(record: MediaRecord): MediaRecord {
+    return this.db.addMedia(record);
+  }
+
+  media(hash: string): MediaRecord | undefined {
+    return this.db.media(hash);
+  }
+
+  mediaList(): MediaRecord[] {
+    return this.db.mediaList();
   }
 
   /** A code tree's thumbnail (a PNG blob), from the check that passed it. */

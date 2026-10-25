@@ -5,13 +5,16 @@ import {
   type RenderSettings,
   type StudioDocument,
 } from '../document/schema.js';
+import type { SceneConfig } from '../runtime/runtime.js';
 import { sceneConfig } from '../scenes/config.js';
-import { flicksToFrame } from '../time/flicks.js';
+import { directionOf } from '../text/languages.js';
+import { flicksToFrame, flicksToSeconds } from '../time/flicks.js';
 
 /**
  * What a render will do, worked out from the video before anything runs: each scene's frames, in
- * chunks of about two seconds, the transitions between scenes, and the output size. Pure, so the
- * Render dialog shows the same numbers the render uses, and so it can be tested to the frame.
+ * chunks of about two seconds, the transitions between scenes, the output size, and what plays
+ * over the scenes (video and pictures, captions, sound). Pure, so the Render dialog shows the same
+ * numbers the render uses, and so it can be tested to the frame.
  */
 
 export interface PlannedChunk {
@@ -40,6 +43,50 @@ export interface PlannedTransition {
   frames: number;
 }
 
+/** A caption, drawn once by Chromium (so Persian is shaped and runs right to left) as a still. */
+export interface PlannedCaption {
+  text: string;
+  lang: string;
+  dir: 'ltr' | 'rtl';
+  treeHash: string;
+  config: Partial<SceneConfig>;
+  /** What the still depends on; equal inputs reuse the still. */
+  cacheInputs: string;
+}
+
+/** A picture over the scenes for a while: a video or image clip, or a caption. */
+export interface PlannedOverlay {
+  clipId: string;
+  kind: 'video' | 'image' | 'caption';
+  /** The media blob, for a video or image clip. */
+  hash: string | null;
+  caption: PlannedCaption | null;
+  startFrame: number;
+  frames: number;
+  /** Where in the file it starts, for a video clip. */
+  inSeconds: number;
+  fadeInSeconds: number;
+  fadeOutSeconds: number;
+}
+
+/** A sound in the mix: a voice, music or effects clip, or the sound of a video clip. */
+export interface PlannedAudio {
+  clipId: string;
+  hash: string;
+  startSeconds: number;
+  inSeconds: number;
+  seconds: number;
+  /** The clip's volume times its track's. */
+  gain: number;
+  fadeInSeconds: number;
+  fadeOutSeconds: number;
+}
+
+export interface MediaFacts {
+  kind: 'video' | 'audio' | 'image';
+  hasAudio: boolean;
+}
+
 export interface RenderPlan {
   width: number;
   height: number;
@@ -55,6 +102,11 @@ export interface RenderPlan {
   totalFrames: number;
   /** Frames that have to be captured (transitions overlap captured frames, they add none). */
   captureFrames: number;
+  /** In drawing order: video under pictures under captions. */
+  overlays: PlannedOverlay[];
+  audio: PlannedAudio[];
+  /** The loudness the mix is brought to, when there is sound; null for a silent video. */
+  loudness: number | null;
 }
 
 export type PlanResult = { ok: true; plan: RenderPlan } | { ok: false; problems: string[] };
@@ -63,6 +115,10 @@ export interface PlanOptions {
   /** Bumped whenever the runtime or the bundled fonts change, so old mezzanines are not reused. */
   runtimeVersion: string;
   chunkSeconds?: number;
+  /** What each imported file is, by hash; clips whose file is not here cannot render. */
+  media?: ReadonlyMap<string, MediaFacts>;
+  /** The built-in caption page's code tree, needed when the video has captions. */
+  captionTree?: string | null;
 }
 
 export function buildRenderPlan(doc: StudioDocument, options: PlanOptions): PlanResult {
@@ -123,9 +179,10 @@ export function buildRenderPlan(doc: StudioDocument, options: PlanOptions): Plan
     transitions.push({ after: i, kind: scene.transitionOut.kind, frames });
   });
 
-  if (problems.length > 0) return { ok: false, problems };
   const captureFrames = planned.reduce((sum, s) => sum + s.frames, 0);
   const totalFrames = captureFrames - transitions.reduce((sum, t) => sum + t.frames, 0);
+  const layered = planClips(doc, options, { fps, totalFrames, width, height, problems });
+  if (problems.length > 0) return { ok: false, problems };
   return {
     ok: true,
     plan: {
@@ -139,8 +196,138 @@ export function buildRenderPlan(doc: StudioDocument, options: PlanOptions): Plan
       transitions,
       totalFrames,
       captureFrames,
+      ...layered,
     },
   };
+}
+
+const VISUAL_TRACKS = ['video', 'image', 'text'] as const;
+const SOUND_TRACKS = ['voice', 'music', 'sfx'] as const;
+
+/**
+ * The clips over the scenes. A clip is cut where the video ends; one that starts after the end is
+ * left out. A muted track is left out. When any track is soloed, only soloed tracks are heard.
+ */
+function planClips(
+  doc: StudioDocument,
+  options: PlanOptions,
+  frame: { fps: number; totalFrames: number; width: number; height: number; problems: string[] },
+): Pick<RenderPlan, 'overlays' | 'audio' | 'loudness'> {
+  const { fps, totalFrames, problems } = frame;
+  const media = options.media ?? new Map<string, MediaFacts>();
+  const tracks = doc.timeline.tracks;
+  const soloing = tracks.some((t) => t.solo && t.kind !== 'scene');
+  const audible = (trackId: string) => {
+    const track = tracks.find((t) => t.id === trackId);
+    return !!track && !track.muted && (!soloing || track.solo);
+  };
+  const overlays: PlannedOverlay[] = [];
+  const audio: PlannedAudio[] = [];
+  const design = DESIGN_SIZES[doc.renderSettings.aspect];
+  const ordered = [...doc.timeline.clips].sort((a, b) => {
+    const ta = tracks.findIndex((t) => t.id === a.trackId);
+    const tb = tracks.findIndex((t) => t.id === b.trackId);
+    return ta - tb || a.start - b.start || a.id.localeCompare(b.id);
+  });
+  for (const clip of ordered) {
+    const track = tracks.find((t) => t.id === clip.trackId);
+    if (!track || track.muted) continue;
+    const startFrame = flicksToFrame(clip.start, fps, 'round');
+    if (startFrame >= totalFrames) continue;
+    const frames = Math.min(
+      totalFrames - startFrame,
+      Math.max(1, flicksToFrame(clip.duration, fps, 'round')),
+    );
+    const seconds = frames / fps;
+    const fadeIn = Math.min(seconds / 2, flicksToSeconds(clip.fadeIn));
+    const fadeOut = Math.min(seconds / 2, flicksToSeconds(clip.fadeOut));
+    const source = clip.source;
+    if (source.type === 'scene') continue;
+    if (source.type === 'text') {
+      if (!(VISUAL_TRACKS as readonly string[]).includes(track.kind) || !source.text.trim())
+        continue;
+      if (!options.captionTree) {
+        problems.push('The caption page is missing from this copy of Studio.');
+        continue;
+      }
+      const dir = source.dir === 'auto' ? directionOf(source.lang) : source.dir;
+      const config: Partial<SceneConfig> = {
+        duration: seconds,
+        width: design.width,
+        height: design.height,
+        lang: source.lang,
+        dir,
+        params: { text: source.text },
+        seed: clip.id,
+      };
+      overlays.push({
+        clipId: clip.id,
+        kind: 'caption',
+        hash: null,
+        caption: {
+          text: source.text,
+          lang: source.lang,
+          dir,
+          treeHash: options.captionTree,
+          config,
+          cacheInputs: JSON.stringify({
+            tree: options.captionTree,
+            runtime: options.runtimeVersion,
+            text: source.text,
+            lang: source.lang,
+            dir,
+            width: frame.width,
+            height: frame.height,
+          }),
+        },
+        startFrame,
+        frames,
+        inSeconds: 0,
+        fadeInSeconds: fadeIn,
+        fadeOutSeconds: fadeOut,
+      });
+      continue;
+    }
+    const facts = media.get(source.hash);
+    if (!facts) {
+      problems.push(
+        `A clip on the ${track.name} track plays a file that is not in this video any more.`,
+      );
+      continue;
+    }
+    const inSeconds = flicksToSeconds(source.in);
+    if (facts.kind !== 'audio' && (VISUAL_TRACKS as readonly string[]).includes(track.kind)) {
+      overlays.push({
+        clipId: clip.id,
+        kind: facts.kind === 'image' ? 'image' : 'video',
+        hash: source.hash,
+        caption: null,
+        startFrame,
+        frames,
+        inSeconds: facts.kind === 'image' ? 0 : inSeconds,
+        fadeInSeconds: fadeIn,
+        fadeOutSeconds: fadeOut,
+      });
+    }
+    const heard =
+      facts.hasAudio &&
+      facts.kind !== 'image' &&
+      audible(track.id) &&
+      (track.kind === 'video' || (SOUND_TRACKS as readonly string[]).includes(track.kind));
+    if (heard && clip.gain * track.volume > 0) {
+      audio.push({
+        clipId: clip.id,
+        hash: source.hash,
+        startSeconds: startFrame / fps,
+        inSeconds,
+        seconds,
+        gain: clip.gain * track.volume,
+        fadeInSeconds: fadeIn,
+        fadeOutSeconds: fadeOut,
+      });
+    }
+  }
+  return { overlays, audio, loudness: audio.length > 0 ? doc.renderSettings.audio.lufs : null };
 }
 
 /** Bits per output pixel per frame each quality aims at, for the size estimate. */

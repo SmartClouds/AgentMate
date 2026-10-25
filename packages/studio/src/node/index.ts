@@ -3,6 +3,8 @@ export * from './ai/studioAi.js';
 export * from './blobs/blobStore.js';
 export * from './db/history.js';
 export * from './db/sqlDriver.js';
+export * from './media/derivatives.js';
+export * from './media/mediaLibrary.js';
 export * from './project/lock.js';
 export * from './project/storageRoot.js';
 export * from './project/videoStore.js';

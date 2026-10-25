@@ -782,6 +782,15 @@ export const IPC = {
     // ({ styleId, aspect, language }) -> SceneCheckView
     checkStyle: 'studioScenes:checkStyle',
   },
+  /** Studio media (E35): files imported into a video, with their preview files. */
+  studioMedia: {
+    // ({ videoId }) -> ImportResult | null, after the user picks files; null when they cancel
+    pickAndImport: 'studioMedia:pickAndImport',
+    // ({ videoId, paths }) -> ImportResult, for files dropped onto the editor
+    importFiles: 'studioMedia:importFiles',
+    // ({ videoId }) -> MediaView[]
+    list: 'studioMedia:list',
+  },
   /** Studio rendering (E34): finished video files, one render at a time, resumed after a crash. */
   studioRender: {
     // () -> RenderToolsView, whether ffmpeg is here and which codecs it can write

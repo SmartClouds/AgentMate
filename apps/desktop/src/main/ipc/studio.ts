@@ -1,4 +1,10 @@
-import { studioAiInputs, studioInputs, studioRenderInputs } from '@agentmat/studio';
+import {
+  studioAiInputs,
+  studioInputs,
+  studioMediaInputs,
+  studioRenderInputs,
+} from '@agentmat/studio';
+import { IMPORT_EXTENSIONS } from '@agentmat/studio/node';
 import { BrowserWindow, dialog, type IpcMainInvokeEvent, ipcMain, shell } from 'electron';
 import { z } from 'zod';
 import { IPC } from '../../shared/ipcChannels';
@@ -164,6 +170,39 @@ export function registerStudioHandlers(
   );
   handle(IPC.studioScenes.checkStyle, (value) =>
     service().checkStyleReference(parse(studioAiInputs.styleReference, value)),
+  );
+  handle(IPC.studioMedia.pickAndImport, async (value, event) => {
+    const { videoId } = parse(studioMediaInputs.videoRef, value);
+    const owner = BrowserWindow.fromWebContents(event.sender);
+    const strip = (ext: readonly string[]) => ext.map((e) => e.slice(1));
+    const options = {
+      title: 'Import media',
+      properties: ['openFile', 'multiSelections'] as ('openFile' | 'multiSelections')[],
+      filters: [
+        {
+          name: 'Video, sound and pictures',
+          extensions: strip([
+            ...IMPORT_EXTENSIONS.video,
+            ...IMPORT_EXTENSIONS.audio,
+            ...IMPORT_EXTENSIONS.image,
+          ]),
+        },
+        { name: 'Video', extensions: strip(IMPORT_EXTENSIONS.video) },
+        { name: 'Sound', extensions: strip(IMPORT_EXTENSIONS.audio) },
+        { name: 'Pictures', extensions: strip(IMPORT_EXTENSIONS.image) },
+      ],
+    };
+    const picked = owner
+      ? await dialog.showOpenDialog(owner, options)
+      : await dialog.showOpenDialog(options);
+    if (picked.canceled || picked.filePaths.length === 0) return null;
+    return service().importMedia({ videoId, paths: picked.filePaths });
+  });
+  handle(IPC.studioMedia.importFiles, (value) =>
+    service().importMedia(parse(studioMediaInputs.importFiles, value)),
+  );
+  handle(IPC.studioMedia.list, (value) =>
+    service().media(parse(studioMediaInputs.videoRef, value)),
   );
   handle(IPC.studioRender.tools, () => service().renderTools());
   handle(IPC.studioRender.estimate, (value) =>

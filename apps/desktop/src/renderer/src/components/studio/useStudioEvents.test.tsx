@@ -79,5 +79,7 @@ describe('useStudioEvents', () => {
     expect(keys() ?? []).toEqual([]);
     emit({ type: 'render-changed', jobId: 'j1', videoId: 'v1' });
     expect(keys()).toEqual([studioKeys.renders]);
+    emit({ type: 'media-changed', videoId: 'v1' });
+    expect(keys()).toEqual([studioKeys.renders, studioKeys.media('v1')]);
   });
 });

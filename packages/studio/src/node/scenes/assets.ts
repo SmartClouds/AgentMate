@@ -18,6 +18,8 @@ export interface StudioAssets {
   runtimeFile: string;
   /** Reads an asset by its path inside `assets/`; null when it is not there. */
   read(path: string): Promise<Uint8Array | null>;
+  /** The built-in caption page's files (`assets/captions/`). */
+  captionPage(): Promise<{ path: string; content: Uint8Array }[]>;
   /** The files of a style's reference scene (`assets/styles/<id>/`). */
   styleReference(styleId: string): Promise<{ path: string; content: Uint8Array }[]>;
 }
@@ -35,6 +37,13 @@ export function studioAssets(root: string = DEFAULT_STUDIO_ROOT): StudioAssets {
       } catch {
         return null;
       }
+    },
+    async captionPage() {
+      const dir = join(assetsDir, 'captions');
+      const names = (await readdir(dir)).sort();
+      return Promise.all(
+        names.map(async (path) => ({ path, content: await readFile(join(dir, path)) })),
+      );
     },
     async styleReference(styleId) {
       if (!/^[a-z0-9-]+$/.test(styleId)) throw new Error('That is not a style.');

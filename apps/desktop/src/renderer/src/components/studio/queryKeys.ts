@@ -29,6 +29,8 @@ export const studioKeys = {
   renderEstimate: (videoId: string, seq: number) =>
     ['studio', 'render-estimate', videoId, seq] as const,
   renders: ['studio', 'renders'] as const,
+  media: (videoId: string) => ['studio', 'media', videoId] as const,
+  peaks: (videoId: string, hash: string) => ['studio', 'peaks', videoId, hash] as const,
   /** Undefined for every video's renders. */
   renderList: (videoId: string | undefined) => ['studio', 'renders', videoId ?? 'all'] as const,
 };

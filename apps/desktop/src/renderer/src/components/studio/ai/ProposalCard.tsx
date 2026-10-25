@@ -95,6 +95,41 @@ function ChangeItem({ change }: { change: ProposalChange }): React.JSX.Element {
           <FieldRows changes={change.changes} />
         </>
       );
+    case 'clip-added':
+      return (
+        <p className="text-sm font-medium">
+          Add <Text value={change.label} /> to the {change.track} track at {change.startSeconds} s
+        </p>
+      );
+    case 'clip-removed':
+      return (
+        <p className="text-sm font-medium">
+          Remove <Text value={change.label} /> from the {change.track} track
+        </p>
+      );
+    case 'clip-changed':
+      return (
+        <>
+          <p className="text-sm font-medium">
+            <Text value={change.label} /> on the {change.track} track
+          </p>
+          <FieldRows changes={change.changes} />
+        </>
+      );
+    case 'captions-added':
+      return (
+        <p className="text-sm font-medium">
+          Caption scene {change.position} from its narration ({change.count}{' '}
+          {change.count === 1 ? 'line' : 'lines'})
+        </p>
+      );
+    case 'track-changed':
+      return (
+        <>
+          <p className="text-sm font-medium">The {change.track} track</p>
+          <FieldRows changes={change.changes} />
+        </>
+      );
   }
 }
 

@@ -10,21 +10,30 @@
  *   reaches its server through the loopback-only proxy in main/rdp/proxy.ts.
  * - Studio previews scenes in iframes from `studio-scene:` (E33). Those pages carry their own,
  *   much stricter policy, which `keepsOwnCsp` leaves in place.
+ * - Studio's editor shows imported media and its preview files from `studio-media:` (E35):
+ *   pictures, video and sound, and the waveform peaks it fetches.
  */
 
 export interface AppCspOptions {
   isDev: boolean;
   blueprintScheme: string;
   studioSceneScheme: string;
+  studioMediaScheme: string;
 }
 
-export function appCsp({ isDev, blueprintScheme, studioSceneScheme }: AppCspOptions): string {
-  const files = `${blueprintScheme}:`;
+export function appCsp({
+  isDev,
+  blueprintScheme,
+  studioSceneScheme,
+  studioMediaScheme,
+}: AppCspOptions): string {
   const scenes = `${studioSceneScheme}:`;
+  const media = `${studioMediaScheme}:`;
+  const files = `${blueprintScheme}: ${media}`;
   const rdp = { script: "'wasm-unsafe-eval'", connect: 'data: ws://127.0.0.1:*' };
   return isDev
-    ? `default-src 'self' http://localhost:5173 ws://localhost:5173; script-src 'self' 'unsafe-inline' ${rdp.script} http://localhost:5173; style-src 'self' 'unsafe-inline'; img-src 'self' data: ${files}; media-src 'self' ${files}; font-src 'self' data:; connect-src 'self' ${rdp.connect} http://localhost:5173 ws://localhost:5173; worker-src 'self' blob:; frame-src 'self' http://localhost:5173 ${scenes};`
-    : `default-src 'self'; script-src 'self' ${rdp.script}; style-src 'self' 'unsafe-inline'; img-src 'self' data: ${files}; media-src 'self' ${files}; font-src 'self' data:; connect-src 'self' ${rdp.connect}; worker-src 'self' blob:; frame-src 'self' ${scenes};`;
+    ? `default-src 'self' http://localhost:5173 ws://localhost:5173; script-src 'self' 'unsafe-inline' ${rdp.script} http://localhost:5173; style-src 'self' 'unsafe-inline'; img-src 'self' data: ${files}; media-src 'self' ${files}; font-src 'self' data:; connect-src 'self' ${rdp.connect} ${media} http://localhost:5173 ws://localhost:5173; worker-src 'self' blob:; frame-src 'self' http://localhost:5173 ${scenes};`
+    : `default-src 'self'; script-src 'self' ${rdp.script}; style-src 'self' 'unsafe-inline'; img-src 'self' data: ${files}; media-src 'self' ${files}; font-src 'self' data:; connect-src 'self' ${rdp.connect} ${media}; worker-src 'self' blob:; frame-src 'self' ${scenes};`;
 }
 
 /**

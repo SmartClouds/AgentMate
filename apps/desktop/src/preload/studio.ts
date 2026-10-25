@@ -6,6 +6,8 @@ import type {
   GenerationDetail,
   GenerationView,
   HistoryEntryView,
+  ImportResult,
+  MediaView,
   MoveResult,
   OpenVideoResult,
   ProjectStorageView,
@@ -121,6 +123,18 @@ export function createStudioScenes() {
       aspect: string;
       language: string;
     }): Promise<SceneCheckView> => ipcRenderer.invoke(IPC.studioScenes.checkStyle, input),
+  };
+}
+
+/** Studio media (E35): import files into a video and list them. */
+export function createStudioMedia() {
+  return {
+    pickAndImport: (videoId: string): Promise<ImportResult | null> =>
+      ipcRenderer.invoke(IPC.studioMedia.pickAndImport, { videoId }),
+    importFiles: (videoId: string, paths: string[]): Promise<ImportResult> =>
+      ipcRenderer.invoke(IPC.studioMedia.importFiles, { videoId, paths }),
+    list: (videoId: string): Promise<MediaView[]> =>
+      ipcRenderer.invoke(IPC.studioMedia.list, { videoId }),
   };
 }
 

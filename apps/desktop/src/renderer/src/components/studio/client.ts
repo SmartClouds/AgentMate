@@ -24,6 +24,15 @@ export function studioRenderClient() {
   return window.agentmat.studioRender;
 }
 
+export function studioMediaClient() {
+  return window.agentmat.studioMedia;
+}
+
+/** Where a file dropped onto the window is on disk; empty for one that is not a file on disk. */
+export function pathForFile(file: File): string {
+  return window.agentmat.shell.pathForFile(file);
+}
+
 /** The projects AgentMate knows, for choosing which one a video belongs to. */
 export async function listProjects(): Promise<Project[]> {
   return (await window.agentmat.projects.list()) ?? [];

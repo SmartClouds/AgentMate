@@ -1,5 +1,6 @@
-import { createHash } from 'node:crypto';
-import { access, mkdir, readFile } from 'node:fs/promises';
+import { createHash, randomBytes } from 'node:crypto';
+import { createReadStream } from 'node:fs';
+import { access, copyFile, mkdir, readFile, rename, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { writeFileAtomic } from '../fs/atomicWrite.js';
 
@@ -39,6 +40,31 @@ export class BlobStore {
     await mkdir(join(this.dir, hash.slice(0, 2)), { recursive: true });
     await writeFileAtomic(file, bytes);
     return hash;
+  }
+
+  /**
+   * Stores a file from disk without reading it into memory: it is hashed as a stream, copied in
+   * beside its final place and renamed there. A file already stored is not copied again.
+   */
+  async putFile(source: string): Promise<{ hash: string; bytes: number }> {
+    const hash = createHash('sha256');
+    for await (const chunk of createReadStream(source, { highWaterMark: 1024 * 1024 })) {
+      hash.update(chunk as Buffer);
+    }
+    const digest = hash.digest('hex');
+    const { size } = await stat(source);
+    const file = this.path(digest);
+    if (await this.has(digest)) return { hash: digest, bytes: size };
+    await mkdir(join(this.dir, digest.slice(0, 2)), { recursive: true });
+    const temp = `${file}.tmp-${randomBytes(6).toString('hex')}`;
+    try {
+      await copyFile(source, temp);
+      await rename(temp, file);
+    } catch (error) {
+      await rm(temp, { force: true });
+      throw error;
+    }
+    return { hash: digest, bytes: size };
   }
 
   async text(hash: string): Promise<string> {

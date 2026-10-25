@@ -16,8 +16,14 @@ import {
   type FfmpegCapabilities,
   hardwareCandidates,
 } from '../../render/ffmpeg.js';
-import { buildRenderPlan, estimateRender, type RenderPlan } from '../../render/plan.js';
+import {
+  buildRenderPlan,
+  estimateRender,
+  type PlanOptions,
+  type RenderPlan,
+} from '../../render/plan.js';
 import { safeFolderName } from '../../text/names.js';
+import { BlobStore } from '../blobs/blobStore.js';
 import { JsonStore } from '../settings/jsonStore.js';
 import { pruneSceneCache } from './cachePrune.js';
 import {
@@ -64,14 +70,22 @@ export interface StudioRenderDeps {
   progressIntervalMs?: number;
 }
 
+/** What the plan needs besides the document: the imported files and the caption page. */
+export type PlanInputs = Pick<PlanOptions, 'media' | 'captionTree'>;
+
 export interface StudioRender {
   tools(): Promise<RenderToolsView>;
-  estimate(input: { videoId: string; document: StudioDocument }): Promise<RenderEstimateView>;
+  estimate(input: {
+    videoId: string;
+    document: StudioDocument;
+    planInputs?: PlanInputs;
+  }): Promise<RenderEstimateView>;
   start(input: {
     videoId: string;
     document: StudioDocument;
     allowedHosts: readonly string[];
     fileName?: string;
+    planInputs?: PlanInputs;
   }): Promise<RenderJobView>;
   jobs(videoId?: string): Promise<RenderJobView[]>;
   cancel(jobId: string): Promise<void>;
@@ -279,6 +293,7 @@ export function createStudioRender(deps: StudioRenderDeps): StudioRender {
       }
     }
     const videoCache = join(cache.dir, record.videoId, 'scenes');
+    const blobs = BlobStore.forVideo(record.folder);
     const hardware = await pickHardware(tools, record.plan, caps);
     const release = deps.serveTrees(record.videoId, record.folder);
     let lastNotify = 0;
@@ -308,6 +323,7 @@ export function createStudioRender(deps: StudioRenderDeps): StudioRender {
         hardware: encoder,
         frames: (deps.host as StudioRenderHost).frames,
         allowedHosts: record.allowedHosts,
+        mediaPath: (hash) => blobs.path(hash),
         cacheDir: videoCache,
         workDir: join(cache.dir, record.videoId, `render-${record.id}`),
         output: record.target,
@@ -435,8 +451,11 @@ export function createStudioRender(deps: StudioRenderDeps): StudioRender {
       }
     },
 
-    async estimate({ videoId, document }) {
-      const result = buildRenderPlan(document, { runtimeVersion: await deps.runtimeVersion() });
+    async estimate({ videoId, document, planInputs }) {
+      const result = buildRenderPlan(document, {
+        runtimeVersion: await deps.runtimeVersion(),
+        ...planInputs,
+      });
       if (!result.ok) return result;
       const estimate = estimateRender(result.plan);
       const warnings: string[] = [];
@@ -466,9 +485,12 @@ export function createStudioRender(deps: StudioRenderDeps): StudioRender {
       };
     },
 
-    async start({ videoId, document, allowedHosts, fileName }) {
+    async start({ videoId, document, allowedHosts, fileName, planInputs }) {
       if (!deps.host) throw new Error('Rendering is not available here.');
-      const result = buildRenderPlan(document, { runtimeVersion: await deps.runtimeVersion() });
+      const result = buildRenderPlan(document, {
+        runtimeVersion: await deps.runtimeVersion(),
+        ...planInputs,
+      });
       if (!result.ok) throw new Error(result.problems.join(' '));
       const { folder, title } = await deps.video(videoId);
       const base = safeFolderName(fileName ?? defaultFileName(document), 'video');

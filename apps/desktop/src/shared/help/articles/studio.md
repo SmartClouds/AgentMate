@@ -68,6 +68,20 @@ A scene page runs with no internet access and cannot reach AgentMate or your fil
 
 Animated scenes cannot reach the internet. If a project's scenes need files from a host of yours, such as its own CDN, add the host under **Scene network** in the project's **Studio** tab. Only https is allowed, and only those hosts. Leave it empty to keep scenes offline, which is the safest, since the code is written by AI.
 
+## The timeline
+
+Switch the editor to **Timeline** in its toolbar. The scenes play one after another on the first row; the rows below hold what plays over them: **Video** and **Images** (shown full frame), **Text** (captions), and **Voice**, **Music** and **Sound effects**.
+
+- **Import** in the Media list, or drop files onto it, to bring in video (MP4, MOV, WebM, MKV), sound (MP3, WAV, M4A, OGG, FLAC) and pictures (PNG, JPG, WebP). Each file is copied into the video's folder, so moving or deleting the original does not break the video. Studio needs ffmpeg for this, as for rendering.
+- Drag a file onto a row, or use **+** to add it at the playhead.
+- Drag a clip to move it (it snaps to the playhead, the edges of scenes and other clips), drag its ends to trim it, and drag a scene to change the order. Drag the right edge of a scene to change its length.
+- Select a clip to set its **Volume**, **Fade in** and **Fade out**, or a caption's words, in the panel on the right.
+- **Caption** adds a caption at the playhead; **Caption scene** writes captions from that scene's narration, one line at a time, keeping Persian words whole.
+- **M** mutes a row and **S** plays it alone.
+- Keys: **Space** plays and pauses, **S** splits the selected clip at the playhead, **Delete** removes it (**Shift+Delete** also closes the gap), **Left** and **Right** step a frame (with **Shift**, a second), **Home** and **End** jump to the start and the end.
+
+Every change is one step in the history, so **Undo** takes it back. In a render, video and pictures are laid over the scenes, captions are drawn by Chromium so Persian reads right to left, and the sound is mixed to the loudness you set (-14 LUFS by default). Ask AI can change the timeline too, for example "put Song.mp3 under the whole video at half volume" or "caption scene 2".
+
 ## Render the video
 
 Click **Render** in the editor's toolbar.

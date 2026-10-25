@@ -132,7 +132,12 @@ import {
   store,
 } from './store';
 import { pruneStudioProjects, resumeStudioRenders, shutdownStudio } from './studio';
-import { handleStudioScenes, STUDIO_SCHEME_PRIVILEGES } from './studio/protocol';
+import {
+  handleStudioMedia,
+  handleStudioScenes,
+  STUDIO_MEDIA_PRIVILEGES,
+  STUDIO_SCHEME_PRIVILEGES,
+} from './studio/protocol';
 import { showRosettaNotice } from './system/rosettaNotice';
 import { isE2E, keepWindowsHidden } from './testMode';
 import { startToolUpdateWatcher, stopToolUpdateWatcher } from './toolUpdates/watcher';
@@ -167,6 +172,7 @@ protocol.registerSchemesAsPrivileged([
     privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
   },
   STUDIO_SCHEME_PRIVILEGES,
+  STUDIO_MEDIA_PRIVILEGES,
 ]);
 
 app.commandLine.appendSwitch('disable-background-timer-throttling');
@@ -450,6 +456,7 @@ app.whenReady().then(async () => {
     isDev,
     blueprintScheme: BLUEPRINT_FILE_SCHEME,
     studioSceneScheme: STUDIO_SCHEME_PRIVILEGES.scheme,
+    studioMediaScheme: STUDIO_MEDIA_PRIVILEGES.scheme,
   });
 
   configureBrowserSession(session.fromPartition(BROWSER_PARTITION));
@@ -493,6 +500,7 @@ app.whenReady().then(async () => {
   configureSpellChecker();
   registerBlueprintFileProtocol();
   handleStudioScenes(protocol);
+  handleStudioMedia(protocol);
   registerAllIpcHandlers();
   void store.getSettings().then(startVault);
   startTerminalBackend();

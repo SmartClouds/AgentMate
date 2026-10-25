@@ -1,6 +1,8 @@
 import { readFile } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
+import { MEDIA_SCHEME, mediaContentType, parseMediaUrl } from '@agentmat/studio';
 import { SCENE_SCHEME, type SceneResolver, serveScene } from '@agentmat/studio/node';
-import type { Protocol } from 'electron';
+import { net, type Protocol } from 'electron';
 import { studioService } from './index';
 
 /**
@@ -21,6 +23,15 @@ export const STUDIO_SCHEME_PRIVILEGES = {
   },
 };
 
+/**
+ * `studio-media://`, the editor's way to an imported file and its preview files. `stream` lets a
+ * video play before it has all arrived, and seek.
+ */
+export const STUDIO_MEDIA_PRIVILEGES = {
+  scheme: MEDIA_SCHEME,
+  privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
+};
+
 let runtime: Promise<Uint8Array> | null = null;
 
 export const studioSceneResolver: SceneResolver = {
@@ -36,6 +47,34 @@ export const studioSceneResolver: SceneResolver = {
   asset: (path) => studioService().assets.read(path),
   allowedHosts: (treeHash) => studioService().sceneHosts({ treeHash }),
 };
+
+export type MediaFileLookup = (
+  address: NonNullable<ReturnType<typeof parseMediaUrl>>,
+) => Promise<string | null>;
+
+const lookupMediaFile: MediaFileLookup = (address) => studioService().mediaFile(address);
+
+/**
+ * Answers `studio-media:` requests on the default session. The address names a video, a file and
+ * a variant; the service says where that file is, for an open video only. The file is fetched with
+ * the request's own headers, so a video's range requests reach it and it seeks.
+ */
+export function handleStudioMedia(
+  target: Protocol,
+  lookup: MediaFileLookup = lookupMediaFile,
+): void {
+  target.handle(MEDIA_SCHEME, async (request) => {
+    const address = parseMediaUrl(request.url);
+    const file = address ? await lookup(address) : null;
+    if (!address || !file) return new Response('Not found', { status: 404 });
+    const response = await net.fetch(pathToFileURL(file).toString(), { headers: request.headers });
+    const type = mediaContentType(address.variant);
+    if (!type) return response;
+    const headers = new Headers(response.headers);
+    headers.set('Content-Type', type);
+    return new Response(response.body, { status: response.status, headers });
+  });
+}
 
 /** Answers `studio-scene:` requests on a session's protocol (the default one, or a capture one). */
 export function handleStudioScenes(

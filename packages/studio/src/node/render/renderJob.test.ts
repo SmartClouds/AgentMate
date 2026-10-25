@@ -16,6 +16,7 @@ import {
   type RenderProgress,
   runRenderJob,
   sceneCacheDir,
+  unpremultiply,
   writeChunk,
 } from './renderJob.js';
 
@@ -68,7 +69,7 @@ async function job(
     hardware: null,
     frames: fakeFrameHost(frameOptions),
     allowedHosts: [],
-    cacheDir: cache,
+    cacheDir: join(cache, 'scenes'),
     workDir: join(cache, 'work'),
     output: join(out, 'Launch.mp4'),
     ...rest,
@@ -109,8 +110,9 @@ describe('runRenderJob', () => {
     });
     expect(progress.at(-1)).toEqual({ phase: 'encode', done: 42, total: 42 });
     expect(progress.some((p) => p.phase === 'encode' && p.done > 0 && p.done < 42)).toBe(true);
-    // The scratch folder goes; the chunks stay for next time.
-    expect((await readdir(cache)).sort()).toHaveLength(2);
+    // The scratch folder goes; the chunks of both scenes stay for next time.
+    expect(await readdir(cache)).toEqual(['scenes']);
+    expect(await readdir(input.cacheDir)).toHaveLength(2);
     expect(await readdir(out)).toEqual(['Launch.mp4']);
   });
 
@@ -154,13 +156,13 @@ describe('runRenderJob', () => {
 
   it('stops on cancel, keeps the chunks it finished and leaves no output', async () => {
     const controller = new AbortController();
-    const { input, out, cache } = await job({
+    const { input, out } = await job({
       signal: controller.signal,
       frameOptions: { onFrame: (n) => n === 20 && controller.abort() },
     });
     await expect(runRenderJob(input)).rejects.toBeInstanceOf(RenderCancelledError);
     expect(await readdir(out)).toEqual([]);
-    const dir = sceneCacheDir(cache, input.plan.scenes[0]!);
+    const dir = sceneCacheDir(input.cacheDir, input.plan.scenes[0]!);
     expect((await readdir(dir)).sort()).toEqual(['chunk-0000.mkv', 'inputs.json']);
   });
 
@@ -200,11 +202,11 @@ describe('runRenderJob', () => {
 
   it('passes on what ffmpeg said when a chunk fails', async () => {
     cue({ failChunk: true });
-    const { input, cache } = await job();
+    const { input } = await job();
     await expect(runRenderJob(input)).rejects.toThrow(
       'Scene 1 could not be drawn: Error while encoding a chunk',
     );
-    const dir = sceneCacheDir(cache, input.plan.scenes[0]!);
+    const dir = sceneCacheDir(input.cacheDir, input.plan.scenes[0]!);
     expect(await readdir(dir)).toEqual(['inputs.json']);
   });
 
@@ -297,5 +299,103 @@ describe('concatList', () => {
     });
     await writeFile(join(dir, 'list.txt'), concatList([file]));
     expect(await readFile(join(dir, 'list.txt'), 'utf8')).toContain("it'\\''s");
+  });
+});
+
+describe('unpremultiply', () => {
+  it('takes the alpha back out of the colour, and leaves see-through pixels black', () => {
+    expect([
+      ...unpremultiply(Uint8Array.from([0, 0, 128, 128, 10, 20, 30, 0, 255, 255, 255, 255])),
+    ]).toEqual([0, 0, 255, 128, 0, 0, 0, 0, 255, 255, 255, 255]);
+  });
+});
+
+describe('clips over the scenes', () => {
+  const CAPTION = 'c'.repeat(64);
+  const SONG = 's'.repeat(64);
+  const layeredPlan = () => {
+    const doc = createDocument({ id: 'v1', title: 'T', language: 'fa' });
+    doc.renderSettings.fps = 24;
+    doc.scenario.scenes = [
+      createScene({
+        id: 'a',
+        code: { treeHash: 'a'.repeat(64) },
+        targetDuration: secondsToFlicks(1),
+      }),
+    ];
+    const base = {
+      transitionIn: null,
+      gain: 1,
+      fadeIn: 0,
+      fadeOut: 0,
+      duration: secondsToFlicks(0.5),
+    };
+    doc.timeline.clips = [
+      {
+        ...base,
+        id: 't',
+        trackId: 'track-text',
+        start: 0,
+        source: { type: 'text', text: 'سلام', lang: 'fa', dir: 'auto' },
+      },
+      {
+        ...base,
+        id: 'm',
+        trackId: 'track-music',
+        start: 0,
+        source: { type: 'media', hash: SONG, in: 0, out: base.duration },
+      },
+    ];
+    const result = buildRenderPlan(doc, {
+      runtimeVersion: '1',
+      chunkSeconds: 0.5,
+      captionTree: CAPTION,
+      media: new Map([[SONG, { kind: 'audio', hasAudio: true }]]),
+    });
+    if (!result.ok) throw new Error(result.problems.join(' '));
+    return { ...result.plan, width: 8, height: 6, design: { width: 8, height: 6 }, scale: 1 };
+  };
+
+  it('draws each caption once, measures the mix, and hands both to the join', async () => {
+    const frames = fakeFrameHost({ captionTree: CAPTION });
+    const { input } = await job({ plan: layeredPlan(), frames, mediaPath: () => 'song.mp3' });
+    const result = await runRenderJob(input);
+    const file = JSON.parse(await readFile(result.output, 'utf8'));
+    expect(file.graph).toContain('overlay=0:0:eof_action=pass');
+    expect(file.graph).toContain('measured_I=-35.75');
+    expect(frames.opened.filter((u) => u.includes(CAPTION))).toHaveLength(1);
+
+    // A second render reuses the caption's still.
+    const again = fakeFrameHost({ captionTree: CAPTION });
+    await runRenderJob({ ...input, frames: again, output: join(await tempDir(), 'Again.mp4') });
+    expect(again.opened.filter((u) => u.includes(CAPTION))).toEqual([]);
+  });
+
+  it('mixes without bringing to a loudness when the measurement says nothing', async () => {
+    cue({ loudnorm: 'no measurement' });
+    const { input } = await job({
+      plan: layeredPlan(),
+      frames: fakeFrameHost({ captionTree: CAPTION }),
+      mediaPath: () => 'song.mp3',
+    });
+    const file = JSON.parse(await readFile((await runRenderJob(input)).output, 'utf8'));
+    expect(file.graph).not.toContain('loudnorm');
+  });
+
+  it('fails clearly when a clip file cannot be found, or the caption page will not get ready', async () => {
+    const { input } = await job({
+      plan: layeredPlan(),
+      frames: fakeFrameHost({ captionTree: CAPTION }),
+    });
+    await expect(runRenderJob(input)).rejects.toThrow(
+      'A clip plays a file this render cannot find.',
+    );
+    const stuck = await job({
+      plan: layeredPlan(),
+      frames: fakeFrameHost({ captionTree: CAPTION, neverReady: true }),
+      mediaPath: () => 'song.mp3',
+      readyTimeoutMs: 10,
+    });
+    await expect(runRenderJob(stuck.input)).rejects.toThrow();
   });
 });

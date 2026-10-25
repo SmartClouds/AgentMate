@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Chip, cn, Pause, Play, SimpleTooltip } from '../kit';
+import { useSceneSeek } from './useSceneSeek';
 
 /**
  * A scene playing in the editor. The page runs in a sandboxed iframe at an opaque origin, so its
- * code cannot reach the app; the editor drives it only by asking for a moment (`studio:seek`) and
- * waiting for `studio:frame`. While a frame is still being drawn, newer requests wait and only the
- * latest one goes next, so a slow scene drops frames instead of falling further and further behind.
+ * code cannot reach the app; the editor drives it only through `useSceneSeek`.
  */
 
 export interface ScenePreviewProps {
@@ -33,7 +32,6 @@ export function ScenePreview({
   label,
   className,
 }: ScenePreviewProps): React.JSX.Element {
-  const frameRef = useRef<HTMLIFrameElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.2);
   const [time, setShownTime] = useState(0);
@@ -45,12 +43,7 @@ export function ScenePreview({
   }, []);
   const [playing, setPlaying] = useState(autoPlay);
   const [loaded, setLoaded] = useState(false);
-  const [slow, setSlow] = useState(false);
-  const [errors, setErrors] = useState<string[]>([]);
-  const pending = useRef(false);
-  const queued = useRef<number | null>(null);
-  const nextId = useRef(1);
-  const sentAt = useRef(0);
+  const { frameRef, send, loaded: frameLoaded, slow, errors } = useSceneSeek();
 
   // Fit the design-size page into the box.
   useEffect(() => {
@@ -62,34 +55,6 @@ export function ScenePreview({
     observer.observe(box);
     return () => observer.disconnect();
   }, [width, height]);
-
-  const send = useCallback((t: number) => {
-    const target = frameRef.current?.contentWindow;
-    if (!target) return;
-    if (pending.current) {
-      queued.current = t;
-      return;
-    }
-    pending.current = true;
-    sentAt.current = performance.now();
-    target.postMessage({ type: 'studio:seek', t, id: nextId.current++ }, '*');
-  }, []);
-
-  useEffect(() => {
-    const onMessage = (event: MessageEvent) => {
-      if (event.source !== frameRef.current?.contentWindow) return;
-      const data = event.data as { type?: string; errors?: string[] } | null;
-      if (data?.type !== 'studio:frame') return;
-      pending.current = false;
-      setSlow(performance.now() - sentAt.current > 120);
-      if (Array.isArray(data.errors)) setErrors(data.errors.slice(0, 20));
-      const next = queued.current;
-      queued.current = null;
-      if (next !== null) send(next);
-    };
-    window.addEventListener('message', onMessage);
-    return () => window.removeEventListener('message', onMessage);
-  }, [send]);
 
   // Play: advance time with the wall clock and ask for each new moment, looping at the end.
   useEffect(() => {
@@ -122,7 +87,7 @@ export function ScenePreview({
           style={{ width, height, transform: `scale(${scale})` }}
           onLoad={() => {
             setLoaded(true);
-            pending.current = false;
+            frameLoaded();
             send(time);
           }}
         />

@@ -2,8 +2,10 @@ import { z } from 'zod';
 import { DESIGN_SIZES, type StudioDocument } from '../document/schema.js';
 import { type StylePreset, styleById } from '../styles/presets.js';
 import { CONTENT_LANGUAGES, directionOf } from '../text/languages.js';
+import { flicksToSeconds } from '../time/flicks.js';
+import { sceneBlocks, videoLength } from '../timeline/layout.js';
 import { sceneForPrompt } from './answerShapes.js';
-import { editAnswerSchema } from './edit/answer.js';
+import { type EditMedia, editAnswerSchema } from './edit/answer.js';
 import { scenarioAnswerSchema } from './scenario/answer.js';
 
 /**
@@ -145,6 +147,46 @@ export function buildScenarioRequest(input: ScenarioRequestInput): string {
 export interface EditRequestInput {
   instruction: string;
   document: StudioDocument;
+  /** The video's imported files, which timeline changes name. */
+  media?: readonly EditMedia[];
+}
+
+const roundTo = (value: number) => Math.round(value * 100) / 100;
+
+/** The timeline as the AI sees it: times in seconds, files by name, scenes where they play. */
+function currentTimeline(doc: StudioDocument, media: readonly EditMedia[]) {
+  const name = (hash: string) => media.find((m) => m.hash === hash)?.name ?? 'missing file';
+  return {
+    lengthSeconds: roundTo(flicksToSeconds(videoLength(doc))),
+    scenes: sceneBlocks(doc).map((b) => ({
+      id: b.sceneId,
+      startSeconds: roundTo(flicksToSeconds(b.start)),
+      endSeconds: roundTo(flicksToSeconds(b.end)),
+    })),
+    tracks: doc.timeline.tracks
+      .filter((t) => t.kind !== 'scene')
+      .map((t) => ({
+        track: t.kind,
+        muted: t.muted,
+        volume: t.volume,
+        clips: doc.timeline.clips
+          .filter((c) => c.trackId === t.id)
+          .sort((a, b) => a.start - b.start)
+          .map((c) => ({
+            id: c.id,
+            startSeconds: roundTo(flicksToSeconds(c.start)),
+            durationSeconds: roundTo(flicksToSeconds(c.duration)),
+            ...(c.source.type === 'text' ? { text: c.source.text } : {}),
+            ...(c.source.type === 'media' ? { file: name(c.source.hash) } : {}),
+            volume: c.gain,
+          })),
+      })),
+    files: media.map((m) => ({
+      name: m.name,
+      kind: m.kind,
+      ...(m.duration === null ? {} : { durationSeconds: roundTo(flicksToSeconds(m.duration)) }),
+    })),
+  };
 }
 
 export function buildEditRequest(input: EditRequestInput): string {
@@ -162,11 +204,15 @@ export function buildEditRequest(input: EditRequestInput): string {
     ].join('\n'),
     '## The scenario now',
     `\`\`\`json\n${JSON.stringify(currentScenario(doc), null, 1)}\n\`\`\``,
+    '## The timeline now',
+    'Scenes play one after another; the other tracks hold clips over them: video and images (shown full frame), captions (text), and voice, music and sound effects.',
+    `\`\`\`json\n${JSON.stringify(currentTimeline(doc, input.media ?? []), null, 1)}\n\`\`\``,
     '## Rules',
     [
       ...languageRules(doc.language).map((rule) => `- ${rule}`),
       '- Refer to scenes by their "id". New scenes get no id; place them with "after" (the id of the scene before, or null for first).',
       '- Change as little as you can. Leave out every field you do not change.',
+      '- Timeline changes use the clip and track changes: times are seconds from the start of the video, files are named as in "files", and clips on one track must not overlap. Use captions.fromNarration to caption a scene from its narration.',
       '- If the request cannot be done on the scenario (for example it is about colors in the animation), make the closest change to the scene notes or visual brief.',
     ].join('\n'),
     '## How to answer',

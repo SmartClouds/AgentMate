@@ -10,6 +10,9 @@ import type {
   GenerationDetail,
   GenerationView,
   HistoryEntryView,
+  ImportResult,
+  MediaVariant,
+  MediaView,
   MoveResult,
   OpenVideoResult,
   ProjectStorageView,
@@ -48,6 +51,7 @@ import {
 } from './ai/studioAi.js';
 import { BlobStore } from './blobs/blobStore.js';
 import type { OpenSqlDriver } from './db/sqlDriver.js';
+import { createMediaLibrary } from './media/mediaLibrary.js';
 import { acquireVideoLock, type HeldLock, LOCK_FILE, type LockOptions } from './project/lock.js';
 import { checkStorageRoot } from './project/storageRoot.js';
 import {
@@ -201,6 +205,14 @@ export interface StudioService {
     aspect: Aspect;
     language: string;
   }): Promise<SceneCheckView>;
+  importMedia(input: { videoId: string; paths: string[] }): Promise<ImportResult>;
+  media(input: { videoId: string }): Promise<MediaView[]>;
+  /** A file to serve for the preview: the original, or a preview file once it is made. */
+  mediaFile(input: {
+    videoId: string;
+    hash: string;
+    variant: MediaVariant;
+  }): Promise<string | null>;
   renderTools(): Promise<RenderToolsView>;
   renderEstimate(input: { videoId: string }): Promise<RenderEstimateView>;
   startRender(input: StartRenderInput): Promise<RenderJobView>;
@@ -479,6 +491,7 @@ export function createStudioService(host: StudioHost): StudioService {
       return { state: 'error', message: error instanceof Error ? error.message : String(error) };
     }
     sessions.set(videoId, { store, lock: locked.lock });
+    media.prepare(videoId, store);
     await putEntry({ ...found, title: store.manifest.title, lastOpenedAt: now() });
     return { state: 'open', session: await sessionView(videoId, store) };
   }
@@ -504,6 +517,25 @@ export function createStudioService(host: StudioHost): StudioService {
   async function projectHosts(projectId: string | null): Promise<string[]> {
     if (!projectId) return [];
     return (await settingsStore.read()).projectSceneHosts[projectId] ?? [];
+  }
+
+  let captionTree: Promise<string> | null = null;
+  /** The built-in caption page, stored once per run in the shared library like the style scenes. */
+  function captionPageTree(): Promise<string> {
+    captionTree ??= assets
+      .captionPage()
+      .then(async (files) => (await treeFromFiles(files, libraryBlobs)).treeHash);
+    captionTree.catch(() => {
+      captionTree = null;
+    });
+    return captionTree;
+  }
+
+  async function planInputs(store: VideoStore) {
+    const media = new Map(
+      store.mediaList().map((m) => [m.hash, { kind: m.kind, hasAudio: m.info.hasAudio }] as const),
+    );
+    return { media, captionTree: await captionPageTree() };
   }
 
   const render = createStudioRender({
@@ -547,6 +579,21 @@ export function createStudioService(host: StudioHost): StudioService {
     },
     // A quarter of the memory, at most 3 GB, for the scene windows of one render.
     memoryCapBytes: Math.min(totalmem() / 4, 3 * 1024 ** 3),
+  });
+
+  const media = createMediaLibrary({
+    async tools() {
+      const found = host.render ? await host.render.tools() : null;
+      return found?.ffmpeg && found.ffprobe
+        ? { ffmpeg: found.ffmpeg, ffprobe: found.ffprobe }
+        : null;
+    },
+    async cacheDir(videoId) {
+      const file = await settingsStore.read();
+      return join(file.cacheDir ?? host.defaultCacheDir, videoId, 'media');
+    },
+    notify: host.notify,
+    now,
   });
 
   async function closeSession(videoId: string): Promise<void> {
@@ -960,12 +1007,30 @@ export function createStudioService(host: StudioHost): StudioService {
       return null;
     },
 
+    async importMedia({ videoId, paths }) {
+      return media.importFiles(videoId, session(videoId).store, paths);
+    },
+
+    async media({ videoId }) {
+      return media.list(videoId, session(videoId).store);
+    },
+
+    async mediaFile({ videoId, hash, variant }) {
+      const open = sessions.get(videoId);
+      return open ? media.file(videoId, open.store, hash, variant) : null;
+    },
+
     async renderTools() {
       return render.tools();
     },
 
     async renderEstimate({ videoId }) {
-      return render.estimate({ videoId, document: session(videoId).store.document });
+      const { store } = session(videoId);
+      return render.estimate({
+        videoId,
+        document: store.document,
+        planInputs: await planInputs(store),
+      });
     },
 
     async startRender({ videoId, fileName }) {
@@ -979,6 +1044,7 @@ export function createStudioService(host: StudioHost): StudioService {
         document,
         allowedHosts: await projectHosts(store.manifest.linkedProjectId),
         fileName,
+        planInputs: await planInputs(store),
       });
     },
 
@@ -1003,6 +1069,7 @@ export function createStudioService(host: StudioHost): StudioService {
     },
 
     async shutdown() {
+      await media.shutdown();
       await render.shutdown();
       await ai.shutdown();
       await Promise.all([...sessions.keys()].map(closeSession));

@@ -370,6 +370,45 @@ export interface GenerationDetail extends GenerationView {
   texts: { request: string; output: string | null; log: string | null }[];
 }
 
+export const MEDIA_VARIANTS = ['original', 'proxy', 'poster', 'sprite', 'peaks'] as const;
+export type MediaVariant = (typeof MEDIA_VARIANTS)[number];
+
+export const studioMediaInputs = {
+  importFiles: z.object({
+    videoId: id,
+    paths: z.array(z.string().min(1).max(4096)).min(1).max(100),
+  }),
+  videoRef: z.object({ videoId: id }),
+  mediaRef: z.object({ videoId: id, hash: z.string().regex(/^[0-9a-f]{64}$/) }),
+};
+
+/** A file imported into a video, with what the editor can show of it so far. */
+export interface MediaView {
+  hash: string;
+  name: string;
+  kind: 'video' | 'audio' | 'image';
+  /** Flicks; null for a still image. */
+  duration: number | null;
+  width: number | null;
+  height: number | null;
+  fps: number | null;
+  hasAudio: boolean;
+  bytes: number;
+  importedAt: number;
+  /** The preview files made so far. */
+  ready: Record<Exclude<MediaVariant, 'original'>, boolean>;
+  /** Still making preview files. */
+  preparing: boolean;
+  /** Why a preview file could not be made, if one could not. The file still renders. */
+  problem: string | null;
+}
+
+export interface ImportResult {
+  imported: MediaView[];
+  /** Files that were not imported, with why. */
+  skipped: { path: string; reason: string }[];
+}
+
 export const studioRenderInputs = {
   videoRef: z.object({ videoId: id }),
   start: z.object({
@@ -464,6 +503,8 @@ export type StudioEvent =
       ok: boolean;
       error: string | null;
     }
+  /** A video's media changed: a file imported, or its preview files made. */
+  | { type: 'media-changed'; videoId: string }
   /** A render the app stopped in the middle of was picked up again at startup. */
   | { type: 'render-resumed'; jobId: string; videoId: string; fileName: string }
   /** A running render's progress, a few times a second. */
