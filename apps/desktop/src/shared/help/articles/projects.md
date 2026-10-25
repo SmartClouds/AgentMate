@@ -377,6 +377,7 @@ Tagging a version creates a git tag (for example `v1.4.0`) on the current commit
 
 1. Click **Tag a version**. The dialog shows the **Latest** tag and the **Next** one, and how many commits came since.
 2. Choose a version. **Patch** (fixes only), **Minor** (new features) and **Major** (breaking changes) fill in the next number. Or click **Suggest with AI**, which reads the commits since the latest tag with your CLI and proposes a version and tag message. You can also type a **Version** yourself.
+   - To cut a pre-release, pick **Beta** or **Preview** above the bump buttons (the default is **Stable**). The version becomes `1.4.0-beta.1`, and the number goes up from the pre-release tags already there (`-beta.2`, `-beta.3`). After a pre-release, **Patch** and **Minor** land on the release it was heading for (`1.4.0`) instead of skipping past it. Switch back to **Stable** to drop the suffix.
 3. The **Prefix** (default `v`) names the tag series. If the repository uses several prefixes, **Prefixes in use** switches between them. AgentMate remembers the prefix per project.
 4. Add a **Tag message (optional)**.
 5. Optionally click **Update version in files**, described below.

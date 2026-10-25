@@ -7,11 +7,19 @@ import { create } from 'zustand';
  * disappears the moment the user navigates (a "Review" click on a completion toast does
  * exactly that). The form has to read the same way wherever the flow is picked up again.
  */
+/** A full release, or one of the pre-release channels a tag can be cut on. */
+export type ReleaseChannel = 'stable' | 'beta' | 'preview';
+
 export interface TagDraft {
   /** The tag series prefix ("v", "web-v", ...), or null until one is chosen. */
   prefix: string | null;
   /** The version itself, without the prefix. */
   version: string;
+  /**
+   * Which kind of release the bump buttons and AI suggestions aim at. Starts at stable every
+   * time the flow does, so a beta is never cut by accident on the next release.
+   */
+  channel: ReleaseChannel;
   /** The annotated tag's message. */
   message: string;
   /** Why the CLI suggested this version, when it suggested one. */
@@ -23,6 +31,7 @@ export interface TagDraft {
 export const EMPTY_TAG_DRAFT: TagDraft = {
   prefix: null,
   version: '',
+  channel: 'stable',
   message: '',
   reason: null,
   updatedVersionFor: null,

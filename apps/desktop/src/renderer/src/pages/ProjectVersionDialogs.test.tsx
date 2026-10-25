@@ -199,6 +199,51 @@ describe('ProjectVersionDialogs', () => {
     expect(createTag).not.toHaveBeenCalled();
   });
 
+  it('cuts a beta from the bump buttons and goes back to stable', async () => {
+    const { user } = renderDialogs();
+
+    await user.click(await screen.findByRole('radio', { name: 'Beta' }));
+    await user.click(screen.getByRole('button', { name: 'Patch bump to v1.0.1-beta.1' }));
+    expect(versionInput().value).toBe('1.0.1-beta.1');
+    expect(screen.getByText(/A beta pre-release/)).toBeTruthy();
+
+    await user.click(screen.getByRole('radio', { name: 'Stable' }));
+    expect(versionInput().value).toBe('1.0.1');
+    expect(screen.getByRole('radio', { name: 'Stable' }).getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('numbers the next beta after the ones already tagged', async () => {
+    const { user } = renderDialogs({
+      'git.tags': {
+        ...tags,
+        latestTag: 'v1.1.0-beta.2',
+        recentTags: ['v1.1.0-beta.2', 'v1.1.0-beta.1', 'v1.0.0'],
+      },
+    });
+
+    // The typed channel picks the radio, and the bumps follow it. 1.1.0 itself hasn't shipped,
+    // so a minor bump lands on it rather than skipping to 1.2.0.
+    await user.type(await screen.findByLabelText('Version'), '1.1.0-beta.1');
+    expect(screen.getByRole('radio', { name: 'Beta' }).getAttribute('aria-checked')).toBe('true');
+    await user.click(screen.getByRole('button', { name: 'Minor bump to v1.1.0-beta.3' }));
+    expect(versionInput().value).toBe('1.1.0-beta.3');
+
+    await user.click(screen.getByRole('radio', { name: 'Stable' }));
+    expect(versionInput().value).toBe('1.1.0');
+    expect(screen.getByRole('button', { name: 'Minor bump to v1.1.0' })).toBeTruthy();
+  });
+
+  it('puts an AI suggestion on the chosen channel', async () => {
+    const suggestTag = vi.fn(async () => ({ ok: true, tag: 'v1.1.0', cliName: 'Claude' }));
+    const { user } = renderDialogs({ 'git.suggestTag': suggestTag });
+
+    await user.click(await screen.findByRole('radio', { name: 'Preview' }));
+    await user.click(screen.getByRole('button', { name: /Suggest with AI/ }));
+
+    await waitFor(() => expect(versionInput().value).toBe('1.1.0-preview.1'));
+    expect(toast.success).toHaveBeenCalledWith('Claude suggested v1.1.0-preview.1.');
+  });
+
   it('starts fresh after the user closes the flow', async () => {
     const { user, unmount } = renderDialogs();
 

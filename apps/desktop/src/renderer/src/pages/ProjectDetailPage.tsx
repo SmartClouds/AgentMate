@@ -171,7 +171,11 @@ import { confirmDialog } from '@/stores/confirmStore';
 import { usePageHeader } from '@/stores/pageHeaderStore';
 import { useShortcutLabel } from '@/stores/shortcutStore';
 import { useTerminalStore } from '@/stores/terminalStore';
-import { EMPTY_TAG_DRAFT, useVersionDialogStore } from '@/stores/versionDialogStore';
+import {
+  EMPTY_TAG_DRAFT,
+  type ReleaseChannel,
+  useVersionDialogStore,
+} from '@/stores/versionDialogStore';
 
 export default function ProjectDetailPage(): React.JSX.Element {
   const { projectId } = useParams<{ projectId: string }>();
@@ -1772,11 +1776,18 @@ function releaseCommitMessage(tag: string): string {
   return `chore(release): bump version to ${plain ? (split?.version ?? tag) : tag}`;
 }
 
-function parseSemverTag(tag: string): { major: number; minor: number; patch: number } | null {
+function parseSemverTag(
+  tag: string,
+): { major: number; minor: number; patch: number; prerelease: boolean } | null {
   const version = splitTag(tag)?.version;
-  const match = version?.match(/^(\d+)\.(\d+)\.(\d+)/);
+  const match = version?.match(/^(\d+)\.(\d+)\.(\d+)(-)?/);
   if (!match) return null;
-  return { major: Number(match[1]), minor: Number(match[2]), patch: Number(match[3]) };
+  return {
+    major: Number(match[1]),
+    minor: Number(match[2]),
+    patch: Number(match[3]),
+    prerelease: match[4] !== undefined,
+  };
 }
 
 /** What each bump kind is for, so the choice reads without knowing semver by heart. */
@@ -1786,7 +1797,11 @@ const BUMP_HINTS = {
   major: 'Breaking changes',
 } as const;
 
-/** The next version number for a bump kind, without any prefix: the caller owns that. */
+/**
+ * The next version number for a bump kind, without any prefix: the caller owns that. After a
+ * pre-release like 1.3.0-beta.2 the release it was heading for (1.3.0) has not shipped yet,
+ * so a bump that 1.3.0 already covers lands on it instead of skipping past it, as npm does.
+ */
 function bumpSemverVersion(latestTag: string | null, kind: 'major' | 'minor' | 'patch'): string {
   const parsed = latestTag ? parseSemverTag(latestTag) : null;
   if (!parsed) {
@@ -1794,9 +1809,54 @@ function bumpSemverVersion(latestTag: string | null, kind: 'major' | 'minor' | '
     if (kind === 'minor') return '0.1.0';
     return '0.0.1';
   }
-  if (kind === 'major') return `${parsed.major + 1}.0.0`;
-  if (kind === 'minor') return `${parsed.major}.${parsed.minor + 1}.0`;
-  return `${parsed.major}.${parsed.minor}.${parsed.patch + 1}`;
+  const { major, minor, patch, prerelease } = parsed;
+  if (kind === 'major') {
+    return prerelease && minor === 0 && patch === 0 ? `${major}.0.0` : `${major + 1}.0.0`;
+  }
+  if (kind === 'minor') {
+    return prerelease && patch === 0 ? `${major}.${minor}.0` : `${major}.${minor + 1}.0`;
+  }
+  return prerelease ? `${major}.${minor}.${patch}` : `${major}.${minor}.${patch + 1}`;
+}
+
+const RELEASE_CHANNELS: { channel: ReleaseChannel; label: string; hint: string }[] = [
+  { channel: 'stable', label: 'Stable', hint: 'A full release' },
+  { channel: 'beta', label: 'Beta', hint: 'Feature complete, still being tested' },
+  { channel: 'preview', label: 'Preview', hint: 'An early look, may still change a lot' },
+];
+
+/** The channel a typed version is on, or null when it is empty or some other pre-release. */
+function releaseChannelOf(version: string): ReleaseChannel | null {
+  if (/^\d+\.\d+\.\d+$/.test(version)) return 'stable';
+  const match = version.match(/^\d+\.\d+\.\d+-(beta|preview)(?:\.\d+)?$/);
+  return match ? (match[1] as ReleaseChannel) : null;
+}
+
+/** `1.3.0` out of `1.3.0`, `1.3.0-beta.2` or `1.3.0+build`, or null for anything else. */
+function stableVersionOf(version: string): string | null {
+  return version.match(/^(\d+\.\d+\.\d+)(?:[-+]|$)/)?.[1] ?? null;
+}
+
+/**
+ * `version` on `channel`: the plain number for a stable release, else the next free
+ * pre-release of it (`1.3.0-beta.1`, then `-beta.2` once that one is tagged). Only the
+ * tags in hand are counted, and git still turns down a duplicate this misses.
+ */
+function versionOnChannel(
+  version: string,
+  channel: ReleaseChannel,
+  prefix: string,
+  existingTags: string[],
+): string {
+  if (channel === 'stable') return version;
+  const stem = `${prefix}${version}-${channel}.`;
+  let highest = 0;
+  for (const existing of existingTags) {
+    if (!existing.startsWith(stem)) continue;
+    const n = Number(existing.slice(stem.length));
+    if (Number.isInteger(n) && n > highest) highest = n;
+  }
+  return `${version}-${channel}.${highest + 1}`;
 }
 
 function GitIconWell({ children }: { children: React.ReactNode }): React.JSX.Element {
@@ -3324,7 +3384,12 @@ function TagVersionDialog({
   const { version, message, reason, updatedVersionFor } = draft;
   // A prefix of null means nothing has been chosen yet, and the effect below fills it in.
   const prefix = draft.prefix ?? 'v';
-  const setVersion = (next: string): void => patchDraft(projectId, { version: next });
+  // A version typed or picked on a channel moves the channel along with it, so the bump
+  // buttons keep offering the kind of release the user is actually making.
+  const setVersion = (next: string): void => {
+    const nextChannel = releaseChannelOf(next.trim());
+    patchDraft(projectId, { version: next, ...(nextChannel ? { channel: nextChannel } : {}) });
+  };
   const setMessage = (next: string): void => patchDraft(projectId, { message: next });
   const setReason = (next: string | null): void => patchDraft(projectId, { reason: next });
   const suggestRequestRef = useRef<string | null>(null);
@@ -3383,16 +3448,22 @@ function TagVersionDialog({
   // used to block tagging entirely even though nothing about the tag itself needed it clean.
   const dirtyFileCount = status?.files.length ?? 0;
   const isDirty = dirtyFileCount > 0;
+  // The prefix alone is not a tag. Everything that acts on the tag keys off the version
+  // field, so an empty version can't create a tag literally named "v".
+  const trimmedVersion = version.trim();
+  // What the channel picker shows. A version on some other pre-release ("1.2.0-rc.1") is on
+  // none of these, so nothing is picked rather than a channel the tag isn't on.
+  const shownChannel = trimmedVersion ? releaseChannelOf(trimmedVersion) : draft.channel;
+  const existingTags = latestTag ? [latestTag, ...recentTags] : recentTags;
+  const onChannel = (next: string, channel: ReleaseChannel = draft.channel): string =>
+    versionOnChannel(next, channel, trimmedPrefix, existingTags);
   const bumpOptions = (['patch', 'minor', 'major'] as const).map((kind) => ({
     kind,
     label: `${kind[0].toUpperCase()}${kind.slice(1)}`,
     hint: BUMP_HINTS[kind],
-    next: bumpSemverVersion(latestTag, kind),
+    next: onChannel(bumpSemverVersion(latestTag, kind)),
   }));
-
-  // The prefix alone is not a tag. Everything that acts on the tag keys off the version
-  // field, so an empty version can't create a tag literally named "v".
-  const trimmedVersion = version.trim();
+  const stableVersion = stableVersionOf(trimmedVersion);
   const looksSemver = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(trimmedVersion);
   const createTagMutation = useMutation({
     mutationFn: (nextTag: string) =>
@@ -3462,12 +3533,19 @@ function TagVersionDialog({
         const split = splitTag(result.tag);
         // The suggestion comes back with the typed prefix already on it, so only the version
         // is taken. The prefix field is the user's and a suggestion never rewrites it.
+        const suggested = split ? split.version : result.tag;
+        // The CLI picks the number. Whether it ships as a beta is the user's call, made with
+        // the channel picker, which may have changed while the CLI was thinking.
+        const channel =
+          useVersionDialogStore.getState().drafts[projectId]?.channel ?? draft.channel;
+        const base = stableVersionOf(suggested);
+        const next = base && channel !== 'stable' ? onChannel(base, channel) : suggested;
+        setVersion(next);
         patchDraft(projectId, {
-          version: split ? split.version : result.tag,
           reason: result.reason ?? null,
           ...(result.message ? { message: result.message } : {}),
         });
-        toast.success(`${result.cliName ?? 'Your CLI'} suggested ${result.tag}.`);
+        toast.success(`${result.cliName ?? 'Your CLI'} suggested ${trimmedPrefix}${next}.`);
       } else {
         toast.error(result.error ?? 'The CLI could not work out a version.');
       }
@@ -3548,6 +3626,12 @@ function TagVersionDialog({
   function handleBump(nextVersion: string): void {
     setVersion(nextVersion);
     setReason(null);
+  }
+
+  /** Moves the version on screen to `channel`, keeping its number: 1.3.0 becomes 1.3.0-beta.1. */
+  function handleChannel(channel: ReleaseChannel): void {
+    patchDraft(projectId, { channel });
+    if (stableVersion) setVersion(onChannel(stableVersion, channel));
   }
 
   return (
@@ -3677,6 +3761,15 @@ function TagVersionDialog({
                 Not a <span className="font-mono">major.minor.patch</span> version. It gets created
                 exactly as typed.
               </p>
+            ) : (shownChannel === 'beta' || shownChannel === 'preview') && stableVersion ? (
+              <p className="border-t border-border bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
+                A {shownChannel} pre-release. Version tools sort it before{' '}
+                <span className="font-mono">
+                  {trimmedPrefix}
+                  {stableVersion}
+                </span>
+                , so it never counts as the latest stable release.
+              </p>
             ) : null}
           </div>
 
@@ -3707,6 +3800,36 @@ function TagVersionDialog({
                 />
               </SimpleTooltip>
             )}
+          </div>
+
+          {/* Pre-releases get their own channel rather than a hand-typed suffix, so the
+              numbering (beta.1, beta.2, ...) carries on from the tags already there. */}
+          <div
+            role="radiogroup"
+            aria-label="Release channel"
+            className="grid grid-cols-3 gap-1 rounded-lg border border-border bg-muted/30 p-1"
+          >
+            {RELEASE_CHANNELS.map((option) => {
+              const selected = shownChannel === option.channel;
+              return (
+                <SimpleTooltip key={option.channel} label={option.hint}>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => handleChannel(option.channel)}
+                    className={cn(
+                      'cursor-pointer rounded-md px-2 py-1 text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      selected
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                </SimpleTooltip>
+              );
+            })}
           </div>
 
           <div className="grid grid-cols-3 gap-2">
