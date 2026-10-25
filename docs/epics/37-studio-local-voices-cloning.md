@@ -4,8 +4,10 @@ Milestone: standalone (Studio). Depends on: E36.
 
 ## Goal
 
-Clone the user's own voice and speak with it, locally with OmniVoice (an optional engine the user
-installs) or online with ElevenLabs, with consent recorded for every cloned voice.
+Speak narration with local voices, Piper always and OmniVoice when the user installs it, and
+clone the user's own voice, locally with OmniVoice or online with ElevenLabs, with consent recorded
+for every cloned voice. Piper and voice profiles moved here from E36, since they need this epic's
+Python environment installer.
 
 ## Design
 
@@ -31,7 +33,10 @@ installs) or online with ElevenLabs, with consent recorded for every cloned voic
 - [ ] T2 The lock script and lock files, with a schema test.
 - [ ] T3 The environment and model-file runners and the GPU probe.
 - [ ] T4 The supervised sidecar and the OmniVoice adapter.
-- [ ] T5 Voice profiles with consent; cloning through OmniVoice and ElevenLabs.
+- [ ] T5 Voice profiles with consent (the transcript filled in by the Whisper host); cloning
+  through OmniVoice and ElevenLabs.
+- [ ] T5b Piper: Dev Setup items for its environment and the Persian and English voices
+  (resumable), and its adapter behind the narrator's engine call (from E36).
 - [ ] T6 e2e `devSetupStudio.e2e.ts` with fake uv, Python and sidecar.
 
 ## Acceptance criteria
@@ -41,3 +46,4 @@ installs) or online with ElevenLabs, with consent recorded for every cloned voic
   reason.
 - AC3 A sidecar crash fails only the job in flight.
 - AC4 No voice is cloned without a consent record.
+- AC5 Persian narration from Piper works offline.

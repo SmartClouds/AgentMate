@@ -73,6 +73,8 @@ export interface PlannedOverlay {
 export interface PlannedAudio {
   clipId: string;
   hash: string;
+  /** What it is in the mix: music drops under a voice when ducking is on. */
+  role: 'voice' | 'music' | 'other';
   startSeconds: number;
   inSeconds: number;
   seconds: number;
@@ -105,6 +107,8 @@ export interface RenderPlan {
   /** In drawing order: video under pictures under captions. */
   overlays: PlannedOverlay[];
   audio: PlannedAudio[];
+  /** Whether music drops under the voice. */
+  duck: boolean;
   /** The loudness the mix is brought to, when there is sound; null for a silent video. */
   loudness: number | null;
 }
@@ -212,7 +216,7 @@ function planClips(
   doc: StudioDocument,
   options: PlanOptions,
   frame: { fps: number; totalFrames: number; width: number; height: number; problems: string[] },
-): Pick<RenderPlan, 'overlays' | 'audio' | 'loudness'> {
+): Pick<RenderPlan, 'overlays' | 'audio' | 'duck' | 'loudness'> {
   const { fps, totalFrames, problems } = frame;
   const media = options.media ?? new Map<string, MediaFacts>();
   const tracks = doc.timeline.tracks;
@@ -318,6 +322,7 @@ function planClips(
       audio.push({
         clipId: clip.id,
         hash: source.hash,
+        role: track.kind === 'voice' ? 'voice' : track.kind === 'music' ? 'music' : 'other',
         startSeconds: startFrame / fps,
         inSeconds,
         seconds,
@@ -327,7 +332,12 @@ function planClips(
       });
     }
   }
-  return { overlays, audio, loudness: audio.length > 0 ? doc.renderSettings.audio.lufs : null };
+  return {
+    overlays,
+    audio,
+    duck: doc.renderSettings.audio.duck !== false,
+    loudness: audio.length > 0 ? doc.renderSettings.audio.lufs : null,
+  };
 }
 
 /** Bits per output pixel per frame each quality aims at, for the size estimate. */

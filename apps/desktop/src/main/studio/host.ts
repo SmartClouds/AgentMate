@@ -3,15 +3,23 @@ import { dirname, join } from 'node:path';
 import { CLI_REGISTRY, launchPickArgs } from '@agentmat/core';
 import type { StudioEvent } from '@agentmat/studio';
 import { checkScene, type StudioHost, type StudioService } from '@agentmat/studio/node';
-import { app, nativeImage } from 'electron';
+import { app, nativeImage, net } from 'electron';
+import type { SecretEnvelope } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';
 import { streamHeadlessCliPrompt } from '../cli/headlessStream';
 import { getDevSetupService } from '../devSetup/runtime';
 import { broadcastToWindows } from '../ipc/send';
 import { showOsNotification } from '../notifications/osNotification';
+import {
+  decryptSecret,
+  encryptSecret,
+  isLockedEnvelope,
+  registerSealedSecretStore,
+} from '../ssh/vault';
 import { store } from '../store';
 import { createOffscreenSource, sceneWindowsMemoryBytes } from './capture/offscreenSource';
 import { openBetterSqlite } from './db';
+import { createStudioSecrets } from './secrets';
 
 /** Scenes are checked small: a quarter of the design size is plenty to see blank or changing frames. */
 const CHECK_SCALE = 0.25;
@@ -45,9 +53,18 @@ export function studioPackageRoot(): string {
 }
 
 export function createDesktopStudioHost(): StudioHost {
+  const dataDir = join(app.getPath('userData'), 'data', 'studio');
+  // ElevenLabs and Azure keys are sealed like the Servers secrets, and move with a passkey change.
+  const secrets = createStudioSecrets<SecretEnvelope>({
+    file: join(dataDir, 'secrets.json'),
+    seal: encryptSecret,
+    unseal: decryptSecret,
+    isLocked: isLockedEnvelope,
+  });
+  registerSealedSecretStore(secrets);
   return {
     packageRoot: studioPackageRoot(),
-    dataDir: join(app.getPath('userData'), 'data', 'studio'),
+    dataDir,
     // Videos, not Documents: Documents is often redirected to OneDrive, and large files and a
     // history database under a sync client are trouble.
     defaultLibraryRoot: join(app.getPath('videos'), 'AgentMate Studio'),
@@ -83,6 +100,16 @@ export function createDesktopStudioHost(): StudioHost {
         open: (input) => createOffscreenSource(input),
         memoryBytes: async () => sceneWindowsMemoryBytes(),
       },
+    },
+    voice: {
+      async appKeys() {
+        const settings = await store.getSettings();
+        return { openai: settings.openaiApiKey, gemini: settings.geminiApiKey };
+      },
+      secrets,
+      fetch: (url, init) => net.fetch(url as string, init),
+      // The e2e suite points every engine at its fake servers.
+      baseUrl: process.env.AGENTMATE_STUDIO_TTS_URL || undefined,
     },
     scenes: {
       async check(input) {

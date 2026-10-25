@@ -388,3 +388,34 @@ describe('VideoStore scene code', () => {
     await expect(readdir(dir)).rejects.toThrow();
   });
 });
+
+describe('narration follows its scene', () => {
+  it('moves a later scene narration when an earlier scene grows, in the same undo step', async () => {
+    const { folder } = await newVideo();
+    const store = await open(folder);
+    const voice = {
+      id: 'nv-s2-abc',
+      trackId: 'track-voice',
+      start: 5 * 705_600_000,
+      duration: 705_600_000,
+      source: { type: 'media' as const, hash: 'a'.repeat(64), in: 0, out: 705_600_000 },
+      transitionIn: null,
+      gain: 1,
+      fadeIn: 0,
+      fadeOut: 0,
+    };
+    store.apply({
+      baseSeq: 1,
+      ops: [addScene('s1'), addScene('s2'), { op: 'clip.add', clip: voice }],
+      label: 'Setup',
+    });
+    const grown = store.apply({
+      baseSeq: 2,
+      ops: [{ op: 'scene.update', sceneId: 's1', patch: { targetDuration: 8 * 705_600_000 } }],
+      label: 'Longer scene 1',
+    });
+    expect(grown.document.timeline.clips[0]?.start).toBe(8 * 705_600_000);
+    const undone = store.undo();
+    expect(undone?.document.timeline.clips[0]?.start).toBe(5 * 705_600_000);
+  });
+});

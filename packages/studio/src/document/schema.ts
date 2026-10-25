@@ -157,7 +157,12 @@ export const renderSettingsSchema = z.object({
   quality: z.enum(QUALITIES),
   codec: z.enum(CODECS),
   hwEncode: z.boolean(),
-  audio: z.object({ sampleRate: z.literal(48_000), lufs: z.number().min(-30).max(-5) }),
+  audio: z.object({
+    sampleRate: z.literal(48_000),
+    lufs: z.number().min(-30).max(-5),
+    /** Music drops under the voice while someone speaks. */
+    duck: z.boolean().default(true),
+  }),
 });
 export type RenderSettings = z.infer<typeof renderSettingsSchema>;
 
@@ -281,7 +286,7 @@ export function createDocument(input: NewDocumentInput): StudioDocument {
       quality: 'standard',
       codec: 'h264',
       hwEncode: true,
-      audio: { sampleRate: 48_000, lufs: -14 },
+      audio: { sampleRate: 48_000, lufs: -14, duck: true },
     },
   };
 }

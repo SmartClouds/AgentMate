@@ -37,6 +37,7 @@ import { RenderStrip } from '../render/RenderStrip';
 import { SceneCodeDialog } from '../scenes/SceneCodeDialog';
 import { SceneMotion } from '../scenes/SceneMotion';
 import { TimelineView } from '../timeline/TimelineView';
+import { VoicePanel } from '../voice/VoicePanel';
 import { HistoryPanel } from './HistoryPanel';
 import { LockedCard } from './LockedCard';
 import { ScenarioPanel } from './ScenarioPanel';
@@ -55,6 +56,8 @@ function typingInField(target: EventTarget | null): boolean {
 }
 
 const SHOWN_WHEN = new Set<GenerationView['status']>(['running', 'failed', 'interrupted']);
+
+const VIEW_LABELS = { scenario: 'Scenario', voice: 'Voice', timeline: 'Timeline' } as const;
 
 /**
  * One video, open for editing: the scenario written by AI from a brief or by hand, edited by hand
@@ -80,7 +83,7 @@ export function StudioEditor({
   const [applying, setApplying] = useState(false);
   const [showHistory, setShowHistory] = useState(true);
   const [rendering, setRendering] = useState(false);
-  const [mode, setMode] = useState<'scenario' | 'timeline'>('scenario');
+  const [mode, setMode] = useState<'scenario' | 'voice' | 'timeline'>('scenario');
   const [title, setTitle] = useState('');
   const openTitle = view.state === 'open' ? view.document.title : '';
   useEffect(() => setTitle(openTitle), [openTitle]);
@@ -203,7 +206,7 @@ export function StudioEditor({
       <div className={TOOLBAR}>
         {back}
         <div className={SEGMENT_TRACK} role="radiogroup" aria-label="View">
-          {(['scenario', 'timeline'] as const).map((value) => (
+          {(['scenario', 'voice', 'timeline'] as const).map((value) => (
             <button
               key={value}
               type="button"
@@ -212,7 +215,7 @@ export function StudioEditor({
               className={segmentClass(mode === value)}
               onClick={() => setMode(value)}
             >
-              {value === 'scenario' ? 'Scenario' : 'Timeline'}
+              {VIEW_LABELS[value]}
             </button>
           ))}
         </div>
@@ -327,6 +330,16 @@ export function StudioEditor({
           />
         )}
       </ErrorBoundary>
+      {mode === 'voice' && (
+        <ErrorBoundary title="Voice">
+          <VoicePanel
+            videoId={videoId}
+            document={document}
+            apply={video.apply}
+            adopt={video.adopt}
+          />
+        </ErrorBoundary>
+      )}
       {mode === 'timeline' && (
         <ErrorBoundary title="Timeline">
           <TimelineView videoId={videoId} document={document} apply={video.apply} />
@@ -336,7 +349,7 @@ export function StudioEditor({
         className={cn(
           'grid gap-2',
           showHistory && 'lg:grid-cols-[minmax(0,1fr)_20rem]',
-          mode === 'timeline' && 'hidden',
+          mode !== 'scenario' && 'hidden',
         )}
       >
         <ErrorBoundary title="Scenario">

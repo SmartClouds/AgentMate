@@ -485,6 +485,7 @@ import { createSftp } from './sftp';
 import {
   createStudio,
   createStudioAi,
+  createStudioAudio,
   createStudioMedia,
   createStudioRender,
   createStudioScenes,
@@ -1962,6 +1963,7 @@ const studioAi = createStudioAi();
 const studioScenes = createStudioScenes();
 const studioRender = createStudioRender();
 const studioMedia = createStudioMedia();
+const studioAudio = createStudioAudio();
 const relay = createRelay();
 const errorTracking = createErrorTracking();
 
@@ -2803,6 +2805,7 @@ const agentmatApi = {
   studioScenes,
   studioRender,
   studioMedia,
+  studioAudio,
   relay,
   errorTracking,
   cloudflare,

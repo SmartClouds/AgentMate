@@ -409,6 +409,89 @@ export interface ImportResult {
   skipped: { path: string; reason: string }[];
 }
 
+const voiceRef = z
+  .string()
+  .max(200)
+  .regex(
+    /^(openai|gemini|elevenlabs|azure):[A-Za-z0-9_.-]{1,100}$/,
+    'Pick one of the offered voices.',
+  );
+
+export const studioAudioInputs = {
+  speak: z.object({ videoId: id, sceneIds: z.array(id).min(1).max(500), voiceRef }),
+  jobs: z.object({ videoId: id }),
+  jobRef: z.object({ videoId: id, jobId: id }),
+  voices: z.object({
+    engine: z.enum(['openai', 'gemini', 'elevenlabs', 'azure']),
+    lang: z.string().min(2).max(35),
+  }),
+  record: z.object({
+    videoId: id,
+    sceneId: id,
+    /** The recording as the browser made it (WebM with Opus, usually). */
+    bytes: z
+      .instanceof(Uint8Array)
+      .refine(
+        (b) => b.length > 0 && b.length <= 200 * 1024 * 1024,
+        'The recording is empty or too long.',
+      ),
+    mimeType: z.string().max(100),
+  }),
+  captionScene: z.object({ videoId: id, sceneId: id }),
+  setKey: z.object({
+    engine: z.enum(['elevenlabs', 'azure']),
+    key: z.string().trim().max(500).nullable(),
+    region: z
+      .string()
+      .trim()
+      .regex(/^[a-z0-9]{2,40}$/, 'That is not an Azure region, such as westeurope.')
+      .optional(),
+  }),
+};
+
+export type NarrationStatus = 'running' | 'done' | 'failed' | 'cancelled';
+
+/** Speaking a video's scenes with a voice engine, scene by scene. */
+export interface NarrationJobView {
+  id: string;
+  videoId: string;
+  voiceRef: string;
+  sceneIds: string[];
+  status: NarrationStatus;
+  /** Pieces of text spoken or found already spoken, out of all of them. */
+  done: number;
+  total: number;
+  /** The scene being spoken now. */
+  sceneId: string | null;
+  /** Scenes left out because they have no narration. */
+  skipped: string[];
+  /** Pieces that were already spoken (a resumed or repeated run reuses them). */
+  reused: number;
+  error: string | null;
+  startedAt: number;
+  endedAt: number | null;
+}
+
+export interface VoiceEngineView {
+  id: 'openai' | 'gemini' | 'elevenlabs' | 'azure';
+  label: string;
+  /** Why it cannot be used yet (no key, the vault is locked), or null when it can. */
+  problem: string | null;
+  /** The vault holds its key and is locked; unlocking it makes the engine usable. */
+  locked: boolean;
+  /** Where its key is set: the app's AI settings (OpenAI, Gemini) or Studio's own (the rest). */
+  keyIn: 'app' | 'studio';
+  pricePerMillionChars: number | null;
+  retiresOn: string | null;
+}
+
+export interface VoiceView {
+  id: string;
+  label: string;
+  locale?: string;
+  gender?: 'female' | 'male';
+}
+
 export const studioRenderInputs = {
   videoRef: z.object({ videoId: id }),
   start: z.object({
@@ -503,6 +586,8 @@ export type StudioEvent =
       ok: boolean;
       error: string | null;
     }
+  /** A narration run moved on: a piece spoken, a scene placed, or the run ended. */
+  | { type: 'narration-changed'; videoId: string; jobId: string }
   /** A video's media changed: a file imported, or its preview files made. */
   | { type: 'media-changed'; videoId: string }
   /** A render the app stopped in the middle of was picked up again at startup. */

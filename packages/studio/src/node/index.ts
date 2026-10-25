@@ -19,3 +19,6 @@ export * from './scenes/codeTree.js';
 export * from './scenes/sceneServer.js';
 export * from './service.js';
 export * from './settings/jsonStore.js';
+export * from './voice/engines.js';
+export * from './voice/narrator.js';
+export * from './voice/voiceKeys.js';

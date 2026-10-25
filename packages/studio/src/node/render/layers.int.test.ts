@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
@@ -7,13 +8,15 @@ import {
   createScene,
   type StudioDocument,
 } from '../../document/schema.js';
+import { loudnessArgs, loudnessGraph } from '../../render/ffmpeg.js';
 import { buildRenderPlan, type MediaFacts, type RenderPlan } from '../../render/plan.js';
 import { fakeFrameHost } from '../../test/fakeFrames.js';
 import { realTools } from '../../test/ffmpegTools.js';
 import { makeSampleMedia } from '../../test/sampleMedia.js';
 import { useTempDirs } from '../../test/tempDir.js';
 import { secondsToFlicks } from '../../time/flicks.js';
-import { probeFfmpeg, probeVideo, readTool } from './ffmpegTool.js';
+import { parseWav } from '../../voice/wav.js';
+import { probeFfmpeg, probeVideo, readTool, runTool } from './ffmpegTool.js';
 import { runRenderJob } from './renderJob.js';
 
 /**
@@ -227,5 +230,84 @@ describe.skipIf(!tools)('clips over the scenes, with the real ffmpeg', () => {
       mediaPath: () => files.tone,
     });
     expect(await probeVideo(tools!, output)).toMatchObject({ frames: 144, audioCodec: 'aac' });
+  });
+});
+
+describe.skipIf(!tools)('music under the voice, with the real ffmpeg', () => {
+  /** The mix alone, before loudness, written to a WAV and read back. */
+  async function mixed(plan: RenderPlan, files: string[], dir: string) {
+    const graphFile = join(dir, `graph-${plan.duck}.txt`);
+    const out = join(dir, `mix-${plan.duck}.wav`);
+    await writeFile(graphFile, loudnessGraph(plan).replace(/,loudnorm=[^[]*/, ''));
+    const args = loudnessArgs({ plan, audioFiles: files, graphFile, version: null });
+    await runTool(tools!.ffmpeg, [
+      '-v',
+      'error',
+      '-y',
+      ...args.slice(0, args.indexOf('[aout]') + 1),
+      '-c:a',
+      'pcm_s16le',
+      out,
+    ]);
+    const bytes = await readFile(out);
+    return { bytes, wav: parseWav(bytes) };
+  }
+
+  /** Root mean square of the mix between two times, on a 0 to 1 scale. */
+  function level(mix: Awaited<ReturnType<typeof mixed>>, from: number, to: number): number {
+    const { bytes, wav } = mix;
+    let sum = 0;
+    let n = 0;
+    const frame = wav.channels * 2;
+    for (let i = Math.round(from * wav.sampleRate); i < Math.round(to * wav.sampleRate); i++) {
+      const v = bytes.readInt16LE(wav.dataOffset + i * frame) / 32768;
+      sum += v * v;
+      n += 1;
+    }
+    return Math.sqrt(sum / n);
+  }
+
+  it('lowers the music while the voice speaks and brings it back after', async () => {
+    const root = await tempDir();
+    const music = join(root, 'music.wav');
+    const voice = join(root, 'voice.wav');
+    await runTool(tools!.ffmpeg, [
+      '-v',
+      'error',
+      '-y',
+      '-f',
+      'lavfi',
+      '-i',
+      'sine=f=220:d=6',
+      music,
+    ]);
+    await runTool(tools!.ffmpeg, [
+      '-v',
+      'error',
+      '-y',
+      '-f',
+      'lavfi',
+      '-i',
+      'sine=f=880:d=1.5',
+      voice,
+    ]);
+    const narrated = (duck: boolean) =>
+      tiny(
+        video((doc) => {
+          doc.renderSettings.audio.duck = duck;
+          doc.timeline.clips = [
+            clip('m', 'track-music', HASH.tone, 0, 6),
+            clip('n', 'track-voice', HASH.clip, 1, 1.5, {
+              source: { type: 'media', hash: HASH.tone, in: 0, out: s(1.5) },
+            }),
+          ];
+        }),
+      );
+    // Voice first (its track is above the music), then the music.
+    const ducked = await mixed(narrated(true), [voice, music], root);
+    const flat = await mixed(narrated(false), [voice, music], root);
+    expect(level(ducked, 1.6, 2.4)).toBeLessThan(level(flat, 1.6, 2.4) * 0.8);
+    expect(level(ducked, 0.2, 0.8)).toBeCloseTo(level(flat, 0.2, 0.8), 2);
+    expect(level(ducked, 4.5, 5.5)).toBeCloseTo(level(flat, 4.5, 5.5), 2);
   });
 });

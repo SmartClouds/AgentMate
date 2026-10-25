@@ -6,8 +6,9 @@ import { errorMessage } from '../format';
 import { Button, Input, Label, Skeleton, Switch, toast } from '../kit';
 import { studioKeys } from '../queryKeys';
 import { StorageLocationField } from '../storage/StorageLocationField';
+import { VoiceKeysFields } from './VoiceKeysFields';
 
-/** Studio's settings: the library folder, the working cache and render defaults. */
+/** Studio's settings: the library folder, the working cache, render defaults and voice keys. */
 export function StudioSettingsSection(): React.JSX.Element {
   const id = useId();
   const queryClient = useQueryClient();
@@ -121,6 +122,8 @@ export function StudioSettingsSection(): React.JSX.Element {
           onCheckedChange={(checked) => update.mutate({ hwEncode: checked })}
         />
       </label>
+
+      <VoiceKeysFields />
     </div>
   );
 }

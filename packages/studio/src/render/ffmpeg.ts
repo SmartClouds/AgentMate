@@ -1,5 +1,5 @@
 import type { Codec, Quality, RenderSettings } from '../document/schema.js';
-import type { RenderPlan } from './plan.js';
+import type { PlannedAudio, RenderPlan } from './plan.js';
 
 /**
  * The ffmpeg command lines a render runs, built as plain argument arrays (never one shell string),
@@ -268,12 +268,28 @@ function audioGraphLines(
     chain += `,volume=${sound.gain.toFixed(4)},adelay=${Math.round(sound.startSeconds * 1000)}:all=1`;
     lines.push(`${chain}[a${k}]`);
   });
-  const inputs = audio.map((_, k) => `[a${k}]`).join('');
-  lines.push(
-    audio.length > 1
-      ? `${inputs}amix=inputs=${audio.length}:normalize=0:duration=longest:dropout_transition=0[amix]`
-      : `${inputs}anull[amix]`,
-  );
+  const mix = (labels: string[], out: string) =>
+    labels.length > 1
+      ? `${labels.join('')}amix=inputs=${labels.length}:normalize=0:duration=longest:dropout_transition=0[${out}]`
+      : `${labels.join('')}anull[${out}]`;
+  const labelsOf = (roles: PlannedAudio['role'][]) =>
+    audio.flatMap((sound, k) => (roles.includes(sound.role) ? [`[a${k}]`] : []));
+  const envelope = plan.duck ? duckEnvelope(audio) : null;
+  const music = labelsOf(['music']);
+  if (envelope && music.length > 0) {
+    // The music, turned down while a voice plays. The voice clips' times are known, so this is a
+    // volume curve rather than a compressor listening to the voice: the same every render.
+    lines.push(mix(music, 'music'));
+    lines.push(`[music]volume='${envelope}':eval=frame[ducked]`);
+    lines.push(mix([...labelsOf(['voice', 'other']), '[ducked]'], 'amix'));
+  } else {
+    lines.push(
+      mix(
+        audio.map((_, k) => `[a${k}]`),
+        'amix',
+      ),
+    );
+  }
   const target = plan.loudness ?? -14;
   let tail = `[amix]apad,atrim=0:${secs(plan.totalFrames / plan.fps)},asetpts=PTS-STARTPTS`;
   if (loudnorm === 'measure') tail += `,loudnorm=I=${target}:TP=-1.5:LRA=11:print_format=json`;
@@ -282,6 +298,37 @@ function audioGraphLines(
   }
   lines.push(`${tail}[aout]`);
   return lines;
+}
+
+/** How far music drops under a voice (about 10 dB), and how long it takes to get there. */
+export const DUCK_LEVEL = 0.3;
+export const DUCK_RAMP_SECONDS = 0.25;
+
+/**
+ * The music's volume over time as an ffmpeg expression in `t`: 1, easing down to DUCK_LEVEL a ramp
+ * before each stretch of voice and back up a ramp after it. Voices less than two ramps apart count
+ * as one stretch, so the music does not bob up between sentences. Null when nothing speaks.
+ */
+export function duckEnvelope(audio: readonly PlannedAudio[]): string | null {
+  const spans = audio
+    .filter((sound) => sound.role === 'voice' && sound.gain > 0)
+    .map((sound) => [sound.startSeconds, sound.startSeconds + sound.seconds] as [number, number])
+    .sort((a, b) => a[0] - b[0]);
+  const merged: [number, number][] = [];
+  for (const span of spans) {
+    const last = merged.at(-1);
+    if (last && span[0] - last[1] < DUCK_RAMP_SECONDS * 2) last[1] = Math.max(last[1], span[1]);
+    else merged.push([...span]);
+  }
+  if (merged.length === 0) return null;
+  const r = secs(DUCK_RAMP_SECONDS);
+  // Each stretch is a trapezoid from 0 to 1; the deepest one at any moment sets the drop.
+  const shapes = merged.map(
+    ([from, to]) =>
+      `min(clip((t-${secs(from)}+${r})/${r},0,1),clip((${secs(to)}+${r}-t)/${r},0,1))`,
+  );
+  const depth = shapes.reduce((all, shape) => `max(${all},${shape})`);
+  return `1-${(1 - DUCK_LEVEL).toFixed(2)}*${depth}`;
 }
 
 /** Whether this ffmpeg takes a filter graph file as `-/filter_complex` (7.1 and later). */

@@ -4,11 +4,12 @@ import { secondsToFlicks } from '../time/flicks.js';
 import {
   assemblyArgs,
   assemblyGraph,
+  duckEnvelope,
   loudnessArgs,
   loudnessGraph,
   parseLoudnorm,
 } from './ffmpeg.js';
-import { buildRenderPlan, type MediaFacts, type RenderPlan } from './plan.js';
+import { buildRenderPlan, type MediaFacts, type PlannedAudio, type RenderPlan } from './plan.js';
 
 const s = secondsToFlicks;
 const V = '1'.repeat(64);
@@ -188,6 +189,53 @@ describe('the graph for clips and sound', () => {
         '',
       ].join('\n'),
     );
+  });
+
+  it('drops the music under the voice, and leaves it alone with ducking off or no voice', () => {
+    const narrated = (duck: boolean) =>
+      plan(
+        video((doc) => {
+          doc.renderSettings.audio.duck = duck;
+          doc.timeline.clips = [
+            clip('m', 'track-music', media(SONG, 4), 0, 4),
+            clip('n', 'track-voice', media(SONG, 1), 1, 1),
+            clip('x', 'track-sfx', media(SONG, 1), 2, 1),
+          ];
+        }),
+      );
+    const ducked = narrated(true);
+    expect(ducked.audio.map((a) => [a.clipId, a.role])).toEqual([
+      ['n', 'voice'],
+      ['m', 'music'],
+      ['x', 'other'],
+    ]);
+    const lines = loudnessGraph(ducked).split(';\n');
+    expect(lines.slice(3, 6)).toEqual([
+      '[a1]anull[music]',
+      "[music]volume='1-0.70*min(clip((t-1.000000+0.250000)/0.250000,0,1),clip((2.000000+0.250000-t)/0.250000,0,1))':eval=frame[ducked]",
+      '[a0][a2][ducked]amix=inputs=3:normalize=0:duration=longest:dropout_transition=0[amix]',
+    ]);
+    const flat = loudnessGraph(narrated(false));
+    expect(flat).not.toContain('[ducked]');
+    expect(flat).toContain('[a0][a1][a2]amix=inputs=3');
+    const noVoice = plan(
+      video((doc) => {
+        doc.timeline.clips = [clip('m', 'track-music', media(SONG, 4), 0, 4)];
+      }),
+    );
+    expect(noVoice.duck).toBe(true);
+    expect(loudnessGraph(noVoice)).not.toContain('[ducked]');
+  });
+
+  it('treats voices close together as one stretch, and a silent voice as none', () => {
+    const voice = (start: number, seconds: number, gain = 1) =>
+      ({ role: 'voice', startSeconds: start, seconds, gain }) as PlannedAudio;
+    expect(duckEnvelope([voice(0, 1, 0), { ...voice(0, 9), role: 'music' }])).toBeNull();
+    const envelope = duckEnvelope([voice(3, 1), voice(0, 1), voice(1.3, 1)]) as string;
+    // 0 to 2.3 joined (a 0.3 s gap), 3 to 4 apart (a 0.7 s gap).
+    expect(envelope.match(/t-\d\.\d+/g)).toEqual(['t-0.000000', 't-3.000000']);
+    expect(envelope).toContain('(2.300000+0.250000-t)');
+    expect(envelope.startsWith('1-0.70*max(')).toBe(true);
   });
 
   it('feeds each clip from its file, the video from where the clip starts, the still looped', () => {

@@ -9,6 +9,7 @@ import type {
   ImportResult,
   MediaView,
   MoveResult,
+  NarrationJobView,
   OpenVideoResult,
   ProjectStorageView,
   RecipeView,
@@ -30,6 +31,8 @@ import type {
   StudioSettingsView,
   StyleReferenceView,
   VideoSummary,
+  VoiceEngineView,
+  VoiceView,
 } from '@agentmat/studio';
 import { ipcRenderer } from 'electron';
 import { IPC } from '../shared/ipcChannels';
@@ -135,6 +138,37 @@ export function createStudioMedia() {
       ipcRenderer.invoke(IPC.studioMedia.importFiles, { videoId, paths }),
     list: (videoId: string): Promise<MediaView[]> =>
       ipcRenderer.invoke(IPC.studioMedia.list, { videoId }),
+  };
+}
+
+/** Studio voice (E36): voice engines and their keys, narration runs, recordings and captions. */
+export function createStudioAudio() {
+  return {
+    engines: (): Promise<VoiceEngineView[]> => ipcRenderer.invoke(IPC.studioAudio.engines),
+    voices: (engine: VoiceEngineView['id'], lang: string): Promise<VoiceView[]> =>
+      ipcRenderer.invoke(IPC.studioAudio.voices, { engine, lang }),
+    setKey: (input: {
+      engine: 'elevenlabs' | 'azure';
+      key: string | null;
+      region?: string;
+    }): Promise<VoiceEngineView[]> => ipcRenderer.invoke(IPC.studioAudio.setKey, input),
+    speak: (input: {
+      videoId: string;
+      sceneIds: string[];
+      voiceRef: string;
+    }): Promise<NarrationJobView> => ipcRenderer.invoke(IPC.studioAudio.speak, input),
+    jobs: (videoId: string): Promise<NarrationJobView[]> =>
+      ipcRenderer.invoke(IPC.studioAudio.jobs, { videoId }),
+    cancel: (videoId: string, jobId: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.studioAudio.cancel, { videoId, jobId }),
+    record: (input: {
+      videoId: string;
+      sceneId: string;
+      bytes: Uint8Array;
+      mimeType: string;
+    }): Promise<EditResponse> => ipcRenderer.invoke(IPC.studioAudio.record, input),
+    captionScene: (videoId: string, sceneId: string): Promise<EditResponse> =>
+      ipcRenderer.invoke(IPC.studioAudio.captionScene, { videoId, sceneId }),
   };
 }
 

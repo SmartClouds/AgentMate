@@ -11,6 +11,7 @@ import {
 } from '../../document/schema.js';
 import { pushTx, type TxRef, type UndoStacks } from '../../document/undo.js';
 import { videoFolderName } from '../../text/names.js';
+import { followScenes } from '../../timeline/narration.js';
 import { BlobStore } from '../blobs/blobStore.js';
 import {
   type CodeRevision,
@@ -308,10 +309,12 @@ export class VideoStore {
     this.assertOpen();
     if (input.baseSeq !== this.head) throw new StaleEditError(this.head);
     if (input.ops.length === 0) return { seq: this.head, document: this.current };
+    // A scene's narration and its captions move with the scene, in the same undo step.
+    const follow = followScenes(this.current, applyOps(this.current, input.ops).document);
     return this.commit(
       'edit',
       null,
-      input.ops,
+      follow.length > 0 ? [...input.ops, ...follow] : input.ops,
       input.label,
       input.actor ?? 'user',
       input.generationId ?? null,
@@ -421,6 +424,15 @@ export class VideoStore {
 
   mediaList(): MediaRecord[] {
     return this.db.mediaList();
+  }
+
+  /** Where a narration's word timings are (a JSON blob), by the narration's media hash. */
+  setNarrationWords(mediaHash: string, wordsHash: string): void {
+    this.db.setMeta(`words:${mediaHash}`, wordsHash);
+  }
+
+  narrationWords(mediaHash: string): string | null {
+    return this.db.getMeta(`words:${mediaHash}`);
   }
 
   /** A code tree's thumbnail (a PNG blob), from the check that passed it. */

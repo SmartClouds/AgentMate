@@ -644,3 +644,116 @@ describe('rendering', () => {
     expect((await s.service.renderTools()).ffmpeg.found).toBe(false);
   });
 });
+
+describe('narration', () => {
+  async function narratable() {
+    const { fakeFrameHost } = await import('../test/fakeFrames.js');
+    const { fakeTools } = await import('../test/ffmpegTools.js');
+    const { GOOD_KEY, startFakeTts } = await import('../test/fakeTts.js');
+    const tts = await startFakeTts();
+    const secrets = new Map<string, string>();
+    const s = await setup({
+      render: { tools: async () => fakeTools, frames: fakeFrameHost() },
+      voice: {
+        appKeys: async () => ({ openai: GOOD_KEY }),
+        secrets: {
+          get: async (name) => secrets.get(name) ?? null,
+          set: async (name, value) => {
+            if (value === null) secrets.delete(name);
+            else secrets.set(name, value);
+          },
+          isLocked: async () => false,
+        },
+        fetch,
+        baseUrl: tts.url,
+      },
+    });
+    const video = await newVideo(s.service);
+    const session = await openSession(s.service, video.id);
+    await s.service.apply({
+      videoId: video.id,
+      baseSeq: session.status.seq,
+      ops: [
+        { op: 'scene.add', index: 0, scene: createScene({ id: 'a', narration: 'سلام دنیا.' }) },
+        { op: 'scene.add', index: 1, scene: createScene({ id: 'b', narration: 'خداحافظ.' }) },
+      ],
+      label: 'Scenes',
+    });
+    return { s, video, tts, GOOD_KEY };
+  }
+
+  async function waitForJob(service: StudioService, videoId: string) {
+    for (let i = 0; i < 400; i++) {
+      const [job] = await service.narrationJobs({ videoId });
+      if (job && job.status !== 'running') return job;
+      await new Promise((r) => setTimeout(r, 10));
+    }
+    throw new Error('narration did not finish');
+  }
+
+  it('speaks scenes with an engine whose key the app has, and keeps Studio keys sealed', async () => {
+    const { s, video, tts, GOOD_KEY } = await narratable();
+    try {
+      const engines = await s.service.voiceEngines();
+      expect(engines.find((e) => e.id === 'openai')?.problem).toBeNull();
+      expect((await s.service.voices({ engine: 'openai', lang: 'fa' })).length).toBe(13);
+      const after = await s.service.setVoiceKey({ engine: 'elevenlabs', key: GOOD_KEY });
+      expect(after.find((e) => e.id === 'elevenlabs')?.problem).toBeNull();
+
+      const job = await s.service.speak({
+        videoId: video.id,
+        sceneIds: ['a', 'b'],
+        voiceRef: 'openai:marin',
+      });
+      expect(job.status).toBe('running');
+      expect((await waitForJob(s.service, video.id)).status).toBe('done');
+      const doc = (await openSession(s.service, video.id)).document;
+      expect(doc.scenario.scenes.map((sc) => sc.voiceRef)).toEqual([
+        'openai:marin',
+        'openai:marin',
+      ]);
+      expect(doc.timeline.clips.filter((c) => c.trackId === 'track-voice')).toHaveLength(2);
+      expect(s.events.some((e) => e.type === 'narration-changed')).toBe(true);
+
+      const captioned = await s.service.captionScene({ videoId: video.id, sceneId: 'a' });
+      expect(captioned.document.timeline.clips.some((c) => c.trackId === 'track-text')).toBe(true);
+    } finally {
+      await tts.close();
+    }
+  });
+
+  it('places a recording, cleans up its temporary file, and stops speaking when the video closes', async () => {
+    const { s, video, tts } = await narratable();
+    try {
+      const { encodeWav } = await import('../voice/wav.js');
+      const { tonePcm } = await import('../test/fakeTts.js');
+      const placed = await s.service.recordNarration({
+        videoId: video.id,
+        sceneId: 'b',
+        bytes: encodeWav(tonePcm(1, 48_000), 48_000),
+        mimeType: 'audio/wav',
+      });
+      expect(placed.document.scenario.scenes[1]?.voiceRef).toBe('recording');
+      const recordings = join(s.host.defaultCacheDir, video.id, 'voice', 'recordings');
+      expect(await readdir(recordings)).toEqual([]);
+
+      tts.failNext(1000, 503);
+      await s.service.speak({ videoId: video.id, sceneIds: ['a'], voiceRef: 'openai:marin' });
+      await s.service.close({ videoId: video.id });
+      expect((await s.service.narrationJobs({ videoId: video.id }))[0]?.status).toBe('cancelled');
+      await expect(
+        s.service.speak({ videoId: video.id, sceneIds: ['a'], voiceRef: 'openai:marin' }),
+      ).rejects.toThrow('That video is not open.');
+    } finally {
+      tts.failNext(0, 503);
+      await tts.close();
+    }
+  });
+
+  it('says voices are unavailable on a host without them', async () => {
+    const s = await setup();
+    expect((await s.service.voiceEngines())[0]?.problem).toBe(
+      'Voices are not available in this copy of Studio.',
+    );
+  });
+});

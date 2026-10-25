@@ -791,6 +791,25 @@ export const IPC = {
     // ({ videoId }) -> MediaView[]
     list: 'studioMedia:list',
   },
+  /** Studio voice (E36): narration from online voice engines, recordings and voice-timed captions. */
+  studioAudio: {
+    // () -> VoiceEngineView[], each engine and what it still needs (a key, an unlocked vault)
+    engines: 'studioAudio:engines',
+    // ({ engine, lang }) -> VoiceView[], never a Chinese voice
+    voices: 'studioAudio:voices',
+    // ({ engine: 'elevenlabs' | 'azure', key, region? }) -> VoiceEngineView[], the key sealed
+    setKey: 'studioAudio:setKey',
+    // ({ videoId, sceneIds, voiceRef }) -> NarrationJobView; progress comes as narration-changed
+    speak: 'studioAudio:speak',
+    // ({ videoId }) -> NarrationJobView[]
+    jobs: 'studioAudio:jobs',
+    // ({ videoId, jobId }) -> void
+    cancel: 'studioAudio:cancel',
+    // ({ videoId, sceneId, bytes, mimeType }) -> EditResponse, a recording placed as narration
+    record: 'studioAudio:record',
+    // ({ videoId, sceneId }) -> EditResponse, captions where the scene's words are spoken
+    captionScene: 'studioAudio:captionScene',
+  },
   /** Studio rendering (E34): finished video files, one render at a time, resumed after a crash. */
   studioRender: {
     // () -> RenderToolsView, whether ffmpeg is here and which codecs it can write

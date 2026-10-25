@@ -30,6 +30,9 @@ export const studioKeys = {
     ['studio', 'render-estimate', videoId, seq] as const,
   renders: ['studio', 'renders'] as const,
   media: (videoId: string) => ['studio', 'media', videoId] as const,
+  voiceEngines: ['studio', 'voice-engines'] as const,
+  voices: (engine: string, lang: string) => ['studio', 'voices', engine, lang] as const,
+  narrationJobs: (videoId: string) => ['studio', 'narration', videoId] as const,
   peaks: (videoId: string, hash: string) => ['studio', 'peaks', videoId, hash] as const,
   /** Undefined for every video's renders. */
   renderList: (videoId: string | undefined) => ['studio', 'renders', videoId ?? 'all'] as const,

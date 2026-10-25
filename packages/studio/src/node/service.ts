@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { access, cp, mkdir, readdir, readFile, stat } from 'node:fs/promises';
+import { access, cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { hostname as osHostname, totalmem } from 'node:os';
 import { basename, join, relative } from 'node:path';
 import { z } from 'zod';
@@ -14,6 +14,7 @@ import type {
   MediaVariant,
   MediaView,
   MoveResult,
+  NarrationJobView,
   OpenVideoResult,
   ProjectStorageView,
   RecipeView,
@@ -35,6 +36,8 @@ import type {
   StyleReferenceView,
   VideoSession,
   VideoSummary,
+  VoiceEngineView,
+  VoiceView,
 } from '../api.js';
 import type { EditOp } from '../document/ops.js';
 import type { StudioDocument } from '../document/schema.js';
@@ -43,6 +46,7 @@ import { sceneUrl } from '../scenes/url.js';
 import { directionOf } from '../text/languages.js';
 import { newId, safeFolderName } from '../text/names.js';
 import { flicksToSeconds } from '../time/flicks.js';
+import type { TtsEngineId } from '../voice/voices.js';
 import {
   createStudioAi,
   type SceneCheckHost,
@@ -66,6 +70,8 @@ import { createStudioRender, type StudioRenderHost } from './render/renderQueue.
 import { type StudioAssets, studioAssets } from './scenes/assets.js';
 import { readTree, type TreeManifest, treeFile, treeFromFiles } from './scenes/codeTree.js';
 import { JsonStore } from './settings/jsonStore.js';
+import { createNarrator } from './voice/narrator.js';
+import { createVoiceKeys, type StudioKeyEngine, type StudioVoiceHost } from './voice/voiceKeys.js';
 
 /**
  * Studio's service: the library of videos, where each project keeps them, and the open videos
@@ -99,6 +105,8 @@ export interface StudioHost {
   scenes?: SceneCheckHost;
   /** Renders videos with ffmpeg and scene windows. Without it, the Render button says why not. */
   render?: StudioRenderHost;
+  /** Keys and network for the voice engines. Without it, narration says voices are unavailable. */
+  voice?: StudioVoiceHost;
   /**
    * Where Studio's own files (fonts, style scenes, the runtime) are. A host that bundles this
    * package says where it shipped them; others leave it to the package folder.
@@ -213,6 +221,30 @@ export interface StudioService {
     hash: string;
     variant: MediaVariant;
   }): Promise<string | null>;
+  voiceEngines(): Promise<VoiceEngineView[]>;
+  voices(input: { engine: TtsEngineId; lang: string }): Promise<VoiceView[]>;
+  setVoiceKey(input: {
+    engine: StudioKeyEngine;
+    key: string | null;
+    region?: string;
+  }): Promise<VoiceEngineView[]>;
+  /** Speaks scenes with a voice, one run per video at a time; progress comes as events. */
+  speak(input: {
+    videoId: string;
+    sceneIds: string[];
+    voiceRef: string;
+  }): Promise<NarrationJobView>;
+  narrationJobs(input: { videoId: string }): Promise<NarrationJobView[]>;
+  cancelNarration(input: { videoId: string; jobId: string }): Promise<void>;
+  /** Puts a recording made in the app on a scene as its narration. */
+  recordNarration(input: {
+    videoId: string;
+    sceneId: string;
+    bytes: Uint8Array;
+    mimeType: string;
+  }): Promise<EditResponse>;
+  /** Captions a scene from its narration, where its words are spoken when it has a voice. */
+  captionScene(input: { videoId: string; sceneId: string }): Promise<EditResponse>;
   renderTools(): Promise<RenderToolsView>;
   renderEstimate(input: { videoId: string }): Promise<RenderEstimateView>;
   startRender(input: StartRenderInput): Promise<RenderJobView>;
@@ -581,13 +613,14 @@ export function createStudioService(host: StudioHost): StudioService {
     memoryCapBytes: Math.min(totalmem() / 4, 3 * 1024 ** 3),
   });
 
+  /** ffmpeg and ffprobe, when both are installed: media and narration need them. */
+  async function ffmpegTools() {
+    const found = host.render ? await host.render.tools() : null;
+    return found?.ffmpeg && found.ffprobe ? { ffmpeg: found.ffmpeg, ffprobe: found.ffprobe } : null;
+  }
+
   const media = createMediaLibrary({
-    async tools() {
-      const found = host.render ? await host.render.tools() : null;
-      return found?.ffmpeg && found.ffprobe
-        ? { ffmpeg: found.ffmpeg, ffprobe: found.ffprobe }
-        : null;
-    },
+    tools: ffmpegTools,
     async cacheDir(videoId) {
       const file = await settingsStore.read();
       return join(file.cacheDir ?? host.defaultCacheDir, videoId, 'media');
@@ -596,11 +629,35 @@ export function createStudioService(host: StudioHost): StudioService {
     now,
   });
 
+  const voiceKeys = createVoiceKeys(host.voice);
+  const narrationCache = async (videoId: string) => {
+    const file = await settingsStore.read();
+    return join(file.cacheDir ?? host.defaultCacheDir, videoId, 'voice');
+  };
+  const narrator = createNarrator({
+    tools: ffmpegTools,
+    keys: () => voiceKeys.keys(),
+    fetch: host.voice?.fetch ?? fetch,
+    baseUrl: host.voice?.baseUrl,
+    cacheDir: narrationCache,
+    store: (videoId) => session(videoId).store,
+    afterEdit,
+    notify: host.notify,
+    newId,
+    now,
+  });
+
   async function closeSession(videoId: string): Promise<void> {
     const open = sessions.get(videoId);
     if (!open) return;
-    // The AI run writes its outcome into the video's history, so it stops before the video closes.
+    // The AI run writes its outcome into the video's history, so it stops before the video closes;
+    // so does a narration run, which keeps the pieces it spoke for next time.
     await ai.stopForClose(videoId);
+    const speaking = narrator.jobs(videoId).find((job) => job.status === 'running');
+    if (speaking) {
+      narrator.cancel(videoId, speaking.id);
+      await narrator.idle(videoId);
+    }
     sessions.delete(videoId);
     try {
       await open.store.close();
@@ -1020,6 +1077,52 @@ export function createStudioService(host: StudioHost): StudioService {
       return open ? media.file(videoId, open.store, hash, variant) : null;
     },
 
+    async voiceEngines() {
+      return voiceKeys.engines();
+    },
+
+    async voices(input) {
+      return voiceKeys.voices(input);
+    },
+
+    async setVoiceKey(input) {
+      await voiceKeys.setKey(input);
+      return voiceKeys.engines();
+    },
+
+    async speak(input) {
+      session(input.videoId);
+      return narrator.speak(input);
+    },
+
+    async narrationJobs({ videoId }) {
+      return narrator.jobs(videoId);
+    },
+
+    async cancelNarration({ videoId, jobId }) {
+      narrator.cancel(videoId, jobId);
+    },
+
+    async recordNarration({ videoId, sceneId, bytes, mimeType }) {
+      const { store } = session(videoId);
+      const dir = join(await narrationCache(videoId), 'recordings');
+      await mkdir(dir, { recursive: true });
+      const file = join(dir, `${newId()}.${mimeType.includes('wav') ? 'wav' : 'webm'}`);
+      await writeFile(file, bytes);
+      try {
+        const document = await narrator.placeRecording({ videoId, sceneId, file });
+        return response(store, store.seq, document);
+      } finally {
+        await rm(file, { force: true });
+      }
+    },
+
+    async captionScene({ videoId, sceneId }) {
+      const { store } = session(videoId);
+      const document = await narrator.captionScene({ videoId, sceneId });
+      return response(store, store.seq, document);
+    },
+
     async renderTools() {
       return render.tools();
     },
@@ -1069,6 +1172,7 @@ export function createStudioService(host: StudioHost): StudioService {
     },
 
     async shutdown() {
+      await narrator.shutdown();
       await media.shutdown();
       await render.shutdown();
       await ai.shutdown();

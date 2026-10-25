@@ -95,7 +95,7 @@ if (tool === 'ffprobe') {
       }),
     );
   });
-} else if (args.includes('concat')) {
+} else if (args.includes('concat') && !args.includes('pcm_s16le')) {
   if (cue.failAssembly) fail(cue.failAssembly);
   if (cue.failEncoder && after('-c:v') === cue.failEncoder)
     fail('InitializeEncoder failed: out of memory');
@@ -142,6 +142,42 @@ if (tool === 'ffprobe') {
       }),
     );
   })();
+} else if (args.includes('pcm_s16le')) {
+  // Narration: WAV pieces (a concat list) or one recording joined into one WAV. The pieces keep
+  // their samples; the output says 48 kHz, so tests feed it 48 kHz pieces.
+  if (cue.failJoin) fail('Error while joining narration');
+  const inputs = args.includes('concat')
+    ? readFileSync(after('-i'), 'utf8')
+        .trim()
+        .split('\n')
+        .map((line) => /^file '(.*)'$/.exec(line)[1].replaceAll("'\\''", "'"))
+    : [after('-i')];
+  const data = inputs.map((file) => {
+    const bytes = readFileSync(file);
+    let at = 12;
+    while (at + 8 <= bytes.length) {
+      const id = bytes.toString('latin1', at, at + 4);
+      const size = bytes.readUInt32LE(at + 4);
+      if (id === 'data') return bytes.subarray(at + 8, at + 8 + size);
+      at += 8 + size + (size % 2);
+    }
+    fail(`${file} is not a WAV file`);
+  });
+  const pcm = Buffer.concat(data);
+  const header = Buffer.alloc(44);
+  header.write('RIFF', 0, 'latin1');
+  header.writeUInt32LE(36 + pcm.length, 4);
+  header.write('WAVEfmt ', 8, 'latin1');
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(1, 22);
+  header.writeUInt32LE(48000, 24);
+  header.writeUInt32LE(96000, 28);
+  header.writeUInt16LE(2, 32);
+  header.writeUInt16LE(16, 34);
+  header.write('data', 36, 'latin1');
+  header.writeUInt32LE(pcm.length, 40);
+  writeFileSync(args.at(-1), Buffer.concat([header, pcm]));
 } else if (args.includes('s16le') && args.at(-1) === '-') {
   // Waveform samples: a second of a soft sound at 8 kHz, 16-bit mono.
   if (cue.failDerivative === 'peaks') fail('Invalid data found when processing input');

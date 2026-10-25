@@ -3,7 +3,7 @@ title: Studio
 category: Build
 order: 40
 summary: Studio makes videos for your projects, or on their own. An AI CLI on your computer writes the scenario from your brief, you edit it by hand or by asking AI, and every video keeps its edits and full history in a folder you choose, always outside the project's source. Nothing in the history is ever deleted, and you can go back to any earlier version.
-keywords: studio, video, videos, film, movie, scenario, script, brief, animate, animation, motion graphics, style, styles, preview, scene code, code, versions, check, network, ai, write with ai, ask ai, edit by typing, proposal, recipe, recipes, cli, model, effort, claude code, codex, gemini, grok, cursor, opencode, scene, scenes, narration, voice over, history, undo, redo, restore, version, versions, storage, folder, location, library, standalone, project videos, lock, another agentmate, take over, move, locate, persian, rtl
+keywords: studio, video, videos, film, movie, scenario, script, brief, animate, animation, motion graphics, style, styles, preview, scene code, code, versions, check, network, ai, write with ai, ask ai, edit by typing, proposal, recipe, recipes, cli, model, effort, claude code, codex, gemini, grok, cursor, opencode, scene, scenes, narration, voice over, voice, voices, text to speech, tts, record, microphone, openai, elevenlabs, azure speech, captions, ducking, history, undo, redo, restore, version, versions, storage, folder, location, library, standalone, project videos, lock, another agentmate, take over, move, locate, persian, rtl
 route: /studio
 ---
 
@@ -67,6 +67,18 @@ A scene page runs with no internet access and cannot reach AgentMate or your fil
 ## Scene network
 
 Animated scenes cannot reach the internet. If a project's scenes need files from a host of yours, such as its own CDN, add the host under **Scene network** in the project's **Studio** tab. Only https is allowed, and only those hosts. Leave it empty to keep scenes offline, which is the safest, since the code is written by AI.
+
+## Voice
+
+Switch the editor to **Voice** in its toolbar to give the scenes their narration.
+
+- Pick an **Engine** and a **Voice**, then **Speak every scene**, or speak one scene with its play button. OpenAI and Google Gemini use the keys in **Settings > AI**; ElevenLabs and Azure Speech keys go in **Settings > Studio**, where they are sealed with the vault. When the vault is locked, Studio asks you to unlock it rather than skipping the engine. Studio shows the engine's list price for the text before you speak.
+- The microphone button records a scene in your own voice. Its narration is shown large while you read, a meter shows you are heard, and you can play the take back and record it again before using it.
+- A scene set to follow its narration takes the voice's length plus half a second, and the scenes after it move along, with their voices and captions.
+- **Caption** writes the scene's captions where its words are spoken, when the voice gives word timings (ElevenLabs does), and by the length of each line otherwise.
+- **Lower the music while someone speaks** turns music down by about 10 dB under the voice in the render.
+
+Long narration is sent in pieces. If a run stops part way (no connection, a refused key, the app closing), speaking again sends only the pieces still missing. Studio never lists a Chinese voice.
 
 ## The timeline
 

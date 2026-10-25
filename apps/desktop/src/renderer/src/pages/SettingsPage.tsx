@@ -400,7 +400,8 @@ const SECTIONS = {
   studio: {
     tab: 'agents',
     title: 'Studio',
-    keywords: 'studio video videos library folder storage location cache render resume gpu encode',
+    keywords:
+      'studio video videos library folder storage location cache render resume gpu encode voice narration elevenlabs azure speech key region',
   },
   reviewCommands: {
     tab: 'agents',

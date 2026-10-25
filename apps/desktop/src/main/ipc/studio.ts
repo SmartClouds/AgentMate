@@ -1,5 +1,6 @@
 import {
   studioAiInputs,
+  studioAudioInputs,
   studioInputs,
   studioMediaInputs,
   studioRenderInputs,
@@ -11,7 +12,7 @@ import { IPC } from '../../shared/ipcChannels';
 import { studioService } from '../studio';
 
 /**
- * Studio's channels (E31), its AI channels (E32), scenes (E33) and rendering (E34). Every argument is checked against Studio's own input schemas before
+ * Studio's channels (E31), its AI channels (E32), scenes (E33), rendering (E34) and voice (E36). Every argument is checked against Studio's own input schemas before
  * the service sees it; the service then checks folders and edits again on its own terms.
  */
 
@@ -203,6 +204,26 @@ export function registerStudioHandlers(
   );
   handle(IPC.studioMedia.list, (value) =>
     service().media(parse(studioMediaInputs.videoRef, value)),
+  );
+  handle(IPC.studioAudio.engines, () => service().voiceEngines());
+  handle(IPC.studioAudio.voices, (value) =>
+    service().voices(parse(studioAudioInputs.voices, value)),
+  );
+  handle(IPC.studioAudio.setKey, (value) =>
+    service().setVoiceKey(parse(studioAudioInputs.setKey, value)),
+  );
+  handle(IPC.studioAudio.speak, (value) => service().speak(parse(studioAudioInputs.speak, value)));
+  handle(IPC.studioAudio.jobs, (value) =>
+    service().narrationJobs(parse(studioAudioInputs.jobs, value)),
+  );
+  handle(IPC.studioAudio.cancel, (value) =>
+    service().cancelNarration(parse(studioAudioInputs.jobRef, value)),
+  );
+  handle(IPC.studioAudio.record, (value) =>
+    service().recordNarration(parse(studioAudioInputs.record, value)),
+  );
+  handle(IPC.studioAudio.captionScene, (value) =>
+    service().captionScene(parse(studioAudioInputs.captionScene, value)),
   );
   handle(IPC.studioRender.tools, () => service().renderTools());
   handle(IPC.studioRender.estimate, (value) =>

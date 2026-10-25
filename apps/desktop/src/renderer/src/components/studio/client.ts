@@ -28,6 +28,10 @@ export function studioMediaClient() {
   return window.agentmat.studioMedia;
 }
 
+export function studioAudioClient() {
+  return window.agentmat.studioAudio;
+}
+
 /** Where a file dropped onto the window is on disk; empty for one that is not a file on disk. */
 export function pathForFile(file: File): string {
   return window.agentmat.shell.pathForFile(file);

@@ -27,6 +27,16 @@ class FakeAudioContext {
   async decodeAudioData(): Promise<{ duration: number }> {
     return { duration: 1 };
   }
+  /** A level meter's analyser hears a steady, moderate voice. */
+  createAnalyser() {
+    return {
+      fftSize: 1024,
+      getFloatTimeDomainData: (samples: Float32Array) => samples.fill(0.1),
+    };
+  }
+  createMediaStreamSource() {
+    return { connect: () => undefined };
+  }
   async close(): Promise<void> {
     return undefined;
   }

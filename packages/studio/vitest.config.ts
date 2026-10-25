@@ -41,6 +41,9 @@ export default defineConfig({
         'src/timeline/**': { lines: 98, branches: 90 },
         'src/node/media/**': { lines: 92, branches: 80 },
         'src/media/**': { lines: 100, branches: 95 },
+        // E36: narration text and WAV handling, the voice engines and the narrator.
+        'src/voice/**': { lines: 98, branches: 90 },
+        'src/node/voice/**': { lines: 95, branches: 78 },
       },
     },
   },

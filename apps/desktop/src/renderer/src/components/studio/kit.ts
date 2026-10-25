@@ -26,7 +26,9 @@ export {
   FolderPlus,
   History,
   ImageIcon,
+  Key,
   Lock,
+  Microphone,
   Pause,
   Pencil,
   Play,
@@ -69,6 +71,7 @@ export {
   segmentClass,
   TOOLBAR,
 } from '@/components/pageKit';
+export { SshVaultUnlockDialog as VaultUnlockDialog } from '@/components/remote/SshVaultUnlockDialog';
 export { Button } from '@/components/ui/button';
 export { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 export {
@@ -89,6 +92,7 @@ export {
 export { Input } from '@/components/ui/input';
 export { Label } from '@/components/ui/label';
 export { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+export { SecretInput } from '@/components/ui/secret-input';
 export { Skeleton } from '@/components/ui/skeleton';
 export { Switch } from '@/components/ui/switch';
 export { Textarea } from '@/components/ui/textarea';

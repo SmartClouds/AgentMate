@@ -333,6 +333,126 @@ export function speechModelTooSmallFor(modelKey: string, languageCode: string): 
   return rank(modelKey) < rank(wanted);
 }
 
+// Studio narration (text to speech)
+
+export interface StudioTtsVoice {
+  /** The id the provider's API takes. */
+  id: string;
+  label: string;
+  /** BCP 47 locale for a voice made for one language; unset for voices that speak any. */
+  locale?: string;
+  gender?: 'female' | 'male';
+}
+
+export interface StudioTtsEngine {
+  label: string;
+  /** The model id sent with every request; unset where the voice alone decides. */
+  model?: string;
+  /** When the provider retires the model, so the app can say so ahead of time. */
+  retiresOn?: string;
+  voices: readonly StudioTtsVoice[];
+  /**
+   * List price in USD per 1,000,000 characters of text, for an estimate before speaking. Null
+   * where the provider bills otherwise (by token, or from a subscription's credits).
+   */
+  pricePerMillionChars: number | null;
+}
+
+const OPENAI_TTS_VOICES = [
+  'alloy',
+  'ash',
+  'ballad',
+  'coral',
+  'echo',
+  'fable',
+  'nova',
+  'onyx',
+  'sage',
+  'shimmer',
+  'verse',
+  'marin',
+  'cedar',
+].map((id) => ({ id, label: id[0]?.toUpperCase() + id.slice(1) }));
+
+const GEMINI_TTS_VOICES = [
+  'Zephyr',
+  'Puck',
+  'Charon',
+  'Kore',
+  'Fenrir',
+  'Leda',
+  'Orus',
+  'Aoede',
+  'Callirrhoe',
+  'Autonoe',
+  'Enceladus',
+  'Iapetus',
+  'Umbriel',
+  'Algieba',
+  'Despina',
+  'Erinome',
+  'Algenib',
+  'Rasalgethi',
+  'Laomedeia',
+  'Achernar',
+  'Alnilam',
+  'Schedar',
+  'Gacrux',
+  'Pulcherrima',
+  'Achird',
+  'Zubenelgenubi',
+  'Vindemiatrix',
+  'Sadachbia',
+  'Sadaltager',
+  'Sulafat',
+].map((id) => ({ id, label: id }));
+
+/**
+ * The voice engines Studio narrates with, as their docs stood in October 2026. OpenAI's voices
+ * and Gemini's speak any language (both list Persian); ElevenLabs voices come from the user's own
+ * account, and only its v3 model speaks Persian; Azure voices are one per locale, and these are the
+ * ones for the languages Studio writes in.
+ */
+export const STUDIO_TTS: Record<'openai' | 'gemini' | 'elevenlabs' | 'azure', StudioTtsEngine> = {
+  openai: {
+    label: 'OpenAI',
+    model: 'gpt-4o-mini-tts',
+    retiresOn: '2027-01-06',
+    voices: OPENAI_TTS_VOICES,
+    pricePerMillionChars: 15,
+  },
+  gemini: {
+    label: 'Google Gemini',
+    model: 'gemini-3.8-flash-tts',
+    voices: GEMINI_TTS_VOICES,
+    pricePerMillionChars: null,
+  },
+  elevenlabs: {
+    label: 'ElevenLabs',
+    model: 'eleven_v3',
+    voices: [],
+    pricePerMillionChars: null,
+  },
+  azure: {
+    label: 'Azure Speech',
+    voices: [
+      { id: 'fa-IR-DilaraNeural', label: 'Dilara', locale: 'fa-IR', gender: 'female' },
+      { id: 'fa-IR-FaridNeural', label: 'Farid', locale: 'fa-IR', gender: 'male' },
+      { id: 'en-US-AvaMultilingualNeural', label: 'Ava', locale: 'en-US', gender: 'female' },
+      { id: 'en-US-JennyNeural', label: 'Jenny', locale: 'en-US', gender: 'female' },
+      { id: 'en-US-GuyNeural', label: 'Guy', locale: 'en-US', gender: 'male' },
+      { id: 'en-GB-SoniaNeural', label: 'Sonia', locale: 'en-GB', gender: 'female' },
+      { id: 'ar-SA-ZariyahNeural', label: 'Zariyah', locale: 'ar-SA', gender: 'female' },
+      { id: 'ar-SA-HamedNeural', label: 'Hamed', locale: 'ar-SA', gender: 'male' },
+      { id: 'tr-TR-EmelNeural', label: 'Emel', locale: 'tr-TR', gender: 'female' },
+      { id: 'de-DE-KatjaNeural', label: 'Katja', locale: 'de-DE', gender: 'female' },
+      { id: 'fr-FR-DeniseNeural', label: 'Denise', locale: 'fr-FR', gender: 'female' },
+      { id: 'es-ES-ElviraNeural', label: 'Elvira', locale: 'es-ES', gender: 'female' },
+    ],
+    pricePerMillionChars: 16,
+  },
+};
+
 // Prices
 
 export interface ModelPrice {

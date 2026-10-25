@@ -22,6 +22,7 @@ import {
   OPENAI_API_MODELS,
   resolveSpeechLanguage,
   SPEECH_LANGUAGES,
+  STUDIO_TTS,
   speechModelTooSmallFor,
   WHISPER_MODEL_LARGE_TURBO,
   WHISPER_MODELS,
@@ -214,6 +215,28 @@ describe('normalizeHelpEmbeddingModels', () => {
   it('turns anything that is not a plain object into an empty map', () => {
     for (const junk of [null, undefined, 'openai', 7, true, ['openai']]) {
       expect(normalizeHelpEmbeddingModels(junk), String(junk)).toEqual({});
+    }
+  });
+});
+
+describe('Studio narration engines', () => {
+  it('names a model for every engine that needs one, and voices for every engine but ElevenLabs', () => {
+    expect(STUDIO_TTS.openai.model).toBe('gpt-4o-mini-tts');
+    expect(STUDIO_TTS.gemini.model).toBeTruthy();
+    expect(STUDIO_TTS.elevenlabs.model).toBe('eleven_v3');
+    for (const [id, engine] of Object.entries(STUDIO_TTS)) {
+      if (id !== 'elevenlabs') expect(engine.voices.length, id).toBeGreaterThan(0);
+      expect(new Set(engine.voices.map((v) => v.id)).size, id).toBe(engine.voices.length);
+    }
+  });
+
+  it('lists Persian voices for the engine with one voice per locale, and never a Chinese one', () => {
+    expect(STUDIO_TTS.azure.voices.filter((v) => v.locale === 'fa-IR')).toHaveLength(2);
+    for (const engine of Object.values(STUDIO_TTS)) {
+      for (const voice of engine.voices) {
+        expect(voice.locale ?? '', voice.id).not.toMatch(/^(zh|cmn|yue)\b/);
+        expect(voice.label).not.toMatch(/\p{Script=Han}/u);
+      }
     }
   });
 });
