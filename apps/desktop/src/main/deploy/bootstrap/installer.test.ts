@@ -50,6 +50,7 @@ function releaseSource(
             rid,
             file: file(rid),
             sha256: SHA,
+            size: 1024,
             url: `https://github.com/SmartClouds/AgentMate/releases/download/v${version}/${file(rid)}`,
           }),
         }

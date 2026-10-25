@@ -2,7 +2,14 @@ import type { DeployCoreRecord, DeployServer } from '@shared/deployTypes';
 import { sshErrorMessage } from '@shared/sshErrors';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { EllipsisVertical, RefreshCw, Rocket, Trash2 } from '@/components/icons';
+import {
+  CloudDownload,
+  EllipsisVertical,
+  RefreshCw,
+  Rocket,
+  TerminalSquare,
+  Trash2,
+} from '@/components/icons';
 import { Chip } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,13 +21,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SimpleTooltip } from '@/components/ui/tooltip';
+import { newerCore, useCoreRelease } from '@/lib/deploy/coreUpdate';
 import { formatUptime } from '@/lib/deploy/setup';
 import { queryKeys } from '@/lib/queryKeys';
 import { withHostKeyTrust } from '@/lib/ssh/hostKeyTrust';
 import { shortAge, timeAgo } from '@/lib/time';
 import { cn } from '@/lib/utils';
 import { TRANSPORT_PHRASE, TRANSPORT_TEXT, useCoreHealth } from './coreHealth';
-import { DeployCard } from './deployKit';
+import { DeployCard, Notice } from './deployKit';
 import { SetupFailure } from './SetupFailure';
 
 function Fact({
@@ -54,20 +62,31 @@ function useNow(intervalMs: number): number {
   return now;
 }
 
-/** A live look at a server's core: whether it answers, its version and how long it has run. */
+/**
+ * A live look at a server's core: whether it answers, its version and how long it has run, and
+ * an update when this build has a newer core than the server runs.
+ */
 export function CoreHealthCard({
   server,
   core,
+  onUpdate,
   onReinstall,
   onRemove,
 }: {
   server: DeployServer;
   core: DeployCoreRecord;
+  /** Updates through the core itself (no SSH). */
+  onUpdate?: () => void;
+  /** The SSH installer: update or reinstall. */
   onReinstall?: () => void;
   onRemove?: (keepData: boolean) => void;
 }): React.JSX.Element {
   const queryClient = useQueryClient();
   const health = useCoreHealth(server);
+  const release = useCoreRelease();
+  const running = health.data?.version ?? core.version;
+  const newer = newerCore(running, release.data);
+  const latest = release.data?.version === running;
   const now = useNow(15_000);
   const [checking, setChecking] = useState(false);
 
@@ -124,7 +143,7 @@ export function CoreHealthCard({
               <RefreshCw className={cn(checking && 'motion-safe:animate-spin')} />
             </Button>
           </SimpleTooltip>
-          {(onReinstall || onRemove) && (
+          {(onUpdate || onReinstall || onRemove) && (
             <DropdownMenu>
               <SimpleTooltip label="More actions">
                 <DropdownMenuTrigger asChild>
@@ -134,9 +153,14 @@ export function CoreHealthCard({
                 </DropdownMenuTrigger>
               </SimpleTooltip>
               <DropdownMenuContent align="end">
+                {onUpdate && (
+                  <DropdownMenuItem onSelect={onUpdate}>
+                    <CloudDownload className="h-3.5 w-3.5" /> Update the core
+                  </DropdownMenuItem>
+                )}
                 {onReinstall && (
                   <DropdownMenuItem onSelect={onReinstall}>
-                    <Rocket className="h-3.5 w-3.5" /> Update or reinstall
+                    <TerminalSquare className="h-3.5 w-3.5" /> Update or reinstall over SSH
                   </DropdownMenuItem>
                 )}
                 {onRemove && (
@@ -157,6 +181,25 @@ export function CoreHealthCard({
       }
       bodyClassName="space-y-3"
     >
+      {newer && onUpdate && (
+        <Notice
+          tone="primary"
+          icon={CloudDownload}
+          action={
+            <Button size="sm" onClick={onUpdate}>
+              Update to {newer.version}
+            </Button>
+          }
+        >
+          <p className="font-medium">Core {newer.version} is available</p>
+          <p className="text-muted-foreground">
+            This server runs {running}.{' '}
+            {newer.serverDownload
+              ? 'The server downloads the update itself, or AgentMate sends it over the core connection.'
+              : 'AgentMate sends the update over the core connection.'}
+          </p>
+        </Notice>
+      )}
       {health.isError && (
         <div className="space-y-2">
           <SetupFailure message={sshErrorMessage(health.error)} />
@@ -168,7 +211,14 @@ export function CoreHealthCard({
       <dl className="grid grid-cols-2 gap-2 md:grid-cols-3">
         <Fact label="Version" mono>
           {health.data ? (
-            health.data.version
+            <>
+              {health.data.version}
+              {latest && (
+                <span className="ml-1.5 font-sans text-xs font-normal text-muted-foreground">
+                  latest
+                </span>
+              )}
+            </>
           ) : health.isPending ? (
             <Skeleton className="h-5 w-16" />
           ) : (

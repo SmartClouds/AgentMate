@@ -4,6 +4,8 @@
  * machinery that runs probes and installers lives in the desktop app and is handed this data.
  */
 
+import type { InstallIntent } from './recipes.js';
+
 export type DevOs = 'win32' | 'darwin' | 'linux';
 export type DevArch = 'x64' | 'arm64' | 'other';
 
@@ -130,9 +132,48 @@ export type DevInstallPhase =
   | 'installing'
   | 'checking';
 
+/**
+ * Where an update check gets its answer. It is whatever will perform the update, so the chip on a
+ * row and the button that follows it cannot disagree: winget for a winget recipe, and so on. The
+ * three Linux managers are named as `PackageManagerId` names them.
+ */
+export type DevUpdateSource =
+  | 'winget'
+  | 'brew'
+  | 'apt-get'
+  | 'dnf'
+  | 'pacman'
+  | 'npm'
+  | 'nuget'
+  | 'flutter'
+  | 'sdkmanager';
+
+/**
+ * What one check found for one installed item. `installed` is the version the source itself has for
+ * it, which can sit on another scale than the version the probe read (Docker Desktop 4.96 against
+ * the engine's 28.x), so it is only used to decide whether the two numbers can be compared.
+ */
+export type DevUpdateCheck =
+  | { state: 'update'; latest: string | null; installed: string | null }
+  | { state: 'current' }
+  /** The source could not be asked, which says nothing about whether an update exists. */
+  | { state: 'unknown' };
+
+/** An update the source offers for an installed row. */
+export interface DevItemUpdate {
+  /** The version to name on the row, or null when it cannot be compared with the one installed. */
+  latest: string | null;
+  /** The update was handed to a terminal and the row is waiting for it to land. */
+  waiting?: boolean;
+  /** Why the last update attempt did not work. */
+  failure?: string;
+}
+
 /** What the installer is doing, or last did, for one item. */
 export interface DevItemJob {
   status: 'queued' | 'installing' | 'failed' | 'waiting-terminal';
+  /** Absent means install. */
+  intent?: InstallIntent;
   phase?: DevInstallPhase;
   /** 0 to 1, or null when the installer gives no progress to report. */
   fraction?: number | null;
@@ -146,16 +187,18 @@ export interface DevItemJob {
 /** The one state a checklist row is in. Everything the row shows is derived from this. */
 export type DevItemState =
   | { kind: 'checking' }
-  | { kind: 'installed'; version: string | null; onPath: boolean }
+  /** Ready. `update` is present when a newer version exists, which never makes the row not ready. */
+  | { kind: 'installed'; version: string | null; onPath: boolean; update?: DevItemUpdate }
   | { kind: 'outdated'; version: string | null; minVersion: string }
   | { kind: 'missing' }
   | { kind: 'blocked'; waitingFor: DevItemId[]; via: 'dependency' | 'bundled' }
-  | { kind: 'queued' }
+  | { kind: 'queued'; intent?: InstallIntent }
   | {
       kind: 'installing';
       phase: DevInstallPhase;
       fraction: number | null;
       detail: string | null;
+      intent?: InstallIntent;
     }
   | { kind: 'failed'; message: string; exitCode: number | null }
   | { kind: 'waiting-terminal' }

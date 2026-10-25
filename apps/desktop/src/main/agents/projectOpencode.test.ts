@@ -52,9 +52,37 @@ describe('readOpencodeProject', () => {
 
     await readOpencodeProject(fs, ['/work/app'], 12345);
 
-    expect(queryDb).toHaveBeenCalledTimes(1);
-    expect(queryDb.mock.calls[0][0]).toBe(DB);
-    expect(queryDb.mock.calls[0][2]).toEqual([12345]);
+    // One look at the schema, then every session at once rather than one query per session.
+    expect(queryDb).toHaveBeenCalledTimes(2);
+    expect(queryDb.mock.calls[0][1]).toContain('sqlite_master');
+    expect(queryDb.mock.calls[1][0]).toBe(DB);
+    expect(queryDb.mock.calls[1][1]).toContain('FROM session WHERE');
+    expect(queryDb.mock.calls[1][2]).toEqual([12345]);
+  });
+
+  it('reads the sessions from session_v2 on a database that has it', async () => {
+    const { fs, queryDb } = fakeFs({
+      query: async (_dbPath, sql) =>
+        sql.includes('sqlite_master')
+          ? [{ name: 'session_v2' }, { name: 'session_message' }]
+          : [row()],
+    });
+
+    const read = await readOpencodeProject(fs, ['/work/app'], 0);
+
+    expect(queryDb.mock.calls[1][1]).toContain('FROM session_v2 WHERE');
+    expect(read.conversations.map((c) => c.id)).toEqual(['ses_a']);
+  });
+
+  it('stays on the old session table when only half of the new layout is there', async () => {
+    const { fs, queryDb } = fakeFs({
+      query: async (_dbPath, sql) =>
+        sql.includes('sqlite_master') ? [{ name: 'session_v2' }] : [row()],
+    });
+
+    await readOpencodeProject(fs, ['/work/app'], 0);
+
+    expect(queryDb.mock.calls[1][1]).toContain('FROM session WHERE');
   });
 
   it('keeps the sessions of the project folder and of its worktrees, and no others', async () => {

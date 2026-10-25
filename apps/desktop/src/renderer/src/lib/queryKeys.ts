@@ -58,6 +58,13 @@ export const queryKeys = {
   /** Prefix of every devSetupItem key, so one invalidate re-checks the whole checklist. */
   devSetupItems: ['dev-setup', 'item'] as const,
   devSetupItem: (id: string) => ['dev-setup', 'item', id] as const,
+  /** Prefix of every update check, so one invalidate asks again (main answers from memory). */
+  devSetupUpdates: ['dev-setup', 'updates'] as const,
+  /** One source's check. The round goes up when the person presses Check again, which forces it. */
+  devSetupUpdatesFor: (source: string, ids: readonly string[], round: number) =>
+    ['dev-setup', 'updates', source, ids.join(','), round] as const,
+  /** An update handed to a terminal, looked at every few seconds until it lands. */
+  devSetupUpdateWait: (id: string) => ['dev-setup', 'update-wait', id] as const,
   /** What the nav badge reads: remembered results only, never a probe. */
   devSetupPeek: ['dev-setup', 'peek'] as const,
   templates: ['prompt-templates'] as const,
@@ -129,6 +136,12 @@ export const queryKeys = {
   githubRunners: ['github-runners'] as const,
   /** Annotations one finished Actions run left behind. */
   runAnnotations: (repo: string, runId: number) => ['run-annotations', repo, runId] as const,
+  runFailure: (repo: string, runId: number) => ['pipeline-run-error', repo, runId] as const,
+  /** Every run's details, for refreshing whichever one is on screen. */
+  runDetailsAll: ['run-details'] as const,
+  /** `live` is part of the key so a run that just finished is read once more, not left half done. */
+  runDetails: (repo: string, runId: number, attempt: number, live: boolean) =>
+    ['run-details', repo, runId, attempt, live] as const,
   pipelineStatus: (projectId: string) => ['pipeline-status', projectId] as const,
   /** Test frameworks and tests found in a project, for the workspace Tests panel. */
   testsDiscovery: (projectId: string) => ['tests-discovery', projectId] as const,
@@ -174,6 +187,8 @@ export const queryKeys = {
   deployHealth: (serverId: string) => ['deploy', 'health', serverId] as const,
   /** The install wizard's read-only look at a server. */
   deployPreflight: (serverId: string) => ['deploy', 'preflight', serverId] as const,
+  /** The core release this build installs, which the health card offers as an update. */
+  deployCoreRelease: ['deploy', 'coreRelease'] as const,
   /** Whether this computer is signed in to a server's core, or what it needs first. */
   deployAccess: (serverId: string) => ['deploy', 'access', serverId] as const,
   /** Prefix of a core's Security area: users, devices, sessions, the audit trail and the step-up. */

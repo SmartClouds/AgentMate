@@ -33,6 +33,7 @@ Click **Agent Tools** in the sidebar under **Agents**, or open the command palet
 Each tool is a row with a name, a line saying how it stands and one button.
 
 - **Version 22.12.0** means it is installed and recent enough. A **Not on your PATH** badge means it was found but a terminal would not find it. That row has an **Add to PATH** button (it names the tool, such as **Add Git to PATH**) that puts the tool's folder on your user PATH. On Windows it changes your user PATH in the registry, and on macOS and Linux it adds a marked block to your shell startup file. Terminals that are already open will not see the change, so open a new one.
+- **2.103.0 available** next to a version means a newer one exists. The tool still counts as ready, and its **Update** button (such as **Update GitHub CLI**) brings it up to date. See [Updates](#updates) below.
 - **Not installed. Needs 22.12 or newer.** has an **Install** button. A tool that is installed but too old says **Needs 22.12 or newer** and has an **Update** button.
 - **Waiting for Git** means the tool needs something first. Its button is switched off, and **Install all missing** takes care of the order. A tool that comes with another says **Comes with Node.js**.
 - While the page is still looking, a row shows a shimmer instead of a verdict, so a tool is never called missing before it has been checked.
@@ -48,6 +49,18 @@ Beside the main button, **Open in terminal** types the same command into a termi
 **Install all missing** runs every step it can, in order. Steps that need a terminal or a download stay for you, and the button says how many. Press it again once you have done them. While a run goes on, the card shows which tool it is on and how far along the whole run is, and **Cancel install** stops it.
 
 Installing the Android SDK licenses or Docker Desktop first asks you to accept the agreements, with their addresses listed. Nothing is accepted until you press **Accept and install**.
+
+### Updates
+
+A tool that is installed can still be behind. When the page opens, AgentMate asks whatever would do the update whether a newer version exists: winget on Windows, Homebrew on a Mac, apt, dnf or pacman on Linux, the npm registry for pnpm, NuGet for the Entity Framework tool, Google's release list for Flutter and the Android SDK manager for the Android tools. Asking the same tool that will do the update means the **available** badge and the button never disagree.
+
+- **They do not hold the list up.** The rows show first, and each source's badges appear as soon as that source answers. The card says **Checking for updates** until the last one is in. Answers are remembered for half an hour, and **Check again** asks every source again.
+- **Ready stays ready.** A tool that is behind still counts in **6 of 6 ready**. The card counts the updates separately, and each stack shows how many of its tools have one.
+- **Update** brings one tool up to date, and **Update all** does every update AgentMate can run itself. Updates that need a terminal stay for you, and the button says how many. When nothing is missing, **Update all** takes the place of **Install all missing**. Updates do not ask you to accept any agreement again.
+- **Docker Desktop** says **Update available** without a number, because the version Docker prints is the engine's and not the app's.
+- **Flutter** updates by running `flutter upgrade`, so it needs the copy to be a git checkout, which the official download is.
+- **Could not check for updates.** means no source answered. That is not the same as being up to date, and the card does not say so.
+- A tool that was installed some other way than the one AgentMate would use, such as Node.js through nvm, shows no update.
 
 ### When something fails
 

@@ -84,11 +84,14 @@ function QuietJob({
 export function OverviewPanel({
   server,
   core,
+  onUpdate,
   onReinstall,
   onRemove,
 }: {
   server: DeployServer;
   core: DeployCoreRecord;
+  /** Updates the core through the core itself; absent for the DevHost. */
+  onUpdate?: () => void;
   onReinstall?: () => void;
   onRemove?: (keepData: boolean) => void;
 }): React.JSX.Element {
@@ -248,7 +251,13 @@ export function OverviewPanel({
 
   const coreCards = (
     <>
-      <CoreHealthCard server={server} core={core} onReinstall={onReinstall} onRemove={onRemove} />
+      <CoreHealthCard
+        server={server}
+        core={core}
+        onUpdate={onUpdate}
+        onReinstall={onReinstall}
+        onRemove={onRemove}
+      />
       <CoreAccessCard server={server} />
     </>
   );

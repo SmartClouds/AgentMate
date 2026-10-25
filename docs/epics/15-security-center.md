@@ -103,6 +103,19 @@ users, devices, audit, core updates and backups.
   shows the running and the available version and opens the update, and a failed update now resets
   the server's lasting connection so the app reconnects to whichever release runs
   (`DeployService.runInstall`).
+- **Core update without SSH (added 2026-10-25).** The Server core card shows "Core X is available"
+  when this build has a newer core, and its menu has "Update the core" next to "Update or reinstall
+  over SSH". The update goes through the core (hub `UpdateCore`, Owner with a step-up): the core
+  downloads the GitHub release asset named by the app, refuses anything that is not the manifest's
+  size and SHA-256, unpacks it under `/opt/agentmate-core/releases` and schedules the switch from a
+  transient unit (`agentmate-coreupdate-*`) three seconds later. That unit swaps the symlink,
+  restarts, and goes back to the previous release when the new one is not active five seconds
+  after its start. A failed download is an outcome, and the app then uploads the tarball over
+  `PUT /api/v1/core/update` on the same connection. Older cores (no hub method or route) and cores
+  not run from `/opt/agentmate-core/current` answer in a way the app turns into `needs-ssh`, and the
+  page hands over to the SSH installer. Code: `Updates/CoreUpdater.cs`,
+  `Updates/CoreInstallation.cs`, `apps/desktop/src/main/deploy/coreUpdate.ts`,
+  `components/deploy/CoreUpdatePanel.tsx`. Not yet tried against a real server.
 - **T5, backups.** `CreateBackup` (Owner, step-up) makes a `.tar.gz` of a `VACUUM INTO` copy of the
   database, the Data Protection keys and the stacks' files (sites and certificates live in the
   database; job logs and change sets stay out), with a manifest inside. It is encrypted on the

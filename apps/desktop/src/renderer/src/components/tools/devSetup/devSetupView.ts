@@ -3,9 +3,11 @@ import {
   type DevInstallPhase,
   type DevJobState,
   type DevOs,
+  type InstallIntent,
   type InstallPlan,
   recipeCommandLine,
   type SetupSummary,
+  type UpdatePlan,
 } from '@agentmat/core';
 
 /**
@@ -87,6 +89,14 @@ const PHASE_TEXT: Record<DevInstallPhase, string> = {
   installing: 'Installing',
   checking: 'Checking the result',
 };
+
+/** The word for a stage. Only the last step differs: an update is "Updating", not "Installing". */
+function phaseText(phase: DevInstallPhase, intent: InstallIntent | undefined): string {
+  return phase === 'installing' && intent === 'update' ? 'Updating' : PHASE_TEXT[phase];
+}
+
+/** Where the update check stands, for the line under the summary. */
+export type UpdateStatus = 'checking' | 'failed' | 'done';
 
 /** "22.12.0" reads as "22.12", and "24.0.0" as "24". A trailing zero is not worth saying. */
 export function formatMinimum(version: string): string {
@@ -172,15 +182,69 @@ export function describeRow(row: ChecklistRow, options: DescribeRowOptions): Row
     case 'checking':
       return { ...BASE, checking: true };
 
-    case 'installed':
+    case 'installed': {
+      const version = state.version ? `Version ${state.version}` : 'Installed';
+      const pathChips: RowChip[] = state.onPath
+        ? []
+        : [{ text: 'Not on your PATH', tone: 'warning' }];
+      const pathAction: RowAction | null = state.onPath
+        ? null
+        : { kind: 'add-to-path', label: `Add ${row.name} to PATH` };
+      const { update } = state;
+      if (!update) {
+        return {
+          ...BASE,
+          tone: 'success',
+          icon: 'installed',
+          text: version,
+          chips: pathChips,
+          action: pathAction,
+        };
+      }
+
+      // Ready, with something newer on offer. The chip says what, the button does it, and the
+      // PATH warning stays after it, since it is still true.
+      const chips: RowChip[] = [
+        {
+          text: update.latest ? `${update.latest} available` : 'Update available',
+          tone: 'primary',
+        },
+        ...pathChips,
+      ];
+      if (update.waiting) {
+        return {
+          ...BASE,
+          tone: 'primary',
+          icon: 'installed',
+          text: `${version}. Waiting for the terminal. Press Enter there, then check again.`,
+          chips,
+          action: { kind: 'recheck', label: 'Check again' },
+          terminalCommand: command,
+        };
+      }
+      const updateAction = installAction(row, 'update', options);
+      if (update.failure) {
+        return {
+          ...BASE,
+          tone: 'warning',
+          icon: 'outdated',
+          text: `${version}. Update failed. ${update.failure}`,
+          chips,
+          action: updateAction && { ...updateAction, label: 'Try again' },
+          terminalCommand: command,
+          showLog: true,
+        };
+      }
       return {
         ...BASE,
         tone: 'success',
         icon: 'installed',
-        text: state.version ? `Version ${state.version}` : 'Installed',
-        chips: state.onPath ? [] : [{ text: 'Not on your PATH', tone: 'warning' }],
-        action: state.onPath ? null : { kind: 'add-to-path', label: `Add ${row.name} to PATH` },
+        text: version,
+        chips,
+        action: updateAction ?? pathAction,
+        terminalCommand: command,
       };
+    }
 
     case 'outdated': {
       const found = state.version ? `Version ${state.version}.` : 'Version could not be read.';
@@ -230,8 +294,9 @@ export function describeRow(row: ChecklistRow, options: DescribeRowOptions): Row
       };
 
     case 'installing': {
-      const phase = PHASE_TEXT[state.phase];
+      const phase = phaseText(state.phase, state.intent);
       const text = state.detail ? `${phase} ${state.detail}` : phase;
+      const verb = state.intent === 'update' ? 'updating' : 'installing';
       return {
         ...BASE,
         tone: 'primary',
@@ -239,7 +304,7 @@ export function describeRow(row: ChecklistRow, options: DescribeRowOptions): Row
         text,
         busy: true,
         progress: { fraction: state.fraction, label: `${row.name}: ${text}` },
-        action: { kind: 'cancel', label: `Cancel installing ${row.name}` },
+        action: { kind: 'cancel', label: `Cancel ${verb} ${row.name}` },
         showLog: true,
       };
     }
@@ -286,13 +351,31 @@ export function summaryHeadline(summary: SetupSummary): string {
   return `${summary.ready} of ${summary.total} ready`;
 }
 
-/** The line under the headline: what is still being looked at, or what is left to do. */
-export function summarySubline(summary: SetupSummary): string {
+/** The part of the line under the headline that is about updates, or nothing. */
+function updateNote(summary: SetupSummary, status: UpdateStatus): string {
+  const count = summary.updates;
+  const updates = `${count} ${count === 1 ? 'update' : 'updates'}`;
+  if (status === 'checking') {
+    return count > 0 ? `${updates} found so far, still checking.` : 'Checking for updates.';
+  }
+  // Said plainly, so a failed check is never mistaken for "all up to date".
+  if (status === 'failed') return 'Could not check for updates.';
+  if (count > 0) return `${updates} available.`;
+  return summary.complete ? 'Everything is up to date.' : '';
+}
+
+/**
+ * The line under the headline: what is still being looked at, or what is left to do, and then how
+ * the search for updates is going. Updates never change what counts as ready.
+ */
+export function summarySubline(summary: SetupSummary, updates?: UpdateStatus): string {
   if (summary.checking > 0) {
     return `Still checking ${summary.checking} ${summary.checking === 1 ? 'tool' : 'tools'}.`;
   }
-  if (summary.complete) return 'Your machine has everything on this list.';
-  return `${summary.missing} still to install.`;
+  const base = summary.complete
+    ? 'Your machine has everything on this list.'
+    : `${summary.missing} still to install.`;
+  return [base, updates ? updateNote(summary, updates) : ''].filter(Boolean).join(' ');
 }
 
 export function installAllLabel(stepCount: number): string {
@@ -329,7 +412,26 @@ export function describeInstallAll(plan: InstallPlan): InstallAllView {
   };
 }
 
-/** The headline and progress line while an install run is going. */
+/** The "Update all" button, or null when there is nothing it could do. */
+export function describeUpdateAll(plan: UpdatePlan): InstallAllView | null {
+  const left = plan.manual.length;
+  if (plan.steps.length === 0 && left === 0) return null;
+  if (plan.steps.length > 0) {
+    const note =
+      left > 0
+        ? `${left} more ${left === 1 ? 'update needs' : 'updates need'} a terminal. Use the ${left === 1 ? 'button on that row' : 'buttons on those rows'}, then press Update all again.`
+        : null;
+    return { label: `Update all (${plan.steps.length})`, disabled: false, note };
+  }
+  return {
+    label: 'Update all',
+    disabled: true,
+    hint: 'These updates need a terminal. Use the button on each row.',
+    note: null,
+  };
+}
+
+/** The headline and progress line while an install or update run is going. */
 export function describeRun(
   job: DevJobState,
   nameOf: (id: string) => string,
@@ -338,8 +440,9 @@ export function describeRun(
   const toGo = job.order.filter(
     (id) => !job.completed.includes(id) && job.items[id]?.status !== 'failed',
   ).length;
+  const verb = job.intent === 'update' ? 'Updating' : 'Installing';
   const headline = job.current
-    ? `Installing ${job.completed.length + 1} of ${total}: ${nameOf(job.current)}`
-    : `Installing ${total} ${total === 1 ? 'tool' : 'tools'}`;
+    ? `${verb} ${job.completed.length + 1} of ${total}: ${nameOf(job.current)}`
+    : `${verb} ${total} ${total === 1 ? 'tool' : 'tools'}`;
   return { headline, subline: `${job.completed.length} done, ${toGo} to go.` };
 }

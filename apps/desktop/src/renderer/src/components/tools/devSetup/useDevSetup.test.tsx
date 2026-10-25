@@ -1,4 +1,4 @@
-import type { DevDetection, DevSetupEnvironment } from '@agentmat/core';
+import type { DevDetection, DevSetupEnvironment, DevUpdateCheck } from '@agentmat/core';
 import { act, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTerminalStore } from '@/stores/terminalStore';
@@ -46,6 +46,10 @@ function bridgeFor(
     stacks?: string[];
     detect?: (id: string, options?: { force?: boolean }) => Promise<DevDetection>;
     environment?: DevSetupEnvironment | (() => Promise<DevSetupEnvironment>);
+    updates?: (
+      ids: string[],
+      options?: { force?: boolean },
+    ) => Promise<Record<string, DevUpdateCheck>>;
   } = {},
 ) {
   return {
@@ -53,7 +57,20 @@ function bridgeFor(
     'settings.update': async (patch: unknown) => patch,
     'devSetup.environment': options.environment ?? WIN,
     'devSetup.detect': options.detect ?? detectFrom({}),
+    ...(options.updates ? { 'devSetup.updates': options.updates } : {}),
   };
+}
+
+const behind = (latest: string, installed: string | null = null): DevUpdateCheck => ({
+  state: 'update',
+  latest,
+  installed,
+});
+
+/** An updates() that answers from a map, and says "current" for anything not listed. */
+function updatesFrom(answers: Record<string, DevUpdateCheck>) {
+  return async (ids: string[]) =>
+    Object.fromEntries(ids.map((id) => [id, answers[id] ?? ({ state: 'current' } as const)]));
 }
 
 beforeEach(() => {
@@ -249,6 +266,313 @@ describe('useDevSetup: checking again', () => {
     await waitFor(() => expect(detect).toHaveBeenCalledWith('node', { force: true }));
     expect(detect).toHaveBeenCalledWith('git', { force: true });
     await waitFor(() => expect(bridge.$fn('devSetup.environment')).toHaveBeenCalled());
+  });
+});
+
+describe('useDevSetup: updates', () => {
+  const installed = detectFrom({
+    git: found('2.55.0'),
+    node: found('24.20.0'),
+    npm: found('11.19.0'),
+    gh: found('2.102.0'),
+  });
+  const rowOf = (result: { current: ReturnType<typeof useDevSetup> }, id: string) =>
+    result.current.checklist?.rows.find((row) => row.item.id === id);
+
+  it('asks once for each source, with the items that source covers', async () => {
+    const updates = vi.fn(updatesFrom({}));
+    renderHookWithProviders(() => useDevSetup(), {
+      bridge: bridgeFor({ detect: installed, updates }),
+    });
+
+    await waitFor(() => expect(updates).toHaveBeenCalledTimes(2));
+
+    expect(updates).toHaveBeenCalledWith(['git', 'node', 'gh'], { force: false });
+    expect(updates).toHaveBeenCalledWith(['pnpm'], { force: false });
+  });
+
+  it('puts what it finds on the row, which stays ready', async () => {
+    const { result } = renderHookWithProviders(() => useDevSetup(), {
+      bridge: bridgeFor({
+        detect: installed,
+        updates: updatesFrom({ gh: behind('2.103.0', '2.102.0') }),
+      }),
+    });
+
+    await waitFor(() =>
+      expect(rowOf(result, 'gh')?.state).toMatchObject({
+        kind: 'installed',
+        update: { latest: '2.103.0' },
+      }),
+    );
+    expect(rowOf(result, 'git')?.state).not.toHaveProperty('update');
+    expect(result.current.checklist?.summary).toMatchObject({ ready: 4, total: 4, updates: 1 });
+  });
+
+  it('shows the answer of a quick source without waiting for a slow one', async () => {
+    const { result } = renderHookWithProviders(() => useDevSetup(), {
+      bridge: bridgeFor({
+        detect: installed,
+        updates: async (ids) =>
+          ids.includes('pnpm')
+            ? new Promise<Record<string, DevUpdateCheck>>(() => undefined)
+            : { gh: behind('2.103.0', '2.102.0') },
+      }),
+    });
+
+    await waitFor(() =>
+      expect(rowOf(result, 'gh')?.state).toMatchObject({ update: expect.any(Object) }),
+    );
+    // The registry has not answered, and the page says it is still looking.
+    expect(result.current.updatesStatus).toBe('checking');
+  });
+
+  it('says the check failed when nothing that is installed got an answer', async () => {
+    const { result } = renderHookWithProviders(() => useDevSetup(), {
+      bridge: bridgeFor({
+        detect: installed,
+        updates: async (ids) =>
+          Object.fromEntries(ids.map((id) => [id, { state: 'unknown' } as const])),
+      }),
+    });
+
+    await waitFor(() => expect(result.current.updatesStatus).toBe('failed'));
+    expect(result.current.checklist?.summary.updates).toBe(0);
+  });
+
+  it('is not a failure when the only unknowns are tools that are not installed', async () => {
+    const { result } = renderHookWithProviders(() => useDevSetup(), {
+      bridge: bridgeFor({
+        detect: installed,
+        updates: async (ids) =>
+          Object.fromEntries(
+            ids.map((id) => [id, id === 'pnpm' ? { state: 'unknown' } : { state: 'current' }]),
+          ) as Record<string, DevUpdateCheck>,
+      }),
+    });
+
+    await waitFor(() => expect(result.current.checklist?.summary.checking).toBe(0));
+    await waitFor(() => expect(result.current.updatesStatus).toBe('done'));
+  });
+
+  it('copes with a bridge that has nothing to say about updates', async () => {
+    const { result } = renderHookWithProviders(() => useDevSetup(), {
+      bridge: bridgeFor({ detect: installed }),
+    });
+
+    await waitFor(() => expect(result.current.checklist?.summary.checking).toBe(0));
+    await waitFor(() => expect(result.current.updatesStatus).not.toBe('checking'));
+    expect(result.current.checklist?.summary.updates).toBe(0);
+  });
+
+  it('updates the tools named, as an update and without any agreement', async () => {
+    const { result, bridge } = renderHookWithProviders(() => useDevSetup(), {
+      bridge: bridgeFor({
+        detect: installed,
+        updates: updatesFrom({ gh: behind('2.103.0', '2.102.0') }),
+      }),
+    });
+    await waitFor(() => expect(result.current.checklist?.summary.checking).toBe(0));
+    await waitFor(() => expect(result.current.updatesStatus).toBe('done'));
+
+    await act(async () => result.current.update(['gh']));
+
+    expect(bridge.$fn('devSetup.install')).toHaveBeenCalledWith({ ids: ['gh'], intent: 'update' });
+  });
+
+  it('updates everything the app can run when asked to update all', async () => {
+    const { result, bridge } = renderHookWithProviders(() => useDevSetup(), {
+      bridge: bridgeFor({
+        detect: installed,
+        updates: updatesFrom({
+          node: behind('24.22.1', '24.20.0'),
+          gh: behind('2.103.0', '2.102.0'),
+        }),
+      }),
+    });
+    await waitFor(() => expect(result.current.updatePlan?.steps).toEqual(['node', 'gh']));
+
+    await act(async () => result.current.updateAll());
+
+    expect(bridge.$fn('devSetup.install')).toHaveBeenCalledWith({
+      ids: ['node', 'gh'],
+      intent: 'update',
+    });
+  });
+
+  it('says so when an update could not be started', async () => {
+    const { result } = renderHookWithProviders(() => useDevSetup(), {
+      bridge: {
+        ...bridgeFor({ detect: installed, updates: updatesFrom({}) }),
+        'devSetup.install': async () => {
+          throw new Error("Error invoking remote method 'devSetup:install': Error: busy");
+        },
+      },
+    });
+    await waitFor(() => expect(result.current.checklist?.summary.checking).toBe(0));
+
+    await act(async () => result.current.update(['gh']));
+
+    expect(toast.error).toHaveBeenCalledWith('Could not start the update. busy');
+  });
+
+  it('asks every source again, and forces it, when everything is checked again', async () => {
+    const updates = vi.fn(updatesFrom({}));
+    const { result } = renderHookWithProviders(() => useDevSetup(), {
+      bridge: bridgeFor({ detect: installed, updates }),
+    });
+    await waitFor(() => expect(result.current.checklist?.summary.checking).toBe(0));
+    await waitFor(() => expect(result.current.updatesStatus).toBe('done'));
+    updates.mockClear();
+
+    act(() => result.current.recheckAll());
+
+    await waitFor(() =>
+      expect(updates).toHaveBeenCalledWith(['git', 'node', 'gh'], { force: true }),
+    );
+    expect(updates).toHaveBeenCalledWith(['pnpm'], { force: true });
+  });
+
+  it('keeps showing an update while it is asked about again, instead of flickering', async () => {
+    let release: (() => void) | undefined;
+    let calls = 0;
+    const { result } = renderHookWithProviders(() => useDevSetup(), {
+      bridge: bridgeFor({
+        detect: installed,
+        updates: async (ids) => {
+          calls += 1;
+          if (calls > 2) await new Promise<void>((resolve) => (release = resolve));
+          return Object.fromEntries(
+            ids.map((id) => [
+              id,
+              id === 'gh' ? behind('2.103.0', '2.102.0') : { state: 'current' },
+            ]),
+          ) as Record<string, DevUpdateCheck>;
+        },
+      }),
+    });
+    await waitFor(() =>
+      expect(rowOf(result, 'gh')?.state).toMatchObject({ update: expect.any(Object) }),
+    );
+
+    act(() => result.current.recheckAll());
+    await waitFor(() => expect(result.current.updatesStatus).toBe('checking'));
+
+    expect(rowOf(result, 'gh')?.state).toMatchObject({ update: { latest: '2.103.0' } });
+    release?.();
+  });
+
+  it('asks again about one tool, forced, when its row is checked again', async () => {
+    const updates = vi.fn(updatesFrom({ gh: behind('2.103.0', '2.102.0') }));
+    const { result } = renderHookWithProviders(() => useDevSetup(), {
+      bridge: bridgeFor({ detect: installed, updates }),
+    });
+    await waitFor(() =>
+      expect(rowOf(result, 'gh')?.state).toMatchObject({ update: expect.any(Object) }),
+    );
+    updates.mockClear();
+
+    act(() => result.current.recheck('gh'));
+
+    await waitFor(() => expect(updates).toHaveBeenCalledWith(['gh'], { force: true }));
+  });
+
+  it('does not ask about updates when a row without one is checked again', async () => {
+    const updates = vi.fn(updatesFrom({}));
+    const { result } = renderHookWithProviders(() => useDevSetup(), {
+      bridge: bridgeFor({ detect: installed, updates }),
+    });
+    await waitFor(() => expect(result.current.checklist?.summary.checking).toBe(0));
+    await waitFor(() => expect(result.current.updatesStatus).toBe('done'));
+    updates.mockClear();
+
+    act(() => result.current.recheck('git'));
+    await waitFor(() => expect(result.current.checklist?.summary.checking).toBe(0));
+
+    expect(updates).not.toHaveBeenCalledWith(['git'], { force: true });
+  });
+
+  describe('handed to a terminal', () => {
+    const COMMAND = 'sudo apt-get install -y --only-upgrade gh';
+
+    it('opens a terminal that says update, and waits on the row without calling it installed', async () => {
+      const { result } = renderHookWithProviders(() => useDevSetup(), {
+        bridge: bridgeFor({
+          detect: installed,
+          updates: updatesFrom({ gh: behind('2.103.0', '2.102.0') }),
+        }),
+      });
+      await waitFor(() =>
+        expect(rowOf(result, 'gh')?.state).toMatchObject({ update: expect.any(Object) }),
+      );
+
+      act(() =>
+        result.current.openInTerminal({
+          id: 'gh',
+          name: 'GitHub CLI',
+          command: COMMAND,
+          intent: 'update',
+        }),
+      );
+
+      expect(useTerminalStore.getState().sessions[0]).toMatchObject({
+        title: 'Update GitHub CLI',
+        initialInput: COMMAND,
+      });
+      expect(toast.info).toHaveBeenCalledWith('Press Enter in the terminal to update GitHub CLI.');
+      expect(rowOf(result, 'gh')?.state).toMatchObject({
+        kind: 'installed',
+        update: { waiting: true },
+      });
+    });
+
+    it('looks at that one update every few seconds and stops once it is gone', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      let updated = false;
+      const updates = vi.fn(async (ids: string[]) =>
+        Object.fromEntries(
+          ids.map((id) => [
+            id,
+            id === 'gh' && !updated
+              ? behind('2.103.0', '2.102.0')
+              : ({ state: 'current' } as const),
+          ]),
+        ),
+      );
+      const { result } = renderHookWithProviders(() => useDevSetup(), {
+        bridge: bridgeFor({ detect: installed, updates }),
+      });
+      await waitFor(() =>
+        expect(rowOf(result, 'gh')?.state).toMatchObject({ update: expect.any(Object) }),
+      );
+
+      act(() =>
+        result.current.openInTerminal({
+          id: 'gh',
+          name: 'GitHub CLI',
+          command: COMMAND,
+          intent: 'update',
+        }),
+      );
+      updates.mockClear();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5_200);
+      });
+      // Asked about by name and forced, so it is not a whole winget list every five seconds.
+      expect(updates).toHaveBeenCalledWith(['gh'], { force: true });
+
+      updated = true;
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5_200);
+      });
+      await waitFor(() => expect(rowOf(result, 'gh')?.state).not.toHaveProperty('update'));
+
+      updates.mockClear();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(11_000);
+      });
+      expect(updates).not.toHaveBeenCalledWith(['gh'], { force: true });
+    });
   });
 });
 

@@ -1,3 +1,4 @@
+import type { InstallIntent } from './recipes.js';
 import type { DevInstallPhase, DevItemId, DevItemJob } from './types.js';
 
 /**
@@ -7,8 +8,8 @@ import type { DevInstallPhase, DevItemId, DevItemJob } from './types.js';
  */
 
 export type DevJobEvent =
-  /** A run begins, or more steps are added to one that is already going. */
-  | { type: 'plan'; jobId: string; steps: DevItemId[] }
+  /** A run begins, or more steps are added to one that is already going. Absent intent is install. */
+  | { type: 'plan'; jobId: string; steps: DevItemId[]; intent?: InstallIntent }
   | { type: 'started'; jobId: string; itemId: DevItemId }
   | {
       type: 'progress';
@@ -44,6 +45,8 @@ export interface DevJobState {
   logs: Record<DevItemId, string[]>;
   current: DevItemId | null;
   restartAdvised: boolean;
+  /** What the run that began this state was for. Absent means install. */
+  intent?: InstallIntent;
   /** The last run ended because it was cancelled. Unset while a run is going. */
   cancelled?: boolean;
 }
@@ -67,6 +70,11 @@ function withoutKey<T>(record: Record<string, T>, key: string): Record<string, T
   return rest;
 }
 
+/** The intent a step was planned with, to carry onto each later state of the same step. */
+function intentOf(job: DevItemJob | undefined): { intent?: InstallIntent } {
+  return job?.intent ? { intent: job.intent } : {};
+}
+
 export function applyJobEvent(state: DevJobState, event: DevJobEvent): DevJobState {
   if (event.type === 'plan') return applyPlan(state, event);
   // Anything else belongs to the run in progress. Events for another run, or arriving after the
@@ -80,7 +88,12 @@ export function applyJobEvent(state: DevJobState, event: DevJobEvent): DevJobSta
         current: event.itemId,
         items: {
           ...state.items,
-          [event.itemId]: { status: 'installing', phase: 'preparing', fraction: null },
+          [event.itemId]: {
+            status: 'installing',
+            phase: 'preparing',
+            fraction: null,
+            ...intentOf(state.items[event.itemId]),
+          },
         },
       };
 
@@ -101,7 +114,7 @@ export function applyJobEvent(state: DevJobState, event: DevJobEvent): DevJobSta
       }
       const detail =
         event.detail === undefined ? (samePhase ? existing.detail : undefined) : event.detail;
-      const next: DevItemJob = { status: 'installing', phase, fraction };
+      const next: DevItemJob = { status: 'installing', phase, fraction, ...intentOf(existing) };
       if (detail) next.detail = detail;
       return { ...state, items: { ...state.items, [event.itemId]: next } };
     }
@@ -135,6 +148,7 @@ export function applyJobEvent(state: DevJobState, event: DevJobEvent): DevJobSta
             status: 'failed',
             message: event.message,
             exitCode: event.exitCode ?? null,
+            ...intentOf(state.items[event.itemId]),
           },
         },
       };
@@ -161,7 +175,7 @@ function applyPlan(state: DevJobState, event: Extract<DevJobEvent, { type: 'plan
       if (status === 'queued' || status === 'installing') continue;
       // A failure being retried is a new attempt: it queues now and starts a fresh log.
       if (status === 'failed') delete logs[id];
-      items[id] = { status: 'queued' };
+      items[id] = { status: 'queued', ...(event.intent ? { intent: event.intent } : {}) };
     }
     return { ...state, items, logs, order: [...new Set([...state.order, ...event.steps])] };
   }
@@ -172,7 +186,9 @@ function applyPlan(state: DevJobState, event: Extract<DevJobEvent, { type: 'plan
     ([id, job]) => job.status === 'failed' && !planned.has(id),
   );
   const items: Record<DevItemId, DevItemJob> = Object.fromEntries(carried);
-  for (const id of event.steps) items[id] = { status: 'queued' };
+  for (const id of event.steps) {
+    items[id] = { status: 'queued', ...(event.intent ? { intent: event.intent } : {}) };
+  }
   const logs = Object.fromEntries(
     Object.entries(state.logs).filter(([id]) => carried.some(([carriedId]) => carriedId === id)),
   );
@@ -185,6 +201,7 @@ function applyPlan(state: DevJobState, event: Extract<DevJobEvent, { type: 'plan
     logs,
     current: null,
     restartAdvised: false,
+    ...(event.intent ? { intent: event.intent } : {}),
   };
 }
 

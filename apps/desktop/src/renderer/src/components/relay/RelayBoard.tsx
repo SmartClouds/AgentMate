@@ -137,7 +137,7 @@ function BoardColumns({
                 over === column.status ? 'border-primary/50 bg-primary/[0.05]' : 'border-border/50',
               )}
             >
-              <header className="flex items-center gap-2 px-3 pt-3 pb-2">
+              <header className="flex items-center gap-2 px-3 pt-3 pb-1">
                 <span
                   aria-hidden
                   className="h-2 w-2 rounded-full"
@@ -153,7 +153,8 @@ function BoardColumns({
                   {tasks.length}
                 </span>
               </header>
-              <div className="flex min-h-16 flex-1 flex-col gap-2 overflow-y-auto px-2 pb-3">
+              {/* pt-1 keeps the selected ring and running glow from being clipped by the scroll edge */}
+              <div className="flex min-h-16 flex-1 flex-col gap-2 overflow-y-auto px-2 pt-1 pb-3">
                 {tasks.map((task) => (
                   <RelayTaskCard
                     key={task.id}

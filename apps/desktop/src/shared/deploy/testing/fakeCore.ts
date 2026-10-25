@@ -2,6 +2,8 @@ import type {
   AlertInfo,
   AlertKind,
   AlertSeverity,
+  CoreUpdateRequest,
+  CoreUpdateResult,
   DirectTlsStatus,
   JobInfo,
   JobKind,
@@ -79,6 +81,12 @@ export class FakeCore {
   down = false;
   /** Set by `rebootServer`; the test decides when the machine actually goes down. */
   rebootRequested = false;
+  /** Every `updateCore` request, and how the core answers one (a test sets it). */
+  readonly coreUpdates: CoreUpdateRequest[] = [];
+  answerCoreUpdate: (request: CoreUpdateRequest) => CoreUpdateResult = () => ({
+    outcome: 'switching',
+    runningVersion: '1.0.0',
+  });
   system: SystemInfo = sampleSystemInfo();
   services: ServiceInfo[] = sampleServices();
   updates: UpdatesInfo = sampleUpdates();

@@ -105,6 +105,28 @@ export interface DeploySetupProgress {
   percent?: number;
 }
 
+/** The core release this build installs, for the Deploy page to offer as an update. */
+export interface DeployCoreRelease {
+  version: string;
+  /** Whether a server may download it from GitHub itself (packaged builds); otherwise it is uploaded. */
+  serverDownload: boolean;
+}
+
+/**
+ * How an update through the core itself ended (no SSH). `needs-ssh` is not a failure: this core
+ * cannot replace itself (an older release, or one the app did not install), so the SSH installer
+ * is the way, and the reason says why.
+ */
+export type DeployCoreUpdateResult =
+  | {
+      outcome: 'updated';
+      version: string;
+      previousVersion: string;
+      /** Whether the server fetched the release itself or this app uploaded it. */
+      via: 'server-download' | 'upload';
+    }
+  | { outcome: 'needs-ssh'; reason: string };
+
 export interface DeploySetupProgressEvent {
   serverId: string;
   progress: DeploySetupProgress;

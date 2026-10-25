@@ -218,6 +218,7 @@ function world(options: Options = {}) {
     root,
     flutterBin,
     run: () => createFlutterInstaller(deps).run(hooks),
+    update: (foundAt: string | null = null) => createFlutterInstaller(deps).update(hooks, foundAt),
     abort: () => abort?.(),
   };
 }
@@ -791,5 +792,105 @@ describe('cancelling', () => {
     expect(result).toMatchObject({ ok: false, cancelled: true });
     expect(w.calls).toContain(`rm:${STAGING}`);
     expect(w.deps.kit.fs.rename).not.toHaveBeenCalledWith(`${STAGING}\\flutter`, ROOT);
+  });
+});
+
+describe('updating the Flutter that is there', () => {
+  const THEIRS = 'D:\\Workspace\\Flutter SDK\\flutter';
+  const THEIR_BAT = `${THEIRS}\\bin\\flutter.bat`;
+
+  it('runs flutter upgrade from the copy that was found, and downloads nothing', async () => {
+    const w = world({ existing: [THEIR_BAT, `${THEIRS}\\.git`] });
+
+    const result = await w.update(THEIR_BAT);
+
+    expect(result).toEqual(OK);
+    expect(w.calls).toEqual([`run:${THEIR_BAT} upgrade`]);
+    expect(w.deps.kit.fetchText).not.toHaveBeenCalled();
+    expect(w.deps.kit.download).not.toHaveBeenCalled();
+  });
+
+  it('leaves the PATH alone, since the copy is already where the person put it', async () => {
+    const w = world({ existing: [THEIR_BAT, `${THEIRS}\\.git`] });
+
+    await w.update(THEIR_BAT);
+
+    expect(w.deps.addToUserPath).not.toHaveBeenCalled();
+  });
+
+  it('uses the copy AgentMate installed when none was named', async () => {
+    const w = world({ existing: [FLUTTER_BAT, `${ROOT}\\.git`] });
+
+    expect(await w.update()).toEqual(OK);
+    expect(w.calls).toEqual([`run:${FLUTTER_BAT} upgrade`]);
+  });
+
+  it('says so, and runs nothing, for a copy with no git history to upgrade from', async () => {
+    const w = world({ existing: [THEIR_BAT] });
+
+    const result = await w.update(THEIR_BAT);
+
+    expect(result).toMatchObject({ ok: false, cancelled: false });
+    expect(result.message).toContain('not installed with git');
+    expect(w.calls).toEqual([]);
+  });
+
+  it('says so when Flutter is not where it was found any more', async () => {
+    const w = world();
+
+    const result = await w.update(THEIR_BAT);
+
+    expect(result).toMatchObject({ ok: false });
+    expect(result.message).toContain('was not found');
+    expect(w.calls).toEqual([]);
+  });
+
+  it('reports the stages and prints what it is doing', async () => {
+    const w = world({ existing: [THEIR_BAT, `${THEIRS}\\.git`] });
+
+    await w.update(THEIR_BAT);
+
+    expect(w.progress.map((one) => one.phase)).toEqual(['preparing', 'installing']);
+    expect(w.lines).toContain('Running flutter upgrade');
+  });
+
+  it('turns a failed upgrade into a sentence and points at the log', async () => {
+    const w = world({ existing: [THEIR_BAT, `${THEIRS}\\.git`], bootstrap: { code: 1 } });
+
+    const result = await w.update(THEIR_BAT);
+
+    expect(result).toMatchObject({ ok: false, cancelled: false });
+    expect(result.message).toContain('Open the log');
+  });
+
+  it('stops a flutter upgrade that goes silent', async () => {
+    const w = world({
+      existing: [THEIR_BAT, `${THEIRS}\\.git`],
+      bootstrap: { code: null, timedOut: true },
+    });
+
+    const result = await w.update(THEIR_BAT);
+
+    expect(result.message).toContain('stopped responding');
+  });
+
+  it('reports a cancel as a cancel, with no message', async () => {
+    const w = world({
+      existing: [THEIR_BAT, `${THEIRS}\\.git`],
+      bootstrap: { code: null, cancelled: true },
+    });
+
+    const result = await w.update(THEIR_BAT);
+
+    expect(result).toMatchObject({ ok: false, cancelled: true });
+    expect(result.message).toBeUndefined();
+  });
+
+  it('does not start when it was cancelled already', async () => {
+    const w = world({ existing: [THEIR_BAT, `${THEIRS}\\.git`] });
+    w.token.cancelled = true;
+
+    expect(await w.update(THEIR_BAT)).toMatchObject({ ok: false, cancelled: true });
+    expect(w.calls).toEqual([]);
   });
 });

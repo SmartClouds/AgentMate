@@ -3,6 +3,7 @@ import type {
   DevItem,
   DevJobEvent,
   DevSetupEnvironment,
+  DevUpdateCheck,
   InstallMode,
 } from '@agentmat/core';
 import { describe, expect, it, vi } from 'vitest';
@@ -22,6 +23,7 @@ const WIN: DevSetupEnvironment = { os: 'win32', arch: 'x64', packageManagers: ['
 interface Step {
   item: DevItem;
   mode: Extract<InstallMode, { mode: 'in-app' }>;
+  path: string | null;
 }
 type Behavior = (step: Step, hooks: RunHooks) => Promise<RunResult>;
 
@@ -41,10 +43,17 @@ function world(
     stacks?: string[];
     behavior?: Record<string, Behavior>;
     afterInstall?: () => Promise<void>;
+    /** What the update source says before anything runs. A missing id reads as unknown. */
+    updates?: Record<string, DevUpdateCheck>;
+    /** What it says when asked again with `force`, if that differs (an update done meanwhile). */
+    freshUpdates?: Record<string, DevUpdateCheck>;
+    paths?: Record<string, string>;
   } = {},
 ) {
   const installed = new Map(Object.entries(options.installed ?? {}));
-  const runs: Array<{ id: string; intent: string }> = [];
+  const updates = new Map(Object.entries(options.updates ?? {}));
+  const freshUpdates = new Map(Object.entries(options.freshUpdates ?? {}));
+  const runs: Array<{ id: string; intent: string; path: string | null }> = [];
   const events: DevJobEvent[] = [];
   const calls: string[] = [];
   let jobCounter = 0;
@@ -55,14 +64,28 @@ function world(
     detect: vi.fn(async (id: string): Promise<DevDetection> => {
       calls.push(`detect:${id}`);
       const version = installed.get(id);
-      return version ? { state: 'found', version, path: null, onPath: true } : { state: 'absent' };
+      return version
+        ? { state: 'found', version, path: options.paths?.[id] ?? null, onPath: true }
+        : { state: 'absent' };
+    }),
+    checkUpdates: vi.fn(async (ids: readonly string[], request?: { force?: boolean }) => {
+      calls.push(`check:${ids.join(',')}${request?.force ? ':force' : ''}`);
+      return Object.fromEntries(
+        ids.map((id) => [
+          id,
+          (request?.force ? freshUpdates.get(id) : undefined) ??
+            updates.get(id) ?? { state: 'unknown' as const },
+        ]),
+      );
     }),
     run: vi.fn(async (step: Step, hooks: RunHooks) => {
       calls.push(`run:${step.item.id}`);
-      runs.push({ id: step.item.id, intent: step.mode.intent });
+      runs.push({ id: step.item.id, intent: step.mode.intent, path: step.path });
       const custom = options.behavior?.[step.item.id];
       if (custom) return custom(step, hooks);
       installed.set(step.item.id, '99.0.0');
+      updates.set(step.item.id, { state: 'current' });
+      freshUpdates.set(step.item.id, { state: 'current' });
       return OK;
     }),
     afterInstall: async () => {
@@ -76,7 +99,16 @@ function world(
     newJobId: () => `job-${++jobCounter}`,
   };
 
-  return { deps, installed, runs, events, calls, installer: createDevSetupInstaller(deps) };
+  return {
+    deps,
+    installed,
+    updates,
+    freshUpdates,
+    runs,
+    events,
+    calls,
+    installer: createDevSetupInstaller(deps),
+  };
 }
 
 const kinds = (events: DevJobEvent[]) => events.map((event) => event.type);
@@ -133,7 +165,7 @@ describe('installing one thing', () => {
     await w.installer.install({ ids: ['node'] });
     await w.installer.whenIdle();
 
-    expect(w.runs).toEqual([{ id: 'node', intent: 'update' }]);
+    expect(w.runs).toEqual([{ id: 'node', intent: 'update', path: null }]);
   });
 
   it('refuses an id that is not in the catalog', async () => {
@@ -1063,5 +1095,292 @@ describe('stopping a run that is not a process', () => {
     expect(() => w.installer.cancel()).not.toThrow();
     gate.resolve({ ok: false, code: null, cancelled: true });
     await w.installer.whenIdle();
+  });
+});
+
+describe('updating a tool that is already installed', () => {
+  const behind = (latest: string): DevUpdateCheck => ({
+    state: 'update',
+    latest,
+    installed: null,
+  });
+  const nothingNewer = { state: 'current' } as const;
+  const planned = (events: DevJobEvent[]) =>
+    events.find((event): event is Extract<DevJobEvent, { type: 'plan' }> => event.type === 'plan');
+
+  it('runs the update, tags the run as one, and calls it done once the tool is newer', async () => {
+    const w = world({ installed: { gh: '2.62.0' }, updates: { gh: behind('2.70.0') } });
+
+    await w.installer.install({ ids: ['gh'], intent: 'update' });
+    await w.installer.whenIdle();
+
+    expect(w.runs).toEqual([{ id: 'gh', intent: 'update', path: null }]);
+    expect(planned(w.events)).toMatchObject({ steps: ['gh'], intent: 'update' });
+    expect(finished(w.events)).toEqual([
+      expect.objectContaining({ itemId: 'gh', result: 'installed' }),
+    ]);
+    expect(w.installer.jobState()).toMatchObject({ intent: 'update', completed: ['gh'] });
+  });
+
+  it('does not take the shortcut an install takes for a tool that is already there', async () => {
+    const w = world({ installed: { gh: '2.62.0' }, updates: { gh: behind('2.70.0') } });
+
+    await w.installer.install({ ids: ['gh'] });
+    await w.installer.whenIdle();
+
+    expect(w.runs).toEqual([]);
+  });
+
+  it('plans nothing for a tool with no update, or one whose source could not be asked', async () => {
+    const w = world({
+      installed: { gh: '2.62.0', git: '2.55.0' },
+      updates: { gh: nothingNewer },
+    });
+
+    const state = await w.installer.install({ ids: ['gh', 'git'], intent: 'update' });
+    await w.installer.whenIdle();
+
+    expect(w.runs).toEqual([]);
+    expect(w.events).toEqual([]);
+    expect(state.running).toBe(false);
+  });
+
+  it('plans nothing for a tool that is not installed', async () => {
+    const w = world({ updates: { gh: behind('2.70.0') } });
+
+    await w.installer.install({ ids: ['gh'], intent: 'update' });
+    await w.installer.whenIdle();
+
+    expect(w.runs).toEqual([]);
+  });
+
+  it('does not ask about an agreement, since it was accepted when the tool was installed', async () => {
+    const w = world({
+      stacks: ['essentials', 'docker'],
+      installed: { 'docker-desktop': '28.0.0' },
+      updates: { 'docker-desktop': behind('4.96.2') },
+    });
+
+    await expect(
+      w.installer.install({ ids: ['docker-desktop'], intent: 'update' }),
+    ).resolves.toBeDefined();
+    await w.installer.whenIdle();
+
+    expect(w.runs.map((run) => run.id)).toEqual(['docker-desktop']);
+  });
+
+  it('looks again just before running, and skips a tool that was updated in the meantime', async () => {
+    const w = world({
+      installed: { gh: '2.62.0' },
+      updates: { gh: behind('2.70.0') },
+      freshUpdates: { gh: nothingNewer },
+    });
+
+    await w.installer.install({ ids: ['gh'], intent: 'update' });
+    await w.installer.whenIdle();
+
+    expect(w.runs).toEqual([]);
+    expect(finished(w.events)).toEqual([
+      expect.objectContaining({ itemId: 'gh', result: 'installed' }),
+    ]);
+  });
+
+  it('runs the copy the person has, so an update to Flutter can use its own folder', async () => {
+    const path = 'D:\\Workspace\\Flutter SDK\\flutter\\bin\\flutter.bat';
+    const w = world({
+      installed: { git: '2.55.0', flutter: '3.47.2' },
+      updates: { flutter: behind('3.47.7') },
+      paths: { flutter: path },
+    });
+
+    await w.installer.install({ ids: ['flutter'], intent: 'update' });
+    await w.installer.whenIdle();
+
+    expect(w.runs).toEqual([{ id: 'flutter', intent: 'update', path }]);
+  });
+
+  it('counts it as updated when the source now says nothing is newer, even if the version did not move', async () => {
+    // Docker Desktop 4.96.0 to 4.96.2 can leave the engine on the same version.
+    const w = world({
+      stacks: ['essentials', 'docker'],
+      installed: { 'docker-desktop': '28.0.0' },
+      updates: { 'docker-desktop': behind('4.96.2') },
+      behavior: {
+        'docker-desktop': async () => {
+          w.freshUpdates.set('docker-desktop', nothingNewer);
+          return OK;
+        },
+      },
+    });
+
+    await w.installer.install({ ids: ['docker-desktop'], intent: 'update' });
+    await w.installer.whenIdle();
+
+    expect(finished(w.events)).toEqual([
+      expect.objectContaining({ itemId: 'docker-desktop', result: 'installed' }),
+    ]);
+  });
+
+  it('counts it as updated when the version rose, even if the source still lists something newer', async () => {
+    const w = world({
+      installed: { gh: '2.62.0' },
+      updates: { gh: behind('2.71.0') },
+      behavior: {
+        gh: async () => {
+          w.installed.set('gh', '2.70.0');
+          return OK;
+        },
+      },
+    });
+
+    await w.installer.install({ ids: ['gh'], intent: 'update' });
+    await w.installer.whenIdle();
+
+    expect(finished(w.events)).toEqual([
+      expect.objectContaining({ itemId: 'gh', result: 'installed' }),
+    ]);
+  });
+
+  it('does not take an exit code of zero on trust when nothing changed', async () => {
+    const w = world({
+      installed: { gh: '2.62.0' },
+      updates: { gh: behind('2.70.0') },
+      behavior: { gh: async () => OK },
+    });
+
+    await w.installer.install({ ids: ['gh'], intent: 'update' });
+    await w.installer.whenIdle();
+
+    expect(finished(w.events)).toEqual([
+      expect.objectContaining({
+        itemId: 'gh',
+        result: 'failed',
+        message: expect.stringContaining('still version 2.62.0'),
+      }),
+    ]);
+    expect(w.installer.jobState().items.gh).toMatchObject({ status: 'failed', intent: 'update' });
+  });
+
+  it('falls back on the exit code when the source cannot be asked afterwards', async () => {
+    const w = world({
+      installed: { gh: '2.62.0' },
+      updates: { gh: behind('2.70.0') },
+      freshUpdates: { gh: behind('2.70.0') },
+      behavior: {
+        gh: async () => {
+          w.freshUpdates.set('gh', { state: 'unknown' });
+          return OK;
+        },
+      },
+    });
+
+    await w.installer.install({ ids: ['gh'], intent: 'update' });
+    await w.installer.whenIdle();
+
+    expect(finished(w.events)).toEqual([
+      expect.objectContaining({ itemId: 'gh', result: 'installed' }),
+    ]);
+  });
+
+  it('reports why a failed update failed, without losing the tool', async () => {
+    const w = world({
+      installed: { gh: '2.62.0' },
+      updates: { gh: behind('2.70.0') },
+      behavior: {
+        gh: async () => ({
+          ok: false,
+          code: 1603,
+          cancelled: false,
+          message: 'Close the app that is using it, then try again.',
+        }),
+      },
+    });
+
+    await w.installer.install({ ids: ['gh'], intent: 'update' });
+    await w.installer.whenIdle();
+
+    expect(finished(w.events)).toEqual([
+      expect.objectContaining({
+        result: 'failed',
+        message: 'Close the app that is using it, then try again.',
+        exitCode: 1603,
+      }),
+    ]);
+  });
+
+  it('does not report a cancelled update as installed just because the tool is there', async () => {
+    const gate = deferred<RunResult>();
+    const w = world({
+      installed: { gh: '2.62.0' },
+      updates: { gh: behind('2.70.0') },
+      behavior: { gh: () => gate.promise },
+    });
+    await w.installer.install({ ids: ['gh'], intent: 'update' });
+    await vi.waitFor(() => expect(w.runs).toHaveLength(1));
+
+    w.installer.cancel();
+    gate.resolve({ ok: false, code: null, cancelled: true });
+    await w.installer.whenIdle();
+
+    expect(finished(w.events)).toEqual([
+      expect.objectContaining({ itemId: 'gh', result: 'cancelled' }),
+    ]);
+    expect(w.installer.jobState().completed).toEqual([]);
+  });
+
+  it('does report a cancelled update that had already landed', async () => {
+    const gate = deferred<RunResult>();
+    const w = world({
+      installed: { gh: '2.62.0' },
+      updates: { gh: behind('2.70.0') },
+      behavior: { gh: () => gate.promise },
+    });
+    await w.installer.install({ ids: ['gh'], intent: 'update' });
+    await vi.waitFor(() => expect(w.runs).toHaveLength(1));
+
+    w.installer.cancel();
+    w.installed.set('gh', '2.70.0');
+    gate.resolve({ ok: false, code: null, cancelled: true });
+    await w.installer.whenIdle();
+
+    expect(finished(w.events)).toEqual([
+      expect.objectContaining({ itemId: 'gh', result: 'installed' }),
+    ]);
+  });
+
+  it('leaves an update that needs a terminal to the person', async () => {
+    const w = world({
+      installed: { git: '2.55.0' },
+      updates: { git: behind('2.56.0') },
+    });
+    // Without winget the recipe is a download page, so there is nothing in the app to run.
+    w.deps.environment = async () => ({ ...WIN, packageManagers: [] });
+
+    const state = await w.installer.install({ ids: ['git'], intent: 'update' });
+    await w.installer.whenIdle();
+
+    expect(w.runs).toEqual([]);
+    expect(state.running).toBe(false);
+  });
+
+  it('can be followed by an install in the same run', async () => {
+    const gate = deferred<RunResult>();
+    const w = world({
+      installed: { gh: '2.62.0' },
+      updates: { gh: behind('2.70.0') },
+      behavior: { gh: () => gate.promise },
+    });
+    await w.installer.install({ ids: ['gh'], intent: 'update' });
+    await vi.waitFor(() => expect(w.runs).toHaveLength(1));
+
+    await w.installer.install({ ids: ['git'] });
+    gate.resolve({ ok: true, code: 0, cancelled: false });
+    w.installed.set('gh', '2.70.0');
+    await w.installer.whenIdle();
+
+    expect(w.runs.map((run) => [run.id, run.intent])).toEqual([
+      ['gh', 'update'],
+      ['git', 'install'],
+    ]);
   });
 });

@@ -553,7 +553,7 @@ describe('DeployPage checks and updates', () => {
     });
 
     await user.click(await screen.findByRole('button', { name: 'More actions' }));
-    await user.click(await screen.findByRole('menuitem', { name: /Update or reinstall/ }));
+    await user.click(await screen.findByRole('menuitem', { name: /Update or reinstall over SSH/ }));
 
     expect(await screen.findByRole('button', { name: /Update to core 1\.53\.0/ })).toBeTruthy();
     expect(screen.getByText('Update or reinstall the server core')).toBeTruthy();
@@ -569,7 +569,7 @@ describe('DeployPage checks and updates', () => {
     });
 
     await user.click(await screen.findByRole('button', { name: 'More actions' }));
-    await user.click(await screen.findByRole('menuitem', { name: /Update or reinstall/ }));
+    await user.click(await screen.findByRole('menuitem', { name: /Update or reinstall over SSH/ }));
     const update = await screen.findByRole('button', { name: /Update to core 1\.53\.0/ });
     expect(screen.getByText('Your account on this core')).toBeTruthy();
     expect(screen.queryByLabelText('Confirm the password')).toBeNull();
@@ -591,7 +591,7 @@ describe('DeployPage checks and updates', () => {
     });
 
     await user.click(await screen.findByRole('button', { name: 'More actions' }));
-    await user.click(await screen.findByRole('menuitem', { name: /Update or reinstall/ }));
+    await user.click(await screen.findByRole('menuitem', { name: /Update or reinstall over SSH/ }));
     const update = await screen.findByRole('button', { name: /Update to core 1\.53\.0/ });
     await user.type(screen.getByLabelText('User name'), OWNER.userName);
     expect((update as HTMLButtonElement).disabled).toBe(true);
@@ -614,7 +614,7 @@ describe('DeployPage checks and updates', () => {
     });
 
     await user.click(await screen.findByRole('button', { name: 'More actions' }));
-    await user.click(await screen.findByRole('menuitem', { name: /Update or reinstall/ }));
+    await user.click(await screen.findByRole('menuitem', { name: /Update or reinstall over SSH/ }));
 
     expect(await screen.findByRole('button', { name: /Update to core 1\.53\.0/ })).toBeTruthy();
     expect(screen.queryByLabelText('User name')).toBeNull();
@@ -634,6 +634,123 @@ describe('DeployPage checks and updates', () => {
     await user.click(screen.getByRole('button', { name: 'Check now' }));
 
     expect(await screen.findByText('1.53.1')).toBeTruthy();
+  });
+});
+
+describe('DeployPage core updates without SSH', () => {
+  const OLDER = server({ core: { ...CORE, version: '1.52.0' }, enrolled: true });
+  const updateBridge = (extra: Record<string, unknown> = {}) => ({
+    'deploy.listServers': async () => [OLDER],
+    'deploy.health': async () => ({ ...HEALTH, version: '1.52.0' }),
+    'deploy.coreRelease': async () => ({ version: '1.53.0', serverDownload: true }),
+    'deploy.stepUpSaved': async () => null,
+    ...extra,
+  });
+
+  async function openUpdate(user: ReturnType<typeof renderPage>['user']): Promise<HTMLElement> {
+    expect(await screen.findByText('Core 1.53.0 is available')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Update to 1.53.0' }));
+    return screen.findByRole('button', { name: /Update to core 1\.53\.0/ });
+  }
+
+  it('offers a newer core on the health card and updates through the core', async () => {
+    const call = deferred<unknown>();
+    const { user, bridge } = renderPage(updateBridge({ 'deploy.updateCore': () => call.promise }));
+
+    await user.click(await openUpdate(user));
+
+    expect(bridge.$fn('deploy.updateCore')).toHaveBeenCalledWith({ serverId: 'srv-1' });
+    const emit = (progress: DeploySetupProgressEvent['progress']) =>
+      bridge.$emit('deploy.onSetupProgress', { serverId: 'srv-1', progress });
+    emit({ phase: 'fetch', title: 'Download', status: 'done' });
+    emit({ phase: 'switch', title: 'Switch', status: 'running' });
+    const steps = await screen.findByRole('list', { name: 'Update steps' });
+    expect(within(steps).getByText('Download the server core on the server')).toBeTruthy();
+    expect(within(steps).getByText('Check that it answers')).toBeTruthy();
+
+    call.resolve({
+      outcome: 'updated',
+      version: '1.53.0',
+      previousVersion: '1.52.0',
+      via: 'server-download',
+    });
+
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith('Server core 1.53.0 is running on Production.'),
+    );
+    expect(await screen.findByText('Server core')).toBeTruthy();
+  });
+
+  it('asks for the password when the core wants a step-up, then tries again with it', async () => {
+    let calls = 0;
+    const { user, bridge } = renderPage(
+      updateBridge({
+        'deploy.updateCore': async () => {
+          calls += 1;
+          if (calls === 1) {
+            throw new Error(
+              "Error invoking remote method 'deploy:updateCore': Error: [core:stepUpRequired] Confirm your password to update the core.",
+            );
+          }
+          return new Promise(() => undefined);
+        },
+      }),
+    );
+
+    await user.click(await openUpdate(user));
+    const dialog = await screen.findByRole('dialog', { name: /Confirm it is you/ });
+    await user.type(within(dialog).getByLabelText('Password'), OWNER.password);
+    await user.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+
+    await waitFor(() =>
+      expect(bridge.$fn('deploy.updateCore')).toHaveBeenLastCalledWith({
+        serverId: 'srv-1',
+        password: OWNER.password,
+      }),
+    );
+  });
+
+  it('hands a core that cannot update itself to the SSH installer', async () => {
+    const { user } = renderPage(
+      updateBridge({
+        'deploy.updateCore': async () => ({
+          outcome: 'needs-ssh',
+          reason: 'This server runs an older core that cannot update itself.',
+        }),
+        'deploy.preflight': async () => ({ ...PREFLIGHT, installed: { version: '1.52.0' } }),
+      }),
+    );
+
+    await user.click(await openUpdate(user));
+    expect(
+      await screen.findByText('This server runs an older core that cannot update itself.'),
+    ).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /Continue over SSH/ }));
+
+    expect(await screen.findByText('Update or reinstall the server core')).toBeTruthy();
+  });
+
+  it('says why an update failed and offers to try again or use SSH', async () => {
+    const { user } = renderPage(
+      updateBridge({
+        'deploy.updateCore': async () => {
+          throw new Error('Server core 1.53.0 did not stay up, so the server went back to 1.52.0.');
+        },
+      }),
+    );
+
+    await user.click(await openUpdate(user));
+
+    expect(await screen.findByText(/did not stay up/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Try again/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Update over SSH instead/ })).toBeTruthy();
+  });
+
+  it('keeps quiet when the server already runs the newest core', async () => {
+    renderPage(updateBridge({ 'deploy.health': async () => ({ ...HEALTH, version: '1.53.0' }) }));
+
+    expect(await screen.findByText('latest')).toBeTruthy();
+    expect(screen.queryByText(/is available/)).toBeNull();
   });
 });
 

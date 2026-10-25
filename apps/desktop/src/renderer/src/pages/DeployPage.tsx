@@ -19,6 +19,7 @@ import { useFileSiteListUpdate, useFileSites } from '@/components/deploy/files/h
 import { filesProblem } from '@/components/deploy/files/messages';
 import { SiteFormDialog } from '@/components/deploy/files/SiteFormDialog';
 import { FirewallPanel } from '@/components/deploy/firewall/FirewallPanel';
+import { CoreUpdatePanel } from '@/components/deploy/CoreUpdatePanel';
 import { InstallPanel } from '@/components/deploy/InstallPanel';
 import { LogsPanel } from '@/components/deploy/logs/LogsPanel';
 import { NotificationsPanel } from '@/components/deploy/notifications/NotificationsPanel';
@@ -197,8 +198,8 @@ function ServerHeader({ server }: { server: DeployServer }): React.JSX.Element {
 }
 
 /**
- * Turns finished installs and removals into a fresh server list and a message, once each, even
- * when they finished while the page was closed.
+ * Turns finished installs, updates and removals into a fresh server list and a message, once
+ * each, even when they finished while the page was closed.
  */
 function useFinishedRuns(onFinished: (serverId: string) => void): void {
   const runs = useDeploySetupStore((state) => state.runs);
@@ -214,11 +215,13 @@ function useFinishedRuns(onFinished: (serverId: string) => void): void {
       handling.current.add(serverId);
       const servers = queryClient.getQueryData<DeployServer[]>(queryKeys.deployServers) ?? [];
       const name = servers.find((server) => server.id === serverId)?.nickname ?? 'the server';
+      const version =
+        run.result?.version ?? (run.update?.outcome === 'updated' ? run.update.version : null);
       toast.success(
         run.kind === 'uninstall'
           ? `Removed the server core from ${name}.`
-          : run.result
-            ? `Server core ${run.result.version} is running on ${name}.`
+          : version
+            ? `Server core ${version} is running on ${name}.`
             : `The server core is running on ${name}.`,
       );
       if (run.result?.enrollmentError) {
@@ -250,7 +253,9 @@ export default function DeployPage(): React.JSX.Element {
   );
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
+  // The SSH installer, for an update or reinstall; and the update through the core itself.
   const [updating, setUpdating] = useState<string | null>(null);
+  const [coreUpdating, setCoreUpdating] = useState<string | null>(null);
   const [unlockOpen, setUnlockOpen] = useState(false);
   const queryClient = useQueryClient();
   const runs = useDeploySetupStore((state) => state.runs);
@@ -304,7 +309,10 @@ export default function DeployPage(): React.JSX.Element {
     siteId: null,
   });
   useConnectionUpdates();
-  useFinishedRuns((serverId) => setUpdating((current) => (current === serverId ? null : current)));
+  useFinishedRuns((serverId) => {
+    setUpdating((current) => (current === serverId ? null : current));
+    setCoreUpdating((current) => (current === serverId ? null : current));
+  });
   // The Cloudflare dialog lives in the address. A link out of Deploy (point a domain, then add its
   // website) takes the dialog away with the rest of it, and closing it keeps the server selected.
   const cloudflareOpen = params.get('dialog') === 'cloudflare';
@@ -596,6 +604,8 @@ export default function DeployPage(): React.JSX.Element {
     if (confirmed) void uninstall(server.id, keepData, null);
   }
 
+  // The DevHost runs from the checkout, so it has nothing to update.
+  const updateCore = selected.dev ? undefined : () => setCoreUpdating(selected.id);
   let content: React.ReactNode;
   let sections = false;
   if (run?.kind === 'uninstall') {
@@ -605,6 +615,17 @@ export default function DeployPage(): React.JSX.Element {
       <InstallPanel
         server={selected}
         onCancel={selected.core ? () => setUpdating(null) : undefined}
+      />
+    );
+  } else if (coreUpdating === selected.id || run?.kind === 'update') {
+    content = (
+      <CoreUpdatePanel
+        server={selected}
+        onUseSsh={() => {
+          setCoreUpdating(null);
+          setUpdating(selected.id);
+        }}
+        onCancel={() => setCoreUpdating(null)}
       />
     );
   } else if (section === 'websites') {
@@ -621,20 +642,10 @@ export default function DeployPage(): React.JSX.Element {
     content = <BackupsPanel server={selected} />;
   } else if (section === 'security') {
     sections = true;
-    content = (
-      <SecurityPanel
-        server={selected}
-        onUpdateCore={selected.dev ? undefined : () => setUpdating(selected.id)}
-      />
-    );
+    content = <SecurityPanel server={selected} onUpdateCore={updateCore} />;
   } else if (section === 'notifications') {
     sections = true;
-    content = (
-      <NotificationsPanel
-        server={selected}
-        onUpdateCore={selected.dev ? undefined : () => setUpdating(selected.id)}
-      />
-    );
+    content = <NotificationsPanel server={selected} onUpdateCore={updateCore} />;
   } else if (section === 'containers') {
     sections = true;
     content = <ContainersPanel server={selected} />;
@@ -653,6 +664,7 @@ export default function DeployPage(): React.JSX.Element {
       <OverviewPanel
         server={selected}
         core={selected.core}
+        onUpdate={updateCore}
         onReinstall={selected.dev ? undefined : () => setUpdating(selected.id)}
         onRemove={selected.dev ? undefined : (keepData) => void remove(selected, keepData)}
       />

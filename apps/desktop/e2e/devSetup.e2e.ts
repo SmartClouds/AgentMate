@@ -180,3 +180,119 @@ test.describe('installing, with a fake winget', () => {
     await expect(page.getByRole('heading', { name: 'Everything is ready' })).toHaveCount(0);
   });
 });
+
+test.describe('updating, with a fake winget', () => {
+  test.skip(process.platform !== 'win32', 'drives a fake winget');
+
+  /** The GitHub CLI is installed at 2.62.0 and winget offers 2.70.0. */
+  function offerUpdate(): void {
+    const fake = required(sandbox);
+    fake.installGh('2.62.0');
+    fake.offerGhUpdate();
+  }
+
+  test('marks a tool that is behind, keeps it ready, and updates it in the app', async () => {
+    const { page } = required(launched);
+    offerUpdate();
+    await openDevSetup(page);
+
+    // Ready all the same: a newer version is not a missing tool.
+    await expect(page.getByRole('heading', { name: 'Everything is ready' })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(row(page, 'GitHub CLI')).toContainText('Version 2.62.0');
+    await expect(row(page, 'GitHub CLI')).toContainText('2.70.0 available', { timeout: 60_000 });
+    await expect(page.getByText(/1 update available\./)).toBeVisible();
+    await expect(
+      page.getByRole('region', { name: 'Essentials' }).getByText('1 update', { exact: true }),
+    ).toBeVisible();
+
+    await page.getByRole('button', { name: 'Update GitHub CLI' }).click();
+
+    await expect(page.getByRole('progressbar', { name: /^GitHub CLI:/ })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(row(page, 'GitHub CLI')).toContainText('Version 2.70.0', { timeout: 60_000 });
+    await expect(row(page, 'GitHub CLI')).not.toContainText('available');
+    await expect(page.getByText(/Everything is up to date\./)).toBeVisible({ timeout: 30_000 });
+    await expect(
+      page.getByText(/Terminals that are already open will not see the new versions/),
+    ).toBeVisible();
+
+    // An upgrade, not an install, and for this one package.
+    expect(required(sandbox).wingetCalls()).toEqual([
+      'upgrade --id GitHub.cli --exact --source winget --silent --accept-package-agreements --accept-source-agreements',
+    ]);
+  });
+
+  test('asks winget once for the whole list when the page opens', async () => {
+    const { page } = required(launched);
+    offerUpdate();
+    await openDevSetup(page);
+    await expect(row(page, 'GitHub CLI')).toContainText('2.70.0 available', { timeout: 60_000 });
+
+    expect(required(sandbox).wingetChecks()).toEqual([
+      'upgrade --source winget --accept-source-agreements --disable-interactivity',
+    ]);
+    // Looking is not changing anything.
+    expect(required(sandbox).wingetCalls()).toEqual([]);
+  });
+
+  test('updates everything from Update all', async () => {
+    const { page } = required(launched);
+    offerUpdate();
+    await openDevSetup(page);
+
+    // With nothing missing, the one button with work to do is the one on offer.
+    await expect(page.getByRole('button', { name: /Install all missing/ })).toHaveCount(0, {
+      timeout: 30_000,
+    });
+    await page.getByRole('button', { name: 'Update all (1)' }).click();
+
+    await expect(page.getByRole('heading', { name: /^Updating 1 of 1: GitHub CLI/ })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(row(page, 'GitHub CLI')).toContainText('Version 2.70.0', { timeout: 60_000 });
+    await expect(page.getByRole('button', { name: /Update all/ })).toHaveCount(0);
+  });
+
+  test('says what went wrong, keeps the tool, and works on another try', async () => {
+    const { page } = required(launched);
+    offerUpdate();
+    required(sandbox).failNextInstall();
+    await openDevSetup(page);
+    await expect(row(page, 'GitHub CLI')).toContainText('2.70.0 available', { timeout: 60_000 });
+
+    await page.getByRole('button', { name: 'Update GitHub CLI' }).click();
+
+    await expect(row(page, 'GitHub CLI')).toContainText('Update failed.', { timeout: 60_000 });
+    await expect(row(page, 'GitHub CLI')).toContainText('winget could not finish (code 1603).');
+    // Still the old version, still ready.
+    await expect(row(page, 'GitHub CLI')).toContainText('Version 2.62.0');
+    await expect(page.getByRole('heading', { name: 'Everything is ready' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Try again' }).click();
+
+    await expect(row(page, 'GitHub CLI')).toContainText('Version 2.70.0', { timeout: 60_000 });
+  });
+
+  test('says so when winget could not say, instead of claiming everything is current', async () => {
+    const { page } = required(launched);
+    offerUpdate();
+    required(sandbox).failUpdateChecks();
+    await openDevSetup(page);
+
+    await expect(page.getByText(/Could not check for updates\./)).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByText(/Everything is up to date/)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Update/ })).toHaveCount(0);
+  });
+
+  test('shows no updates when nothing is behind', async () => {
+    const { page } = required(launched);
+    required(sandbox).installGh('2.70.0');
+    await openDevSetup(page);
+
+    await expect(page.getByText(/Everything is up to date\./)).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByText(/available/)).toHaveCount(0);
+  });
+});

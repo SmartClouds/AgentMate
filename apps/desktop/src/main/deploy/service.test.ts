@@ -85,6 +85,7 @@ function publicReleases(): ReleaseSource {
       rid,
       file: `agentmate-core-1.53.0-${rid}.tar.gz`,
       sha256: SHA,
+      size: 1024,
       url: `https://github.com/SmartClouds/AgentMate/releases/download/v1.53.0/agentmate-core-1.53.0-${rid}.tar.gz`,
     }),
   };

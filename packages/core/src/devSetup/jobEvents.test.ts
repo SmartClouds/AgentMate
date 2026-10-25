@@ -526,3 +526,57 @@ describe('applyJobEvent: how a run ended', () => {
     expect(second.cancelled).toBeFalsy();
   });
 });
+
+describe('applyJobEvent: an update run', () => {
+  const update: DevJobEvent = { type: 'plan', jobId: 'u', steps: ['node', 'gh'], intent: 'update' };
+
+  it('remembers that the run, and each queued step, is an update', () => {
+    const state = run([update]);
+
+    expect(state.intent).toBe('update');
+    expect(state.items).toEqual({
+      node: { status: 'queued', intent: 'update' },
+      gh: { status: 'queued', intent: 'update' },
+    });
+  });
+
+  it('keeps the intent on the step through starting, progress and failing', () => {
+    const started = run([update, { type: 'started', jobId: 'u', itemId: 'node' }]);
+    expect(started.items.node).toMatchObject({ status: 'installing', intent: 'update' });
+
+    const progressed = applyJobEvent(started, {
+      type: 'progress',
+      jobId: 'u',
+      itemId: 'node',
+      phase: 'downloading',
+      fraction: 0.5,
+    });
+    expect(progressed.items.node).toMatchObject({ status: 'installing', intent: 'update' });
+
+    const failed = applyJobEvent(progressed, {
+      type: 'finished',
+      jobId: 'u',
+      itemId: 'node',
+      result: 'failed',
+      message: 'nope',
+    });
+    expect(failed.items.node).toMatchObject({ status: 'failed', intent: 'update' });
+  });
+
+  it('leaves an install run without any intent', () => {
+    const state = run([{ type: 'plan', jobId: 'i', steps: ['git'] }]);
+
+    expect(state).not.toHaveProperty('intent');
+    expect(state.items.git).toEqual({ status: 'queued' });
+  });
+
+  it('gives a step added to a run that is going the intent of the request that added it', () => {
+    const state = run([
+      { type: 'plan', jobId: 'i', steps: ['git'] },
+      { type: 'plan', jobId: 'i', steps: ['node'], intent: 'update' },
+    ]);
+
+    expect(state.items.git).toEqual({ status: 'queued' });
+    expect(state.items.node).toEqual({ status: 'queued', intent: 'update' });
+  });
+});

@@ -12,6 +12,7 @@ import {
 } from '../usage/logParsers';
 import { makeTokens } from '../usage/shared';
 import { type HistorySource, historySource } from './historySources';
+import { opencodeSessionTable } from './opencodeStore';
 import { type HistoryFs, localHistoryFs } from './sessionHistory';
 
 // Tokens and estimated cost of one past conversation, for the history list's right-click menu.
@@ -147,8 +148,8 @@ async function transcriptUsage(
   return summarizeUsage(entries);
 }
 
-const OPENCODE_USAGE_SQL = `SELECT model, cost, tokens_input, tokens_output, tokens_reasoning,
-  tokens_cache_read, tokens_cache_write FROM session WHERE id = ?`;
+const opencodeUsageSql = (table: string): string => `SELECT model, cost, tokens_input,
+  tokens_output, tokens_reasoning, tokens_cache_read, tokens_cache_write FROM ${table} WHERE id = ?`;
 
 const count = (value: unknown): number =>
   typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
@@ -178,13 +179,16 @@ async function opencodeUsage(
   id: string,
   source: HistorySource,
 ): Promise<AgentSessionUsage> {
-  if (!fs.queryDb || !source.dbPath) return UNAVAILABLE;
+  const { queryDb } = fs;
+  const { dbPath } = source;
+  if (!queryDb || !dbPath) return UNAVAILABLE;
   // Querying can mean copying a database of hundreds of MB, so a session is read again only
   // after it was updated.
   const cached = opencodeCache.get(id);
   if (cached && cached.mtimeMs === source.mtimeMs) return cached.usage;
 
-  const row = (await fs.queryDb(source.dbPath, OPENCODE_USAGE_SQL, [id]))[0];
+  const table = await opencodeSessionTable((sql) => queryDb(dbPath, sql));
+  const row = (await queryDb(dbPath, opencodeUsageSql(table), [id]))[0];
   if (!row) return UNAVAILABLE;
   const tokens = makeTokens(
     count(row.tokens_input),

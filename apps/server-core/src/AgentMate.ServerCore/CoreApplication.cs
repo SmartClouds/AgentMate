@@ -138,6 +138,7 @@ internal static class CoreApplication
         app.MapStackEndpoints();
         app.MapBackupEndpoints();
         app.MapFileEndpoints();
+        app.MapCoreUpdateEndpoints();
         app.MapHub<CoreHub>(CoreHub.Path, options =>
             {
                 options.Transports = HttpTransportType.WebSockets;

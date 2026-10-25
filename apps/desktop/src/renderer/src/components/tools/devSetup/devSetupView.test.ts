@@ -4,12 +4,14 @@ import {
   type DevDetection,
   type DevItemJob,
   type DevSetupEnvironment,
+  type DevUpdateCheck,
 } from '@agentmat/core';
 import { describe, expect, it } from 'vitest';
 import {
   describeInstallAll,
   describeRow,
   describeRun,
+  describeUpdateAll,
   formatMinimum,
   installAllLabel,
   summaryHeadline,
@@ -35,13 +37,19 @@ const absent: DevDetection = { state: 'absent' };
 function rowFor(
   id: string,
   detections: Record<string, DevDetection | undefined>,
-  options: { environment?: DevSetupEnvironment; job?: DevItemJob; stacks?: string[] } = {},
+  options: {
+    environment?: DevSetupEnvironment;
+    job?: DevItemJob;
+    stacks?: string[];
+    update?: DevUpdateCheck;
+  } = {},
 ): ChecklistRow {
   const checklist = buildChecklist({
     stacks: options.stacks ?? ['essentials', 'flutter', 'docker'],
     environment: options.environment ?? win,
     detections,
     jobs: options.job ? { [id]: options.job } : {},
+    updates: options.update ? { [id]: options.update } : {},
   });
   const row = checklist.rows.find((one) => one.item.id === id);
   if (!row) throw new Error(`no row ${id}`);
@@ -473,12 +481,273 @@ describe('formatMinimum', () => {
   });
 });
 
+describe('describeRow: an update is on offer', () => {
+  const NODE_UPDATE: DevUpdateCheck = { state: 'update', latest: '24.22.1', installed: '24.20.0' };
+  const WINGET_UPGRADE =
+    'winget upgrade --id OpenJS.NodeJS.LTS --exact --source winget --silent --accept-package-agreements --accept-source-agreements';
+
+  it('stays green and ready, names the newer version in a chip, and offers the update', () => {
+    const view = describeRow(
+      rowFor('node', { node: found('24.20.0') }, { update: NODE_UPDATE }),
+      inApp,
+    );
+
+    expect(view).toMatchObject({
+      tone: 'success',
+      icon: 'installed',
+      text: 'Version 24.20.0',
+      chips: [{ text: '24.22.1 available', tone: 'primary' }],
+      action: { kind: 'update', label: 'Update Node.js' },
+      terminalCommand: WINGET_UPGRADE,
+    });
+  });
+
+  it('says only "Update available" when the two versions are not on one scale', () => {
+    const view = describeRow(
+      rowFor(
+        'docker-desktop',
+        { 'docker-desktop': found('28.5.1'), wsl2: found('2.5.9') },
+        { update: { state: 'update', latest: '4.96.2', installed: '4.96.0' } },
+      ),
+      inApp,
+    );
+
+    expect(view.chips).toEqual([{ text: 'Update available', tone: 'primary' }]);
+    expect(view.action).toEqual({ kind: 'update', label: 'Update Docker Desktop' });
+  });
+
+  it('keeps the PATH warning, after the update chip, and leads with the update', () => {
+    const view = describeRow(
+      rowFor('node', { node: found('24.20.0', false) }, { update: NODE_UPDATE }),
+      inApp,
+    );
+
+    expect(view.chips).toEqual([
+      { text: '24.22.1 available', tone: 'primary' },
+      { text: 'Not on your PATH', tone: 'warning' },
+    ]);
+    expect(view.action?.kind).toBe('update');
+  });
+
+  it('types the command into a terminal when the app does not install itself', () => {
+    const view = describeRow(
+      rowFor('node', { node: found('24.20.0') }, { update: NODE_UPDATE }),
+      terminalOnly,
+    );
+
+    expect(view.action).toEqual({ kind: 'terminal-install', label: 'Update Node.js' });
+    expect(view.terminalCommand).toBe(WINGET_UPGRADE);
+  });
+
+  it('hands an update that needs a password to a terminal, with the upgrade command', () => {
+    const linux: DevSetupEnvironment = { os: 'linux', arch: 'x64', packageManagers: ['apt-get'] };
+    const view = describeRow(
+      rowFor('gh', { gh: found('2.40.0') }, { environment: linux, update: { ...NODE_UPDATE } }),
+      { ...inApp, os: 'linux' },
+    );
+
+    expect(view.action).toEqual({ kind: 'terminal-install', label: 'Update GitHub CLI' });
+    expect(view.terminalCommand).toBe('sudo apt-get install -y --only-upgrade gh');
+  });
+
+  it('shows nothing extra for a tool that is current', () => {
+    const view = describeRow(
+      rowFor('node', { node: found('24.22.1') }, { update: { state: 'current' } }),
+      inApp,
+    );
+
+    expect(view).toMatchObject({ text: 'Version 24.22.1', chips: [], action: null });
+  });
+
+  it('waits for the terminal it was handed to, and offers to check again', () => {
+    const view = describeRow(
+      rowFor(
+        'node',
+        { node: found('24.20.0') },
+        { update: NODE_UPDATE, job: { status: 'waiting-terminal' } },
+      ),
+      inApp,
+    );
+
+    expect(view).toMatchObject({
+      text: 'Version 24.20.0. Waiting for the terminal. Press Enter there, then check again.',
+      action: { kind: 'recheck', label: 'Check again' },
+      terminalCommand: WINGET_UPGRADE,
+    });
+  });
+
+  it('says why the last update did not work, keeps the tool ready, and offers another go', () => {
+    const view = describeRow(
+      rowFor(
+        'node',
+        { node: found('24.20.0') },
+        {
+          update: NODE_UPDATE,
+          job: {
+            status: 'failed',
+            intent: 'update',
+            message: 'Close the app that is using it, then try again.',
+          },
+        },
+      ),
+      inApp,
+    );
+
+    expect(view).toMatchObject({
+      tone: 'warning',
+      icon: 'outdated',
+      text: 'Version 24.20.0. Update failed. Close the app that is using it, then try again.',
+      action: { kind: 'update', label: 'Try again' },
+      showLog: true,
+    });
+    expect(view.chips[0]).toEqual({ text: '24.22.1 available', tone: 'primary' });
+  });
+
+  it('says "Updating" while an update runs, and keeps the other stage words', () => {
+    const updating = (phase: 'installing' | 'downloading') =>
+      describeRow(
+        rowFor(
+          'node',
+          { node: found('24.20.0') },
+          {
+            update: NODE_UPDATE,
+            job: { status: 'installing', phase, fraction: null, intent: 'update' },
+          },
+        ),
+        inApp,
+      );
+
+    expect(updating('installing')).toMatchObject({
+      text: 'Updating',
+      action: { kind: 'cancel', label: 'Cancel updating Node.js' },
+      busy: true,
+    });
+    expect(updating('downloading').text).toBe('Downloading');
+  });
+
+  it('still says "Installing" for an install', () => {
+    const view = describeRow(
+      rowFor(
+        'git',
+        { git: absent },
+        { job: { status: 'installing', phase: 'installing', fraction: null } },
+      ),
+      inApp,
+    );
+
+    expect(view).toMatchObject({
+      text: 'Installing',
+      action: { label: 'Cancel installing Git' },
+    });
+  });
+
+  it('keeps an update that is only waiting in line as a plain queued row', () => {
+    const view = describeRow(
+      rowFor(
+        'node',
+        { node: found('24.20.0') },
+        { update: NODE_UPDATE, job: { status: 'queued', intent: 'update' } },
+      ),
+      inApp,
+    );
+
+    expect(view).toMatchObject({ icon: 'queued', text: 'Waiting in line' });
+  });
+});
+
+describe('describeUpdateAll', () => {
+  const plan = (steps: string[], manual: string[] = []) => ({ steps, manual });
+
+  it('counts what it will update', () => {
+    expect(describeUpdateAll(plan(['node', 'gh']))).toEqual({
+      label: 'Update all (2)',
+      disabled: false,
+      note: null,
+    });
+  });
+
+  it('says what it leaves for the person', () => {
+    expect(describeUpdateAll(plan(['node'], ['git']))?.note).toBe(
+      '1 more update needs a terminal. Use the button on that row, then press Update all again.',
+    );
+    expect(describeUpdateAll(plan(['node'], ['git', 'gh']))?.note).toBe(
+      '2 more updates need a terminal. Use the buttons on those rows, then press Update all again.',
+    );
+  });
+
+  it('is off, and says why, when everything left needs a terminal', () => {
+    expect(describeUpdateAll(plan([], ['git']))).toEqual({
+      label: 'Update all',
+      disabled: true,
+      hint: 'These updates need a terminal. Use the button on each row.',
+      note: null,
+    });
+  });
+
+  it('is not there at all when nothing can be updated', () => {
+    expect(describeUpdateAll(plan([]))).toBeNull();
+  });
+});
+
+describe('the summary with updates', () => {
+  const summary = {
+    total: 4,
+    ready: 4,
+    checking: 0,
+    missing: 0,
+    updates: 0,
+    stacks: [],
+    complete: true,
+  };
+
+  it('says it is looking for updates, and how many it has found so far', () => {
+    expect(summarySubline(summary, 'checking')).toBe(
+      'Your machine has everything on this list. Checking for updates.',
+    );
+    expect(summarySubline({ ...summary, updates: 2 }, 'checking')).toBe(
+      'Your machine has everything on this list. 2 updates found so far, still checking.',
+    );
+  });
+
+  it('counts the updates once the check is done', () => {
+    expect(summarySubline({ ...summary, updates: 1 }, 'done')).toBe(
+      'Your machine has everything on this list. 1 update available.',
+    );
+    expect(summarySubline({ ...summary, updates: 3 }, 'done')).toBe(
+      'Your machine has everything on this list. 3 updates available.',
+    );
+  });
+
+  it('says it is all up to date when the check found nothing', () => {
+    expect(summarySubline(summary, 'done')).toBe(
+      'Your machine has everything on this list. Everything is up to date.',
+    );
+  });
+
+  it('adds to what is still missing, rather than replacing it', () => {
+    expect(
+      summarySubline({ ...summary, complete: false, ready: 2, missing: 2, updates: 1 }, 'done'),
+    ).toBe('2 still to install. 1 update available.');
+  });
+
+  it('says so when the updates could not be checked, and not that all is current', () => {
+    expect(summarySubline(summary, 'failed')).toBe(
+      'Your machine has everything on this list. Could not check for updates.',
+    );
+  });
+
+  it('is unchanged when no update status is given', () => {
+    expect(summarySubline(summary)).toBe('Your machine has everything on this list.');
+  });
+});
+
 describe('the summary', () => {
   const summary = (overrides: Partial<Parameters<typeof summaryHeadline>[0]>) => ({
     total: 11,
     ready: 6,
     checking: 0,
     missing: 5,
+    updates: 0,
     stacks: [],
     complete: false,
     ...overrides,
@@ -607,5 +876,38 @@ describe('describeRun', () => {
   it('never uses an em dash', () => {
     const view = describeRun(job({}), nameOf);
     expect(`${view.headline} ${view.subline}`).not.toContain(EM_DASH);
+  });
+
+  it('speaks of updating when the run is an update', () => {
+    expect(
+      describeRun(job({ intent: 'update', completed: ['git'], current: 'node' }), nameOf),
+    ).toEqual({
+      headline: 'Updating 2 of 3: Node.js',
+      subline: '1 done, 2 to go.',
+    });
+    expect(describeRun(job({ intent: 'update', current: null }), nameOf).headline).toBe(
+      'Updating 3 tools',
+    );
+    expect(
+      describeRun(job({ intent: 'update', order: ['git'], current: null }), nameOf).headline,
+    ).toBe('Updating 1 tool');
+  });
+});
+
+describe('the words around updates never use an em dash', () => {
+  it('in any line the update copy can produce', () => {
+    const lines = [
+      describeUpdateAll({ steps: ['a'], manual: ['b'] })?.note,
+      describeUpdateAll({ steps: [], manual: ['b'] })?.hint,
+      summarySubline(
+        { total: 1, ready: 0, checking: 0, missing: 1, updates: 2, stacks: [], complete: false },
+        'checking',
+      ),
+      summarySubline(
+        { total: 1, ready: 1, checking: 0, missing: 0, updates: 0, stacks: [], complete: true },
+        'failed',
+      ),
+    ];
+    for (const line of lines) expect(line ?? '').not.toContain(EM_DASH);
   });
 });

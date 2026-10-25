@@ -2,6 +2,7 @@ import {
   applyJobEvent,
   buildChecklist,
   buildInstallPlan,
+  buildUpdatePlan,
   type Checklist,
   collectConsents,
   DEV_STACKS,
@@ -10,11 +11,17 @@ import {
   type DevItemJob,
   type DevJobState,
   type DevSetupEnvironment,
+  type DevUpdateCheck,
+  type DevUpdateSource,
   EMPTY_JOB_STATE,
+  hasUpdate,
   type InstallPlan,
   itemsForStacks,
   missingItemIds,
   normalizeDevSetupStacks,
+  type UpdatePlan,
+  updatableItemIds,
+  updateSourceFor,
 } from '@agentmat/core';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
@@ -22,6 +29,7 @@ import { toast } from 'sonner';
 import { queryKeys } from '@/lib/queryKeys';
 import { confirmDialog } from '@/stores/confirmStore';
 import { useTerminalStore } from '@/stores/terminalStore';
+import type { UpdateStatus } from './devSetupView';
 
 /** How often a row that was handed to the terminal checks whether the tool has turned up. */
 const POLL_MS = 5_000;
@@ -29,11 +37,15 @@ const POLL_MS = 5_000;
 const GIVE_UP_MS = 10 * 60_000;
 /** What main refuses with when a step carries an agreement the request did not accept. */
 const CONSENT_REQUIRED = 'consent-required';
+/** Main remembers update answers for half an hour, so asking again sooner costs nothing. */
+const UPDATES_STALE_MS = 10 * 60_000;
 
 export interface TerminalHandoff {
   id: DevItemId;
   name: string;
   command: string;
+  /** What the command is for. Absent means install. */
+  intent?: 'install' | 'update';
 }
 
 export interface UseDevSetup {
@@ -49,8 +61,15 @@ export interface UseDevSetup {
   job: DevJobState;
   /** What "Install all missing" would do right now. */
   plan: InstallPlan | undefined;
+  /** What "Update all" would do right now. */
+  updatePlan: UpdatePlan | undefined;
+  /** How the search for newer versions is going. It never holds up the checklist. */
+  updatesStatus: UpdateStatus;
   install: (ids: readonly DevItemId[]) => Promise<void>;
   installAll: () => Promise<void>;
+  /** Brings tools that are already installed up to date. */
+  update: (ids: readonly DevItemId[]) => Promise<void>;
+  updateAll: () => Promise<void>;
   /** With an id, takes that waiting step out of the queue; without, stops the whole run. */
   cancel: (id?: DevItemId) => void;
   recheck: (id: DevItemId) => void;
@@ -104,8 +123,14 @@ export function useDevSetup(): UseDevSetup {
   });
   const environment = environmentQuery.data;
 
-  const [waiting, setWaiting] = useState<Record<DevItemId, number>>({});
+  /** Items handed to a terminal: when, and whether it was an update (which is looked at differently). */
+  const [waiting, setWaiting] = useState<Record<DevItemId, { at: number; update: boolean }>>({});
   const [job, setJob] = useState<DevJobState>(EMPTY_JOB_STATE);
+  /** Goes up when the person presses Check again, which makes the update checks ask afresh. */
+  const [updateRound, setUpdateRound] = useState(0);
+  const forcedRounds = useRef(new Set<string>());
+  /** The last answer for each item, kept until a newer one arrives so chips do not flicker. */
+  const knownUpdates = useRef<Record<DevItemId, DevUpdateCheck>>({});
 
   // Follow the run. A window opened half way through one has missed the earlier events, so it asks
   // for the current state too, but never lets that answer replace events already received.
@@ -146,20 +171,84 @@ export function useDevSetup(): UseDevSetup {
       detections[item.id] = { state: 'error', message: messageOf(probe.error) };
   });
 
+  // Newer versions are a separate question from "is it installed", and a slower one, so it never
+  // holds the rows up. Each source answers by itself: winget in a few seconds, the Android SDK
+  // after a JVM has started, and neither waits for the other.
+  const sources = new Map<DevUpdateSource, DevItemId[]>();
+  if (environment) {
+    for (const item of items) {
+      const source = updateSourceFor(item, environment);
+      if (source) sources.set(source, [...(sources.get(source) ?? []), item.id]);
+    }
+  }
+  const sourceList = [...sources].sort(([a], [b]) => a.localeCompare(b));
+  const updateQueries = useQueries({
+    queries: sourceList.map(([source, ids]) => ({
+      queryKey: queryKeys.devSetupUpdatesFor(source, ids, updateRound),
+      queryFn: async (): Promise<Record<DevItemId, DevUpdateCheck>> => {
+        // Only the first ask of a round is forced. Later ones (after an update finished) are
+        // answered from what main remembers, which is already fresh for the item that changed.
+        const mark = `${updateRound}:${source}`;
+        const force = updateRound > 0 && !forcedRounds.current.has(mark);
+        forcedRounds.current.add(mark);
+        return (await window.agentmat.devSetup.updates(ids, { force })) ?? {};
+      },
+      meta: { silentLoading: true },
+      staleTime: UPDATES_STALE_MS,
+      retry: false,
+    })),
+  });
+  // An update handed to a terminal is looked at on its own, every few seconds, until it lands.
+  const waitingUpdateIds = Object.keys(waiting).filter((id) => waiting[id]?.update);
+  const waitProbes = useQueries({
+    queries: waitingUpdateIds.map((id) => ({
+      queryKey: queryKeys.devSetupUpdateWait(id),
+      queryFn: async (): Promise<Record<DevItemId, DevUpdateCheck>> =>
+        (await window.agentmat.devSetup.updates([id], { force: true })) ?? {},
+      meta: { silentLoading: true },
+      staleTime: 0,
+      refetchInterval: POLL_MS,
+      retry: false,
+    })),
+  });
+  for (const query of [...updateQueries, ...waitProbes]) {
+    if (query.data) Object.assign(knownUpdates.current, query.data);
+  }
+  const updates = knownUpdates.current;
+
   // What the installer is doing wins over a row that was only handed to the terminal.
   const jobs: Record<DevItemId, DevItemJob | undefined> = {};
   for (const id of Object.keys(waiting)) jobs[id] = { status: 'waiting-terminal' };
   Object.assign(jobs, job.items);
 
   const checklist = environment
-    ? buildChecklist({ stacks, environment, detections, jobs })
+    ? buildChecklist({ stacks, environment, detections, jobs, updates })
     : undefined;
   const plan =
     checklist && environment
       ? buildInstallPlan(missingItemIds(checklist.entries), checklist.entries, environment.os)
       : undefined;
+  const updatePlan = checklist
+    ? buildUpdatePlan(updatableItemIds(checklist.entries), checklist.entries)
+    : undefined;
+
+  // "Could not check" is only said when nothing that is installed got an answer from anyone.
+  const askable = new Set(sourceList.flatMap(([, ids]) => ids));
+  const installedUpdates = items
+    .filter((item) => askable.has(item.id) && detections[item.id]?.state === 'found')
+    .map((item) => updates[item.id]);
+  let updatesStatus: UpdateStatus = 'done';
+  if (updateQueries.some((query) => query.isFetching)) updatesStatus = 'checking';
+  else if (
+    installedUpdates.length > 0 &&
+    installedUpdates.every((check) => !check || check.state === 'unknown') &&
+    sourceList.length > 0
+  ) {
+    updatesStatus = 'failed';
+  }
 
   // Main has already looked again at an item that finished, so this page does too, straight away.
+  // For an update that includes its update check, which main has just redone for that item.
   const looked = useRef(new Set<string>());
   useEffect(() => {
     for (const id of job.completed) {
@@ -167,6 +256,7 @@ export function useDevSetup(): UseDevSetup {
       if (looked.current.has(key)) continue;
       looked.current.add(key);
       void queryClient.invalidateQueries({ queryKey: queryKeys.devSetupItem(id) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.devSetupUpdates });
     }
   }, [job.completed, job.jobId, queryClient]);
 
@@ -177,11 +267,13 @@ export function useDevSetup(): UseDevSetup {
     }
   }, [job.running, job.jobId, queryClient]);
 
-  // A row stops waiting for the terminal the moment its tool shows up.
+  // A row stops waiting for the terminal the moment its tool shows up. An update is different: the
+  // tool was there all along, so it has arrived when there is no newer version left to get.
   const arrived = checklist
-    ? Object.keys(waiting).filter(
-        (id) => checklist.rows.find((row) => row.item.id === id)?.state.kind === 'installed',
-      )
+    ? Object.keys(waiting).filter((id) => {
+        const state = checklist.rows.find((row) => row.item.id === id)?.state;
+        return state?.kind === 'installed' && !state.update;
+      })
     : [];
   const arrivedKey = arrived.join(',');
   useEffect(() => {
@@ -191,7 +283,11 @@ export function useDevSetup(): UseDevSetup {
       const next = Object.fromEntries(Object.entries(current).filter(([id]) => !done.has(id)));
       return Object.keys(next).length === Object.keys(current).length ? current : next;
     });
-  }, [arrivedKey]);
+    // The look at an update that was waiting on a terminal is about to stop, and what it found
+    // is in main's memory now. Asking again reads that, so the row does not go back to the older
+    // answer the page still holds.
+    void queryClient.invalidateQueries({ queryKey: queryKeys.devSetupUpdates });
+  }, [arrivedKey, queryClient]);
 
   // ...and gives up on one that never does, so a closed terminal does not poll forever.
   const waitingCount = Object.keys(waiting).length;
@@ -201,7 +297,7 @@ export function useDevSetup(): UseDevSetup {
       const now = Date.now();
       setWaiting((current) => {
         const next = Object.fromEntries(
-          Object.entries(current).filter(([, startedAt]) => now - startedAt < GIVE_UP_MS),
+          Object.entries(current).filter(([, one]) => now - one.at < GIVE_UP_MS),
         );
         return Object.keys(next).length === Object.keys(current).length ? current : next;
       });
@@ -264,6 +360,24 @@ export function useDevSetup(): UseDevSetup {
 
   function recheck(id: DevItemId): void {
     void queryClient.invalidateQueries({ queryKey: queryKeys.devSetupItem(id) });
+    // A row with an update is looked at again for that too. Main redoes just this tool's check, and
+    // asking the page's checks again then reads the fresh answer from its memory.
+    const state = checklist?.rows.find((row) => row.item.id === id)?.state;
+    if (state && hasUpdate(state)) {
+      void window.agentmat.devSetup
+        .updates([id], { force: true })
+        .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.devSetupUpdates }))
+        .catch(() => undefined);
+    }
+  }
+
+  async function update(ids: readonly DevItemId[]): Promise<void> {
+    try {
+      // No agreement to accept: that was done when the tool was installed.
+      await window.agentmat.devSetup.install({ ids: [...ids], intent: 'update' });
+    } catch (error) {
+      toast.error(`Could not start the update. ${plainMessage(error)}`);
+    }
   }
 
   return {
@@ -285,8 +399,13 @@ export function useDevSetup(): UseDevSetup {
     checklist,
     job,
     plan,
+    updatePlan,
+    updatesStatus,
     install,
     installAll: () => install(checklist ? missingItemIds(checklist.entries) : []),
+    update,
+    // Only what the app can run itself. The rest is left for the person, and the button says so.
+    updateAll: () => update(updatePlan?.steps ?? []),
     cancel: (id) => {
       void window.agentmat.devSetup.cancel(id);
     },
@@ -295,12 +414,18 @@ export function useDevSetup(): UseDevSetup {
       // The machine too: a package manager may have been installed since the page opened.
       void queryClient.invalidateQueries({ queryKey: queryKeys.devSetupEnvironment });
       void queryClient.invalidateQueries({ queryKey: queryKeys.devSetupItems });
+      // And the update checks, which this time ask their sources again rather than main's memory.
+      setUpdateRound((round) => round + 1);
     },
-    openInTerminal: ({ id, name, command }) => {
+    openInTerminal: ({ id, name, command, intent }) => {
+      const updating = intent === 'update';
       // The command is typed in but not run: the person reads it and presses Enter themselves.
-      useTerminalStore.getState().openSession({ title: `Install ${name}`, initialInput: command });
-      toast.info(`Press Enter in the terminal to install ${name}.`);
-      setWaiting((current) => ({ ...current, [id]: Date.now() }));
+      useTerminalStore.getState().openSession({
+        title: `${updating ? 'Update' : 'Install'} ${name}`,
+        initialInput: command,
+      });
+      toast.info(`Press Enter in the terminal to ${updating ? 'update' : 'install'} ${name}.`);
+      setWaiting((current) => ({ ...current, [id]: { at: Date.now(), update: updating } }));
     },
     copyCommand: async ({ name, command }) => {
       try {

@@ -56,7 +56,7 @@ export function runStripeClass(tone: RunTone): string {
 }
 
 /** True while GitHub can still be asked to stop the run. */
-export function isLiveRun(item: RunLike): boolean {
+export function isLiveRun(item: Pick<RunLike, 'status'>): boolean {
   return item.status !== 'completed';
 }
 
@@ -102,17 +102,31 @@ export function RunStatusIcon({
   );
 }
 
-/** How long a run took, or how long it has been going. Empty when the timestamps make no sense. */
-export function runDuration(
-  item: Pick<GithubActionsHistoryItem, 'createdAt' | 'updatedAt'>,
+/**
+ * The time between two ISO timestamps as `45s`, `1m 5s` or `2h 2m`. Empty when either end is
+ * missing or the pair makes no sense. With `now`, an open end counts up to that clock, for a job
+ * or step that is still running.
+ */
+export function spanDuration(
+  start: string | null | undefined,
+  end: string | null | undefined,
+  now?: number,
 ): string {
-  const started = Date.parse(item.createdAt);
-  const ended = Date.parse(item.updatedAt);
-  if (!Number.isFinite(started) || !Number.isFinite(ended)) return '';
+  if (!start) return '';
+  const started = Date.parse(start);
+  const ended = end ? Date.parse(end) : now;
+  if (ended === undefined || !Number.isFinite(started) || !Number.isFinite(ended)) return '';
   const seconds = Math.round((ended - started) / 1000);
   if (seconds < 0) return '';
   if (seconds < 60) return `${seconds}s`;
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m ${seconds % 60}s`;
   return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+}
+
+/** How long a run took, or how long it has been going. Empty when the timestamps make no sense. */
+export function runDuration(
+  item: Pick<GithubActionsHistoryItem, 'createdAt' | 'updatedAt'>,
+): string {
+  return spanDuration(item.createdAt, item.updatedAt);
 }

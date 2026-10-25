@@ -90,27 +90,40 @@ function joinCommand(argv: readonly string[], os: DevOs): string {
   return argv.map((arg) => quoteShellArg(arg, os)).join(' ');
 }
 
+export type LinuxPackageManagerId = (typeof LINUX_MANAGERS)[number];
+
+/** The first Linux manager on this machine that has a package for the recipe, and which packages. */
+export function linuxPackageChoice(
+  recipe: Extract<DevRecipe, { kind: 'pkg' }>,
+  available: readonly PackageManagerId[],
+): { manager: LinuxPackageManagerId; packages: readonly string[] } | null {
+  for (const manager of LINUX_MANAGERS) {
+    if (!available.includes(manager)) continue;
+    const packages =
+      manager === 'apt-get' ? recipe.apt : manager === 'dnf' ? recipe.dnf : recipe.pacman;
+    if (packages?.length) return { manager, packages };
+  }
+  return null;
+}
+
 function linuxPackageCommand(
   recipe: Extract<DevRecipe, { kind: 'pkg' }>,
   available: readonly PackageManagerId[],
   intent: InstallIntent,
 ): string | null {
-  for (const manager of LINUX_MANAGERS) {
-    if (!available.includes(manager)) continue;
-    if (manager === 'apt-get' && recipe.apt?.length) {
-      const flags = intent === 'update' ? ['-y', '--only-upgrade'] : ['-y'];
-      return ['sudo', 'apt-get', 'install', ...flags, ...recipe.apt].join(' ');
-    }
-    if (manager === 'dnf' && recipe.dnf?.length) {
-      return ['sudo', 'dnf', intent === 'update' ? 'upgrade' : 'install', '-y', ...recipe.dnf].join(
-        ' ',
-      );
-    }
-    if (manager === 'pacman' && recipe.pacman?.length) {
-      return ['sudo', 'pacman', '-S', '--noconfirm', ...recipe.pacman].join(' ');
-    }
+  const choice = linuxPackageChoice(recipe, available);
+  if (!choice) return null;
+  const { manager, packages } = choice;
+  if (manager === 'apt-get') {
+    const flags = intent === 'update' ? ['-y', '--only-upgrade'] : ['-y'];
+    return ['sudo', 'apt-get', 'install', ...flags, ...packages].join(' ');
   }
-  return null;
+  if (manager === 'dnf') {
+    return ['sudo', 'dnf', intent === 'update' ? 'upgrade' : 'install', '-y', ...packages].join(
+      ' ',
+    );
+  }
+  return ['sudo', 'pacman', '-S', '--noconfirm', ...packages].join(' ');
 }
 
 /**

@@ -27,6 +27,7 @@ import { useShortcutLabel } from '@/stores/shortcutStore';
 import { useVersionDialogStore } from '@/stores/versionDialogStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { PauseProjectRunsButton } from './PauseProjectRunsButton';
+import { WorkspaceDeployButton } from './WorkspaceDeployButton';
 import { WorkspaceScopeSwitcher } from './worktrees/WorkspaceScopeSwitcher';
 
 /**
@@ -34,8 +35,11 @@ import { WorkspaceScopeSwitcher } from './worktrees/WorkspaceScopeSwitcher';
  * buttons. Run uses the general terminal, the same as the project page's Run button.
  * Right-clicking Run lists the project's commands and links to where they're edited.
  *
- * In a worktree's workspace, Run starts in the worktree's folder, while tagging a version and
- * the project page belong to the project itself (its main checkout).
+ * A project linked to a WordPress site gets Deploy in place of Tag a version: deploying to the
+ * site is what moves it forward, and tagging is still on the project page's Git tab.
+ *
+ * In a worktree's workspace, Run starts in the worktree's folder, while tagging a version,
+ * deploying and the project page belong to the project itself (its main checkout).
  */
 export function WorkspaceHeaderActions(): React.JSX.Element | null {
   const navigate = useNavigate();
@@ -51,6 +55,7 @@ export function WorkspaceHeaderActions(): React.JSX.Element | null {
   const runShortcut = useShortcutLabel('workspace.run');
   const parentId = project?.parentId ?? null;
   const tagOpen = parentId !== null && tagDialogProjectId === parentId;
+  const wordpress = project?.wordpress;
 
   // The button and the run shortcut share this. The ref keeps the listener on the latest project
   // without resubscribing every render, since requestRun is a new function each time.
@@ -144,16 +149,26 @@ export function WorkspaceHeaderActions(): React.JSX.Element | null {
         projectId={project.id}
         projectName={project.name}
       />
-      <SimpleTooltip label={`Tag a version of ${project.name}`}>
-        <Button
-          variant={tagOpen ? 'soft' : 'ghost'}
-          size="icon"
-          aria-label="Tag a version"
-          onClick={() => openVersionDialog(parentId)}
-        >
-          <Tag className="h-4 w-4" />
-        </Button>
-      </SimpleTooltip>
+      {wordpress ? (
+        <WorkspaceDeployButton
+          key={parentId}
+          projectId={parentId}
+          projectName={project.name}
+          siteId={wordpress.siteId}
+          inWorktree={project.worktree !== null}
+        />
+      ) : (
+        <SimpleTooltip label={`Tag a version of ${project.name}`}>
+          <Button
+            variant={tagOpen ? 'soft' : 'ghost'}
+            size="icon"
+            aria-label="Tag a version"
+            onClick={() => openVersionDialog(parentId)}
+          >
+            <Tag className="h-4 w-4" />
+          </Button>
+        </SimpleTooltip>
+      )}
       <SimpleTooltip label={`Open ${project.name}'s project details`}>
         <Button
           variant="ghost"
@@ -183,12 +198,16 @@ export function WorkspaceHeaderActions(): React.JSX.Element | null {
       />
       {/* Keyed by project so each one gets its own form, suggestion and tag run. One shared
           instance let a project's pending answer or finished tag land in the next project. */}
-      <ProjectVersionDialogs
-        key={parentId}
-        projectId={parentId}
-        open={tagOpen}
-        onOpenChange={(next) => (next ? openVersionDialog(parentId) : closeVersionDialog(parentId))}
-      />
+      {wordpress ? null : (
+        <ProjectVersionDialogs
+          key={parentId}
+          projectId={parentId}
+          open={tagOpen}
+          onOpenChange={(next) =>
+            next ? openVersionDialog(parentId) : closeVersionDialog(parentId)
+          }
+        />
+      )}
     </>
   );
 }

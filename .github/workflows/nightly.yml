@@ -6,7 +6,8 @@ name: Nightly
 # Each `[e2e]` push runs a smaller set (Ubuntu and Rocky installs, ufw and firewalld, Ubuntu for the
 # rest; see the server-core-system job in test.yml).
 # This one runs every night and by hand, never on a push, on the self-hosted Linux runner like
-# the rest of CI. The jobs queue one after another on it.
+# the rest of CI. The jobs queue one after another on it. Each starts with the Runner cleanup step,
+# which clears what the job leaves on the runner's disk once it is over (see ci.yml).
 #
 # Each job sets AGENTMATE_TEST_SERVER_IMAGES to its image, and every system test runs on it when it
 # supports it (see testServerImages in apps/desktop/src/main/deploy/testing/testServers.ts). A test
@@ -39,6 +40,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Runner cleanup
+        uses: ./.github/actions/runner-cleanup
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
@@ -124,6 +128,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Runner cleanup
+        uses: ./.github/actions/runner-cleanup
+
       - name: Display and Electron libraries
         run: |
           # Everything Electron links against. GitHub's hosted images ship most of these already,
@@ -196,10 +203,13 @@ jobs:
       - name: Rebuild native modules for Electron
         run: pnpm --filter @agentmat/desktop rebuild:native
 
+      # In a global config of this job's own, in the temp folder the runner empties after each
+      # job, so the runner's user keeps no CI identity in its real ~/.gitconfig.
       - name: Git identity for fixtures
         run: |
-          git config --global user.name "AgentMate CI"
-          git config --global user.email "ci@agentmate.invalid"
+          echo "GIT_CONFIG_GLOBAL=$RUNNER_TEMP/gitconfig" >> "$GITHUB_ENV"
+          git config --file "$RUNNER_TEMP/gitconfig" user.name "AgentMate CI"
+          git config --file "$RUNNER_TEMP/gitconfig" user.email "ci@agentmate.invalid"
 
       - name: Publish the linux-x64 release
         run: node scripts/server-core.mjs publish linux-x64
@@ -251,6 +261,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Runner cleanup
+        uses: ./.github/actions/runner-cleanup
 
       - name: Display and Electron libraries
         run: |
@@ -354,6 +367,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Runner cleanup
+        uses: ./.github/actions/runner-cleanup
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v6

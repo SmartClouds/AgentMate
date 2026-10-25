@@ -1,4 +1,10 @@
-import type { DevDetection, DevJobEvent, DevJobState, DevSetupEnvironment } from '@agentmat/core';
+import type {
+  DevDetection,
+  DevJobEvent,
+  DevJobState,
+  DevSetupEnvironment,
+  DevUpdateCheck,
+} from '@agentmat/core';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTerminalStore } from '@/stores/terminalStore';
@@ -43,9 +49,12 @@ function bridgeFor(
     environment?: DevSetupEnvironment | (() => Promise<DevSetupEnvironment>);
     detections?: Record<string, DevDetection>;
     stacks?: string[];
+    /** What the update check says per tool. Anything not listed is current. Left out: no check. */
+    updates?: Record<string, DevUpdateCheck>;
   } = {},
 ) {
   const detections = options.detections ?? MOST;
+  const updates = options.updates;
   // Settings that remember what was saved, as the real store does, so a toggle sticks.
   let saved: Record<string, unknown> = { devSetupStacks: options.stacks ?? ['essentials'] };
   return {
@@ -56,6 +65,12 @@ function bridgeFor(
     },
     'devSetup.environment': options.environment ?? WIN,
     'devSetup.detect': async (id: string) => detections[id] ?? absent,
+    ...(updates
+      ? {
+          'devSetup.updates': async (ids: string[]) =>
+            Object.fromEntries(ids.map((id) => [id, updates[id] ?? { state: 'current' }])),
+        }
+      : {}),
     'devSetup.jobState': IDLE,
     'devSetup.install': async () => IDLE,
     'devSetup.cancel': async () => undefined,
@@ -552,6 +567,216 @@ describe('DevSetupPanel: a tool that is installed but not on PATH', () => {
 
     expect(screen.queryByText('Not on your PATH')).toBeNull();
     expect(screen.queryByRole('button', { name: /to PATH$/ })).toBeNull();
+  });
+});
+
+describe('DevSetupPanel: updates', () => {
+  const NODE_BEHIND: DevUpdateCheck = { state: 'update', latest: '24.22.1', installed: '22.12.0' };
+  const READY: Record<string, DevDetection> = { ...MOST, gh: found('2.102.0') };
+  const GH_BEHIND: DevUpdateCheck = { state: 'update', latest: '2.103.0', installed: '2.102.0' };
+
+  const rowOf = (name: string) => {
+    const essentials = screen.getByRole('region', { name: 'Essentials' });
+    const row = within(essentials)
+      .getAllByRole('listitem')
+      .find((item) => within(item).queryByText(name, { selector: 'span' }));
+    if (!row) throw new Error(`no row for ${name}`);
+    return row;
+  };
+
+  it('marks a tool that is ready but behind, with the version on offer and a way to update it', async () => {
+    renderPanel(bridgeFor({ updates: { node: NODE_BEHIND } }));
+
+    expect(await screen.findByText('24.22.1 available')).toBeTruthy();
+    const node = rowOf('Node.js');
+    expect(within(node).getByText('Version 22.12.0')).toBeTruthy();
+    expect(within(node).getByRole('button', { name: 'Update Node.js' })).toBeTruthy();
+    // It is still counted as ready: only the GitHub CLI is missing.
+    expect(screen.getByRole('heading', { name: '3 of 4 ready' })).toBeTruthy();
+  });
+
+  it('shows nothing of the kind on a tool that is current', async () => {
+    renderPanel(bridgeFor({ updates: { node: NODE_BEHIND } }));
+    await screen.findByText('24.22.1 available');
+
+    expect(within(rowOf('Git')).queryByRole('button', { name: /Update/ })).toBeNull();
+    expect(within(rowOf('Git')).queryByText(/available/)).toBeNull();
+  });
+
+  it('updates the tool in the app when its button is pressed, as an update', async () => {
+    const { user, bridge } = renderPanel(bridgeFor({ updates: { node: NODE_BEHIND } }));
+
+    await user.click(await screen.findByRole('button', { name: 'Update Node.js' }));
+
+    expect(bridge.$fn('devSetup.install')).toHaveBeenCalledWith({
+      ids: ['node'],
+      intent: 'update',
+    });
+    expect(useTerminalStore.getState().sessions).toHaveLength(0);
+  });
+
+  it('says how many updates there are, and updates them all from the summary', async () => {
+    const { user, bridge } = renderPanel(
+      bridgeFor({ detections: READY, updates: { node: NODE_BEHIND, gh: GH_BEHIND } }),
+    );
+
+    expect(await screen.findByText(/2 updates available\./)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Update all (2)' }));
+
+    expect(bridge.$fn('devSetup.install')).toHaveBeenCalledWith({
+      ids: ['node', 'gh'],
+      intent: 'update',
+    });
+  });
+
+  it('puts the count on the stack too, so a long list can be scanned', async () => {
+    renderPanel(bridgeFor({ detections: READY, updates: { node: NODE_BEHIND, gh: GH_BEHIND } }));
+
+    const essentials = await screen.findByRole('region', { name: 'Essentials' });
+    expect(await within(essentials).findByText('2 updates')).toBeTruthy();
+    expect(within(essentials).getByText('4 of 4 ready')).toBeTruthy();
+  });
+
+  it('leads with Update all, and drops the Install all that has nothing to do, when all is installed', async () => {
+    renderPanel(bridgeFor({ detections: READY, updates: { gh: GH_BEHIND } }));
+
+    expect(await screen.findByRole('button', { name: 'Update all (1)' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Install all missing/ })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Everything is ready' })).toBeTruthy();
+  });
+
+  it('keeps both buttons when something is missing and something is behind', async () => {
+    renderPanel(bridgeFor({ updates: { node: NODE_BEHIND } }));
+
+    expect(await screen.findByRole('button', { name: 'Update all (1)' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Install all missing (1)' })).toBeTruthy();
+  });
+
+  it('keeps the disabled Install all when there are no updates, as it always was', async () => {
+    renderPanel(bridgeFor({ detections: READY, updates: {} }));
+
+    const button = await screen.findByRole('button', { name: 'Install all missing' });
+    expect(button).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /Update all/ })).toBeNull();
+    expect(await screen.findByText(/Everything is up to date\./)).toBeTruthy();
+  });
+
+  it('says plainly when the updates could not be checked, rather than that all is current', async () => {
+    renderPanel(
+      bridgeFor({
+        detections: READY,
+        updates: {
+          git: { state: 'unknown' },
+          node: { state: 'unknown' },
+          gh: { state: 'unknown' },
+          pnpm: { state: 'unknown' },
+        },
+      }),
+    );
+
+    expect(await screen.findByText(/Could not check for updates\./)).toBeTruthy();
+    expect(screen.queryByText(/Everything is up to date/)).toBeNull();
+  });
+
+  it('checks again for updates from the summary, asking the sources afresh', async () => {
+    const { user, bridge } = renderPanel(bridgeFor({ detections: READY, updates: {} }));
+    await screen.findByText(/Everything is up to date\./);
+    bridge.$fn('devSetup.updates').mockClear();
+
+    await user.click(screen.getByRole('button', { name: 'Check again' }));
+
+    await waitFor(() =>
+      expect(bridge.$fn('devSetup.updates')).toHaveBeenCalledWith(expect.any(Array), {
+        force: true,
+      }),
+    );
+  });
+
+  it('keeps the page working when the app has no answer for updates at all', async () => {
+    renderPanel(bridgeFor({ detections: READY }));
+
+    expect(await screen.findByRole('heading', { name: 'Everything is ready' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Update/ })).toBeNull();
+  });
+
+  it('speaks of updating during an update run, and offers to cancel it in those words', async () => {
+    const { bridge } = renderPanel(
+      bridgeFor({ detections: READY, updates: { node: NODE_BEHIND, gh: GH_BEHIND } }),
+    );
+    await screen.findByRole('button', { name: 'Update all (2)' });
+
+    await emit(
+      bridge,
+      { type: 'plan', jobId: 'u', steps: ['node', 'gh'], intent: 'update' },
+      { type: 'started', jobId: 'u', itemId: 'node' },
+      { type: 'progress', jobId: 'u', itemId: 'node', phase: 'installing', fraction: null },
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Updating 1 of 2: Node.js' })).toBeTruthy();
+    expect(within(rowOf('Node.js')).getByText('Updating')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Cancel update' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Update all/ })).toBeNull();
+  });
+
+  it('says why an update failed on the row and offers another go', async () => {
+    const { bridge } = renderPanel(bridgeFor({ detections: READY, updates: { gh: GH_BEHIND } }));
+    await screen.findByRole('button', { name: 'Update GitHub CLI' });
+
+    await emit(
+      bridge,
+      { type: 'plan', jobId: 'u', steps: ['gh'], intent: 'update' },
+      { type: 'started', jobId: 'u', itemId: 'gh' },
+      {
+        type: 'finished',
+        jobId: 'u',
+        itemId: 'gh',
+        result: 'failed',
+        message: 'Close the app that is using it, then try again.',
+      },
+      { type: 'done', jobId: 'u', cancelled: false },
+    );
+
+    const gh = rowOf('GitHub CLI');
+    expect(
+      await within(gh).findByText(
+        /Update failed\. Close the app that is using it, then try again\./,
+      ),
+    ).toBeTruthy();
+    expect(within(gh).getByRole('button', { name: 'Try again' })).toBeTruthy();
+  });
+
+  it('tells a screen reader that a tool was updated, and not that it was installed', async () => {
+    const { bridge } = renderPanel(bridgeFor({ detections: READY, updates: { gh: GH_BEHIND } }));
+    await screen.findByRole('button', { name: 'Update GitHub CLI' });
+
+    await emit(
+      bridge,
+      { type: 'plan', jobId: 'u', steps: ['gh'], intent: 'update' },
+      { type: 'finished', jobId: 'u', itemId: 'gh', result: 'installed' },
+    );
+
+    expect(screen.getByRole('status', { name: 'Install updates' }).textContent).toBe(
+      'GitHub CLI updated.',
+    );
+  });
+
+  it('opens a terminal for an update that needs a password, with the upgrade command', async () => {
+    const linux: DevSetupEnvironment = { os: 'linux', arch: 'x64', packageManagers: ['apt-get'] };
+    const { user } = renderPanel(
+      bridgeFor({
+        environment: linux,
+        detections: READY,
+        updates: { gh: { state: 'update', latest: '2.103.0', installed: null } },
+      }),
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Update GitHub CLI' }));
+
+    expect(useTerminalStore.getState().sessions[0]).toMatchObject({
+      title: 'Update GitHub CLI',
+      initialInput: 'sudo apt-get install -y --only-upgrade gh',
+    });
+    expect(await screen.findByText(/Waiting for the terminal/)).toBeTruthy();
   });
 });
 

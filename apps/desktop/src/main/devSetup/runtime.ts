@@ -9,11 +9,14 @@ import type {
   DevJobState,
   DevOs,
   DevSetupEnvironment,
+  DevUpdateCheck,
 } from '@agentmat/core';
 import { IPC } from '../../shared/ipcChannels';
+import { runSdkManagerStreaming } from '../android/exec';
 import { getAndroidSdk, refreshAndroidSdk } from '../android/sdk';
 import { broadcastToWindows } from '../ipc/send';
-import { cancelSpawn, spawnStreaming } from '../process/spawnStreaming';
+import { cancelSpawn, killProcessTree, spawnStreaming } from '../process/spawnStreaming';
+import { fetchLatestVersion } from '../registryVersions';
 import { store } from '../store';
 import { isE2E } from '../testMode';
 import { refreshExtraToolPathDirs } from '../toolPaths';
@@ -27,6 +30,7 @@ import { type ManagedRunners, runManagedRecipe } from './runners/managedDispatch
 import { createManagedRunners } from './runners/managedRuntime';
 import { createPackageManagerRunner } from './runners/packageManagerRunner';
 import { resolveDevSetupSandbox } from './sandbox';
+import { createUpdateChecker } from './updates';
 import { addToUserPath, type UserPathResult } from './userPath';
 import { createSystemUserPathDeps } from './userPathSystem';
 
@@ -41,6 +45,14 @@ export interface DevSetupService {
   detect(id: DevItemId, options?: { force?: boolean }): Promise<DevDetection>;
   /** What is remembered, without probing anything. */
   peek(ids: readonly DevItemId[]): Record<DevItemId, DevDetection | undefined>;
+  /**
+   * Which of these have a newer version on offer. Answers come from what the install itself would
+   * run (winget, brew, the registry), are remembered for half an hour, and `force` asks again.
+   */
+  updates(
+    ids: readonly DevItemId[],
+    options?: { force?: boolean },
+  ): Promise<Record<DevItemId, DevUpdateCheck>>;
   install(request: InstallRequest): Promise<DevJobState>;
   /** With an id, takes that waiting step out of the queue; without, stops the whole run. */
   cancel(id?: DevItemId): void;
@@ -62,6 +74,36 @@ const INSTALL_ENV_VARS = [
   'DOTNET_ROOT',
   'FLUTTER_ROOT',
 ] as const;
+
+/** Registries and release lists answer in a second or two, so a slow one is not worth waiting for. */
+const FEED_TIMEOUT_MS = 15_000;
+/** `sdkmanager --list` starts a JVM and reads Google's whole package list. */
+const SDK_LIST_TIMEOUT_MS = 120_000;
+
+/**
+ * What `sdkmanager --list` printed, or null when there is no sdkmanager to run. The newer tool can
+ * exit with an error after printing the whole list, so the exit code is not what decides whether
+ * there is an answer: the text is, and it is read by the parser.
+ */
+async function listAndroidSdkPackages(): Promise<string | null> {
+  const sdk = await getAndroidSdk();
+  if (!sdk.paths.sdkmanager) return null;
+  const lines: string[] = [];
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await runSdkManagerStreaming(sdk, [...(sdk.root ? [`--sdk_root=${sdk.root}`] : []), '--list'], {
+      onSpawn: (child) => {
+        timer = setTimeout(() => killProcessTree(child), SDK_LIST_TIMEOUT_MS);
+      },
+      onLine: (line) => lines.push(line),
+    });
+  } catch {
+    // Judged by what it printed, below.
+  } finally {
+    clearTimeout(timer);
+  }
+  return lines.join('\n');
+}
 
 function currentOs(): DevOs {
   return process.platform === 'win32' || process.platform === 'darwin' ? process.platform : 'linux';
@@ -138,6 +180,22 @@ function createService(): DevSetupService {
     return detector.detect(id, options);
   };
 
+  const updateChecker = createUpdateChecker({
+    environment: () => environment(),
+    detect: (id) => detect(id),
+    probe: (command, args, options) => runProbe(command, args, { ...options, env: sandbox?.env }),
+    // A test run must not depend on the network, or on the SDK this machine happens to have.
+    latestNpm: async (pkg) => (sandbox ? null : fetchLatestVersion({ type: 'npm', package: pkg })),
+    fetchJson: async (url) => {
+      if (sandbox) throw new Error('Not available in a test run.');
+      const response = await fetch(url, { signal: AbortSignal.timeout(FEED_TIMEOUT_MS) });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    },
+    sdkmanagerList: async () => (sandbox ? null : listAndroidSdkPackages()),
+    now: Date.now,
+  });
+
   const addToPath = async (id: DevItemId): Promise<UserPathResult> => {
     // The user PATH is the registry or the person's shell startup file, which a test run must
     // never reach, so this refuses before looking at anything.
@@ -164,13 +222,17 @@ function createService(): DevSetupService {
     environment: () => environment(),
     stacks: async () => (await store.getSettings()).devSetupStacks,
     detect,
+    checkUpdates: (ids, options) => updateChecker.check(ids, options),
     run: async (step, hooks) => {
       const { recipe, intent } = step.mode;
       if (recipe.kind === 'managed') {
         // Built the first time one is needed: opening the page touches neither the data folder
         // nor the network.
         managed ??= createManagedRunners();
-        return runManagedRecipe(step.item.id, recipe, hooks, managed);
+        return runManagedRecipe(step.item.id, recipe, hooks, managed, {
+          intent,
+          path: step.path,
+        });
       }
       return packageManagerRunner.run(recipe, intent, hooks);
     },
@@ -190,6 +252,7 @@ function createService(): DevSetupService {
     environment,
     detect,
     peek: (ids) => detector.peek(ids),
+    updates: (ids, options) => updateChecker.check(ids, options),
     install: (request) => installer.install(request),
     cancel: (id) => installer.cancel(id),
     addToPath,

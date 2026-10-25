@@ -42,6 +42,8 @@ function errorMessage(error: unknown): string {
 
 export function createFlutterInstaller(deps: FlutterInstallerDeps): {
   run: (hooks: RunHooks) => Promise<RunResult>;
+  /** Brings the Flutter that is already there up to date. `foundAt` is where it was found. */
+  update: (hooks: RunHooks, foundAt: string | null) => Promise<RunResult>;
 } {
   const { kit } = deps;
   const sep = kit.os === 'win32' ? '\\' : '/';
@@ -215,5 +217,42 @@ export function createFlutterInstaller(deps: FlutterInstallerDeps): {
       }
       return { ok: true, code: 0, cancelled: false };
     },
+
+    async update(hooks, foundAt) {
+      if (hooks.token.cancelled) return CANCELLED;
+      hooks.onProgress({ phase: 'preparing', fraction: null });
+
+      // The copy the person has is the one to update, wherever it is, and the official archive
+      // and a clone both carry the git history that `flutter upgrade` works from.
+      const command = foundAt ?? flutterCommand;
+      if (!(await kit.fs.exists(command)))
+        return fail('Flutter was not found, so it was not updated.');
+      const sdkRoot = parentOf(parentOf(command, sep), sep);
+      if (!(await kit.fs.exists(`${sdkRoot}${sep}.git`))) {
+        return fail(
+          'This copy of Flutter was not installed with git, so it cannot update itself. Update it the way you installed it.',
+        );
+      }
+
+      hooks.onProgress({ phase: 'installing', fraction: null });
+      hooks.onLine('Running flutter upgrade');
+      const upgrade = await deps.runCommand(command, ['upgrade'], {
+        token: hooks.token,
+        onLine: hooks.onLine,
+        idleMs: FIRST_RUN_IDLE_MS,
+      });
+      if (upgrade.cancelled || hooks.token.cancelled) return CANCELLED;
+      if (upgrade.timedOut) return fail('flutter upgrade stopped responding, so it was stopped.');
+      if (upgrade.code !== 0) {
+        return fail('flutter upgrade did not finish. Open the log for details.');
+      }
+      return { ok: true, code: 0, cancelled: false };
+    },
   };
+}
+
+/** The folder a path is in. */
+function parentOf(path: string, sep: string): string {
+  const cut = path.lastIndexOf(sep);
+  return cut > 0 ? path.slice(0, cut) : path;
 }

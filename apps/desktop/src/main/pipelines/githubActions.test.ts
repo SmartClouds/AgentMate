@@ -201,6 +201,10 @@ describe('toWorkflowRun', () => {
         html_url: 'https://example.invalid/7',
         created_at: '2026-03-15T09:00:00.000Z',
         updated_at: '2026-03-15T09:10:00.000Z',
+        event: 'push',
+        actor: { login: 'octo' },
+        head_sha: 'abc1234def5678',
+        run_attempt: 2,
       }),
     ).toEqual({
       id: 7,
@@ -214,7 +218,21 @@ describe('toWorkflowRun', () => {
       htmlUrl: 'https://example.invalid/7',
       createdAt: '2026-03-15T09:00:00.000Z',
       updatedAt: '2026-03-15T09:10:00.000Z',
+      event: 'push',
+      actor: 'octo',
+      headSha: 'abc1234def5678',
+      runAttempt: 2,
     });
+  });
+
+  it('leaves out the run facts GitHub did not send, instead of inventing them', () => {
+    const run = actions.toWorkflowRun({
+      ...ghRun({ actor: null }),
+    } as unknown as Parameters<typeof actions.toWorkflowRun>[0]);
+    expect(run.event).toBeUndefined();
+    expect(run.actor).toBeUndefined();
+    expect(run.headSha).toBeUndefined();
+    expect(run.runAttempt).toBeUndefined();
   });
 
   it.each([
@@ -1210,6 +1228,219 @@ describe('fetchRunAnnotations', () => {
     await expect(
       actions.fetchRunAnnotations({ repo: 'acme/demo', runId: 5001, checkSuiteId: 9001 }),
     ).resolves.toEqual({ ok: false, error: 'HTTP 403: Forbidden' });
+  });
+});
+
+describe('fetchRunDetails', () => {
+  const JOBS_PATH = 'repos/acme/demo/actions/runs/5001/jobs?per_page=100';
+
+  /** A job as the REST API prints it. */
+  function ghJob(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: 11,
+      name: 'test',
+      status: 'completed',
+      conclusion: 'success',
+      started_at: '2026-03-15T09:00:05Z',
+      completed_at: '2026-03-15T09:04:35Z',
+      html_url: 'https://github.com/acme/demo/actions/runs/5001/job/11',
+      runner_name: 'GitHub Actions 3',
+      steps: [
+        {
+          number: 1,
+          name: 'Set up job',
+          status: 'completed',
+          conclusion: 'success',
+          started_at: '2026-03-15T09:00:05Z',
+          completed_at: '2026-03-15T09:00:07Z',
+        },
+        {
+          number: 2,
+          name: 'Run tests',
+          status: 'completed',
+          conclusion: 'failure',
+          started_at: '2026-03-15T09:00:07Z',
+          completed_at: '2026-03-15T09:04:30Z',
+        },
+      ],
+      ...overrides,
+    };
+  }
+
+  it('maps the jobs and their steps with timings, status and conclusion', async () => {
+    scenario.api[JOBS_PATH] = { jobs: [ghJob()] };
+
+    const result = await actions.fetchRunDetails({ repo: 'acme/demo', runId: 5001 });
+
+    expect(result).toEqual({
+      ok: true,
+      jobs: [
+        {
+          id: 11,
+          name: 'test',
+          status: 'completed',
+          conclusion: 'success',
+          startedAt: '2026-03-15T09:00:05Z',
+          completedAt: '2026-03-15T09:04:35Z',
+          htmlUrl: 'https://github.com/acme/demo/actions/runs/5001/job/11',
+          runnerName: 'GitHub Actions 3',
+          steps: [
+            {
+              number: 1,
+              name: 'Set up job',
+              status: 'completed',
+              conclusion: 'success',
+              startedAt: '2026-03-15T09:00:05Z',
+              completedAt: '2026-03-15T09:00:07Z',
+            },
+            {
+              number: 2,
+              name: 'Run tests',
+              status: 'completed',
+              conclusion: 'failure',
+              startedAt: '2026-03-15T09:00:07Z',
+              completedAt: '2026-03-15T09:04:30Z',
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('keeps a job that has not started as nulls, not as made-up times', async () => {
+    scenario.api[JOBS_PATH] = {
+      jobs: [
+        ghJob({
+          status: 'queued',
+          conclusion: null,
+          started_at: null,
+          completed_at: null,
+          runner_name: null,
+          steps: [],
+        }),
+      ],
+    };
+
+    const result = await actions.fetchRunDetails({ repo: 'acme/demo', runId: 5001 });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.jobs[0]).toMatchObject({
+      status: 'queued',
+      conclusion: null,
+      startedAt: null,
+      completedAt: null,
+      runnerName: null,
+      steps: [],
+    });
+  });
+
+  it('treats a missing steps list as no steps and a status GitHub adds later as unknown', async () => {
+    scenario.api[JOBS_PATH] = {
+      jobs: [ghJob({ status: 'some_new_state', conclusion: 'brand_new', steps: undefined })],
+    };
+
+    const result = await actions.fetchRunDetails({ repo: 'acme/demo', runId: 5001 });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.jobs[0]).toMatchObject({ status: 'unknown', conclusion: null, steps: [] });
+  });
+
+  it('returns an empty list for a run that has no jobs yet', async () => {
+    scenario.api[JOBS_PATH] = { jobs: [] };
+
+    await expect(actions.fetchRunDetails({ repo: 'acme/demo', runId: 5001 })).resolves.toEqual({
+      ok: true,
+      jobs: [],
+    });
+  });
+
+  it('refuses a run it cannot identify', async () => {
+    await expect(actions.fetchRunDetails({ repo: 'acme', runId: 1 })).resolves.toEqual({
+      ok: false,
+      error: 'That workflow run could not be identified.',
+    });
+    await expect(actions.fetchRunDetails({ repo: 'acme/demo', runId: 0 })).resolves.toEqual({
+      ok: false,
+      error: 'That workflow run could not be identified.',
+    });
+    expect(ghCalls()).toEqual([]);
+  });
+
+  it('says to install the CLI when gh cannot be started at all', async () => {
+    proc.reply = async () => {
+      const error = new Error('spawn gh ENOENT') as Error & { code: string };
+      error.code = 'ENOENT';
+      throw error;
+    };
+    await expect(actions.fetchRunDetails({ repo: 'acme/demo', runId: 5001 })).resolves.toEqual({
+      ok: false,
+      error: 'Install the GitHub CLI and sign in to see this run.',
+    });
+  });
+
+  it('does not depend on a version probe, which can time out when gh is busy', async () => {
+    // Clicking through pipelines fires several gh calls at once. A bare `gh --version` among them
+    // used to time out on a loaded machine and turn a working gh into "Install the GitHub CLI".
+    scenario.ghAvailable = false;
+    scenario.api[JOBS_PATH] = { jobs: [ghJob()] };
+
+    const result = await actions.fetchRunDetails({ repo: 'acme/demo', runId: 5001 });
+
+    expect(result.ok).toBe(true);
+    expect(ghCalls().some((args) => args[0] === '--version')).toBe(false);
+  });
+
+  it('reports a GitHub failure instead of throwing', async () => {
+    scenario.apiErrors[JOBS_PATH] = 'HTTP 403: Forbidden';
+
+    await expect(actions.fetchRunDetails({ repo: 'acme/demo', runId: 5001 })).resolves.toEqual({
+      ok: false,
+      error: 'HTTP 403: Forbidden',
+    });
+  });
+
+  it('serves a finished run from memory for a while, since its steps no longer change', async () => {
+    scenario.api[JOBS_PATH] = { jobs: [ghJob()] };
+
+    await actions.fetchRunDetails({ repo: 'acme/demo', runId: 5001 });
+    const before = proc.calls.length;
+    await actions.fetchRunDetails({ repo: 'acme/demo', runId: 5001 });
+
+    expect(proc.calls.length).toBe(before);
+  });
+
+  it('asks GitHub again once the remembered answer is old, in case the run was re-run', async () => {
+    vi.useFakeTimers();
+    scenario.api[JOBS_PATH] = { jobs: [ghJob()] };
+
+    await actions.fetchRunDetails({ repo: 'acme/demo', runId: 5001 });
+    const before = proc.calls.length;
+    vi.advanceTimersByTime(11 * 60_000);
+    await actions.fetchRunDetails({ repo: 'acme/demo', runId: 5001 });
+
+    expect(proc.calls.length).toBeGreaterThan(before);
+  });
+
+  it('never remembers a run that is still going, so each look sees the newest step', async () => {
+    scenario.api[JOBS_PATH] = { jobs: [ghJob({ status: 'in_progress', conclusion: null })] };
+
+    await actions.fetchRunDetails({ repo: 'acme/demo', runId: 5001 });
+    const before = proc.calls.length;
+    await actions.fetchRunDetails({ repo: 'acme/demo', runId: 5001 });
+
+    expect(proc.calls.length).toBeGreaterThan(before);
+  });
+
+  it('never remembers a run with no jobs yet', async () => {
+    scenario.api[JOBS_PATH] = { jobs: [] };
+
+    await actions.fetchRunDetails({ repo: 'acme/demo', runId: 5001 });
+    const before = proc.calls.length;
+    await actions.fetchRunDetails({ repo: 'acme/demo', runId: 5001 });
+
+    expect(proc.calls.length).toBeGreaterThan(before);
   });
 });
 

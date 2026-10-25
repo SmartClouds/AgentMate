@@ -14,6 +14,9 @@ import type {
   GithubRunAnnotationsInput,
   GithubRunAnnotationsResult,
   GithubRunCancelRequest,
+  GithubRunDetailsInput,
+  GithubRunDetailsResult,
+  GithubRunJob,
   GithubWorkflowDispatchRequest,
   GithubWorkflowInfo,
   GithubWorkflowRefsResult,
@@ -57,6 +60,10 @@ interface GhRun {
   created_at: string;
   updated_at: string;
   check_suite_id?: number;
+  event?: string;
+  actor?: { login?: string } | null;
+  head_sha?: string;
+  run_attempt?: number;
 }
 
 const REPO_LOOKUP_TTL_MS = 10 * 60_000;
@@ -147,6 +154,11 @@ export function toWorkflowRun(item: GhRun): GithubWorkflowRunInfo {
     htmlUrl: item.html_url,
     createdAt: item.created_at,
     updatedAt: item.updated_at,
+    // Left out entirely when GitHub did not send them, so the UI can tell "unknown" from a value.
+    ...(item.event ? { event: item.event } : {}),
+    ...(item.actor?.login ? { actor: item.actor.login } : {}),
+    ...(item.head_sha ? { headSha: item.head_sha } : {}),
+    ...(item.run_attempt ? { runAttempt: item.run_attempt } : {}),
   };
 }
 
@@ -450,6 +462,10 @@ export async function fetchProjectPipelineStatus(project: Project): Promise<Proj
 interface GhJobStep {
   name: string;
   conclusion: string | null;
+  number?: number;
+  status?: string;
+  started_at?: string | null;
+  completed_at?: string | null;
 }
 
 interface GhJob {
@@ -457,6 +473,11 @@ interface GhJob {
   name: string;
   conclusion: string | null;
   steps?: GhJobStep[];
+  status?: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  html_url?: string | null;
+  runner_name?: string | null;
 }
 
 interface GhAnnotation {
@@ -630,6 +651,81 @@ export async function fetchRunFailureText(
     errorCache.set(cacheKey, { text, at: Date.now() });
     return { ok: true, text };
   } catch (error) {
+    return { ok: false, error: ghErrorMessage(error) };
+  }
+}
+
+/**
+ * A finished run's jobs rarely change, but a re-run reuses the run id, so the answer is only kept
+ * for a while instead of for good like annotations.
+ */
+const DETAILS_CACHE_MS = 10 * 60_000;
+const DETAILS_CACHE_CAP = 200;
+const detailsCache = new Map<
+  string,
+  { result: GithubRunDetailsResult & { ok: true }; at: number }
+>();
+
+function toJob(job: GhJob): GithubRunJob {
+  return {
+    id: job.id,
+    name: job.name,
+    status: toRunStatus(job.status ?? ''),
+    conclusion: toConclusion(job.conclusion),
+    startedAt: job.started_at ?? null,
+    completedAt: job.completed_at ?? null,
+    htmlUrl: job.html_url ?? null,
+    runnerName: job.runner_name ?? null,
+    steps: (job.steps ?? []).map((step, index) => ({
+      number: step.number ?? index + 1,
+      name: step.name,
+      status: toRunStatus(step.status ?? ''),
+      conclusion: toConclusion(step.conclusion),
+      startedAt: step.started_at ?? null,
+      completedAt: step.completed_at ?? null,
+    })),
+  };
+}
+
+/** The jobs of one Actions run with each step's status and timing, for the Pipelines details. */
+export async function fetchRunDetails(
+  input: GithubRunDetailsInput,
+): Promise<GithubRunDetailsResult> {
+  const parsed = parseOwnerRepo(input.repo);
+  const runId = Number(input.runId);
+  if (!parsed || !Number.isInteger(runId) || runId <= 0) {
+    return { ok: false, error: 'That workflow run could not be identified.' };
+  }
+
+  const cacheKey = `${parsed.owner}/${parsed.repo}#${runId}`;
+  const cached = detailsCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < DETAILS_CACHE_MS) return cached.result;
+
+  // No `gh --version` probe first: it is its own unqueued process with a short timeout, so among
+  // the calls fired by clicking through pipelines it timed out on a busy machine and reported a
+  // working gh as missing. The status call that lists the pipelines already knows gh is there, and
+  // a gh that cannot be started shows up as ENOENT from the call itself.
+  try {
+    const payload = await ghApi<{ jobs?: GhJob[] }>(
+      `repos/${parsed.owner}/${parsed.repo}/actions/runs/${runId}/jobs?per_page=100`,
+    );
+    const result = { ok: true as const, jobs: (payload.jobs ?? []).map(toJob) };
+
+    // A run that is still going, or has no jobs yet, must be looked at again next time.
+    const finished =
+      result.jobs.length > 0 && result.jobs.every((job) => job.status === 'completed');
+    if (finished) {
+      if (detailsCache.size >= DETAILS_CACHE_CAP) {
+        const oldest = detailsCache.keys().next().value;
+        if (oldest !== undefined) detailsCache.delete(oldest);
+      }
+      detailsCache.set(cacheKey, { result, at: Date.now() });
+    }
+    return result;
+  } catch (error) {
+    if ((error as { code?: string }).code === 'ENOENT') {
+      return { ok: false, error: 'Install the GitHub CLI and sign in to see this run.' };
+    }
     return { ok: false, error: ghErrorMessage(error) };
   }
 }

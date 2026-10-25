@@ -175,7 +175,7 @@
       }
     },
     {
-      "includes": ["scripts/**"],
+      "includes": ["scripts/**", ".github/actions/**"],
       "linter": { "rules": { "suspicious": { "noConsole": "off" } } }
     }
   ],

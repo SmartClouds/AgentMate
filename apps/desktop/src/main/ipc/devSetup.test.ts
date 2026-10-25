@@ -17,6 +17,7 @@ const service = vi.hoisted(() => ({
   environment: vi.fn(),
   detect: vi.fn(),
   peek: vi.fn(),
+  updates: vi.fn(),
   install: vi.fn(),
   cancel: vi.fn(),
   addToPath: vi.fn(),
@@ -37,6 +38,7 @@ beforeEach(async () => {
   service.environment.mockReset();
   service.detect.mockReset();
   service.peek.mockReset();
+  service.updates.mockReset();
   service.install.mockReset();
   service.cancel.mockReset();
   service.addToPath.mockReset();
@@ -138,7 +140,52 @@ describe('devSetup:peek', () => {
   });
 });
 
+describe('devSetup:updates', () => {
+  it('asks about the items named and hands back what the check found', async () => {
+    const found = { node: { state: 'update', latest: '24.22.1', installed: '24.20.0' } };
+    service.updates.mockResolvedValue(found);
+
+    await expect(invoke(IPC.devSetup.updates, ['node', 'node', 'gh'])).resolves.toEqual(found);
+    expect(service.updates).toHaveBeenCalledWith(['node', 'gh'], { force: false });
+  });
+
+  it('asks again only when told to, and only with exactly true', async () => {
+    service.updates.mockResolvedValue({});
+
+    await invoke(IPC.devSetup.updates, ['node'], { force: true });
+    await invoke(IPC.devSetup.updates, ['node'], { force: 'yes' });
+
+    expect(service.updates).toHaveBeenNthCalledWith(1, ['node'], { force: true });
+    expect(service.updates).toHaveBeenNthCalledWith(2, ['node'], { force: false });
+  });
+
+  it.each([
+    ['not a list', 'node'],
+    ['a list with an unknown id', ['node', 'nope']],
+    ['more ids than the catalog could have', Array.from({ length: 61 }, () => 'node')],
+  ])('refuses %s', async (_label, ids) => {
+    await expect(invoke(IPC.devSetup.updates, ids)).rejects.toThrow('Invalid dev setup items.');
+    expect(service.updates).not.toHaveBeenCalled();
+  });
+});
+
 describe('devSetup:install', () => {
+  it('passes on an update, and treats any other intent as an install', async () => {
+    service.install.mockResolvedValue({});
+
+    await invoke(IPC.devSetup.install, { ids: ['gh'], intent: 'update' });
+    await invoke(IPC.devSetup.install, { ids: ['gh'], intent: 'rm -rf /' });
+    await invoke(IPC.devSetup.install, { ids: ['gh'], intent: 'install' });
+
+    expect(service.install).toHaveBeenNthCalledWith(1, {
+      ids: ['gh'],
+      consented: false,
+      intent: 'update',
+    });
+    expect(service.install).toHaveBeenNthCalledWith(2, { ids: ['gh'], consented: false });
+    expect(service.install).toHaveBeenNthCalledWith(3, { ids: ['gh'], consented: false });
+  });
+
   it('starts the installs for the items named and hands back the state', async () => {
     service.install.mockResolvedValue({ running: true });
 

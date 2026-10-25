@@ -41,6 +41,8 @@ export interface RemoteRelease {
   rid: ReleaseRid;
   file: string;
   sha256: string;
+  /** In bytes, from the manifest: a core that downloads it stops at the first byte past this. */
+  size: number;
   url: string;
 }
 
@@ -163,6 +165,7 @@ export function githubReleaseSource(
         rid,
         file: asset.file,
         sha256: asset.sha256,
+        size: asset.size,
         url: releaseDownloadUrl(manifest.version, asset.file),
       };
     },

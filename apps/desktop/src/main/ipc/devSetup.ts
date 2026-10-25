@@ -3,6 +3,7 @@ import {
   type DevItemId,
   type DevJobState,
   type DevSetupEnvironment,
+  type DevUpdateCheck,
   isDevItemId,
 } from '@agentmat/core';
 import { ipcMain } from 'electron';
@@ -50,12 +51,28 @@ export function registerDevSetupHandlers(): void {
       getDevSetupService().peek(checkedIds(ids)),
   );
 
+  ipcMain.handle(
+    IPC.devSetup.updates,
+    (
+      _event,
+      ids: unknown,
+      options?: { force?: boolean },
+    ): Promise<Record<DevItemId, DevUpdateCheck>> =>
+      getDevSetupService().updates(checkedIds(ids), { force: options?.force === true }),
+  );
+
   ipcMain.handle(IPC.devSetup.install, (_event, request: unknown): Promise<DevJobState> => {
-    const { ids, consented } = (request ?? {}) as { ids?: unknown; consented?: unknown };
-    // Rebuilt from the two checked fields, so nothing else a caller attached gets through.
+    const { ids, consented, intent } = (request ?? {}) as {
+      ids?: unknown;
+      consented?: unknown;
+      intent?: unknown;
+    };
+    // Rebuilt from the checked fields, so nothing else a caller attached gets through. The intent
+    // is one of two words, never anything that reaches a command.
     return getDevSetupService().install({
       ids: checkedIds(ids),
       consented: consented === true,
+      ...(intent === 'update' ? { intent: 'update' as const } : {}),
     });
   });
 

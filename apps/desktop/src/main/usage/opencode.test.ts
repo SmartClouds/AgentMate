@@ -249,15 +249,30 @@ describe('scanOpencodeUsage', () => {
     };
   }
 
-  it('asks the database once, for sessions since retention', async () => {
+  // What sqlite_master says for an OpenCode 2.x database; the sessions query gets one row.
+  const v2Db = async (_dbPath: string, sql: string, _params: unknown[]) =>
+    sql.includes('sqlite_master') ? [{ name: 'session_v2' }, { name: 'session_message' }] : [row()];
+
+  it('checks which tables the database has, then asks for sessions since retention', async () => {
     const queryDb = vi.fn(async (_dbPath: string, _sql: string, _params: unknown[]) => [row()]);
     const usage = await scanOpencodeUsage(deps({ sinceMs: 12345, queryDb }));
 
-    expect(queryDb).toHaveBeenCalledTimes(1);
-    expect(queryDb.mock.calls[0][0]).toBe(DB);
-    expect(queryDb.mock.calls[0][1]).toContain('FROM session');
-    expect(queryDb.mock.calls[0][2]).toEqual([12345]);
+    expect(queryDb).toHaveBeenCalledTimes(2);
+    expect(queryDb.mock.calls[0][1]).toContain('sqlite_master');
+    expect(queryDb.mock.calls[1][0]).toBe(DB);
+    expect(queryDb.mock.calls[1][1]).toContain('FROM session WHERE');
+    expect(queryDb.mock.calls[1][2]).toEqual([12345]);
     expect(usage.status).toBe('ok');
+    expect(usage.today.tokens.total).toBeGreaterThan(0);
+  });
+
+  it('reads sessions from session_v2 on a database that has it', async () => {
+    const queryDb = vi.fn(v2Db);
+    const usage = await scanOpencodeUsage(deps({ sinceMs: 12345, queryDb }));
+
+    expect(queryDb).toHaveBeenCalledTimes(2);
+    expect(queryDb.mock.calls[1][1]).toContain('FROM session_v2 WHERE');
+    expect(queryDb.mock.calls[1][2]).toEqual([12345]);
     expect(usage.today.tokens.total).toBeGreaterThan(0);
   });
 

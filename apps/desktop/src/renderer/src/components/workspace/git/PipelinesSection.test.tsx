@@ -1,16 +1,12 @@
-// @vitest-environment jsdom
 import type { Project } from '@agentmat/core';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import { queryKeys } from '@/lib/queryKeys';
-
-/**
- * A pipelines refresh that fails while the Fix with AI dialog is open used to swap the run rows for
- * the error notice. That unmounted the dialog and the user lost the prompt they were reading.
- */
+import type { GithubWorkflowInfo, GithubWorkflowRunInfo } from '@shared/apiTypes';
+import { act, screen, within } from '@testing-library/react';
+import { useState } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { runTone } from '@/components/pipelines/runStatus';
+import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
+import { FailedRunActions, PipelinesSection } from './PipelinesSection';
+import type { PipelineRow, PipelinesView } from './usePipelineStatus';
 
 const mounts = vi.fn();
 const unmounts = vi.fn();
@@ -27,153 +23,190 @@ vi.mock('./FixRunDialog', async () => {
     },
   };
 });
-vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
-const { PipelinesSection } = await import('./PipelinesSection');
+const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn(), info: vi.fn() }));
+vi.mock('sonner', () => ({ toast, Toaster: () => null }));
 
 const project = { id: 'p1', name: 'App', folderPath: 'C:\\work\\app' } as Project;
 
-const healthy = {
-  projectId: 'p1',
-  cliAvailable: true,
-  authenticated: true,
-  github: { owner: 'acme', repo: 'app' },
-  workflows: [{ id: 1, name: 'CI', htmlUrl: 'https://github.com/acme/app/actions/workflows/ci' }],
-  runsByWorkflowId: {
-    1: {
-      id: 42,
-      workflowId: 1,
-      name: 'CI',
-      displayTitle: 'Add login',
-      runNumber: 7,
-      headBranch: 'main',
-      status: 'completed',
-      conclusion: 'failure',
-      htmlUrl: 'https://github.com/acme/app/actions/runs/42',
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z',
-    },
-  },
-};
-
-const status = vi.fn();
-
-function renderSection() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <TooltipProvider>
-          <PipelinesSection project={project} />
-        </TooltipProvider>
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
-  return client;
+function workflow(id: number, name: string): GithubWorkflowInfo {
+  return {
+    id,
+    name,
+    path: `.github/workflows/${name.toLowerCase()}.yml`,
+    state: 'active',
+    htmlUrl: `https://github.com/acme/app/actions/workflows/${name.toLowerCase()}.yml`,
+    badgeUrl: '',
+    dispatchable: false,
+    dispatchInputs: [],
+  };
 }
 
-async function refresh(client: QueryClient) {
-  await act(async () => {
-    await client.invalidateQueries({ queryKey: queryKeys.pipelineStatus(project.id) });
-    // let React Query notify observers and React commit the result
-    await new Promise((done) => setTimeout(done, 20));
+function row(
+  id: number,
+  name: string,
+  state: Pick<GithubWorkflowRunInfo, 'status' | 'conclusion'> | null,
+): PipelineRow {
+  const run: GithubWorkflowRunInfo | null = state && {
+    id: id * 100,
+    workflowId: id,
+    name,
+    displayTitle: `${name} commit`,
+    runNumber: id,
+    headBranch: 'main',
+    htmlUrl: `https://github.com/acme/app/actions/runs/${id * 100}`,
+    createdAt: new Date(Date.now() - 3 * 3_600_000).toISOString(),
+    updatedAt: new Date(Date.now() - 3 * 3_600_000).toISOString(),
+    ...state,
+  };
+  return { workflow: workflow(id, name), run, tone: run ? runTone(run) : null };
+}
+
+const FAILED = { status: 'completed', conclusion: 'failure' } as const;
+const PASSED = { status: 'completed', conclusion: 'success' } as const;
+
+function ready(rows: PipelineRow[]): PipelinesView {
+  return { kind: 'ready', rows, repo: 'acme/app' };
+}
+
+const onRetry = vi.fn();
+const onOpenDetails = vi.fn();
+const openExternal = vi.fn();
+
+/** Holds the view in state so a test can change it without remounting the providers around it. */
+let setViewFromTest: (view: PipelinesView) => void = () => undefined;
+
+function Harness({ initial }: { initial: PipelinesView }): React.JSX.Element {
+  const [view, setView] = useState(initial);
+  setViewFromTest = setView;
+  return (
+    <PipelinesSection
+      project={project}
+      view={view}
+      retrying={false}
+      onRetry={onRetry}
+      onOpenDetails={onOpenDetails}
+    />
+  );
+}
+
+function renderSection(view: PipelinesView) {
+  const rendered = renderWithProviders(<Harness initial={view} />, {
+    bridge: {
+      'pipelines.runError': { ok: true, text: 'Job: test\n  Step: Run tests (failure)' },
+      'shell.openExternal': openExternal,
+    },
   });
+  return { ...rendered, update: (next: PipelinesView) => act(() => setViewFromTest(next)) };
 }
 
 beforeEach(() => {
-  mounts.mockClear();
-  unmounts.mockClear();
-  status.mockReset();
-  Object.assign(window, { agentmat: { pipelines: { status }, shell: { openExternal: vi.fn() } } });
+  vi.clearAllMocks();
 });
 
-afterEach(() => cleanup());
-
-describe('PipelinesSection refresh errors', () => {
-  it('keeps an open Fix with AI dialog when a refresh reports an error', async () => {
-    status.mockResolvedValueOnce(healthy);
-    const client = renderSection();
-    fireEvent.click(await screen.findByRole('button', { name: /Fix with AI/ }));
-    expect(await screen.findByText('fix dialog')).toBeTruthy();
-
-    status.mockResolvedValueOnce({ ...healthy, error: 'rate limited' });
-    await refresh(client);
-
-    expect(status).toHaveBeenCalledTimes(2);
-    expect(screen.getByText('fix dialog')).toBeTruthy();
-    expect(screen.queryByText('Could not load pipelines')).toBeNull();
-    expect(unmounts).not.toHaveBeenCalled();
-    expect(mounts).toHaveBeenCalledTimes(1);
+describe('PipelinesSection', () => {
+  it('shimmers while the first read is in flight', () => {
+    renderSection({ kind: 'loading' });
+    expect(screen.getByTestId('pipelines-loading')).toBeInTheDocument();
   });
 
-  it('keeps an open Fix with AI dialog when a refresh throws', async () => {
-    status.mockResolvedValueOnce(healthy);
-    const client = renderSection();
-    fireEvent.click(await screen.findByRole('button', { name: /Fix with AI/ }));
-    await screen.findByText('fix dialog');
-
-    status.mockRejectedValueOnce(new Error('network down'));
-    await refresh(client);
-
-    expect(screen.getByText('fix dialog')).toBeTruthy();
-    expect(unmounts).not.toHaveBeenCalled();
-  });
-
-  it('still shows the error notice when the very first load fails', async () => {
-    status.mockResolvedValueOnce({ ...healthy, error: 'rate limited', workflows: [] });
-    renderSection();
-    expect(await screen.findByText('Could not load pipelines')).toBeTruthy();
-  });
-
-  it('recovers to fresh data after a failed refresh', async () => {
-    status.mockResolvedValueOnce(healthy);
-    const client = renderSection();
-    await screen.findByText('CI');
-
-    status.mockResolvedValueOnce({ ...healthy, error: 'rate limited' });
-    await refresh(client);
-    status.mockResolvedValueOnce({
-      ...healthy,
-      workflows: [{ id: 1, name: 'Release', htmlUrl: 'https://github.com/acme/app' }],
+  it('shows a notice in place of the rows, and wires Retry to it', async () => {
+    const { user } = renderSection({
+      kind: 'notice',
+      notice: { kind: 'error', error: 'rate limited' },
     });
-    await refresh(client);
+    expect(screen.getByText('Could not load pipelines')).toBeInTheDocument();
 
-    await waitFor(() => expect(screen.getByText('Release')).toBeTruthy());
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('lists each pipeline with its latest run and outcome', () => {
+    renderSection(ready([row(1, 'CD', FAILED), row(2, 'Nightly', PASSED), row(3, 'Docs', null)]));
+
+    expect(screen.getByText('CD')).toBeInTheDocument();
+    expect(screen.getByText('CD commit · main · 3h ago')).toBeInTheDocument();
+    expect(screen.getByText('Failed')).toBeInTheDocument();
+    expect(screen.getByText('Passed')).toBeInTheDocument();
+    expect(screen.getByText('Never run')).toBeInTheDocument();
+  });
+
+  it('offers Fix with AI and Copy error on a failed run only', () => {
+    renderSection(ready([row(1, 'CD', FAILED), row(2, 'Nightly', PASSED)]));
+
+    expect(screen.getAllByRole('button', { name: /Fix with AI/ })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /Copy error/ })).toHaveLength(1);
+  });
+
+  it('opens the details on that pipeline when its card is clicked, not GitHub', async () => {
+    const { user } = renderSection(ready([row(1, 'CD', FAILED), row(2, 'Nightly', PASSED)]));
+
+    await user.click(screen.getByRole('button', { name: /Nightly/ }));
+
+    expect(onOpenDetails).toHaveBeenCalledWith(2);
+    expect(openExternal).not.toHaveBeenCalled();
+  });
+
+  it('opens the details for a pipeline that has never run', async () => {
+    const { user } = renderSection(ready([row(3, 'Docs', null)]));
+
+    await user.click(screen.getByRole('button', { name: /Docs/ }));
+
+    expect(onOpenDetails).toHaveBeenCalledWith(3);
+  });
+
+  it('does not open the details when Fix with AI is pressed', async () => {
+    const { user } = renderSection(ready([row(1, 'CD', FAILED)]));
+
+    await user.click(screen.getByRole('button', { name: /Fix with AI/ }));
+
+    expect(onOpenDetails).not.toHaveBeenCalled();
+  });
+
+  it('keeps an open Fix with AI dialog while the rows refresh underneath it', async () => {
+    const { user, update } = renderSection(ready([row(1, 'CD', FAILED)]));
+    await user.click(screen.getByRole('button', { name: /Fix with AI/ }));
+    expect(await screen.findByText('fix dialog')).toBeInTheDocument();
+
+    update(ready([row(1, 'CD', FAILED), row(2, 'Nightly', PASSED)]));
+
+    expect(screen.getByText('fix dialog')).toBeInTheDocument();
+    expect(screen.getByText('Nightly')).toBeInTheDocument();
+    expect(mounts).toHaveBeenCalledTimes(1);
+    expect(unmounts).not.toHaveBeenCalled();
   });
 });
 
-describe('PipelinesSection retry', () => {
-  const failed = { ...healthy, error: 'rate limited', workflows: [] };
+describe('FailedRunActions', () => {
+  const run = { repo: 'acme/app', runId: 100, workflowName: 'CD' };
 
-  // A failed attempt that answers after a moment, so the loading state is on screen to assert on.
-  const slowFailure = () => new Promise((done) => setTimeout(() => done(failed), 50));
+  it('copies the failure text and says so', async () => {
+    const { user } = renderWithProviders(<FailedRunActions project={project} run={run} />, {
+      bridge: {
+        'pipelines.runError': { ok: true, text: 'Job: test\n  Step: Run tests (failure)' },
+      },
+    });
 
-  it('shows a loading state on Retry until the attempt settles', async () => {
-    status.mockResolvedValueOnce(failed);
-    renderSection();
-    const retryButton = await screen.findByRole('button', { name: 'Retry' });
+    await user.click(screen.getByRole('button', { name: /Copy error/ }));
 
-    status.mockImplementationOnce(slowFailure);
-    fireEvent.click(retryButton);
-
-    const busy = await screen.findByRole('button', { name: 'Retrying…' });
-    expect(busy.getAttribute('aria-disabled')).toBe('true');
-    expect(status).toHaveBeenCalledTimes(2);
-
-    expect(await screen.findByRole('button', { name: 'Retry' }, { timeout: 2000 })).toBeTruthy();
+    expect(await navigator.clipboard.readText()).toBe('Job: test\n  Step: Run tests (failure)');
+    expect(toast.success).toHaveBeenCalledWith('Failure copied');
   });
 
-  it('ignores clicks while a retry is in flight', async () => {
-    status.mockResolvedValueOnce(failed);
-    renderSection();
-    const retryButton = await screen.findByRole('button', { name: 'Retry' });
+  it('shows GitHub’s reason when the failure cannot be read', async () => {
+    const { user } = renderWithProviders(<FailedRunActions project={project} run={run} />, {
+      bridge: { 'pipelines.runError': { ok: false, error: 'Install the GitHub CLI.' } },
+    });
 
-    status.mockImplementationOnce(slowFailure);
-    fireEvent.click(retryButton);
-    fireEvent.click(await screen.findByRole('button', { name: 'Retrying…' }));
+    await user.click(screen.getByRole('button', { name: /Copy error/ }));
 
-    expect(status).toHaveBeenCalledTimes(2);
-    await screen.findByRole('button', { name: 'Retry' }, { timeout: 2000 });
-    expect(status).toHaveBeenCalledTimes(2);
+    expect(toast.error).toHaveBeenCalledWith('Install the GitHub CLI.');
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('keeps the buttons together in one row', () => {
+    renderWithProviders(<FailedRunActions project={project} run={run} />);
+    const group = screen.getByRole('button', { name: /Fix with AI/ }).parentElement as HTMLElement;
+    expect(within(group).getAllByRole('button')).toHaveLength(2);
   });
 });

@@ -36,6 +36,20 @@ describe('agentSessionTitle', () => {
     expect(agentSessionTitle('  Add npm scripts ', 'Codex CLI')).toBe('Add npm scripts');
   });
 
+  it("drops OpenCode's OC | prefix and keeps the session title", () => {
+    expect(agentSessionTitle('OC | Fix login bug', 'OpenCode')).toBe('Fix login bug');
+    expect(agentSessionTitle('OC |  Spaced out', 'OpenCode')).toBe('Spaced out');
+    expect(agentSessionTitle('OC | Debugging OpenCode Gemini CLI tra…', 'OpenCode')).toBe(
+      'Debugging OpenCode Gemini CLI tra…',
+    );
+  });
+
+  it('treats an OpenCode title with nothing after the prefix as no title', () => {
+    expect(agentSessionTitle('OC |', 'OpenCode')).toBeNull();
+    expect(agentSessionTitle('OC | ', 'OpenCode')).toBeNull();
+    expect(agentSessionTitle('OpenCode', 'OpenCode')).toBeNull();
+  });
+
   it('ignores the CLI name and what the shell set before it', () => {
     expect(agentSessionTitle(undefined, 'Claude Code')).toBeNull();
     expect(agentSessionTitle('', 'Claude Code')).toBeNull();

@@ -3072,6 +3072,13 @@ export interface GithubWorkflowRunInfo {
   htmlUrl: string;
   createdAt: string;
   updatedAt: string;
+  /** What started the run (`push`, `schedule`, `workflow_dispatch`, ...). */
+  event?: string;
+  /** The GitHub login that triggered it. */
+  actor?: string;
+  headSha?: string;
+  /** 1 for a first run, higher after a re-run. */
+  runAttempt?: number;
 }
 
 export interface ProjectPipelineStatus {
@@ -3134,6 +3141,42 @@ export type GithubRunAnnotationsResult =
       /** Failures first, then warnings, then notices. */
       annotations: GithubRunAnnotation[];
       counts: Record<GithubRunAnnotationLevel, number>;
+    }
+  | { ok: false; error: string };
+
+export interface GithubRunDetailsInput {
+  repo: string;
+  runId: number;
+}
+
+/** One step of a job, in the order GitHub ran (or will run) it. Times are null until it starts. */
+export interface GithubRunStep {
+  number: number;
+  name: string;
+  status: PipelineRunStatus;
+  conclusion: PipelineConclusion;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
+export interface GithubRunJob {
+  id: number;
+  name: string;
+  status: PipelineRunStatus;
+  conclusion: PipelineConclusion;
+  startedAt: string | null;
+  completedAt: string | null;
+  /** The job's own page on GitHub, with its logs. */
+  htmlUrl: string | null;
+  runnerName: string | null;
+  steps: GithubRunStep[];
+}
+
+export type GithubRunDetailsResult =
+  | {
+      ok: true;
+      /** Empty while GitHub has not scheduled the run's jobs yet. */
+      jobs: GithubRunJob[];
     }
   | { ok: false; error: string };
 

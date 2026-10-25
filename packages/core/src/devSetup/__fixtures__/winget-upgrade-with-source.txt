@@ -1,0 +1,10 @@
+Name       Id                  Version Available Source
+------------------------------------------------------------
+GitHub CLI GitHub.cli          2.102.0 2.103.0   winget
+Git        Git.Git             2.55.0  2.55.1    winget
+2 upgrades available.
+The following packages have an upgrade available, but require explicit targeting for upgrade:
+Name                  Id                    Version Available Source
+--------------------------------------------------------------------
+Temurin 17 JDK 17.0.9 EclipseAdoptium.Temurin.17.JDK 17.0.9.9 17.0.13.11 winget
+1 package(s) have pins that prevent upgrade.

@@ -1,33 +1,17 @@
 import type { Project } from '@agentmat/core';
-import type { GithubActionsRunErrorInput, ProjectPipelineStatus } from '@shared/apiTypes';
-import { useQuery } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import type { GithubActionsRunErrorInput } from '@shared/apiTypes';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { Copy, Spinner, Wand2 } from '@/components/icons';
 import { Chip } from '@/components/pageKit';
-import { RunStatusIcon, type RunTone, runTone } from '@/components/pipelines/runStatus';
+import { RunStatusIcon, type RunTone } from '@/components/pipelines/runStatus';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { SimpleTooltip } from '@/components/ui/tooltip';
-import { queryKeys } from '@/lib/queryKeys';
 import { timeAgo } from '@/lib/time';
 import { cn } from '@/lib/utils';
-import { useTerminalStore } from '@/stores/terminalStore';
 import { FixRunDialog } from './FixRunDialog';
-import { PanelNotice, type PanelNoticeAction } from './PanelNotice';
-
-const RANK: Record<string, number> = {
-  failed: 0,
-  running: 1,
-  queued: 2,
-  passed: 3,
-  cancelled: 4,
-  other: 5,
-};
-
-/** Shortest time a retry shows its spinner, so an instant failure still reads as a retry. */
-const RETRY_FEEDBACK_MS = 600;
+import { PipelinesNotice } from './PipelinesNotice';
+import type { PipelinesView } from './usePipelineStatus';
 
 /** A run's outcome as a small tinted chip, live runs with a pulsing dot. */
 export function RunChip({ tone }: { tone: RunTone }): React.JSX.Element {
@@ -52,102 +36,39 @@ export function RunChip({ tone }: { tone: RunTone }): React.JSX.Element {
   );
 }
 
-/** GitHub Actions for the project: each workflow's latest run, failures first. */
-export function PipelinesSection({ project }: { project: Project }): React.JSX.Element {
-  const navigate = useNavigate();
-  const openSession = useTerminalStore((s) => s.openSession);
-  const status = useQuery({
-    queryKey: queryKeys.pipelineStatus(project.id),
-    queryFn: () => window.agentmat.pipelines.status(project.id),
-    refetchInterval: 30_000,
-    meta: { silentLoading: true },
-  });
-
-  // A refresh that fails (offline, rate limited) must not replace rows the user is working with.
-  // Swapping them for the error notice unmounts every row, and with it an open Fix with AI dialog.
-  const lastGood = useRef<ProjectPipelineStatus | null>(null);
-  if (status.data && !status.data.error) lastGood.current = status.data;
-
-  // Retry shows a spinner until the attempt settles, so a click never looks like it did nothing.
-  const [retrying, setRetrying] = useState(false);
-  function retry(): void {
-    setRetrying(true);
-    const minimum = new Promise((done) => setTimeout(done, RETRY_FEEDBACK_MS));
-    void Promise.all([status.refetch(), minimum]).finally(() => setRetrying(false));
-  }
-
-  if (status.isPending) {
+/**
+ * GitHub Actions for the project: each workflow's latest run, failures first. A card opens that
+ * pipeline's details. The data comes from the panel, which shares it with the larger view.
+ */
+export function PipelinesSection({
+  project,
+  view,
+  retrying,
+  onRetry,
+  onOpenDetails,
+}: {
+  project: Project;
+  view: PipelinesView;
+  retrying: boolean;
+  onRetry: () => void;
+  onOpenDetails: (workflowId: number) => void;
+}): React.JSX.Element {
+  if (view.kind === 'loading') {
     return (
-      <div className="space-y-1 px-2 py-1.5">
+      <div data-testid="pipelines-loading" className="space-y-1 px-2 py-1.5">
         {Array.from({ length: 3 }, (_, i) => (
           <Skeleton key={i} className="h-10 rounded-lg" style={{ width: `${96 - i * 10}%` }} />
         ))}
       </div>
     );
   }
-
-  const data = status.data?.error || !status.data ? (lastGood.current ?? status.data) : status.data;
-  const notice = (title: string, body: React.ReactNode, action?: PanelNoticeAction) => (
-    <PanelNotice title={title} body={body} action={action} />
-  );
-
-  if (!data || data.error) {
-    return notice(
-      'Could not load pipelines',
-      data?.error ? (
-        <SimpleTooltip label={data.error} className="max-w-sm" wrapTrigger>
-          <span className="cursor-help underline decoration-dotted underline-offset-4">
-            Could not connect to GitHub.
-          </span>
-        </SimpleTooltip>
-      ) : (
-        'Try again in a moment.'
-      ),
-      {
-        label: 'Retry',
-        run: retry,
-        pending: retrying,
-        pendingLabel: 'Retrying…',
-      },
-    );
+  if (view.kind === 'notice') {
+    return <PipelinesNotice notice={view.notice} retrying={retrying} onRetry={onRetry} />;
   }
-  if (!data.cliAvailable) {
-    return notice('GitHub CLI not found', 'Install gh to see workflow runs here.', {
-      label: 'Open Agent Tools',
-      run: () => navigate('/tools'),
-    });
-  }
-  if (!data.authenticated) {
-    return notice('Sign in to GitHub', 'gh needs to be signed in to read workflow runs.', {
-      label: 'Run gh auth login',
-      run: () => openSession({ title: 'GitHub sign in', initialInput: 'gh auth login' }),
-    });
-  }
-  if (!data.github) {
-    return notice('No GitHub remote', 'This repository is not hosted on GitHub.');
-  }
-  if (data.workflows.length === 0) {
-    return notice(
-      'No workflows yet',
-      `${data.github.owner}/${data.github.repo} has no GitHub Actions.`,
-    );
-  }
-
-  const rows = data.workflows
-    .map((workflow) => {
-      const run = data.runsByWorkflowId[workflow.id] ?? null;
-      const tone = run ? runTone(run) : null;
-      return { workflow, run, tone };
-    })
-    .sort(
-      (a, b) => (RANK[a.tone?.outcome ?? 'other'] ?? 9) - (RANK[b.tone?.outcome ?? 'other'] ?? 9),
-    );
-
-  const repo = `${data.github.owner}/${data.github.repo}`;
 
   return (
     <div className="min-h-0 flex-1 space-y-px overflow-y-auto py-1">
-      {rows.map(({ workflow, run, tone }) => {
+      {view.rows.map(({ workflow, run, tone }) => {
         const failed = tone?.outcome === 'failed' && run;
         return (
           <div
@@ -161,9 +82,8 @@ export function PipelinesSection({ project }: { project: Project }): React.JSX.E
           >
             <button
               type="button"
-              onClick={() =>
-                void window.agentmat.shell.openExternal(run?.htmlUrl ?? workflow.htmlUrl)
-              }
+              aria-haspopup="dialog"
+              onClick={() => onOpenDetails(workflow.id)}
               className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
             >
               {tone ? (
@@ -185,7 +105,7 @@ export function PipelinesSection({ project }: { project: Project }): React.JSX.E
               <FailedRunActions
                 project={project}
                 run={{
-                  repo,
+                  repo: view.repo,
                   runId: run.id,
                   workflowName: workflow.name,
                   displayTitle: run.displayTitle,

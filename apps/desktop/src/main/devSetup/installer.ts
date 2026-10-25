@@ -2,17 +2,21 @@ import {
   applyJobEvent,
   buildChecklist,
   buildInstallPlan,
+  buildUpdatePlan,
   collectConsents,
+  compareVersions,
   type DevDetection,
   type DevItem,
   type DevItemId,
   type DevJobEvent,
   type DevJobState,
   type DevSetupEnvironment,
+  type DevUpdateCheck,
   dependencyIds,
   displayName,
   EMPTY_JOB_STATE,
   getDevItem,
+  type InstallIntent,
   type InstallMode,
   isDevItemId,
   itemsForStacks,
@@ -39,6 +43,8 @@ export const CANCEL_IN_PROGRESS = 'The install is still stopping. Try again in a
 export interface InstallStep {
   item: DevItem;
   mode: Extract<InstallMode, { mode: 'in-app' }>;
+  /** Where the tool was found, for an update that has to run the copy the person already has. */
+  path: string | null;
 }
 
 export interface InstallerDeps {
@@ -46,6 +52,11 @@ export interface InstallerDeps {
   /** The stacks the person switched on. */
   stacks: () => Promise<string[]>;
   detect: (id: DevItemId, options?: { force?: boolean }) => Promise<DevDetection>;
+  /** Whether newer versions exist. What is remembered is used unless `force` asks again. */
+  checkUpdates: (
+    ids: readonly DevItemId[],
+    options?: { force?: boolean },
+  ) => Promise<Record<DevItemId, DevUpdateCheck>>;
   /** Runs one in-app install and says how it went. */
   run: (step: InstallStep, hooks: RunHooks) => Promise<RunResult>;
   /** Picks up what the install changed: PATH, JAVA_HOME and the like. */
@@ -60,6 +71,8 @@ export interface InstallRequest {
   ids: readonly string[];
   /** The person accepted the agreements shown for the steps that carry one. */
   consented?: boolean;
+  /** Absent means install. An update brings tools that are already there up to date. */
+  intent?: InstallIntent;
 }
 
 export interface DevSetupInstaller {
@@ -75,6 +88,17 @@ export interface DevSetupInstaller {
 
 function isInstalled(item: DevItem, detection: DevDetection): boolean {
   return detection.state === 'found' && meetsMinimum(detection.version, item.minVersion);
+}
+
+/** An update is proved by a higher version than the tool had before it ran. */
+function versionRose(before: DevDetection, after: DevDetection): boolean {
+  return (
+    before.state === 'found' &&
+    after.state === 'found' &&
+    before.version !== null &&
+    after.version !== null &&
+    compareVersions(after.version, before.version) > 0
+  );
 }
 
 function messageOf(error: unknown): string {
@@ -112,11 +136,14 @@ export function createDevSetupInstaller(deps: InstallerDeps): DevSetupInstaller 
     jobId: string,
     item: DevItem,
     ran: RunResult | null,
+    /** For an update: what the tool was before, since it is "installed" either way. */
+    before?: DevDetection,
   ): Promise<void> {
     let installed = false;
     try {
       if (ran) await deps.afterInstall();
-      installed = isInstalled(item, await deps.detect(item.id, { force: true }));
+      const after = await deps.detect(item.id, { force: true });
+      installed = before ? versionRose(before, after) : isInstalled(item, after);
     } catch {
       // The look is a courtesy, and failing to take it must not turn a cancel into an error.
     }
@@ -138,10 +165,34 @@ export function createDevSetupInstaller(deps: InstallerDeps): DevSetupInstaller 
     if (!item) return;
     // Running it again is a retry, so an earlier failure must not hold back what needs it.
     failed.delete(id);
+    // What the step was planned as. An update must not take the "already installed" shortcut below,
+    // since a tool that is being updated is always installed.
+    const updating = state.items[id]?.intent === 'update';
     const environment = await deps.environment();
+    const name = displayName(item, environment.os);
 
     const before = await deps.detect(id, { force: true });
-    if (isInstalled(item, before)) {
+    if (updating) {
+      if (before.state !== 'found') {
+        failed.add(id);
+        dispatch({ type: 'started', jobId, itemId: id });
+        dispatch({
+          type: 'finished',
+          jobId,
+          itemId: id,
+          result: 'failed',
+          message: `${name} was not found, so there is nothing to update.`,
+        });
+        return;
+      }
+      // The list the person pressed Update on can be a while old. If it has been updated since,
+      // there is nothing to do, and running the manager again would only say so.
+      const fresh = (await deps.checkUpdates([id], { force: true }))[id];
+      if (fresh?.state === 'current') {
+        dispatch({ type: 'finished', jobId, itemId: id, result: 'installed' });
+        return;
+      }
+    } else if (isInstalled(item, before)) {
       dispatch({ type: 'finished', jobId, itemId: id, result: 'installed' });
       return;
     }
@@ -155,7 +206,7 @@ export function createDevSetupInstaller(deps: InstallerDeps): DevSetupInstaller 
 
     const mode = selectRecipe(item, {
       ...environment,
-      intent: before.state === 'found' ? 'update' : 'install',
+      intent: updating || before.state === 'found' ? 'update' : 'install',
     });
     // Something this step needs did not install, so running it would only fail in a confusing way.
     if (dependencyIds(item, environment.os, mode).some((dependency) => failed.has(dependency))) {
@@ -165,7 +216,6 @@ export function createDevSetupInstaller(deps: InstallerDeps): DevSetupInstaller 
     }
 
     dispatch({ type: 'started', jobId, itemId: id });
-    const name = displayName(item, environment.os);
 
     if (mode.mode !== 'in-app') {
       failed.add(id);
@@ -184,7 +234,7 @@ export function createDevSetupInstaller(deps: InstallerDeps): DevSetupInstaller 
     let result: RunResult;
     try {
       result = await deps.run(
-        { item, mode },
+        { item, mode, path: before.state === 'found' ? before.path : null },
         {
           token,
           onCancel: (abort) => {
@@ -203,7 +253,7 @@ export function createDevSetupInstaller(deps: InstallerDeps): DevSetupInstaller 
     currentAbort = null;
 
     if (result.cancelled || cancelRequested) {
-      await finishCancelled(jobId, item, result);
+      await finishCancelled(jobId, item, result, updating ? before : undefined);
       return;
     }
 
@@ -211,7 +261,18 @@ export function createDevSetupInstaller(deps: InstallerDeps): DevSetupInstaller 
     dispatch({ type: 'progress', jobId, itemId: id, phase: 'checking', fraction: null });
     await deps.afterInstall();
     const after = await deps.detect(id, { force: true });
-    if (isInstalled(item, after)) {
+    let worked = isInstalled(item, after);
+    if (updating) {
+      // Docker Desktop can move from 4.96.0 to 4.96.2 without its engine's version changing, so a
+      // higher version is one proof and winget saying there is nothing newer is the other. If the
+      // source cannot be asked, the exit code is all there is.
+      const check = (await deps.checkUpdates([id], { force: true }))[id];
+      worked =
+        check?.state === 'unknown' || check === undefined
+          ? result.ok && after.state === 'found'
+          : check.state === 'current' || versionRose(before, after);
+    }
+    if (worked) {
       dispatch({
         type: 'finished',
         jobId,
@@ -225,10 +286,15 @@ export function createDevSetupInstaller(deps: InstallerDeps): DevSetupInstaller 
     failed.add(id);
     let message = result.message ?? 'The install did not finish.';
     if (result.ok) {
-      message =
-        after.state === 'found'
-          ? `${name} is still version ${after.version ?? 'unknown'}. It needs ${item.minVersion ?? 'a newer version'} or newer.`
-          : `The installer finished but ${name} was not found. Open a new terminal or restart AgentMate.`;
+      if (updating) {
+        const shown = after.state === 'found' ? (after.version ?? 'unknown') : 'unknown';
+        message = `The update ran, but ${name} is still version ${shown}. Close anything that is using it, then check again.`;
+      } else {
+        message =
+          after.state === 'found'
+            ? `${name} is still version ${after.version ?? 'unknown'}. It needs ${item.minVersion ?? 'a newer version'} or newer.`
+            : `The installer finished but ${name} was not found. Open a new terminal or restart AgentMate.`;
+      }
     }
     dispatch({
       type: 'finished',
@@ -290,7 +356,7 @@ export function createDevSetupInstaller(deps: InstallerDeps): DevSetupInstaller 
   }
 
   return {
-    async install({ ids, consented }) {
+    async install({ ids, consented, intent }) {
       // Everything below is chosen from the catalog entry an id names, so an id that is not in it
       // stops here, whoever sent it.
       if (!Array.isArray(ids) || !ids.every(isDevItemId))
@@ -310,14 +376,27 @@ export function createDevSetupInstaller(deps: InstallerDeps): DevSetupInstaller 
         ),
       );
 
-      const checklist = buildChecklist({ stacks, environment, detections, jobs: state.items });
+      const updating = intent === 'update';
+      // What is remembered about updates is enough to plan with: the page showed the person that
+      // same list, and each step looks again before it runs.
+      const updates = updating ? await deps.checkUpdates(ids) : undefined;
+      const checklist = buildChecklist({
+        stacks,
+        environment,
+        detections,
+        jobs: state.items,
+        updates,
+      });
       // Steps already queued or running count as not needing work, so they are never planned twice.
-      const steps = buildInstallPlan(ids, checklist.entries, environment.os).steps;
+      const steps = updating
+        ? buildUpdatePlan(ids, checklist.entries).steps
+        : buildInstallPlan(ids, checklist.entries, environment.os).steps;
       if (steps.length === 0) return state;
       // The cancel may have come while the checks above ran.
       refuseWhileStopping();
 
-      if (collectConsents(steps).length > 0 && consented !== true) {
+      // The agreements were accepted when the tool was installed, so an update does not ask again.
+      if (!updating && collectConsents(steps).length > 0 && consented !== true) {
         throw new Error(CONSENT_REQUIRED);
       }
 
@@ -325,7 +404,7 @@ export function createDevSetupInstaller(deps: InstallerDeps): DevSetupInstaller 
       const appending = loop !== null && state.running;
       const jobId = appending && state.jobId ? state.jobId : deps.newJobId();
       queue.push(...steps);
-      dispatch({ type: 'plan', jobId, steps });
+      dispatch({ type: 'plan', jobId, steps, ...(updating ? { intent: 'update' as const } : {}) });
       if (!appending) loop = processQueue(jobId);
       return state;
     },

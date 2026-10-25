@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import { type Project, type WorktreeInfo, worktreeScopeId } from '@agentmat/core';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -59,6 +59,36 @@ vi.mock('@/pages/ProjectDetailPage', () => ({
   },
 }));
 
+/**
+ * The real Deploy button runs the WordPress review, which has its own tests. Here it only matters
+ * when the header shows it, for which project, and that each project gets its own instance.
+ */
+const deploy = vi.hoisted(() => ({
+  mounts: [] as string[],
+  props: [] as Array<{
+    projectId: string;
+    projectName: string;
+    siteId: string;
+    inWorktree: boolean;
+  }>,
+}));
+
+vi.mock('./WorkspaceDeployButton', () => ({
+  WorkspaceDeployButton: (props: {
+    projectId: string;
+    projectName: string;
+    siteId: string;
+    inWorktree: boolean;
+  }) => {
+    deploy.props.push(props);
+    // biome-ignore lint/correctness/useExhaustiveDependencies: counts real mounts only
+    useEffect(() => {
+      deploy.mounts.push(props.projectId);
+    }, []);
+    return <button type="button">Deploy to {props.siteId}</button>;
+  },
+}));
+
 function project(id: string): Project {
   return {
     id,
@@ -86,6 +116,8 @@ beforeEach(() => {
   dialogs.mounts.length = 0;
   dialogs.unmounts.length = 0;
   dialogs.onOpenChange = {};
+  deploy.mounts.length = 0;
+  deploy.props.length = 0;
 });
 
 async function renderHeader(projects: Project[] = [project('a'), project('b')]) {
@@ -102,6 +134,109 @@ async function renderHeader(projects: Project[] = [project('a'), project('b')]) 
   await screen.findByRole('button', { name: 'Tag a version' });
   return view;
 }
+
+function wordpressProject(id: string, siteId = `site-${id}`): Project {
+  return {
+    ...project(id),
+    wordpress: {
+      siteId,
+      items: [{ kind: 'theme', slug: 'storefront' }],
+      linkedAt: '2026-10-01T00:00:00.000Z',
+    },
+  } as Project;
+}
+
+describe('WorkspaceHeaderActions deploy for WordPress projects', () => {
+  async function renderWordPress(projects: Project[], scopeId = 'a', worktrees: unknown[] = []) {
+    useWorkspaceStore.getState().openProject(scopeId);
+    return renderWithProviders(<WorkspaceHeaderActions />, {
+      bridge: { 'projects.list': projects, 'worktrees.list': worktrees },
+    });
+  }
+
+  it('shows Deploy where Tag a version would be, and mounts no tag dialogs', async () => {
+    await renderWordPress([wordpressProject('a')]);
+
+    expect(await screen.findByRole('button', { name: 'Deploy to site-a' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Tag a version' })).toBeNull();
+    expect(dialogs.mounts).toEqual([]);
+    expect(deploy.props.at(-1)).toEqual({
+      projectId: 'a',
+      projectName: 'A',
+      siteId: 'site-a',
+      inWorktree: false,
+    });
+  });
+
+  it('keeps the other header buttons in place around it', async () => {
+    await renderWordPress([wordpressProject('a')]);
+    await screen.findByRole('button', { name: 'Deploy to site-a' });
+
+    const names = screen
+      .getAllByRole('button')
+      .map((button) => button.getAttribute('aria-label') ?? button.textContent);
+    expect(names).toEqual([
+      'Switch workspace: main checkout',
+      'Set a run command for A',
+      'Deploy to site-a',
+      'Project details',
+      'Running CLIs',
+    ]);
+  });
+
+  it('shows Tag a version, not Deploy, for a project with no WordPress site', async () => {
+    await renderWordPress([project('a')]);
+
+    expect(await screen.findByRole('button', { name: 'Tag a version' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Deploy/ })).toBeNull();
+    expect(deploy.mounts).toEqual([]);
+  });
+
+  it('swaps back to Tag a version when the Workspace moves to a regular project', async () => {
+    await renderWordPress([wordpressProject('a'), project('b')]);
+    await screen.findByRole('button', { name: 'Deploy to site-a' });
+
+    act(() => useWorkspaceStore.getState().openProject('b'));
+
+    expect(await screen.findByRole('button', { name: 'Tag a version' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Deploy/ })).toBeNull();
+    expect(dialogs.mounts).toEqual(['b']);
+  });
+
+  it('gives each WordPress project its own Deploy, so one run never shows on another', async () => {
+    await renderWordPress([wordpressProject('a'), wordpressProject('b')]);
+    await screen.findByRole('button', { name: 'Deploy to site-a' });
+
+    act(() => useWorkspaceStore.getState().openProject('b'));
+
+    expect(await screen.findByRole('button', { name: 'Deploy to site-b' })).toBeInTheDocument();
+    expect(deploy.mounts).toEqual(['a', 'b']);
+  });
+
+  it("deploys the linked project from a worktree's workspace, and says it is a worktree", async () => {
+    const worktree = {
+      id: 'wt-1',
+      projectId: 'a',
+      path: '/work/a.worktrees/feat',
+      branch: 'feat',
+      baseBranch: 'main',
+      createdAt: '2026-09-25T00:00:00.000Z',
+      createdByApp: true,
+      missing: false,
+      locked: false,
+      status: null,
+    } satisfies WorktreeInfo;
+    await renderWordPress([wordpressProject('a')], worktreeScopeId('a', 'wt-1'), [worktree]);
+
+    expect(await screen.findByRole('button', { name: 'Deploy to site-a' })).toBeInTheDocument();
+    expect(deploy.props.at(-1)).toEqual({
+      projectId: 'a',
+      projectName: 'A',
+      siteId: 'site-a',
+      inWorktree: true,
+    });
+  });
+});
 
 describe('WorkspaceHeaderActions tag a version', () => {
   it('gives each project its own dialogs instead of reusing one', async () => {

@@ -122,6 +122,7 @@ Other notices land in the same inbox: updates for CLI tools and alerts from Depl
 ## Tips
 
 - The GitHub activity card on the [Dashboard](dashboard.md) shows the same runs in a smaller form.
+- To see the jobs and steps of a run, open the **Pipelines** section in a project's Workspace and click a pipeline. See [Pipeline details](workspace-git.md#pipeline-details).
 - If a run you were pointed to is missing, it has dropped off the recent list and AgentMate says so in a toast.
 - Pull requests, their checks and merging live in the project's Git tab, not on this page. See [Workspace: Git](workspace-git.md).
 

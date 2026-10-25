@@ -24,10 +24,15 @@ interface FakeOptions {
   env?: Record<string, string>;
   caseInsensitive?: boolean;
   scope?: string;
-  /** In-memory OpenCode store: sessions plus first/last user prompt per session id. */
+  /**
+   * In-memory OpenCode store: sessions plus first/last user prompt per session id. A query that
+   * names the other layout's tables throws, the way SQLite does for a table that is not there.
+   */
   opencode?: {
     sessions: Record<string, unknown>[];
     prompts?: Record<string, { first: string | null; last: string | null }>;
+    /** `session_v2` and `session_message` (OpenCode 2.x), else `session`, `message` and `part`. */
+    layout?: 'v2';
   };
 }
 
@@ -42,12 +47,29 @@ function fakeFs(files: Record<string, FakeFile>, options: FakeOptions = {}): Fak
   const queryDb: HistoryFs['queryDb'] = options.opencode
     ? async (_dbPath, sql, params = []) => {
         const store = options.opencode;
-        if (!store || sql.includes('FROM session')) return [...(store?.sessions ?? [])];
-        const id = params[0];
-        const prompts = (store?.prompts ?? {})[id as string];
+        if (!store) return [];
+        const v2 = store.layout === 'v2';
+        if (sql.includes('sqlite_master')) {
+          return v2 ? [{ name: 'session_v2' }, { name: 'session_message' }] : [];
+        }
+        if (sql.includes('ORDER BY time_updated')) {
+          if (!sql.includes(v2 ? 'FROM session_v2 ' : 'FROM session ')) {
+            throw new Error('no such table');
+          }
+          return [...store.sessions];
+        }
+        if (!sql.includes(v2 ? 'FROM session_message ' : 'FROM part ')) {
+          throw new Error('no such table');
+        }
+        const prompts = (store.prompts ?? {})[params[0] as string];
         if (!prompts) return [];
         const text = sql.includes('DESC') ? prompts.last : prompts.first;
-        return text == null ? [] : [{ data: JSON.stringify({ type: 'text', text }) }];
+        if (text == null) return [];
+        // A user message on 2.x holds its text at the top; before that it was a text part.
+        const data = v2
+          ? { time: { created: 1 }, text, files: [], agents: [] }
+          : { type: 'text', text };
+        return [{ data: JSON.stringify(data) }];
       }
     : undefined;
   return {
@@ -650,6 +672,43 @@ describe('collectHistory for OpenCode', () => {
     });
   });
 
+  it('reads sessions and prompts from the 2.x tables', async () => {
+    const fs = fakeFs(dbFile(), {
+      opencode: {
+        ...store(
+          [
+            {
+              id: 'ses_titled',
+              directory: '/work/app',
+              title: 'Debugging the tracker',
+              model: '{"id":"m1","providerID":"opencode"}',
+              time_created: 10,
+              time_updated: 20,
+            },
+            {
+              id: 'ses_fresh',
+              directory: '/work/app',
+              title: null,
+              model: '{"id":"m1","providerID":"opencode"}',
+              time_created: 30,
+              time_updated: 40,
+            },
+          ],
+          {
+            ses_titled: { first: 'First ask', last: 'Last ask' },
+            ses_fresh: { first: 'Update the packages', last: null },
+          },
+        ),
+        layout: 'v2',
+      },
+    });
+    const sessions = await collectHistory(fs, { folder: '/work/app' });
+    expect(sessions.map((s) => [s.id, s.title, s.firstPrompt, s.lastPrompt])).toEqual([
+      ['ses_fresh', null, 'Update the packages', null],
+      ['ses_titled', 'Debugging the tracker', 'First ask', 'Last ask'],
+    ]);
+  });
+
   it('keeps folder filtering on the session directory', async () => {
     const fs = fakeFs(dbFile(), {
       opencode: store(
@@ -762,6 +821,64 @@ describe('collectHistory for OpenCode', () => {
         ['opencode', 'ses_real', 'Real first prompt', 'Real last prompt'],
       ]);
       expect(sessions[0]).toMatchObject({ cwd: 'E:/App', model: 'm-real' });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('reads a real 2.x SQLite store and leaves the old tables it migrated from alone', async () => {
+    const { DatabaseSync } = await import('node:sqlite');
+    const dir = await mkdtemp(join(tmpdir(), 'opencode-'));
+    try {
+      const storeDir = join(dir, '.local', 'share', 'opencode');
+      await mkdir(storeDir, { recursive: true });
+      const db = new DatabaseSync(join(storeDir, 'opencode.db'));
+      try {
+        const sessionColumns =
+          '(id TEXT, directory TEXT, title TEXT, model TEXT, time_created INTEGER, time_updated INTEGER)';
+        db.exec(`CREATE TABLE session ${sessionColumns}`);
+        db.exec(`CREATE TABLE session_v2 ${sessionColumns}`);
+        db.exec(
+          'CREATE TABLE session_message (id TEXT, session_id TEXT, type TEXT, seq INTEGER, data TEXT)',
+        );
+        // OpenCode stopped writing the old table when it upgraded, so this one is stale.
+        db.prepare('INSERT INTO session VALUES (?, ?, ?, ?, ?, ?)').run(
+          'ses_old',
+          'E:/App',
+          'Old session',
+          null,
+          1,
+          2,
+        );
+        // A session OpenCode has not titled yet has a NULL title.
+        db.prepare('INSERT INTO session_v2 VALUES (?, ?, ?, ?, ?, ?)').run(
+          'ses_new',
+          'E:/App',
+          null,
+          '{"id":"m-new","providerID":"opencode"}',
+          100,
+          200,
+        );
+        const insert = db.prepare('INSERT INTO session_message VALUES (?, ?, ?, ?, ?)');
+        const message = (id: string, type: string, seq: number, data: unknown) =>
+          insert.run(id, 'ses_new', type, seq, JSON.stringify(data));
+        // Plan mode reminders are their own type, so they are never taken for a prompt.
+        message('m1', 'synthetic', 5, {
+          text: '<system-reminder>You are in Plan mode</system-reminder>',
+        });
+        message('m2', 'user', 6, { text: 'New first prompt', files: [], agents: [] });
+        message('m3', 'assistant', 7, { content: [{ type: 'text', text: 'On it' }] });
+        message('m4', 'user', 20, { text: 'New last prompt', files: [], agents: [] });
+        message('m5', 'idle', 30, { outcome: 'succeeded' });
+      } finally {
+        db.close();
+      }
+      const fs: HistoryFs = { ...localHistoryFs, scope: 'opencode-real-v2', home: async () => dir };
+      const sessions = await collectHistory(fs, { folder: 'E:/App' });
+      expect(sessions.map((s) => [s.provider, s.id, s.title, s.firstPrompt, s.lastPrompt])).toEqual(
+        [['opencode', 'ses_new', null, 'New first prompt', 'New last prompt']],
+      );
+      expect(sessions[0]).toMatchObject({ cwd: 'E:/App', model: 'm-new' });
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

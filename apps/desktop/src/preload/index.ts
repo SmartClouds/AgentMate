@@ -26,6 +26,7 @@ import type {
   DevJobEvent,
   DevJobState,
   DevSetupEnvironment,
+  DevUpdateCheck,
   DuplicatePolicy,
   GenericMapping,
   GitChangeEntry,
@@ -175,6 +176,8 @@ import type {
   GithubRunAnnotationsInput,
   GithubRunAnnotationsResult,
   GithubRunCancelRequest,
+  GithubRunDetailsInput,
+  GithubRunDetailsResult,
   GithubRunnersInput,
   GithubRunnersResult,
   GithubWorkflowDispatchRequest,
@@ -436,6 +439,8 @@ import type {
   DeployAlertsEvent,
   DeployAlertsQuery,
   DeployConnection,
+  DeployCoreRelease,
+  DeployCoreUpdateResult,
   DeployEnrollInput,
   DeployHealth,
   DeployInstallInput,
@@ -1032,8 +1037,21 @@ const devSetup = {
     ipcRenderer.invoke(IPC.devSetup.detect, id, options),
   peek: (ids: string[]): Promise<Record<string, DevDetection | undefined>> =>
     ipcRenderer.invoke(IPC.devSetup.peek, ids),
-  install: (request: { ids: string[]; consented?: boolean }): Promise<DevJobState> =>
-    ipcRenderer.invoke(IPC.devSetup.install, request),
+  /**
+   * Which installed tools have a newer version on offer. Answers are remembered in main for half an
+   * hour; `force` asks again.
+   */
+  updates: (
+    ids: string[],
+    options?: { force?: boolean },
+  ): Promise<Record<string, DevUpdateCheck>> =>
+    ipcRenderer.invoke(IPC.devSetup.updates, ids, options),
+  /** `intent: 'update'` brings tools that are already installed up to date. */
+  install: (request: {
+    ids: string[];
+    consented?: boolean;
+    intent?: 'install' | 'update';
+  }): Promise<DevJobState> => ipcRenderer.invoke(IPC.devSetup.install, request),
   /** With an id, takes that waiting step out of the queue; without, stops the whole run. */
   cancel: (id?: string): Promise<void> => ipcRenderer.invoke(IPC.devSetup.cancel, id),
   /**
@@ -1715,6 +1733,9 @@ const pipelines = {
   /** Warnings, notices and failures the run's jobs left behind. */
   runAnnotations: (input: GithubRunAnnotationsInput): Promise<GithubRunAnnotationsResult> =>
     ipcRenderer.invoke(IPC.pipelines.runAnnotations, input),
+  /** The jobs of one run with each step's status and timing. */
+  runDetails: (input: GithubRunDetailsInput): Promise<GithubRunDetailsResult> =>
+    ipcRenderer.invoke(IPC.pipelines.runDetails, input),
   /** Branches and tags a manual run can be started from. */
   refs: (repo: string): Promise<GithubWorkflowRefsResult> =>
     ipcRenderer.invoke(IPC.pipelines.refs, repo),
@@ -1739,6 +1760,15 @@ const deploy = {
     ipcRenderer.invoke(IPC.deploy.install, input),
   uninstall: (input: DeployUninstallInput): Promise<void> =>
     ipcRenderer.invoke(IPC.deploy.uninstall, input),
+  /**
+   * Updates the core without SSH: the server downloads the release itself, or the app uploads it
+   * over the core's connection. Needs an Owner with a step-up (`[core:stepUpRequired]`); pass the
+   * password or a code. Ends in `needs-ssh` when the core cannot replace itself.
+   */
+  updateCore: (input: DeployStepUpInput): Promise<DeployCoreUpdateResult> =>
+    ipcRenderer.invoke(IPC.deploy.updateCore, input),
+  /** The core release this build installs, or null when it has none. */
+  coreRelease: (): Promise<DeployCoreRelease | null> => ipcRenderer.invoke(IPC.deploy.coreRelease),
   health: (serverId: string): Promise<DeployHealth> =>
     ipcRenderer.invoke(IPC.deploy.health, serverId),
   /** Whether this computer can act on the core now: signed in, or what it needs first. */

@@ -15,6 +15,9 @@ name: Tests
 # of the job's own (GIT_CONFIG_GLOBAL) and run the tests with HOME in the job's temp folder, so a
 # test that reaches for ~ cannot touch its user's real files.
 #
+# Every job starts with the Runner cleanup step, which clears what the job leaves on a self-hosted
+# runner's disk once it is over (see ci.yml). It does nothing on GitHub's hosted runners.
+#
 # Every job here is independent of the others (only the merge and WordPress sync jobs wait for
 # another), so they all start at once when there are enough runners. The slow suites are split
 # into shards for the same reason.
@@ -61,6 +64,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Runner cleanup
+        uses: ./.github/actions/runner-cleanup
 
       # Node first: pnpm's installer runs npm from PATH, and without one it falls back to the
       # runner's own npm, which a runner self-update leaves broken (actions/runner#2094).
@@ -127,6 +133,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Runner cleanup
+        uses: ./.github/actions/runner-cleanup
+
       # Node first: pnpm's installer runs npm from PATH, and without one it falls back to the
       # runner's own npm, which a runner self-update leaves broken (actions/runner#2094).
       - name: Setup Node.js
@@ -180,6 +189,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Runner cleanup
+        uses: ./.github/actions/runner-cleanup
 
       # Node first: pnpm's installer runs npm from PATH, and without one it falls back to the
       # runner's own npm, which a runner self-update leaves broken (actions/runner#2094).
@@ -242,6 +254,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Runner cleanup
+        uses: ./.github/actions/runner-cleanup
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
@@ -275,6 +290,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Runner cleanup
+        uses: ./.github/actions/runner-cleanup
 
       # Node first: pnpm's installer runs npm from PATH, and without one it falls back to the
       # runner's own npm, which a runner self-update leaves broken (actions/runner#2094).
@@ -312,6 +330,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Runner cleanup
+        uses: ./.github/actions/runner-cleanup
 
       # The feature band, not an exact patch, so release builds pick up the newest runtime fixes.
       - name: Setup .NET
@@ -375,6 +396,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Runner cleanup
+        uses: ./.github/actions/runner-cleanup
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
@@ -457,6 +481,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Runner cleanup
+        uses: ./.github/actions/runner-cleanup
+
       # Node first: pnpm's installer runs npm from PATH, and without one it falls back to the
       # runner's own npm, which a runner self-update leaves broken (actions/runner#2094).
       - name: Setup Node.js
@@ -510,6 +537,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Runner cleanup
+        uses: ./.github/actions/runner-cleanup
 
       - name: Display and Electron libraries (Linux)
         if: runner.os == 'Linux'

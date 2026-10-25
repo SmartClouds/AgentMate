@@ -8,4 +8,5 @@ export * from './plan.js';
 export * from './recipes.js';
 export * from './status.js';
 export * from './types.js';
+export * from './updates.js';
 export * from './version.js';

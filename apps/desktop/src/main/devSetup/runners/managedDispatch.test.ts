@@ -20,7 +20,13 @@ function runners(): ManagedRunners & { calls: string[] } {
   };
   return {
     calls,
-    flutter: { run: done('flutter') },
+    flutter: {
+      run: done('flutter'),
+      update: vi.fn(async (_hooks: RunHooks, foundAt: string | null) => {
+        calls.push(`flutter-update:${foundAt}`);
+        return OK;
+      }),
+    },
     android: {
       runCmdlineTools: done('cmdline-tools'),
       runLicenses: done('licenses'),
@@ -92,5 +98,55 @@ describe('runManagedRecipe', () => {
     await runManagedRecipe('docker-running', managed('docker-launch'), hooks, r);
 
     expect(r.calls).toEqual(['docker-launch']);
+  });
+});
+
+describe('runManagedRecipe for an update', () => {
+  const update = (path: string | null = null) => ({ intent: 'update' as const, path });
+
+  it('updates Flutter where it was found, rather than installing it again', async () => {
+    const r = runners();
+
+    await runManagedRecipe(
+      'flutter',
+      managed('flutter-archive'),
+      hooks,
+      r,
+      update('D:\\f\\flutter.bat'),
+    );
+
+    expect(r.calls).toEqual(['flutter-update:D:\\f\\flutter.bat']);
+  });
+
+  it('updates an Android package by asking sdkmanager for it again', async () => {
+    const r = runners();
+
+    await runManagedRecipe('android-emulator', managed('android-package'), hooks, r, update());
+
+    expect(r.calls).toEqual(['package:emulator']);
+  });
+
+  it('has no update for the steps that are not a version', async () => {
+    const r = runners();
+
+    for (const [id, installer] of [
+      ['android-cmdline-tools', 'android-cmdline-tools'],
+      ['android-licenses', 'android-licenses'],
+      ['docker-running', 'docker-launch'],
+    ] as const) {
+      expect(await runManagedRecipe(id, managed(installer), hooks, r, update())).toMatchObject({
+        ok: false,
+        message: 'This step cannot be updated.',
+      });
+    }
+    expect(r.calls).toEqual([]);
+  });
+
+  it('still installs when no intent is given', async () => {
+    const r = runners();
+
+    await runManagedRecipe('flutter', managed('flutter-archive'), hooks, r);
+
+    expect(r.calls).toEqual(['flutter']);
   });
 });

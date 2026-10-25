@@ -107,7 +107,8 @@ function allAnnotationsText(run: AnnotatedRun, annotations: GithubRunAnnotation[
   return [header, ...annotations.map(annotationText)].join('\n\n');
 }
 
-async function copyText(text: string, success: string): Promise<void> {
+/** Copies to the clipboard and says so with a toast, or says why it could not. */
+export async function copyText(text: string, success: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(text);
     toast.success(success);
@@ -149,10 +150,13 @@ export function RunAnnotations({
   run,
   annotations,
   counts,
+  flush = false,
 }: {
   run: AnnotatedRun;
   annotations: GithubRunAnnotation[];
   counts: Record<GithubRunAnnotationLevel, number>;
+  /** Drops the indent that lines it up under a run card, for use on its own. */
+  flush?: boolean;
 }): React.JSX.Element | null {
   const [open, setOpen] = useState(false);
   if (annotations.length === 0) return null;
@@ -162,7 +166,7 @@ export function RunAnnotations({
 
   return (
     // Lined up under the run title, past the status glyph.
-    <div className="pb-2.5 pl-[3.125rem] pr-3">
+    <div className={flush ? undefined : 'pb-2.5 pl-[3.125rem] pr-3'}>
       <div className="flex items-center gap-1">
         <button
           type="button"

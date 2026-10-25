@@ -1091,6 +1091,33 @@ export type DnsCredentialSaveResult = {
     credential?: DnsCredentialInfo;
 }
 
+/** Transpiled from AgentMate.ServerCore.Contracts.CoreUpdateRequest */
+export type CoreUpdateRequest = {
+    /** Transpiled from string */
+    version: string;
+    /** Transpiled from string */
+    file: string;
+    /** Transpiled from string */
+    sha256: string;
+    /** Transpiled from long */
+    size: number;
+    /** Transpiled from string? */
+    downloadUrl?: string;
+}
+
+/** Transpiled from AgentMate.ServerCore.Contracts.CoreUpdateOutcome */
+export type CoreUpdateOutcome = "switching" | "downloadFailed" | "unsupported";
+
+/** Transpiled from AgentMate.ServerCore.Contracts.CoreUpdateResult */
+export type CoreUpdateResult = {
+    /** Transpiled from AgentMate.ServerCore.Contracts.CoreUpdateOutcome */
+    outcome: CoreUpdateOutcome;
+    /** Transpiled from string */
+    runningVersion: string;
+    /** Transpiled from string? */
+    problem?: string;
+}
+
 /** Transpiled from AgentMate.ServerCore.Contracts.DirectTlsStatus */
 export type DirectTlsStatus = {
     /** Transpiled from bool */

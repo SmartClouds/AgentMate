@@ -20,6 +20,7 @@ import type {
   ContainerStatsBatch,
   ContainerStatsRequest,
   ContainerSummary,
+  CoreUpdateRequest,
   DirectTlsRequest,
   DnsCredentialRequest,
   DockerDiskUsage,
@@ -378,6 +379,16 @@ export class FakeCoreConnection implements ICoreHub {
     this.assertOpen();
     this.assertRole('SendTelegramNotificationTest', ADMINS);
     return this.answer(this.core.telegram.test());
+  };
+
+  // The core updating itself: an Owner with a step-up. The test says how the core answers.
+
+  updateCore = async (request: CoreUpdateRequest) => {
+    this.assertOpen();
+    this.assertRole('UpdateCore', OWNERS);
+    if (this.core.stepUpUntil <= this.core.now()) throw unauthorizedError('UpdateCore');
+    this.core.coreUpdates.push(request);
+    return this.answer(this.core.answerCoreUpdate(request));
   };
 
   // Websites and certificates: Viewers read, Admins change, Owners write snippets, and taking a

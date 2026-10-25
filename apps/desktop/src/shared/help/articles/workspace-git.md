@@ -3,7 +3,7 @@ title: Git in the Workspace
 category: Workspace
 order: 40
 summary: Stage, commit, branch, push and merge from the Workspace's Source control panel, with AI help for commit messages, conflicts and pull requests.
-keywords: git, source control, commit, stage, branch, push, pull, sync, diff, pull request, pr, merge, conflicts, review, github, gh, ai commit message, changes, undo, discard
+keywords: git, source control, commit, stage, branch, push, pull, sync, diff, pull request, pr, merge, conflicts, review, github, gh, ai commit message, changes, undo, discard, pipelines, github actions, jobs, steps, workflow runs
 route: /workspace
 ---
 
@@ -192,7 +192,22 @@ If the pull request was merged elsewhere and you are still on its branch, a card
 
 ## Pipelines
 
-The **Pipelines** section lists each GitHub Actions workflow of the repository with its latest run, failures first. Click a row to open the run on GitHub. A failed run has **Fix with AI** and **Copy error** buttons. It needs `gh` installed and signed in, and shows the same notices as the pull request section if not. For a list across all your projects, see [Pipelines](pipelines.md).
+The **Pipelines** section lists each GitHub Actions workflow of the repository with its latest run, failures first. Click a row to see that pipeline's details. A failed run has **Fix with AI** and **Copy error** buttons. It needs `gh` installed and signed in, and shows the same notices as the pull request section if not. For a list across all your projects, see [Pipelines](pipelines.md).
+
+### Pipeline details
+
+Click a row, or the **Open pipelines in a larger view** button in the section header, to open a larger window. Every pipeline is listed on the left, and the one you pick shows its details on the right. Press `Esc` to close it. It reads the same data as the section, so both stay current while it is open.
+
+For the selected pipeline's latest run you see:
+
+- **The run.** Its name, commit title and outcome, then the branch, run number, the attempt (after a re-run), what started it, who started it and the short commit hash. Below that is when it started and how long it took, or how long it has been running. Hover the time for the exact date.
+- **Jobs.** One card per job with its outcome and how long it took. Click a card to open it onto its steps, each with its outcome and duration, and the failed step is highlighted. Failed and running jobs start open, and so does a run's only job. The link icon on a job opens it on GitHub.
+- **Annotations.** The errors, warnings and notices the jobs left, when there are any. See [Pipelines](pipelines.md#annotations).
+- **Failure output.** For a failed run, a folded block with the failed jobs' errors and the end of their logs. AgentMate only reads it when you open it, and **Copy** copies it.
+
+The buttons under the run's details are **Fix with AI** and **Copy error** for a failed run, **Stop** while it is still going, and **Open run on GitHub**. A pipeline that has never run says so and offers **Open workflow on GitHub**. In the toolbar, **Refresh from GitHub** asks again, and **Open Actions on GitHub** opens the repository's Actions page.
+
+A run that is still going refreshes about every 10 seconds, so you can watch its steps move along.
 
 A failure alert can land here: in Settings, **Notifications**, **Pipeline failures**, set **When I click a failure** to **Project workspace**, and clicking the message or the pet's bubble opens this project's Workspace with the **Pipelines** section unfolded. See [Settings](settings.md#pipeline-failures).
 

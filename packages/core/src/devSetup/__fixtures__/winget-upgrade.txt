@@ -1,0 +1,18 @@
+   -
+   \
+   |
+   /
+   -
+Name                                  Id                                        Version         Available
+-------------------------------------------------------------------------------------------------------------
+Antigravity 2.24.0                    Google.Antigravity                        2.24.0          2.25.0
+Docker Desktop                        Docker.DockerDesktop                      4.96.0          4.96.2
+Google Chrome                         Google.Chrome.EXE                         155.0.8059.85   156.0.8078.48
+Node.js                               OpenJS.NodeJS.LTS                         24.20.0         24.22.1
+Orca                                  StablyAI.Orca                             1.4.230         1.4.237
+Postman x64 12.33.1                   Postman.Postman                           12.33.1         12.33.3
+PowerShell 7.6.6.0-x64                Microsoft.PowerShell                      7.6.6.0         7.6.7.0
+Tailscale                             Tailscale.Tailscale                       1.104.1         1.104.2
+Visual Studio Community 2026 Insiders Microsoft.VisualStudio.Community.Insiders 18.12.12308.306 18.12.12316.0
+9 upgrades available.
+1 package(s) have version numbers that cannot be determined. Use --include-unknown to see all results.

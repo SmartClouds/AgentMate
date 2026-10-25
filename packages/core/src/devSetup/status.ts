@@ -1,6 +1,16 @@
 import { applicableDependencies } from './catalog.js';
 import type { InstallMode } from './recipes.js';
-import type { DevDetection, DevItem, DevItemId, DevItemJob, DevItemState, DevOs } from './types.js';
+import type {
+  DevDetection,
+  DevItem,
+  DevItemId,
+  DevItemJob,
+  DevItemState,
+  DevItemUpdate,
+  DevOs,
+  DevUpdateCheck,
+} from './types.js';
+import { resolveItemUpdate } from './updates.js';
 import { meetsMinimum } from './version.js';
 
 /**
@@ -20,6 +30,34 @@ export interface DeriveItemStateInput {
   job?: DevItemJob;
   /** Whether another item is installed. Undefined means that item has not been checked yet. */
   readiness: (id: DevItemId) => boolean | undefined;
+  /** What the update check found for this item. Undefined until it has answered, or when it never asks. */
+  update?: DevUpdateCheck;
+}
+
+/**
+ * An installed row, with the update the source offers when there is one. A newer version never
+ * makes the row not ready: it is the same tool doing the same job, just not the latest build.
+ */
+function installedState(
+  detection: Extract<DevDetection, { state: 'found' }>,
+  check: DevUpdateCheck | undefined,
+  job: DevItemJob | undefined,
+): DevItemState {
+  const state: DevItemState = {
+    kind: 'installed',
+    version: detection.version,
+    onPath: detection.onPath,
+  };
+  const offer = resolveItemUpdate(detection.version, check);
+  if (!offer) return state;
+  const update: DevItemUpdate = { ...offer };
+  if (job?.status === 'waiting-terminal') update.waiting = true;
+  // Only an update that failed is the row's business. A failed install from before is cleared by
+  // the tool being there now, as it always was.
+  if (job?.status === 'failed' && job.intent === 'update') {
+    update.failure = job.message ?? 'The update did not finish.';
+  }
+  return { ...state, update };
 }
 
 export function isReady(state: DevItemState): boolean {
@@ -52,16 +90,18 @@ export function deriveItemState(input: DeriveItemStateInput): DevItemState {
       phase: job.phase ?? 'installing',
       fraction: job.fraction ?? null,
       detail: job.detail ?? null,
+      ...(job.intent ? { intent: job.intent } : {}),
     };
   }
-  if (job?.status === 'queued') return { kind: 'queued' };
+  if (job?.status === 'queued')
+    return { kind: 'queued', ...(job.intent ? { intent: job.intent } : {}) };
 
   if (!detection) return { kind: 'checking' };
   if (detection.state === 'error') return { kind: 'unknown', message: detection.message };
 
   if (detection.state === 'found' && meetsMinimum(detection.version, item.minVersion)) {
     // Found and good enough clears any earlier failure or wait: the tool is simply there now.
-    return { kind: 'installed', version: detection.version, onPath: detection.onPath };
+    return installedState(detection, input.update, job);
   }
 
   if (job?.status === 'failed') {

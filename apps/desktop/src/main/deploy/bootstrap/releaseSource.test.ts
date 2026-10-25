@@ -183,6 +183,7 @@ describe('githubReleaseSource', () => {
         rid: 'linux-arm64',
         file: 'agentmate-core-1.53.0-linux-arm64.tar.gz',
         sha256: sha256('arm bytes'),
+        size: 'arm bytes'.length,
         url: 'https://github.com/SmartClouds/AgentMate/releases/download/v1.53.0/agentmate-core-1.53.0-linux-arm64.tar.gz',
       });
       expect(download).not.toHaveBeenCalled();

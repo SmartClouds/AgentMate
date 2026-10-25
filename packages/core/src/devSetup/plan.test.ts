@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { getDevItem, itemsForStacks } from './catalog.js';
 import {
   buildInstallPlan,
+  buildUpdatePlan,
   collectConsents,
   missingItemIds,
   type PlanEntry,
   summarizeSetup,
+  updatableItemIds,
 } from './plan.js';
 import { type RecipeContext, selectRecipe } from './recipes.js';
 import type { DevItem, DevItemState, DevOs } from './types.js';
@@ -292,5 +294,85 @@ describe('the catalog still builds a plan', () => {
       expect(new Set(all).size, os).toBe(all.length);
       for (const id of all) expect(getDevItem(id), id).toBeDefined();
     }
+  });
+});
+
+describe('updatableItemIds and buildUpdatePlan', () => {
+  const withUpdate = (latest: string | null, waiting = false): DevItemState => ({
+    kind: 'installed',
+    version: '1.0.0',
+    onPath: true,
+    update: { latest, ...(waiting ? { waiting: true } : {}) },
+  });
+
+  /** Every item installed, with the states given laid over their ids. */
+  function installedWith(os: DevOs, states: Record<string, DevItemState>): Map<string, PlanEntry> {
+    const all = entriesFor(['essentials'], os);
+    for (const [id, entry] of all) all.set(id, { ...entry, state: states[id] ?? INSTALLED });
+    return all;
+  }
+
+  it('lists the installed items with an update, in checklist order, optional ones too', () => {
+    const entries = installedWith('win32', {
+      gh: withUpdate('2.103.0'),
+      node: withUpdate('24.22.1'),
+      pnpm: withUpdate(null),
+    });
+
+    expect(updatableItemIds(entries)).toEqual(['node', 'gh', 'pnpm']);
+  });
+
+  it('leaves out an update that is already waiting on a terminal', () => {
+    const entries = installedWith('win32', {
+      gh: withUpdate('2.103.0', true),
+      node: withUpdate(null),
+    });
+
+    expect(updatableItemIds(entries)).toEqual(['node']);
+  });
+
+  it('runs winget updates in the app', () => {
+    const entries = installedWith('win32', { gh: withUpdate('2.103.0'), node: withUpdate(null) });
+
+    expect(buildUpdatePlan(updatableItemIds(entries), entries)).toEqual({
+      steps: ['node', 'gh'],
+      manual: [],
+    });
+  });
+
+  it('hands a package-manager update that needs a password to the person', () => {
+    const entries = installedWith('linux', { gh: withUpdate(null), node: withUpdate(null) });
+
+    expect(buildUpdatePlan(updatableItemIds(entries), entries)).toEqual({
+      steps: [],
+      manual: ['node', 'gh'],
+    });
+  });
+
+  it('only plans what it was asked for, and nothing that has no update', () => {
+    const entries = installedWith('win32', { gh: withUpdate('2.103.0'), node: withUpdate(null) });
+
+    expect(buildUpdatePlan(['gh', 'git', 'missing-id', 'gh'], entries)).toEqual({
+      steps: ['gh'],
+      manual: [],
+    });
+  });
+});
+
+describe('summarizeSetup with updates', () => {
+  it('counts the rows that can be updated, optional ones included, without changing ready', () => {
+    const entryFor = (id: string, state: DevItemState): PlanEntry => {
+      const found = getDevItem(id);
+      if (!found) throw new Error(`no catalog item ${id}`);
+      return { item: found, mode: selectRecipe(found, contexts.win32), state };
+    };
+
+    const summary = summarizeSetup([
+      entryFor('git', INSTALLED),
+      entryFor('node', { ...INSTALLED, update: { latest: '24.22.1' } }),
+      entryFor('pnpm', { ...INSTALLED, update: { latest: null } }),
+    ]);
+
+    expect(summary).toMatchObject({ total: 2, ready: 2, updates: 2, complete: true });
   });
 });

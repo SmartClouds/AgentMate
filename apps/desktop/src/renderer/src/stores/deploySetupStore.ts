@@ -1,5 +1,7 @@
+import { coreErrorCode } from '@shared/coreErrors';
 import type {
   DeployAccountInput,
+  DeployCoreUpdateResult,
   DeployInstallResult,
   DeploySetupPhase,
   DeploySetupProgress,
@@ -10,12 +12,18 @@ import { create } from 'zustand';
 import { withHostKeyTrust } from '@/lib/ssh/hostKeyTrust';
 
 /**
- * Installs and removals of the server core, per server. They keep running in the main process
- * when the Deploy page is left, so their progress lives here and the page picks it up again.
+ * Installs, updates and removals of the server core, per server. They keep running in the main
+ * process when the Deploy page is left, so their progress lives here and the page picks it up again.
  */
 
+/** A step-up the core asked for, or the password or code that answers one. */
+export interface UpdateProof {
+  password?: string;
+  totpCode?: string;
+}
+
 export interface SetupRun {
-  kind: 'install' | 'uninstall';
+  kind: 'install' | 'uninstall' | 'update';
   planned: DeploySetupPhase[];
   events: DeploySetupProgress[];
   status: 'running' | 'done' | 'failed';
@@ -24,6 +32,8 @@ export interface SetupRun {
   result: DeployInstallResult | null;
   /** For a removal: whether the core's data stays on the server. */
   keepData?: boolean;
+  /** For an update through the core: how it ended. */
+  update?: DeployCoreUpdateResult;
 }
 
 interface DeploySetupState {
@@ -37,6 +47,16 @@ interface DeploySetupState {
   ) => Promise<DeployInstallResult | null>;
   /** Resolves true once the core is gone. */
   uninstall: (serverId: string, keepData: boolean, sudoPassword: string | null) => Promise<boolean>;
+  /**
+   * Updates the core through the core itself (no SSH). A step-up the core wants is thrown, with
+   * no run left behind, so the caller can ask for the password and try again. A core that cannot
+   * replace itself ends the run as failed with `update.outcome` set to `needs-ssh`.
+   */
+  updateCore: (
+    serverId: string,
+    planned: DeploySetupPhase[],
+    proof?: UpdateProof,
+  ) => Promise<DeployCoreUpdateResult | null>;
   clear: (serverId: string) => void;
 }
 
@@ -54,6 +74,7 @@ export const useDeploySetupStore = create<DeploySetupState>((set, get) => {
     call: () => Promise<T>,
     extra: Partial<SetupRun> = {},
     finish: (value: T) => Partial<SetupRun> = () => ({}),
+    rethrow: (error: unknown) => boolean = () => false,
   ): Promise<{ ok: true; value: T } | { ok: false }> {
     if (get().runs[serverId]?.status === 'running') return { ok: false };
     set((state) => ({
@@ -77,10 +98,14 @@ export const useDeploySetupStore = create<DeploySetupState>((set, get) => {
     });
     try {
       const value = await withHostKeyTrust(serverId, call);
-      // One update, so whoever sees 'done' also sees the result.
-      update(serverId, () => ({ ...finish(value), status: 'done' }));
+      // One update, so whoever sees 'done' also sees the result. The result may say it failed.
+      update(serverId, () => ({ status: 'done', ...finish(value) }));
       return { ok: true, value };
     } catch (error) {
+      if (rethrow(error)) {
+        get().clear(serverId);
+        throw error;
+      }
       update(serverId, () => ({
         status: 'failed',
         error: sshErrorMessage(error),
@@ -119,6 +144,21 @@ export const useDeploySetupStore = create<DeploySetupState>((set, get) => {
         { keepData },
       );
       return outcome.ok;
+    },
+    updateCore: async (serverId, planned, proof) => {
+      const outcome = await start(
+        serverId,
+        'update',
+        planned,
+        () => window.agentmat.deploy.updateCore({ serverId, ...proof }),
+        {},
+        (update): Partial<SetupRun> =>
+          update.outcome === 'needs-ssh'
+            ? { update, status: 'failed', error: update.reason }
+            : { update },
+        (error) => coreErrorCode(error) === 'stepUpRequired',
+      );
+      return outcome.ok ? outcome.value : null;
     },
     clear: (serverId) =>
       set((state) => {

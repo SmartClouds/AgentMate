@@ -139,6 +139,8 @@ export function registerDeployHandlers({ ipc, service, guard }: DeployHandlerDep
   handle(IPC.deploy.preflight, (id) => service.preflight(serverId(id)));
   handle(IPC.deploy.install, (input) => service.install(installInput(input)));
   handle(IPC.deploy.uninstall, (input) => service.uninstall(uninstallInput(input)));
+  handle(IPC.deploy.updateCore, (input) => service.updateCore(stepUpInput(input)));
+  handle(IPC.deploy.coreRelease, () => service.coreRelease());
   handle(IPC.deploy.health, (id) => service.health(serverId(id)));
   handle(IPC.deploy.access, (id) => service.access(serverId(id)));
   handle(IPC.deploy.enroll, (input) => service.enroll(enrollInput(input)));

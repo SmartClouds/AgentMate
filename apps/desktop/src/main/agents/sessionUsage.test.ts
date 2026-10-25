@@ -361,6 +361,19 @@ describe('readSessionUsage, OpenCode sessions', () => {
     expect(usage.models).toEqual([{ model: PRICED, tokens: usage.tokens, costUsd: 0.42 }]);
   });
 
+  it('reads the totals off session_v2 on a database that has it', async () => {
+    const queryDb = vi.fn(async (_dbPath: string, sql: string) =>
+      sql.includes('sqlite_master') ? [{ name: 'session_v2' }, { name: 'session_message' }] : [row],
+    );
+    listed();
+    const usage = ok(await readSessionUsage('opencode', 'ses_abc', fakeFs(queryDb)));
+    expect(queryDb).toHaveBeenLastCalledWith(dbPath, expect.stringContaining('FROM session_v2'), [
+      'ses_abc',
+    ]);
+    expect(usage.tokens.total).toBe(4350);
+    expect(usage.costUsd).toBe(0.42);
+  });
+
   it('names no model when the session row has none', async () => {
     listed();
     const usage = ok(
@@ -406,11 +419,12 @@ describe('readSessionUsage, OpenCode sessions', () => {
     listed(1);
     await readSessionUsage('opencode', 'ses_abc', fs);
     await readSessionUsage('opencode', 'ses_abc', fs);
-    expect(queryDb).toHaveBeenCalledTimes(1);
+    // One read is a look at the schema and the session row.
+    expect(queryDb).toHaveBeenCalledTimes(2);
 
     listed(2);
     await readSessionUsage('opencode', 'ses_abc', fs);
-    expect(queryDb).toHaveBeenCalledTimes(2);
+    expect(queryDb).toHaveBeenCalledTimes(4);
   });
 
   it('is unavailable on a database without the token columns, or without the session', async () => {

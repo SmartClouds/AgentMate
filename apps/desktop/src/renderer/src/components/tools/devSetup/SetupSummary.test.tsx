@@ -14,6 +14,7 @@ const summary = (overrides: Partial<Summary> = {}): Summary => ({
   ready: 6,
   checking: 0,
   missing: 5,
+  updates: 0,
   stacks: [],
   complete: false,
   ...overrides,
@@ -198,5 +199,139 @@ describe('SetupSummary: what Install all leaves out', () => {
     );
 
     expect(screen.getByText('1 more step needs a terminal or a download.')).toBeTruthy();
+  });
+});
+
+describe('SetupSummary and updates', () => {
+  const ready = summary({ ready: 11, missing: 0, complete: true });
+
+  it('says how many updates there are, without touching how many are ready', () => {
+    renderWithProviders(
+      <SetupSummary
+        summary={{ ...ready, updates: 2 }}
+        onRecheckAll={vi.fn()}
+        updatesStatus="done"
+      />,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Everything is ready' })).toBeTruthy();
+    expect(
+      screen.getByText('Your machine has everything on this list. 2 updates available.'),
+    ).toBeTruthy();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '11');
+  });
+
+  it('shows a spinner and says it is looking while the update check runs', () => {
+    renderWithProviders(
+      <SetupSummary summary={ready} onRecheckAll={vi.fn()} updatesStatus="checking" />,
+    );
+
+    expect(
+      screen.getByText('Your machine has everything on this list. Checking for updates.'),
+    ).toBeTruthy();
+    expect(document.querySelector('.animate-spin')).not.toBeNull();
+  });
+
+  it('shows no spinner once the check is over', () => {
+    renderWithProviders(
+      <SetupSummary summary={ready} onRecheckAll={vi.fn()} updatesStatus="done" />,
+    );
+
+    expect(document.querySelector('.animate-spin')).toBeNull();
+    expect(screen.getByText(/Everything is up to date\./)).toBeTruthy();
+  });
+
+  it('shows Update all with its count, and runs it', async () => {
+    const onClick = vi.fn();
+    const { user } = renderWithProviders(
+      <SetupSummary
+        summary={{ ...ready, updates: 2 }}
+        onRecheckAll={vi.fn()}
+        updateAll={{ label: 'Update all (2)', onClick }}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Update all (2)' }));
+
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('has no Update all button unless it is given one', () => {
+    renderWithProviders(<SetupSummary summary={ready} onRecheckAll={vi.fn()} />);
+
+    expect(screen.queryByRole('button', { name: /Update all/ })).toBeNull();
+  });
+
+  it('keeps Install all as the main button when both are there', () => {
+    renderWithProviders(
+      <SetupSummary
+        summary={summary({ updates: 1 })}
+        onRecheckAll={vi.fn()}
+        installAll={{ label: 'Install all missing (5)', onClick: vi.fn() }}
+        updateAll={{ label: 'Update all (1)', onClick: vi.fn() }}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Install all missing (5)' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Update all (1)' })).toBeTruthy();
+  });
+
+  it('disables Update all, and says why on hover, when the rest needs a terminal', async () => {
+    const { user } = renderWithProviders(
+      <SetupSummary
+        summary={ready}
+        onRecheckAll={vi.fn()}
+        updateAll={{
+          label: 'Update all',
+          onClick: vi.fn(),
+          disabled: true,
+          hint: 'These updates need a terminal. Use the button on each row.',
+        }}
+      />,
+    );
+
+    const button = screen.getByRole('button', { name: 'Update all' });
+    expect(button).toBeDisabled();
+    await user.hover(button.parentElement as HTMLElement);
+    expect((await screen.findAllByText(/These updates need a terminal/)).length).toBeGreaterThan(0);
+  });
+
+  it('says what Update all leaves for the person, next to what Install all leaves', () => {
+    renderWithProviders(
+      <SetupSummary
+        summary={ready}
+        onRecheckAll={vi.fn()}
+        updateAll={{
+          label: 'Update all (2)',
+          onClick: vi.fn(),
+          note: '1 more update needs a terminal.',
+        }}
+      />,
+    );
+
+    expect(screen.getByText('1 more update needs a terminal.')).toBeTruthy();
+  });
+
+  it('offers a cancel in the words of an update while one runs', async () => {
+    const onCancel = vi.fn();
+    const { user } = renderWithProviders(
+      <SetupSummary
+        summary={ready}
+        onRecheckAll={vi.fn()}
+        updateAll={{ label: 'Update all (2)', onClick: vi.fn() }}
+        run={{
+          headline: 'Updating 1 of 2: Node.js',
+          subline: '0 done, 2 to go.',
+          fraction: 0.2,
+          onCancel,
+          cancelLabel: 'Cancel update',
+        }}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: /Update all/ })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Cancel update' }));
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
   });
 });

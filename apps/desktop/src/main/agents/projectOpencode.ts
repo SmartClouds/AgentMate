@@ -1,6 +1,7 @@
 import { sameFolder } from '@agentmat/core';
 import { conversationKey, type ListedConversation, type RecordedUsage } from './projectUsageReport';
 import { localDay } from './projectUsageScan';
+import { opencodeSessionTable } from './opencodeStore';
 import { findOpencodeDb, type HistoryFs } from './sessionHistory';
 import { opencodeModelId } from './sessionUsage';
 
@@ -16,9 +17,9 @@ import { opencodeModelId } from './sessionUsage';
 // parent's row matched the sum of its own messages exactly. So every row is added once, with no
 // folding of children into parents.
 
-const SESSIONS_SQL = `SELECT id, directory, title, model, cost, time_updated, tokens_input,
-  tokens_output, tokens_reasoning, tokens_cache_read, tokens_cache_write
-  FROM session WHERE time_updated >= ? ORDER BY time_updated DESC`;
+const sessionsSql = (table: string): string => `SELECT id, directory, title, model, cost,
+  time_updated, tokens_input, tokens_output, tokens_reasoning, tokens_cache_read, tokens_cache_write
+  FROM ${table} WHERE time_updated >= ? ORDER BY time_updated DESC`;
 
 export interface OpencodeProject {
   conversations: ListedConversation[];
@@ -42,13 +43,15 @@ export async function readOpencodeProject(
   folders: readonly string[],
   sinceMs: number,
 ): Promise<OpencodeProject> {
-  if (!fs.queryDb) return EMPTY;
+  const { queryDb } = fs;
+  if (!queryDb) return EMPTY;
   const dbPath = await findOpencodeDb(fs, await fs.home()).catch(() => null);
   if (!dbPath) return EMPTY;
 
   let found: Record<string, unknown>[];
   try {
-    found = await fs.queryDb(dbPath, SESSIONS_SQL, [sinceMs]);
+    const table = await opencodeSessionTable((sql) => queryDb(dbPath, sql));
+    found = await queryDb(dbPath, sessionsSql(table), [sinceMs]);
   } catch {
     return { ...EMPTY, unreadable: 1 };
   }

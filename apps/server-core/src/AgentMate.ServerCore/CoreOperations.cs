@@ -27,7 +27,8 @@ internal sealed record ServerServices(
     UpdatesCache Updates,
     ISystemInfoSource Info,
     IServiceManager Services,
-    StreamLimits Streams);
+    StreamLimits Streams,
+    CoreUpdater CoreUpdater);
 
 /// <summary>
 /// Running the server: programs and transient units, the platform layer (Linux here; the DevHost
@@ -88,6 +89,15 @@ internal static class CoreOperations
         services.AddSingleton<MetricsSampler>();
         services.AddSingleton<UpdatesCache>();
         services.AddSingleton<SystemJobs>();
+
+        // The core updating itself (no SSH): GitHub's release links redirect to its file host.
+        services.AddSingleton<ICoreInstallation, SystemdCoreInstallation>();
+        services.AddSingleton<CoreUpdater>();
+        services.AddHttpClient(CoreUpdater.HttpClientName, client =>
+        {
+            client.Timeout = Timeout.InfiniteTimeSpan;
+            client.DefaultRequestHeaders.UserAgent.ParseAdd($"AgentMate-Core/{CoreVersion.Current}");
+        });
         services.AddSingleton<StreamLimits>();
         services.AddSingleton<ServerServices>();
         services.AddCoreDocker();

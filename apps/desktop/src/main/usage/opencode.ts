@@ -8,6 +8,7 @@ import {
   type UsagePeriod,
   type UsageTokens,
 } from '@agentmat/core';
+import { opencodeSessionTable } from '../agents/opencodeStore';
 import { retentionSinceMs } from './logParsers';
 import type { KnownProjects } from './projectDaily';
 import { buildProjectDaily } from './projectDaily';
@@ -25,9 +26,9 @@ import { makeTokens } from './shared';
 // tokens (verified against a real database in projectOpencode.ts), so every row
 // is added once with no folding of children into parents.
 
-const SESSIONS_SQL = `SELECT id, directory, model, cost, time_updated, tokens_input,
-  tokens_output, tokens_reasoning, tokens_cache_read, tokens_cache_write
-  FROM session WHERE time_updated >= ? ORDER BY time_updated DESC`;
+const sessionsSql = (table: string): string => `SELECT id, directory, model, cost, time_updated,
+  tokens_input, tokens_output, tokens_reasoning, tokens_cache_read, tokens_cache_write
+  FROM ${table} WHERE time_updated >= ? ORDER BY time_updated DESC`;
 
 const DAY_MS = 86_400_000;
 const SERIES_DAYS = 14;
@@ -200,7 +201,8 @@ export async function scanOpencodeUsage(deps: OpencodeScanDeps = {}): Promise<Pr
   const dbPath = await findDb();
   if (!dbPath) return buildOpencodeUsage([]);
 
-  const rows = await queryDb(dbPath, SESSIONS_SQL, [sinceMs]);
+  const table = await opencodeSessionTable((sql) => queryDb(dbPath, sql, []));
+  const rows = await queryDb(dbPath, sessionsSql(table), [sinceMs]);
   const entries = toOpencodeEntries(rows, sinceMs);
 
   let projectDaily: ProjectDaily | undefined;

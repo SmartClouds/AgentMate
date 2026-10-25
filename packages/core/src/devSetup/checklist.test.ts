@@ -193,3 +193,69 @@ describe('buildChecklist', () => {
     expect(checklist.groups.map((group) => group.stack.id)).toEqual(['essentials', 'docker']);
   });
 });
+
+describe('buildChecklist with updates', () => {
+  const detections = {
+    git: found('2.55.0'),
+    node: found('24.20.0'),
+    npm: found('11.19.0'),
+    gh: found('2.102.0'),
+  };
+  const updates = {
+    node: { state: 'update', latest: '24.22.1', installed: '24.20.0' },
+    gh: { state: 'update', latest: '2.103.0', installed: '2.102.0' },
+    git: { state: 'current' },
+  } as const;
+
+  it('puts the newer version on the rows that have one and leaves the others alone', () => {
+    const checklist = buildChecklist({
+      stacks: ['essentials'],
+      environment: win,
+      detections,
+      updates,
+    });
+
+    const state = (id: string) => checklist.rows.find((row) => row.item.id === id)?.state;
+    expect(state('node')).toMatchObject({ kind: 'installed', update: { latest: '24.22.1' } });
+    expect(state('gh')).toMatchObject({ kind: 'installed', update: { latest: '2.103.0' } });
+    expect(state('git')).not.toHaveProperty('update');
+    expect(state('npm')).not.toHaveProperty('update');
+  });
+
+  it('counts them without taking anything from ready', () => {
+    const checklist = buildChecklist({
+      stacks: ['essentials'],
+      environment: win,
+      detections: { ...detections, pnpm: found('12.14.0') },
+      updates,
+    });
+
+    expect(checklist.summary).toMatchObject({ ready: 4, total: 4, updates: 2, complete: true });
+    expect(checklist.groups[0]).toMatchObject({ ready: 4, total: 4, updates: 2 });
+  });
+
+  it('works without any update information, which is how the nav badge builds it', () => {
+    const checklist = buildChecklist({ stacks: ['essentials'], environment: win, detections });
+
+    expect(checklist.summary.updates).toBe(0);
+    for (const row of checklist.rows) expect(row.state).not.toHaveProperty('update');
+  });
+
+  it('plans an installed row for an upgrade rather than an install', () => {
+    const checklist = buildChecklist({
+      stacks: ['essentials'],
+      environment: win,
+      detections,
+      updates,
+    });
+
+    expect(checklist.rows.find((row) => row.item.id === 'gh')?.mode).toMatchObject({
+      mode: 'in-app',
+      intent: 'update',
+    });
+    const missing = buildChecklist({ stacks: ['essentials'], environment: win, detections: {} });
+    expect(missing.rows.find((row) => row.item.id === 'gh')?.mode).toMatchObject({
+      intent: 'install',
+    });
+  });
+});

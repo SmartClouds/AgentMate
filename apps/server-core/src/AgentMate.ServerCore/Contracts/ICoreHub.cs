@@ -559,6 +559,15 @@ public interface ICoreHub
 
     /// <summary>Sends one test message to the chat and says whether Telegram took it. Admin.</summary>
     Task<TelegramNotificationsTestResult> SendTelegramNotificationTest();
+
+    // Updating the core itself, without SSH. Owner, with a step-up: the release runs as root.
+
+    /// <summary>
+    /// Downloads the release from its GitHub address, checks it against the app's checksum and
+    /// switches to it a few seconds later. A failed download is an outcome, not an error, so the
+    /// app can upload the release instead (PUT /api/v1/core/update).
+    /// </summary>
+    Task<CoreUpdateResult> UpdateCore(CoreUpdateRequest request);
 }
 
 /// <summary>Everything the core can push to the app without being asked.</summary>

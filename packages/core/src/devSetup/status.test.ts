@@ -290,3 +290,103 @@ describe('isReady', () => {
     }
   });
 });
+
+describe('deriveItemState with an update on offer', () => {
+  const offer = { state: 'update', latest: '24.22.1', installed: '24.20.0' } as const;
+
+  function deriveWith(
+    id: string,
+    detection: DevDetection | undefined,
+    update: Parameters<typeof deriveItemState>[0]['update'],
+    job?: DevItemJob,
+  ) {
+    const target = item(id);
+    return deriveItemState({
+      item: target,
+      os: 'win32',
+      mode: selectRecipe(target, { ...ctx('win32'), intent: 'update' }),
+      detection,
+      job,
+      readiness: readyMap({}),
+      update,
+    });
+  }
+
+  it('stays installed, so the tool is still counted as ready, and carries the newer version', () => {
+    const state = deriveWith('node', found('24.20.0'), offer);
+
+    expect(state).toEqual({
+      kind: 'installed',
+      version: '24.20.0',
+      onPath: true,
+      update: { latest: '24.22.1' },
+    });
+    expect(isReady(state)).toBe(true);
+  });
+
+  it('adds nothing for a tool that is current, or when the check has not answered or failed', () => {
+    for (const update of [{ state: 'current' }, { state: 'unknown' }, undefined] as const) {
+      expect(deriveWith('node', found('24.20.0'), update)).toEqual({
+        kind: 'installed',
+        version: '24.20.0',
+        onPath: true,
+      });
+    }
+  });
+
+  it('ignores an update for a tool that is not installed', () => {
+    expect(deriveWith('node', absent, offer)).toEqual({ kind: 'missing' });
+    expect(deriveWith('node', undefined, offer)).toEqual({ kind: 'checking' });
+  });
+
+  it('keeps the older-than-minimum case as outdated, which an update does not change', () => {
+    expect(deriveWith('node', found('20.11.0'), offer)).toMatchObject({ kind: 'outdated' });
+  });
+
+  it('shows the update that is running, and remembers it is an update', () => {
+    const running: DevItemJob = {
+      status: 'installing',
+      phase: 'downloading',
+      fraction: 0.4,
+      intent: 'update',
+    };
+    expect(deriveWith('node', found('24.20.0'), offer, running)).toEqual({
+      kind: 'installing',
+      phase: 'downloading',
+      fraction: 0.4,
+      detail: null,
+      intent: 'update',
+    });
+    expect(
+      deriveWith('node', found('24.20.0'), offer, { status: 'queued', intent: 'update' }),
+    ).toEqual({ kind: 'queued', intent: 'update' });
+  });
+
+  it('says an update is waiting on the terminal it was handed to', () => {
+    expect(
+      deriveWith('node', found('24.20.0'), offer, { status: 'waiting-terminal' }),
+    ).toMatchObject({ kind: 'installed', update: { latest: '24.22.1', waiting: true } });
+  });
+
+  it('keeps why an update failed on the row that is still installed', () => {
+    const failed: DevItemJob = {
+      status: 'failed',
+      message: 'Close the app that is using it, then try again.',
+      intent: 'update',
+    };
+    expect(deriveWith('node', found('24.20.0'), offer, failed)).toMatchObject({
+      kind: 'installed',
+      update: { latest: '24.22.1', failure: 'Close the app that is using it, then try again.' },
+    });
+  });
+
+  it('does not blame an update for an install that failed before the tool turned up', () => {
+    const failed: DevItemJob = { status: 'failed', message: 'It broke.' };
+    expect(deriveWith('node', found('24.20.0'), offer, failed)).toEqual({
+      kind: 'installed',
+      version: '24.20.0',
+      onPath: true,
+      update: { latest: '24.22.1' },
+    });
+  });
+});

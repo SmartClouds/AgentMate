@@ -8,6 +8,7 @@ import {
   describeInstallAll,
   describeRow,
   describeRun,
+  describeUpdateAll,
   type RowAction,
   type RowView,
 } from './devSetupView';
@@ -52,7 +53,8 @@ function ChecklistSkeleton(): React.JSX.Element {
  */
 export function DevSetupPanel(): React.JSX.Element {
   const devSetup = useDevSetup();
-  const { checklist, environment, job, plan } = devSetup;
+  const { checklist, environment, job, plan, updatePlan } = devSetup;
+  const updating = job.intent === 'update';
   const [logFor, setLogFor] = useState<string | null>(null);
 
   const nameOf = (id: string): string =>
@@ -101,30 +103,43 @@ export function DevSetupPanel(): React.JSX.Element {
     }
     const spoken = told.current;
     const messages: string[] = [];
-    for (const id of job.completed.slice(spoken.done)) messages.push(`${nameOf(id)} installed.`);
+    for (const id of job.completed.slice(spoken.done)) {
+      messages.push(`${nameOf(id)} ${job.intent === 'update' ? 'updated' : 'installed'}.`);
+    }
     spoken.done = job.completed.length;
     for (const id of failedIds) {
       if (spoken.failed.has(id)) continue;
       spoken.failed.add(id);
-      messages.push(`${nameOf(id)} could not be installed.`);
+      const kind = job.items[id]?.intent === 'update' ? 'updated' : 'installed';
+      messages.push(`${nameOf(id)} could not be ${kind}.`);
     }
     if (job.cancelled && !spoken.cancelled) {
       spoken.cancelled = true;
-      messages.push('Install cancelled.');
+      messages.push(job.intent === 'update' ? 'Update cancelled.' : 'Install cancelled.');
     }
     if (messages.length > 0) setAnnouncement(messages.join(' '));
-  }, [job.jobId, job.completed, job.cancelled, failedKey]);
+  }, [job.jobId, job.completed, job.cancelled, job.intent, failedKey]);
 
   function handleAction(row: ChecklistRow, view: RowView, action: RowAction): void {
     const id = row.item.id;
     switch (action.kind) {
       case 'install':
-      case 'update':
         void devSetup.install([id]);
+        break;
+      case 'update':
+        // A tool below its minimum is "outdated" and is brought up through the install path, which
+        // knows what it needs first. One that is ready and merely behind is an update.
+        if (row.state.kind === 'installed') void devSetup.update([id]);
+        else void devSetup.install([id]);
         break;
       case 'terminal-install':
         if (view.terminalCommand) {
-          devSetup.openInTerminal({ id, name: row.name, command: view.terminalCommand });
+          devSetup.openInTerminal({
+            id,
+            name: row.name,
+            command: view.terminalCommand,
+            intent: row.state.kind === 'installed' ? 'update' : 'install',
+          });
         }
         break;
       case 'open-link':
@@ -153,7 +168,16 @@ export function DevSetupPanel(): React.JSX.Element {
   const wingetMissing =
     environment?.os === 'win32' && !environment.packageManagers.includes('winget');
   const noLinuxManager = environment?.os === 'linux' && environment.packageManagers.length === 0;
-  const installAll = plan ? describeInstallAll(plan) : undefined;
+  const updateAllView = updatePlan ? describeUpdateAll(updatePlan) : null;
+  // With nothing left to install, the one button that has work to do is Update all, and a disabled
+  // "Install all missing" next to it would only be in the way.
+  const nothingMissing =
+    plan !== undefined &&
+    plan.steps.length === 0 &&
+    plan.manual.length === 0 &&
+    plan.deferred.length === 0;
+  const installAll =
+    plan && !(nothingMissing && updateAllView) ? describeInstallAll(plan) : undefined;
 
   return (
     <div className="@container/devsetup flex flex-col gap-2">
@@ -180,12 +204,25 @@ export function DevSetupPanel(): React.JSX.Element {
                 onClick: () => void devSetup.installAll(),
               }
             }
+            updateAll={
+              updateAllView
+                ? {
+                    label: updateAllView.label,
+                    disabled: updateAllView.disabled,
+                    hint: updateAllView.hint,
+                    note: updateAllView.note,
+                    onClick: () => void devSetup.updateAll(),
+                  }
+                : undefined
+            }
+            updatesStatus={devSetup.updatesStatus}
             run={
               job.running
                 ? {
                     ...describeRun(job, nameOf),
                     fraction: overallFraction(job),
                     onCancel: () => devSetup.cancel(),
+                    cancelLabel: updating ? 'Cancel update' : undefined,
                   }
                 : undefined
             }
@@ -216,7 +253,9 @@ export function DevSetupPanel(): React.JSX.Element {
           )}
           {job.completed.length > 0 && (
             <Notice tone="neutral">
-              Terminals that are already open will not see the new tools. Open a new one.
+              {updating
+                ? 'Terminals that are already open will not see the new versions. Open a new one.'
+                : 'Terminals that are already open will not see the new tools. Open a new one.'}
             </Notice>
           )}
           {job.restartAdvised && (

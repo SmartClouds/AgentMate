@@ -5,7 +5,7 @@ import {
   itemsForStacks,
   normalizeDevSetupStacks,
 } from './catalog.js';
-import { type PlanEntry, type SetupSummary, summarizeSetup } from './plan.js';
+import { hasUpdate, type PlanEntry, type SetupSummary, summarizeSetup } from './plan.js';
 import { type DevSetupEnvironment, type InstallMode, selectRecipe } from './recipes.js';
 import { deriveItemState } from './status.js';
 import type {
@@ -15,6 +15,7 @@ import type {
   DevItemJob,
   DevItemState,
   DevStack,
+  DevUpdateCheck,
 } from './types.js';
 import { meetsMinimum } from './version.js';
 
@@ -39,6 +40,8 @@ export interface ChecklistGroup {
   /** Required items installed, and required items in all. Optional rows are never counted. */
   ready: number;
   total: number;
+  /** Rows, optional ones included, that have a newer version available. */
+  updates: number;
 }
 
 export interface Checklist {
@@ -56,6 +59,11 @@ export interface ChecklistInput {
   detections: Readonly<Record<DevItemId, DevDetection | undefined>>;
   /** What the installer is doing for each item. */
   jobs?: Readonly<Record<DevItemId, DevItemJob | undefined>>;
+  /**
+   * What the update check has found, by item id. Optional: the nav badge builds a checklist
+   * without it, and a row whose source has not answered simply shows no update yet.
+   */
+  updates?: Readonly<Record<DevItemId, DevUpdateCheck | undefined>>;
 }
 
 export function buildChecklist(input: ChecklistInput): Checklist {
@@ -76,7 +84,13 @@ export function buildChecklist(input: ChecklistInput): Checklist {
   };
 
   const rows: ChecklistRow[] = items.map((item) => {
-    const mode = selectRecipe(item, environment);
+    const detection = detections[item.id];
+    // A tool that is already there is brought up to date, not installed again, and the two are
+    // different commands (`winget upgrade`, not `winget install`).
+    const mode = selectRecipe(item, {
+      ...environment,
+      intent: detection?.state === 'found' ? 'update' : 'install',
+    });
     return {
       item,
       name: displayName(item, environment.os),
@@ -85,9 +99,10 @@ export function buildChecklist(input: ChecklistInput): Checklist {
         item,
         os: environment.os,
         mode,
-        detection: detections[item.id],
+        detection,
         job: jobs[item.id],
         readiness,
+        update: input.updates?.[item.id],
       }),
     };
   });
@@ -106,6 +121,7 @@ export function buildChecklist(input: ChecklistInput): Checklist {
         rows: own,
         ready: required.filter((row) => row.state.kind === 'installed').length,
         total: required.length,
+        updates: own.filter((row) => hasUpdate(row.state)).length,
       };
     },
   );

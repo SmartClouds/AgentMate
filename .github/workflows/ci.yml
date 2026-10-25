@@ -12,6 +12,12 @@ name: CI
 # The macOS end-to-end shards run on the Mac too. GitHub's hosted runners are
 # for CD, which packages the installers.
 #
+# The self-hosted runners keep their disks between jobs, so every job that runs on one starts with
+# the Runner cleanup step (.github/actions/runner-cleanup). It gives the job a temp folder of its
+# own, and its post step, which runs even when the job fails or is cancelled, deletes what the job
+# left behind: test containers, temp folders and the workspace, and once a day the cache entries
+# and tool versions nothing uses any more.
+#
 # The jobs do not wait for each other, and the desktop unit and end-to-end
 # suites are split into shards, so a run is only as fast as the number of
 # runners online allows. With one runner every job queues behind the last.
@@ -49,6 +55,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Runner cleanup
+        uses: ./.github/actions/runner-cleanup
 
       # Node first: pnpm's installer runs npm from PATH, and without one it falls back to the
       # runner's own npm, which a runner self-update leaves broken (actions/runner#2094).

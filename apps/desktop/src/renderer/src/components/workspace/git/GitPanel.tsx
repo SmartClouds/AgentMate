@@ -66,6 +66,7 @@ import { GitFileRow } from './GitFileRow';
 import { HistorySection } from './HistorySection';
 import { PanelNotice } from './PanelNotice';
 import { HAIRLINE_BELOW, PanelIconButton, type PanelTabDef, PanelTabs } from './PanelTabs';
+import { PipelinesDialog } from './PipelinesDialog';
 import { PipelinesSection } from './PipelinesSection';
 import { BranchPrPill, pullRequestAttention } from './pr/BranchPrPill';
 import { PullRequestDialog } from './pr/PullRequestDialog';
@@ -73,6 +74,7 @@ import { PullRequestSection } from './pr/PullRequestSection';
 import { announcePublishedBranch, usePullRequest } from './pr/usePullRequest';
 import { SectionCount, SourceSection, SourceSectionSplitter } from './SourceSection';
 import { StashesSection, StashMenu, useStashes } from './StashesSection';
+import { usePipelineStatus } from './usePipelineStatus';
 import {
   type GitActions,
   openChangedFile,
@@ -594,6 +596,15 @@ function SourceControlBody({
   const sectionsRef = useRef<HTMLDivElement>(null);
   const revealPanelSection = useWorkspaceStore((s) => s.revealPanelSection);
   const [prDialogOpen, setPrDialogOpen] = useState(false);
+  // The section and its larger view read one shared status, so a failed refresh can't leave them
+  // disagreeing. It only reads while one of them is on screen: a folded section renders nothing.
+  const [pipelinesDialog, setPipelinesDialog] = useState<{
+    open: boolean;
+    workflowId: number | null;
+  }>({ open: false, workflowId: null });
+  const pipelines = usePipelineStatus(project.id, {
+    enabled: state?.isRepo === true && (openSections.pipelines || pipelinesDialog.open),
+  });
   const openCreateWorktree = useWorktreeDialogStore((s) => s.openCreate);
   const worktreeCount = useWorktrees(parseScopeId(project.id).projectId).data?.length ?? 0;
   // Cheap (`git stash list`), so the Stashes header can carry its count like Commits does.
@@ -822,10 +833,36 @@ function SourceControlBody({
             />
           )}
         </SourceSection>
-        <SourceSection {...fold('pipelines')} title="Pipelines">
-          <PipelinesSection project={project} />
+        <SourceSection
+          {...fold('pipelines')}
+          title="Pipelines"
+          actions={
+            state.hasRemote ? (
+              <PanelIconButton
+                label="Open pipelines in a larger view"
+                onClick={() => setPipelinesDialog({ open: true, workflowId: null })}
+              >
+                <Expand className="h-2.5 w-2.5" />
+              </PanelIconButton>
+            ) : null
+          }
+        >
+          <PipelinesSection
+            project={project}
+            view={pipelines.view}
+            retrying={pipelines.retrying}
+            onRetry={pipelines.retry}
+            onOpenDetails={(workflowId) => setPipelinesDialog({ open: true, workflowId })}
+          />
         </SourceSection>
       </div>
+      <PipelinesDialog
+        project={project}
+        open={pipelinesDialog.open}
+        onOpenChange={(open) => setPipelinesDialog((current) => ({ ...current, open }))}
+        state={pipelines}
+        workflowId={pipelinesDialog.workflowId}
+      />
       {state.hasRemote ? (
         <PullRequestDialog
           project={project}

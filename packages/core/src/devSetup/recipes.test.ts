@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { getDevItem } from './catalog.js';
 import {
+  linuxPackageChoice,
   quoteShellArg,
   type RecipeContext,
   recipeArgv,
@@ -250,6 +251,38 @@ describe('selectRecipe in general', () => {
     const mode = selectRecipe(item('node'), { ...win, intent: 'update' });
     expect(mode).toMatchObject({ mode: 'in-app' });
     expect(recipeCommandLine(mode, win.os)).toContain('winget upgrade --id OpenJS.NodeJS.LTS');
+  });
+});
+
+describe('linuxPackageChoice', () => {
+  const recipe = {
+    kind: 'pkg',
+    apt: ['nodejs', 'npm'],
+    dnf: ['nodejs'],
+    pacman: ['nodejs'],
+  } as const;
+
+  it('takes the first manager on the machine that has a package, in apt, dnf, pacman order', () => {
+    expect(linuxPackageChoice(recipe, ['pacman', 'dnf'])).toEqual({
+      manager: 'dnf',
+      packages: ['nodejs'],
+    });
+    expect(linuxPackageChoice(recipe, ['apt-get', 'dnf'])).toEqual({
+      manager: 'apt-get',
+      packages: ['nodejs', 'npm'],
+    });
+  });
+
+  it('skips a manager the recipe has no package for', () => {
+    expect(linuxPackageChoice({ kind: 'pkg', dnf: ['git'] }, ['apt-get', 'dnf'])).toEqual({
+      manager: 'dnf',
+      packages: ['git'],
+    });
+  });
+
+  it('is null when none of the machine managers can install it', () => {
+    expect(linuxPackageChoice(recipe, [])).toBeNull();
+    expect(linuxPackageChoice({ kind: 'pkg', pacman: ['x'] }, ['apt-get'])).toBeNull();
   });
 });
 

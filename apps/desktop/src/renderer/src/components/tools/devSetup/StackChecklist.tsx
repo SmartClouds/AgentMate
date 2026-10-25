@@ -31,9 +31,16 @@ export function StackChecklist({
       title={group.stack.name}
       description={group.stack.description}
       extra={
-        <Chip tone={complete ? 'success' : 'neutral'}>
-          {group.ready} of {group.total} ready
-        </Chip>
+        <div className="flex items-center gap-1.5">
+          {group.updates > 0 && (
+            <Chip tone="primary">
+              {group.updates} {group.updates === 1 ? 'update' : 'updates'}
+            </Chip>
+          )}
+          <Chip tone={complete ? 'success' : 'neutral'}>
+            {group.ready} of {group.total} ready
+          </Chip>
+        </div>
       }
       flush
     >

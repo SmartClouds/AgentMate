@@ -40,6 +40,50 @@ function needsWork(state: DevItemState): boolean {
   }
 }
 
+/** Whether this row is ready and has a newer version on offer. */
+export function hasUpdate(state: DevItemState): boolean {
+  return state.kind === 'installed' && state.update !== undefined;
+}
+
+/** An update that can be started now: not already handed to a terminal and waiting there. */
+function updatable(state: DevItemState): boolean {
+  return state.kind === 'installed' && state.update !== undefined && !state.update.waiting;
+}
+
+/** The items "Update all" would update, in checklist order. Optional items are included. */
+export function updatableItemIds(entries: ReadonlyMap<DevItemId, PlanEntry>): DevItemId[] {
+  return [...entries.values()]
+    .filter((entry) => updatable(entry.state))
+    .map((entry) => entry.item.id);
+}
+
+export interface UpdatePlan {
+  /** Run these inside the app, in this order. */
+  steps: DevItemId[];
+  /** The person runs these in a terminal: they need a password or an admin prompt. */
+  manual: DevItemId[];
+}
+
+/**
+ * What updating these items does. Everything here is installed already, so unlike an install there
+ * is no order to work out: a tool that needed another was only ever installed after it. The split
+ * is the same one an install makes, between what the app runs and what has to go to a terminal.
+ */
+export function buildUpdatePlan(
+  targets: readonly DevItemId[],
+  entries: ReadonlyMap<DevItemId, PlanEntry>,
+): UpdatePlan {
+  const steps: DevItemId[] = [];
+  const manual: DevItemId[] = [];
+  for (const id of new Set(targets)) {
+    const entry = entries.get(id);
+    if (!entry || !updatable(entry.state)) continue;
+    if (entry.mode.mode === 'in-app') steps.push(id);
+    else if (entry.mode.mode === 'terminal') manual.push(id);
+  }
+  return { steps, manual };
+}
+
 /** The required items still to do, in checklist order. Optional items are only installed by name. */
 export function missingItemIds(entries: ReadonlyMap<DevItemId, PlanEntry>): DevItemId[] {
   return [...entries.values()]
@@ -147,6 +191,8 @@ export interface SetupSummary {
   checking: number;
   /** Required items that are not installed, ignoring those still being checked. */
   missing: number;
+  /** Items of any kind that are ready and have a newer version. They are still counted as ready. */
+  updates: number;
   stacks: StackSummary[];
   complete: boolean;
 }
@@ -178,6 +224,7 @@ export function summarizeSetup(entries: readonly PlanEntry[]): SetupSummary {
     ready,
     checking,
     missing,
+    updates: entries.filter((entry) => hasUpdate(entry.state)).length,
     stacks,
     complete: required.length > 0 && ready === required.length,
   };

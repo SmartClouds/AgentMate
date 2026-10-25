@@ -27,8 +27,20 @@ export interface DevSetupSandbox {
   bin: string;
   /** Environment for `launchApp({ env })`. */
   env(): Record<string, string>;
-  /** Every line winget was called with, quotes removed. */
+  /**
+   * Every line winget was called with to install or update something, quotes removed. The calls
+   * that only ask what could be updated are in `wingetChecks`, so an install test can still say
+   * exactly which commands changed the machine.
+   */
   wingetCalls(): string[];
+  /** The calls that ask winget which packages have a newer version. */
+  wingetChecks(): string[];
+  /** The GitHub CLI is installed already, at this version. */
+  installGh(version?: string): void;
+  /** winget now lists a newer GitHub CLI (2.70.0), and upgrading to it works. */
+  offerGhUpdate(): void;
+  /** Asking winget what could be updated fails, as it does with no network. */
+  failUpdateChecks(): void;
   /** The next winget install fails once with Windows Installer's "fatal error" code. */
   failNextInstall(): void;
   /** Installs take about forty seconds, so a test has time to cancel one. */
@@ -69,6 +81,7 @@ export function createDevSetupSandbox(): DevSetupSandbox {
       [
         'setlocal',
         'if "%~1"=="--version" goto version',
+        'if "%~1"=="upgrade" goto upgrade',
         '>>"%~dp0winget.log" echo %*',
         'if exist "%~dp0fail-once" goto fail',
         'echo Found GitHub CLI [GitHub.cli] Version 2.62.0',
@@ -87,6 +100,36 @@ export function createDevSetupSandbox(): DevSetupSandbox {
         'echo Found GitHub CLI [GitHub.cli] Version 2.62.0',
         'echo Installer failed with exit code 1603',
         'exit /b 1603',
+        // `winget upgrade` is two things. With --silent it upgrades a package, and without it it
+        // lists what has a newer version, which is what the page asks when it opens.
+        ':upgrade',
+        'echo %* | findstr /C:"--silent" >nul && goto upgraderun',
+        '>>"%~dp0winget-checks.log" echo %*',
+        'if exist "%~dp0checks-fail" exit /b 1',
+        'if exist "%~dp0update-available" goto listed',
+        'echo No installed package found matching input criteria.',
+        'exit /b 0',
+        ':listed',
+        'echo Name       Id         Version Available',
+        'echo -------------------------------------------',
+        'echo GitHub CLI GitHub.cli 2.62.0  2.70.0',
+        'echo 1 upgrades available.',
+        'exit /b 0',
+        ':upgraderun',
+        '>>"%~dp0winget.log" echo %*',
+        'if exist "%~dp0fail-once" goto fail',
+        'echo Found GitHub CLI [GitHub.cli] Version 2.62.0',
+        'echo Downloading https://github.com/cli/cli/releases/download/v2.70.0/gh.msi',
+        'echo   40%%',
+        'if exist "%~dp0slow" ping -n 40 127.0.0.1 >nul',
+        'ping -n 2 127.0.0.1 >nul',
+        'echo Successfully verified installer hash',
+        'echo Starting package install...',
+        '>"%~dp0gh.cmd" echo @echo off',
+        '>>"%~dp0gh.cmd" echo echo gh version 2.70.0',
+        'del "%~dp0update-available"',
+        'echo Successfully installed',
+        'exit /b 0',
         ':version',
         'echo v1.9.25200',
         'exit /b 0',
@@ -95,18 +138,26 @@ export function createDevSetupSandbox(): DevSetupSandbox {
     );
   }
 
+  /** What a fake tool logged when it was called, one line per call, quotes removed. */
+  function callsIn(file: string): string[] {
+    const log = join(bin, file);
+    if (!existsSync(log)) return [];
+    return readFileSync(log, 'utf-8')
+      .split(/\r?\n/)
+      .map((line) => line.replaceAll('"', '').trim())
+      .filter(Boolean);
+  }
+
   return {
     folder,
     bin,
     env: () => ({ AGENTMATE_DEVSETUP_SANDBOX: folder }),
-    wingetCalls: () => {
-      const log = join(bin, 'winget.log');
-      if (!existsSync(log)) return [];
-      return readFileSync(log, 'utf-8')
-        .split(/\r?\n/)
-        .map((line) => line.replaceAll('"', '').trim())
-        .filter(Boolean);
-    },
+    wingetCalls: () => callsIn('winget.log'),
+    wingetChecks: () => callsIn('winget-checks.log'),
+    installGh: (version = '2.62.0') =>
+      writeTool(bin, 'gh', [`echo gh version ${version}`], [`echo "gh version ${version}"`]),
+    offerGhUpdate: () => writeFileSync(join(bin, 'update-available'), ''),
+    failUpdateChecks: () => writeFileSync(join(bin, 'checks-fail'), ''),
     failNextInstall: () => writeFileSync(join(bin, 'fail-once'), ''),
     makeInstallsSlow: () => writeFileSync(join(bin, 'slow'), ''),
     cleanup: () => {

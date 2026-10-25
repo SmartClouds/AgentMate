@@ -647,6 +647,8 @@ export const IPC = {
     environment: 'devSetup:environment',
     detect: 'devSetup:detect',
     peek: 'devSetup:peek',
+    /** Which installed tools have a newer version on offer. */
+    updates: 'devSetup:updates',
     install: 'devSetup:install',
     cancel: 'devSetup:cancel',
     /** Puts the folder of a tool that is installed but off PATH on the user PATH. */
@@ -874,6 +876,7 @@ export const IPC = {
     dashboardActivity: 'pipelines:dashboardActivity',
     runError: 'pipelines:runError',
     runAnnotations: 'pipelines:runAnnotations',
+    runDetails: 'pipelines:runDetails',
     refs: 'pipelines:refs',
     dispatch: 'pipelines:dispatch',
     cancelRun: 'pipelines:cancelRun',
@@ -885,6 +888,10 @@ export const IPC = {
     preflight: 'deploy:preflight',
     install: 'deploy:install',
     uninstall: 'deploy:uninstall',
+    /** (DeployStepUpInput) -> DeployCoreUpdateResult: updates the core through the core, no SSH. */
+    updateCore: 'deploy:updateCore',
+    /** () -> DeployCoreRelease | null: the core release this build installs. */
+    coreRelease: 'deploy:coreRelease',
     health: 'deploy:health',
     access: 'deploy:access',
     enroll: 'deploy:enroll',

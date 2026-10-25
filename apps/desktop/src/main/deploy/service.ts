@@ -21,6 +21,8 @@ import type {
   DeployAccountInput,
   DeployConnection,
   DeployCoreRecord,
+  DeployCoreRelease,
+  DeployCoreUpdateResult,
   DeployEnrollInput,
   DeployHealth,
   DeployInstallInput,
@@ -59,6 +61,7 @@ import {
 } from './connection/transport';
 import { clientCertificate } from './directTls/clientCertificate';
 import { directTlsTransport, PinMismatchError, type TlsConnect } from './directTls/transport';
+import { updateCoreLive } from './coreUpdate';
 import { CoreLinks } from './live/coreLinks';
 import { LinkBlockedError } from './live/linkFailures';
 import type { DeployState } from './state';
@@ -536,6 +539,39 @@ export class DeployService {
       this.links.reset(input.serverId);
       this.deps.serversChanged?.();
     });
+  }
+
+  /**
+   * Updates the core through the core itself, with no SSH: the server downloads the release, or
+   * this app uploads it over the core's connection (coreUpdate.ts). Ends in `needs-ssh` for a core
+   * that cannot replace itself, and the SSH installer takes over from there.
+   */
+  async updateCore(input: DeployStepUpInput): Promise<DeployCoreUpdateResult> {
+    this.refuseDevHost(input.serverId);
+    return this.exclusive(input.serverId, async () => {
+      const result = await updateCoreLive(
+        {
+          releases: this.deps.releases,
+          record: (serverId) => this.deps.state.get(serverId),
+          saveRecord: (serverId, record) => this.deps.state.set(serverId, record),
+          withHub: (serverId, work) => this.withHub(serverId, work),
+          withCoreHttp: (serverId, work) => this.withCoreHttp(serverId, work),
+          health: (serverId) => this.health(serverId),
+          roles: (serverId) => this.roles(serverId),
+          resetLink: (serverId) => this.links.reset(serverId),
+          progress: (progress) => this.deps.progress({ serverId: input.serverId, progress }),
+        },
+        input,
+      );
+      if (result.outcome === 'updated') this.deps.serversChanged?.();
+      return result;
+    });
+  }
+
+  /** The core release this build installs, for the Deploy page; null when it has none. */
+  async coreRelease(): Promise<DeployCoreRelease | null> {
+    const version = await this.deps.availableVersion();
+    return version ? { version, serverDownload: this.deps.releases.remote !== undefined } : null;
   }
 
   /** The core release this build installs, or null when it has none (E15's checklist compares). */

@@ -21,7 +21,8 @@ import {
  * 3. a change deploys, while agent settings and AgentMate files in the theme stay on this computer;
  * 4. a PHP syntax error is refused before the site changes;
  * 5. a fatal error rolls back on its own;
- * 6. a good deploy is rolled back by hand from Deploy > the site > Deploys.
+ * 6. the Workspace header has Deploy in place of Tag a version, and it deploys the project;
+ * 7. a good deploy is rolled back by hand from Deploy > the site > Deploys.
  *
  * Every request is signed with Ed25519 in the main process, so this also proves the signing works
  * under Electron's BoringSSL, which the plain-Node unit tests can't. Needs AGENTMATE_SYSTEM_TESTS=1
@@ -39,6 +40,7 @@ const SITE_ROOT = '/var/www/html';
 const SITE_SETUP = `${SITE_ROOT}/wp-content/themes/${THEME}/inc/setup.php`;
 const SETUP_V2 = '<?php // setup v2';
 const SETUP_V3 = '<?php // setup v3';
+const SETUP_V4 = '<?php // setup v4';
 const MINUTE = 60_000;
 /** A pull, a deploy or a rollback, health checks included. */
 const RUN_TIMEOUT = 3 * MINUTE;
@@ -241,6 +243,56 @@ test.describe('WordPress sites in Deploy and Projects', () => {
     expect(siteFile(wp(), SITE_SETUP)).toBe(SETUP_V2);
   });
 
+  test('deploys from the Workspace header, where Tag a version would be', async () => {
+    const p = page();
+    writeSetup(`${SETUP_V4}
+`);
+
+    const projectId = await p.evaluate(async (projectFolder) => {
+      const api = (
+        window as unknown as {
+          agentmat: { projects: { list(): Promise<Array<{ id: string; folderPath: string }>> } };
+        }
+      ).agentmat;
+      const same = (path: string): string => path.replace(/[\\/]+$/, '').toLowerCase();
+      const projects = await api.projects.list();
+      return (
+        projects.find((project) => same(project.folderPath) === same(projectFolder))?.id ?? null
+      );
+    }, folder);
+    expect(projectId).not.toBeNull();
+    await p.evaluate((id) => {
+      location.hash = `#/workspace/${id}`;
+    }, projectId);
+
+    const deploy = p.getByRole('button', { name: `Deploy to ${SITE_LABEL}` });
+    await expect(deploy).toBeVisible({ timeout: MINUTE });
+    await expect(deploy).toHaveText('Deploy');
+    await expect(p.getByRole('button', { name: 'Tag a version' })).toHaveCount(0);
+
+    await deploy.click();
+    const dialog = p.getByRole('dialog', { name: `Deploy to ${SITE_LABEL}` });
+    await expect(dialog.getByText(/^\d+ files? to upload/)).toBeVisible({ timeout: MINUTE });
+    await deploySetupChange(dialog);
+    await expect(dialog.getByRole('status').filter({ hasText: 'Deployed' })).toBeVisible({
+      timeout: RUN_TIMEOUT,
+    });
+    await closeDeployDialog(dialog);
+
+    expect(siteFile(wp(), SITE_SETUP)).toBe(SETUP_V4);
+    // The result was seen in the dialog, so the header is back to plain Deploy, with no dot.
+    await expect(deploy).toHaveText('Deploy');
+    await expect(p.getByTestId('deploy-result-dot')).toHaveCount(0);
+
+    // Back to the project's WordPress section, where the next step starts.
+    await p.getByRole('button', { name: 'Project details' }).click();
+    await p
+      .getByRole('navigation', { name: 'Project sections' })
+      .getByRole('button', { name: /WordPress/ })
+      .click();
+    await expect(p.getByRole('region', { name: 'Linked site' })).toContainText(SITE_LABEL);
+  });
+
   test('rolls a good deploy back by hand from Deploy', async () => {
     const p = page();
     writeSetup(`${SETUP_V3}\n`);
@@ -275,7 +327,8 @@ test.describe('WordPress sites in Deploy and Projects', () => {
     await confirm.getByRole('button', { name: 'Roll back', exact: true }).click();
     await expect(confirm).toBeHidden();
 
-    await expect.poll(() => siteFile(wp(), SITE_SETUP), { timeout: RUN_TIMEOUT }).toBe(SETUP_V2);
+    // Back to what the Workspace header deployed just before.
+    await expect.poll(() => siteFile(wp(), SITE_SETUP), { timeout: RUN_TIMEOUT }).toBe(SETUP_V4);
     await expect(newest).toContainText('Rolled back', { timeout: MINUTE });
   });
 });

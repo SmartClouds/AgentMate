@@ -1,6 +1,6 @@
 import type { Project } from '@agentmat/core';
 import type { GithubActionsRunErrorInput } from '@shared/apiTypes';
-import { useQuery } from '@tanstack/react-query';
+import { useRunFailure } from '@/components/pipelines/useRunFailure';
 import { FixWithAiDialog } from '../FixWithAiDialog';
 
 /** What an agent is asked to do about a failed run, with the failure pasted underneath. */
@@ -38,18 +38,7 @@ export function FixRunDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }): React.JSX.Element {
-  const failure = useQuery({
-    queryKey: ['pipeline-run-error', run.repo, run.runId],
-    queryFn: async () => {
-      const result = await window.agentmat.pipelines.runError(run);
-      if (!result.ok) throw new Error(result.error);
-      return result.text;
-    },
-    enabled: open,
-    staleTime: Number.POSITIVE_INFINITY,
-    retry: false,
-    meta: { silentLoading: true },
-  });
+  const failure = useRunFailure(run, open);
 
   return (
     <FixWithAiDialog

@@ -26,6 +26,11 @@ import {
 } from '@agentmat/core';
 import Database from 'better-sqlite3';
 import { rememberHistorySource } from './historySources';
+import {
+  type OpencodeSessionTable,
+  opencodePromptSql,
+  opencodeSessionTable,
+} from './opencodeStore';
 
 // Past conversations for the workspace's history section. Each CLI keeps its own store:
 // Claude Code (and OpenClaude, same format) one transcript per session in a folder named
@@ -790,21 +795,12 @@ export async function findOpencodeDb(fs: HistoryFs, home: string): Promise<strin
   return null;
 }
 
-const OPENCODE_SESSIONS_SQL =
-  'SELECT id, directory, title, model, time_created, time_updated FROM session ORDER BY time_updated DESC';
-
-const OPENCODE_FIRST_PROMPT_SQL = `SELECT p.data AS data FROM part p JOIN message m ON m.id = p.message_id
-  WHERE m.session_id = ? AND json_extract(m.data, '$.role') = 'user'
-  AND json_extract(p.data, '$.type') = 'text' ORDER BY p.time_created LIMIT 1`;
-
-const OPENCODE_LAST_PROMPT_SQL = `SELECT p.data AS data FROM part p JOIN message m ON m.id = p.message_id
-  WHERE m.session_id = ? AND json_extract(m.data, '$.role') = 'user'
-  AND json_extract(p.data, '$.type') = 'text' ORDER BY p.time_created DESC LIMIT 1`;
-
 interface OpencodeCandidate {
   file: FileInfo;
   row: OpencodeSessionRow;
   dbPath: string;
+  /** Which tables this database keeps its sessions in, which decides where the prompts are. */
+  table: OpencodeSessionTable;
 }
 
 async function opencodeCandidates(
@@ -816,9 +812,15 @@ async function opencodeCandidates(
   if (!fs.queryDb) return [];
   const dbPath = await findOpencodeDb(fs, home).catch(() => null);
   if (!dbPath) return [];
+  const { queryDb } = fs;
+  let table: OpencodeSessionTable;
   let rows: Record<string, unknown>[];
   try {
-    rows = await fs.queryDb(dbPath, OPENCODE_SESSIONS_SQL);
+    table = await opencodeSessionTable((sql) => queryDb(dbPath, sql));
+    rows = await queryDb(
+      dbPath,
+      `SELECT id, directory, title, model, time_created, time_updated FROM ${table} ORDER BY time_updated DESC`,
+    );
   } catch {
     return [];
   }
@@ -847,6 +849,7 @@ async function opencodeCandidates(
         time_updated: typeof record.time_updated === 'number' ? record.time_updated : null,
       },
       dbPath,
+      table,
     });
   }
   return out;
@@ -885,8 +888,18 @@ async function opencodeSession(
 ): Promise<AgentHistorySession | null> {
   const summary = await summarize(fs, candidate.file, async () => {
     const [first, last] = await Promise.all([
-      opencodePrompt(fs, candidate.dbPath, candidate.row.id, OPENCODE_FIRST_PROMPT_SQL),
-      opencodePrompt(fs, candidate.dbPath, candidate.row.id, OPENCODE_LAST_PROMPT_SQL),
+      opencodePrompt(
+        fs,
+        candidate.dbPath,
+        candidate.row.id,
+        opencodePromptSql(candidate.table, 'first'),
+      ),
+      opencodePrompt(
+        fs,
+        candidate.dbPath,
+        candidate.row.id,
+        opencodePromptSql(candidate.table, 'last'),
+      ),
     ]);
     return summarizeOpencodeSession(candidate.row, first, last);
   });
@@ -1050,7 +1063,7 @@ export async function collectHistory(
         provider: Exclude<AgentHistoryProvider, 'opencode' | 'freebuff-cli'>;
         file: CursorCandidate;
       }
-    | { provider: 'opencode'; file: FileInfo; row: OpencodeSessionRow; dbPath: string }
+    | ({ provider: 'opencode' } & OpencodeCandidate)
     | { provider: 'freebuff-cli'; file: FreebuffCandidate };
   const picked: Picked[] = [
     ...claudeCandidates.map((file) => ({ provider: 'claude-code' as const, file })),
