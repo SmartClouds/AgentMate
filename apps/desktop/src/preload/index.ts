@@ -482,7 +482,7 @@ import { createErrorTracking } from './errorTracking';
 import { createHealth } from './health';
 import { createRelay } from './relay';
 import { createSftp } from './sftp';
-import { createStudio } from './studio';
+import { createStudio, createStudioAi } from './studio';
 
 interface TerminalDataPayload {
   sessionId: string;
@@ -1952,6 +1952,7 @@ const deployAppStore = {
 const deployRegistry = createDeployRegistry();
 const health = createHealth();
 const studio = createStudio();
+const studioAi = createStudioAi();
 const relay = createRelay();
 const errorTracking = createErrorTracking();
 
@@ -2789,6 +2790,7 @@ const agentmatApi = {
   deployRegistry,
   health,
   studio,
+  studioAi,
   relay,
   errorTracking,
   cloudflare,

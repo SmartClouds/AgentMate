@@ -26,6 +26,10 @@ export default defineConfig({
         'src/node/db/**': { lines: 92, branches: 85 },
         'src/node/blobs/**': { lines: 92, branches: 85 },
         'src/node/fs/**': { lines: 92, branches: 85 },
+        // E32: reading AI answers and turning them into edits, and the runs that ask for them.
+        'src/ai/**': { lines: 95, branches: 85 },
+        'src/node/ai/**': { lines: 92, branches: 78 },
+        'src/node/recipes/**': { lines: 92, branches: 85 },
       },
     },
   },

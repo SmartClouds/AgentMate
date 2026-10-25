@@ -14,4 +14,8 @@ export const studioKeys = {
   rootCheck: (path: string, projectId: string | null) =>
     ['studio', 'root-check', projectId, path] as const,
   history: (videoId: string) => ['studio', 'history', videoId] as const,
+  generations: (videoId: string) => ['studio', 'generations', videoId] as const,
+  generationDetail: (videoId: string, generationId: string) =>
+    ['studio', 'generations', videoId, generationId] as const,
+  recipes: ['studio', 'recipes'] as const,
 };

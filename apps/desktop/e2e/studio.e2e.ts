@@ -48,6 +48,8 @@ test('makes a video, edits it, and keeps every edit after the app is killed', as
   const dialog = first.page.getByRole('dialog', { name: 'New video' });
   await dialog.getByLabel('Title').fill('Launch film');
   await dialog.getByRole('radio', { name: 'Vertical 9:16' }).click();
+  // This test writes the scenario by hand.
+  await dialog.getByRole('switch', { name: 'Write the scenario with AI' }).click();
   await dialog.getByRole('button', { name: 'Create video' }).click();
 
   await expect(first.page.getByLabel('Video title')).toHaveValue('Launch film');

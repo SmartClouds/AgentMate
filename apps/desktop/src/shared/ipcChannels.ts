@@ -738,6 +738,29 @@ export const IPC = {
     // main -> renderer: StudioEvent
     onEvent: 'studio:onEvent',
   },
+  /** Studio's AI runs (E32): scenarios from a brief, edits by typing, and saved recipes. */
+  studioAi: {
+    // (StartScenarioInput) -> GenerationView, which then runs in the background
+    startScenario: 'studioAi:startScenario',
+    // (StartEditInput) -> GenerationView; the answer comes back as a proposal
+    startEdit: 'studioAi:startEdit',
+    // ({ videoId, generationId }) -> GenerationView, a new run with the same request and picks
+    retry: 'studioAi:retry',
+    cancel: 'studioAi:cancel',
+    // ({ videoId, limit }) -> GenerationView[]
+    generations: 'studioAi:generations',
+    // ({ videoId, generationId }) -> GenerationDetail
+    generationDetail: 'studioAi:generationDetail',
+    // ({ videoId, generationId }) -> EditResponse
+    applyProposal: 'studioAi:applyProposal',
+    discardProposal: 'studioAi:discardProposal',
+    // () -> RecipeView[]
+    recipes: 'studioAi:recipes',
+    // (SaveRecipeInput) -> RecipeView
+    saveRecipe: 'studioAi:saveRecipe',
+    // ({ recipeId }) -> void
+    deleteRecipe: 'studioAi:deleteRecipe',
+  },
   /** Relay (E26): context-sized tasks in the project, run one session each, with handoffs. */
   relay: {
     // (projectId) -> RelayBoard

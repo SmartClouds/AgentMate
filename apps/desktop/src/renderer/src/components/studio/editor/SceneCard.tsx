@@ -1,10 +1,11 @@
-import type { EditOp, Scene } from '@agentmat/studio';
+import { AI_TRANSITIONS, type EditOp, type Scene, toDuration } from '@agentmat/studio';
 import { useEffect, useId, useState } from 'react';
 import { fieldSecondsToFlicks, flicksToFieldSeconds, scriptClass } from '../format';
 import {
   ArrowDown,
   ArrowUp,
   Button,
+  Combobox,
   cn,
   GLASS_CARD,
   Input,
@@ -14,10 +15,39 @@ import {
   Trash2,
 } from '../kit';
 
+const TRANSITION_LABELS: Record<(typeof AI_TRANSITIONS)[number], string> = {
+  cut: 'Cut',
+  fade: 'Fade',
+  fadeblack: 'Fade through black',
+  fadewhite: 'Fade through white',
+  dissolve: 'Dissolve',
+  wipeleft: 'Wipe left',
+  wiperight: 'Wipe right',
+  slideleft: 'Slide left',
+  slideright: 'Slide right',
+  circleopen: 'Circle open',
+};
+
+const TRANSITION_OPTIONS = AI_TRANSITIONS.map((value) => ({
+  value,
+  label: TRANSITION_LABELS[value],
+}));
+
+/** On-screen text is edited as one line per caption; blank lines are dropped. */
+function toLines(text: string): string[] {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 50);
+}
+
 export interface SceneCardProps {
   scene: Scene;
   index: number;
   count: number;
+  /** The video's frame rate, which a transition's length lands on. */
+  fps: number;
   apply: (ops: EditOp[], label: string) => Promise<boolean>;
   onRemove: (scene: Scene, index: number) => void;
 }
@@ -30,6 +60,7 @@ export function SceneCard({
   scene,
   index,
   count,
+  fps,
   apply,
   onRemove,
 }: SceneCardProps): React.JSX.Element {
@@ -38,12 +69,18 @@ export function SceneCard({
   const [title, setTitle] = useState(scene.title);
   const [narration, setNarration] = useState(scene.narration);
   const [duration, setDuration] = useState(flicksToFieldSeconds(scene.targetDuration));
+  const [onScreen, setOnScreen] = useState(scene.onScreenText.join('\n'));
+  const [visual, setVisual] = useState(scene.visualBrief);
   const durationFlicks = fieldSecondsToFlicks(duration);
 
   // A change from elsewhere (undo, restore, an AI edit) replaces what the fields show.
   useEffect(() => setTitle(scene.title), [scene.title]);
   useEffect(() => setNarration(scene.narration), [scene.narration]);
   useEffect(() => setDuration(flicksToFieldSeconds(scene.targetDuration)), [scene.targetDuration]);
+  const onScreenText = scene.onScreenText.join('\n');
+  useEffect(() => setOnScreen(onScreenText), [onScreenText]);
+  useEffect(() => setVisual(scene.visualBrief), [scene.visualBrief]);
+  const transition = scene.transitionOut?.kind ?? 'cut';
 
   const update = (patch: Partial<Omit<Scene, 'id'>>, label: string) =>
     apply([{ op: 'scene.update', sceneId: scene.id, patch }], label);
@@ -124,6 +161,46 @@ export function SceneCard({
           }}
         />
       </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor={`${id}-onscreen`}>On screen</Label>
+          <Textarea
+            id={`${id}-onscreen`}
+            value={onScreen}
+            dir="auto"
+            rows={2}
+            className={scriptClass(onScreen)}
+            placeholder="Short lines shown on screen, one per line"
+            onChange={(event) => setOnScreen(event.target.value)}
+            onBlur={() => {
+              const lines = toLines(onScreen);
+              if (lines.join('\n') !== onScreenText) {
+                void update(
+                  { onScreenText: lines },
+                  `Edited the on-screen text of scene ${number}`,
+                );
+              }
+            }}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor={`${id}-visual`}>What the viewer sees</Label>
+          <Textarea
+            id={`${id}-visual`}
+            value={visual}
+            dir="auto"
+            rows={2}
+            className={scriptClass(visual)}
+            placeholder="Layout, objects and motion, for the animation"
+            onChange={(event) => setVisual(event.target.value)}
+            onBlur={() => {
+              if (visual !== scene.visualBrief) {
+                void update({ visualBrief: visual }, `Edited what scene ${number} shows`);
+              }
+            }}
+          />
+        </div>
+      </div>
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1.5">
           <Label htmlFor={`${id}-duration`}>Length (seconds)</Label>
@@ -146,6 +223,28 @@ export function SceneCard({
             }}
           />
         </div>
+        {index < count - 1 && (
+          <div className="space-y-1.5">
+            <Label>Then</Label>
+            <Combobox
+              ariaLabel={`How scene ${number} hands over`}
+              className="w-48"
+              options={TRANSITION_OPTIONS}
+              value={transition}
+              onChange={(next) => {
+                if (next === transition) return;
+                const transitionOut =
+                  next === 'cut'
+                    ? null
+                    : { kind: next as Exclude<typeof next, 'cut'>, duration: toDuration(0.5, fps) };
+                void update(
+                  { transitionOut } as Partial<Omit<Scene, 'id'>>,
+                  `Changed how scene ${number} hands over`,
+                );
+              }}
+            />
+          </div>
+        )}
         {durationFlicks === null && (
           <p id={`${id}-duration-error`} className="pb-2 text-xs text-destructive">
             Enter a length from 0.5 to 600 seconds.

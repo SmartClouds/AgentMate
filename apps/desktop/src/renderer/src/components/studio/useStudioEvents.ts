@@ -10,9 +10,12 @@ export function useStudioEvents(): void {
     return studioClient().onEvent((event) => {
       if (event.type === 'library-changed') {
         void queryClient.invalidateQueries({ queryKey: studioKeys.videos });
-      } else {
+      } else if (event.type === 'video-changed') {
         void queryClient.invalidateQueries({ queryKey: studioKeys.history(event.videoId) });
+      } else if (event.type === 'generation-changed') {
+        void queryClient.invalidateQueries({ queryKey: studioKeys.generations(event.videoId) });
       }
+      // Output lines are for the run's own progress card, which listens for them itself.
     });
   }, [queryClient]);
 }

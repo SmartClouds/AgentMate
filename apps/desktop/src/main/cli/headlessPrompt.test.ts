@@ -287,7 +287,8 @@ describe('runHeadlessCliPrompt attaches screenshots', () => {
       strictCli: true,
       images: ['frame.png'],
     });
-    expect(started.args).toEqual(['-p']);
+    // -p carries a short value: current Gemini refuses a bare -p and appends the value to stdin.
+    expect(started.args).toEqual(['-p', 'Answer the prompt above.']);
     expect(started.stdin).toBe('@frame.png write a commit message');
     expect(started.env?.GEMINI_CLI_TRUST_WORKSPACE).toBe('true');
     // The usual env still goes in.
@@ -330,5 +331,32 @@ describe('runHeadlessCliPrompt attaches screenshots', () => {
       expect(started.stdin).toBe('write a commit message');
       expect(started.env?.GEMINI_CLI_TRUST_WORKSPACE).toBeUndefined();
     }
+  });
+});
+
+describe('runHeadlessCliPrompt in a folder the app made for the run', () => {
+  it('tells Codex to run outside a git repository, once even when an image asks too', async () => {
+    installed.add('codex');
+    const started = await run({ preferredCliId: 'codex-cli', strictCli: true, trustCwd: true });
+    expect(started.args.filter((a) => a === '--skip-git-repo-check')).toHaveLength(1);
+    const withImage = await run({
+      preferredCliId: 'codex-cli',
+      strictCli: true,
+      trustCwd: true,
+      images: ['shot.png'],
+    });
+    expect(withImage.args.filter((a) => a === '--skip-git-repo-check')).toHaveLength(1);
+  });
+
+  it('trusts the folder for Gemini through its environment', async () => {
+    installed.add('gemini');
+    const started = await run({ preferredCliId: 'gemini-cli', strictCli: true, trustCwd: true });
+    expect(started.env?.GEMINI_CLI_TRUST_WORKSPACE).toBe('true');
+  });
+
+  it('leaves a folder the user works in untouched', async () => {
+    installed.add('codex');
+    const started = await run({ preferredCliId: 'codex-cli', strictCli: true });
+    expect(started.args).not.toContain('--skip-git-repo-check');
   });
 });

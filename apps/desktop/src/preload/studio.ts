@@ -3,11 +3,17 @@ import type {
   CreateVideoInput,
   EditOp,
   EditResponse,
+  GenerationDetail,
+  GenerationView,
   HistoryEntryView,
   MoveResult,
   OpenVideoResult,
   ProjectStorageView,
+  RecipeView,
   RootCheckView,
+  SaveRecipeInput,
+  StartEditInput,
+  StartScenarioInput,
   StudioDocument,
   StudioEvent,
   StudioSettingsPatch,
@@ -76,5 +82,33 @@ export function createStudio() {
       ipcRenderer.on(IPC.studio.onEvent, listener);
       return () => ipcRenderer.removeListener(IPC.studio.onEvent, listener);
     },
+  };
+}
+
+/** Studio's AI runs (E32): scenarios, edits by typing, their records, and saved recipes. */
+export function createStudioAi() {
+  const ref = (videoId: string, generationId: string) => ({ videoId, generationId });
+  return {
+    startScenario: (input: StartScenarioInput): Promise<GenerationView> =>
+      ipcRenderer.invoke(IPC.studioAi.startScenario, input),
+    startEdit: (input: StartEditInput): Promise<GenerationView> =>
+      ipcRenderer.invoke(IPC.studioAi.startEdit, input),
+    retry: (videoId: string, generationId: string): Promise<GenerationView> =>
+      ipcRenderer.invoke(IPC.studioAi.retry, ref(videoId, generationId)),
+    cancel: (videoId: string, generationId: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.studioAi.cancel, ref(videoId, generationId)),
+    generations: (videoId: string, limit: number): Promise<GenerationView[]> =>
+      ipcRenderer.invoke(IPC.studioAi.generations, { videoId, limit }),
+    generationDetail: (videoId: string, generationId: string): Promise<GenerationDetail> =>
+      ipcRenderer.invoke(IPC.studioAi.generationDetail, ref(videoId, generationId)),
+    applyProposal: (videoId: string, generationId: string): Promise<EditResponse> =>
+      ipcRenderer.invoke(IPC.studioAi.applyProposal, ref(videoId, generationId)),
+    discardProposal: (videoId: string, generationId: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.studioAi.discardProposal, ref(videoId, generationId)),
+    recipes: (): Promise<RecipeView[]> => ipcRenderer.invoke(IPC.studioAi.recipes),
+    saveRecipe: (input: SaveRecipeInput): Promise<RecipeView> =>
+      ipcRenderer.invoke(IPC.studioAi.saveRecipe, input),
+    deleteRecipe: (recipeId: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.studioAi.deleteRecipe, { recipeId }),
   };
 }

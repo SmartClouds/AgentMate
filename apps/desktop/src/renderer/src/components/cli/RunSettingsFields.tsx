@@ -138,6 +138,7 @@ export function RunSettingsFields({
       <div className="space-y-1.5">
         <FieldLabel>CLI</FieldLabel>
         <Combobox
+          ariaLabel="CLI"
           value={value.cliId ?? ''}
           onChange={(next) => onChange(fitToCli(next || undefined, value))}
           options={cliOptions}
@@ -150,6 +151,7 @@ export function RunSettingsFields({
       <div className="space-y-1.5">
         <FieldLabel>Model</FieldLabel>
         <Combobox
+          ariaLabel="Model"
           value={value.model ?? ''}
           onChange={(next) => onChange({ ...value, model: next.trim() || undefined })}
           options={(options?.models ?? []).map((m) => ({

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createDocument } from '../../document/schema.js';
 import { openNodeSqlite } from '../../test/nodeSqlite.js';
 import { useTempDirs } from '../../test/tempDir.js';
-import { HistoryDb, type NewTx } from './history.js';
+import { HistoryDb, type NewGeneration, type NewTx } from './history.js';
 
 const tempDir = useTempDirs();
 const opened: HistoryDb[] = [];
@@ -156,5 +156,80 @@ describe('HistoryDb', () => {
     expect(() => HistoryDb.open(openNodeSqlite, file, { busyTimeoutMs: 50 })).toThrow(
       /locked|busy/i,
     );
+  });
+});
+
+describe('HistoryDb generations', () => {
+  const generation = (over: Partial<NewGeneration> = {}): NewGeneration => ({
+    id: 'g1',
+    parentId: null,
+    stage: 'scenario',
+    status: 'running',
+    cliId: 'claude-code',
+    cliName: null,
+    model: 'opus',
+    effort: 'high',
+    instruction: 'A video about water',
+    params: { targetSeconds: 45, styleId: null },
+    startedAt: 1000,
+    ...over,
+  });
+
+  it('records a generation and reads it back with its attempts', async () => {
+    const db = await openDb();
+    db.addGeneration(generation());
+    db.updateGeneration('g1', {
+      cliName: 'Claude Code',
+      attempts: [
+        {
+          requestHash: 'a'.repeat(64),
+          outputHash: null,
+          logHash: null,
+          startedAt: 1000,
+          finishedAt: 2000,
+          issues: ['x'],
+          error: null,
+        },
+      ],
+    });
+    db.updateGeneration('g1', { status: 'done', resultSeq: 7, finishedAt: 3000 });
+    expect(db.generation('g1')).toMatchObject({
+      id: 'g1',
+      stage: 'scenario',
+      status: 'done',
+      cliName: 'Claude Code',
+      model: 'opus',
+      effort: 'high',
+      params: { targetSeconds: 45, styleId: null },
+      resultSeq: 7,
+      finishedAt: 3000,
+      proposal: null,
+      error: null,
+    });
+    expect(db.generation('g1')?.attempts).toHaveLength(1);
+    expect(db.generation('nope')).toBeUndefined();
+  });
+
+  it('lists generations newest first', async () => {
+    const db = await openDb();
+    db.addGeneration(generation({ id: 'g1', startedAt: 1 }));
+    db.addGeneration(generation({ id: 'g2', startedAt: 2, stage: 'edit' }));
+    expect(db.generations({ limit: 10 }).map((g) => g.id)).toEqual(['g2', 'g1']);
+    expect(db.generations({ limit: 1 }).map((g) => g.id)).toEqual(['g2']);
+  });
+
+  it('marks runs left running by a crash as interrupted', async () => {
+    const db = await openDb();
+    db.addGeneration(generation({ id: 'g1' }));
+    db.addGeneration(generation({ id: 'g2', status: 'done' }));
+    expect(db.interruptRunning(5000)).toBe(1);
+    expect(db.generation('g1')).toMatchObject({ status: 'interrupted', finishedAt: 5000 });
+    expect(db.generation('g2')?.status).toBe('done');
+  });
+
+  it('never lets a generation record be deleted', async () => {
+    const db = await openDb();
+    db.addGeneration(generation());
+    expect(() => db.unsafeExec("DELETE FROM generations WHERE id = 'g1'")).toThrow(/append-only/);
   });
 });

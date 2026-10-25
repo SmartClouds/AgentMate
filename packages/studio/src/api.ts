@@ -1,6 +1,9 @@
+import type { EffortLevel } from '@agentmat/core';
 import { z } from 'zod';
+import type { EditProposal } from './ai/edit/answer.js';
 import { editOpSchema } from './document/ops.js';
-import { ASPECTS, type StudioDocument } from './document/schema.js';
+import { ASPECTS, type Aspect, type StudioDocument } from './document/schema.js';
+import { styleById } from './styles/presets.js';
 import { isContentLanguage } from './text/languages.js';
 
 /**
@@ -55,6 +58,70 @@ export const studioInputs = {
   locate: z.object({ videoId: id, folder: folderPath }),
   move: z.object({ videoId: id, toRoot: folderPath }),
 };
+
+export const EFFORT_LEVELS = [
+  'low',
+  'medium',
+  'high',
+  'xhigh',
+  'max',
+] as const satisfies readonly EffortLevel[];
+
+/** The CLI, model and effort for one AI run. No CLI means the app's default CLI. */
+export const runSettingsSchema = z.object({
+  cliId: z.string().min(1).max(64).nullable(),
+  model: z.string().trim().min(1).max(200).nullable().optional(),
+  effort: z.enum(EFFORT_LEVELS).nullable().optional(),
+});
+export type RunSettingsInput = z.infer<typeof runSettingsSchema>;
+
+const styleId = z
+  .string()
+  .max(64)
+  .refine((value) => styleById(value) !== undefined, 'Pick one of the offered styles.')
+  .nullable();
+const targetSeconds = z.number().int().min(5).max(1800);
+const brief = z.string().trim().min(1).max(100_000);
+
+export const studioAiInputs = {
+  startScenario: z.object({ videoId: id, brief, targetSeconds, styleId, run: runSettingsSchema }),
+  startEdit: z.object({
+    videoId: id,
+    instruction: z.string().trim().min(1).max(20_000),
+    run: runSettingsSchema,
+  }),
+  generationRef: z.object({ videoId: id, generationId: id }),
+  generations: z.object({ videoId: id, limit: z.number().int().min(1).max(500) }),
+  saveRecipe: z.object({
+    id: id.optional(),
+    name: z.string().trim().min(1).max(120),
+    brief,
+    styleId,
+    language: z.string().refine(isContentLanguage, 'Pick one of the offered languages.'),
+    aspect: z.enum(ASPECTS),
+    targetSeconds,
+    scenario: runSettingsSchema,
+  }),
+  recipeRef: z.object({ recipeId: id }),
+};
+
+export type StartScenarioInput = z.infer<typeof studioAiInputs.startScenario>;
+export type StartEditInput = z.infer<typeof studioAiInputs.startEdit>;
+export type SaveRecipeInput = z.infer<typeof studioAiInputs.saveRecipe>;
+
+/** A saved way of making a video: the brief, the look, the format and the AI picks per stage. */
+export interface RecipeView {
+  id: string;
+  name: string;
+  brief: string;
+  styleId: string | null;
+  language: string;
+  aspect: Aspect;
+  targetSeconds: number;
+  scenario: RunSettingsInput;
+  createdAt: number;
+  updatedAt: number;
+}
 
 export type CreateVideoInput = z.infer<typeof studioInputs.create>;
 export type StudioSettingsPatch = z.infer<typeof studioInputs.updateSettings>;
@@ -156,6 +223,71 @@ export interface MoveResult {
   oldFolder: string;
 }
 
+export type GenerationStage = 'scenario' | 'edit';
+
+export type GenerationStatus =
+  | 'running'
+  /** A scenario that was written into the video. */
+  | 'done'
+  /** An edit waiting for the user to apply or discard it. */
+  | 'proposed'
+  | 'applied'
+  | 'discarded'
+  | 'failed'
+  | 'cancelled'
+  /** The app closed or crashed while it ran. CLI runs cannot resume, so it can only be retried. */
+  | 'interrupted';
+
+/** One CLI run inside a generation: the first try, then each repair round. */
+export interface GenerationAttempt {
+  requestHash: string;
+  outputHash: string | null;
+  logHash: string | null;
+  startedAt: number;
+  finishedAt: number | null;
+  /** What was wrong with the answer, sent back in the next repair round. */
+  issues: string[];
+  error: string | null;
+}
+
+/** An edit proposal as stored: the ops were checked against the video at `baseSeq`. */
+export type StoredProposal = EditProposal & { baseSeq: number };
+
+export interface GenerationParams {
+  targetSeconds?: number;
+  styleId?: string | null;
+}
+
+export interface GenerationView {
+  id: string;
+  parentId: string | null;
+  stage: GenerationStage;
+  status: GenerationStatus;
+  cliId: string | null;
+  /** The CLI that really answered, which differs from `cliId` when none was picked. */
+  cliName: string | null;
+  model: string | null;
+  effort: EffortLevel | null;
+  /** The user's own words: the brief, or what to change. */
+  instruction: string;
+  params: GenerationParams;
+  attempts: GenerationAttempt[];
+  proposal: StoredProposal | null;
+  /** The history entry this generation made. */
+  resultSeq: number | null;
+  error: string | null;
+  startedAt: number;
+  finishedAt: number | null;
+}
+
+/** A generation with what was sent and what came back in each attempt, for the details view. */
+export interface GenerationDetail extends GenerationView {
+  texts: { request: string; output: string | null; log: string | null }[];
+}
+
 export type StudioEvent =
   | { type: 'library-changed' }
-  | { type: 'video-changed'; videoId: string; seq: number };
+  | { type: 'video-changed'; videoId: string; seq: number }
+  | { type: 'generation-changed'; videoId: string; generationId: string }
+  /** New lines of a running CLI's output, batched. */
+  | { type: 'generation-output'; videoId: string; generationId: string; lines: string[] };

@@ -6,11 +6,17 @@ import type {
   ApplyResult,
   CreateVideoInput,
   EditResponse,
+  GenerationDetail,
+  GenerationView,
   HistoryEntryView,
   MoveResult,
   OpenVideoResult,
   ProjectStorageView,
+  RecipeView,
   RootCheckView,
+  SaveRecipeInput,
+  StartEditInput,
+  StartScenarioInput,
   StudioEvent,
   StudioSettingsPatch,
   StudioSettingsView,
@@ -20,6 +26,7 @@ import type {
 import type { EditOp } from '../document/ops.js';
 import type { StudioDocument } from '../document/schema.js';
 import { newId, safeFolderName } from '../text/names.js';
+import { createStudioAi, type StudioAiHost } from './ai/studioAi.js';
 import type { OpenSqlDriver } from './db/sqlDriver.js';
 import { acquireVideoLock, type HeldLock, LOCK_FILE, type LockOptions } from './project/lock.js';
 import { checkStorageRoot } from './project/storageRoot.js';
@@ -30,6 +37,7 @@ import {
   VideoStore,
   type VideoStoreDeps,
 } from './project/videoStore.js';
+import { RecipeStore } from './recipes/recipeStore.js';
 import { JsonStore } from './settings/jsonStore.js';
 
 /**
@@ -58,6 +66,8 @@ export interface StudioHost {
   openDb: OpenSqlDriver;
   projects: { get(id: string): Promise<HostProject | null> | HostProject | null };
   notify(event: StudioEvent): void;
+  /** Runs AI CLIs. Without it, Studio works but every AI action says it is unavailable. */
+  ai?: StudioAiHost;
   now?: () => number;
   pid?: number;
   hostname?: string;
@@ -122,10 +132,23 @@ export interface StudioService {
   locate(input: { videoId: string; folder: string }): Promise<VideoSummary>;
   removeFromLibrary(input: { videoId: string }): Promise<void>;
   move(input: { videoId: string; toRoot: string }): Promise<MoveResult>;
+  startScenario(input: StartScenarioInput): Promise<GenerationView>;
+  startEdit(input: StartEditInput): Promise<GenerationView>;
+  retryGeneration(input: GenerationRef): Promise<GenerationView>;
+  cancelGeneration(input: GenerationRef): Promise<void>;
+  generations(input: { videoId: string; limit: number }): Promise<GenerationView[]>;
+  generationDetail(input: GenerationRef): Promise<GenerationDetail>;
+  applyProposal(input: GenerationRef): Promise<EditResponse>;
+  discardProposal(input: GenerationRef): Promise<void>;
+  recipes(): Promise<RecipeView[]>;
+  saveRecipe(input: SaveRecipeInput): Promise<RecipeView>;
+  deleteRecipe(input: { recipeId: string }): Promise<void>;
   shutdown(): Promise<void>;
   /** Drops an open video as a crash would, keeping its lock file. Tests only. */
   abandonForTest(videoId: string): void;
 }
+
+type GenerationRef = { videoId: string; generationId: string };
 
 const LOCK_STALE_MS = 30_000;
 const LOCK_HEARTBEAT_MS = 10_000;
@@ -196,6 +219,9 @@ export function createStudioService(host: StudioHost): StudioService {
     now,
   );
   const sessions = new Map<string, Session>();
+  /** Videos the editor closed while an AI run was still working on them. */
+  const closeAfterRun = new Set<string>();
+  const recipeStore = new RecipeStore(join(host.dataDir, 'recipes.json'), now, newId);
 
   const lockOptions = (takeOverStale = false): LockOptions => ({
     appId: host.appId,
@@ -303,7 +329,10 @@ export function createStudioService(host: StudioHost): StudioService {
 
   async function openWith(videoId: string, takeOverStale: boolean): Promise<OpenVideoResult> {
     const existing = sessions.get(videoId);
-    if (existing) return { state: 'open', session: await sessionView(videoId, existing.store) };
+    if (existing) {
+      closeAfterRun.delete(videoId);
+      return { state: 'open', session: await sessionView(videoId, existing.store) };
+    }
     const found = await entry(videoId);
     const summary = await summarize(found);
     if (summary.missing) return { state: 'missing', video: summary };
@@ -329,9 +358,23 @@ export function createStudioService(host: StudioHost): StudioService {
     return { state: 'open', session: await sessionView(videoId, store) };
   }
 
+  const ai = createStudioAi({
+    ai: host.ai,
+    now,
+    newId,
+    notify: host.notify,
+    store: (videoId) => session(videoId).store,
+    afterEdit,
+    onIdle: (videoId) => {
+      if (closeAfterRun.delete(videoId)) void closeSession(videoId).catch(() => undefined);
+    },
+  });
+
   async function closeSession(videoId: string): Promise<void> {
     const open = sessions.get(videoId);
     if (!open) return;
+    // The AI run writes its outcome into the video's history, so it stops before the video closes.
+    await ai.stopForClose(videoId);
     sessions.delete(videoId);
     try {
       await open.store.close();
@@ -429,7 +472,15 @@ export function createStudioService(host: StudioHost): StudioService {
 
     open: ({ videoId }) => openWith(videoId, false),
     takeOver: ({ videoId }) => openWith(videoId, true),
-    close: ({ videoId }) => closeSession(videoId),
+    async close({ videoId }) {
+      // Leaving the editor does not stop a scenario being written: the video stays open until
+      // the run ends, then closes. Quitting, moving or removing the video does stop it.
+      if (ai.isRunning(videoId)) {
+        closeAfterRun.add(videoId);
+        return;
+      }
+      await closeSession(videoId);
+    },
 
     async apply({ videoId, baseSeq, ops, label }) {
       const { store } = session(videoId);
@@ -550,13 +601,33 @@ export function createStudioService(host: StudioHost): StudioService {
       }
     },
 
+    startScenario: (input) => ai.startScenario(input),
+    startEdit: (input) => ai.startEdit(input),
+    retryGeneration: (input) => ai.retry(input),
+    cancelGeneration: (input) => ai.cancel(input),
+    generations: async (input) => ai.generations(input),
+    generationDetail: (input) => ai.detail(input),
+
+    async applyProposal(input) {
+      const { store } = session(input.videoId);
+      const result = await ai.applyProposal(input);
+      return response(store, result.seq, result.document);
+    },
+
+    discardProposal: (input) => ai.discardProposal(input),
+    recipes: () => recipeStore.list(),
+    saveRecipe: (input) => recipeStore.save(input),
+    deleteRecipe: ({ recipeId }) => recipeStore.remove(recipeId),
+
     async shutdown() {
+      await ai.shutdown();
       await Promise.all([...sessions.keys()].map(closeSession));
     },
 
     abandonForTest(videoId) {
       const open = sessions.get(videoId);
       if (!open) return;
+      ai.abandonForTest(videoId);
       sessions.delete(videoId);
       open.store.crashForTest();
       open.lock.abandon();

@@ -17,10 +17,12 @@ import { SceneCard } from './SceneCard';
 export interface ScenarioPanelProps {
   document: StudioDocument;
   apply: (ops: EditOp[], label: string) => Promise<boolean>;
+  /** The AI brief card, shown above the scenario. */
+  brief?: React.ReactNode;
 }
 
-/** The scenario, scene by scene. AI writes it in E32; here it is written and edited by hand. */
-export function ScenarioPanel({ document, apply }: ScenarioPanelProps): React.JSX.Element {
+/** The scenario, scene by scene: written by AI from the brief, or by hand, and edited either way. */
+export function ScenarioPanel({ document, apply, brief }: ScenarioPanelProps): React.JSX.Element {
   const id = useId();
   const scenes = document.scenario.scenes;
   const [logline, setLogline] = useState(document.scenario.logline);
@@ -44,6 +46,7 @@ export function ScenarioPanel({ document, apply }: ScenarioPanelProps): React.JS
 
   return (
     <div className="space-y-2">
+      {brief}
       <div className={cn(GLASS_CARD, 'space-y-1.5 p-3')}>
         <Label htmlFor={`${id}-logline`}>What the video is about</Label>
         <Textarea
@@ -70,7 +73,11 @@ export function ScenarioPanel({ document, apply }: ScenarioPanelProps): React.JS
           size="sm"
           icon={Pencil}
           title="No scenes yet"
-          description="Add the first scene and write what it shows and says."
+          description={
+            brief
+              ? 'Write the brief above and let the AI write them, or add the first scene yourself.'
+              : 'Add the first scene and write what it shows and says.'
+          }
           action={
             <Button onClick={() => void addScene()}>
               <Plus /> Add scene
@@ -85,6 +92,7 @@ export function ScenarioPanel({ document, apply }: ScenarioPanelProps): React.JS
               scene={scene}
               index={index}
               count={scenes.length}
+              fps={document.renderSettings.fps}
               apply={apply}
               onRemove={(s, i) => void remove(s, i)}
             />

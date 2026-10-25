@@ -52,6 +52,14 @@ export const CliDefinitionSchema = z.object({
    */
   promptWriteArgs: z.array(z.string()).optional(),
   /**
+   * What a headless run needs in a folder the app made for it (a Studio work folder), which the
+   * CLI has never been told to trust and which is no git repository. Without these, Codex refuses
+   * to start and Cursor and Gemini stop to ask, which nothing can answer with no terminal. Only
+   * used for such folders, never for a project the user works in.
+   */
+  promptTrustArgs: z.array(z.string()).optional(),
+  promptTrustEnv: z.record(z.string(), z.string()).optional(),
+  /**
    * Example for the per-CLI "Arguments" field, shown as its placeholder. Each one names
    * a flag this CLI really has (taken from its own --help), since the flag for picking a
    * model differs per CLI: `--model sonnet`, `-m provider/model`, and so on. Absent for
@@ -137,8 +145,11 @@ export const CLI_REGISTRY: CliDefinition[] = [
     executableNames: ['gemini'],
     detectCommand: { command: 'gemini', args: ['--version'] },
     versionCommand: { command: 'gemini', args: ['--version'] },
-    promptCommand: { command: 'gemini', args: ['-p'] },
+    // -p takes a value and appends it to the prompt that comes on stdin; a bare -p fails with
+    // "Not enough arguments following: p" before the model sees anything.
+    promptCommand: { command: 'gemini', args: ['-p', 'Answer the prompt above.'] },
     promptInputMode: 'stdin',
+    promptTrustEnv: { GEMINI_CLI_TRUST_WORKSPACE: 'true' },
     promptWriteArgs: ['--yolo'],
     promptImageInput: 'mention',
     // Headless gemini refuses to read from a folder it doesn't trust, and a per-run temp folder
@@ -237,6 +248,7 @@ export const CLI_REGISTRY: CliDefinition[] = [
     // ("unexpected argument '--full-auto'"). The exec equivalent is the sandbox policy, and
     // exec never prompts for approvals anyway.
     promptWriteArgs: ['--sandbox', 'workspace-write'],
+    promptTrustArgs: ['--skip-git-repo-check'],
     promptImageInput: 'flag',
     promptImageFlag: '--image',
     // An image run happens in a fresh temp folder, and outside a git repo `codex exec` stops with
@@ -306,6 +318,7 @@ export const CLI_REGISTRY: CliDefinition[] = [
     versionCommand: { command: 'cursor-agent', args: ['--version'] },
     promptCommand: { command: 'cursor-agent', args: ['-p'] },
     promptWriteArgs: ['--force'],
+    promptTrustArgs: ['--trust'],
     argsExample: `--model ${CLI_MODEL_EXAMPLES['cursor-cli']}`,
     installCommand: {
       win32: "irm 'https://cursor.com/install?win32=true' | iex",

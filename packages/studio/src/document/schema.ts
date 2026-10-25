@@ -244,6 +244,9 @@ const TRACK_NAMES: Record<TrackKind, string> = {
   sfx: 'Sound effects',
 };
 
+/** The title a video gets when the user leaves it blank; an AI scenario may replace it. */
+export const UNTITLED_TITLE = 'Untitled video';
+
 export interface NewDocumentInput {
   id: string;
   title: string;

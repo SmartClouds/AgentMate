@@ -93,3 +93,46 @@ describe('buildHeadlessCliArgs: argument-mode CLIs', () => {
     expect(buildHeadlessCliArgs({ cli: interactiveOnly, savedArgs: '--x' })).toEqual([]);
   });
 });
+
+describe('buildHeadlessCliArgs: a folder the app made for the run', () => {
+  // Found by running each CLI in a fresh Studio work folder (E32 spike S2): Codex refuses to run
+  // outside a git repository, and Cursor and Gemini stop to ask whether to trust the folder,
+  // which nothing can answer with no terminal.
+  it('tells Codex to run outside a git repository, after its subcommand', () => {
+    expect(buildHeadlessCliArgs({ cli: cli('codex-cli'), trustCwd: true })).toEqual([
+      'exec',
+      '--skip-git-repo-check',
+    ]);
+  });
+
+  it('tells Cursor to trust the folder, before the prompt flag', () => {
+    expect(buildHeadlessCliArgs({ cli: cli('cursor-cli'), trustCwd: true })).toEqual([
+      '--trust',
+      '-p',
+    ]);
+  });
+
+  it('tells Gemini to trust the folder through its environment, which older versions ignore', () => {
+    expect(cli('gemini-cli').promptTrustEnv).toEqual({ GEMINI_CLI_TRUST_WORKSPACE: 'true' });
+    expect(buildHeadlessCliArgs({ cli: cli('gemini-cli'), trustCwd: true })).not.toContain(
+      '--skip-trust',
+    );
+  });
+
+  it('adds nothing for a folder the user works in, or a CLI that never asks', () => {
+    expect(buildHeadlessCliArgs({ cli: cli('codex-cli') })).toEqual(['exec']);
+    expect(buildHeadlessCliArgs({ cli: cli('claude-code'), trustCwd: true })).toEqual(['-p']);
+  });
+});
+
+describe('buildHeadlessCliArgs: Gemini', () => {
+  // Gemini's -p takes a value and appends it to what came on stdin; a bare -p fails with
+  // "Not enough arguments following: p" before the model is asked anything.
+  it('gives -p a value, so the prompt on stdin is read', () => {
+    const args = buildHeadlessCliArgs({ cli: cli('gemini-cli') });
+    const at = args.indexOf('-p');
+    expect(at).toBeGreaterThanOrEqual(0);
+    expect(args[at + 1]?.trim()).toBeTruthy();
+    expect(args[at + 1]?.startsWith('-')).toBe(false);
+  });
+});

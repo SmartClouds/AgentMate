@@ -13,6 +13,8 @@ export interface HeadlessCliArgsInput {
   runArgs?: readonly string[];
   /** Adds the CLI's write flags, for runs the user asked to change files. */
   allowWrites?: boolean;
+  /** The run's folder is one the app made for it, so the CLI is told to trust it. */
+  trustCwd?: boolean;
 }
 
 /**
@@ -31,7 +33,10 @@ export function buildHeadlessCliArgs(input: HeadlessCliArgsInput): string[] {
   const { cli } = input;
   if (!cli.promptCommand) return [];
   const runArgs = [...(input.runArgs ?? [])];
-  const writeArgs = input.allowWrites ? (cli.promptWriteArgs ?? []) : [];
+  const writeArgs = [
+    ...(input.allowWrites ? (cli.promptWriteArgs ?? []) : []),
+    ...(input.trustCwd ? (cli.promptTrustArgs ?? []) : []),
+  ];
   const configured = parseCliArgs(configuredArgsWithout((input.savedArgs ?? '').trim(), runArgs));
   const userArgs = [...configured, ...runArgs];
   return cli.promptInputMode === 'stdin'

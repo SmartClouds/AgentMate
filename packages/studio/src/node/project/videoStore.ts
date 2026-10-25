@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
+import type { GenerationView } from '../../api.js';
 import { applyOps, type EditOp } from '../../document/ops.js';
 import {
   type Aspect,
@@ -10,7 +11,15 @@ import {
 } from '../../document/schema.js';
 import { pushTx, type TxRef, type UndoStacks } from '../../document/undo.js';
 import { videoFolderName } from '../../text/names.js';
-import { HistoryDb, type HistoryEntry, type Revision, type TxActor } from '../db/history.js';
+import { BlobStore } from '../blobs/blobStore.js';
+import {
+  type GenerationPatch,
+  HistoryDb,
+  type HistoryEntry,
+  type NewGeneration,
+  type Revision,
+  type TxActor,
+} from '../db/history.js';
 import type { OpenSqlDriver } from '../db/sqlDriver.js';
 import { readJsonFile, writeFileAtomic } from '../fs/atomicWrite.js';
 
@@ -218,6 +227,8 @@ export class VideoStore {
           saved.document,
         );
       }
+      // An AI run cannot outlive the app that started it.
+      db.interruptRunning(deps.now());
       const head = db.head();
       const store = new VideoStore(
         folder,
@@ -246,6 +257,28 @@ export class VideoStore {
 
   get manifest(): VideoManifest {
     return this.manifestValue;
+  }
+
+  get blobs(): BlobStore {
+    return BlobStore.forVideo(this.folder);
+  }
+
+  addGeneration(generation: NewGeneration): void {
+    this.assertOpen();
+    this.db.addGeneration(generation);
+  }
+
+  updateGeneration(id: string, patch: GenerationPatch): void {
+    this.assertOpen();
+    this.db.updateGeneration(id, patch);
+  }
+
+  generation(id: string): GenerationView | undefined {
+    return this.db.generation(id);
+  }
+
+  generations(options: { limit: number }): GenerationView[] {
+    return this.db.generations(options);
   }
 
   status(): VideoStatus {

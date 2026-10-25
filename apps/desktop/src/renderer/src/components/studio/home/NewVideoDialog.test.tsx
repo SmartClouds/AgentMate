@@ -1,14 +1,39 @@
+import type { RecipeView } from '@agentmat/studio';
 import { screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
-import { INSIDE_PROJECT, ok, PROJECT, settings, storage, video } from '../testing/fixtures';
+import { usePendingScenario } from '../ai/runSettings';
+import { INSIDE_PROJECT, NOW, ok, PROJECT, settings, storage, video } from '../testing/fixtures';
 import { NewVideoDialog } from './NewVideoDialog';
 
-function renderDialog(projectId: string | null = null, overrides: Record<string, unknown> = {}) {
+const RECIPE: RecipeView = {
+  id: 'r1',
+  name: 'Product explainer',
+  brief: 'یک ویدیوی توضیحی برای محصول',
+  styleId: 'flat-vector',
+  language: 'fa',
+  aspect: '9:16',
+  targetSeconds: 30,
+  scenario: { cliId: 'claude-code', model: 'opus', effort: 'high' },
+  createdAt: NOW,
+  updatedAt: NOW,
+};
+
+function renderDialog(
+  projectId: string | null = null,
+  overrides: Record<string, unknown> = {},
+  recipeId: string | null = null,
+) {
   const onCreated = vi.fn();
   const onOpenChange = vi.fn();
   const view = renderWithProviders(
-    <NewVideoDialog open onOpenChange={onOpenChange} projectId={projectId} onCreated={onCreated} />,
+    <NewVideoDialog
+      open
+      onOpenChange={onOpenChange}
+      projectId={projectId}
+      recipeId={recipeId}
+      onCreated={onCreated}
+    />,
     {
       bridge: {
         'projects.list': async () => [
@@ -18,6 +43,7 @@ function renderDialog(projectId: string | null = null, overrides: Record<string,
         'studio.settings': async () => settings(),
         'studio.projectStorage': async () => storage(),
         'studio.create': async () => video(),
+        'studioAi.recipes': async () => [],
         ...overrides,
       },
     },
@@ -25,16 +51,23 @@ function renderDialog(projectId: string | null = null, overrides: Record<string,
   return { ...view, onCreated, onOpenChange };
 }
 
+beforeEach(() => {
+  usePendingScenario.setState({ pending: null });
+  window.localStorage.clear();
+});
+
 describe('NewVideoDialog', () => {
-  it('creates a standalone Persian video by default and says where it will be saved', async () => {
+  it('creates a Persian video and hands the brief to the editor to write the scenario', async () => {
     const { user, bridge, onCreated, onOpenChange } = renderDialog();
     expect(await screen.findByText(settings().standaloneRoot)).toBeInTheDocument();
-    await user.type(screen.getByLabelText('Title'), 'معرفی محصول');
+    expect(screen.getByRole('button', { name: 'Create and write' })).toBeDisabled();
+    await user.type(screen.getByLabelText('What is the video about?'), 'معرفی محصول تازه');
+    await user.click(screen.getByRole('radio', { name: '30 s' }));
     await user.click(screen.getByRole('radio', { name: 'Vertical 9:16' }));
-    await user.click(screen.getByRole('button', { name: 'Create video' }));
+    await user.click(screen.getByRole('button', { name: 'Create and write' }));
     await waitFor(() =>
       expect(bridge.$fn('studio.create')).toHaveBeenCalledWith({
-        title: 'معرفی محصول',
+        title: 'Untitled video',
         projectId: null,
         language: 'fa',
         aspect: '9:16',
@@ -42,18 +75,64 @@ describe('NewVideoDialog', () => {
     );
     expect(onCreated).toHaveBeenCalledWith(video());
     expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(usePendingScenario.getState().pending).toEqual({
+      videoId: video().id,
+      request: {
+        brief: 'معرفی محصول تازه',
+        targetSeconds: 30,
+        styleId: null,
+        run: { cliId: null, model: null, effort: null },
+      },
+    });
   });
 
-  it('cannot create a video without a title', async () => {
-    renderDialog();
-    expect(await screen.findByRole('button', { name: 'Create video' })).toBeDisabled();
+  it('makes a blank video without AI, which then needs a title', async () => {
+    const { user, bridge } = renderDialog();
+    await user.click(await screen.findByRole('switch', { name: 'Write the scenario with AI' }));
+    expect(screen.queryByLabelText('What is the video about?')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create video' })).toBeDisabled();
+    await user.type(screen.getByLabelText('Title'), 'Teaser');
+    await user.click(screen.getByRole('button', { name: 'Create video' }));
+    await waitFor(() =>
+      expect(bridge.$fn('studio.create')).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Teaser' }),
+      ),
+    );
+    expect(usePendingScenario.getState().pending).toBeNull();
+  });
+
+  it('starts from a saved recipe, with its brief, look, format and AI', async () => {
+    const { user, bridge } = renderDialog(null, { 'studioAi.recipes': async () => [RECIPE] });
+    await user.click(await screen.findByRole('combobox', { name: 'Start from' }));
+    await user.click(await screen.findByRole('option', { name: 'Product explainer' }));
+    expect(screen.getByLabelText('What is the video about?')).toHaveValue(RECIPE.brief);
+    expect(screen.getByRole('radio', { name: 'Vertical 9:16' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    expect(screen.getByRole('radio', { name: '30 s' })).toHaveAttribute('aria-checked', 'true');
+    await user.click(screen.getByRole('button', { name: 'Create and write' }));
+    await waitFor(() => expect(bridge.$fn('studio.create')).toHaveBeenCalled());
+    expect(usePendingScenario.getState().pending?.request).toEqual({
+      brief: RECIPE.brief,
+      targetSeconds: 30,
+      styleId: 'flat-vector',
+      run: RECIPE.scenario,
+    });
+  });
+
+  it('opens on a recipe picked from the Recipes list', async () => {
+    renderDialog(null, { 'studioAi.recipes': async () => [RECIPE] }, 'r1');
+    await waitFor(() =>
+      expect(screen.getByLabelText('What is the video about?')).toHaveValue(RECIPE.brief),
+    );
   });
 
   it("uses the project's folder when opened from a project", async () => {
     const { user, bridge } = renderDialog('p1');
     expect(await screen.findByText(storage().root)).toBeInTheDocument();
-    await user.type(screen.getByLabelText('Title'), 'Teaser');
-    await user.click(screen.getByRole('button', { name: 'Create video' }));
+    await user.type(screen.getByLabelText('What is the video about?'), 'Teaser');
+    await user.click(screen.getByRole('button', { name: 'Create and write' }));
     await waitFor(() =>
       expect(bridge.$fn('studio.create')).toHaveBeenCalledWith(
         expect.objectContaining({ projectId: 'p1' }),
@@ -66,8 +145,8 @@ describe('NewVideoDialog', () => {
       'studio.projectStorage': async () => storage({ check: ok([INSIDE_PROJECT]) }),
     });
     expect(await screen.findByText(/inside the project's folder/)).toBeInTheDocument();
-    await user.type(screen.getByLabelText('Title'), 'Teaser');
-    expect(screen.getByRole('button', { name: 'Create video' })).toBeDisabled();
+    await user.type(screen.getByLabelText('What is the video about?'), 'Teaser');
+    expect(screen.getByRole('button', { name: 'Create and write' })).toBeDisabled();
   });
 
   it('shows what went wrong when the video could not be made', async () => {
@@ -76,9 +155,10 @@ describe('NewVideoDialog', () => {
         throw new Error("Error invoking remote method 'studio:create': Error: The disk is full.");
       },
     });
-    await user.type(await screen.findByLabelText('Title'), 'Film');
-    await user.click(screen.getByRole('button', { name: 'Create video' }));
+    await user.type(await screen.findByLabelText('What is the video about?'), 'Film');
+    await user.click(screen.getByRole('button', { name: 'Create and write' }));
     expect(await screen.findByText('The disk is full.')).toBeInTheDocument();
+    expect(usePendingScenario.getState().pending).toBeNull();
   });
 
   it('offers no Chinese among the languages', async () => {

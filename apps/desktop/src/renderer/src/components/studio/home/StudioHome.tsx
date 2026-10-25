@@ -5,6 +5,7 @@ import { listProjects, studioClient } from '../client';
 import { errorMessage } from '../format';
 import {
   appQueryKeys,
+  Bookmark,
   Button,
   Combobox,
   FolderPlus,
@@ -16,6 +17,7 @@ import {
 } from '../kit';
 import { studioKeys } from '../queryKeys';
 import { NewVideoDialog } from './NewVideoDialog';
+import { RecipesDialog } from './RecipesDialog';
 import { VideoGrid } from './VideoGrid';
 
 type Filter = 'all' | 'standalone' | 'project';
@@ -36,6 +38,12 @@ export function StudioHome({
   const [filter, setFilter] = useState<Filter>('all');
   const [projectId, setProjectId] = useState('');
   const [creating, setCreating] = useState(false);
+  const [showRecipes, setShowRecipes] = useState(false);
+  const [recipeId, setRecipeId] = useState<string | null>(null);
+  const startNew = (fromRecipe: string | null) => {
+    setRecipeId(fromRecipe);
+    setCreating(true);
+  };
 
   const projects = useQuery({ queryKey: appQueryKeys.projects, queryFn: listProjects });
   const projectNames = useMemo(
@@ -90,10 +98,13 @@ export function StudioHome({
           />
         )}
         <div className="ml-auto flex items-center gap-2">
+          <Button variant="ghost" onClick={() => setShowRecipes(true)}>
+            <Bookmark /> Recipes
+          </Button>
           <Button variant="outline" onClick={() => void addExisting()}>
             <FolderPlus /> Add existing folder
           </Button>
-          <Button onClick={() => setCreating(true)}>
+          <Button onClick={() => startNew(null)}>
             <Plus /> New video
           </Button>
         </div>
@@ -106,7 +117,7 @@ export function StudioHome({
         onOpen={onOpen}
         projectNames={projectNames}
         emptyAction={
-          <Button onClick={() => setCreating(true)}>
+          <Button onClick={() => startNew(null)}>
             <Plus /> New video
           </Button>
         }
@@ -115,7 +126,16 @@ export function StudioHome({
         open={creating}
         onOpenChange={setCreating}
         projectId={filter === 'project' && projectId ? projectId : null}
+        recipeId={recipeId}
         onCreated={onOpen}
+      />
+      <RecipesDialog
+        open={showRecipes}
+        onOpenChange={setShowRecipes}
+        onUse={(id) => {
+          setShowRecipes(false);
+          startNew(id);
+        }}
       />
     </div>
   );

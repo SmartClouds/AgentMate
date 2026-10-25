@@ -115,4 +115,29 @@ describe('StudioHome', () => {
     await waitFor(() => expect(bridge.$fn('studio.pickFolder')).toHaveBeenCalled());
     expect(() => bridge.$fn('studio.addExisting')).toThrow();
   });
+
+  it('opens the saved recipes and starts a new video from one', async () => {
+    const recipe = {
+      id: 'r1',
+      name: 'Explainer',
+      brief: 'Explain the product',
+      styleId: null,
+      language: 'en',
+      aspect: '1:1',
+      targetSeconds: 45,
+      scenario: { cliId: null },
+      createdAt: 1,
+      updatedAt: 1,
+    };
+    const { user } = renderHome({ 'studioAi.recipes': async () => [recipe] });
+    await user.click(await screen.findByRole('button', { name: /Recipes/ }));
+    const list = await screen.findByRole('dialog', { name: 'Recipes' });
+    await user.click(await within(list).findByRole('button', { name: 'Use' }));
+    const dialog = await screen.findByRole('dialog', { name: 'New video' });
+    await waitFor(() =>
+      expect(within(dialog).getByLabelText('What is the video about?')).toHaveValue(
+        'Explain the product',
+      ),
+    );
+  });
 });

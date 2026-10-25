@@ -57,7 +57,7 @@ const cancelledBeforeStart = new Set<string>();
  * agent itself; taskkill /T takes the whole tree down. Elsewhere the CLI is the direct
  * child and a signal is enough.
  */
-function killProcessTree(child: ChildProcess): void {
+export function killProcessTree(child: ChildProcess): void {
   if (process.platform === 'win32' && child.pid) {
     execFile('taskkill', ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true }, () => {
       // Best effort: the process may already have exited on its own.
@@ -217,7 +217,7 @@ async function probeVersion(cli: CliDefinition): Promise<boolean> {
  * repo content (a commit subject, say) can never paste an environment value (an API
  * key, for instance) into a prompt that goes off to a model.
  */
-function stripEnvExpansions(prompt: string): string {
+export function stripEnvExpansions(prompt: string): string {
   return process.platform === 'win32' ? prompt.replace(/%([A-Za-z0-9_]+)%/g, '$1') : prompt;
 }
 
@@ -230,7 +230,7 @@ function stripEnvExpansions(prompt: string): string {
  */
 const WINDOWS_PROMPT_BUDGET_CHARS = 5000;
 
-function truncateForCommandLine(prompt: string, command: string, args: string[]): string {
+export function truncateForCommandLine(prompt: string, command: string, args: string[]): string {
   if (process.platform !== 'win32') return prompt;
   const overhead = command.length + args.join(' ').length + 20;
   const budget = Math.max(WINDOWS_PROMPT_BUDGET_CHARS - overhead, 500);
@@ -269,6 +269,11 @@ export interface HeadlessPromptOptions {
    * entry says how to attach an image can take them; any other CLI is not started at all.
    */
   images?: string[];
+  /**
+   * `cwd` is a folder the app made for this run (a Studio work folder), so the CLI is told to
+   * trust it instead of stopping to ask. Never set for a folder the user works in.
+   */
+  trustCwd?: boolean;
 }
 
 /** Names the CLIs that can look at a screenshot, for an error that tells the user what to pick. */
@@ -297,42 +302,87 @@ export async function runHeadlessCliPrompt(
   };
   if (options.requestId && cancelledBeforeStart.delete(options.requestId)) return cancelledResult;
 
+  const prepared = await prepareHeadlessRun(prompt, options);
+  if (!prepared.ok) return prepared.result;
+  const { cli, command, args, prompt: fullPrompt, env } = prepared.run;
+  // Resolving the CLI can take seconds, and working out the tool folders can mean starting
+  // Python; the user may have cancelled in the meantime.
+  if (options.requestId && cancelledBeforeStart.delete(options.requestId)) {
+    return { ...cancelledResult, cliName: cli.name };
+  }
+
+  const timeoutMs = options.timeoutMs ?? HEADLESS_TIMEOUT_MS;
+  const outcome =
+    cli.promptInputMode === 'stdin'
+      ? await execPrompt(command, args, cwd, options.requestId, fullPrompt, timeoutMs, env)
+      : await execPrompt(
+          command,
+          [...args, truncateForCommandLine(stripEnvExpansions(fullPrompt), command, args)],
+          cwd,
+          options.requestId,
+          null,
+          timeoutMs,
+          env,
+        );
+
+  // A cancel that lost the race with completion would otherwise sit in the set forever.
+  const cancelledLate = options.requestId ? cancelledBeforeStart.delete(options.requestId) : false;
+  return headlessResult(
+    cli.name,
+    { ...outcome, cancelled: outcome.cancelled || cancelledLate },
+    timeoutMs,
+  );
+}
+
+export interface PreparedHeadlessRun {
+  cli: CliDefinition;
+  command: string;
+  /** The CLI's arguments, without the prompt. */
+  args: string[];
+  /** The prompt, with whatever an attached image needs in front of it. */
+  prompt: string;
+  env: NodeJS.ProcessEnv;
+}
+
+/**
+ * Everything before a headless run starts: which CLI answers, its arguments from the user's
+ * settings and the run's own picks, and the environment. Shared by the buffered run above and the
+ * streaming one in headlessStream.ts, so both start a CLI exactly the same way.
+ */
+export async function prepareHeadlessRun(
+  prompt: string,
+  options: Omit<HeadlessPromptOptions, 'requestId' | 'timeoutMs'>,
+): Promise<{ ok: true; run: PreparedHeadlessRun } | { ok: false; result: HeadlessPromptResult }> {
+  const fail = (result: Omit<HeadlessPromptResult, 'ok' | 'text'>) =>
+    ({ ok: false, result: { ok: false, text: '', ...result } }) as const;
   const settings = await store.getSettings();
   const cli = await resolveHeadlessCli(settings, options.preferredCliId, options.strictCli);
-  // Resolving the CLI can take seconds; the user may have cancelled in the meantime.
-  if (options.requestId && cancelledBeforeStart.delete(options.requestId)) return cancelledResult;
 
   if (!cli?.promptCommand && options.strictCli) {
     const name = options.preferredCliId ? getCliDefinition(options.preferredCliId)?.name : null;
-    return {
-      ok: false,
-      text: '',
+    return fail({
       cliName: name ?? null,
       error:
         `${name ?? 'The chosen CLI'} wasn't found. Check that it runs in a new terminal, then ` +
         'refresh CLI Manager, or pick another AI for this task.',
-    };
+    });
   }
 
   if (!cli?.promptCommand) {
-    return {
-      ok: false,
-      text: '',
+    return fail({
       cliName: null,
       error:
         'No installed CLI supports non-interactive prompts. Install one (Claude Code, Codex, Gemini, …) ' +
         'from CLI Manager and pick it as your default CLI in Settings.',
-    };
+    });
   }
 
   const images = options.images ?? [];
   if (images.length > 0 && !supportsPromptImages(cli)) {
-    return {
-      ok: false,
-      text: '',
+    return fail({
       cliName: cli.name,
       error: `${cli.name} can't look at screenshots. Pick ${imageCliNames()}.`,
-    };
+    });
   }
 
   // Stdin bypasses cmd.exe's command line entirely, so a CLI confirmed to read the
@@ -346,12 +396,9 @@ export async function runHeadlessCliPrompt(
     savedArgs: getCliArgsFor(settings.cliArgs, cli.id),
     runArgs: cli.id === options.preferredCliId ? (options.runArgs ?? []) : [],
     allowWrites: options.allowWrites,
+    trustCwd: options.trustCwd,
   });
   const imageInput = buildHeadlessImageInput(cli, images);
-  const args = [...baseArgs, ...imageInput.args];
-  const fullPrompt = imageInput.promptPrefix + prompt;
-
-  const timeoutMs = options.timeoutMs ?? HEADLESS_TIMEOUT_MS;
   // Cline's CLI self-updates on every invocation by spawning a detached background installer;
   // on Windows that can flash open a visible console mid-run. This is a no-op env var for every
   // other CLI we shell out to. The extra tool folders let a CLI that a native installer put in
@@ -360,54 +407,52 @@ export async function runHeadlessCliPrompt(
     ...process.env,
     CLINE_NO_AUTO_UPDATE: '1',
     ...imageInput.env,
+    ...(options.trustCwd ? cli.promptTrustEnv : {}),
   });
-  // Working out those folders can mean starting Python, and the user may cancel meanwhile.
-  if (options.requestId && cancelledBeforeStart.delete(options.requestId)) {
-    return { ...cancelledResult, cliName: cli.name };
-  }
-  const outcome =
-    cli.promptInputMode === 'stdin'
-      ? await execPrompt(
-          cli.promptCommand.command,
-          args,
-          cwd,
-          options.requestId,
-          fullPrompt,
-          timeoutMs,
-          env,
-        )
-      : await execPrompt(
-          cli.promptCommand.command,
-          [
-            ...args,
-            truncateForCommandLine(stripEnvExpansions(fullPrompt), cli.promptCommand.command, args),
-          ],
-          cwd,
-          options.requestId,
-          null,
-          timeoutMs,
-          env,
-        );
+  return {
+    ok: true,
+    run: {
+      cli,
+      command: cli.promptCommand.command,
+      // An image run and a trusted folder can both ask for the same flag; a CLI may refuse it twice.
+      args: [...baseArgs, ...imageInput.args.filter((arg) => !baseArgs.includes(arg))],
+      prompt: imageInput.promptPrefix + prompt,
+      env,
+    },
+  };
+}
 
-  // A cancel that lost the race with completion would otherwise sit in the set forever.
-  const cancelledLate = options.requestId ? cancelledBeforeStart.delete(options.requestId) : false;
+/** How a headless run ended, whichever way it was started. */
+export interface HeadlessOutcome {
+  stdout: string;
+  stderr: string;
+  failed: boolean;
+  cancelled: boolean;
+  timedOut: boolean;
+}
 
-  if (outcome.cancelled || cancelledLate) {
-    return { ok: false, text: '', cliName: cli.name, cancelled: true, error: 'Request cancelled.' };
+/** Turns a finished run into the result callers get: the answer, or the reason there is none. */
+export function headlessResult(
+  cliName: string,
+  outcome: HeadlessOutcome,
+  timeoutMs: number,
+): HeadlessPromptResult {
+  if (outcome.cancelled) {
+    return { ok: false, text: '', cliName, cancelled: true, error: 'Request cancelled.' };
   }
 
   const text = stripAnsi(outcome.stdout).trim();
   const log = trimLog(stripAnsi(outcome.stderr).trim());
-  if (text && !outcome.timedOut) return { ok: true, text, log, cliName: cli.name };
+  if (text && !outcome.timedOut) return { ok: true, text, log, cliName };
 
   if (outcome.timedOut) {
     return {
       ok: false,
       text,
       log,
-      cliName: cli.name,
+      cliName,
       timedOut: true,
-      error: `${cli.name} was still working after ${Math.round(timeoutMs / 60000)} minutes and was stopped.`,
+      error: `${cliName} was still working after ${Math.round(timeoutMs / 60000)} minutes and was stopped.`,
     };
   }
 
@@ -419,12 +464,12 @@ export async function runHeadlessCliPrompt(
     ok: false,
     text: '',
     log,
-    cliName: cli.name,
+    cliName,
     error: outcome.failed
       ? detail
-        ? `${cli.name} failed: ${detail}`
-        : `${cli.name} exited without answering.`
-      : `${cli.name} returned an empty answer.`,
+        ? `${cliName} failed: ${detail}`
+        : `${cliName} exited without answering.`
+      : `${cliName} returned an empty answer.`,
   };
 }
 

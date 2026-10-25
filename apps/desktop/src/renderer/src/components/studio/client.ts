@@ -10,6 +10,12 @@ export function studioClient() {
 
 export type StudioClient = ReturnType<typeof studioClient>;
 
+export function studioAiClient() {
+  return window.agentmat.studioAi;
+}
+
+export type StudioAiClient = ReturnType<typeof studioAiClient>;
+
 /** The projects AgentMate knows, for choosing which one a video belongs to. */
 export async function listProjects(): Promise<Project[]> {
   return (await window.agentmat.projects.list()) ?? [];

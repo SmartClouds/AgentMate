@@ -135,3 +135,63 @@ describe('ScenarioPanel', () => {
     expect(screen.getByDisplayValue('Changed by undo')).toBeInTheDocument();
   });
 });
+
+describe('ScenarioPanel scene details', () => {
+  it('saves the on-screen lines one per line, dropping blank ones', async () => {
+    const { user, apply } = renderPanel();
+    const field = within(scene(1)).getByLabelText('On screen');
+    await user.type(field, 'هر قطره مهم است{Enter}{Enter}  ۳۰۰۰ لیتر  ');
+    await user.tab();
+    expect(apply).toHaveBeenCalledWith(
+      [
+        {
+          op: 'scene.update',
+          sceneId: 's1',
+          patch: { onScreenText: ['هر قطره مهم است', '۳۰۰۰ لیتر'] },
+        },
+      ],
+      'Edited the on-screen text of scene 1',
+    );
+  });
+
+  it('saves what the viewer sees', async () => {
+    const { user, apply } = renderPanel();
+    await user.type(within(scene(2)).getByLabelText('What the viewer sees'), 'A drop falls');
+    await user.tab();
+    expect(apply).toHaveBeenCalledWith(
+      [{ op: 'scene.update', sceneId: 's2', patch: { visualBrief: 'A drop falls' } }],
+      'Edited what scene 2 shows',
+    );
+  });
+
+  it('changes how a scene hands over, on a frame of the video, and offers none on the last scene', async () => {
+    const { user, apply } = renderPanel();
+    await user.click(within(scene(1)).getByRole('combobox', { name: 'How scene 1 hands over' }));
+    await user.click(await screen.findByRole('option', { name: 'Fade through black' }));
+    expect(apply).toHaveBeenCalledWith(
+      [
+        {
+          op: 'scene.update',
+          sceneId: 's1',
+          patch: { transitionOut: { kind: 'fadeblack', duration: secondsToFlicks(0.5) } },
+        },
+      ],
+      'Changed how scene 1 hands over',
+    );
+    expect(
+      within(scene(3)).queryByRole('combobox', { name: /hands over/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('goes back to a plain cut', async () => {
+    const doc = withScenes('A', 'B');
+    doc.scenario.scenes[0]!.transitionOut = { kind: 'fade', duration: secondsToFlicks(0.5) };
+    const { user, apply } = renderPanel(doc);
+    await user.click(within(scene(1)).getByRole('combobox', { name: 'How scene 1 hands over' }));
+    await user.click(await screen.findByRole('option', { name: 'Cut' }));
+    expect(apply).toHaveBeenCalledWith(
+      [{ op: 'scene.update', sceneId: 's1', patch: { transitionOut: null } }],
+      'Changed how scene 1 hands over',
+    );
+  });
+});

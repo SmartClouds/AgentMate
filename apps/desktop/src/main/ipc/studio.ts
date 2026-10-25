@@ -1,11 +1,11 @@
-import { studioInputs } from '@agentmat/studio';
+import { studioAiInputs, studioInputs } from '@agentmat/studio';
 import { BrowserWindow, dialog, type IpcMainInvokeEvent, ipcMain, shell } from 'electron';
 import { z } from 'zod';
 import { IPC } from '../../shared/ipcChannels';
 import { studioService } from '../studio';
 
 /**
- * Studio's channels (E31). Every argument is checked against Studio's own input schemas before
+ * Studio's channels (E31), and its AI channels (E32). Every argument is checked against Studio's own input schemas before
  * the service sees it; the service then checks folders and edits again on its own terms.
  */
 
@@ -106,6 +106,37 @@ export function registerStudioHandlers(
     movedAway.delete(folder);
     await shell.trashItem(folder);
   });
+  handle(IPC.studioAi.startScenario, (value) =>
+    service().startScenario(parse(studioAiInputs.startScenario, value)),
+  );
+  handle(IPC.studioAi.startEdit, (value) =>
+    service().startEdit(parse(studioAiInputs.startEdit, value)),
+  );
+  handle(IPC.studioAi.retry, (value) =>
+    service().retryGeneration(parse(studioAiInputs.generationRef, value)),
+  );
+  handle(IPC.studioAi.cancel, (value) =>
+    service().cancelGeneration(parse(studioAiInputs.generationRef, value)),
+  );
+  handle(IPC.studioAi.generations, (value) =>
+    service().generations(parse(studioAiInputs.generations, value)),
+  );
+  handle(IPC.studioAi.generationDetail, (value) =>
+    service().generationDetail(parse(studioAiInputs.generationRef, value)),
+  );
+  handle(IPC.studioAi.applyProposal, (value) =>
+    service().applyProposal(parse(studioAiInputs.generationRef, value)),
+  );
+  handle(IPC.studioAi.discardProposal, (value) =>
+    service().discardProposal(parse(studioAiInputs.generationRef, value)),
+  );
+  handle(IPC.studioAi.recipes, () => service().recipes());
+  handle(IPC.studioAi.saveRecipe, (value) =>
+    service().saveRecipe(parse(studioAiInputs.saveRecipe, value)),
+  );
+  handle(IPC.studioAi.deleteRecipe, (value) =>
+    service().deleteRecipe(parse(studioAiInputs.recipeRef, value)),
+  );
   handle(IPC.studio.revealVideo, async (value) => {
     const { videoId } = parse(studioInputs.videoRef, value);
     const video = (await service().list()).find((v) => v.id === videoId);

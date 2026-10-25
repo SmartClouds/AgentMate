@@ -315,6 +315,9 @@ export default defineConfig({
               functions: 85,
               branches: 80,
             },
+            // Studio (E32): the streaming CLI run behind the scenario writer.
+            // Branches for the POSIX spawn path only run on the Linux and Mac CI legs.
+            'src/main/cli/headlessStream.ts': { lines: 95, branches: 70 },
           },
     },
   },

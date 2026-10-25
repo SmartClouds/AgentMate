@@ -1,8 +1,10 @@
 import { dirname, join } from 'node:path';
+import { CLI_REGISTRY, launchPickArgs } from '@agentmat/core';
 import type { StudioEvent } from '@agentmat/studio';
 import type { StudioHost } from '@agentmat/studio/node';
 import { app } from 'electron';
 import { IPC } from '../../shared/ipcChannels';
+import { streamHeadlessCliPrompt } from '../cli/headlessStream';
 import { broadcastToWindows } from '../ipc/send';
 import { store } from '../store';
 import { openBetterSqlite } from './db';
@@ -33,6 +35,30 @@ export function createDesktopStudioHost(): StudioHost {
       },
     },
     notify: (event: StudioEvent) => broadcastToWindows(IPC.studio.onEvent, event),
+    ai: {
+      async run(request, signal, onLine) {
+        const result = await streamHeadlessCliPrompt(request.prompt, request.cwd, {
+          preferredCliId: request.cliId,
+          // A CLI the user picked is the one that runs, or none; the model flags only fit it.
+          strictCli: request.cliId !== null,
+          runArgs: request.cliId
+            ? launchPickArgs(request.cliId, {
+                model: request.model ?? undefined,
+                effort: request.effort ?? undefined,
+              })
+            : [],
+          timeoutMs: request.timeoutMs,
+          pointerPrompt: request.pointerPrompt,
+          // The run's work folder is Studio's own, never a git repository or a trusted folder.
+          trustCwd: true,
+          signal,
+          onLine,
+        });
+        // Studio names CLIs by their short label ("Claude Code"), as its pickers do.
+        const cli = CLI_REGISTRY.find((c) => c.name === result.cliName);
+        return { ...result, cliName: cli?.label ?? result.cliName, log: result.log ?? '' };
+      },
+    },
   };
 }
 

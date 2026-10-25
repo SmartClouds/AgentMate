@@ -1,4 +1,14 @@
+import type { GenerationView } from '@agentmat/studio';
 import { useEffect, useState } from 'react';
+import { AskAiBar } from '../ai/AskAiBar';
+import { BriefCard } from '../ai/BriefCard';
+import type { BriefValue } from '../ai/BriefFields';
+import { GenerationCard } from '../ai/GenerationCard';
+import { GenerationDetailsDialog } from '../ai/GenerationDetailsDialog';
+import { ProposalCard } from '../ai/ProposalCard';
+import { fromRunInput, usePendingScenario, useRunSettings } from '../ai/runSettings';
+import { SaveRecipeDialog } from '../ai/SaveRecipeDialog';
+import { useStudioAi } from '../ai/useStudioAi';
 import { studioClient } from '../client';
 import { errorMessage, scriptClass } from '../format';
 import {
@@ -35,18 +45,38 @@ function typingInField(target: EventTarget | null): boolean {
   return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }
 
+const SHOWN_WHEN = new Set<GenerationView['status']>(['running', 'failed', 'interrupted']);
+
 /**
- * One video, open for editing. E31 edits the scenario by hand and keeps the full history; the
- * preview, timeline and AI arrive in the following epics, in panels of their own, each behind its
- * own error boundary so one failing panel never takes the editor down.
+ * One video, open for editing: the scenario written by AI from a brief or by hand, edited by hand
+ * or by asking AI, with the full history kept. The preview and timeline arrive in the following
+ * epics, in panels of their own, each behind its own error boundary so one failing panel never
+ * takes the editor down.
  */
 export function StudioEditor({ videoId, onBack }: StudioEditorProps): React.JSX.Element {
   const video = useStudioVideo(videoId);
   const { view } = video;
+  const ai = useStudioAi(videoId, video.adopt);
+  const [scenarioRun, setScenarioRun] = useRunSettings('scenario');
+  const [editRun, setEditRun] = useRunSettings('edit');
+  const [detailsId, setDetailsId] = useState<string | null>(null);
+  const [recipeFrom, setRecipeFrom] = useState<GenerationView | null>(null);
+  const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
+  const [applying, setApplying] = useState(false);
   const [showHistory, setShowHistory] = useState(true);
   const [title, setTitle] = useState('');
   const openTitle = view.state === 'open' ? view.document.title : '';
   useEffect(() => setTitle(openTitle), [openTitle]);
+
+  // A scenario asked for in the New video dialog starts once the video is open here.
+  const takePending = usePendingScenario((state) => state.take);
+  const isOpen = view.state === 'open';
+  const { startScenario } = ai;
+  useEffect(() => {
+    if (!isOpen) return;
+    const request = takePending(videoId);
+    if (request) void startScenario(request);
+  }, [isOpen, takePending, videoId, startScenario]);
 
   const status = view.state === 'open' ? view.status : null;
   useEffect(() => {
@@ -119,6 +149,28 @@ export function StudioEditor({ videoId, onBack }: StudioEditorProps): React.JSX.
   }
 
   const { document } = view;
+  const latest = ai.generations[0];
+  const proposal = ai.generations.find((g) => g.status === 'proposed');
+  const lastScenario = ai.generations.find((g) => g.stage === 'scenario');
+  const briefInitial: BriefValue = lastScenario
+    ? {
+        brief: lastScenario.instruction,
+        targetSeconds: lastScenario.params.targetSeconds ?? 60,
+        styleId: lastScenario.params.styleId ?? document.styleId,
+        run: fromRunInput(lastScenario),
+      }
+    : { brief: '', targetSeconds: 60, styleId: document.styleId, run: scenarioRun };
+  const hasScenes = document.scenario.scenes.length > 0;
+  const busy = ai.running !== null;
+  const applyProposal = async (generationId: string) => {
+    setApplying(true);
+    try {
+      await ai.applyProposal(generationId);
+    } finally {
+      setApplying(false);
+    }
+  };
+
   const saveTitle = () => {
     const next = title.trim();
     if (!next) {
@@ -210,9 +262,54 @@ export function StudioEditor({ videoId, onBack }: StudioEditorProps): React.JSX.
         Every change is saved as you make it, and the full history is kept in the video's own
         folder.
       </Notice>
+      <ErrorBoundary title="AI">
+        {hasScenes && (
+          <AskAiBar
+            run={editRun}
+            onRunChange={setEditRun}
+            busy={busy}
+            onAsk={(instruction) => ai.startEdit(instruction, editRun)}
+          />
+        )}
+        {latest && SHOWN_WHEN.has(latest.status) && !dismissed.has(latest.id) && (
+          <GenerationCard
+            generation={latest}
+            output={ai.output[latest.id] ?? []}
+            onCancel={() => void ai.cancel(latest.id)}
+            onRetry={() => void ai.retry(latest.id)}
+            onDetails={() => setDetailsId(latest.id)}
+            onDismiss={() => setDismissed((ids) => new Set(ids).add(latest.id))}
+          />
+        )}
+        {proposal && (
+          <ProposalCard
+            generation={proposal}
+            applying={applying}
+            onApply={() => void applyProposal(proposal.id)}
+            onDiscard={() => void ai.discardProposal(proposal.id)}
+          />
+        )}
+      </ErrorBoundary>
       <div className={cn('grid gap-2', showHistory && 'lg:grid-cols-[minmax(0,1fr)_20rem]')}>
         <ErrorBoundary title="Scenario">
-          <ScenarioPanel document={document} apply={video.apply} />
+          <ScenarioPanel
+            document={document}
+            apply={video.apply}
+            brief={
+              <BriefCard
+                // Starts again from the latest brief once the runs have loaded or a scenario lands.
+                key={`${ai.loading}-${hasScenes}-${lastScenario?.id ?? ''}`}
+                aspect={document.renderSettings.aspect}
+                rewriting={hasScenes}
+                busy={busy}
+                initial={briefInitial}
+                onStart={(request, value) => {
+                  setScenarioRun(value.run);
+                  return ai.startScenario(request);
+                }}
+              />
+            }
+          />
         </ErrorBoundary>
         {showHistory && (
           <ErrorBoundary title="History">
@@ -220,10 +317,27 @@ export function StudioEditor({ videoId, onBack }: StudioEditorProps): React.JSX.
               videoId={videoId}
               currentSeq={view.status.seq}
               onRestore={(seq) => void video.restore(seq)}
+              ai={{
+                generations: ai.generations,
+                loading: ai.loading,
+                onDetails: setDetailsId,
+                onRetry: (id) => void ai.retry(id),
+                onSaveRecipe: setRecipeFrom,
+              }}
             />
           </ErrorBoundary>
         )}
       </div>
+      <GenerationDetailsDialog
+        videoId={videoId}
+        generationId={detailsId}
+        onOpenChange={(open) => !open && setDetailsId(null)}
+      />
+      <SaveRecipeDialog
+        generation={recipeFrom}
+        document={document}
+        onOpenChange={(open) => !open && setRecipeFrom(null)}
+      />
     </div>
   );
 }

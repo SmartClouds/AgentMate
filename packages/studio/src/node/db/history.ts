@@ -1,5 +1,13 @@
 import { createHash } from 'node:crypto';
 import { deflateRawSync, inflateRawSync } from 'node:zlib';
+import type {
+  GenerationAttempt,
+  GenerationParams,
+  GenerationStage,
+  GenerationStatus,
+  GenerationView,
+  StoredProposal,
+} from '../../api.js';
 import type { EditOp } from '../../document/ops.js';
 import { parseDocument, type StudioDocument } from '../../document/schema.js';
 import type { TxRef } from '../../document/undo.js';
@@ -40,6 +48,28 @@ export interface Revision {
   kind: 'milestone' | 'render' | 'restore';
 }
 
+export type NewGeneration = Pick<
+  GenerationView,
+  | 'id'
+  | 'parentId'
+  | 'stage'
+  | 'status'
+  | 'cliId'
+  | 'cliName'
+  | 'model'
+  | 'effort'
+  | 'instruction'
+  | 'params'
+  | 'startedAt'
+>;
+
+export type GenerationPatch = Partial<
+  Pick<
+    GenerationView,
+    'status' | 'cliName' | 'attempts' | 'proposal' | 'resultSeq' | 'error' | 'finishedAt'
+  >
+>;
+
 const APPEND_ONLY = ['txs', 'snapshots', 'revisions'];
 
 const DDL = `
@@ -68,6 +98,27 @@ CREATE TABLE IF NOT EXISTS revisions (
   label TEXT NOT NULL,
   kind TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS generations (
+  id TEXT PRIMARY KEY,
+  parent_id TEXT,
+  stage TEXT NOT NULL,
+  status TEXT NOT NULL,
+  cli_id TEXT,
+  cli_name TEXT,
+  model TEXT,
+  effort TEXT,
+  instruction TEXT NOT NULL,
+  params TEXT NOT NULL,
+  attempts TEXT NOT NULL DEFAULT '[]',
+  proposal TEXT,
+  result_seq INTEGER,
+  error TEXT,
+  started_at INTEGER NOT NULL,
+  finished_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS generations_started ON generations (started_at);
+CREATE TRIGGER IF NOT EXISTS generations_no_delete BEFORE DELETE ON generations
+  BEGIN SELECT RAISE(ABORT, 'Studio history is append-only.'); END;
 ${APPEND_ONLY.map(
   (table) => `
 CREATE TRIGGER IF NOT EXISTS ${table}_no_update BEFORE UPDATE ON ${table}
@@ -96,6 +147,39 @@ function toTx(row: SqlRow): TxRecord {
     inverse: JSON.parse(String(row.inverse)) as EditOp[],
   };
 }
+
+const nullable = (value: unknown) => (value === null ? null : String(value));
+
+function toGeneration(row: SqlRow): GenerationView {
+  return {
+    id: String(row.id),
+    parentId: nullable(row.parent_id),
+    stage: row.stage as GenerationStage,
+    status: row.status as GenerationStatus,
+    cliId: nullable(row.cli_id),
+    cliName: nullable(row.cli_name),
+    model: nullable(row.model),
+    effort: nullable(row.effort) as GenerationView['effort'],
+    instruction: String(row.instruction),
+    params: JSON.parse(String(row.params)) as GenerationParams,
+    attempts: JSON.parse(String(row.attempts)) as GenerationAttempt[],
+    proposal: row.proposal === null ? null : (JSON.parse(String(row.proposal)) as StoredProposal),
+    resultSeq: row.result_seq === null ? null : Number(row.result_seq),
+    error: nullable(row.error),
+    startedAt: Number(row.started_at),
+    finishedAt: row.finished_at === null ? null : Number(row.finished_at),
+  };
+}
+
+const GENERATION_COLUMNS: Record<keyof GenerationPatch, string> = {
+  status: 'status',
+  cliName: 'cli_name',
+  attempts: 'attempts',
+  proposal: 'proposal',
+  resultSeq: 'result_seq',
+  error: 'error',
+  finishedAt: 'finished_at',
+};
 
 export class HistoryDb {
   private constructor(private readonly db: SqlDriver) {}
@@ -231,6 +315,68 @@ export class HistoryDb {
         label: String(row.label),
         kind: row.kind as Revision['kind'],
       }));
+  }
+
+  addGeneration(g: NewGeneration): void {
+    this.db
+      .prepare(
+        `INSERT INTO generations
+           (id, parent_id, stage, status, cli_id, cli_name, model, effort, instruction, params, started_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        g.id,
+        g.parentId,
+        g.stage,
+        g.status,
+        g.cliId,
+        g.cliName,
+        g.model,
+        g.effort,
+        g.instruction,
+        JSON.stringify(g.params),
+        g.startedAt,
+      );
+  }
+
+  /** A generation's status, attempts and result change as it runs; the rest is fixed at the start. */
+  updateGeneration(id: string, patch: GenerationPatch): void {
+    const keys = Object.keys(patch) as (keyof GenerationPatch)[];
+    if (keys.length === 0) return;
+    const values = keys.map((key) => {
+      const value = patch[key];
+      if (key === 'attempts' || key === 'proposal') {
+        return value === null ? null : JSON.stringify(value);
+      }
+      return value as string | number | null;
+    });
+    this.db
+      .prepare(
+        `UPDATE generations SET ${keys.map((k) => `${GENERATION_COLUMNS[k]} = ?`).join(', ')} WHERE id = ?`,
+      )
+      .run(...values, id);
+  }
+
+  generation(id: string): GenerationView | undefined {
+    const row = this.db.prepare('SELECT * FROM generations WHERE id = ?').get(id);
+    return row ? toGeneration(row) : undefined;
+  }
+
+  /** Newest first. */
+  generations(options: { limit: number }): GenerationView[] {
+    return this.db
+      .prepare('SELECT * FROM generations ORDER BY started_at DESC, rowid DESC LIMIT ?')
+      .all(options.limit)
+      .map(toGeneration);
+  }
+
+  /** Runs still marked running when the video opens were cut off by a crash or a quit. */
+  interruptRunning(at: number): number {
+    return this.db
+      .prepare(
+        `UPDATE generations SET status = 'interrupted', finished_at = ? WHERE status = 'running'`,
+      )
+      .run(at).changes;
   }
 
   getMeta(key: string): string | null {

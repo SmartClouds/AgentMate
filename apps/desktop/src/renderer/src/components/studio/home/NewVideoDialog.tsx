@@ -1,7 +1,16 @@
-import { ASPECTS, type Aspect, CONTENT_LANGUAGES, type VideoSummary } from '@agentmat/studio';
+import {
+  ASPECTS,
+  type Aspect,
+  CONTENT_LANGUAGES,
+  type RecipeView,
+  UNTITLED_TITLE,
+  type VideoSummary,
+} from '@agentmat/studio';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
-import { listProjects, studioClient } from '../client';
+import { BriefFields, type BriefValue } from '../ai/BriefFields';
+import { fromRunInput, toRunInput, usePendingScenario, useRunSettings } from '../ai/runSettings';
+import { listProjects, studioAiClient, studioClient } from '../client';
 import { errorMessage } from '../format';
 import {
   appQueryKeys,
@@ -17,6 +26,7 @@ import {
   Label,
   Notice,
   SEGMENT_TRACK,
+  Switch,
   segmentClass,
 } from '../kit';
 import { studioKeys } from '../queryKeys';
@@ -30,34 +40,81 @@ export const ASPECT_LABELS: Record<Aspect, string> = {
 };
 
 const STANDALONE = '__standalone__';
+const BLANK = '__blank__';
 
 export interface NewVideoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Preselects a project (from a project's Studio tab), or standalone with null. */
   projectId?: string | null;
+  /** Starts from a saved recipe. */
+  recipeId?: string | null;
   onCreated: (video: VideoSummary) => void;
 }
 
+/**
+ * A new video: where it belongs, its language and format, and usually the brief the AI writes the
+ * scenario from. A saved recipe fills all of that in. The scenario run starts once the editor has
+ * the video open, so the user watches it there.
+ */
 export function NewVideoDialog({
   open,
   onOpenChange,
   projectId = null,
+  recipeId = null,
   onCreated,
 }: NewVideoDialogProps): React.JSX.Element {
   const queryClient = useQueryClient();
   const titleId = useId();
+  const aiId = useId();
+  const [savedRun, setSavedRun] = useRunSettings('scenario');
   const [title, setTitle] = useState('');
   const [owner, setOwner] = useState(projectId ?? STANDALONE);
   const [language, setLanguage] = useState('fa');
   const [aspect, setAspect] = useState<Aspect>('16:9');
+  const [recipe, setRecipe] = useState(BLANK);
+  const [useAi, setUseAi] = useState(true);
+  const [brief, setBrief] = useState<BriefValue>({
+    brief: '',
+    targetSeconds: 60,
+    styleId: null,
+    run: savedRun,
+  });
 
+  const recipes = useQuery({
+    queryKey: studioKeys.recipes,
+    queryFn: () => studioAiClient().recipes(),
+    enabled: open,
+  });
+
+  const applyRecipe = (picked: RecipeView | undefined) => {
+    setRecipe(picked?.id ?? BLANK);
+    if (!picked) return;
+    setLanguage(picked.language);
+    setAspect(picked.aspect);
+    setUseAi(true);
+    setBrief({
+      brief: picked.brief,
+      targetSeconds: picked.targetSeconds,
+      styleId: picked.styleId,
+      run: fromRunInput(picked.scenario),
+    });
+  };
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: resets only when the dialog opens
   useEffect(() => {
-    if (open) {
-      setTitle('');
-      setOwner(projectId ?? STANDALONE);
-    }
+    if (!open) return;
+    setTitle('');
+    setOwner(projectId ?? STANDALONE);
+    setRecipe(BLANK);
+    setBrief((current) => ({ ...current, brief: '', run: savedRun }));
   }, [open, projectId]);
+
+  // A recipe chosen from the Recipes list arrives once the saved recipes have loaded.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: applyRecipe only sets state
+  useEffect(() => {
+    if (open && recipeId) applyRecipe(recipes.data?.find((r) => r.id === recipeId));
+  }, [open, recipeId, recipes.data]);
 
   const projects = useQuery({
     queryKey: appQueryKeys.projects,
@@ -78,9 +135,23 @@ export function NewVideoDialog({
 
   const create = useMutation({
     mutationFn: () =>
-      studioClient().create({ title: title.trim(), projectId: chosenProject, language, aspect }),
+      studioClient().create({
+        title: title.trim() || UNTITLED_TITLE,
+        projectId: chosenProject,
+        language,
+        aspect,
+      }),
     onSuccess: (video) => {
       void queryClient.invalidateQueries({ queryKey: studioKeys.videos });
+      if (useAi) {
+        setSavedRun(brief.run);
+        usePendingScenario.getState().set(video.id, {
+          brief: brief.brief.trim(),
+          targetSeconds: brief.targetSeconds,
+          styleId: brief.styleId,
+          run: toRunInput(brief.run),
+        });
+      }
       onOpenChange(false);
       onCreated(video);
     },
@@ -97,26 +168,43 @@ export function NewVideoDialog({
     label: l.native === l.name ? l.name : `${l.name} (${l.native})`,
     keywords: [l.native, l.code],
   }));
+  const recipeOptions = [
+    { value: BLANK, label: 'A blank video' },
+    ...(recipes.data ?? []).map((r) => ({ value: r.id, label: r.name, keywords: [r.brief] })),
+  ];
   const where = chosenProject ? storage.data?.root : settings.data?.standaloneRoot;
   const blocked = chosenProject !== null && storage.data?.check.ok === false;
+  const ready = useAi ? brief.brief.trim().length > 0 : title.trim().length > 0;
   const error = create.error ? errorMessage(create.error) : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>New video</DialogTitle>
           <DialogDescription>
-            Name it and choose its language and format. You write the brief and the scenario next.
+            Choose its language and format, and tell the AI what it is about. You can edit the
+            scenario it writes, or write one yourself.
           </DialogDescription>
         </DialogHeader>
         <form
-          className="space-y-4"
+          className="max-h-[70vh] space-y-4 overflow-y-auto pr-1"
           onSubmit={(event) => {
             event.preventDefault();
-            if (title.trim() && !blocked) create.mutate();
+            if (ready && !blocked) create.mutate();
           }}
         >
+          {(recipes.data?.length ?? 0) > 0 && (
+            <div className="space-y-1.5">
+              <Label>Start from</Label>
+              <Combobox
+                ariaLabel="Start from"
+                options={recipeOptions}
+                value={recipe}
+                onChange={(id) => applyRecipe(recipes.data?.find((r) => r.id === id))}
+              />
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor={titleId}>Title</Label>
             <Input
@@ -125,22 +213,24 @@ export function NewVideoDialog({
               dir="auto"
               autoFocus
               maxLength={200}
-              placeholder="Product launch teaser"
+              placeholder={useAi ? 'Leave empty and the AI names it' : 'Product launch teaser'}
               onChange={(event) => setTitle(event.target.value)}
             />
           </div>
-          <div className="space-y-1.5">
-            <Label>Belongs to</Label>
-            <Combobox ariaLabel="Belongs to" options={owners} value={owner} onChange={setOwner} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Language</Label>
-            <Combobox
-              ariaLabel="Language"
-              options={languages}
-              value={language}
-              onChange={setLanguage}
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>Belongs to</Label>
+              <Combobox ariaLabel="Belongs to" options={owners} value={owner} onChange={setOwner} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Language</Label>
+              <Combobox
+                ariaLabel="Language"
+                options={languages}
+                value={language}
+                onChange={setLanguage}
+              />
+            </div>
           </div>
           <fieldset className="space-y-1.5">
             <legend className="text-sm font-medium">Format</legend>
@@ -159,6 +249,11 @@ export function NewVideoDialog({
               ))}
             </div>
           </fieldset>
+          <div className="flex items-center gap-2">
+            <Switch id={aiId} checked={useAi} onCheckedChange={setUseAi} />
+            <Label htmlFor={aiId}>Write the scenario with AI</Label>
+          </div>
+          {useAi && <BriefFields value={brief} onChange={setBrief} aspect={aspect} />}
           {where && (
             <p className="text-xs text-muted-foreground">
               Saved in <span className="break-all font-mono">{where}</span>
@@ -179,8 +274,8 @@ export function NewVideoDialog({
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!title.trim() || blocked || create.isPending}>
-              {create.isPending ? 'Creating...' : 'Create video'}
+            <Button type="submit" disabled={!ready || blocked || create.isPending}>
+              {create.isPending ? 'Creating...' : useAi ? 'Create and write' : 'Create video'}
             </Button>
           </DialogFooter>
         </form>

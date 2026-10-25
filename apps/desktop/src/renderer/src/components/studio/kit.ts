@@ -4,15 +4,22 @@
  * becomes an app of its own, this file is the one that gets reimplemented.
  */
 
+export { getCliDefinition, launchPickLabel } from '@agentmat/core';
 export { toast } from 'sonner';
+export { type RunSettings, RunSettingsFields } from '@/components/cli/RunSettingsFields';
 export { ErrorBoundary } from '@/components/ErrorBoundary';
 export {
   ArrowDown,
   ArrowLeft,
   ArrowUp,
+  Bookmark,
+  Check,
+  ChevronDown,
+  ChevronUp,
   CircleCheck,
   Clapperboard,
   EllipsisVertical,
+  FileText,
   Folder,
   FolderOpen,
   FolderPlus,
@@ -21,9 +28,15 @@ export {
   Pencil,
   Plus,
   Redo,
+  RefreshCw,
+  Send,
+  Sparkles,
+  Spinner,
+  StopCircle,
   Trash2,
   TriangleAlert,
   Undo,
+  X,
 } from '@/components/icons';
 export {
   CARD_GRID,
@@ -59,6 +72,7 @@ export {
 } from '@/components/ui/dropdown-menu';
 export { Input } from '@/components/ui/input';
 export { Label } from '@/components/ui/label';
+export { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 export { Skeleton } from '@/components/ui/skeleton';
 export { Switch } from '@/components/ui/switch';
 export { Textarea } from '@/components/ui/textarea';

@@ -1,5 +1,6 @@
 import type {
   EditOp,
+  EditResponse,
   LockHolderView,
   OpenVideoResult,
   StudioDocument,
@@ -34,6 +35,8 @@ export interface StudioVideo {
   undo: () => Promise<void>;
   redo: () => Promise<void>;
   restore: (seq: number) => Promise<void>;
+  /** Takes in a version the service made on its own, like an applied AI proposal. */
+  adopt: (result: EditResponse) => Promise<void>;
   takeOver: () => Promise<void>;
   reload: () => Promise<void>;
 }
@@ -96,6 +99,38 @@ export function useStudioVideo(videoId: string): StudioVideo {
     return run;
   }, []);
 
+  const adopt = useCallback(
+    (result: EditResponse) =>
+      enqueue(async () => {
+        const current = viewRef.current;
+        if (current.state !== 'open' || result.seq < current.status.seq) return;
+        settle(result.document, result.status);
+        viewRef.current = { ...current, document: result.document, status: result.status };
+      }),
+    [enqueue, settle],
+  );
+
+  // A newer version made elsewhere (an AI scenario landing, mostly) is fetched and shown. The
+  // editor's own edits announce themselves too; those are already in hand and are skipped.
+  useEffect(() => {
+    return studioClient().onEvent((event) => {
+      if (event.type !== 'video-changed' || event.videoId !== videoId) return;
+      void enqueue(async () => {
+        const current = viewRef.current;
+        if (current.state !== 'open' || current.status.seq >= event.seq) return;
+        try {
+          const result = await studioClient().open(videoId);
+          if (result.state !== 'open') return;
+          const { document, status } = result.session;
+          settle(document, status);
+          viewRef.current = { ...current, document, status };
+        } catch {
+          // The next change or a reload brings it in.
+        }
+      });
+    });
+  }, [enqueue, settle, videoId]);
+
   const apply = useCallback(
     (ops: EditOp[], label: string) =>
       enqueue(async () => {
@@ -150,6 +185,7 @@ export function useStudioVideo(videoId: string): StudioVideo {
     undo: () => step('undo'),
     redo: () => step('redo'),
     restore: (seq) => step({ restore: seq }),
+    adopt,
     takeOver: () => open(true),
     reload: () => open(false),
   };
