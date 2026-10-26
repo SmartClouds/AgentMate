@@ -15,14 +15,15 @@ internal static class HealthEndpoints
     public static IEndpointRouteBuilder MapHealthEndpoints(this IEndpointRouteBuilder endpoints)
     {
         endpoints
-            .MapGet(Path, (CoreStartup startup, CoreLayout layout, LayoutMigrationJournalFile journal) => TypedResults.Ok(
+            .MapGet(Path, (CoreStartup startup, CoreLayout layout, LayoutMigrationJournalFile journal, NameMovesFile moves) => TypedResults.Ok(
                 new HealthResponse(
                     "ok",
                     CoreVersion.Current,
                     CoreVersion.ApiVersion,
                     startup.StartedAtUnixMs,
                     layout.Kind == CoreLayoutKind.Runova ? CoreLayoutName.Runova : CoreLayoutName.Legacy,
-                    layout.Kind == CoreLayoutKind.Legacy ? journal.RolledBackError() : null)))
+                    layout.Kind == CoreLayoutKind.Legacy ? journal.RolledBackError() : null,
+                    layout.Kind == CoreLayoutKind.Runova ? moves.NginxError() : null)))
             .AllowAnonymous();
         return endpoints;
     }

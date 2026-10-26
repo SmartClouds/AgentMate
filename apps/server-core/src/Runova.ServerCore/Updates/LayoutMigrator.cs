@@ -20,12 +20,17 @@ internal sealed class LayoutMigrator(
     SystemdRunner units,
     LayoutMigrationJournalFile journal,
     CoreDirectories directories,
-    IDbContextFactory<CoreDbContext> contexts)
+    IDbContextFactory<CoreDbContext> contexts,
+    NameMovesFile moves)
 {
     /// <summary>Between the answer and the migration's start.</summary>
     public static readonly TimeSpan StartDelay = TimeSpan.FromSeconds(3);
 
-    public LayoutMigrationStatus Status() => journal.Status(installation.Layout);
+    public LayoutMigrationStatus Status()
+    {
+        var moved = moves.Read();
+        return journal.Status(installation.Layout) with { Nginx = moved.Nginx, Sshd = moved.Sshd };
+    }
 
     public async Task<LayoutMigrationResult> StartAsync(CancellationToken cancellationToken)
     {

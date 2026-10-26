@@ -35,6 +35,12 @@ internal interface INginxMachine
     /// <summary>Points the link at the target in one step (a new link renamed over the old one).</summary>
     Task ReplaceLinkAsync(string path, string target, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Renames a file, link or folder within its file system (rename(2)): in one step, with
+    /// everything in it, and refused when the target is there already.
+    /// </summary>
+    Task MoveAsync(string from, string to, CancellationToken cancellationToken);
+
     /// <summary>The file's size in bytes, or null when it does not exist.</summary>
     Task<long?> LengthAsync(string path, CancellationToken cancellationToken);
 
@@ -158,6 +164,27 @@ internal sealed partial class LocalNginxMachine(IProcessRunner runner, SystemdRu
             var errno = Marshal.GetLastPInvokeError();
             File.Delete(temporary);
             throw new IOException($"Could not point {path} at {target} (errno {errno}).");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task MoveAsync(string from, string to, CancellationToken cancellationToken)
+    {
+        var source = Map(from);
+        var target = Map(to);
+        if (File.Exists(target) || Directory.Exists(target) || new FileInfo(target).LinkTarget is not null)
+        {
+            throw new IOException($"Could not move {from}: {to} is there already.");
+        }
+
+        if (Directory.Exists(source) && new FileInfo(source).LinkTarget is null)
+        {
+            Directory.Move(source, target);
+        }
+        else
+        {
+            File.Move(source, target);
         }
 
         return Task.CompletedTask;

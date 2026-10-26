@@ -55,6 +55,9 @@ internal sealed class DockerNginxMachine(string container) : INginxMachine
     public async Task ReplaceLinkAsync(string path, string target, CancellationToken cancellationToken) =>
         Check(await ShellAsync("ln -sfn \"$2\" \"$1.next\" && mv -T \"$1.next\" \"$1\"", cancellationToken, path, target), "link " + path);
 
+    public async Task MoveAsync(string from, string to, CancellationToken cancellationToken) =>
+        Check(await ShellAsync("test ! -e \"$2\" && test ! -L \"$2\" && mv -T \"$1\" \"$2\"", cancellationToken, from, to), "move " + from);
+
     public async Task<long?> LengthAsync(string path, CancellationToken cancellationToken)
     {
         var result = await ExecAsync(["stat", "-c", "%s", path], cancellationToken);

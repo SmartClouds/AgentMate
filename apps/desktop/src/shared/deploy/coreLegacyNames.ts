@@ -23,4 +23,9 @@ export const LEGACY_CORE_NAMES = {
   /** Backups the core made before the rename, and the files saved from them. */
   backupPrefix: 'agentmate-', // legacy-name
   backupExtension: 'ambackup',
+  /** nginx's folders and names on a server set up before the rename, until the core moves them. */
+  nginxConfigRoot: '/etc/nginx/agentmate', // legacy-name
+  nginxWebRoot: '/var/www/agentmate', // legacy-name
+  nginxNamePrefix: 'agentmate', // legacy-name
+  sshdDropIn: '/etc/ssh/sshd_config.d/00-agentmate.conf', // legacy-name
 } as const;

@@ -1,4 +1,5 @@
 using System.Text;
+using Runova.ServerCore.Compatibility;
 
 namespace Runova.ServerCore.Nginx;
 
@@ -53,6 +54,49 @@ internal static class NginxConfWiring
         }
 
         return text;
+    }
+
+    /// <summary>
+    /// Points nginx.conf at another layout: each include line of <paramref name="from"/> becomes
+    /// the matching line of <paramref name="to"/>, with its indentation, and the note above a
+    /// stream block the core added follows. Where a line of <paramref name="to"/> is there
+    /// already, the old one goes instead, so nginx never loads the same file twice. Everything
+    /// else stays exactly as it was, line endings included.
+    /// </summary>
+    public static string Rewire(string text, NginxLayout from, NginxLayout to)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        ArgumentNullException.ThrowIfNull(from);
+        ArgumentNullException.ThrowIfNull(to);
+        var (httpThere, streamThere) = IsWired(text, to);
+        var replacements = new Dictionary<string, (string Line, bool AlreadyThere)>(StringComparer.Ordinal)
+        {
+            [from.HttpInclude] = (to.HttpInclude, httpThere),
+            [from.StreamInclude] = (to.StreamInclude, streamThere),
+            [LegacyNames.NginxNote] = (Note, false),
+        };
+        var lines = text.Split('\n');
+        var result = new List<string>(lines.Length);
+        foreach (var line in lines)
+        {
+            var body = line.TrimEnd('\r');
+            var trimmed = body.Trim();
+            if (!replacements.TryGetValue(trimmed, out var replacement))
+            {
+                result.Add(line);
+                continue;
+            }
+
+            if (replacement.AlreadyThere)
+            {
+                continue;
+            }
+
+            var indent = body[..(body.Length - body.TrimStart().Length)];
+            result.Add(indent + replacement.Line + line[body.Length..]);
+        }
+
+        return string.Join('\n', result);
     }
 
     /// <summary>Puts the line on its own just before the block's closing brace, indented one level.</summary>

@@ -715,6 +715,7 @@ export class DeployService {
       transport,
       layout,
       ...(answer.migrationError ? { migrationError: answer.migrationError } : {}),
+      ...(answer.nginxMoveError ? { nginxMoveError: answer.nginxMoveError } : {}),
     };
   }
 

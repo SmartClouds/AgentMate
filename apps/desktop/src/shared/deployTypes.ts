@@ -238,6 +238,8 @@ export interface DeployHealth {
   layout?: DeployCoreLayout;
   /** Why the last move to the Runova layout was put back. */
   migrationError?: string;
+  /** Why moving nginx to the new names was put back; it keeps its old names and works as before. */
+  nginxMoveError?: string;
 }
 
 /**

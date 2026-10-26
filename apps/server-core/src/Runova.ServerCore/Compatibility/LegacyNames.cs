@@ -26,12 +26,14 @@ internal static class LegacyNames
     /// <summary>Transient units the old core started (a firewall revert timer can still be waiting).</summary>
     public const string TransientUnitPrefix = "agentmate-";
 
-    // nginx and sshd files a server set up before the rename keeps where they are, for good: the
-    // core keeps using whichever names it finds there.
+    // nginx and sshd files a server set up before the rename. The core moves them to the new
+    // names once it runs in the Runova layout (Updates/LegacyNamesMove.cs) and keeps using the
+    // old ones where a move was put back; the old nginx folders stay behind as links.
     public const string NginxConfigRoot = "/etc/nginx/agentmate";
     public const string NginxWebRoot = "/var/www/agentmate";
     public const string NginxNamePrefix = "agentmate";
     public const string SshdDropInPath = "/etc/ssh/sshd_config.d/00-agentmate.conf";
+    public const string NginxNote = "# Added by AgentMate: the sites and proxies it manages.";
 
     // Wire names an old desktop sends. Accepted for good, since the app cannot know which core
     // answers before its first request.

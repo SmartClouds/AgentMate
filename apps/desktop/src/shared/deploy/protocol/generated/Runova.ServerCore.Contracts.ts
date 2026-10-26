@@ -2084,6 +2084,8 @@ export type HealthResponse = {
     layout?: CoreLayoutName;
     /** Transpiled from string? */
     migrationError?: string;
+    /** Transpiled from string? */
+    nginxMoveError?: string;
 }
 
 /** Transpiled from Runova.ServerCore.Contracts.PingResponse */
@@ -2187,6 +2189,10 @@ export type LayoutMigrationStatus = {
     startedAtUnixMs?: number;
     /** Transpiled from long */
     finishedAtUnixMs?: number;
+    /** Transpiled from Runova.ServerCore.Contracts.NameMoveStatus? */
+    nginx?: NameMoveStatus;
+    /** Transpiled from Runova.ServerCore.Contracts.NameMoveStatus? */
+    sshd?: NameMoveStatus;
 }
 
 /** Transpiled from Runova.ServerCore.Contracts.LayoutMigrationOutcome */
@@ -2198,6 +2204,17 @@ export type LayoutMigrationResult = {
     outcome: LayoutMigrationOutcome;
     /** Transpiled from string? */
     problem?: string;
+}
+
+/** Transpiled from Runova.ServerCore.Contracts.NameMovePhase */
+export type NameMovePhase = "notNeeded" | "waiting" | "done" | "failed" | "kept";
+
+/** Transpiled from Runova.ServerCore.Contracts.NameMoveStatus */
+export type NameMoveStatus = {
+    /** Transpiled from Runova.ServerCore.Contracts.NameMovePhase */
+    phase: NameMovePhase;
+    /** Transpiled from string? */
+    detail?: string;
 }
 
 /** Transpiled from Runova.ServerCore.Contracts.TelegramNotificationsStatus */

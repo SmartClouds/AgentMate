@@ -247,6 +247,66 @@ internal sealed class SimulatedNginxMachine : INginxMachine
         return Task.CompletedTask;
     }
 
+    public Task MoveAsync(string from, string to, CancellationToken cancellationToken)
+    {
+        lock (_gate)
+        {
+            var source = Normalize(from);
+            var target = Normalize(to);
+            if (_files.ContainsKey(target) || _directories.Contains(target) || _links.ContainsKey(target))
+            {
+                throw new IOException($"Could not move {from}: {to} is there already.");
+            }
+
+            if (MoveFailure?.Invoke(source) is { } failure)
+            {
+                throw new IOException(failure);
+            }
+
+            static string Moved(string key, string source, string target) =>
+                key == source ? target : target + key[source.Length..];
+
+            bool Inside(string key) => key == source || key.StartsWith(source + "/", StringComparison.Ordinal);
+            if (!_files.ContainsKey(source) && !_directories.Contains(source) && !_links.ContainsKey(source))
+            {
+                throw new IOException($"Could not move {from}: it is not there.");
+            }
+
+            foreach (var key in _files.Keys.Where(Inside).ToList())
+            {
+                _files[Moved(key, source, target)] = _files[key];
+                _files.Remove(key);
+                if (_modes.Remove(key, out var mode))
+                {
+                    _modes[Moved(key, source, target)] = mode;
+                }
+            }
+
+            foreach (var key in _directories.Where(Inside).ToList())
+            {
+                _directories.Remove(key);
+                _directories.Add(Moved(key, source, target));
+                if (_modes.Remove(key, out var mode))
+                {
+                    _modes[Moved(key, source, target)] = mode;
+                }
+            }
+
+            foreach (var key in _links.Keys.Where(Inside).ToList())
+            {
+                _links[Moved(key, source, target)] = _links[key];
+                _links.Remove(key);
+            }
+
+            AddDirectory(Parent(target));
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>A reason to refuse moving this path (as rename(2) can), or null to move it.</summary>
+    public Func<string, string?>? MoveFailure { get; set; }
+
     public Task<long?> LengthAsync(string path, CancellationToken cancellationToken)
     {
         lock (_gate)

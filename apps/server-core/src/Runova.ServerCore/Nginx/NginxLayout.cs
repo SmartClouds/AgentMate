@@ -19,15 +19,14 @@ internal sealed record NginxLayout
 
     public static NginxLayout Rhel { get; } = new() { TrustedCertificates = RhelTrustedCertificates };
 
-    private static readonly Lazy<bool> _legacyNamesHere = new(() =>
-        OperatingSystem.IsLinux() && Directory.Exists(LegacyNames.NginxConfigRoot) && !Directory.Exists(Debian.ConfigRoot));
-
     /// <summary>
-    /// Whether nginx on this server was set up before the rename: its folder under the old name is
-    /// there and the new one is not. Such a server keeps every name it has (folders, logs, zones),
-    /// so nothing nginx serves moves; a new setup uses the new names.
+    /// Whether nginx on this server still has the names from before the rename: its folder under
+    /// the old name is there and the new one is not. Asked again each time, since the core moves
+    /// such a server to the new names while it runs (Updates/LegacyNamesMove.cs); until then it
+    /// keeps every name it has (folders, logs, zones), and a new setup uses the new names.
     /// </summary>
-    public static bool LegacyNamesHere => _legacyNamesHere.Value;
+    public static bool LegacyNamesHere =>
+        OperatingSystem.IsLinux() && Directory.Exists(LegacyNames.NginxConfigRoot) && !Directory.Exists(Debian.ConfigRoot);
 
     /// <summary>The prefix of what nginx itself names: log files, cache folders, zones and the upgrade map.</summary>
     public string NamePrefix { get; init; } = "runova";
@@ -36,12 +35,16 @@ internal sealed record NginxLayout
     public NginxLayout WithLegacyNames() => this with
     {
         ConfigRoot = LegacyNames.NginxConfigRoot,
+        WebRoot = LegacyNames.NginxWebRoot,
         AcmeWebroot = LegacyNames.NginxWebRoot + "/acme",
         SitesRoot = LegacyNames.NginxWebRoot + "/sites",
         NamePrefix = LegacyNames.NginxNamePrefix,
     };
 
     public string ConfigRoot { get; init; } = "/etc/nginx/runova";
+
+    /// <summary>The folder that holds the ACME webroot and the site folders.</summary>
+    public string WebRoot { get; init; } = "/var/www/runova";
 
     /// <summary>
     /// Challenge files for ACME HTTP-01 go to <c>{AcmeWebroot}/.well-known/acme-challenge/</c>.

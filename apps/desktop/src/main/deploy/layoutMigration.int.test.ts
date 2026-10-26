@@ -5,11 +5,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
+import { LEGACY_CORE_NAMES } from '../../shared/deploy/coreLegacyNames';
 import { SshConnectionPool } from '../ssh/pool';
 import { localArtifactSource } from './bootstrap/releaseSource';
 import { LEGACY_CORE, RUNOVA_CORE } from './coreLayout';
 import { DeployService } from './service';
+import { DeploySites } from './sites/deploySites';
 import { DeployState } from './state';
+import { runJob } from './testing/coreSession';
 import {
   skipWhenNoServers,
   startTestServer,
@@ -158,6 +161,97 @@ async function legacyApp(server: TestServer, release: string) {
 const gidOf = (server: TestServer, group: string) =>
   server.run(`getent group ${group} | cut -d: -f3`);
 
+const OLD_NGINX = LEGACY_CORE_NAMES.nginxConfigRoot;
+const OLD_WEB = LEGACY_CORE_NAMES.nginxWebRoot;
+const NEW_NGINX = '/etc/nginx/runova';
+const NEW_WEB = '/var/www/runova';
+const NEW_DROP_IN = '/etc/ssh/sshd_config.d/00-runova.conf';
+/** Makes nginx -t refuse the new names only: a zone the new configuration declares as well. */
+const CONFLICT = '/etc/nginx/conf.d/zz-conflict.conf';
+
+/** Asks again every second until `done` holds, or fails saying what it waited for. */
+async function until(done: () => boolean, timeoutMs: number, what: string): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!done()) {
+    if (Date.now() > deadline) throw new Error(`Gave up waiting for ${what}.`);
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+  }
+}
+
+/** The site's file, through nginx. */
+const served = (server: TestServer) =>
+  server.run(
+    "curl -s --max-time 10 -H 'Host: blog.test' http://127.0.0.1/static/hello.txt || true",
+  );
+
+const nameMoves = (server: TestServer) =>
+  server.run(`cat ${RUNOVA_CORE.dataDirectory}/name-moves.json 2>/dev/null || true`);
+
+const nginxMove = (phase: string) => new RegExp(`"nginx":\\s*\\{\\s*"phase":\\s*"${phase}"`);
+
+/**
+ * What a 1.63 server had on top of the core: nginx set up by that core, with a site whose snippet
+ * serves files from the site folder, and the security checklist's sshd drop-in.
+ */
+async function seedNginxAndSshd(
+  server: TestServer,
+  image: string,
+  service: DeployService,
+): Promise<void> {
+  // nginx.org's nginx, fetched from its repository alone: the core's job adopts an nginx that is
+  // there, which spares the test the distribution's whole package index.
+  server.run(
+    image.startsWith('rocky')
+      ? [
+          'set -e',
+          "printf '[nginx-stable]\\nname=nginx stable\\nbaseurl=https://nginx.org/packages/centos/9/$basearch/\\ngpgcheck=1\\nenabled=1\\ngpgkey=https://nginx.org/keys/nginx_signing.key\\nmodule_hotfixes=true\\n' > /etc/yum.repos.d/nginx.repo",
+          "dnf install -y -q --disablerepo='*' --enablerepo=nginx-stable nginx",
+        ].join('\n')
+      : [
+          'set -e',
+          'curl -fsSL --retry 5 https://nginx.org/keys/nginx_signing.key -o /usr/share/keyrings/nginx-org.asc',
+          "echo 'deb [signed-by=/usr/share/keyrings/nginx-org.asc] https://nginx.org/packages/ubuntu noble nginx' > /etc/apt/sources.list.d/nginx.list",
+          'apt-get update -q -o Dir::Etc::sourcelist=sources.list.d/nginx.list -o Dir::Etc::sourceparts=- -o APT::Get::List-Cleanup=0',
+          'DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends nginx',
+        ].join('\n'),
+  );
+  const sites = new DeploySites({ links: service.links, roles: () => ['owner'] });
+  const job = await sites.install('srv');
+  const nginx = await service.links.call('srv', (hub) => runJob(hub, job, 900_000));
+  expect(nginx.final?.state, nginx.log.slice(-40).join('\n')).toBe('succeeded');
+  const saved = await sites.saveSite('srv', {
+    id: 'blog',
+    domains: ['blog.test'],
+    upstream: {
+      kind: 'servicePort',
+      service: 'web',
+      port: 3000,
+      verifyCertificate: true,
+      sendUpstreamHost: false,
+    },
+    websocket: true,
+    rateLimit: { requests: 50, per: 'second', burst: 100, noDelay: true },
+    gzip: true,
+    http2: false,
+    redirectToHttps: false,
+  });
+  expect(saved.site, JSON.stringify(saved.problems)).toBeTruthy();
+  const snippet = await sites.setSnippets('srv', {
+    siteId: 'blog',
+    serverSnippet: `location /static/ {\n    root ${OLD_WEB}/sites/blog;\n}\n`,
+  });
+  expect(snippet.problems).toEqual([]);
+  const applied = await sites.apply('srv');
+  expect(applied.applied, applied.error ?? JSON.stringify(applied.problems)).toBe(true);
+  server.run(
+    `mkdir -p ${OLD_WEB}/sites/blog/static && echo hello > ${OLD_WEB}/sites/blog/static/hello.txt && chmod -R a+rX ${OLD_WEB}/sites/blog`,
+  );
+  expect(served(server)).toBe('hello');
+  server.run(
+    `printf '# Written by the security checklist.\\nX11Forwarding no\\n' > ${LEGACY_CORE_NAMES.sshdDropIn} && (systemctl reload ssh 2>/dev/null || systemctl reload sshd)`,
+  );
+}
+
 describe.skipIf(!enabled)('moving a server from before the rename to the Runova layout', () => {
   skipWhenNoServers(IMAGES);
   for (const image of IMAGES) {
@@ -179,6 +273,11 @@ describe.skipIf(!enabled)('moving a server from before the rename to the Runova 
         });
         expect((await service.access('srv')).state).toBe('signed-in');
         expect((await service.health('srv')).version).toBe(LEGACY_VERSION);
+        await seedNginxAndSshd(server, image, service);
+        // Harmless to the old names; the new ones declare the same zone, so nginx -t refuses them.
+        server.run(
+          `printf 'limit_req_zone $binary_remote_addr zone=runova_rate_blog:1m rate=1r/s;\\n' > ${CONFLICT} && nginx -t`,
+        );
 
         // The new core refuses to start under its new unit, so the move has to be put back.
         server.run(
@@ -235,6 +334,62 @@ describe.skipIf(!enabled)('moving a server from before the rename to the Runova 
         expect(server.run(`${RUNOVA_CORE.binaryPath} admin status`)).toContain(
           '"userName":"maria"',
         );
+
+        // The new core moves nginx and the drop-in on its first start. nginx refuses the new
+        // names, so nginx goes back to the old ones and keeps serving; the drop-in moves.
+        await until(
+          () => nginxMove('(failed|done)').test(nameMoves(server)),
+          180_000,
+          'the nginx move',
+        );
+        expect(nameMoves(server)).toMatch(nginxMove('failed'));
+        expect(server.run(`test -d ${OLD_NGINX} && ! test -L ${OLD_NGINX} && echo real`)).toBe(
+          'real',
+        );
+        expect(server.run(`test -e ${NEW_NGINX} && echo there || echo gone`)).toBe('gone');
+        expect(server.run(`test -d ${OLD_WEB} && ! test -L ${OLD_WEB} && echo real`)).toBe('real');
+        expect(
+          server.run(`grep -c 'include ${OLD_NGINX}/current/http.conf;' /etc/nginx/nginx.conf`),
+        ).toBe('1');
+        expect(served(server)).toBe('hello');
+        expect((await service.health('srv')).nginxMoveError).toMatch(/new names/);
+        expect(
+          server.run(
+            `test -f ${NEW_DROP_IN} && ! test -e ${LEGACY_CORE_NAMES.sshdDropIn} && echo moved`,
+          ),
+        ).toBe('moved');
+        expect(server.run('sshd -T | grep -i ^x11forwarding')).toBe('x11forwarding no');
+
+        // Without the conflict, the next start of the core moves nginx too.
+        server.run(`rm -f ${CONFLICT} && systemctl restart ${RUNOVA_CORE.unit}`);
+        await until(
+          () => nginxMove('done').test(nameMoves(server)),
+          180_000,
+          'the nginx move to finish',
+        );
+        expect(server.run(`readlink ${OLD_NGINX}`)).toBe(NEW_NGINX);
+        expect(server.run(`readlink ${OLD_WEB}`)).toBe(NEW_WEB);
+        expect(server.run('nginx -t 2>&1')).toContain('successful');
+        const conf = server.run('cat /etc/nginx/nginx.conf');
+        expect(conf).toContain(`include ${NEW_NGINX}/current/http.conf;`);
+        expect(conf).not.toContain(OLD_NGINX);
+        expect(
+          server.run(`grep -c 'root ${NEW_WEB}/sites/blog;' ${NEW_NGINX}/current/sites/blog.conf`),
+        ).not.toBe('0');
+        expect(
+          server.run(`grep -rl ${LEGACY_CORE_NAMES.nginxNamePrefix} ${NEW_NGINX}/current/ || true`),
+        ).toBe('');
+        expect(server.run(`ls /var/log/nginx | grep -c '^runova-blog' || true`)).not.toBe('0');
+        expect(
+          server.run(
+            `ls /var/log/nginx | grep -c '^${LEGACY_CORE_NAMES.nginxNamePrefix}-' || true`,
+          ),
+        ).toBe('0');
+        expect(served(server)).toBe('hello');
+        expect((await service.health('srv')).nginxMoveError).toBeUndefined();
+        // sshd still lets the login in, on a fresh connection.
+        pool.closeAll();
+        expect((await service.health('srv')).layout).toBe('runova');
         pool.closeAll();
       },
       TIMEOUT_MS,
