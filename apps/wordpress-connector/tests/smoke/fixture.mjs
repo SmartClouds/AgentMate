@@ -8,6 +8,7 @@
  *   site.wp(['plugin', 'activate', 'hello']);  // WP-CLI (returns stdout; { allowFail: true } to not throw)
  *   site.exec('cat /var/www/html/wp-content/themes/x/style.css');
  *   site.writeFile('/var/www/html/wp-content/mu-plugins/x.php', '<?php ...');
+ *   await site.config(['set', 'WP_DEBUG', 'true', '--raw']);  // waits out Apache's opcache
  *   site.serveDownloads({ 'https://github.com/...zip': '/runova-dist/x.zip' });  // see below
  *   site.stop();
  *
@@ -74,6 +75,12 @@ const MULTISITE_HTACCESS = [
 function sleep(ms) {
   return new Promise((done) => setTimeout(done, ms));
 }
+
+/**
+ * The image's opcache.revalidate_freq: Apache may run its cached copy of a changed PHP file, such
+ * as wp-config.php, for up to this long after the change.
+ */
+const OPCACHE_REVALIDATE_MS = 2000;
 
 /** Builds dist/runova-connector.zip when it is not there yet. */
 export function connectorZip() {
@@ -251,6 +258,15 @@ export async function startWordPressFixture(options = {}) {
       wp,
       exec,
       writeFile,
+      /**
+       * `wp config <args>`, then a wait until the web server runs the new wp-config.php. Without
+       * the wait, a request in the next 2 seconds may still see the old constants.
+       */
+      async config(args) {
+        const out = wp(['config', ...args]);
+        await sleep(OPCACHE_REVALIDATE_MS + 1000);
+        return out;
+      },
       /** A new one-time connection key from `wp runova key create`. */
       keyFor(scope, { label, expiresIn } = {}) {
         const args = [cli, 'key', 'create', `--scope=${scope}`, '--porcelain'];

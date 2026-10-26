@@ -59,6 +59,8 @@ interface Fixture {
   exec: (command: string, options?: { allowFail?: boolean }) => string;
   wp: (args: string[], options?: { allowFail?: boolean }) => string;
   writeFile: (path: string, content: string) => void;
+  /** `wp config <args>`, then a wait until Apache's opcache sees the new wp-config.php. */
+  config: (args: string[]) => Promise<string>;
   serveDownloads: (map: Record<string, string>) => void;
   keyFor: (scope: 'read' | 'write') => string;
   stop: () => void;
@@ -316,7 +318,7 @@ function moveSuite(options: { port: number; multisite: boolean }) {
       // On the single site the old folder goes after a short grace period, so the test can see
       // it go; the network keeps it, so the owner can delete it first.
       if (!options.multisite) {
-        site.wp(['config', 'set', 'RUNOVA_CONNECTOR_MIGRATION_GRACE_SECONDS', '2', '--raw']);
+        await site.config(['set', 'RUNOVA_CONNECTOR_MIGRATION_GRACE_SECONDS', '2', '--raw']);
       }
       const result = await service.updateConnector(siteId);
       expect(result.moved).toBe(true);
@@ -374,7 +376,7 @@ function moveSuite(options: { port: number; multisite: boolean }) {
     }, 120_000);
 
     it('still honors the read-only switch under its 1.63 name in wp-config.php', async () => {
-      site.wp(['config', 'set', 'AGENTMATE_CONNECTOR_READ_ONLY', 'true', '--raw']); // legacy-name
+      await site.config(['set', 'AGENTMATE_CONNECTOR_READ_ONLY', 'true', '--raw']); // legacy-name
       try {
         expect((await service.siteInfo(siteId)).readOnlyByConstant).toBe(true);
         const error = await deploy('<?php // setup read-only\n').then(
@@ -383,7 +385,7 @@ function moveSuite(options: { port: number; multisite: boolean }) {
         );
         expect(wordPressErrorCode(error)).toBe('readOnly');
       } finally {
-        site.wp(['config', 'delete', 'AGENTMATE_CONNECTOR_READ_ONLY']); // legacy-name
+        await site.config(['delete', 'AGENTMATE_CONNECTOR_READ_ONLY']); // legacy-name
       }
       expect((await service.siteInfo(siteId)).readOnlyByConstant).toBe(false);
     }, 120_000);
