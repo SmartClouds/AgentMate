@@ -23,7 +23,7 @@ const FAILING = parseHealthResponse({
         {
           status: 'fail',
           output: 'connect ECONNREFUSED postgres://app:topsecret1@db:5432/app',
-          agentmate: {
+          runova: {
             errorCode: 'ECONNREFUSED',
             hint: 'Check the db container',
             stack: 'at x (db.js:1)',
@@ -43,17 +43,17 @@ const TARGET = {
   targetName: 'API',
   environmentName: 'Production',
   serverLabel: 'web-1',
-  url: 'https://user:pw@api.example.com/_agentmate/health?token=abc#x',
+  url: 'https://user:pw@api.example.com/_runova/health?token=abc#x',
 };
 
 describe('buildHealthSpecMarkdown', () => {
   const spec = buildHealthSpecMarkdown();
 
   it('states the protocol, media type and response shape', () => {
-    expect(spec).toContain('agentmate-health/1');
+    expect(spec).toContain('runova-health/1');
     expect(spec).toContain('application/health+json');
     expect(spec).toContain('"checks"');
-    expect(spec).toContain('"agentmate"');
+    expect(spec).toContain('"runova"');
     expect(spec).toContain('503');
   });
 
@@ -82,13 +82,13 @@ describe('buildHealthSetupPrompt', () => {
       projectName: 'CuraLink',
       environmentName: 'Staging',
       serverLabel: 'web-2',
-      path: '/_agentmate/health',
+      path: '/_runova/health',
       authMode: 'bearer',
     });
     expect(prompt).toContain('CuraLink');
     expect(prompt).toContain('Staging');
     expect(prompt).toContain('web-2');
-    expect(prompt).toContain('/_agentmate/health');
+    expect(prompt).toContain('/_runova/health');
     expect(prompt).toContain(HEALTH_ENV.tokenHash);
     expect(prompt).toContain(buildHealthSpecMarkdown());
     expect(prompt).toMatch(/Bearer/);
@@ -116,13 +116,13 @@ describe('buildHealthSetupPrompt', () => {
       path: '/h',
       authMode: 'bearer',
     });
-    expect(prompt).not.toMatch(/amh_[A-Za-z0-9_-]{20,}/);
+    expect(prompt).not.toMatch(/rnh_[A-Za-z0-9_-]{20,}/);
   });
 });
 
 describe('healthUrlForPrompt', () => {
   it('drops credentials, the query and the fragment', () => {
-    expect(healthUrlForPrompt(TARGET.url)).toBe('https://api.example.com/_agentmate/health');
+    expect(healthUrlForPrompt(TARGET.url)).toBe('https://api.example.com/_runova/health');
   });
 
   it('returns a placeholder for a URL it cannot read', () => {
@@ -165,7 +165,7 @@ describe('buildHealthDiagnosePrompt', () => {
     expect(prompt).toContain('CuraLink');
     expect(prompt).toContain('Production');
     expect(prompt).toContain('web-1');
-    expect(prompt).toContain('https://api.example.com/_agentmate/health');
+    expect(prompt).toContain('https://api.example.com/_runova/health');
     expect(prompt).not.toContain('token=abc');
     expect(prompt).not.toContain('user:pw');
     expect(prompt).not.toContain('topsecret1');

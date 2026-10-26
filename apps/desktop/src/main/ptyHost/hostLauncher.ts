@@ -1,12 +1,24 @@
 import { fork } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { existsSync, statSync } from 'node:fs';
-import { cp, mkdir, readdir, rename, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readdir, rename, rm, rmdir, writeFile } from 'node:fs/promises';
 import { connect } from 'node:net';
 import { basename, dirname, join, relative, sep } from 'node:path';
 import { app } from 'electron';
+import {
+  LEGACY_APP_NAME,
+  LEGACY_PTY_PIPE_PREFIX,
+  LEGACY_PTY_SOCKET_PREFIX,
+} from '../../shared/legacyNames';
+import { currentDataFolderMove } from '../rebrand/dataFolder';
 import { HostClient } from './hostClient';
-import { type HelloResult, PTY_HOST_PROTOCOL_VERSION, ptyHostPaths } from './protocol';
+import {
+  type HelloResult,
+  PTY_HOST_PROTOCOL_VERSION,
+  type PtyEndpointNames,
+  type PtyHostPaths,
+  ptyHostPaths,
+} from './protocol';
 
 const READY_TIMEOUT_MS = 15_000;
 
@@ -57,9 +69,9 @@ interface HostLocation {
   relocatedDir: string | null;
 }
 
-function relocationRoot(): string {
+function relocationRoot(appName = app.getName()): string {
   const localAppData = process.env.LOCALAPPDATA ?? join(app.getPath('home'), 'AppData', 'Local');
-  return join(localAppData, app.getName(), 'pty-host');
+  return join(localAppData, appName, 'pty-host');
 }
 
 /**
@@ -213,6 +225,36 @@ export interface ConnectedHost {
   hello: HelloResult;
 }
 
+const LEGACY_ENDPOINT_NAMES: PtyEndpointNames = {
+  pipePrefix: LEGACY_PTY_PIPE_PREFIX,
+  socketPrefix: LEGACY_PTY_SOCKET_PREFIX,
+};
+
+/**
+ * A host started before the rename listens under the old name, or under a path hashed from the
+ * old profile folder. Its token file moved with the profile, so the current one opens it. Its
+ * shells keep running and the app uses it until it exits; the next host starts under the new name.
+ */
+async function adoptLegacyHost(paths: PtyHostPaths): Promise<ConnectedHost | null> {
+  const folders = [app.getPath('userData'), currentDataFolderMove()?.legacyFolder].filter(
+    (folder): folder is string => Boolean(folder),
+  );
+  const endpoints = new Set<string>();
+  for (const folder of folders) {
+    endpoints.add(ptyHostPaths(folder, LEGACY_ENDPOINT_NAMES).endpoint);
+    endpoints.add(ptyHostPaths(folder).endpoint);
+  }
+  endpoints.delete(paths.endpoint);
+  for (const endpoint of endpoints) {
+    try {
+      return await HostClient.connect(endpoint, paths.tokenFile);
+    } catch {
+      // nothing there
+    }
+  }
+  return null;
+}
+
 /**
  * Connects to the terminal host, starting one if none is running. Resolves null when the
  * host cannot be used at all, in which case the caller runs terminals in-process.
@@ -230,7 +272,7 @@ export async function connectToHost(): Promise<ConnectedHost | null> {
     }
   };
 
-  let existing = await tryConnect();
+  let existing = (await tryConnect()) ?? (await adoptLegacyHost(paths));
   if (existing) {
     const { client, hello } = existing;
     const incompatible = hello.protocolVersion !== PTY_HOST_PROTOCOL_VERSION;
@@ -264,8 +306,24 @@ export async function connectToHost(): Promise<ConnectedHost | null> {
   if (outcome !== 'ready') return null;
 
   const connected = await tryConnect();
-  if (connected) void keepHostFiles(identity, connected.hello.appVersion);
+  if (connected) {
+    void keepHostFiles(identity, connected.hello.appVersion);
+    void removeLegacyHostCopies();
+  }
   return connected;
+}
+
+/**
+ * Hosts from before the rename ran from copies under the old name. A fresh host just started, so
+ * none of those is in use any more (one that still were would have been adopted above).
+ */
+async function removeLegacyHostCopies(): Promise<void> {
+  if (!app.isPackaged || process.platform !== 'win32') return;
+  const root = relocationRoot(LEGACY_APP_NAME);
+  if (!existsSync(root)) return;
+  await rm(root, { recursive: true, force: true }).catch(() => undefined);
+  // The old app's folder goes too once nothing else is left in it.
+  await rmdir(dirname(root)).catch(() => undefined);
 }
 
 async function keepHostFiles(current: string, running: string): Promise<void> {

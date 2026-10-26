@@ -6,7 +6,7 @@ import type {
   FirewallPreset,
   FirewallRuleInfo,
   FirewallRuleSpec,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployServer } from '@shared/deployTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -63,7 +63,7 @@ export function FirewallPanel({ server }: { server: DeployServer }): React.JSX.E
   const queryClient = useQueryClient();
   const access = useQuery({
     queryKey: queryKeys.deployAccess(serverId),
-    queryFn: () => window.agentmat.deploy.access(serverId),
+    queryFn: () => window.runova.deploy.access(serverId),
     retry: false,
     staleTime: 30_000,
   });
@@ -196,10 +196,10 @@ export function FirewallPanel({ server }: { server: DeployServer }): React.JSX.E
     try {
       const input = { serverId, changeSetId: change.id };
       if (kind === 'keep') {
-        await window.agentmat.deployFirewall.confirm(input);
+        await window.runova.deployFirewall.confirm(input);
         toast.success('Firewall change kept.');
       } else {
-        await window.agentmat.deployFirewall.revert(input);
+        await window.runova.deployFirewall.revert(input);
         toast.success('Firewall change reverted. The old rules are back.');
       }
       waitingFor.current = null;

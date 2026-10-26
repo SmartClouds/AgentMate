@@ -1,4 +1,4 @@
-import type { AvdSummary } from '@agentmat/core';
+import type { AvdSummary } from '@runova/core';
 import { screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';

@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { parseScopeId, type StartupPage } from '@agentmat/core';
+import { parseScopeId, type StartupPage } from '@runova/core';
 import { app, type BrowserWindow } from 'electron';
 import { store } from './store';
 

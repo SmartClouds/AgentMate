@@ -16,7 +16,7 @@ import { type FakeOllama, startFakeOllama } from './fakeOllama';
 test.skip(!dotnetAvailable(), 'needs the .NET SDK to build the server core DevHost');
 
 /** The DevHost's fixed development owner (see its DevHost.cs). */
-const DEV_PASSWORD = 'agentmate-local-password';
+const DEV_PASSWORD = 'runova-local-password';
 const CRASHING = 'newsletter-sender-1';
 
 let devHost: DevHost | undefined;
@@ -53,7 +53,7 @@ test('a crash loop, diagnosed: a check runs by itself, a change waits for approv
       ollamaModel: 'e2e-script',
       ollamaBaseUrl: ollama.url,
     },
-    env: { AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port) },
+    env: { RUNOVA_DEPLOY_DEV_CORE: String(devHost.port) },
   });
   const { page } = launched;
 

@@ -70,8 +70,8 @@ import type {
   StreamProxySettings,
   TelegramNotificationsRequest,
   VolumeInfo,
-} from '../protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import type { FakeCore } from './fakeCore';
 import type { FakeConsoleSession } from './fakeDocker';
 import { FakeFilesError } from './fakeFiles';
@@ -389,6 +389,19 @@ export class FakeCoreConnection implements ICoreHub {
     if (this.core.stepUpUntil <= this.core.now()) throw unauthorizedError('UpdateCore');
     this.core.coreUpdates.push(request);
     return this.answer(this.core.answerCoreUpdate(request));
+  };
+
+  migrateLayout = async () => {
+    this.assertOpen();
+    this.assertRole('MigrateLayout', OWNERS);
+    if (this.core.stepUpUntil <= this.core.now()) throw unauthorizedError('MigrateLayout');
+    this.core.layoutMigrations += 1;
+    return this.answer(this.core.answerLayoutMigration());
+  };
+
+  migrationStatus = async () => {
+    this.assertOpen();
+    return this.answer(this.core.migrationStatus);
   };
 
   // Websites and certificates: Viewers read, Admins change, Owners write snippets, and taking a

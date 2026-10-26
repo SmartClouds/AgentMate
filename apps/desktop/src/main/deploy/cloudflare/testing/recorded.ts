@@ -26,7 +26,7 @@ export const verifiedToken = {
 /** GET /user/tokens/:id, for a token that may read itself. `permission_groups` is filled in. */
 export const tokenDetails = {
   id: TOKEN_ID,
-  name: 'AgentMate',
+  name: 'Runova',
   status: 'active',
   issued_on: '2018-07-01T05:20:00Z',
   modified_on: '2018-07-02T05:20:00Z',
@@ -139,7 +139,7 @@ export const permissionGroups = [
 /** POST /user/tokens: the token's value is only ever in this answer. */
 export const createdToken = {
   id: 'ed17574386854bf78a67040be0a770b1',
-  name: 'AgentMate DNS-01',
+  name: 'Runova DNS-01',
   status: 'active',
   issued_on: STAMP,
   modified_on: STAMP,

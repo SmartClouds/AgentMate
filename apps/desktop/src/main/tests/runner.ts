@@ -27,7 +27,7 @@ import {
   type TestRunSummary,
   type TestTarget,
   testNodeId,
-} from '@agentmat/core';
+} from '@runova/core';
 import { type CancelToken, cancelSpawn, spawnStreaming } from '../process/spawnStreaming';
 
 /**
@@ -310,7 +310,7 @@ export class TestRunManager {
     };
 
     try {
-      reportRoot = await mkdtemp(join(tmpdir(), 'agentmate-tests-'));
+      reportRoot = await mkdtemp(join(tmpdir(), 'runova-tests-'));
       for (const [index, target] of targets.entries()) {
         if (run.token.cancelled) break;
         const project = input.discovery.projects.find((entry) => entry.id === target.testProjectId);

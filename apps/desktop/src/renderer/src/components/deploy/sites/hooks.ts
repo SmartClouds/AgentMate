@@ -1,5 +1,5 @@
 import { coreErrorMessage } from '@shared/coreErrors';
-import type { SiteLogKind } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { SiteLogKind } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { ownedSubscription } from '@/lib/deploy/overview/subscription';
@@ -13,7 +13,7 @@ import { queryKeys } from '@/lib/queryKeys';
 export function useNginxStatus(serverId: string, enabled = true) {
   return useQuery({
     queryKey: queryKeys.deployNginx(serverId),
-    queryFn: () => window.agentmat.deploySites.status(serverId),
+    queryFn: () => window.runova.deploySites.status(serverId),
     enabled,
     retry: false,
   });
@@ -22,7 +22,7 @@ export function useNginxStatus(serverId: string, enabled = true) {
 export function useSites(serverId: string, enabled = true) {
   return useQuery({
     queryKey: queryKeys.deploySites(serverId),
-    queryFn: async () => (await window.agentmat.deploySites.list(serverId)) ?? [],
+    queryFn: async () => (await window.runova.deploySites.list(serverId)) ?? [],
     enabled,
     retry: false,
   });
@@ -31,7 +31,7 @@ export function useSites(serverId: string, enabled = true) {
 export function useStreams(serverId: string, enabled = true) {
   return useQuery({
     queryKey: queryKeys.deployStreams(serverId),
-    queryFn: async () => (await window.agentmat.deploySites.listStreams(serverId)) ?? [],
+    queryFn: async () => (await window.runova.deploySites.listStreams(serverId)) ?? [],
     enabled,
     retry: false,
   });
@@ -64,9 +64,9 @@ export function useSiteLog(serverId: string, siteId: string, kind: SiteLogKind):
   useEffect(() => {
     setLog({ lines: [], resets: 0, ended: false, error: null });
     return ownedSubscription({
-      listen: window.agentmat.deploySites.onLog,
-      start: () => window.agentmat.deploySites.watchLog({ serverId, siteId, kind }),
-      stop: window.agentmat.deploySites.unwatchLog,
+      listen: window.runova.deploySites.onLog,
+      start: () => window.runova.deploySites.watchLog({ serverId, siteId, kind }),
+      stop: window.runova.deploySites.unwatchLog,
       onEvent: (event) =>
         setLog((current) => ({
           lines: [...(event.reset ? [] : current.lines), ...event.lines].slice(-MAX_LOG_LINES),

@@ -49,7 +49,7 @@ const fileSchema = z.union([fileV2, fileV1]) as unknown as z.ZodType<RecipeFile>
 
 /** The file a recipe is exported as. */
 const exportSchema = z.object({
-  format: z.literal('agentmate-studio-recipe'),
+  format: z.literal('runova-studio-recipe'),
   formatVersion: z.literal(1),
   recipe: z.object({ versions: z.array(versionSchema).min(1).max(1000) }),
 });
@@ -152,7 +152,7 @@ export class RecipeStore {
     const recipe = (await this.store.read()).recipes[recipeId];
     if (!recipe) throw new Error('That recipe is not saved any more.');
     const file: z.infer<typeof exportSchema> = {
-      format: 'agentmate-studio-recipe',
+      format: 'runova-studio-recipe',
       formatVersion: 1,
       recipe: { versions: recipe.versions },
     };

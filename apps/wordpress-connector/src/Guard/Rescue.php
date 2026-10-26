@@ -3,20 +3,22 @@
  * rescue.php's work, once WordPress is loaded with SHORTINIT: the database and options are there,
  * plugins and themes are not. Only the rescue routes are answered.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Guard;
+namespace Runova\Connector\Guard;
 
-use AgentMate\Connector\Auth\SiteMove;
-use AgentMate\Connector\Crypto\SiteKeys;
-use AgentMate\Connector\Env\WordPressEnvironment;
-use AgentMate\Connector\Http\Dispatcher;
-use AgentMate\Connector\Http\Transport;
-use AgentMate\Connector\Plugin;
-use AgentMate\Connector\Routes\DeployHandlers;
-use AgentMate\Connector\Routes\Handlers;
-use AgentMate\Connector\Storage\WpdbStorage;
+use Runova\Connector\Auth\SiteMove;
+use Runova\Connector\Crypto\SiteKeys;
+use Runova\Connector\Env\WordPressEnvironment;
+use Runova\Connector\Http\Dispatcher;
+use Runova\Connector\Http\Transport;
+use Runova\Connector\Layout;
+use Runova\Connector\Plugin;
+use Runova\Connector\Protocol;
+use Runova\Connector\Routes\DeployHandlers;
+use Runova\Connector\Routes\Handlers;
+use Runova\Connector\Storage\WpdbStorage;
 
 final class Rescue
 {
@@ -25,8 +27,8 @@ final class Rescue
     public static function serve(string $pluginDir): void
     {
         global $wpdb;
-        if (!defined('AGENTMATE_CONNECTOR_FILE')) {
-            define('AGENTMATE_CONNECTOR_FILE', $pluginDir . '/agentmate-connector.php');
+        if (!defined('RUNOVA_CONNECTOR_FILE')) {
+            define('RUNOVA_CONNECTOR_FILE', Layout::mainFile($pluginDir));
         }
         if (!self::active($pluginDir)) {
             // A deactivated connector answers nothing, here as everywhere else.
@@ -45,13 +47,16 @@ final class Rescue
             SiteMove::apply($storage, time(), $from, $to);
         });
         $dispatcher = new Dispatcher($storage, $env, $keys, Handlers::rescue($storage, $env), array(Plugin::class, 'logError'));
-        Transport::emit($dispatcher->handle(Transport::incoming($route)));
+        // Nothing in the address says which app is calling; the copy in the 1.63 folder is the
+        // one 1.63 desktops know about. A signed request verifies under either prefix anyway.
+        $prefix = Layout::of($pluginDir) === Layout::BRIDGE ? Protocol::LEGACY_PREFIX : Protocol::PREFIX;
+        Transport::emit($dispatcher->handle(Transport::incoming($route, $prefix)));
         exit;
     }
 
     private static function active(string $pluginDir): bool
     {
-        $basename = basename($pluginDir) . '/agentmate-connector.php';
+        $basename = basename($pluginDir) . '/' . basename(Layout::mainFile($pluginDir));
         $active = get_option('active_plugins');
         if (is_array($active) && in_array($basename, $active, true)) {
             return true;
@@ -67,7 +72,7 @@ final class Rescue
     public static function writeConfig(string $pluginDir): void
     {
         $path = $pluginDir . '/' . self::CONFIG;
-        $content = "<?php\n// Written by AgentMate Connector so rescue.php can find WordPress. Safe to delete.\nreturn array('abspath' => " . var_export(ABSPATH, true) . ");\n";
+        $content = "<?php\n// Written by Runova Connector so rescue.php can find WordPress. Safe to delete.\nreturn array('abspath' => " . var_export(ABSPATH, true) . ");\n";
         // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
         if (is_file($path) && file_get_contents($path) === $content) {
             return;

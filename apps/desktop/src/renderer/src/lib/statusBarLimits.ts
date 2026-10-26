@@ -3,7 +3,7 @@ import {
   type ProviderUsage,
   STATUS_BAR_USAGE_PROVIDERS,
   type SubscriptionWindow,
-} from '@agentmat/core';
+} from '@runova/core';
 
 /**
  * ok: the account's own numbers. estimate: worked out from local logs because the account did not

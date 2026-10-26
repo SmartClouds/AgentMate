@@ -27,7 +27,7 @@ The strip at the top of **Source control** shows:
 - The current branch name (or `detached` and the commit when you are not on a branch). Click it to jump to the **Branches** section. Its tooltip tells you what the branch is tracking.
 - A pull request pill next to it. **#42** with a colored dot shows the branch's pull request and its state. **Create PR** appears once the branch is published and has no pull request yet. Click either to open the **Pull request** section.
 - One main button for what is needed now: **Publish** (the branch is not on the remote yet), **Push** (you have commits to send), **Pull** (the remote has new commits), or **Sync** (both, which pulls and then pushes). Arrows show how many commits are behind and ahead. When nothing is needed, only the fetch button shows.
-- **Fetch from remote** (the circular arrows) updates what AgentMate knows about the remote without changing your files. AgentMate fetches once by itself when the panel first shows, so the counts mean something.
+- **Fetch from remote** (the circular arrows) updates what Runova knows about the remote without changing your files. Runova fetches once by itself when the panel first shows, so the counts mean something.
 - **Show line totals** (the small chart icon) turns the line totals on and off, described below.
 
 If the project has no remote, the sync buttons are not shown.
@@ -75,7 +75,7 @@ When there are changes, a commit box sits at the top of **Changes**.
 2. Click **Commit**. It commits what is staged. If nothing is staged, the button reads **Stage all & commit** and stages everything first.
 3. To commit and push in one go, click the arrow next to the button (**More commit options**) and choose **Commit & push**. For a branch that has no remote copy yet, this publishes it.
 
-`Ctrl+Enter` (`Cmd+Enter`) commits and `Ctrl+Shift+Enter` commits and pushes, while you are typing in the message box. A message you have half written is kept for each project, even if you switch tabs or pages, until you close AgentMate.
+`Ctrl+Enter` (`Cmd+Enter`) commits and `Ctrl+Shift+Enter` commits and pushes, while you are typing in the message box. A message you have half written is kept for each project, even if you switch tabs or pages, until you close Runova.
 
 The commit button stays off while the message is empty, while there is nothing to commit, and while conflicts are unresolved. With conflicts the box says **Resolve the conflicts below before committing.** and shows **Fix with AI**.
 
@@ -108,7 +108,7 @@ Opening a changed file shows its diff in a tab in the focused pane. The tab's he
 
 Open the **Branches** section to see local branches, then remote-only ones under **Remote**. The current branch has a check mark and is bold, and the default branch is tagged **default**.
 
-- **Switch**: click a branch. If you have uncommitted changes, AgentMate asks **Switch to {branch}?** first. Git carries your changes over when it can, and refuses (and says why) when they would be overwritten.
+- **Switch**: click a branch. If you have uncommitted changes, Runova asks **Switch to {branch}?** first. Git carries your changes over when it can, and refuses (and says why) when they would be overwritten.
 - **Create**: click **New branch** (the **+** in the section header), type a name (spaces become dashes), and press `Enter`. The new branch is created from where you are and you switch to it.
 - **Find**: with more than eight branches, a **Filter branches** box appears.
 - **Open on GitHub**: double-click a branch. A branch that is not pushed yet says so.
@@ -160,7 +160,7 @@ With no pull request yet:
 2. If you have uncommitted changes, a note says they are not part of the pull request until you commit them, with a **Review changes** button.
 3. Type a **Title** and an optional description. The sparkle button (**Write the title and description with AI**) drafts both from your changes. Click it again to stop.
 4. Tick **Open as a draft** if you want one.
-5. Click **Create pull request**. The branch is published or pushed first when needed, and a message offers **Open on GitHub**. If `gh` is not available, AgentMate opens GitHub's own pull request page in your browser.
+5. Click **Create pull request**. The branch is published or pushed first when needed, and a message offers **Open on GitHub**. If `gh` is not available, Runova opens GitHub's own pull request page in your browser.
 
 After you publish a branch with **Publish** or **Commit & push**, a message offers **Create pull request** too, as long as GitHub is set up for the project.
 
@@ -185,7 +185,7 @@ The **Merge** card lists what is in the way, or says **Ready to merge into {base
 - Things GitHub will always refuse stop the button: the pull request is closed or merged, it is still a draft (a **Mark ready** button fixes that), it conflicts with the base, or you have uncommitted changes while cleanup is on.
 - Softer warnings, such as failed or running checks, a reviewer who asked for changes, an approval still needed, or open threads, do not stop you. The confirmation then says GitHub still refuses the merge if the repository requires them, and its button reads **Merge anyway**.
 - The arrow beside the button (**Choose merge method**) picks **Squash and merge** (the default), **Create a merge commit** or **Rebase and merge**. Your choice is remembered per project.
-- **Delete {branch} here and on GitHub, then switch to {base}** is ticked by default. After the merge, AgentMate switches to the base branch, pulls the merge and deletes the branch locally and on GitHub. Each step is listed. If a step fails, **Retry cleanup** tries again.
+- **Delete {branch} here and on GitHub, then switch to {base}** is ticked by default. After the merge, Runova switches to the base branch, pulls the merge and deletes the branch locally and on GitHub. Each step is listed. If a step fails, **Retry cleanup** tries again.
 - A confirmation dialog spells out what will happen before anything runs.
 
 If the pull request was merged elsewhere and you are still on its branch, a card says **Merged into {base}** with a button to switch and delete the branch. A closed one offers a new pull request. A summary, **Merged #{n} into {base}**, stays on screen after the merge until you dismiss it.
@@ -203,7 +203,7 @@ For the selected pipeline's latest run you see:
 - **The run.** Its name, commit title and outcome, then the branch, run number, the attempt (after a re-run), what started it, who started it and the short commit hash. Below that is when it started and how long it took, or how long it has been running. Hover the time for the exact date.
 - **Jobs.** One card per job with its outcome and how long it took. Click a card to open it onto its steps, each with its outcome and duration, and the failed step is highlighted. Failed and running jobs start open, and so does a run's only job. The link icon on a job opens it on GitHub.
 - **Annotations.** The errors, warnings and notices the jobs left, when there are any. See [Pipelines](pipelines.md#annotations).
-- **Failure output.** For a failed run, a folded block with the failed jobs' errors and the end of their logs. AgentMate only reads it when you open it, and **Copy** copies it.
+- **Failure output.** For a failed run, a folded block with the failed jobs' errors and the end of their logs. Runova only reads it when you open it, and **Copy** copies it.
 
 The buttons under the run's details are **Fix with AI** and **Copy error** for a failed run, **Stop** while it is still going, and **Open run on GitHub**. A pipeline that has never run says so and offers **Open workflow on GitHub**. In the toolbar, **Refresh from GitHub** asks again, and **Open Actions on GitHub** opens the repository's Actions page.
 

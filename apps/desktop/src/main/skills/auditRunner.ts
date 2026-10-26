@@ -1,13 +1,13 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { basename, extname, join, posix, sep } from 'node:path';
-import type { SkillAuditFileInput, SkillAuditFinding } from '@agentmat/core';
+import type { SkillAuditFileInput, SkillAuditFinding } from '@runova/core';
 import {
   buildSkillAuditPrompt,
   parseSkillAuditReview,
   scanSkillFiles,
   scoreSkillFindings,
   sortFindings,
-} from '@agentmat/core';
+} from '@runova/core';
 import type {
   RunSkillAuditResult,
   SkillAuditRecord,
@@ -229,7 +229,7 @@ async function fetchGithubTree(repo: string, ref: string): Promise<GithubTreeEnt
 
   const response = await fetch(
     `https://api.github.com/repos/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`,
-    { headers: { 'User-Agent': 'AgentMate', Accept: 'application/vnd.github+json' } },
+    { headers: { 'User-Agent': 'Runova', Accept: 'application/vnd.github+json' } },
   );
   if (!response.ok) throw new Error(githubTreeError(response.status, repo, ref));
   const tree = (await response.json()) as { tree?: GithubTreeEntry[] };
@@ -329,7 +329,7 @@ async function downloadGithubFiles(
       const encoded = path.split('/').map(encodeURIComponent).join('/');
       const response = await fetch(
         `https://raw.githubusercontent.com/${repo}/${encodeURIComponent(ref)}/${encoded}`,
-        { headers: { 'User-Agent': 'AgentMate' } },
+        { headers: { 'User-Agent': 'Runova' } },
       ).catch(() => null);
       if (!response?.ok) continue;
       const content = await response.text();

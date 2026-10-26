@@ -1,4 +1,4 @@
-import type { UpdateCheckSource } from '@agentmat/core';
+import type { UpdateCheckSource } from '@runova/core';
 
 const UPDATE_CHECK_TIMEOUT_MS = 8000;
 

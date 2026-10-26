@@ -199,12 +199,12 @@ describe('TopMenu version and updates', () => {
   it('opens About from the version chip, without starting an update check', async () => {
     const { user, bridge } = renderTopMenu('/', { 'app.getVersion': async () => '2.4.1' });
 
-    const button = await screen.findByRole('button', { name: /AgentMate v2\.4\.1/ });
+    const button = await screen.findByRole('button', { name: /Runova v2\.4\.1/ });
     expect(button.textContent).toBe('v2.4.1');
     expect(button).toHaveAttribute('aria-haspopup', 'dialog');
     await user.click(button);
 
-    expect(await screen.findByRole('dialog', { name: 'About AgentMate' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'About Runova' })).toBeInTheDocument();
     expect(() => bridge.$fn('app.checkForUpdates')).toThrow(/not been touched/);
   });
 
@@ -214,8 +214,8 @@ describe('TopMenu version and updates', () => {
       'app.checkForUpdates': async () => ({ state: 'not-available' }),
     });
 
-    await user.click(await screen.findByRole('button', { name: /AgentMate v2\.4\.1/ }));
-    const about = await screen.findByRole('dialog', { name: 'About AgentMate' });
+    await user.click(await screen.findByRole('button', { name: /Runova v2\.4\.1/ }));
+    const about = await screen.findByRole('dialog', { name: 'About Runova' });
     await user.click(within(about).getByRole('button', { name: 'Check for updates' }));
 
     await waitFor(() =>
@@ -227,16 +227,16 @@ describe('TopMenu version and updates', () => {
     const { user } = renderTopMenu('/', { 'app.getVersion': async () => '2.4.1' });
 
     const button = await screen.findByRole('button', {
-      name: 'AgentMate v2.4.1, by SmartClouds, about',
+      name: 'Runova v2.4.1, by SmartClouds, about',
     });
     await user.hover(button);
 
-    expect((await screen.findAllByText('About AgentMate')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('About Runova')).length).toBeGreaterThan(0);
   });
 
   it('keeps the update dot on the chip when an update is waiting', async () => {
     renderTopMenu('/', { 'app.getVersion': async () => '2.4.1' });
-    const button = await screen.findByRole('button', { name: /AgentMate v2\.4\.1/ });
+    const button = await screen.findByRole('button', { name: /Runova v2\.4\.1/ });
     const quiet = button.childElementCount;
 
     act(() =>
@@ -250,14 +250,12 @@ describe('TopMenu version and updates', () => {
     );
 
     expect(button.childElementCount).toBe(quiet + 1);
-    expect(button).toHaveAccessibleName(
-      'AgentMate v2.4.1, by SmartClouds, update available, about',
-    );
+    expect(button).toHaveAccessibleName('Runova v2.4.1, by SmartClouds, update available, about');
   });
 
   it('shows a check in progress on the chip', async () => {
     renderTopMenu('/', { 'app.getVersion': async () => '2.4.1' });
-    const button = await screen.findByRole('button', { name: /AgentMate v2\.4\.1/ });
+    const button = await screen.findByRole('button', { name: /Runova v2\.4\.1/ });
 
     act(() => useUpdateStore.setState({ status: { state: 'checking' } }));
 

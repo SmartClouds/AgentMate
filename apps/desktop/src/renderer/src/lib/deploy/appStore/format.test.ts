@@ -1,4 +1,4 @@
-import { CATALOG_TEMPLATES, checkCatalogUpdate, findCatalogTemplate } from '@agentmat/core';
+import { CATALOG_TEMPLATES, checkCatalogUpdate, findCatalogTemplate } from '@runova/core';
 import { describe, expect, it } from 'vitest';
 import {
   allOfficial,

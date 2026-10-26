@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTempUserData } from '../../test/main/ipcHarness';
 
 /**
- * The bridge reaches AgentMate through the same loopback server as the hooks, at /run-commands.
+ * The bridge reaches Runova through the same loopback server as the hooks, at /run-commands.
  * These cases are about who may ask: the secret written next to the port, and nothing else.
  */
 

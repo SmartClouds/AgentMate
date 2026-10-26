@@ -380,7 +380,7 @@ export interface AppSettings {
   /** OS notification (in-app toast fallback) when a rate-limit window crosses a percent threshold. */
   usageThresholdAlerts: UsageThresholdAlertSettings;
   /**
-   * Floating pixel companion that walks around the desktop while AgentMate is
+   * Floating pixel companion that walks around the desktop while Runova is
    * open. Off until the user turns it on in Settings.
    */
   desktopPetEnabled: boolean;
@@ -449,7 +449,7 @@ export interface ProjectNotificationSettings {
   confirmation: ProjectNotificationHook;
   /**
    * Speaks the message through the desktop companion instead of Telegram. It only lands
-   * while AgentMate is running with the companion on screen; any other time the hook
+   * while Runova is running with the companion on screen; any other time the hook
    * quietly does nothing, so the agent's CLI never sees a failure.
    */
   pet: ProjectNotificationHook;
@@ -463,8 +463,8 @@ export interface DetectedClaudeHook {
   matcher?: string;
   /** Raw `{ type, command, args?, timeout?, ... }` body, passed through as Claude Code stores it. */
   hook: Record<string, unknown>;
-  /** True when this is one of AgentMate's own Completion/Confirmation hooks (shown elsewhere). */
-  managedByAgentMate: boolean;
+  /** True when this is one of Runova's own Completion/Confirmation hooks (shown elsewhere). */
+  managedByRunova: boolean;
   /** CLI_REGISTRY id of the owning agent: 'claude-code', or another agent inferred from the command. */
   cliId: string;
 }

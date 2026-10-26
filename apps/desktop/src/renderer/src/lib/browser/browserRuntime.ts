@@ -379,7 +379,7 @@ export function createBrowserRuntime(options: BrowserRuntimeOptions = {}) {
         await webview.executeJavaScript(pickerSource);
         entry.pickerDocument = entry.documentId;
       }
-      return (await webview.executeJavaScript(`window.__agentmatPicker.${call}`)) as Result;
+      return (await webview.executeJavaScript(`window.__runovaPicker.${call}`)) as Result;
     },
 
     dispose(tabId: string): void {

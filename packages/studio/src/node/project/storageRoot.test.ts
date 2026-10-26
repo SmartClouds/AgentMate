@@ -131,7 +131,7 @@ describe('checkStorageRoot system folders', () => {
 
   it("treats the user's own temp folder as theirs, though macOS keeps it under /private", async () => {
     const tempDir = '/private/var/folders/ab/xyz/T';
-    const inTemp = await checkStorageRoot(`${tempDir}/agentmate-e2e-1/Videos`, {
+    const inTemp = await checkStorageRoot(`${tempDir}/runova-e2e-1/Videos`, {
       platform: 'darwin',
       tempDir,
       probeWrite: async () => undefined,

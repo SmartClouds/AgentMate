@@ -1,0 +1,79 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <AssemblyName>runova-core</AssemblyName>
+    <RootNamespace>Runova.ServerCore</RootNamespace>
+    <OutputType>Exe</OutputType>
+    <!-- Release targets (linux-x64, linux-arm64) plus every machine that restores this project:
+         single-file publishing makes the SDK add the host's own runtime to a restore, so listing
+         them all keeps the lock file identical on Windows, macOS and Linux, and locked. -->
+    <RuntimeIdentifiers>linux-x64;linux-arm64;win-x64;osx-x64;osx-arm64</RuntimeIdentifiers>
+    <UserSecretsId />
+    <!-- An API behind a Unix socket serves no static web assets. -->
+    <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
+    <!-- LibraryImport generates the one libc call .NET has no API for: kill() on a process group. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <!-- Release publishes (dotnet publish -r linux-x64 or linux-arm64): one self-contained binary,
+       precompiled for a fast start. Native libraries stay beside it rather than self-extracting,
+       because extraction goes to $HOME, which is wrong for a root service and for the bridge.
+       PublishSingleFile is set for every restore, not just publishes: it adds an implicit
+       package reference (ILLink tasks) that the lock file has to know about, or a locked-mode
+       publish fails. -->
+  <PropertyGroup>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <SelfContained>true</SelfContained>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
+  <!-- Hangfire is LGPL-3.0, which lets anyone swap in their own build of the library. Inside the
+       single-file bundle it could not be swapped, so its assemblies ship beside the binary, with
+       the license texts and notices from its package. -->
+  <ItemGroup Condition="'$(PkgHangfire_Core)' != ''">
+    <None Include="$(PkgHangfire_Core)\COPYING;$(PkgHangfire_Core)\COPYING.LESSER;$(PkgHangfire_Core)\NOTICES"
+          Link="licenses\hangfire\%(Filename)%(Extension)"
+          CopyToOutputDirectory="Never"
+          CopyToPublishDirectory="PreserveNewest"
+          ExcludeFromSingleFile="true" />
+  </ItemGroup>
+  <Target Name="KeepHangfireBesideTheBinary" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Condition="$([System.String]::Copy('%(Filename)').StartsWith('Hangfire.'))">
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="Cronos" />
+    <PackageReference Include="Docker.DotNet.Enhanced" />
+    <PackageReference Include="FluentFTP" />
+    <PackageReference Include="Hangfire.AspNetCore" />
+    <PackageReference Include="Hangfire.Core" GeneratePathProperty="true" />
+    <PackageReference Include="Hangfire.Storage.SQLite" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" />
+    <PackageReference Include="SSH.NET" />
+    <PackageReference Include="OpenTelemetry" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="Tapper.Attributes" />
+    <PackageReference Include="TypedSignalR.Client.TypeScript.Attributes" />
+    <PackageReference Include="WTelegramClient" />
+  </ItemGroup>
+
+  <!-- Passwords long enough to pass the length rule but too common to allow (see its README). -->
+  <ItemGroup>
+    <EmbeddedResource Include="Security\CommonPasswords\common-passwords.txt" LogicalName="Runova.ServerCore.CommonPasswords" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Runova.ServerCore.Tests" />
+    <InternalsVisibleTo Include="Runova.ServerCore.SystemTests" />
+    <InternalsVisibleTo Include="Runova.ServerCore.DevHost" />
+  </ItemGroup>
+</Project>

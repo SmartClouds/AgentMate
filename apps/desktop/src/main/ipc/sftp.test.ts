@@ -101,10 +101,10 @@ beforeEach(async () => {
     state: vi.fn(() => ({ isMaximized: true })),
     backToMain: vi.fn(),
   };
-  local = realpathSync(tempDir('agentmate-ipc-sftp-'));
+  local = realpathSync(tempDir('runova-ipc-sftp-'));
   server = new FakeSftpServer({ home: '/home/deploy' });
   server.dir('/srv/site/assets').file('/srv/site/index.html', '<h1>hi</h1>');
-  const edits = tempDir('agentmate-ipc-sftp-edits-');
+  const edits = tempDir('runova-ipc-sftp-edits-');
   await loadIpc(
     () => import('./sftp'),
     async (ipc) => {

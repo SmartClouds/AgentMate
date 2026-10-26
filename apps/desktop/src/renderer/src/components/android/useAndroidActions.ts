@@ -1,4 +1,4 @@
-import type { AndroidActionResult } from '@agentmat/core';
+import type { AndroidActionResult } from '@runova/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
@@ -65,13 +65,13 @@ export function useAndroidActions(): AndroidActions {
   const captureToast = useCallback((title: string, fileName: string, path: string) => {
     showLinkedToast(
       { kind: 'success', title, description: fileName, link: { route: '/android' } },
-      () => void window.agentmat.android.revealCapture(path),
+      () => void window.runova.android.revealCapture(path),
     );
   }, []);
 
   const screenshot = useCallback(
     (serial: string, label: string) => {
-      void window.agentmat.android
+      void window.runova.android
         .screenshot(serial, label)
         .then((capture) => captureToast('Screenshot saved', capture.fileName, capture.path))
         .catch((error: Error) => toast.error(error.message));
@@ -84,7 +84,7 @@ export function useAndroidActions(): AndroidActions {
       if (recording?.serial === serial) {
         const { id } = recording;
         setRecording(null);
-        void window.agentmat.android
+        void window.runova.android
           .stopRecording(id)
           .then((capture) => captureToast('Recording saved', capture.fileName, capture.path))
           .catch((error: Error) => toast.error(error.message));
@@ -95,7 +95,7 @@ export function useAndroidActions(): AndroidActions {
         toast.error('Stop the recording that is already running first.');
         return;
       }
-      void window.agentmat.android
+      void window.runova.android
         .startRecording(serial, label)
         .then(({ id }) => {
           setRecording({ serial, id });
@@ -107,7 +107,7 @@ export function useAndroidActions(): AndroidActions {
   );
 
   const rotate = useCallback((serial: string) => {
-    void window.agentmat.android.rotate(serial).catch((error: Error) => toast.error(error.message));
+    void window.runova.android.rotate(serial).catch((error: Error) => toast.error(error.message));
   }, []);
 
   /**
@@ -116,7 +116,7 @@ export function useAndroidActions(): AndroidActions {
    * the common case on Windows.
    */
   const openShell = useCallback((serial: string, label: string) => {
-    void window.agentmat.android
+    void window.runova.android
       .adbPath()
       .then((adb) => {
         useTerminalStore.getState().openSession({
@@ -129,11 +129,11 @@ export function useAndroidActions(): AndroidActions {
 
   const installApk = useCallback((serial: string, label: string, paths?: string[]) => {
     void (async () => {
-      const chosen = paths?.length ? paths : await window.agentmat.android.pickApk();
+      const chosen = paths?.length ? paths : await window.runova.android.pickApk();
       if (chosen.length === 0) return;
       const toastId = toast.loading(`Installing on ${label}`);
       try {
-        const result = await window.agentmat.android.installApk(serial, chosen);
+        const result = await window.runova.android.installApk(serial, chosen);
         if (result.ok) toast.success(`Installed on ${label}.`, { id: toastId });
         else toast.error(result.message ?? 'The install failed.', { id: toastId });
       } catch (error) {
@@ -146,7 +146,7 @@ export function useAndroidActions(): AndroidActions {
     (avdName: string) =>
       run(
         avdName,
-        () => window.agentmat.android.start(avdName, { coldBoot: true }),
+        () => window.runova.android.start(avdName, { coldBoot: true }),
         `${avdName} would not start.`,
       ),
     [run],
@@ -163,11 +163,7 @@ export function useAndroidActions(): AndroidActions {
           variant: 'destructive',
         });
         if (!confirmed) return;
-        run(
-          avdName,
-          () => window.agentmat.android.wipeData(avdName),
-          'Could not wipe that device.',
-        );
+        run(avdName, () => window.runova.android.wipeData(avdName), 'Could not wipe that device.');
       })();
     },
     [run],
@@ -185,7 +181,7 @@ export function useAndroidActions(): AndroidActions {
         if (!confirmed) return;
         run(
           avdName,
-          () => window.agentmat.android.deleteAvd(avdName),
+          () => window.runova.android.deleteAvd(avdName),
           'Could not delete that device.',
         );
       })();
@@ -208,18 +204,18 @@ export function useAndroidActions(): AndroidActions {
       (avdName, options) =>
         run(
           avdName,
-          () => window.agentmat.android.start(avdName, options),
+          () => window.runova.android.start(avdName, options),
           `${avdName} would not start.`,
         ),
       [run],
     ),
     stop: useCallback(
-      (serial) => run(serial, () => window.agentmat.android.stop(serial), 'That would not stop.'),
+      (serial) => run(serial, () => window.runova.android.stop(serial), 'That would not stop.'),
       [run],
     ),
     cancelBoot: useCallback(
       (avdName) =>
-        run(avdName, () => window.agentmat.android.cancelBoot(avdName), 'Could not cancel.'),
+        run(avdName, () => window.runova.android.cancelBoot(avdName), 'Could not cancel.'),
       [run],
     ),
   };

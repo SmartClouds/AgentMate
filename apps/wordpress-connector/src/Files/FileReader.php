@@ -5,13 +5,13 @@
  * The batch stops adding bytes once the response budget is spent: files past that point come back
  * with length 0 and the client asks again from offset + length.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Files;
+namespace Runova\Connector\Files;
 
-use AgentMate\Connector\Http\ApiError;
-use AgentMate\Connector\Protocol;
+use Runova\Connector\Http\ApiError;
+use Runova\Connector\Protocol;
 
 final class FileReader
 {

@@ -1,4 +1,4 @@
-import type { ScheduledTask } from '@agentmat/core';
+import type { ScheduledTask } from '@runova/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IPC } from '../../shared/ipcChannels';
 import {

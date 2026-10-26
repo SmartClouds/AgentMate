@@ -6,7 +6,7 @@ import { closeApp, createProject, type LaunchedApp, launchApp } from './app';
 /**
  * Studio (E31) in the built app: a video made from the library, edited, and every acknowledged
  * edit back after the app is killed outright; a project's video folder refused inside the project;
- * and a second copy of AgentMate kept out of a video the first one has open.
+ * and a second copy of Runova kept out of a video the first one has open.
  */
 
 const opened: LaunchedApp[] = [];
@@ -26,9 +26,9 @@ async function useLibrary(page: Page, folder: string): Promise<void> {
   await page.evaluate(async (defaultRoot) => {
     await (
       window as unknown as {
-        agentmat: { studio: { updateSettings(p: unknown): Promise<unknown> } };
+        runova: { studio: { updateSettings(p: unknown): Promise<unknown> } };
       }
-    ).agentmat.studio.updateSettings({ defaultRoot });
+    ).runova.studio.updateSettings({ defaultRoot });
   }, folder);
 }
 
@@ -40,7 +40,7 @@ async function goTo(page: Page, hash: string): Promise<void> {
 
 test('makes a video, edits it, and keeps every edit after the app is killed', async () => {
   const first = await launch();
-  const library = join(first.root, 'Videos', 'AgentMate Studio');
+  const library = join(first.root, 'Videos', 'Runova Studio');
   await useLibrary(first.page, library);
 
   await first.page.getByRole('link', { name: 'Studio', exact: true }).click();
@@ -86,7 +86,7 @@ test('makes a video, edits it, and keeps every edit after the app is killed', as
 
 test("refuses a project's video folder inside the project source", async () => {
   const launched = await launch();
-  await useLibrary(launched.page, join(launched.root, 'Videos', 'AgentMate Studio'));
+  await useLibrary(launched.page, join(launched.root, 'Videos', 'Runova Studio'));
   const projectId = await createProject(launched);
   await goTo(launched.page, `#/projects/${projectId}?tab=studio`);
   await launched.page.reload();
@@ -105,15 +105,15 @@ test("refuses a project's video folder inside the project source", async () => {
   ).toBeVisible();
 });
 
-test('keeps a second copy of AgentMate out of a video the first one has open', async () => {
+test('keeps a second copy of Runova out of a video the first one has open', async () => {
   const first = await launch();
-  await useLibrary(first.page, join(first.root, 'Videos', 'AgentMate Studio'));
+  await useLibrary(first.page, join(first.root, 'Videos', 'Runova Studio'));
   const video = await first.page.evaluate(async () => {
     const studio = (
       window as unknown as {
-        agentmat: { studio: { create(input: unknown): Promise<{ id: string; folder: string }> } };
+        runova: { studio: { create(input: unknown): Promise<{ id: string; folder: string }> } };
       }
-    ).agentmat.studio;
+    ).runova.studio;
     return studio.create({ title: 'Shared film', projectId: null, language: 'en', aspect: '16:9' });
   });
   await goTo(first.page, `#/studio/${video.id}`);
@@ -122,11 +122,11 @@ test('keeps a second copy of AgentMate out of a video the first one has open', a
   const second = await launch();
   await second.page.evaluate(async (folder) => {
     await (
-      window as unknown as { agentmat: { studio: { addExisting(f: string): Promise<unknown> } } }
-    ).agentmat.studio.addExisting(folder);
+      window as unknown as { runova: { studio: { addExisting(f: string): Promise<unknown> } } }
+    ).runova.studio.addExisting(folder);
   }, video.folder);
   await goTo(second.page, `#/studio/${video.id}`);
-  await expect(second.page.getByText('Open in another AgentMate')).toBeVisible();
+  await expect(second.page.getByText('Open in another Runova')).toBeVisible();
   await expect(second.page.getByRole('button', { name: 'Take over' })).toHaveCount(0);
 
   // Once the first copy closes the video, the second one can open it.

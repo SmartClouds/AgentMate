@@ -1,11 +1,11 @@
-import type { WpIgnoreList, WpItemRef } from '@agentmat/core';
+import type { WpIgnoreList, WpItemRef } from '@runova/core';
 import {
   ignorePatternForExtension,
   ignorePatternForPath,
   WP_IGNORE_ALL,
   withWpIgnore,
   wpItemKey,
-} from '@agentmat/core';
+} from '@runova/core';
 
 /**
  * What a user can leave out of a WordPress deploy by picking things in the review (E21), and how

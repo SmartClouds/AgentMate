@@ -1,6 +1,6 @@
 import { coreErrorMessage } from '@shared/coreErrors';
 import { backupSize } from '@shared/deploy/backupSchedule';
-import type { StoredBackupInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { StoredBackupInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployServer } from '@shared/deployTypes';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -61,7 +61,7 @@ export function StoredTab({
     setProblem(null);
     try {
       const saved = await stepUp.run(() =>
-        window.agentmat.deployServerBackups.downloadStored(input(backup)),
+        window.runova.deployServerBackups.downloadStored(input(backup)),
       );
       if (saved?.saved) toast.success(`Backup saved to ${saved.path}`);
     } catch (error) {
@@ -83,7 +83,7 @@ export function StoredTab({
     setWorking(backup.backupId);
     setProblem(null);
     try {
-      await stepUp.run(() => window.agentmat.deployServerBackups.deleteStored(input(backup)));
+      await stepUp.run(() => window.runova.deployServerBackups.deleteStored(input(backup)));
       void stored.refetch();
     } catch (error) {
       setProblem(coreErrorMessage(error));

@@ -1,4 +1,4 @@
-import { quoteForShell } from '@agentmat/core';
+import { quoteForShell } from '@runova/core';
 import { encodeSshError } from '../../shared/sshErrors';
 import { type ExecOptions, type ExecResult, requireAnswer, type SshConnection } from './connection';
 

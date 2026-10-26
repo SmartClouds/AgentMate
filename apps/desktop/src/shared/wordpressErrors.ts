@@ -1,4 +1,4 @@
-import type { WpErrorCode } from '@agentmat/core';
+import type { WpErrorCode } from '@runova/core';
 import { sshErrorMessage } from './sshErrors';
 
 /**
@@ -28,7 +28,7 @@ export type WordPressErrorCode =
   | 'unreachable'
   | 'timeout'
   | 'cancelled'
-  /** The connection key is not one AgentMate can read. */
+  /** The connection key is not one Runova can read. */
   | 'keyInvalid'
   | 'keyExpired'
   /** The site's connector speaks an older protocol than this app needs. */

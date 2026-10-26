@@ -1,4 +1,4 @@
-import type { GitChangeStatus } from '@agentmat/core';
+import type { GitChangeStatus } from '@runova/core';
 import type { ChipTone } from '@/components/pageKit';
 import { changeStatusMeta } from '@/lib/git';
 import { cn } from '@/lib/utils';

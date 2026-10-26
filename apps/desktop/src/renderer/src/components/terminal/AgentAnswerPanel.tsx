@@ -1,4 +1,4 @@
-import type { AgentInstructionTarget } from '@agentmat/core';
+import type { AgentInstructionTarget } from '@runova/core';
 import { MAX_SSH_AGENT_MESSAGE_CHARS } from '@shared/sshAgentMessage';
 import { CircleQuestion, Send } from '@/components/icons';
 import { Button } from '@/components/ui/button';

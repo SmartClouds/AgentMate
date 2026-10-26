@@ -46,7 +46,7 @@ export function HistoryNav(): React.JSX.Element {
   }, [canGoForward, navigate]);
 
   useEffect(() => {
-    const isMac = window.agentmat.platform === 'darwin';
+    const isMac = window.runova.platform === 'darwin';
 
     function onKeyDown(e: KeyboardEvent): void {
       // Alt+Arrow everywhere, plus Cmd+[ / Cmd+] to match macOS conventions.

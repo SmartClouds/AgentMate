@@ -61,7 +61,7 @@ describe('explorer path guards', () => {
   });
 
   it('refuses a parent folder outside the project', async () => {
-    const outside = tempDir('agentmate-explorer-outside-');
+    const outside = tempDir('runova-explorer-outside-');
     await expect(
       invoke(IPC.explorer.createFile, PROJECT_ID, outside, 'planted.txt'),
     ).rejects.toThrow('outside of the allowed directories');
@@ -102,7 +102,7 @@ describe('explorer path guards', () => {
   });
 
   it('refuses an entry outside the project even when its parent exists', async () => {
-    const outside = tempDir('agentmate-explorer-outside-entry-');
+    const outside = tempDir('runova-explorer-outside-entry-');
     writeFileSync(join(outside, 'victim.txt'), 'x', 'utf-8');
     await expect(
       invoke(IPC.explorer.delete, PROJECT_ID, [join(outside, 'victim.txt')], { permanent: true }),
@@ -339,7 +339,7 @@ describe('explorer:move', () => {
 
 describe('explorer:pasteExternal', () => {
   it('copies an external file into the target folder and reports it in `moves`', async () => {
-    const outside = tempDir('agentmate-explorer-external-');
+    const outside = tempDir('runova-explorer-external-');
     const source = join(outside, 'brought-in.txt');
     writeFileSync(source, 'from outside\n', 'utf-8');
 
@@ -355,7 +355,7 @@ describe('explorer:pasteExternal', () => {
   });
 
   it("auto-renames when the external file's name is already taken, the same as an internal copy", async () => {
-    const outside = tempDir('agentmate-explorer-external-');
+    const outside = tempDir('runova-explorer-external-');
     const source = join(outside, 'a.txt');
     writeFileSync(source, 'outside a\n', 'utf-8');
 
@@ -371,7 +371,7 @@ describe('explorer:pasteExternal', () => {
   });
 
   it('copies an external folder tree into the project', async () => {
-    const outside = tempDir('agentmate-explorer-external-');
+    const outside = tempDir('runova-explorer-external-');
     mkdirSync(join(outside, 'nested'), { recursive: true });
     writeFileSync(join(outside, 'nested', 'keep.txt'), 'keep\n', 'utf-8');
 
@@ -386,10 +386,10 @@ describe('explorer:pasteExternal', () => {
   });
 
   it('refuses when the target folder is outside the project', async () => {
-    const outside = tempDir('agentmate-explorer-external-');
+    const outside = tempDir('runova-explorer-external-');
     const source = join(outside, 'x.txt');
     writeFileSync(source, 'x', 'utf-8');
-    const elsewhere = tempDir('agentmate-explorer-external-target-');
+    const elsewhere = tempDir('runova-explorer-external-target-');
 
     await expect(
       invoke(IPC.explorer.pasteExternal, PROJECT_ID, [source], elsewhere),
@@ -397,7 +397,7 @@ describe('explorer:pasteExternal', () => {
   });
 
   it('refuses a source that no longer exists', async () => {
-    const outside = tempDir('agentmate-explorer-external-');
+    const outside = tempDir('runova-explorer-external-');
 
     await expect(
       invoke(IPC.explorer.pasteExternal, PROJECT_ID, [join(outside, 'ghost.txt')], repo.dir),
@@ -439,7 +439,7 @@ describe('explorer:revealInOs', () => {
   });
 
   it('refuses a path outside the project', async () => {
-    const outside = tempDir('agentmate-explorer-reveal-');
+    const outside = tempDir('runova-explorer-reveal-');
     await expect(invoke(IPC.explorer.revealInOs, PROJECT_ID, outside)).rejects.toThrow(
       'outside of the allowed directories',
     );
@@ -539,7 +539,7 @@ describe('explorer:ignoredPaths', () => {
   });
 
   it('skips paths that are not inside the project folder', async () => {
-    const outside = tempDir('agentmate-explorer-ignored-');
+    const outside = tempDir('runova-explorer-ignored-');
     expect(
       await invoke<string[]>(IPC.explorer.ignoredPaths, PROJECT_ID, [join(outside, 'x.js')]),
     ).toEqual([]);
@@ -548,7 +548,7 @@ describe('explorer:ignoredPaths', () => {
 
 describe('explorer in a worktree workspace', () => {
   function addWorktree(): { scope: string; dir: string } {
-    const dir = join(tempDir('agentmate-explorer-wt-'), 'feat');
+    const dir = join(tempDir('runova-explorer-wt-'), 'feat');
     repo.git('worktree', 'add', '-b', 'feat', dir);
     userData.writeData('worktrees.json', [
       {

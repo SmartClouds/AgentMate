@@ -23,7 +23,7 @@ import {
   summarizeGeminiChat,
   summarizeGrokChat,
   summarizeOpencodeSession,
-} from '@agentmat/core';
+} from '@runova/core';
 import Database from 'better-sqlite3';
 import { rememberHistorySource } from './historySources';
 import {
@@ -1203,7 +1203,7 @@ export const localHistoryFs: HistoryFs = {
       // The CLI may be running and hold the DB in WAL mode; a read-only open
       // can lose that race, so retry against a private copy (WAL sidecars
       // included, without them the copy reads as a stale snapshot).
-      const dir = mkdtempSync(join(tmpdir(), 'agentmate-history-'));
+      const dir = mkdtempSync(join(tmpdir(), 'runova-history-'));
       try {
         const copy = join(dir, 'history.db');
         copyFileSync(dbPath, copy);

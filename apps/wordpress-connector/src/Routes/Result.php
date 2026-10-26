@@ -2,10 +2,10 @@
 /**
  * What a handler returns: the `data` of an ok response, and blobs to append to the frame.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Routes;
+namespace Runova\Connector\Routes;
 
 final class Result
 {

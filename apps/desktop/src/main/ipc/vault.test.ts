@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { SaveVaultEntryInput } from '@agentmat/core';
+import type { SaveVaultEntryInput } from '@runova/core';
 import type { IpcMainInvokeEvent } from 'electron';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { VaultStatus } from '../../shared/apiTypes';
@@ -61,7 +61,7 @@ async function codeOf(promise: Promise<unknown>): Promise<string | null> {
 }
 
 beforeEach(async () => {
-  dir = await mkdtemp(join(tmpdir(), 'agentmate-vault-ipc-'));
+  dir = await mkdtemp(join(tmpdir(), 'runova-vault-ipc-'));
   clipboardText = '';
   ipc = new FakeIpc();
   service = new VaultService({
@@ -205,7 +205,7 @@ describe('vault IPC handlers', () => {
       notes: `${SENTINEL}-note`,
     });
 
-    expect(await ipc.invoke(IPC.vault.exportCsv, 'wrong password!!', 'agentmate')).toEqual({
+    expect(await ipc.invoke(IPC.vault.exportCsv, 'wrong password!!', 'runova')).toEqual({
       ok: false,
       reason: 'wrong-password',
     });
@@ -217,8 +217,8 @@ describe('vault IPC handlers', () => {
       reason: 'cancelled',
     });
 
-    expect(await ipc.invoke(IPC.vault.exportCsv, PASSWORD, 'agentmate')).toEqual({ ok: true });
-    expect(dialogs.pickExportPath).toHaveBeenLastCalledWith('agentmate');
+    expect(await ipc.invoke(IPC.vault.exportCsv, PASSWORD, 'runova')).toEqual({ ok: true });
+    expect(dialogs.pickExportPath).toHaveBeenLastCalledWith('runova');
     expect(await readFile(join(dir, 'export.csv'), 'utf-8')).toContain(`${SENTINEL}-note`);
   });
 });

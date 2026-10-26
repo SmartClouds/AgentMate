@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { CliLogo } from '@/components/cliLogos';

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { installAgentmatBridge } from '../../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../../test/renderer/runovaBridge';
 import { containerConsoleAdapter, NEW_SHELL_NOTICE } from './containerConsoleAdapter';
 
 /**
@@ -11,7 +11,7 @@ import { containerConsoleAdapter, NEW_SHELL_NOTICE } from './containerConsoleAda
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 function setup(openConsole: (...args: unknown[]) => unknown = async () => 'console-1') {
-  const bridge = installAgentmatBridge({ 'deployDocker.openConsole': openConsole });
+  const bridge = installRunovaBridge({ 'deployDocker.openConsole': openConsole });
   const adapter = containerConsoleAdapter('srv-1', 'toolbox');
   const data: Array<{ sessionId: string; data: string }> = [];
   const exits: Array<{ sessionId: string; exitCode: number }> = [];
@@ -77,7 +77,7 @@ describe('containerConsoleAdapter', () => {
   });
 
   it('runs a chosen command as a chosen user', async () => {
-    const bridge = installAgentmatBridge({ 'deployDocker.openConsole': async () => 'console-1' });
+    const bridge = installRunovaBridge({ 'deployDocker.openConsole': async () => 'console-1' });
     const adapter = containerConsoleAdapter('srv-1', 'toolbox', {
       command: ['/bin/sh', '-c', 'php artisan migrate'],
       user: 'root',

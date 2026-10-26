@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { CliLaunchOptions } from '@agentmat/core';
+import type { CliLaunchOptions } from '@runova/core';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { EffortPicker } from './RunSettingsFields';

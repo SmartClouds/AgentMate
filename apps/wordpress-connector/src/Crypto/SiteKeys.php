@@ -1,20 +1,21 @@
 <?php
 /**
  * The site's Ed25519 key. Every reply is signed with it, and its public half travels inside each
- * connection key, so AgentMate can check even the first reply it gets.
+ * connection key, so Runova can check even the first reply it gets.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Crypto;
+namespace Runova\Connector\Crypto;
 
-use AgentMate\Connector\Support\Json;
-use AgentMate\Connector\Support\Options;
+use Runova\Connector\Legacy;
+use Runova\Connector\Support\Json;
+use Runova\Connector\Support\Options;
 
 final class SiteKeys
 {
     /** Never autoloaded: it is read only when a request needs it. */
-    const OPTION = 'agentmate_connector_site_key';
+    const OPTION = Legacy::OPTION_PREFIX . 'site_key';
 
     /** @var string */
     private $publicKey;

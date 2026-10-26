@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import type {
   AuditEventInfo,
   AuditPage,
-} from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { DeploySecurity, type DeploySecurityDeps, MAX_EXPORT_EVENTS } from './security';
 
 /**
@@ -157,16 +157,13 @@ describe('DeploySecurity audit', () => {
       filter: { action: 'auth.' },
     });
 
-    expect(deps.pickExportPath).toHaveBeenCalledWith(
-      'csv',
-      'agentmate-audit-Prod-EU-2026-10-01.csv',
-    );
+    expect(deps.pickExportPath).toHaveBeenCalledWith('csv', 'runova-audit-Prod-EU-2026-10-01.csv');
     expect(hub.queryAudit).toHaveBeenNthCalledWith(1, { action: 'auth.', limit: 200 });
     expect(hub.queryAudit).toHaveBeenNthCalledWith(2, { action: 'auth.', limit: 200, beforeId: 2 });
     expect(connections).toEqual(['srv-1']);
     expect(result).toEqual({
       saved: true,
-      path: '/exports/agentmate-audit-Prod-EU-2026-10-01.csv',
+      path: '/exports/runova-audit-Prod-EU-2026-10-01.csv',
       count: 3,
       truncated: false,
     });

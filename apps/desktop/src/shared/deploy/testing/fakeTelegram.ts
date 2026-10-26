@@ -3,7 +3,7 @@ import type {
   TelegramNotificationsSaveResult,
   TelegramNotificationsStatus,
   TelegramNotificationsTestResult,
-} from '../protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../protocol/generated/Runova.ServerCore.Contracts';
 import {
   checkBotToken,
   checkChatId,

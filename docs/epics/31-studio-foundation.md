@@ -5,16 +5,16 @@ Milestone: standalone (Studio). Depends on: none.
 ## Goal
 
 Start Studio, the section where a user makes videos for a project or on their own. This epic lays
-the ground every later Studio epic stands on: a module that could leave AgentMate as an app of its
+the ground every later Studio epic stands on: a module that could leave Runova as an app of its
 own, a library of videos kept outside every project's source in a folder the user picks per
 project, and a video document whose every change is saved the moment it is made and kept forever,
 with undo that survives a crash.
 
 ## Design
 
-- **A module of its own.** `packages/studio` (`@agentmat/studio`) holds everything Studio knows,
+- **A module of its own.** `packages/studio` (`@runova/studio`) holds everything Studio knows,
   with no Electron, React or better-sqlite3 in it. Its root export is pure and runs in the
-  renderer; `@agentmat/studio/node` holds the Node services. The desktop app reaches the app's own
+  renderer; `@runova/studio/node` holds the Node services. The desktop app reaches the app's own
   modules through one file per side: `main/studio/host.ts` builds the `StudioHost` port, and
   `components/studio/kit.ts` (with `client.ts` for the bridge) is the renderer's door. Boundary
   tests in the package and in the app hold both sides to that, so a split later means rewriting two
@@ -34,15 +34,15 @@ with undo that survives a crash.
   restart. Restore appends a whole earlier version as a new entry. `document.json` is a copy written
   a moment after each edit and rebuilt from the history when it is behind or torn; if the history
   file is lost, the history restarts from `document.json`.
-- **Storage.** The library folder defaults to `Videos/AgentMate Studio` (not Documents, which is
+- **Storage.** The library folder defaults to `Videos/Runova Studio` (not Documents, which is
   often under OneDrive). Standalone videos go in `Standalone`, each project in `Projects/<name>`
   unless the user picks another folder in the project's Studio tab. A folder is checked on its real
   path through symlinks and junctions: inside the project, inside the app, a system folder or one
   that cannot be written is refused; a synced folder (OneDrive, Dropbox, iCloud, Google Drive), a
   network folder or a nearly full drive gets a warning.
-- **One writer.** A `.studio.lock` (app, host, pid, heartbeat) keeps a second copy of AgentMate
+- **One writer.** A `.studio.lock` (app, host, pid, heartbeat) keeps a second copy of Runova
   (the dev build, another computer on a shared drive) out of an open video, with "Open in another
-  AgentMate" and Take over only once the heartbeat goes quiet. A holder on the same machine whose
+  Runova" and Take over only once the heartbeat goes quiet. A holder on the same machine whose
   process is gone is taken over at once. SQLite's exclusive locking mode is the backstop.
 - **Studio's own settings** live in `userData/data/studio/` (settings and the registry of known
   videos), not in the app settings, so the module stays separable.
@@ -85,7 +85,7 @@ with undo that survives a crash.
 - AC3 The History panel lists every change with who made it and when; Restore adds a new entry;
   UPDATE or DELETE on the history tables is refused.
 - AC4 A moved or renamed video folder is found again with Locate, history included.
-- AC5 A second copy of AgentMate shows "Open in another AgentMate" and can take over only once the
+- AC5 A second copy of Runova shows "Open in another Runova" and can take over only once the
   first stops answering.
 - AC6 Both boundary tests and the no-Chinese-content scan fail on a forbidden fixture.
 
@@ -107,5 +107,5 @@ with undo that survives a crash.
 - Studio's settings, registry and (later) sealed keys are not in the app backup yet, like the
   Health and Relay stores; each video folder carries its manifest, so Add existing folder rebuilds
   the library after a reinstall. E39 adds the settings and recipes to the backup.
-- No read-only view of a video held by another copy of AgentMate: SQLite's exclusive lock keeps a
+- No read-only view of a video held by another copy of Runova: SQLite's exclusive lock keeps a
   second reader out too.

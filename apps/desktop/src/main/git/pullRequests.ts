@@ -4,7 +4,7 @@ import {
   type PullRequestInfo,
   parsePrView,
   parseReviewThreads,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { MergeStep, MergeStepResult } from '../../shared/apiTypes';
 import { githubRepoForFolder } from '../pipelines/githubActions';
 import { ghErrorMessage, ghGraphql, runGh } from './githubCli';

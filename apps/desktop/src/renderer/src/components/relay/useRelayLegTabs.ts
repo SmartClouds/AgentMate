@@ -8,7 +8,7 @@ import { useWorkspaceStore } from '@/stores/workspaceStore';
  */
 export function useRelayLegTabs(): void {
   useEffect(() => {
-    const relay = window.agentmat.relay;
+    const relay = window.runova.relay;
     const offLeg = relay.onLegTab((event) => {
       useWorkspaceStore.getState().addRelayLegTab(event.projectId, {
         id: event.tabId,

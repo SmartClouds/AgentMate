@@ -3,10 +3,10 @@
  * Plugin options. On multisite the plugin is network-wide (themes and plugins are shared by every
  * site), so its options live in the network's options. On a single site they are never autoloaded.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Support;
+namespace Runova\Connector\Support;
 
 final class Options
 {

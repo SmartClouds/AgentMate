@@ -1,4 +1,4 @@
-import { AI_TRANSITIONS, type EditOp, type Scene, toDuration } from '@agentmat/studio';
+import { AI_TRANSITIONS, type EditOp, type Scene, toDuration } from '@runova/studio';
 import { useEffect, useId, useState } from 'react';
 import { fieldSecondsToFlicks, flicksToFieldSeconds, scriptClass } from '../format';
 import {

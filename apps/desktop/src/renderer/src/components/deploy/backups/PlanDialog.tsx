@@ -11,7 +11,7 @@ import type {
   BackupDestinationInfo,
   BackupPlanInfo,
   BackupPlanPreview,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployServer } from '@shared/deployTypes';
 import { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Spinner, TriangleAlert } from '@/components/icons';
@@ -157,7 +157,7 @@ export function PlanDialog({
     let stale = false;
     setPreviewing(true);
     const timer = setTimeout(() => {
-      window.agentmat.deployServerBackups
+      window.runova.deployServerBackups
         .previewPlan({
           serverId: server.id,
           preview: {
@@ -204,7 +204,7 @@ export function PlanDialog({
     setBusy(true);
     setProblem(null);
     try {
-      await window.agentmat.deployServerBackups.savePlan({
+      await window.runova.deployServerBackups.savePlan({
         serverId: server.id,
         plan: {
           ...(plan ? { id: plan.id } : {}),

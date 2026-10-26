@@ -1,5 +1,5 @@
-import type { Project, ProjectRunCommand } from '@agentmat/core';
-import { classifyRunCommand, configuredRunCommands, parseRunInputs } from '@agentmat/core';
+import type { Project, ProjectRunCommand } from '@runova/core';
+import { classifyRunCommand, configuredRunCommands, parseRunInputs } from '@runova/core';
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { RunCommandPickerDialog } from '@/components/projects/RunCommandPickerDialog';

@@ -1,4 +1,4 @@
-import type { ContainerSummary } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { ContainerSummary } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useEffect, useState } from 'react';
 import { Spinner, TriangleAlert } from '@/components/icons';
 import { Button } from '@/components/ui/button';

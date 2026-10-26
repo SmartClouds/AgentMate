@@ -16,7 +16,7 @@ import {
   type RemoteProject,
   SENTRY_READ_SCOPES,
   SENTRY_WRITE_SCOPE,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { ErrorIssueSort, ErrorStatusFilter } from '../../shared/errorTrackingTypes';
 import {
   createSentryClient,
@@ -27,7 +27,7 @@ import {
 
 /**
  * An error tracker as the service sees it (E24): hosts, scopes, and the provider's data already
- * in AgentMate's own types. Sentry is the only one so far; a second provider is one more
+ * in Runova's own types. Sentry is the only one so far; a second provider is one more
  * implementation of `ErrorProvider` and nothing else changes.
  *
  * Every failure it throws carries a `kind` (see sentryClient.ts) next to a message that is safe
@@ -190,7 +190,7 @@ export function createSentryProvider(deps: SentryProviderDeps): ErrorProvider {
 
     async issue(access, org, issueId) {
       const issue = parseSentryIssue(await client(access).getIssue(org, issueId));
-      if (!issue) throw new Error('Sentry sent an issue AgentMate could not read.');
+      if (!issue) throw new Error('Sentry sent an issue Runova could not read.');
       return issue;
     },
 

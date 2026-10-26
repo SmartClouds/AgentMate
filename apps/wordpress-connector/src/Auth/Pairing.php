@@ -6,21 +6,21 @@
  * desktop key in the body; the nonce is new. Only then is the pairing used up, its secret
  * forgotten, and the connection created.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Auth;
+namespace Runova\Connector\Auth;
 
-use AgentMate\Connector\Audit\AuditLog;
-use AgentMate\Connector\Crypto\Base64Url;
-use AgentMate\Connector\Crypto\Crypto;
-use AgentMate\Connector\Env\Environment;
-use AgentMate\Connector\Http\ApiError;
-use AgentMate\Connector\Http\Bundle;
-use AgentMate\Connector\Http\BundleReader;
-use AgentMate\Connector\Protocol;
-use AgentMate\Connector\Storage\Storage;
-use AgentMate\Connector\Support\Text;
+use Runova\Connector\Audit\AuditLog;
+use Runova\Connector\Crypto\Base64Url;
+use Runova\Connector\Crypto\Crypto;
+use Runova\Connector\Env\Environment;
+use Runova\Connector\Http\ApiError;
+use Runova\Connector\Http\Bundle;
+use Runova\Connector\Http\BundleReader;
+use Runova\Connector\Protocol;
+use Runova\Connector\Storage\Storage;
+use Runova\Connector\Support\Text;
 
 final class Pairing
 {
@@ -42,9 +42,10 @@ final class Pairing
 
     /**
      * @param array{connectionId: ?string, timestamp: int, nonce: string, signature: ?string} $auth
+     * @param string $prefix the endpoint's signing prefix; set to the one the proof matched
      * @return array<string, mixed> the WpPairResponse
      */
-    public function pair(array $auth, ?Bundle $bundle, string $ip): array
+    public function pair(array $auth, ?Bundle $bundle, string $ip, string &$prefix = Protocol::PREFIX): array
     {
         $now = $this->env->now();
         if ($auth['connectionId'] !== null || $auth['signature'] === null) {
@@ -85,14 +86,25 @@ final class Pairing
 
         $secret = Base64Url::decode($pairing['secret']);
         $given = Base64Url::decode($proof);
-        $expected = $secret === null ? '' : Crypto::hmac($secret, Canonical::pair($pairingId, $publicKey, $deviceName, $auth['timestamp'], $auth['nonce']));
-        if ($secret === null || $given === null || !hash_equals($expected, $given)) {
+        $matched = null;
+        if ($secret !== null && $given !== null) {
+            // A 1.63 desktop proves with the old prefix; one wrong proof is one attempt either way.
+            foreach (array($prefix, Protocol::otherPrefix($prefix)) as $candidate) {
+                $expected = Crypto::hmac($secret, Canonical::pair($pairingId, $publicKey, $deviceName, $auth['timestamp'], $auth['nonce'], $candidate));
+                if (hash_equals($expected, $given)) {
+                    $matched = $candidate;
+                    break;
+                }
+            }
+        }
+        if ($matched === null) {
             $this->failAttempt($pairing, $ip, $now);
             throw ApiError::auth('pairingInvalid', 'The connection key proof did not match.');
         }
+        $prefix = $matched;
 
         $signature = Base64Url::decode((string) $auth['signature']);
-        $text = Canonical::request(Protocol::ROUTES['pair'], $auth['timestamp'], $auth['nonce'], null, $bundle->sha256());
+        $text = Canonical::request(Protocol::ROUTES['pair'], $auth['timestamp'], $auth['nonce'], null, $bundle->sha256(), $prefix);
         if ($signature === null || !Crypto::verify($signature, $text, (string) Base64Url::decode($publicKey))) {
             $this->failAttempt($pairing, $ip, $now);
             throw ApiError::auth('badSignature', 'The pair request is not signed by the key it carries.');
@@ -100,8 +112,8 @@ final class Pairing
         if (!$this->storage->insertNonce(hash('sha256', "pair\n" . $auth['nonce']), $now + 2 * Protocol::TIMESTAMP_WINDOW_SECONDS + 60)) {
             throw ApiError::auth('replayed', 'This request was already used.');
         }
-        if ($this->env->constantOn('AGENTMATE_CONNECTOR_DISABLED')) {
-            throw new ApiError('disabled', 'AgentMate Connector is switched off in wp-config.php.');
+        if ($this->env->constantOn('RUNOVA_CONNECTOR_DISABLED')) {
+            throw new ApiError('disabled', 'Runova Connector is switched off in wp-config.php.');
         }
         if (!$this->storage->usePairing($pairingId, $now)) {
             throw ApiError::auth('pairingInvalid', 'That connection key was already used.');

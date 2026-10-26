@@ -1,5 +1,5 @@
 import { posix, win32 } from 'node:path';
-import type { DevOs } from '@agentmat/core';
+import type { DevOs } from '@runova/core';
 
 /**
  * A private world for the end-to-end tests of Dev Setup. Detection is only meaningful if it sees
@@ -19,7 +19,7 @@ export interface DevSetupSandbox {
 
 export interface SandboxInput {
   isE2E: boolean;
-  /** `AGENTMATE_DEVSETUP_SANDBOX`. */
+  /** `RUNOVA_DEVSETUP_SANDBOX`. */
   folder: string | undefined;
   baseEnv: NodeJS.ProcessEnv;
   os: DevOs;

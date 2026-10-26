@@ -10,7 +10,7 @@ import type {
   FirewallProtocol,
   FirewallRuleInfo,
   FirewallRuleSpec,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployFirewallStep } from '@shared/deployFirewallTypes';
 
 /** Words for the Firewall section: rules, policies, change sets and exposure. */

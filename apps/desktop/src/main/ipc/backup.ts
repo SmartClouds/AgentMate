@@ -132,11 +132,11 @@ export function registerBackupHandlers(): void {
       const dateStamp = new Date().toISOString().slice(0, 10);
       const result = await dialog.showSaveDialog({
         defaultPath: compress
-          ? `agentmate-backup-${dateStamp}.zip`
-          : `agentmate-backup-${dateStamp}.json`,
+          ? `runova-backup-${dateStamp}.zip`
+          : `runova-backup-${dateStamp}.json`,
         filters: compress
-          ? [{ name: 'AgentMate Backup (zip)', extensions: ['zip'] }]
-          : [{ name: 'AgentMate Backup', extensions: ['json'] }],
+          ? [{ name: 'Runova Backup (zip)', extensions: ['zip'] }]
+          : [{ name: 'Runova Backup', extensions: ['json'] }],
       });
       if (result.canceled || !result.filePath) return { ok: false };
 
@@ -178,7 +178,7 @@ export function registerBackupHandlers(): void {
   ipcMain.handle(IPC.backup.open, async (): Promise<BackupOpenResult> => {
     const result = await dialog.showOpenDialog({
       properties: ['openFile'],
-      filters: [{ name: 'AgentMate Backup', extensions: ['json', 'zip'] }],
+      filters: [{ name: 'Runova Backup', extensions: ['json', 'zip'] }],
     });
     if (result.canceled || result.filePaths.length === 0) return { ok: false };
 

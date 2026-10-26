@@ -3,7 +3,7 @@ import {
   AGENT_HISTORY_PROVIDERS,
   type AgentHistoryProvider,
   type AgentHistorySession,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { ProjectUsageReport, ProjectUsageUncounted } from '../../shared/apiTypes';
 import type { LocalLogProvider, ScanCache } from '../usage/logParsers';
 import { type HistorySource, historySource } from './historySources';

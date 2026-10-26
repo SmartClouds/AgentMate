@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { ImportResult, MediaView, OpenVideoResult, VideoSummary } from '@agentmat/studio';
+import type { ImportResult, MediaView, OpenVideoResult, VideoSummary } from '@runova/studio';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IPC } from '../../shared/ipcChannels';
 import { electronState, queueDialog, setElectronPath } from '../../test/main/electronMock';

@@ -31,7 +31,7 @@ export function StopRunButton({
 
     setBusy(true);
     try {
-      const result = await window.agentmat.pipelines.cancelRun({ repo: item.repo, runId: item.id });
+      const result = await window.runova.pipelines.cancelRun({ repo: item.repo, runId: item.id });
       if (!result.ok) {
         toast.error(result.error);
         return;

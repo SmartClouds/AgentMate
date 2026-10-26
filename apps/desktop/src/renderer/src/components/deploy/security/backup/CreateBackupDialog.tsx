@@ -19,7 +19,7 @@ import type { StepUp } from '../useStepUp';
 
 /**
  * Making a backup: a passphrase typed twice, then where to save it. The core encrypts with it on
- * the server, so only the passphrase can open the file; AgentMate keeps it nowhere.
+ * the server, so only the passphrase can open the file; Runova keeps it nowhere.
  */
 
 const MIN = 12;
@@ -64,7 +64,7 @@ export function CreateBackupDialog({
     setProblem(null);
     try {
       const result = await stepUp.run(() =>
-        window.agentmat.deployHardening.createBackup({ serverId: server.id, passphrase }),
+        window.runova.deployHardening.createBackup({ serverId: server.id, passphrase }),
       );
       if (!result?.saved) return;
       toast.success(`Backup saved to ${result.path}`);
@@ -109,8 +109,8 @@ export function CreateBackupDialog({
             </p>
           )}
           <Notice tone="warning" icon={TriangleAlert} className="text-xs">
-            Without this passphrase the backup cannot be opened, by you or anyone. AgentMate does
-            not keep it. Write it down somewhere safe.
+            Without this passphrase the backup cannot be opened, by you or anyone. Runova does not
+            keep it. Write it down somewhere safe.
           </Notice>
           {problem && (
             <p role="alert" className="text-sm text-destructive">

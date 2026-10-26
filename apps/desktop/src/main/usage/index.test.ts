@@ -1,4 +1,4 @@
-import type { ProviderUsage, SubscriptionWindow } from '@agentmat/core';
+import type { ProviderUsage, SubscriptionWindow } from '@runova/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**

@@ -1,10 +1,10 @@
-import type { PromptType, TargetAI } from '@agentmat/core';
+import type { PromptType, TargetAI } from '@runova/core';
 import {
   buildPromptGenerationRequest,
   DEFAULT_TARGET_AI,
   resolvePromptTargetAI,
   targetAIForProject,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
@@ -81,13 +81,13 @@ export function useProjectPromptBuilder(
 
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
     enabled,
   });
 
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
     enabled,
   });
   const project = projectsQuery.data?.find((p) => p.id === projectId);
@@ -114,7 +114,7 @@ export function useProjectPromptBuilder(
 
   const saveDraftMutation = useMutation({
     mutationFn: () =>
-      window.agentmat.projectDrafts.create({
+      window.runova.projectDrafts.create({
         projectId,
         rawInput,
         promptType,
@@ -139,7 +139,7 @@ export function useProjectPromptBuilder(
   ): Promise<void> {
     try {
       const isTranslation = source === 'translate';
-      await window.agentmat.promptHistory.add({
+      await window.runova.promptHistory.add({
         rawInput: request.rawInput,
         promptType: isTranslation ? '' : request.promptType,
         targetAI: isTranslation ? '' : request.targetAI,
@@ -167,7 +167,7 @@ export function useProjectPromptBuilder(
       return;
     }
 
-    const settings = settingsQuery.data ?? (await window.agentmat.settings.get());
+    const settings = settingsQuery.data ?? (await window.runova.settings.get());
     const { provider, model } = promptProviderModel(settings);
     if (!model.trim()) {
       toast.error(`Set a ${provider} model in Settings first.`);
@@ -182,7 +182,7 @@ export function useProjectPromptBuilder(
     cancelRunAssessment(jobKey);
     setGenerated('');
     try {
-      const result = await window.agentmat.ai.ask({
+      const result = await window.runova.ai.ask({
         provider,
         model,
         prompt: buildPromptGenerationRequest(request),
@@ -223,7 +223,7 @@ export function useProjectPromptBuilder(
     cancelRunAssessment(jobKey);
     setGenerated('');
     try {
-      const translated = await window.agentmat.translate.text({
+      const translated = await window.runova.translate.text({
         text: request.rawInput,
         targetLang: 'en',
         requestId: task.requestId,

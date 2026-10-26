@@ -1,6 +1,6 @@
-import { DASHBOARD_CHART_IDS, type DashboardRow, DEFAULT_DASHBOARD } from '@agentmat/core';
+import { DASHBOARD_CHART_IDS, type DashboardRow, DEFAULT_DASHBOARD } from '@runova/core';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { installAgentmatBridge } from '../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../test/renderer/runovaBridge';
 import { initDashboardLayout, useDashboardLayoutStore } from './dashboardLayoutStore';
 
 /**
@@ -17,7 +17,7 @@ function layoutOf(rows: DashboardRow[]): string[][] {
 }
 
 function start(settings: Record<string, unknown>) {
-  const bridge = installAgentmatBridge({ 'settings.get': settings });
+  const bridge = installRunovaBridge({ 'settings.get': settings });
   return bridge;
 }
 

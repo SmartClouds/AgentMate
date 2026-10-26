@@ -1,26 +1,26 @@
 <?php
 /**
- * `wp agentmate key create`: makes a one-time connection key from the command line.
+ * `wp runova key create`: makes a one-time connection key from the command line.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Cli;
+namespace Runova\Connector\Cli;
 
-use AgentMate\Connector\Plugin;
+use Runova\Connector\Plugin;
 
 /**
- * Creates connection keys for AgentMate.
+ * Creates connection keys for Runova.
  */
 final class KeyCommand
 {
     /**
-     * Creates a one-time connection key. Paste it into AgentMate within 15 minutes.
+     * Creates a one-time connection key. Paste it into Runova within 15 minutes.
      *
      * ## OPTIONS
      *
      * --scope=<scope>
-     * : What the connection may do. A write key lets AgentMate change code on this site.
+     * : What the connection may do. A write key lets Runova change code on this site.
      * ---
      * options:
      *   - read
@@ -38,8 +38,8 @@ final class KeyCommand
      *
      * ## EXAMPLES
      *
-     *     wp agentmate key create --scope=read --label="Laptop"
-     *     wp agentmate key create --scope=write --expires-in=30 --porcelain
+     *     wp runova key create --scope=read --label="Laptop"
+     *     wp runova key create --scope=write --expires-in=30 --porcelain
      *
      * @when after_wp_load
      *
@@ -74,7 +74,7 @@ final class KeyCommand
         \WP_CLI::line($created['key']);
         \WP_CLI::success('Created a ' . $scope . ' key. It works once, for the next 15 minutes.');
         if ($scope === 'write') {
-            \WP_CLI::warning('A write key lets AgentMate change code on this site.');
+            \WP_CLI::warning('A write key lets Runova change code on this site.');
         }
     }
 }

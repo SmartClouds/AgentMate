@@ -7,7 +7,7 @@ import {
   parseAvdManagerList,
   parseEmulatorListAvds,
   parseIni,
-} from '@agentmat/core';
+} from '@runova/core';
 import { runAvdManager, runEmulator } from './exec';
 import type { ResolvedAndroidSdk } from './sdk';
 

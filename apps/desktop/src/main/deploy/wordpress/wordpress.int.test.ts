@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { normalizeProjectWordPressLink, type Project, type WpItemRef } from '@agentmat/core';
+import { normalizeProjectWordPressLink, type Project, type WpItemRef } from '@runova/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { wordPressErrorCode } from '../../../shared/wordpressErrors';
 import { systemTestsEnabled } from '../testing/testServerMachines';
@@ -12,12 +12,12 @@ import { WordPressBases, WordPressState, wordPressStateFilePort } from './state'
 import { createFetchTransport } from './transport';
 
 /**
- * The desktop's WordPress sync engine against the real AgentMate Connector plugin on WordPress in
+ * The desktop's WordPress sync engine against the real Runova Connector plugin on WordPress in
  * Docker (E19 T10): pairing, a new project pulled from the site, a deploy with agent files left
  * in the theme folder (none may reach the site), a PHP syntax error refused before anything is
  * written, a fatal error rolled back on its own, a manual rollback, and a read-only key.
  *
- * Opt in with AGENTMATE_SYSTEM_TESTS=1 (Linux containers). The fixture builds the plugin zip
+ * Opt in with RUNOVA_SYSTEM_TESTS=1 (Linux containers). The fixture builds the plugin zip
  * when it is missing; its containers are named after the port and removed afterwards.
  */
 
@@ -99,7 +99,7 @@ describe.skipIf(!enabled)('WordPress projects against the real connector', () =>
     site.exec(
       [
         `mkdir -p ${THEME_DIR}/inc`,
-        `printf '/*\\nTheme Name: AgentMate Int\\n*/\\n' > ${THEME_DIR}/style.css`,
+        `printf '/*\\nTheme Name: Runova Int\\n*/\\n' > ${THEME_DIR}/style.css`,
         `printf '<?php echo "home ok";\\n' > ${THEME_DIR}/index.php`,
         `printf '<?php\\nrequire __DIR__ . "/inc/setup.php";\\n' > ${THEME_DIR}/functions.php`,
         `printf '<?php // setup v1\\n' > ${THEME_DIR}/inc/setup.php`,
@@ -108,7 +108,7 @@ describe.skipIf(!enabled)('WordPress projects against the real connector', () =>
     );
     site.wp(['theme', 'activate', 'am-int']);
 
-    dir = mkdtempSync(join(tmpdir(), 'agentmate-wp-int-'));
+    dir = mkdtempSync(join(tmpdir(), 'runova-wp-int-'));
     service = new WordPressProjectService({
       state: new WordPressState(wordPressStateFilePort(join(dir, 'deploy-wordpress.json'))),
       bases: new WordPressBases(join(dir, 'bases')),
@@ -147,7 +147,7 @@ describe.skipIf(!enabled)('WordPress projects against the real connector', () =>
       active: true,
     });
     // The connector itself is never something to sync.
-    const connector = items.find((item) => item.slug === 'agentmate-connector');
+    const connector = items.find((item) => item.slug === 'runova-connector');
     if (connector) expect(connector.protected).toBe(true);
   }, 120_000);
 
@@ -157,20 +157,20 @@ describe.skipIf(!enabled)('WordPress projects against the real connector', () =>
       siteId,
       items: [THEME],
       folderPath: join(dir, 'project'),
-      name: 'AgentMate Int',
+      name: 'Runova Int',
       agentType: 'claude-code',
     });
-    expect(local('style.css')).toContain('Theme Name: AgentMate Int');
+    expect(local('style.css')).toContain('Theme Name: Runova Int');
     expect(local('inc/setup.php')).toBe('<?php // setup v1\n');
     expect(project.prompt).toContain('untrusted data');
     expect(project.wordpress?.items).toEqual([THEME]);
   }, 180_000);
 
-  it('deploys a change and never sends agent or AgentMate files', async () => {
+  it('deploys a change and never sends agent or Runova files', async () => {
     write(themeFile('inc/setup.php'), '<?php // setup v2\n');
     const agentFiles = [
       '.claude/settings.json',
-      '.agentmate/hooks/notify.sh',
+      '.runova/hooks/notify.sh',
       '.agents/skills/x/SKILL.md',
       'AGENTS.md',
       'CLAUDE.md',
@@ -207,7 +207,7 @@ describe.skipIf(!enabled)('WordPress projects against the real connector', () =>
   }, 240_000);
 
   it('rolls a deploy back on its own when the site stops working', async () => {
-    write(themeFile('inc/setup.php'), '<?php agentmate_int_no_such_function();\n');
+    write(themeFile('inc/setup.php'), '<?php runova_int_no_such_function();\n');
     const { result } = await plannedDeploy();
     const outcome = await result;
     expect(outcome.state).toBe('rolledBack');

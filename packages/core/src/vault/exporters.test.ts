@@ -51,15 +51,15 @@ const entries = build([
   },
 ]);
 
-describe('exportEntriesCsv: agentmate', () => {
+describe('exportEntriesCsv: runova', () => {
   it('writes a header that the importer recognizes', () => {
-    const [header] = parseCsv(exportEntriesCsv(entries, 'agentmate'));
-    expect(detectImportFormat(header)).toBe('agentmate');
+    const [header] = parseCsv(exportEntriesCsv(entries, 'runova'));
+    expect(detectImportFormat(header)).toBe('runova');
   });
 
   it('round-trips every entry type through import without losing data', () => {
-    const csv = exportEntriesCsv(entries, 'agentmate');
-    const { entries: imported, skipped } = mapImportRows(parseCsv(csv), 'agentmate');
+    const csv = exportEntriesCsv(entries, 'runova');
+    const { entries: imported, skipped } = mapImportRows(parseCsv(csv), 'runova');
     expect(skipped).toEqual([]);
     const rebuilt = build(imported);
     const strip = (e: VaultEntry) => {

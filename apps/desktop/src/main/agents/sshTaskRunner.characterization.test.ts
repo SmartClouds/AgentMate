@@ -17,7 +17,7 @@ import {
  * Characterization suite (E09 T3): pins what the SSH and local-terminal AI does today, byte for
  * byte where it matters (the prompt, the transcript, the history), so the refactor that gives
  * the loop a pluggable command executor can be shown to change nothing. The shell on the far end
- * is a scripted one that answers AgentMate's markers; the AI is scripted too.
+ * is a scripted one that answers Runova's markers; the AI is scripted too.
  */
 
 const fake = vi.hoisted(() => {
@@ -42,9 +42,9 @@ const fake = vi.hoisted(() => {
   function type(sessionId: string, line: string): void {
     state.written.push(line);
     const hidden = line.match(
-      /^printf '\\033\]7750;AgentMate:Start:(\w+)\\007'; (.*); printf '\\033\]7750;AgentMate:Done:\1:%s\\007' "\$\?"[\r\n]$/,
+      /^printf '\\033\]7750;Runova:Start:(\w+)\\007'; (.*); printf '\\033\]7750;Runova:Done:\1:%s\\007' "\$\?"[\r\n]$/,
     );
-    const plain = line.match(/^(.*); printf '\\n(__AGENTMATE_DONE_\w+__):%s\\n' "\$\?"[\r\n]$/);
+    const plain = line.match(/^(.*); printf '\\n(__RUNOVA_DONE_\w+__):%s\\n' "\$\?"[\r\n]$/);
     const body = hidden?.[2] ?? plain?.[1];
     if (body === undefined) return;
     state.ran.push(body);
@@ -54,9 +54,9 @@ const fake = vi.hoisted(() => {
     };
     queueMicrotask(() => {
       emit(sessionId, `${line.trimEnd()}\r\n`);
-      if (hidden) emit(sessionId, `\x1b]7750;AgentMate:Start:${hidden[1]}\x07`);
+      if (hidden) emit(sessionId, `\x1b]7750;Runova:Start:${hidden[1]}\x07`);
       emit(sessionId, answer.output);
-      if (hidden) emit(sessionId, `\x1b]7750;AgentMate:Done:${hidden[1]}:${answer.code}\x07`);
+      if (hidden) emit(sessionId, `\x1b]7750;Runova:Done:${hidden[1]}:${answer.code}\x07`);
       if (plain) emit(sessionId, `\n${plain[2]}:${answer.code}\n`);
     });
   }
@@ -120,7 +120,7 @@ vi.mock('../store', () => ({
 vi.mock('../notifications/petNotifier', () => ({ speakOnPet: vi.fn() }));
 vi.mock('../notifications/osNotification', () => ({ showOsNotification: vi.fn(() => true) }));
 vi.mock('../mainWindow', () => ({ getMainWindow: () => null }));
-vi.mock('@agentmat/core', () => ({
+vi.mock('@runova/core', () => ({
   getCliDefinition: (id: string) => (id === 'claude' ? { name: 'Claude Code' } : undefined),
   runArgsFor: (cliId: string | null, modelId: string | null) =>
     cliId && modelId === 'opus' ? ['--model', 'opus'] : [],

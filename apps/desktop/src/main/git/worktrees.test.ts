@@ -26,7 +26,7 @@ function samePath(a: string, b: string): boolean {
 /** A repo plus an empty spot beside it for worktrees. */
 function setup(files?: Record<string, string>) {
   const repo = initGitRepo(files);
-  const trees = tempDir('agentmate-trees-');
+  const trees = tempDir('runova-trees-');
   return { repo, trees, at: (name: string) => join(trees, name) };
 }
 
@@ -60,7 +60,7 @@ describe.runIf(hasGit())('git worktrees', () => {
       // Git lists the real folder. A temp folder is often reached another way: /var is a link
       // to /private/var on macOS, and Windows can hand out an 8.3 short name like RUNNER~1.
       const { repo, trees } = setup();
-      const linked = tempDir('agentmate-trees-link-');
+      const linked = tempDir('runova-trees-link-');
       rmSync(linked, { recursive: true, force: true });
       symlinkSync(trees, linked, 'junction');
       const entry = await addWorktree(repo.dir, {

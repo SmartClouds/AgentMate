@@ -1,0 +1,43 @@
+==> http.conf <==
+# Managed by Runova. Each apply writes a new release, so change this in the app instead.
+
+# WebSocket requests ask the upstream to switch protocols; other requests close as usual.
+map $http_upgrade $runova_connection_upgrade {
+    default upgrade;
+    "" close;
+}
+
+# Requests for names no site claims get no answer at all, and TLS handshakes for them
+# are refused before any certificate is shown.
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name _;
+    ssl_reject_handshake on;
+    return 444;
+}
+
+==> stream.conf <==
+# Managed by Runova. Each apply writes a new release, so change this in the app instead.
+# TCP and UDP ports passed straight through to a service; nginx.conf includes this in its stream block.
+
+# Stream proxy web-tcp: TCP port 5000
+server {
+    listen 5000;
+    listen [::]:5000;
+    proxy_pass 127.0.0.1:3000;
+}
+
+# Stream proxy office-only: TCP port 5001
+server {
+    listen 5001;
+    listen [::]:5001;
+    proxy_pass 127.0.0.1:3000;
+    proxy_connect_timeout 5s;
+    proxy_timeout 600s;
+
+    allow 10.0.0.0/8;
+    deny all;
+}

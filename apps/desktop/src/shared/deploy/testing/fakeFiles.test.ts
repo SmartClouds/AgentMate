@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { FileEntry } from '../protocol/generated/AgentMate.ServerCore.Contracts';
+import type { FileEntry } from '../protocol/generated/Runova.ServerCore.Contracts';
 import { FakeCore } from './fakeCore';
 import { FAKE_FILES_IDLE_MS, FakeFilesError } from './fakeFiles';
 

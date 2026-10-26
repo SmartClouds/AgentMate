@@ -3,18 +3,21 @@
  * The real environment: answers come from WordPress. On multisite everything is read from the
  * main site, which is where the connection key's URLs point.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Env;
+namespace Runova\Connector\Env;
 
-use AgentMate\Connector\Crypto\Crypto;
-use AgentMate\Connector\Protocol;
-use AgentMate\Connector\Support\DataDir;
+use Runova\Connector\Crypto\Crypto;
+use Runova\Connector\Layout;
+use Runova\Connector\Legacy;
+use Runova\Connector\Protocol;
+use Runova\Connector\Support\Constants;
+use Runova\Connector\Support\DataDir;
 
 final class WordPressEnvironment implements Environment
 {
-    const GUARD_FILE = '00-agentmate-connector-guard.php';
+    const GUARD_FILE = '00-runova-connector-guard.php';
 
     /** @var float */
     private $start;
@@ -43,7 +46,12 @@ final class WordPressEnvironment implements Environment
 
     public function pluginVersion(): string
     {
-        return AGENTMATE_CONNECTOR_VERSION;
+        return RUNOVA_CONNECTOR_VERSION;
+    }
+
+    public function layout(): string
+    {
+        return Layout::current();
     }
 
     private function mainSiteId(): ?int
@@ -116,12 +124,12 @@ final class WordPressEnvironment implements Environment
 
     public function constantOn(string $name): bool
     {
-        return defined($name) && (bool) constant($name);
+        return Constants::on($name);
     }
 
     public function fileModsAllowed(): bool
     {
-        return (bool) wp_is_file_mod_allowed('agentmate_connector');
+        return (bool) wp_is_file_mod_allowed('runova_connector');
     }
 
     public function filesystemMethod(): string
@@ -217,7 +225,7 @@ final class WordPressEnvironment implements Environment
 
     public function connectorSlug(): string
     {
-        return dirname(plugin_basename(AGENTMATE_CONNECTOR_FILE));
+        return dirname(plugin_basename(RUNOVA_CONNECTOR_FILE));
     }
 
     public function guardSlug(): string
@@ -233,10 +241,16 @@ final class WordPressEnvironment implements Environment
     /** rescue.php's URL, only when it is on the site's own origin (not a CDN host for plugin files). */
     public function rescueUrl(): ?string
     {
-        if (!is_file(dirname(AGENTMATE_CONNECTOR_FILE) . '/rescue.php')) {
+        return $this->rescueUrlFor(RUNOVA_CONNECTOR_FILE);
+    }
+
+    /** rescue.php beside a main file, for a copy of the connector that may not be the running one. */
+    public function rescueUrlFor(string $mainFile): ?string
+    {
+        if (!is_file(dirname($mainFile) . '/rescue.php')) {
             return null;
         }
-        $url = (string) plugins_url('rescue.php', AGENTMATE_CONNECTOR_FILE);
+        $url = (string) plugins_url('rescue.php', $mainFile);
         $origin = self::origin($url);
         if ($origin === null) {
             return null;
@@ -270,11 +284,12 @@ final class WordPressEnvironment implements Environment
         return self::confirmWindow();
     }
 
-    /** AGENTMATE_CONNECTOR_CONFIRM_SECONDS shortens the window for tests; never below 5 or above 180. */
+    /** RUNOVA_CONNECTOR_CONFIRM_SECONDS shortens the window for tests; never below 5 or above 180. */
     public static function confirmWindow(): int
     {
-        if (defined('AGENTMATE_CONNECTOR_CONFIRM_SECONDS') && is_numeric(AGENTMATE_CONNECTOR_CONFIRM_SECONDS)) {
-            return (int) max(5, min(180, (int) AGENTMATE_CONNECTOR_CONFIRM_SECONDS));
+        $seconds = Constants::value('RUNOVA_CONNECTOR_CONFIRM_SECONDS');
+        if (is_numeric($seconds)) {
+            return (int) max(5, min(180, (int) $seconds));
         }
         return 180;
     }
@@ -282,12 +297,12 @@ final class WordPressEnvironment implements Environment
     public function healthChecks(): array
     {
         $this->cleanCaches();
-        $home = add_query_arg('agentmate_health', bin2hex(random_bytes(6)), get_home_url($this->mainSiteId(), '/'));
+        $home = add_query_arg('runova_health', bin2hex(random_bytes(6)), get_home_url($this->mainSiteId(), '/'));
         $ping = add_query_arg(
-            array('action' => Protocol::AJAX_ACTION . '_ping', 'agentmate_health' => bin2hex(random_bytes(6))),
+            array('action' => Protocol::AJAX_ACTION . '_ping', 'runova_health' => bin2hex(random_bytes(6))),
             $this->ajaxUrl()
         );
-        return array(self::probe('home', $home, null), self::probe('ajaxPing', $ping, 'agentmate-pong'));
+        return array(self::probe('home', $home, null), self::probe('ajaxPing', $ping, 'runova-pong'));
     }
 
     /**
@@ -384,7 +399,7 @@ final class WordPressEnvironment implements Environment
 
     public function setGuardState(?array $state): void
     {
-        \AgentMate\Connector\Guard\GuardState::write($state);
+        \Runova\Connector\Guard\GuardState::write($state);
     }
 
     public function fileMode(): int

@@ -1,6 +1,6 @@
 import { request } from 'node:http';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { FileTarget } from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { FileTarget } from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { describeSftpClientContract, type SftpClientHarness } from '../../sftp/testing/contract';
 import type { ReleaseSource } from '../bootstrap/releaseSource';
 import { CORE_HOST } from '../connection/coreHttp';
@@ -27,7 +27,7 @@ import { createDockerFilePool } from './pool';
 
 const enabled = dotnetAvailable();
 /** The DevHost's fixed development owner (see its DevHost.cs). */
-const DEV_PASSWORD = 'agentmate-local-password';
+const DEV_PASSWORD = 'runova-local-password';
 const TIMEOUT = 60_000;
 
 let devHost: DevHostCore | null = null;
@@ -115,7 +115,7 @@ async function harness(target: FileTarget): Promise<SftpClientHarness> {
   // Reads behind the client's back go through a session of their own.
   const reader = await pool.acquire(id);
   folders += 1;
-  const root = `/agentmate-contract-${process.pid}-${folders}`;
+  const root = `/runova-contract-${process.pid}-${folders}`;
   const seed = (body: Record<string, unknown>) =>
     seedOn(port, { kind: target.kind, id: target.id, ...body });
   await seed({ path: root, type: 'dir' });

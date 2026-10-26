@@ -8,7 +8,7 @@ import {
   renderCatalogApp,
   validateDomain,
   validateStackName,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { DeployAppParamValue } from '@shared/deployAppStoreTypes';
 import { suggestStoreAppName } from './format';
 

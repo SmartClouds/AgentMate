@@ -3,14 +3,14 @@
  * /connector/update: the app sends a newer release, or has the site download it from the GitHub
  * release, and the plugin swaps its own folder.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Unit;
+namespace Runova\Connector\Tests\Unit;
 
-use AgentMate\Connector\Deploy\DeployService;
-use AgentMate\Connector\Tests\Support\DeployTestCase;
-use AgentMate\Connector\Tests\Support\ZipFixture;
+use Runova\Connector\Deploy\DeployService;
+use Runova\Connector\Tests\Support\DeployTestCase;
+use Runova\Connector\Tests\Support\ZipFixture;
 
 final class ConnectorUpdateTest extends DeployTestCase
 {
@@ -26,14 +26,14 @@ final class ConnectorUpdateTest extends DeployTestCase
     /** The connector folder the fake site "runs": a release plus the file the plugin writes itself. */
     private function install(string $version): void
     {
-        $dir = $this->path('plugins/agentmate-connector');
+        $dir = $this->path('plugins/runova-connector');
         if (is_dir($dir)) {
             $this->wipe($dir);
         }
         foreach ($this->release($version) as $relative => $bytes) {
-            $this->env->put('plugins/agentmate-connector/' . $relative, $bytes);
+            $this->env->put('plugins/runova-connector/' . $relative, $bytes);
         }
-        $this->env->put('plugins/agentmate-connector/rescue-config.php', "<?php\nreturn array('abspath' => '/site/');\n");
+        $this->env->put('plugins/runova-connector/rescue-config.php', "<?php\nreturn array('abspath' => '/site/');\n");
     }
 
     private function wipe(string $dir): void
@@ -60,12 +60,12 @@ final class ConnectorUpdateTest extends DeployTestCase
     private function release(string $version, string $php = '7.4', string $wp = '6.0'): array
     {
         return array(
-            'agentmate-connector.php' => "<?php\n/**\n * Plugin Name:       AgentMate Connector\n * Version:           {$version}\n * Requires at least: {$wp}\n * Requires PHP:      {$php}\n */\ndefine('AGENTMATE_CONNECTOR_VERSION', '{$version}');\n",
+            'runova-connector.php' => "<?php\n/**\n * Plugin Name:       Runova Connector\n * Version:           {$version}\n * Requires at least: {$wp}\n * Requires PHP:      {$php}\n */\ndefine('RUNOVA_CONNECTOR_VERSION', '{$version}');\n",
             'src/Autoloader.php' => "<?php // autoloader {$version}\n",
             'src/Plugin.php' => "<?php // plugin {$version}\n",
             'src/Util/Helper.php' => "<?php // helper {$version}\n",
-            'guard/00-agentmate-connector-guard.php' => "<?php // guard {$version}\n",
-            'readme.txt' => "=== AgentMate Connector ===\nStable tag: {$version}\n",
+            'guard/00-runova-connector-guard.php' => "<?php // guard {$version}\n",
+            'readme.txt' => "=== Runova Connector ===\nStable tag: {$version}\n",
         );
     }
 
@@ -103,13 +103,13 @@ final class ConnectorUpdateTest extends DeployTestCase
     private function siblings(): array
     {
         return array_values(array_filter((array) scandir($this->path('plugins')), function ($name) {
-            return strncmp((string) $name, '.agentmate-connector-', 21) === 0;
+            return strncmp((string) $name, '.runova-connector-', 18) === 0;
         }));
     }
 
     private function installed(string $relative): ?string
     {
-        return $this->read('plugins/agentmate-connector/' . $relative);
+        return $this->read('plugins/runova-connector/' . $relative);
     }
 
     /** @param array<string, mixed> $result */
@@ -124,7 +124,7 @@ final class ConnectorUpdateTest extends DeployTestCase
 
     private function versionOnDisk(): string
     {
-        preg_match('/Version:\s+(\S+)/', (string) $this->installed('agentmate-connector.php'), $match);
+        preg_match('/Version:\s+(\S+)/', (string) $this->installed('runova-connector.php'), $match);
         return $match[1];
     }
 
@@ -153,8 +153,8 @@ final class ConnectorUpdateTest extends DeployTestCase
         $this->assertSame(array(), $this->siblings());
         $this->assertSame(2, $this->env->healthCalls, 'Once before the swap and once after.');
         $this->assertGreaterThanOrEqual(1, $this->env->cacheCleans);
-        $this->assertContains($this->path('plugins/agentmate-connector/src/Plugin.php'), $this->env->invalidated);
-        $this->assertNotContains($this->path('plugins/agentmate-connector/readme.txt'), $this->env->invalidated);
+        $this->assertContains($this->path('plugins/runova-connector/src/Plugin.php'), $this->env->invalidated);
+        $this->assertNotContains($this->path('plugins/runova-connector/readme.txt'), $this->env->invalidated);
     }
 
     public function testKeepsTheFilesThePluginWritesForItself(): void
@@ -165,10 +165,10 @@ final class ConnectorUpdateTest extends DeployTestCase
 
     public function testRemovesFilesTheNewReleaseNoLongerHas(): void
     {
-        $this->env->put('plugins/agentmate-connector/src/Old/Gone.php', '<?php // gone');
+        $this->env->put('plugins/runova-connector/src/Old/Gone.php', '<?php // gone');
         $this->assertOk($this->update($this->release(self::NEW)));
         $this->assertNull($this->installed('src/Old/Gone.php'));
-        $this->assertFalse(is_dir($this->path('plugins/agentmate-connector/src/Old')));
+        $this->assertFalse(is_dir($this->path('plugins/runova-connector/src/Old')));
     }
 
     public function testWritesTheAuditLog(): void
@@ -299,19 +299,19 @@ final class ConnectorUpdateTest extends DeployTestCase
                 return $r;
             })),
             'no guard template' => array($change(function (array $r) {
-                unset($r['guard/00-agentmate-connector-guard.php']);
+                unset($r['guard/00-runova-connector-guard.php']);
                 return $r;
             })),
             'another plugin' => array($change(function (array $r) {
-                $r['agentmate-connector.php'] = str_replace('AgentMate Connector', 'Something Else', $r['agentmate-connector.php']);
+                $r['runova-connector.php'] = str_replace('Runova Connector', 'Something Else', $r['runova-connector.php']);
                 return $r;
             })),
             'a header that disagrees with the request' => array($change(function (array $r) {
-                $r['agentmate-connector.php'] = (string) preg_replace('/Version:\s+1\.1\.0/', 'Version: 1.2.0', $r['agentmate-connector.php']);
+                $r['runova-connector.php'] = (string) preg_replace('/Version:\s+1\.1\.0/', 'Version: 1.2.0', $r['runova-connector.php']);
                 return $r;
             })),
             'a version constant that disagrees' => array($change(function (array $r) {
-                $r['agentmate-connector.php'] = str_replace("'AGENTMATE_CONNECTOR_VERSION', '1.1.0'", "'AGENTMATE_CONNECTOR_VERSION', '1.2.0'", $r['agentmate-connector.php']);
+                $r['runova-connector.php'] = str_replace("'RUNOVA_CONNECTOR_VERSION', '1.1.0'", "'RUNOVA_CONNECTOR_VERSION', '1.2.0'", $r['runova-connector.php']);
                 return $r;
             })),
             'a file over the size cap' => array($change(function (array $r) {
@@ -435,7 +435,7 @@ final class ConnectorUpdateTest extends DeployTestCase
         };
         $result = $this->update($this->release(self::NEW));
         $this->assertError('internal', $result);
-        $this->assertStringContainsString('.agentmate-connector-old-', $result['body']['error']['message']);
+        $this->assertStringContainsString('.runova-connector-old-', $result['body']['error']['message']);
         $this->assertCount(2, $this->siblings(), 'The old and the new files are both kept.');
     }
 
@@ -455,18 +455,18 @@ final class ConnectorUpdateTest extends DeployTestCase
 
     public function testSweepsFoldersACrashedUpdateLeftBehind(): void
     {
-        $this->env->put('plugins/.agentmate-connector-new-0123456789ab/src/Plugin.php', '<?php');
-        $this->env->put('plugins/.agentmate-connector-old-0123456789ab/agentmate-connector.php', '<?php');
-        $this->env->put('plugins/.agentmate-connector-notmine/keep.txt', 'keep');
+        $this->env->put('plugins/.runova-connector-new-0123456789ab/src/Plugin.php', '<?php');
+        $this->env->put('plugins/.runova-connector-old-0123456789ab/runova-connector.php', '<?php');
+        $this->env->put('plugins/.runova-connector-notmine/keep.txt', 'keep');
         $this->assertOk($this->update($this->release(self::NEW)));
-        $this->assertSame(array('.agentmate-connector-notmine'), $this->siblings());
-        $this->assertSame('keep', $this->read('plugins/.agentmate-connector-notmine/keep.txt'));
+        $this->assertSame(array('.runova-connector-notmine'), $this->siblings());
+        $this->assertSame('keep', $this->read('plugins/.runova-connector-notmine/keep.txt'));
     }
 
     public function testDotFoldersAreNotPluginsToWordPress(): void
     {
         // get_plugins() skips entries that start with a dot; the staging folder relies on it.
-        $this->assertSame('.', substr('.agentmate-connector-new-0123456789ab', 0, 1));
+        $this->assertSame('.', substr('.runova-connector-new-0123456789ab', 0, 1));
     }
 
     public function testRefusesASymlinkedPluginFolder(): void
@@ -475,8 +475,8 @@ final class ConnectorUpdateTest extends DeployTestCase
             $this->markTestSkipped('No symlinks here.');
         }
         $real = $this->tempDir() . '/real-connector';
-        rename($this->path('plugins/agentmate-connector'), $real);
-        if (!@symlink($real, $this->path('plugins/agentmate-connector'))) {
+        rename($this->path('plugins/runova-connector'), $real);
+        if (!@symlink($real, $this->path('plugins/runova-connector'))) {
             $this->markTestSkipped('Symlinks are not allowed here.');
         }
         $result = $this->update($this->release(self::NEW));
@@ -492,7 +492,7 @@ final class ConnectorUpdateTest extends DeployTestCase
         $info = $this->assertOk($this->call('/site/info', null, array('connectionId' => $this->write)));
         $this->assertTrue($info['selfUpdate']);
 
-        $this->wipe($this->path('plugins/agentmate-connector'));
+        $this->wipe($this->path('plugins/runova-connector'));
         $info = $this->assertOk($this->call('/site/info', null, array('connectionId' => $this->write)));
         $this->assertFalse($info['selfUpdate']);
     }
@@ -507,7 +507,7 @@ final class ConnectorUpdateTest extends DeployTestCase
 
     private function releaseUrl(string $version = self::NEW): string
     {
-        return 'https://github.com/SmartClouds/AgentMate/releases/download/v' . $version . '/agentmate-connector.zip';
+        return 'https://github.com/SmartClouds/Runova/releases/download/v' . $version . '/runova-connector.zip';
     }
 
     /**
@@ -548,7 +548,7 @@ final class ConnectorUpdateTest extends DeployTestCase
     public function testReadsAZipThatStoresItsFiles(): void
     {
         $release = $this->release(self::NEW);
-        $this->env->downloads[$this->releaseUrl()] = ZipFixture::build($release, 'agentmate-connector/', 0);
+        $this->env->downloads[$this->releaseUrl()] = ZipFixture::build($release, 'runova-connector/', 0);
         $this->assertSame('updated', $this->assertOk($this->downloadUpdate($release))['state']);
     }
 
@@ -582,7 +582,7 @@ final class ConnectorUpdateTest extends DeployTestCase
                 return ZipFixture::build($files, 'something-else/');
             }),
             'an encrypted zip' => array(function (array $files) {
-                return ZipFixture::build($files, 'agentmate-connector/', 8, 0x0801);
+                return ZipFixture::build($files, 'runova-connector/', 8, 0x0801);
             }),
             'a cut-off zip' => array(function (array $files) {
                 $zip = ZipFixture::build($files);
@@ -607,15 +607,15 @@ final class ConnectorUpdateTest extends DeployTestCase
         $this->assertRefused('downloadFailed', $this->downloadUpdate($release));
     }
 
-    public function testOnlyEverFetchesTheAgentMateReleaseOfTheVersionItInstalls(): void
+    public function testOnlyEverFetchesTheRunovaReleaseOfTheVersionItInstalls(): void
     {
         $release = $this->release(self::NEW);
         $urls = array(
             'another version' => $this->releaseUrl('1.2.0'),
-            'plain HTTP' => 'http://github.com/SmartClouds/AgentMate/releases/download/v1.1.0/agentmate-connector.zip',
-            'another repository' => 'https://github.com/someone/AgentMate/releases/download/v1.1.0/agentmate-connector.zip',
-            'another host' => 'https://example.test/AgentMate/releases/download/v1.1.0/agentmate-connector.zip',
-            'another file' => 'https://github.com/SmartClouds/AgentMate/releases/download/v1.1.0/other.zip',
+            'plain HTTP' => 'http://github.com/SmartClouds/Runova/releases/download/v1.1.0/runova-connector.zip',
+            'another repository' => 'https://github.com/someone/Runova/releases/download/v1.1.0/runova-connector.zip',
+            'another host' => 'https://example.test/Runova/releases/download/v1.1.0/runova-connector.zip',
+            'another file' => 'https://github.com/SmartClouds/Runova/releases/download/v1.1.0/other.zip',
             'a query' => $this->releaseUrl() . '?x=1',
             'empty' => '',
         );

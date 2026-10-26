@@ -73,7 +73,7 @@ export function ProjectFileBrowser({
 
   const dirQuery = useQuery({
     queryKey: ['project-dir', currentPath],
-    queryFn: () => window.agentmat.fs.listDirectory(currentPath),
+    queryFn: () => window.runova.fs.listDirectory(currentPath),
   });
 
   const entries = dirQuery.data ?? [];
@@ -90,7 +90,7 @@ export function ProjectFileBrowser({
       return;
     }
     try {
-      const content = await window.agentmat.fs.readFile(path);
+      const content = await window.runova.fs.readFile(path);
       setSelectedFile(path);
       setFileContent(content);
       setSavedContent(content);
@@ -102,7 +102,7 @@ export function ProjectFileBrowser({
   async function saveFile(): Promise<void> {
     if (!selectedFile) return;
     try {
-      await window.agentmat.fs.writeFile(selectedFile, fileContent);
+      await window.runova.fs.writeFile(selectedFile, fileContent);
       setSavedContent(fileContent);
       toast.success('File saved.');
     } catch (error) {

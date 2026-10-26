@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
-import { getCliDefinition, runArgsFor } from '@agentmat/core';
+import { getCliDefinition, runArgsFor } from '@runova/core';
 import type {
   AiProvider,
   SshAgentHistoryEntry,
@@ -230,7 +230,7 @@ NEEDS_INPUT: <a short question for the user>
 Rules:
 - Exactly one command per reply. Do not chain unrelated steps with && unless they are trivially part of the same action.
 - Prefer flags that skip confirmations (-y, --yes) so a command never hangs waiting on a TTY prompt.
-- When a command needs root, use plain sudo. Never pass sudo -n or -S, and never use NEEDS_INPUT to ask for a password: when sudo prompts for one, AgentMate answers it for the user.
+- When a command needs root, use plain sudo. Never pass sudo -n or -S, and never use NEEDS_INPUT to ask for a password: when sudo prompts for one, Runova answers it for the user.
 - Let commands print their normal progress. Do not silence them with -qq or > /dev/null, since the user is watching the output.
 - Do not repeat a command that already ran successfully in the transcript below.
 - If the transcript shows the task is already done, reply FINISHED.
@@ -299,7 +299,7 @@ interface RunState {
   controller: AbortController;
   pendingApproval: PendingApproval | null;
   pendingInputAnswer: ((answer: string) => void) | null;
-  /** Resolves with true when the user lets AgentMate type the saved password into a prompt. */
+  /** Resolves with true when the user lets Runova type the saved password into a prompt. */
   pendingPassword: ((approved: boolean) => void) | null;
   /** Set while the run is paused on an error: true picks it up again, false ends it. */
   pendingContinue: ((resume: boolean) => void) | null;

@@ -5,17 +5,17 @@
  * unreadable files, names that are not UTF-8, files over the size cap and paths the policy refuses
  * are reported as skipped and never followed. Hashes are cached by path, size and mtime.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Files;
+namespace Runova\Connector\Files;
 
-use AgentMate\Connector\Crypto\Base64Url;
-use AgentMate\Connector\Env\Environment;
-use AgentMate\Connector\Http\ApiError;
-use AgentMate\Connector\Protocol;
-use AgentMate\Connector\Storage\Storage;
-use AgentMate\Connector\Support\Text;
+use Runova\Connector\Crypto\Base64Url;
+use Runova\Connector\Env\Environment;
+use Runova\Connector\Http\ApiError;
+use Runova\Connector\Protocol;
+use Runova\Connector\Storage\Storage;
+use Runova\Connector\Support\Text;
 
 final class Manifest
 {

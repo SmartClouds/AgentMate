@@ -25,7 +25,7 @@ describe('choosing the test servers a system test runs on', () => {
 });
 
 describe('deciding whether system tests run', () => {
-  it('stays off unless AGENTMATE_SYSTEM_TESTS is 1, without asking Docker', () => {
+  it('stays off unless RUNOVA_SYSTEM_TESTS is 1, without asking Docker', () => {
     const osType = vi.fn(() => 'linux');
 
     expect(systemTestsEnabled(undefined, osType)).toBe(false);

@@ -55,13 +55,13 @@ async function restart(current: LaunchedApp): Promise<ElectronApplication> {
     args: [
       join(E2E_OUT_DIR, 'main', 'index.mjs'),
       `--user-data-dir=${current.userDataDir}`,
-      ...(process.env.AGENTMATE_E2E_NO_SANDBOX === '1' ? ['--no-sandbox'] : []),
+      ...(process.env.RUNOVA_E2E_NO_SANDBOX === '1' ? ['--no-sandbox'] : []),
     ],
     env: {
       ...(process.env as Record<string, string>),
       ELECTRON_RENDERER_URL: '',
-      AGENTMATE_USER_DATA_DIR: current.userDataDir,
-      AGENTMATE_E2E: '1',
+      RUNOVA_USER_DATA_DIR: current.userDataDir,
+      RUNOVA_E2E: '1',
     },
   });
   return relaunched;

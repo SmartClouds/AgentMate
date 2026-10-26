@@ -11,13 +11,13 @@ import { PEBBLE_DIRECTORY, type Pebble, startPebble } from './pebble';
  * The machine side of the full-stack run (deployFullStack.e2e.ts): a systemd test server, the
  * same as the system tests boot, next to a Pebble of its own. Before the app sees the server,
  * it trusts Pebble's test CA, reaches Pebble as `pebble`, and has the core's ACME directory
- * pointed at it in /etc/agentmate-core/core.json (which the installer leaves alone), the way a
+ * pointed at it in /etc/runova-core/core.json (which the installer leaves alone), the way a
  * staging setup would. The test DNS maps the site's domain to the server's address, so Pebble's
  * HTTP-01 check lands on the nginx the core runs there.
  */
 
 /** The site's domain, mapped in the test DNS. */
-export const SITE_DOMAIN = 'shop.agentmate.test';
+export const SITE_DOMAIN = 'shop.runova.test';
 
 export interface FullStackServer {
   server: TestServer;
@@ -49,7 +49,7 @@ export async function startFullStackServer(image: TestServerImage): Promise<Full
       pebble.rootPem,
     );
     sh(
-      'mkdir -p /etc/agentmate-core && chmod 700 /etc/agentmate-core && cat > /etc/agentmate-core/core.json && chmod 600 /etc/agentmate-core/core.json',
+      'mkdir -p /etc/runova-core && chmod 700 /etc/runova-core && cat > /etc/runova-core/core.json && chmod 600 /etc/runova-core/core.json',
       JSON.stringify({ Core: { Acme: { ProductionDirectory: PEBBLE_DIRECTORY } } }),
     );
     await pebble.mapDomain(SITE_DOMAIN, address);

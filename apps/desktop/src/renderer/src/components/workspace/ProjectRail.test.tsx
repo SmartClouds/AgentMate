@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { Project, WorktreeInfo } from '@agentmat/core';
+import type { Project, WorktreeInfo } from '@runova/core';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -22,7 +22,7 @@ vi.mock('@/lib/terminal/terminalRuntime', () => ({
 
 const project = {
   id: 'p1',
-  name: 'AgentMate',
+  name: 'Runova',
   folderPath: 'C:\\code\\app',
   iconDataUrl: null,
   iconBgColor: null,
@@ -98,13 +98,13 @@ describe('opening a project from the rail', () => {
     expect(navigate).toHaveBeenCalledTimes(1);
     expect(navigate).toHaveBeenCalledWith('/workspace/p2');
 
-    pressAndRelease(screen.getByRole('button', { name: 'Open AgentMate' }));
+    pressAndRelease(screen.getByRole('button', { name: 'Open Runova' }));
     expect(navigate).toHaveBeenLastCalledWith('/workspace/p1');
   });
 
   it('opens the project that is already showing, too', () => {
     renderRail('p1', []);
-    pressAndRelease(screen.getByRole('button', { name: 'Open AgentMate' }));
+    pressAndRelease(screen.getByRole('button', { name: 'Open Runova' }));
     expect(navigate).toHaveBeenCalledWith('/workspace/p1');
   });
 });
@@ -128,18 +128,16 @@ describe('worktrees in the rail', () => {
     expect(
       await screen.findByRole('button', { name: 'Open worktree feat/auth-flow' }),
     ).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('button', { name: 'Open AgentMate' })).not.toHaveAttribute(
-      'aria-current',
-    );
+    expect(screen.getByRole('button', { name: 'Open Runova' })).not.toHaveAttribute('aria-current');
   });
 
   it('folds the worktrees away behind a count, and back', async () => {
     renderRail();
     await screen.findByRole('button', { name: 'Open worktree fix-login' });
-    fireEvent.click(screen.getByRole('button', { name: 'Hide AgentMate worktrees' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Runova worktrees' }));
     expect(screen.queryByRole('button', { name: 'Open worktree fix-login' })).toBeNull();
     expect(useWorkspaceStore.getState().railExpanded.p1).toBe(false);
-    fireEvent.click(screen.getByRole('button', { name: 'Show 2 AgentMate worktrees' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Show 2 Runova worktrees' }));
     expect(screen.getByRole('button', { name: 'Open worktree fix-login' })).toBeInTheDocument();
   });
 
@@ -154,13 +152,13 @@ describe('worktrees in the rail', () => {
 
   it('starts a new worktree from the rail', async () => {
     renderRail();
-    fireEvent.click(await screen.findByRole('button', { name: 'New AgentMate worktree' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'New Runova worktree' }));
     expect(useWorktreeDialogStore.getState().create).toEqual({ projectId: 'p1' });
   });
 
   it('offers a new worktree on the project tile’s menu, even with none yet', async () => {
     renderRail('p1', []);
-    fireEvent.contextMenu(screen.getByRole('button', { name: 'Open AgentMate' }));
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Open Runova' }));
     fireEvent.click(await screen.findByRole('menuitem', { name: /New worktree/ }));
     expect(useWorktreeDialogStore.getState().create).toEqual({ projectId: 'p1' });
   });

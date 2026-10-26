@@ -9,7 +9,7 @@ route: /deploy
 
 The **Logs** section of a server's page in Deploy has two tabs: **Problems**, a feed of what is broken on the server right now, and **Log viewer**, one place to read container, app, systemd and website logs live. The **Deploy AI** is a drawer that works with both. It looks at a problem or a log, proposes commands to run on the server, and runs each one only after you approve it (unless you let it run read-only checks by itself).
 
-The assistant and the logs both go through the AgentMate server core on the server. You need to be signed in to the core, see [Deploy servers and setup](deploy-servers-setup.md).
+The assistant and the logs both go through the Runova server core on the server. You need to be signed in to the core, see [Deploy servers and setup](deploy-servers-setup.md).
 
 ## Where to find it
 
@@ -54,7 +54,7 @@ The **Log source** picker lists these (type in its search box to filter):
 
 - **App (name): every service**: all services of a compose app together, each with its own colour and name in the line. At most four services are followed at once; an app with more says so under the log, and you can pick any one of its containers to read it alone. An app's page also opens its logs on their own, see [Logs and consoles of an app](deploy-containers-stacks.md#logs-and-consoles-of-an-app).
 - **Container (name)**: a single container.
-- **Journal** of a systemd unit: docker.service, nginx.service, ssh.service and agentmate-core.service are listed. Type any other unit name in the search box and pick **Journal of (name)**.
+- **Journal** of a systemd unit: docker.service, nginx.service, ssh.service and runova-core.service are listed. Type any other unit name in the search box and pick **Journal of (name)**.
 - **Site (domain): access log** and **error log** for each website with nginx.
 - **Core audit trail**: the core's audit events as log lines.
 

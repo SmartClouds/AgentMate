@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type {
   StackInfo,
   StackRevisionInfo,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * The App Store's last line of defence: a render the linter still has findings for is never
@@ -12,8 +12,8 @@ import type {
 
 const FINDING = { id: 'privileged:app', rule: 'privileged', severity: 'critical', message: 'x' };
 
-vi.mock('@agentmat/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@agentmat/core')>();
+vi.mock('@runova/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@runova/core')>();
   return {
     ...actual,
     renderCatalogApp: (...args: Parameters<typeof actual.renderCatalogApp>) => {
@@ -30,7 +30,7 @@ vi.mock('@agentmat/core', async (importOriginal) => {
 });
 
 const { generateCatalogSecrets, findCatalogTemplate, renderCatalogApp } = await import(
-  '@agentmat/core'
+  '@runova/core'
 );
 const { DeployAppStore } = await import('./service');
 

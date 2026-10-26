@@ -5,15 +5,15 @@
  * rename onto a file that exists or is open, so a failed rename is retried after removing the
  * target.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Files;
+namespace Runova\Connector\Files;
 
 final class AtomicWriter
 {
     /** Temporary files start with this, so a crash leaves something recognisable to clean up. */
-    const TEMP_PREFIX = '.agentmate-tmp-';
+    const TEMP_PREFIX = '.runova-tmp-';
 
     /** @var callable */
     private $rename;

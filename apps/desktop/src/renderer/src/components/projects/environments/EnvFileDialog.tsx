@@ -1,4 +1,4 @@
-import { countDotenvKeys, DEFAULT_ENV_FILE_NAMES, isEnvFileName } from '@agentmat/core';
+import { countDotenvKeys, DEFAULT_ENV_FILE_NAMES, isEnvFileName } from '@runova/core';
 import type { EnvFileSummary, ProjectEnvironment } from '@shared/apiTypes';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -56,7 +56,7 @@ export function EnvFileDialog({
 
     let cancelled = false;
     setLoading(true);
-    window.agentmat.environments
+    window.runova.environments
       .readFile(environment.id, file.id)
       .then((text) => {
         if (!cancelled) setContent(text);
@@ -84,7 +84,7 @@ export function EnvFileDialog({
     if (!canSubmit) return;
     setSubmitting(true);
     try {
-      await window.agentmat.environments.saveFile({
+      await window.runova.environments.saveFile({
         environmentId: environment.id,
         id: file?.id,
         fileName: trimmedName,
@@ -100,7 +100,7 @@ export function EnvFileDialog({
     }
   }
 
-  let nameHint = 'Saved encrypted in AgentMate. Nothing is written to the project folder.';
+  let nameHint = 'Saved encrypted in Runova. Nothing is written to the project folder.';
   if (trimmedName && !nameValid) nameHint = 'Use a name like .env or .env.production.';
   else if (nameTaken) nameHint = `${trimmedName} is already saved in ${environment.name}.`;
 

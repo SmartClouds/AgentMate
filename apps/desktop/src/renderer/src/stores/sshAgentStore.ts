@@ -1,4 +1,4 @@
-import type { EffortLevel } from '@agentmat/core';
+import type { EffortLevel } from '@runova/core';
 import type {
   SshAgentHistoryRun,
   SshAgentMode,
@@ -99,7 +99,7 @@ export async function startSshAgentTask(input: StartSshAgentTaskInput): Promise<
     sessions: { ...state.sessions, [sessionId]: { mode, phase: 'thinking', step: 0 } },
   }));
   try {
-    await window.agentmat.sshAgent.start(input);
+    await window.runova.sshAgent.start(input);
   } catch (error) {
     useSshAgentStore.getState().clear(sessionId);
     throw error;
@@ -131,15 +131,15 @@ export function continueSshAgentTaskFrom(
 }
 
 export function approveSshAgentCommand(sessionId: string): void {
-  void window.agentmat.sshAgent.approveCommand(sessionId);
+  void window.runova.sshAgent.approveCommand(sessionId);
 }
 
 export function skipSshAgentCommand(sessionId: string): void {
-  void window.agentmat.sshAgent.skipCommand(sessionId);
+  void window.runova.sshAgent.skipCommand(sessionId);
 }
 
 export function answerSshAgentInput(sessionId: string, answer: string): void {
-  void window.agentmat.sshAgent.answerNeedsInput(sessionId, answer);
+  void window.runova.sshAgent.answerNeedsInput(sessionId, answer);
 }
 
 /**
@@ -147,23 +147,23 @@ export function answerSshAgentInput(sessionId: string, answer: string): void {
  * caller keeps the text instead of losing it.
  */
 export async function sendSshAgentMessage(sessionId: string, text: string): Promise<boolean> {
-  return window.agentmat.sshAgent.sendMessage(sessionId, text);
+  return window.runova.sshAgent.sendMessage(sessionId, text);
 }
 
 export function answerSshAgentPassword(sessionId: string, approved: boolean): void {
-  void window.agentmat.sshAgent.answerPassword(sessionId, approved);
+  void window.runova.sshAgent.answerPassword(sessionId, approved);
 }
 
 export function stopSshAgentTask(sessionId: string): void {
-  void window.agentmat.sshAgent.stop(sessionId);
+  void window.runova.sshAgent.stop(sessionId);
 }
 
 export function continueSshAgentTask(sessionId: string): void {
-  void window.agentmat.sshAgent.continueTask(sessionId);
+  void window.runova.sshAgent.continueTask(sessionId);
 }
 
 /**
- * Whether the user can see this terminal right now: AgentMate is the focused app, the terminal
+ * Whether the user can see this terminal right now: Runova is the focused app, the terminal
  * panel is open, and this is the tab it shows.
  */
 function isWatchingSession(sessionId: string): boolean {
@@ -182,7 +182,7 @@ let started = false;
 export function initSshAgentStatus(): void {
   if (started) return;
   started = true;
-  window.agentmat.sshAgent.onProgress((progress: SshAgentProgress) => {
+  window.runova.sshAgent.onProgress((progress: SshAgentProgress) => {
     useSshAgentStore.setState((state) => {
       const existing = state.sessions[progress.sessionId];
       const next: SshAgentSessionState = {
@@ -202,7 +202,7 @@ export function initSshAgentStatus(): void {
     if (isSshAgentWaitingOnUser(now) && !isWatchingSession(progress.sessionId)) {
       const title =
         useTerminalStore.getState().sessions.find((s) => s.id === progress.sessionId)?.title ?? '';
-      void window.agentmat.sshAgent.notifyWaiting(progress.sessionId, title);
+      void window.runova.sshAgent.notifyWaiting(progress.sessionId, title);
     }
   });
 }

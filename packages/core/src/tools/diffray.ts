@@ -160,7 +160,7 @@ export interface DiffrayReviewInput {
   jsonOutput?: boolean;
 }
 
-/** Shells AgentMate's terminal opens with, which differ in how they redirect output to a file. */
+/** Shells Runova's terminal opens with, which differ in how they redirect output to a file. */
 export type DiffrayShellKind = 'powershell' | 'posix';
 
 export const DIFFRAY_DEFAULT_JSON_FILE = 'diffray-report.json';
@@ -599,7 +599,7 @@ function powerShellCodebaseScript(
   const ps = quotePowerShellLiteral;
   const flags = diffrayReviewFlags(input).map(ps).join(', ');
   const skip = (options.skipFiles ?? []).map(ps).join(', ');
-  return `# diffray whole-file review for ${options.label?.trim() || 'this project'}, written by AgentMate.
+  return `# diffray whole-file review for ${options.label?.trim() || 'this project'}, written by Runova.
 # The file list is worked out here instead of being pasted onto the prompt, so the command
 # you run stays one line long. Ctrl+C stops the run.
 $ErrorActionPreference = 'Continue'
@@ -691,7 +691,7 @@ function posixCodebaseScript(
   const flags = diffrayReviewFlags(input).map(sh).join(' ');
   const skip = (options.skipFiles ?? []).map(sh).join(' ');
   return `#!/usr/bin/env bash
-# diffray whole-file review for ${options.label?.trim() || 'this project'}, written by AgentMate.
+# diffray whole-file review for ${options.label?.trim() || 'this project'}, written by Runova.
 # The file list is worked out here instead of being pasted onto the prompt, so the command
 # you run stays one line long. Ctrl+C stops the run.
 

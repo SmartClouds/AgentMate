@@ -158,7 +158,7 @@ describeRemoteFilesContract('SFTP over a stand-in connection', async () => {
 describe('createSftpRemote', () => {
   let scratch = '';
   beforeAll(async () => {
-    scratch = await mkdtemp(join(tmpdir(), 'agentmate-sftp-remote-'));
+    scratch = await mkdtemp(join(tmpdir(), 'runova-sftp-remote-'));
   });
   afterAll(async () => {
     await rm(scratch, { recursive: true, force: true });

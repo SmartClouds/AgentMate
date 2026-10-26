@@ -18,7 +18,7 @@ import {
  */
 
 beforeEach(() => {
-  const dir = tempDir('agentmate-sealed-');
+  const dir = tempDir('runova-sealed-');
   mkdirSync(join(dir, 'data'), { recursive: true });
   setElectronPath('userData', dir);
   lockVault();

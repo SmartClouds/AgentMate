@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { TestResult, TestRunEvent, TestTarget } from '@agentmat/core';
+import type { TestResult, TestRunEvent, TestTarget } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { discoverWorkspaceTests } from './discovery';
 import { write } from './fakeRunners';
@@ -12,12 +12,12 @@ import { TestRunManager } from './runner';
  * The Tests panel against the real toolchains, one tiny project each with a passing and a failing
  * test. Slow (compilers, package restores), so it only runs when asked:
  *
- *   AGENTMATE_REAL_RUNNERS=1 pnpm --filter @agentmat/desktop exec vitest run realRunners
+ *   RUNOVA_REAL_RUNNERS=1 pnpm --filter @runova/desktop exec vitest run realRunners
  *
  * A toolchain that is not installed is skipped rather than failed.
  */
 
-const enabled = process.env.AGENTMATE_REAL_RUNNERS === '1';
+const enabled = process.env.RUNOVA_REAL_RUNNERS === '1';
 
 function installed(command: string, args: string[]): boolean {
   if (!enabled) return false;
@@ -39,7 +39,7 @@ function installed(command: string, args: string[]): boolean {
 let root = '';
 
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), 'agentmate-real-runner-'));
+  root = await mkdtemp(join(tmpdir(), 'runova-real-runner-'));
 });
 
 afterEach(async () => {

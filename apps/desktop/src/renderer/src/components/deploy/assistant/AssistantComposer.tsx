@@ -1,4 +1,4 @@
-import { CLI_REGISTRY } from '@agentmat/core';
+import { CLI_REGISTRY } from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { CliLogo } from '@/components/cliLogos';
@@ -39,7 +39,7 @@ export function AssistantComposer({
   const [starting, setStarting] = useState(false);
   const cliQuery = useQuery({
     queryKey: queryKeys.cliStatus,
-    queryFn: () => window.agentmat.cli.detectAll(),
+    queryFn: () => window.runova.cli.detectAll(),
     meta: { silentLoading: true },
   });
   const promptClis = CLI_REGISTRY.filter(

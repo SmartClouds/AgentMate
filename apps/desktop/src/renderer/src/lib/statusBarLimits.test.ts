@@ -1,4 +1,4 @@
-import { emptyUsageTokens, type ProviderUsage, type SubscriptionWindow } from '@agentmat/core';
+import { emptyUsageTokens, type ProviderUsage, type SubscriptionWindow } from '@runova/core';
 import { describe, expect, it } from 'vitest';
 import { buildLimitChips, liveWindows, mergeProviderUsage } from './statusBarLimits';
 

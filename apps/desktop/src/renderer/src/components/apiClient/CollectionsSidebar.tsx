@@ -1,4 +1,4 @@
-import type { ApiTreeNode } from '@agentmat/core';
+import type { ApiTreeNode } from '@runova/core';
 import type { ApiCollectionSummary } from '@shared/apiClientTypes';
 import { LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import { useMemo, useState } from 'react';

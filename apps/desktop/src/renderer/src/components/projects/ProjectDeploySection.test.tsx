@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

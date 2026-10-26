@@ -38,14 +38,14 @@ interface PickerApi {
 
 declare global {
   interface Window {
-    __agentmatPicker?: PickerApi;
+    __runovaPicker?: PickerApi;
   }
 }
 
 function inject(): PickerApi {
   const result = (0, eval)(source);
   expect(result).toBe(true);
-  const api = window.__agentmatPicker;
+  const api = window.__runovaPicker;
   if (!api) throw new Error('picker did not install');
   return api;
 }
@@ -69,7 +69,7 @@ const frame = () => new Promise((resolve) => setTimeout(resolve, 30));
 
 function pointAt(el: Element | null, type = 'pointermove', init: MouseEventInit = {}): void {
   under = el;
-  const host = document.querySelector('agentmate-picker');
+  const host = document.querySelector('runova-picker');
   const target = host ?? document;
   target.dispatchEvent(
     new MouseEvent(type, { bubbles: true, cancelable: true, clientX: 50, clientY: 50, ...init }),
@@ -94,7 +94,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  window.__agentmatPicker?.teardown();
+  window.__runovaPicker?.teardown();
   vi.restoreAllMocks();
 });
 
@@ -104,13 +104,13 @@ describe('installing', () => {
     first.arm();
     const second = inject();
     expect(second).toBe(first);
-    expect(document.querySelectorAll('agentmate-picker')).toHaveLength(1);
+    expect(document.querySelectorAll('runova-picker')).toHaveLength(1);
   });
 
   it('removes itself on teardown', () => {
     inject().teardown();
-    expect(document.querySelector('agentmate-picker')).toBeNull();
-    expect(window.__agentmatPicker).toBeUndefined();
+    expect(document.querySelector('runova-picker')).toBeNull();
+    expect(window.__runovaPicker).toBeUndefined();
   });
 });
 
@@ -158,7 +158,7 @@ describe('hovering', () => {
     api.arm();
     api.freeze();
     const wheel = new WheelEvent('wheel', { bubbles: true, cancelable: true });
-    document.querySelector('agentmate-picker')?.dispatchEvent(wheel);
+    document.querySelector('runova-picker')?.dispatchEvent(wheel);
     expect(wheel.defaultPrevented).toBe(true);
   });
 });
@@ -197,7 +197,7 @@ describe('awaitPick', () => {
     const button = document.querySelector('button') as Element;
     const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
     under = button;
-    document.querySelector('agentmate-picker')?.dispatchEvent(event);
+    document.querySelector('runova-picker')?.dispatchEvent(event);
     expect(event.defaultPrevented).toBe(true);
     expect((await pending).kind).toBe('copy');
   });
@@ -399,7 +399,7 @@ describe('pins', () => {
     api.setMarkers([marker(1)]);
     api.setChromeHidden(true);
     expect(api.inspect().chromeHidden).toBe(true);
-    expect((document.querySelector('agentmate-picker') as HTMLElement).style.visibility).toBe(
+    expect((document.querySelector('runova-picker') as HTMLElement).style.visibility).toBe(
       'hidden',
     );
     api.setChromeHidden(false);

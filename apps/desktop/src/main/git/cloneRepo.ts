@@ -1,6 +1,6 @@
 import { mkdir, readdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { stripRemoteCredentials } from '@agentmat/core';
+import { stripRemoteCredentials } from '@runova/core';
 import { runGh } from './githubCli';
 import { git, gitOrNull, isGitRepo } from './plumbing';
 

@@ -1,9 +1,9 @@
-import { consolePortFromSerial, type EmulatorObservation } from '@agentmat/core';
+import { consolePortFromSerial, type EmulatorObservation } from '@runova/core';
 
 /**
  * Reads CPU and memory for every running Android emulator, for the idle tracker.
  *
- * Two things make this harder than it looks. An emulator started outside AgentMate (or before a
+ * Two things make this harder than it looks. An emulator started outside Runova (or before a
  * restart of it, since they are launched detached) has no pid on record, so its process is found
  * through the console port the emulator listens on. And asking adb anything starts an adb server
  * if none is running, which must never happen to someone who does not use Android, so a plain
@@ -24,7 +24,7 @@ export interface EmulatorSourceDeps {
   listOnlineEmulators(): Promise<string[] | null>;
   /** The AVD name behind each serial. A serial still booting may be missing from the answer. */
   resolveAvdNames(serials: string[]): Promise<Map<string, string>>;
-  /** Pids of the emulators AgentMate launched itself. */
+  /** Pids of the emulators Runova launched itself. */
   launchedPids(): Map<string, number>;
   /** Every listening TCP port by the pid that owns it. */
   listeningPorts(): Promise<Map<number, number[]>>;

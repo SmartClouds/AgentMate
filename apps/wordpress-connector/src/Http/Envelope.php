@@ -3,12 +3,12 @@
  * The response envelope, mirrored from bundle.ts:
  *   "AMWR1\n" | meta length (uint32, big-endian) | meta JSON {ts, status, sig} | gzip(frame)
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Http;
+namespace Runova\Connector\Http;
 
-use AgentMate\Connector\Protocol;
+use Runova\Connector\Protocol;
 
 final class Envelope
 {

@@ -1,4 +1,4 @@
-import type { OriginLockPreview } from './deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { OriginLockPreview } from './deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * Plain data the Cloudflare dialog passes between the main process and the renderer. The API token
@@ -6,7 +6,7 @@ import type { OriginLockPreview } from './deploy/protocol/generated/AgentMate.Se
  * learns that one is set and what it is allowed to do.
  */
 
-/** A permission AgentMate asks for when it guides the user through creating a token. */
+/** A permission Runova asks for when it guides the user through creating a token. */
 export type CloudflarePermissionId =
   | 'zone'
   | 'dns'
@@ -274,7 +274,7 @@ export type CloudflareDnsTokenInput =
 export interface CloudflareRemoveDnsTokenInput {
   serverId: string;
   zone: string;
-  /** Also delete the token at Cloudflare, when AgentMate made it. */
+  /** Also delete the token at Cloudflare, when Runova made it. */
   deleteAtCloudflare: boolean;
 }
 

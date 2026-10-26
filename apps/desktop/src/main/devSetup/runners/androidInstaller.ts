@@ -1,5 +1,5 @@
 import type { ChildProcess } from 'node:child_process';
-import { ANDROID_REPOSITORY_MANIFEST_URL, parseCmdlineToolsArchive } from '@agentmat/core';
+import { ANDROID_REPOSITORY_MANIFEST_URL, parseCmdlineToolsArchive } from '@runova/core';
 import type { SdkManagerStreamHandlers } from '../../android/exec';
 import type { ResolvedAndroidSdk } from '../../android/sdk';
 import { createDownloadHooks, type ManagedKit } from './managed';
@@ -7,7 +7,7 @@ import type { RunHooks, RunResult } from './packageManagerRunner';
 
 /**
  * Setting up the Android SDK without Android Studio. Google publishes the command-line tools as a
- * plain zip; AgentMate downloads that, checks it and puts it in `cmdline-tools/latest` inside the
+ * plain zip; Runova downloads that, checks it and puts it in `cmdline-tools/latest` inside the
  * SDK folder. Everything after that (platform tools, the emulator, a platform, a system image and
  * the licenses) is `sdkmanager`, which this drives and reports on.
  *
@@ -21,7 +21,7 @@ const IDLE_MS = 10 * 60_000;
 
 export interface AndroidInstallerDeps {
   kit: ManagedKit;
-  /** The SDK as AgentMate sees it now. */
+  /** The SDK as Runova sees it now. */
   androidSdk: () => Promise<ResolvedAndroidSdk>;
   refreshAndroidSdk: () => void;
   /** Where a new SDK goes when none exists. */
@@ -129,7 +129,7 @@ export function createAndroidInstaller(deps: AndroidInstallerDeps): {
       if (javaMissing) {
         return {
           failure:
-            'The Android tools need Java and could not find it. Open a new terminal or restart AgentMate, then try again.',
+            'The Android tools need Java and could not find it. Open a new terminal or restart Runova, then try again.',
           declinedLicense,
         };
       }
@@ -202,7 +202,7 @@ export function createAndroidInstaller(deps: AndroidInstallerDeps): {
       if (hooks.token.cancelled) return CANCELLED;
 
       hooks.onProgress({ phase: 'extracting', fraction: null });
-      const staging = `${root}${sep}.agentmate-cmdline-tools-${kit.randomId()}`;
+      const staging = `${root}${sep}.runova-cmdline-tools-${kit.randomId()}`;
       await kit.fs.mkdir(staging);
       try {
         const extracted = await kit.extract(zipPath, staging, {

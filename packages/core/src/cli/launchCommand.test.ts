@@ -21,11 +21,9 @@ describe('buildAgentLaunchCommand', () => {
       buildAgentLaunchCommand({
         cliId: 'claude-code',
         shellKind: 'powershell',
-        hookSettingsPath: 'C:\\Users\\me\\AppData\\Roaming\\AgentMate\\agent-hooks\\claude.json',
+        hookSettingsPath: 'C:\\Users\\me\\AppData\\Roaming\\Runova\\agent-hooks\\claude.json',
       }),
-    ).toBe(
-      'claude --settings C:\\Users\\me\\AppData\\Roaming\\AgentMate\\agent-hooks\\claude.json',
-    );
+    ).toBe('claude --settings C:\\Users\\me\\AppData\\Roaming\\Runova\\agent-hooks\\claude.json');
   });
 
   it('quotes a hook settings path with spaces for the shell it is typed into', () => {

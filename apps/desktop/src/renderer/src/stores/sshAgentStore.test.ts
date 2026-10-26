@@ -1,6 +1,6 @@
 import type { SshAgentHistoryRun, SshAgentProgress } from '@shared/apiTypes';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { currentBridge, type FakeBridge } from '../../../test/renderer/agentmatBridge';
+import { currentBridge, type FakeBridge } from '../../../test/renderer/runovaBridge';
 import {
   continueSshAgentTaskFrom,
   initSshAgentStatus,

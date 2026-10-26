@@ -56,7 +56,7 @@ function SavedRdpServerRow({
     if (!confirmed) return;
     setRemoving(true);
     try {
-      await window.agentmat.rdp.removeServer(server.id);
+      await window.runova.rdp.removeServer(server.id);
       onRemoved();
     } finally {
       setRemoving(false);
@@ -160,7 +160,7 @@ export function RdpServersPanel(): React.JSX.Element {
 
   const serversQuery = useQuery({
     queryKey: queryKeys.rdpServers,
-    queryFn: () => window.agentmat.rdp.listServers(),
+    queryFn: () => window.runova.rdp.listServers(),
   });
   const servers = serversQuery.data ?? [];
   // Looked up by id so the dialog shows the saved certificate as it is after a change.
@@ -171,7 +171,7 @@ export function RdpServersPanel(): React.JSX.Element {
   }
 
   const reorderMutation = useMutation({
-    mutationFn: (orderedIds: string[]) => window.agentmat.rdp.reorderServers(orderedIds),
+    mutationFn: (orderedIds: string[]) => window.runova.rdp.reorderServers(orderedIds),
     onSuccess: (saved) => queryClient.setQueryData(queryKeys.rdpServers, saved),
     onError: (error) => {
       toast.error(ipcErrorMessage(error, 'Could not save the new order.'));
@@ -200,14 +200,14 @@ export function RdpServersPanel(): React.JSX.Element {
 
   async function openSession(server: RdpSavedServer): Promise<void> {
     try {
-      await window.agentmat.rdp.openSession(server.id);
+      await window.runova.rdp.openSession(server.id);
     } catch (error) {
       toast.error(ipcErrorMessage(error, 'Could not open the session.'));
     }
   }
 
   async function handleConnect(server: RdpSavedServer): Promise<void> {
-    const status = await window.agentmat.ssh.vaultStatus();
+    const status = await window.runova.ssh.vaultStatus();
     if (status.hasPasskey && !status.unlocked) {
       setPendingConnect(server);
       setUnlockMode('unlock');

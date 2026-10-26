@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { descendantPids, type ProcessRow } from '@agentmat/core';
+import { descendantPids, type ProcessRow } from '@runova/core';
 import { callScript, compileScript, helperAssemblyPath } from './processSuspendWindows';
 import { listProcesses } from './processTree';
 

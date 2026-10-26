@@ -1,4 +1,4 @@
-import type { AndroidEvent, AvdSummary } from '@agentmat/core';
+import type { AndroidEvent, AvdSummary } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AndroidEmulatorManager } from './emulatorManager';
 
@@ -7,7 +7,7 @@ import { AndroidEmulatorManager } from './emulatorManager';
  *
  * The behaviours that matter are the ones that are hard to see by hand: that the console port is
  * chosen so the serial is known before the emulator exists, that the boot stages follow what the
- * device actually reports, that an emulator started outside AgentMate is adopted rather than
+ * device actually reports, that an emulator started outside Runova is adopted rather than
  * ignored, and that stopping falls back to killing the process when the console will not.
  */
 
@@ -112,7 +112,7 @@ describe('snapshot', () => {
     expect(snapshot.emulators[0]).toMatchObject({ state: 'stopped', serial: null, progress: 0 });
   });
 
-  it('adopts an emulator that was started outside AgentMate', async () => {
+  it('adopts an emulator that was started outside Runova', async () => {
     world.boot('emulator-5554', 'Pixel_7_API_34');
     const manager = makeManager([avd('Pixel_7_API_34')]);
 

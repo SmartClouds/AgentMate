@@ -28,8 +28,8 @@ function errorOf(value: unknown): string {
 
 const project = {
   id: 'p1',
-  name: 'AgentMate',
-  folderPath: 'E:\\work\\agentmate',
+  name: 'Runova',
+  folderPath: 'E:\\work\\runova',
   createdAt: '2025-01-01T00:00:00.000Z',
   updatedAt: '2025-06-01T00:00:00.000Z',
 };
@@ -41,7 +41,7 @@ describe('the envelope itself', () => {
       templates: [{ id: 't1', name: 'Review', content: 'Look at this' }],
       activity: [{ id: 'a1', type: 'project-created', message: 'made a project' }],
     });
-    expect(result.data.projects?.[0].name).toBe('AgentMate');
+    expect(result.data.projects?.[0].name).toBe('Runova');
     expect(result.data.templates?.[0].name).toBe('Review');
     expect(result.data.activity?.[0].id).toBe('a1');
     expect(result.warnings).toEqual([]);
@@ -62,7 +62,7 @@ describe('the envelope itself', () => {
     ['an array', [{ version: BACKUP_VERSION }]],
     ['undefined', undefined],
   ])('refuses %s', (_label, value) => {
-    expect(errorOf(value)).toBe('That file is not a valid AgentMate backup.');
+    expect(errorOf(value)).toBe('That file is not a valid Runova backup.');
   });
 
   it('refuses a newer format and says which one it saw', () => {
@@ -79,12 +79,12 @@ describe('the envelope itself', () => {
   });
 
   it('refuses a file with no data object', () => {
-    expect(errorOf({ version: BACKUP_VERSION })).toBe('That file is not a valid AgentMate backup.');
+    expect(errorOf({ version: BACKUP_VERSION })).toBe('That file is not a valid Runova backup.');
     expect(errorOf({ version: BACKUP_VERSION, data: [] })).toBe(
-      'That file is not a valid AgentMate backup.',
+      'That file is not a valid Runova backup.',
     );
     expect(errorOf({ version: BACKUP_VERSION, data: 'projects' })).toBe(
-      'That file is not a valid AgentMate backup.',
+      'That file is not a valid Runova backup.',
     );
   });
 

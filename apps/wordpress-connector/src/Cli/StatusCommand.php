@@ -1,15 +1,15 @@
 <?php
 /**
- * `wp agentmate status`.
+ * `wp runova status`.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Cli;
+namespace Runova\Connector\Cli;
 
-use AgentMate\Connector\Guard\GuardInstaller;
-use AgentMate\Connector\Info\StatusChecks;
-use AgentMate\Connector\Plugin;
+use Runova\Connector\Guard\GuardInstaller;
+use Runova\Connector\Info\StatusChecks;
+use Runova\Connector\Plugin;
 
 /**
  * Checks what this site allows and what protects a deploy here.
@@ -34,7 +34,7 @@ final class StatusCommand
      *
      * ## EXAMPLES
      *
-     *     wp agentmate status
+     *     wp runova status
      *
      * @when after_wp_load
      *
@@ -46,10 +46,10 @@ final class StatusCommand
         if (!function_exists('get_plugin_data')) {
             require_once ABSPATH . 'wp-admin/includes/plugin.php';
         }
-        $header = get_plugin_data(AGENTMATE_CONNECTOR_FILE, false, false);
+        $header = get_plugin_data(RUNOVA_CONNECTOR_FILE, false, false);
         $checks = StatusChecks::run(Plugin::environment(), Plugin::storage(), array(
             'headerVersion' => isset($header['Version']) ? (string) $header['Version'] : null,
-            'guardCurrent' => GuardInstaller::isCurrent(dirname(AGENTMATE_CONNECTOR_FILE)),
+            'guardCurrent' => GuardInstaller::isCurrent(dirname(RUNOVA_CONNECTOR_FILE)),
         ));
         $rows = array();
         foreach ($checks as $check) {

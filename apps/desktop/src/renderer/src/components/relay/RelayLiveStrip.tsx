@@ -1,4 +1,4 @@
-import { formatTokenCount } from '@agentmat/core';
+import { formatTokenCount } from '@runova/core';
 import type { RelayRunView } from '@shared/relayTypes';
 import { useReducedMotion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';

@@ -50,13 +50,13 @@ export interface MonacoDiffEditorProps {
 function currentTheme(): string {
   switch (resolveMonacoThemeKey()) {
     case 'light':
-      return 'agentmate-light';
+      return 'runova-light';
     case 'dark':
-      return 'agentmate-dark';
+      return 'runova-dark';
     case 'vscode-dark':
       return 'vs-dark';
     case 'vs2026':
-      return 'agentmate-vs2026';
+      return 'runova-vs2026';
   }
 }
 
@@ -402,9 +402,9 @@ export const MonacoDiffEditor = forwardRef<MonacoDiffEditorHandle, MonacoDiffEdi
         (lineActionsRef.current ?? []).forEach((action, index) => {
           disposables.push(
             editor.addAction({
-              id: `agentmate.diff.lines.${action.id}`,
+              id: `runova.diff.lines.${action.id}`,
               label: action.menuLabel,
-              contextMenuGroupId: '0_agentmate_lines',
+              contextMenuGroupId: '0_runova_lines',
               contextMenuOrder: index,
               run: (ed) => {
                 const lines = selectedLines(ed, true);

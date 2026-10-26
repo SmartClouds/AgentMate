@@ -8,12 +8,12 @@ import {
   type SdkBinaryPaths,
   type SdkPlatform,
   sdkBinaryPaths,
-} from '@agentmat/core';
+} from '@runova/core';
 import { store } from '../store';
 import { toolSpawn } from './spawnTool';
 
 /**
- * Where the pure resolution in @agentmat/core meets the real filesystem. Everything downstream
+ * Where the pure resolution in @runova/core meets the real filesystem. Everything downstream
  * takes absolute binary paths from here, which is what lets the rest of the feature spawn tools
  * directly instead of going through a shell and worrying about Windows quoting.
  */

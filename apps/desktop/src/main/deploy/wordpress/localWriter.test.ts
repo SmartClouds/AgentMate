@@ -23,7 +23,7 @@ let base: string;
 let root: string;
 
 beforeEach(() => {
-  base = mkdtempSync(join(tmpdir(), 'agentmate-wp-writer-'));
+  base = mkdtempSync(join(tmpdir(), 'runova-wp-writer-'));
   root = join(base, 'project');
   mkdirSync(root);
 });

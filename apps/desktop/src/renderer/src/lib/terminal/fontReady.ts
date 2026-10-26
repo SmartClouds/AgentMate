@@ -29,7 +29,7 @@ export function whenTerminalFontReady(): Promise<void> {
  * The face terminals use for Persian and Arabic letters. It covers those letters only, so it can
  * sit first in the terminal's font list without touching how Latin text, borders or symbols look.
  */
-export const TERMINAL_RTL_FONT = 'AgentMate Terminal RTL';
+export const TERMINAL_RTL_FONT = 'Runova Terminal RTL';
 
 // The Arabic block and its supplements and presentation forms, plus the zero-width non-joiner
 // and joiner, which have to come from the same face as the letters around them.

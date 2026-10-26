@@ -1,5 +1,5 @@
-import type { Project, WpIgnoreList } from '@agentmat/core';
-import { withoutWpIgnore } from '@agentmat/core';
+import type { Project, WpIgnoreList } from '@runova/core';
+import { withoutWpIgnore } from '@runova/core';
 import { wordPressErrorMessage } from '@shared/wordpressErrors';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
@@ -38,7 +38,7 @@ export function useProjectIgnore(project: Project | undefined): ProjectIgnore {
     if (!project) return { ok: false, error: 'That project is not loaded yet.' };
     setSaving(true);
     try {
-      const updated = await window.agentmat.deployWordPress.setProjectIgnore({
+      const updated = await window.runova.deployWordPress.setProjectIgnore({
         projectId: project.id,
         ignore: next ?? {},
       });

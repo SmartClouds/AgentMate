@@ -1,4 +1,4 @@
-import { defaultGrammarSettings, type GrammarSettings } from '@agentmat/core';
+import { defaultGrammarSettings, type GrammarSettings } from '@runova/core';
 import type { GrammarCheckResult, GrammarIssue } from '@shared/grammar';
 import { act, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';

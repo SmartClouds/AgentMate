@@ -54,10 +54,10 @@ export function HostKeyChangedDialogHost(): React.JSX.Element {
                   {request.nickname}’s identity changed
                 </DialogTitle>
                 <DialogDescription>
-                  {request.host}:{request.port} presented a different host key than the one
-                  AgentMate trusted before. That is expected after you reinstall or replace the
-                  server. If you did neither, someone may be intercepting the connection: check the
-                  new fingerprint with your hosting provider before you trust it.
+                  {request.host}:{request.port} presented a different host key than the one Runova
+                  trusted before. That is expected after you reinstall or replace the server. If you
+                  did neither, someone may be intercepting the connection: check the new fingerprint
+                  with your hosting provider before you trust it.
                 </DialogDescription>
               </DialogHeader>
             </div>

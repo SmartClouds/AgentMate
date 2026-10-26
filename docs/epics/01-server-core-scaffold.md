@@ -11,15 +11,15 @@ on, nothing in the core is reachable without an explicit authorization decision.
 
 ## Tasks
 
-- [x] T1 Solution layout: `AgentMate.ServerCore.slnx`, `global.json` (SDK 10.0.4xx, roll forward
+- [x] T1 Solution layout: `Runova.ServerCore.slnx`, `global.json` (SDK 10.0.4xx, roll forward
   latest feature, Microsoft.Testing.Platform runner), `Directory.Build.props` (nullable, implicit
   usings, warnings as errors, latest analyzers, invariant globalization), `Directory.Packages.props`
   (central versions), `packages.lock.json` per project with locked restore in CI, `nuget.config`
   with package source mapping to nuget.org only, `.editorconfig` for C#, a local dotnet tool
   manifest pinning the TypedSignalR generator.
-- [x] T2 Projects: `src/AgentMate.ServerCore` (web host, `serve` and `admin` commands, runtime
-  identifiers `linux-x64;linux-arm64` so locked publishes work), `tests/AgentMate.ServerCore.Tests`
-  (xUnit v3), `tests/AgentMate.ServerCore.SystemTests` (placeholder that skips outside Linux with
+- [x] T2 Projects: `src/Runova.ServerCore` (web host, `serve` and `admin` commands, runtime
+  identifiers `linux-x64;linux-arm64` so locked publishes work), `tests/Runova.ServerCore.Tests`
+  (xUnit v3), `tests/Runova.ServerCore.SystemTests` (placeholder that skips outside Linux with
   Docker; CI runs it only in the `[e2e]` job that E03 adds).
 - [x] T3 Host: minimal APIs; host filtering and rejection of any request with an `Origin` header
   before authentication; a placeholder authentication scheme that never authenticates and
@@ -28,7 +28,7 @@ on, nothing in the core is reachable without an explicit authorization decision.
   on a Unix socket in production (stale socket files from a crash are detected and replaced, the
   socket ends up 0660) and on loopback TCP in development. Only an exact first argument of `admin`
   diverts from the web host, and nothing with side effects runs before the host is built.
-- [x] T4 `agentmate-core admin version` prints the version as JSON without starting Kestrel (the
+- [x] T4 `runova-core admin version` prints the version as JSON without starting Kestrel (the
   installer uses it later).
 - [x] T5 Contracts: `[TranspilationSource]` DTOs (Tapper attributes) and the `[Hub]` `ICoreHub` and
   `[Receiver]` `ICoreHubReceiver` interfaces (TypedSignalR attributes); `CoreHub` implements
@@ -82,7 +82,7 @@ on, nothing in the core is reachable without an explicit authorization decision.
 - **The generator needs a restored project** (it loads it through MSBuild), so
   `server-core:contracts` restores first. Linux and Windows produce byte-identical output
   (checked with SHA-256 in the .NET SDK container).
-- **Placeholder authentication.** The scheme is named `AgentMateDevice`; its handler
+- **Placeholder authentication.** The scheme is named `RunovaDevice`; its handler
   (`NoCredentialsAuthenticationHandler`) authenticates nobody so challenges are a clean 401 until
   E04 replaces it.
 - **Invariant globalization.** The core accepts ASCII (punycode) domain labels only; the desktop

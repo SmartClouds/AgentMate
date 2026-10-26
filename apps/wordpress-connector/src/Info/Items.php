@@ -3,14 +3,14 @@
  * The site's themes, plugins and mu-plugins as WpItem records. Names that cannot be a slug (a
  * folder with a space, a theme in a subfolder) are left out, since they can never be synced.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Info;
+namespace Runova\Connector\Info;
 
-use AgentMate\Connector\Env\Environment;
-use AgentMate\Connector\Files\ItemResolver;
-use AgentMate\Connector\Files\PathPolicy;
+use Runova\Connector\Env\Environment;
+use Runova\Connector\Files\ItemResolver;
+use Runova\Connector\Files\PathPolicy;
 
 final class Items
 {
@@ -29,8 +29,8 @@ final class Items
     /** Whether this site lets anything be written at all. */
     public static function writesAllowed(Environment $env): bool
     {
-        return !$env->constantOn('AGENTMATE_CONNECTOR_READ_ONLY')
-            && !$env->constantOn('AGENTMATE_CONNECTOR_DISABLED')
+        return !$env->constantOn('RUNOVA_CONNECTOR_READ_ONLY')
+            && !$env->constantOn('RUNOVA_CONNECTOR_DISABLED')
             && $env->fileModsAllowed()
             && $env->filesystemMethod() === 'direct';
     }

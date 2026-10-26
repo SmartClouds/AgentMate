@@ -65,7 +65,7 @@ function scanCodex(cache: ScanCache = {}) {
 }
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'agentmate-log-folders-'));
+  root = mkdtempSync(join(tmpdir(), 'runova-log-folders-'));
   now = Date.now();
   vi.stubEnv('CLAUDE_CONFIG_DIR', join(root, 'claude'));
   vi.stubEnv('CODEX_HOME', join(root, 'codex'));
@@ -80,13 +80,13 @@ afterEach(() => {
 
 describe('Claude Code session folders', () => {
   it('names a project directory after the folder its transcripts were launched in', async () => {
-    claudeFile('E--AgentMate', 'a.jsonl', claudeLine('E:\\AgentMate\\apps\\desktop', 'm1'));
-    claudeFile('E--AgentMate', 'b.jsonl', claudeLine('E:\\AgentMate', 'm2'));
+    claudeFile('E--Runova', 'a.jsonl', claudeLine('E:\\Runova\\apps\\desktop', 'm1'));
+    claudeFile('E--Runova', 'b.jsonl', claudeLine('E:\\Runova', 'm2'));
 
     const result = await scanClaude();
 
     expect(result.entries).toHaveLength(2);
-    expect(result.sources).toEqual([{ folder: 'E:\\AgentMate', count: 2 }]);
+    expect(result.sources).toEqual([{ folder: 'E:\\Runova', count: 2 }]);
   });
 
   it('reads deeper into a transcript when its first cwd is past the first 32 KB', async () => {
@@ -94,11 +94,11 @@ describe('Claude Code session folders', () => {
     const padding = Array.from({ length: 40 }, (_, i) =>
       JSON.stringify({ type: 'summary', text: `${i}`.padEnd(1000, 'x') }),
     ).join('\n');
-    claudeFile('E--AgentMate', 'long.jsonl', `${padding}\n${claudeLine('E:\\AgentMate', 'm1')}`);
+    claudeFile('E--Runova', 'long.jsonl', `${padding}\n${claudeLine('E:\\Runova', 'm1')}`);
 
     const result = await scanClaude();
 
-    expect(result.sources).toEqual([{ folder: 'E:\\AgentMate', count: 1 }]);
+    expect(result.sources).toEqual([{ folder: 'E:\\Runova', count: 1 }]);
   });
 
   it('falls back to the first cwd seen when the directory name matches no folder', async () => {
@@ -106,16 +106,16 @@ describe('Claude Code session folders', () => {
     claudeFile(
       'E--a-very-long-project-name-with-a-hash-1f3a',
       'x.jsonl',
-      claudeLine('E:\\AgentMate\\apps', 'm1'),
+      claudeLine('E:\\Runova\\apps', 'm1'),
     );
 
     const result = await scanClaude();
 
-    expect(result.sources).toEqual([{ folder: 'E:\\AgentMate\\apps', count: 1 }]);
+    expect(result.sources).toEqual([{ folder: 'E:\\Runova\\apps', count: 1 }]);
   });
 
   it('gives a folder-less transcript a null folder rather than a wrong one', async () => {
-    claudeFile('E--AgentMate', 'nocwd.jsonl', claudeLine(null, 'm1'));
+    claudeFile('E--Runova', 'nocwd.jsonl', claudeLine(null, 'm1'));
 
     const result = await scanClaude();
 
@@ -124,7 +124,7 @@ describe('Claude Code session folders', () => {
   });
 
   it('treats a transcript sitting directly in the projects folder as having no folder', async () => {
-    writeFile(join(root, 'claude', 'projects', 'loose.jsonl'), claudeLine('E:\\AgentMate', 'm1'));
+    writeFile(join(root, 'claude', 'projects', 'loose.jsonl'), claudeLine('E:\\Runova', 'm1'));
 
     const result = await scanClaude();
 
@@ -132,36 +132,36 @@ describe('Claude Code session folders', () => {
   });
 
   it("gives a subagent's transcript the folder of its project directory", async () => {
-    claudeFile('E--AgentMate', 'parent.jsonl', claudeLine('E:\\AgentMate', 'p1', now - 2 * HOUR));
+    claudeFile('E--Runova', 'parent.jsonl', claudeLine('E:\\Runova', 'p1', now - 2 * HOUR));
     claudeFile(
-      'E--AgentMate',
+      'E--Runova',
       join('session-1', 'subagents', 'agent-1.jsonl'),
-      claudeLine('E:\\AgentMate\\apps', 's1'),
+      claudeLine('E:\\Runova\\apps', 's1'),
     );
 
     const result = await scanClaude();
 
-    expect(result.sources?.map((source) => source.folder)).toEqual(['E:\\AgentMate']);
+    expect(result.sources?.map((source) => source.folder)).toEqual(['E:\\Runova']);
     expect(result.sources?.reduce((sum, source) => sum + source.count, 0)).toBe(
       result.entries.length,
     );
   });
 
   it('keeps the runs in step with the entries when two projects are scanned together', async () => {
-    claudeFile('E--AgentMate', 'a.jsonl', claudeLine('E:\\AgentMate', 'a1'));
+    claudeFile('E--Runova', 'a.jsonl', claudeLine('E:\\Runova', 'a1'));
     claudeFile('E--Galaxy', 'b.jsonl', claudeLine('E:\\Galaxy', 'b1'));
     claudeFile('E--Galaxy', 'c.jsonl', claudeLine('E:\\Galaxy\\docs', 'b2'));
 
     const result = await scanClaude();
 
     const byFolder = new Map(result.sources?.map((source) => [source.folder, source.count]));
-    expect(byFolder.get('E:\\AgentMate')).toBe(1);
+    expect(byFolder.get('E:\\Runova')).toBe(1);
     expect(byFolder.get('E:\\Galaxy')).toBe(2);
     expect(result.entries).toHaveLength(3);
   });
 
   it('leaves the entries themselves free of any folder, so cached entries stay as they were', async () => {
-    claudeFile('E--AgentMate', 'a.jsonl', claudeLine('E:\\AgentMate', 'a1'));
+    claudeFile('E--Runova', 'a.jsonl', claudeLine('E:\\Runova', 'a1'));
 
     const result = await scanClaude();
 
@@ -259,7 +259,7 @@ describe('Codex session folders', () => {
 
 describe('scanLogFile', () => {
   it('still hands back the very same state for a file that has not changed', async () => {
-    const path = claudeFile('E--AgentMate', 'a.jsonl', claudeLine('E:\\AgentMate', 'a1'));
+    const path = claudeFile('E--Runova', 'a.jsonl', claudeLine('E:\\Runova', 'a1'));
     const info = statSync(path);
     const log: LogFile = { path, mtimeMs: info.mtimeMs, size: info.size };
     const first = await scanLogFile('claude-code', log, undefined);

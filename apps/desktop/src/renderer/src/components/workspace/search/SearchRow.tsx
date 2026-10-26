@@ -1,4 +1,4 @@
-import type { GitChangeStatus } from '@agentmat/core';
+import type { GitChangeStatus } from '@runova/core';
 import { isImagePath } from '@shared/imageFiles';
 import type { SymbolKind } from '@shared/symbolKinds';
 import { memo } from 'react';

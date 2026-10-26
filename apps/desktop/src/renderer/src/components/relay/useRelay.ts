@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type {
   RelayBoard,
   RelayContextEvent,
@@ -33,27 +33,27 @@ export function useRelayBoard(projectId: string | null) {
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: queryKeys.relayBoard(projectId ?? ''),
-    queryFn: () => window.agentmat.relay.board(projectId as string),
+    queryFn: () => window.runova.relay.board(projectId as string),
     enabled: Boolean(projectId),
   });
 
   useEffect(() => {
     if (!projectId) return;
-    void window.agentmat.relay.watch(projectId);
-    const offChanged = window.agentmat.relay.onChanged((event) => {
+    void window.runova.relay.watch(projectId);
+    const offChanged = window.runova.relay.onChanged((event) => {
       if (event.projectId !== projectId) return;
       void queryClient.invalidateQueries({ queryKey: queryKeys.relayBoard(projectId) });
       if (event.reason === 'files') {
         void queryClient.invalidateQueries({ queryKey: ['relay', 'task', projectId] });
       }
     });
-    const offRun = window.agentmat.relay.onRun((run) => {
+    const offRun = window.runova.relay.onRun((run) => {
       if (run.projectId === projectId) applyRun(queryClient, run);
     });
     return () => {
       offChanged();
       offRun();
-      void window.agentmat.relay.unwatch(projectId);
+      void window.runova.relay.unwatch(projectId);
     };
   }, [projectId, queryClient]);
 
@@ -71,7 +71,7 @@ export const useRelayContextStore = create<ContextState>(() => ({ byTab: {} }));
 export function useRelayContextFeed(): void {
   useEffect(
     () =>
-      window.agentmat.relay.onContext((event) =>
+      window.runova.relay.onContext((event) =>
         useRelayContextStore.setState((state) => ({
           byTab: { ...state.byTab, [event.tabId]: event },
         })),
@@ -99,7 +99,7 @@ export function useRelayActions() {
   const start = useCallback(
     async (input: RelayStartInput): Promise<boolean> => {
       try {
-        const result = await window.agentmat.relay.start(input);
+        const result = await window.runova.relay.start(input);
         if (!result.ok) {
           toast.error('The relay did not start', { description: result.error });
           return false;
@@ -120,11 +120,11 @@ export function useRelayActions() {
   );
 
   const pause = useCallback(
-    (run: RelayRunView) => window.agentmat.relay.pause(run.id).catch(failed('pause the relay')),
+    (run: RelayRunView) => window.runova.relay.pause(run.id).catch(failed('pause the relay')),
     [],
   );
   const resume = useCallback(
-    (run: RelayRunView) => window.agentmat.relay.resume(run.id).catch(failed('resume the relay')),
+    (run: RelayRunView) => window.runova.relay.resume(run.id).catch(failed('resume the relay')),
     [],
   );
   const cancel = useCallback(async (run: RelayRunView) => {
@@ -135,11 +135,11 @@ export function useRelayActions() {
       confirmLabel: 'Stop relay',
       variant: 'destructive',
     });
-    if (ok) await window.agentmat.relay.cancel(run.id).catch(failed('stop the relay'));
+    if (ok) await window.runova.relay.cancel(run.id).catch(failed('stop the relay'));
   }, []);
   const markDone = useCallback(
     (run: RelayRunView, taskId: string) =>
-      window.agentmat.relay.markDone(run.id, taskId).catch(failed('mark the task done')),
+      window.runova.relay.markDone(run.id, taskId).catch(failed('mark the task done')),
     [],
   );
 
@@ -152,7 +152,7 @@ export function useRelayActions() {
  */
 export async function runTaskInNewSession(project: Project, taskId: string): Promise<boolean> {
   try {
-    const run = await window.agentmat.relay.prepareRun(project.id, taskId);
+    const run = await window.runova.relay.prepareRun(project.id, taskId);
     const tabId = launchPromptTab(project, {
       cliId: run.choice.cliId,
       prompt: run.prompt,

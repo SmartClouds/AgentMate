@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { Project, WorktreeInfo } from '@agentmat/core';
+import type { Project, WorktreeInfo } from '@runova/core';
 import { fireEvent, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { asWorkspaceProject } from '@/lib/workspace/scope';
@@ -76,7 +76,7 @@ describe('WorktreesSection', () => {
     expect(within(row).getByText('3 changes')).toBeInTheDocument();
     expect(within(row).getByText('↑2')).toBeInTheDocument();
     expect(within(row).getByText('↓1')).toBeInTheDocument();
-    expect(screen.getByText('Added outside AgentMate')).toBeInTheDocument();
+    expect(screen.getByText('Added outside Runova')).toBeInTheDocument();
     await user.click(row);
     expect(navigate).toHaveBeenCalledWith('/workspace/p1~wt-1');
   });

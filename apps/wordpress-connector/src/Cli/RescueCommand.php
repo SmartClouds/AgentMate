@@ -1,17 +1,17 @@
 <?php
 /**
- * `wp agentmate rescue status|rollback`: for when a deploy broke the site and AgentMate cannot
+ * `wp runova rescue status|rollback`: for when a deploy broke the site and Runova cannot
  * reach it. Registered by the guard, so it still works with `--skip-plugins`.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Cli;
+namespace Runova\Connector\Cli;
 
-use AgentMate\Connector\Plugin;
+use Runova\Connector\Plugin;
 
 /**
- * Inspects and undoes a pending AgentMate deploy.
+ * Inspects and undoes a pending Runova deploy.
  */
 final class RescueCommand
 {
@@ -20,8 +20,8 @@ final class RescueCommand
      *
      * ## EXAMPLES
      *
-     *     wp agentmate rescue status
-     *     wp agentmate rescue status --skip-plugins
+     *     wp runova rescue status
+     *     wp runova rescue status --skip-plugins
      *
      * @when after_wp_load
      *
@@ -54,7 +54,7 @@ final class RescueCommand
      *
      * ## EXAMPLES
      *
-     *     wp agentmate rescue rollback --skip-plugins --yes
+     *     wp runova rescue rollback --skip-plugins --yes
      *
      * @when after_wp_load
      *

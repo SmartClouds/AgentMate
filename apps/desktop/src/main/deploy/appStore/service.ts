@@ -4,7 +4,7 @@ import {
   readCatalogInstall,
   renderCatalogApp,
   renderCatalogUpdate,
-} from '@agentmat/core';
+} from '@runova/core';
 import type {
   DeployAppInstallInput,
   DeployAppInstallResult,

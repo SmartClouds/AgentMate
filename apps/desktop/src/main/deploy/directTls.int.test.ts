@@ -28,7 +28,7 @@ import {
  * (and the link falls back to SSH meanwhile); then the link rides TLS with the device key. A
  * connection without a client certificate, with a key the core does not know, with a revoked
  * device, or to a server whose key is not the pin, is refused. Turning it off closes the port and
- * takes the ufw rule away. Needs AGENTMATE_SYSTEM_TESTS=1, Docker, and
+ * takes the ufw rule away. Needs RUNOVA_SYSTEM_TESTS=1, Docker, and
  * `pnpm server-core:publish linux-x64`.
  */
 
@@ -38,7 +38,7 @@ const REPO = fileURLToPath(new URL('../../../../../', import.meta.url));
 const ARTIFACTS = join(REPO, 'apps', 'server-core', 'artifacts', 'release');
 const TEST_TIMEOUT_MS = 900_000;
 const PASSWORD = 'correct horse battery staple';
-const CORE = '/opt/agentmate-core/current/agentmate-core';
+const CORE = '/opt/runova-core/current/runova-core';
 
 const servers: TestServer[] = [];
 const pools: SshConnectionPool[] = [];
@@ -73,7 +73,7 @@ function rawRequest(port: number, key?: string, certificate?: string): Promise<s
     const socket = tlsConnect({
       host: '127.0.0.1',
       port,
-      servername: 'agentmate-core',
+      servername: 'runova-core',
       minVersion: 'TLSv1.3',
       rejectUnauthorized: false,
       ...(key && certificate ? { key, cert: certificate } : {}),
@@ -84,9 +84,7 @@ function rawRequest(port: number, key?: string, certificate?: string): Promise<s
     };
     socket.setTimeout(10_000, () => done('timeout'));
     socket.once('secureConnect', () =>
-      socket.write(
-        'GET /api/v1/health HTTP/1.1\r\nHost: agentmate-core\r\nConnection: close\r\n\r\n',
-      ),
+      socket.write('GET /api/v1/health HTTP/1.1\r\nHost: runova-core\r\nConnection: close\r\n\r\n'),
     );
     socket.once('data', (chunk) => done(chunk.toString('utf8').split('\r\n')[0] ?? ''));
     socket.once('error', (error) => done(`error: ${error.message}`));
@@ -178,7 +176,7 @@ describe.skipIf(!enabled)('direct TLS on a real server', () => {
       expect(on.status).toMatchObject({ enabled: true, listening: true, port: tlsPort });
       expect(on.pinned).toMatchObject({ enabled: true, pin: on.status.pin });
       expect(server.run(`ss -Htln 'sport = :${tlsPort}' | wc -l`)).toBe('1');
-      expect(server.run(`stat -c %a /var/lib/agentmate-core/tls/server.key`)).toBe('600');
+      expect(server.run(`stat -c %a /var/lib/runova-core/tls/server.key`)).toBe('600');
 
       // ufw drops the port, so the link falls back to the SSH tunnel.
       await service.links.call('srv', (hub) => hub.ping());

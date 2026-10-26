@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
-import { installAgentmatBridge } from './agentmatBridge';
+import { installRunovaBridge } from './runovaBridge';
 import { resetAllStoresAsync } from './stores';
 
 /**
@@ -86,7 +86,7 @@ if (hasDom) {
     null) as typeof HTMLCanvasElement.prototype.getContext;
 
   if (!URL.createObjectURL) {
-    URL.createObjectURL = () => 'blob:agentmate-test';
+    URL.createObjectURL = () => 'blob:runova-test';
     URL.revokeObjectURL = () => undefined;
   }
 
@@ -105,7 +105,7 @@ if (hasDom) {
 
 beforeEach(async () => {
   if (!hasDom) return;
-  installAgentmatBridge();
+  installRunovaBridge();
   // Awaited rather than fired off: the store modules load on first use, and a test that runs
   // before that finished would inherit the previous test's state.
   await resetAllStoresAsync();

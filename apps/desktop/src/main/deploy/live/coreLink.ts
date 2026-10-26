@@ -1,6 +1,6 @@
 import type { IStreamResult, ISubscription } from '@microsoft/signalr';
 import { coreErrorCode, coreErrorMessage } from '../../../shared/coreErrors';
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import type { DeployConnection, DeployConnectionState } from '../../../shared/deployTypes';
 import type { LiveHubSession } from '../connection/liveHub';
 import type { LinkFeed } from './feeds';

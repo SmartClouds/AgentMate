@@ -1,4 +1,4 @@
-import type { DevItemId, DevRecipe, InstallIntent } from '@agentmat/core';
+import type { DevItemId, DevRecipe, InstallIntent } from '@runova/core';
 import type { RunHooks, RunResult } from './packageManagerRunner';
 
 /**
@@ -88,7 +88,7 @@ export function runManagedRecipe(
     }
     case 'docker-launch':
       return updating ? cannotUpdate() : runners.dockerLaunch.run(hooks);
-    // Installing again is the update: it follows the lock file this copy of AgentMate carries.
+    // Installing again is the update: it follows the lock file this copy of Runova carries.
     case 'studio-python-env':
       if (recipe.target === 'piper' || recipe.target === 'omnivoice') {
         return runners.studioTools.runEnv(recipe.target, hooks);

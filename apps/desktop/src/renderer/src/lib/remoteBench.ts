@@ -13,10 +13,10 @@ import { describeEncoderSupport } from './rtcCodecs';
  * would itself distort the CPU numbers it reports.
  *
  * Drive it from the renderer devtools console:
- *   __agentmatBench.start('before-webrtc/video-playback')
+ *   __runovaBench.start('before-webrtc/video-playback')
  *   … run the workload for 60s …
- *   __agentmatBench.stop()      // prints a summary
- *   __agentmatBench.export()    // downloads the raw NDJSON
+ *   __runovaBench.stop()      // prints a summary
+ *   __runovaBench.export()    // downloads the raw NDJSON
  */
 
 const MAX_SAMPLES = 4000;
@@ -140,7 +140,7 @@ export function recordControllerSample(input: ControllerInput): void {
 async function sampleProcess(): Promise<void> {
   if (!running) return;
   try {
-    const main = await window.agentmat.remote.benchSample();
+    const main = await window.runova.remote.benchSample();
     const perf = performance as Performance & { memory?: { usedJSHeapSize: number } };
     push({
       kind: 'process',
@@ -250,7 +250,7 @@ export function exportBenchmark(): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = `agentmate-bench-${label.replace(/[^\w.-]+/g, '_')}-${startedAt}.ndjson`;
+  anchor.download = `runova-bench-${label.replace(/[^\w.-]+/g, '_')}-${startedAt}.ndjson`;
   anchor.click();
   URL.revokeObjectURL(url);
 }
@@ -273,7 +273,7 @@ function round(value: number, digits: number): number {
 
 declare global {
   interface Window {
-    __agentmatBench: {
+    __runovaBench: {
       start: (label: string) => void;
       stop: () => BenchSummary;
       export: () => void;
@@ -281,7 +281,7 @@ declare global {
   }
 }
 
-window.__agentmatBench = {
+window.__runovaBench = {
   start: startBenchmark,
   stop: stopBenchmark,
   export: exportBenchmark,

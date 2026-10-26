@@ -1,4 +1,4 @@
-import { styleById } from '@agentmat/studio';
+import { styleById } from '@runova/studio';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { runLabel } from '../ai/runSettings';

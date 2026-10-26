@@ -30,7 +30,7 @@ interface PortOut {
 }
 
 function merged(files: Record<string, string>): Record<string, { ports?: PortOut[] }> {
-  const folder = mkdtempSync(join(tmpdir(), 'agentmate-e07-override-'));
+  const folder = mkdtempSync(join(tmpdir(), 'runova-e07-override-'));
   folders.push(folder);
   for (const [name, text] of Object.entries(files)) writeFileSync(join(folder, name), text);
   const env: NodeJS.ProcessEnv = {};

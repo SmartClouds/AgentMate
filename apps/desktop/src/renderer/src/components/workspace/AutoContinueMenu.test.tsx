@@ -1,10 +1,10 @@
-import type { AutoContinuePending } from '@agentmat/core';
+import type { AutoContinuePending } from '@runova/core';
 import { screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAgentStatusStore } from '@/stores/agentStatusStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
-import { currentBridge } from '../../../../test/renderer/agentmatBridge';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
+import { currentBridge } from '../../../../test/renderer/runovaBridge';
 import { AutoContinueMenu, autoContinuePendingLine } from './AutoContinueMenu';
 
 // The runtime owns real xterm instances, which the workspace store only calls when a tab closes.

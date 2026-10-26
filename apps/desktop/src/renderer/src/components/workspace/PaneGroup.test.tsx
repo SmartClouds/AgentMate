@@ -1,4 +1,4 @@
-import type { PaneGroupNode, Project } from '@agentmat/core';
+import type { PaneGroupNode, Project } from '@runova/core';
 import { fireEvent, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useExplorerStore } from '@/stores/explorerStore';
@@ -138,7 +138,7 @@ describe('PaneGroup', () => {
       expect(slots().map((slot) => slot.dataset.tabSlot)[0]).toBe(terminalId);
 
       const dataTransfer = {
-        types: ['application/x-agentmate-tab'],
+        types: ['application/x-runova-tab'],
         setData: vi.fn(),
         getData: () =>
           JSON.stringify({ projectId: 'p1', tabId: terminalId, groupId: workspace?.root.id }),

@@ -241,7 +241,7 @@ describe('CloudflareState', () => {
 
 describe('cloudflareFilePort', () => {
   it('writes a file only the user can read, and reads it back', async () => {
-    const folder = mkdtempSync(join(tmpdir(), 'agentmate-cloudflare-'));
+    const folder = mkdtempSync(join(tmpdir(), 'runova-cloudflare-'));
     folders.push(folder);
     const path = join(folder, 'data', 'cloudflare.json');
     const port = cloudflareFilePort(path);
@@ -257,7 +257,7 @@ describe('cloudflareFilePort', () => {
   });
 
   it('passes on errors other than a missing file', async () => {
-    const folder = mkdtempSync(join(tmpdir(), 'agentmate-cloudflare-'));
+    const folder = mkdtempSync(join(tmpdir(), 'runova-cloudflare-'));
     folders.push(folder);
     await expect(cloudflareFilePort(folder).read()).rejects.toThrow();
   });

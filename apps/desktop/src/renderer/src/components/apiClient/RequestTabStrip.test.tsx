@@ -1,4 +1,4 @@
-import { emptyDraft } from '@agentmat/core';
+import { emptyDraft } from '@runova/core';
 import { fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { ApiTab } from '@/stores/apiClientTabsStore';

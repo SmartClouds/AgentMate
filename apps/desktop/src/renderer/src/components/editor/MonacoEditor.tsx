@@ -12,7 +12,7 @@ export function currentMonacoTheme(): string {
     case 'vscode-dark':
       return 'vs-dark';
     case 'vs2026':
-      return 'agentmate-vs2026';
+      return 'runova-vs2026';
   }
 }
 
@@ -31,7 +31,7 @@ export interface MonacoEditorProps {
 }
 
 /** The owner name the editor's own markers go under, so other markers are left alone. */
-const MARKER_OWNER = 'agentmate';
+const MARKER_OWNER = 'runova';
 
 export function MonacoEditor({
   value,

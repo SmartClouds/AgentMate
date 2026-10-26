@@ -80,7 +80,7 @@ export async function startRdpAgentTask(input: StartRdpAgentTaskInput): Promise<
     sessions: { ...state.sessions, [sessionId]: { mode, phase: 'thinking', step: 0 } },
   }));
   try {
-    await window.agentmat.rdpAgent.start(input);
+    await window.runova.rdpAgent.start(input);
   } catch (error) {
     useRdpAgentStore.getState().clear(sessionId);
     throw error;
@@ -88,28 +88,28 @@ export async function startRdpAgentTask(input: StartRdpAgentTaskInput): Promise<
 }
 
 export function approveRdpAgentAction(sessionId: string): void {
-  void window.agentmat.rdpAgent.approveAction(sessionId);
+  void window.runova.rdpAgent.approveAction(sessionId);
 }
 
 export function skipRdpAgentAction(sessionId: string): void {
-  void window.agentmat.rdpAgent.skipAction(sessionId);
+  void window.runova.rdpAgent.skipAction(sessionId);
 }
 
 export function answerRdpAgentInput(sessionId: string, answer: string): void {
-  void window.agentmat.rdpAgent.answerNeedsInput(sessionId, answer);
+  void window.runova.rdpAgent.answerNeedsInput(sessionId, answer);
 }
 
 /** Sends the running task a message of the user's own. False when the task has ended by now. */
 export async function sendRdpAgentMessage(sessionId: string, text: string): Promise<boolean> {
-  return window.agentmat.rdpAgent.sendMessage(sessionId, text);
+  return window.runova.rdpAgent.sendMessage(sessionId, text);
 }
 
 export function stopRdpAgentTask(sessionId: string): void {
-  void window.agentmat.rdpAgent.stop(sessionId);
+  void window.runova.rdpAgent.stop(sessionId);
 }
 
 export function continueRdpAgentTask(sessionId: string): void {
-  void window.agentmat.rdpAgent.continueTask(sessionId);
+  void window.runova.rdpAgent.continueTask(sessionId);
 }
 
 /**
@@ -118,7 +118,7 @@ export function continueRdpAgentTask(sessionId: string): void {
  * Returns a function that stops following.
  */
 export function initRdpAgentStatus(title: () => string): () => void {
-  return window.agentmat.rdpAgent.onProgress((progress: RdpAgentProgress) => {
+  return window.runova.rdpAgent.onProgress((progress: RdpAgentProgress) => {
     useRdpAgentStore.setState((state) => {
       const existing = state.sessions[progress.sessionId];
       const next: RdpAgentSessionState = {
@@ -137,7 +137,7 @@ export function initRdpAgentStatus(title: () => string): () => void {
     const now = useRdpAgentStore.getState().sessions[progress.sessionId];
     const watching = document.hasFocus() && document.visibilityState === 'visible';
     if (isRdpAgentWaitingOnUser(now) && !watching) {
-      void window.agentmat.rdpAgent.notifyWaiting(progress.sessionId, title());
+      void window.runova.rdpAgent.notifyWaiting(progress.sessionId, title());
     }
   });
 }

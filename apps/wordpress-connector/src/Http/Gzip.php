@@ -3,10 +3,10 @@
  * Gzip with a hard ceiling on what a payload may inflate to, so a small upload cannot become a
  * huge string in memory.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Http;
+namespace Runova\Connector\Http;
 
 final class Gzip
 {

@@ -53,7 +53,7 @@ let ftpServer: FtpTestServer | null = null;
 let userData = '';
 
 beforeAll(async () => {
-  userData = await mkdtemp(join(tmpdir(), 'agentmate-deploy-int-'));
+  userData = await mkdtemp(join(tmpdir(), 'runova-deploy-int-'));
   if (!docker) return;
   [openssh, ftpServer] = await Promise.all([startSshServer(), startFtpServer()]);
 }, 900_000);
@@ -221,7 +221,7 @@ function describeDeploy(kind: Kind): void {
       server = kind.server();
       root = `${server.home}/deploy-int-${kind.slug}`;
       server.exec('rm -rf "$1" && mkdir -p "$1/theirs"', [root]);
-      local = await mkdtemp(join(tmpdir(), `agentmate-deploy-int-${kind.slug}-`));
+      local = await mkdtemp(join(tmpdir(), `runova-deploy-int-${kind.slug}-`));
       const untrusted: FilesConnectTarget = {
         protocol: kind.protocol,
         remoteRoot: root,
@@ -417,7 +417,7 @@ function describeDeploy(kind: Kind): void {
       async () => {
         server.exec(
           'printf %s "$2" > "$1/server-only.txt" && printf %s "$2" > "$1/sub dir é/theirs.txt"',
-          [root, 'not from AgentMate'],
+          [root, 'not from Runova'],
         );
         const serverOnlyTimes = [
           remoteMtime('server-only.txt'),
@@ -451,12 +451,12 @@ function describeDeploy(kind: Kind): void {
         expect(remoteText('sub dir é/my file ü 日本.txt')).toBeNull();
         expect(remoteText('with space.txt')).toBe('spaces in the name, edited');
         expect(remoteText('new file é.txt')).toBe('brand new');
-        expect(remoteText('server-only.txt')).toBe('not from AgentMate');
-        expect(remoteText('sub dir é/theirs.txt')).toBe('not from AgentMate');
+        expect(remoteText('server-only.txt')).toBe('not from Runova');
+        expect(remoteText('sub dir é/theirs.txt')).toBe('not from Runova');
         expect([remoteMtime('server-only.txt'), remoteMtime('sub dir é/theirs.txt')]).toEqual(
           serverOnlyTimes,
         );
-        // AgentMate made this folder, but someone else's file in it keeps it.
+        // Runova made this folder, but someone else's file in it keeps it.
         expect(remoteDirExists('sub dir é')).toBe(true);
 
         const after = await plan();
@@ -586,7 +586,7 @@ function describeDeploy(kind: Kind): void {
     );
 
     it(
-      'removes the folders AgentMate made once their files are deleted here, never one it did not make',
+      'removes the folders Runova made once their files are deleted here, never one it did not make',
       async () => {
         expect(remoteDirExists('nested/deep')).toBe(true);
         expect(remoteDirExists('theirs')).toBe(true);
@@ -613,7 +613,7 @@ function describeDeploy(kind: Kind): void {
         expect(remoteDirExists('sub dir é')).toBe(true);
         expect(remoteDirExists('css')).toBe(true);
         expect(remoteDirExists('')).toBe(true);
-        expect(remoteText('server-only.txt')).toBe('not from AgentMate');
+        expect(remoteText('server-only.txt')).toBe('not from Runova');
         expect(own((await plan()).changes)).toEqual([]);
       },
       STEP_TIMEOUT,

@@ -1,4 +1,4 @@
-import { DEFAULT_TARGET_AI, getCliDefinition } from '@agentmat/core';
+import { DEFAULT_TARGET_AI, getCliDefinition } from '@runova/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { usePromptBuilderStore } from './promptBuilderStore';
 
@@ -61,7 +61,7 @@ describe('the setters', () => {
 
 describe('coming back from a saved draft', () => {
   function seed(saved: Record<string, unknown>): void {
-    localStorage.setItem('agentmate-prompt-builder', JSON.stringify({ state: saved, version: 0 }));
+    localStorage.setItem('runova-prompt-builder', JSON.stringify({ state: saved, version: 0 }));
   }
 
   it('restores the draft as it was left', async () => {
@@ -111,7 +111,7 @@ describe('coming back from a saved draft', () => {
 
   it('saves the draft as it is typed', () => {
     state().setRawInput('typing');
-    const saved = JSON.parse(localStorage.getItem('agentmate-prompt-builder') ?? '{}');
+    const saved = JSON.parse(localStorage.getItem('runova-prompt-builder') ?? '{}');
     expect(saved.state.rawInput).toBe('typing');
   });
 });

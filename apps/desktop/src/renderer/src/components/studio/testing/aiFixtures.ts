@@ -1,4 +1,4 @@
-import type { GenerationDetail, GenerationView, StoredProposal } from '@agentmat/studio';
+import type { GenerationDetail, GenerationView, StoredProposal } from '@runova/studio';
 import { NOW } from './fixtures';
 
 /** Builders for Studio's AI runs in renderer tests. */

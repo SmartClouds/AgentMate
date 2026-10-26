@@ -61,7 +61,7 @@ export function normalizeProjectWorktreeSetup(value: unknown): ProjectWorktreeSe
   };
 }
 
-/** A worktree AgentMate knows about, as saved in worktrees.json. */
+/** A worktree Runova knows about, as saved in worktrees.json. */
 export interface WorktreeRecord {
   /** Short and stable; together with the project id it keys the worktree's workspace. */
   id: string;
@@ -72,7 +72,7 @@ export interface WorktreeRecord {
   /** What it was branched from, and where Merge sends it back to. */
   baseBranch: string | null;
   createdAt: string;
-  /** False for worktrees made outside AgentMate that it picked up from git. */
+  /** False for worktrees made outside Runova that it picked up from git. */
   createdByApp: boolean;
 }
 

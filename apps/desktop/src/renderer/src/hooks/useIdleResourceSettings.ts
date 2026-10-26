@@ -2,7 +2,7 @@ import {
   type AppSettings,
   DEFAULT_IDLE_RESOURCE_MINUTES,
   normalizeIdleResourceMinutes,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { queryKeys } from '@/lib/queryKeys';
@@ -23,11 +23,11 @@ export function useIdleResourceSettings(): {
   const queryClient = useQueryClient();
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
     meta: { silentLoading: true },
   });
   const mutation = useMutation({
-    mutationFn: (patch: IdleResourcePatch) => window.agentmat.settings.update(patch),
+    mutationFn: (patch: IdleResourcePatch) => window.runova.settings.update(patch),
     meta: { silentLoading: true },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.settings });

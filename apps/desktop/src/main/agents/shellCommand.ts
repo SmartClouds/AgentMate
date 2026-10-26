@@ -41,7 +41,7 @@ export function isRiskyCommand(command: string): boolean {
 }
 
 /**
- * `sudo -n` fails right away instead of asking for a password, so the prompt AgentMate answers
+ * `sudo -n` fails right away instead of asking for a password, so the prompt Runova answers
  * with the saved one never shows up. Models add it anyway to avoid a hanging command, so it goes.
  */
 export function allowSudoPasswordPrompt(command: string): string {
@@ -80,7 +80,7 @@ export function shellFamily(shell: string): ShellFamily {
 }
 
 // biome-ignore lint/suspicious/noControlCharactersInRegex: ESC/BEL frame the OSC prompt marker
-export const PROMPT_READY = /\x1b\]7750;AgentMate:PromptReady:1(?:\x07|\x1b\\)/;
+export const PROMPT_READY = /\x1b\]7750;Runova:PromptReady:1(?:\x07|\x1b\\)/;
 
 /**
  * The output ends on a password prompt: sudo's own (`[sudo] password for bob:`), `su`, `passwd`,
@@ -132,15 +132,15 @@ export function markedCommandLine(
   // A trailing `;` would put `;;` in front of the marker, which bash rejects.
   const body = family === 'cmd' ? command : command.replace(/[\s;]+$/, '');
   if (!hidden || family === 'cmd') {
-    const marker = `__AGENTMATE_DONE_${id}__`;
+    const marker = `__RUNOVA_DONE_${id}__`;
     const done = new RegExp(`${marker}:(\\d+)`);
     switch (family) {
       case 'powershell':
         // $? has to be read before anything else runs, since every statement resets it.
         return {
           line:
-            `${body}; $__agentmateExit = if ($?) { 0 } elseif ($LASTEXITCODE) { $LASTEXITCODE } else { 1 }; ` +
-            `Write-Host "\`n${marker}:$__agentmateExit"${enter}`,
+            `${body}; $__runovaExit = if ($?) { 0 } elseif ($LASTEXITCODE) { $LASTEXITCODE } else { 1 }; ` +
+            `Write-Host "\`n${marker}:$__runovaExit"${enter}`,
           start: null,
           done,
         };
@@ -160,14 +160,14 @@ export function markedCommandLine(
   }
 
   // BEL ends both markers, so a done marker read in pieces can't pass `:1` off as `:12`.
-  const start = `\x1b]7750;AgentMate:Start:${id}\x07`;
-  const done = new RegExp(`\x1b\\]7750;AgentMate:Done:${id}:(\\d+)\x07`);
+  const start = `\x1b]7750;Runova:Start:${id}\x07`;
+  const done = new RegExp(`\x1b\\]7750;Runova:Done:${id}:(\\d+)\x07`);
   if (family === 'powershell') {
     return {
       line:
-        `Write-Host -NoNewline ([char]27 + ']7750;AgentMate:Start:${id}' + [char]7); ${body}; ` +
-        '$__agentmateExit = if ($?) { 0 } elseif ($LASTEXITCODE) { $LASTEXITCODE } else { 1 }; ' +
-        `Write-Host -NoNewline ([char]27 + ']7750;AgentMate:Done:${id}:' + $__agentmateExit + [char]7)${enter}`,
+        `Write-Host -NoNewline ([char]27 + ']7750;Runova:Start:${id}' + [char]7); ${body}; ` +
+        '$__runovaExit = if ($?) { 0 } elseif ($LASTEXITCODE) { $LASTEXITCODE } else { 1 }; ' +
+        `Write-Host -NoNewline ([char]27 + ']7750;Runova:Done:${id}:' + $__runovaExit + [char]7)${enter}`,
       start,
       done,
     };
@@ -175,8 +175,8 @@ export function markedCommandLine(
   const exitCode = family === 'fish' ? '$status' : '"$?"';
   return {
     line:
-      `printf '\\033]7750;AgentMate:Start:${id}\\007'; ${body}; ` +
-      `printf '\\033]7750;AgentMate:Done:${id}:%s\\007' ${exitCode}${enter}`,
+      `printf '\\033]7750;Runova:Start:${id}\\007'; ${body}; ` +
+      `printf '\\033]7750;Runova:Done:${id}:%s\\007' ${exitCode}${enter}`,
     start,
     done,
   };
@@ -270,7 +270,7 @@ export class CommandDisplay {
     private readonly marked: MarkedCommand & { start: string },
     id: string,
   ) {
-    this.donePrefix = `\x1b]7750;AgentMate:Done:${id}:`;
+    this.donePrefix = `\x1b]7750;Runova:Done:${id}:`;
     sink.captureDisplay(true);
     // The line never started, so there is no clean version to draw. Show what the shell printed.
     this.echoTimer = setTimeout(() => {

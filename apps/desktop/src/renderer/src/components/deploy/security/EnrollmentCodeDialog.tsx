@@ -1,5 +1,5 @@
 import { coreErrorMessage } from '@shared/coreErrors';
-import type { EnrollmentCodeInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { EnrollmentCodeInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployServer } from '@shared/deployTypes';
 import { useEffect, useId, useState } from 'react';
 import { toast } from 'sonner';
@@ -70,7 +70,7 @@ export function EnrollmentCodeDialog({
     setProblem(null);
     try {
       const code = await run(() =>
-        window.agentmat.deploySecurity.createEnrollmentCode({
+        window.runova.deploySecurity.createEnrollmentCode({
           serverId: server.id,
           userName,
           validMinutes: minutes,
@@ -130,7 +130,7 @@ export function EnrollmentCodeDialog({
             </Notice>
             <p className="text-xs leading-relaxed text-muted-foreground">
               On the other computer, save this server in Remote with an SSH login that is in the
-              server's agentmate group, open Deploy, pick the server and choose Join with a code.
+              server's runova group, open Deploy, pick the server and choose Join with a code.
             </p>
             <DialogFooter>
               <Button type="button" variant="soft" onClick={() => void copy(made.code)}>

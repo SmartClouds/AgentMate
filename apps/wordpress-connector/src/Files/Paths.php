@@ -2,10 +2,10 @@
 /**
  * Filesystem path comparisons that hold on Windows hosts too (backslashes, case-insensitive).
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Files;
+namespace Runova\Connector\Files;
 
 final class Paths
 {

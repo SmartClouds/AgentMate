@@ -1,4 +1,4 @@
-import type { KeepAwakeMode } from '@agentmat/core';
+import type { KeepAwakeMode } from '@runova/core';
 import { ipcMain } from 'electron';
 import type { KeepAwakeStatus } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';

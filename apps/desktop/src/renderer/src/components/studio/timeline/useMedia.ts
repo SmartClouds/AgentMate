@@ -1,4 +1,4 @@
-import { type MediaView, mediaUrl } from '@agentmat/studio';
+import { type MediaView, mediaUrl } from '@runova/studio';
 import { useQuery } from '@tanstack/react-query';
 import { studioMediaClient } from '../client';
 import { studioKeys } from '../queryKeys';

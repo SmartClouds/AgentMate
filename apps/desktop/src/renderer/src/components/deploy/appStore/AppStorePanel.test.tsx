@@ -1,4 +1,4 @@
-import { CATALOG_TEMPLATES } from '@agentmat/core';
+import { CATALOG_TEMPLATES } from '@runova/core';
 import { screen, waitFor, within } from '@testing-library/react';
 import { useLocation } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';

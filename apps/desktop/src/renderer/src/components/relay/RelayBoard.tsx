@@ -1,5 +1,5 @@
-import { formatTokenCount, type Project, type RelayTaskStatus } from '@agentmat/core';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { formatTokenCount, type Project, type RelayTaskStatus } from '@runova/core';
 import type { RelayBoard as Board } from '@shared/relayTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LayoutGroup } from 'framer-motion';
@@ -40,8 +40,8 @@ function useBoardMoves(projectId: string) {
       order: sequence ? withColumnOrder(board.order, sequence) : board.order,
     });
     try {
-      if (task.status !== status) await window.agentmat.relay.setStatus(projectId, taskId, status);
-      if (sequence) await window.agentmat.relay.reorder(projectId, sequence);
+      if (task.status !== status) await window.runova.relay.setStatus(projectId, taskId, status);
+      if (sequence) await window.runova.relay.reorder(projectId, sequence);
     } catch (error) {
       toast.error(`Could not move ${taskId}`, {
         description: error instanceof Error ? error.message : String(error),
@@ -211,7 +211,7 @@ export function RelayBoard({
   const query = useRelayBoard(projectId);
   const projects = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   });
   const project: Project | null = projects.data?.find((entry) => entry.id === projectId) ?? null;
   const { markDone } = useRelayActions();

@@ -459,7 +459,7 @@ export interface AppSettings {
    */
   cliArgs: CliArgsMap;
   /**
-   * Model, effort, and permission mode per CLI id, added only when AgentMate opens that CLI in a
+   * Model, effort, and permission mode per CLI id, added only when Runova opens that CLI in a
    * terminal. A field left unset adds no flag, so the CLI keeps its own default.
    */
   cliLaunchDefaults: CliLaunchDefaultsMap;
@@ -560,7 +560,7 @@ export interface AppSettings {
   /**
    * Where the app's outgoing requests go: straight out, through this machine's
    * own proxy settings, or through a server typed in by hand. Covers the main
-   * process, the update check, and the CLIs and git commands AgentMate spawns.
+   * process, the update check, and the CLIs and git commands Runova spawns.
    */
   proxy: ProxySettings;
   /** Per-provider config for the Token Usage page (enabled flag + optional API key), keyed by provider id. */
@@ -593,7 +593,7 @@ export interface AppSettings {
   /** Which providers show their plan limits in the bottom status bar; switched in Settings. */
   statusBarUsage: StatusBarUsageSettings;
   /**
-   * Floating pixel companion that walks around the desktop while AgentMate is
+   * Floating pixel companion that walks around the desktop while Runova is
    * open. Off until the user turns it on in Settings.
    */
   desktopPetEnabled: boolean;
@@ -662,7 +662,7 @@ export interface AppSettings {
    */
   desktopPetAgentStatus: boolean;
   /**
-   * When true, terminal sessions keep running in the background after AgentMate quits and
+   * When true, terminal sessions keep running in the background after Runova quits and
    * reappear, output included, the next time it opens. Restarts for an update always keep
    * them, whatever this is set to.
    */
@@ -688,12 +688,12 @@ export interface AppSettings {
    */
   terminalAiNotifications: boolean;
   /**
-   * Whether AgentMate keeps this computer from going to sleep: always, only while an agent
+   * Whether Runova keeps this computer from going to sleep: always, only while an agent
    * (or a shell) is busy, or never.
    */
   keepAwake: KeepAwakeMode;
   /**
-   * When true, AgentMate checks once a day whether a newer version of an installed CLI or tool
+   * When true, Runova checks once a day whether a newer version of an installed CLI or tool
    * has been published, and drops a bell notification in the app when one has.
    */
   checkToolUpdatesEnabled: boolean;
@@ -723,7 +723,7 @@ export interface AppSettings {
    */
   androidEmulatorLaunchFlags: string;
   /**
-   * Send `adb emu kill` to the emulators AgentMate started when the app quits. Off by default:
+   * Send `adb emu kill` to the emulators Runova started when the app quits. Off by default:
    * an emulator is a window the user can close themselves, and it is slow to boot again.
    */
   androidStopEmulatorsOnQuit: boolean;
@@ -783,7 +783,7 @@ export interface ProjectNotificationSettings {
   confirmation: ProjectNotificationHook;
   /**
    * Speaks the message through the desktop companion instead of Telegram. It only lands
-   * while AgentMate is running with the companion on screen; any other time the hook
+   * while Runova is running with the companion on screen; any other time the hook
    * quietly does nothing, so the agent's CLI never sees a failure.
    */
   pet: ProjectNotificationHook;
@@ -797,8 +797,8 @@ export interface DetectedClaudeHook {
   matcher?: string;
   /** Raw `{ type, command, args?, timeout?, ... }` body, passed through as Claude Code stores it. */
   hook: Record<string, unknown>;
-  /** True when this is one of AgentMate's own Completion/Confirmation hooks (shown elsewhere). */
-  managedByAgentMate: boolean;
+  /** True when this is one of Runova's own Completion/Confirmation hooks (shown elsewhere). */
+  managedByRunova: boolean;
   /** CLI_REGISTRY id of the owning agent: 'claude-code', or another agent inferred from the command. */
   cliId: string;
 }
@@ -860,10 +860,10 @@ export interface ProjectWordPressItem {
 }
 
 /**
- * A project that mirrors part of a WordPress site connected through the AgentMate Connector
+ * A project that mirrors part of a WordPress site connected through the Runova Connector
  * plugin (E21). The folder keeps the site's layout (`wp-content/themes/<slug>/...`), and only
  * these items are ever pulled or deployed, so anything else in the folder (agent settings,
- * AgentMate's own files, notes) never reaches the site. What was last synced is kept by the app,
+ * Runova's own files, notes) never reaches the site. What was last synced is kept by the app,
  * outside the folder.
  */
 export interface ProjectWordPressLink {

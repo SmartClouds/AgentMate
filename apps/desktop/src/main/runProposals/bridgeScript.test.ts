@@ -8,7 +8,7 @@ import { bridgeScriptSource } from './bridgeScript';
 
 /**
  * The generated bridge is what Claude Code starts, so these tests start it the same way: a node
- * process that speaks MCP over stdin and stdout. A small HTTP server stands in for AgentMate.
+ * process that speaks MCP over stdin and stdout. A small HTTP server stands in for Runova.
  */
 
 const TOKEN = 'secret-token';
@@ -123,7 +123,7 @@ describe('run suggestion bridge', () => {
     expect(tools).toEqual(['list_run_commands', 'propose_run_command']);
   });
 
-  it('forwards a suggestion with the project and the token, and returns what AgentMate said', async () => {
+  it('forwards a suggestion with the project and the token, and returns what Runova said', async () => {
     const { lines } = await talk([
       call(3, 'propose_run_command', { label: 'android dev', command: 'flutter run' }),
     ]);
@@ -140,7 +140,7 @@ describe('run suggestion bridge', () => {
     ]);
   });
 
-  it('reports a refusal from AgentMate as a tool error', async () => {
+  it('reports a refusal from Runova as a tool error', async () => {
     const { lines } = await talk([call(4, 'propose_run_command', { command: 'rejected' })]);
 
     expect(textOf(lines[0])).toEqual({ text: 'The command is empty.', isError: true });
@@ -152,12 +152,12 @@ describe('run suggestion bridge', () => {
     expect(JSON.parse(textOf(lines[0]).text)).toEqual([{ label: 'dev', command: 'pnpm dev' }]);
   });
 
-  it('says AgentMate is not running when there is no port file', async () => {
+  it('says Runova is not running when there is no port file', async () => {
     rmSync(portFile);
 
     const { lines } = await talk([call(6, 'list_run_commands')]);
 
-    expect(textOf(lines[0])).toEqual({ text: 'AgentMate is not running.', isError: true });
+    expect(textOf(lines[0])).toEqual({ text: 'Runova is not running.', isError: true });
   });
 
   it('answers an unknown method with a JSON-RPC error, and writes nothing else to stdout', async () => {

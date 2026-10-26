@@ -9,7 +9,7 @@ name: Nightly
 # the rest of CI. The jobs queue one after another on it. Each starts with the Runner cleanup step,
 # which clears what the job leaves on the runner's disk once it is over (see ci.yml).
 #
-# Each job sets AGENTMATE_TEST_SERVER_IMAGES to its image, and every system test runs on it when it
+# Each job sets RUNOVA_TEST_SERVER_IMAGES to its image, and every system test runs on it when it
 # supports it (see testServerImages in apps/desktop/src/main/deploy/testing/testServers.ts). A test
 # that needs something else (a firewall, the Rocky-only podman case) is skipped in that job.
 
@@ -86,18 +86,18 @@ jobs:
           image="${{ matrix.image }}"
           base="${image%-ufw}"
           base="${base%-firewalld}"
-          docker build -q -t "agentmate-test-server:$base" "apps/server-core/test-servers/$base"
+          docker build -q -t "runova-test-server:$base" "apps/server-core/test-servers/$base"
           if [ "$base" != "$image" ]; then
-            docker build -q -t "agentmate-test-server:$image" "apps/server-core/test-servers/$image"
+            docker build -q -t "runova-test-server:$image" "apps/server-core/test-servers/$image"
           fi
 
       # One file at a time: each boots whole machines, and two at once only slow each other down.
       - name: System tests on ${{ matrix.image }}
         env:
-          AGENTMATE_SYSTEM_TESTS: "1"
-          AGENTMATE_TEST_SERVER_IMAGES: ${{ matrix.image }}
+          RUNOVA_SYSTEM_TESTS: "1"
+          RUNOVA_TEST_SERVER_IMAGES: ${{ matrix.image }}
         run: >-
-          pnpm --filter @agentmat/desktop exec vitest run --project main --no-file-parallelism
+          pnpm --filter @runova/desktop exec vitest run --project main --no-file-parallelism
           src/main/deploy/deploy.int.test.ts
           src/main/deploy/docker.int.test.ts
           src/main/deploy/stacks.int.test.ts
@@ -191,7 +191,7 @@ jobs:
       - name: Install Electron binary
         run: |
           for attempt in 1 2 3; do
-            pnpm --filter @agentmat/desktop exec install-electron && exit 0
+            pnpm --filter @runova/desktop exec install-electron && exit 0
             echo "attempt $attempt failed, retrying in 15s"
             sleep 15
           done
@@ -201,15 +201,15 @@ jobs:
         run: pnpm build:packages
 
       - name: Rebuild native modules for Electron
-        run: pnpm --filter @agentmat/desktop rebuild:native
+        run: pnpm --filter @runova/desktop rebuild:native
 
       # In a global config of this job's own, in the temp folder the runner empties after each
       # job, so the runner's user keeps no CI identity in its real ~/.gitconfig.
       - name: Git identity for fixtures
         run: |
           echo "GIT_CONFIG_GLOBAL=$RUNNER_TEMP/gitconfig" >> "$GITHUB_ENV"
-          git config --file "$RUNNER_TEMP/gitconfig" user.name "AgentMate CI"
-          git config --file "$RUNNER_TEMP/gitconfig" user.email "ci@agentmate.invalid"
+          git config --file "$RUNNER_TEMP/gitconfig" user.name "Runova CI"
+          git config --file "$RUNNER_TEMP/gitconfig" user.email "ci@runova.invalid"
 
       - name: Publish the linux-x64 release
         run: node scripts/server-core.mjs publish linux-x64
@@ -226,17 +226,17 @@ jobs:
           image="${{ matrix.image }}"
           base="${image%-ufw}"
           base="${base%-firewalld}"
-          docker build -q -t "agentmate-test-server:$base" "apps/server-core/test-servers/$base"
-          docker build -q -t "agentmate-test-server:$image" "apps/server-core/test-servers/$image"
+          docker build -q -t "runova-test-server:$base" "apps/server-core/test-servers/$base"
+          docker build -q -t "runova-test-server:$image" "apps/server-core/test-servers/$image"
 
       - name: Full stack on ${{ matrix.image }}
         env:
-          AGENTMATE_SYSTEM_TESTS: "1"
-          AGENTMATE_TEST_SERVER_IMAGES: ${{ matrix.image }}
-          AGENTMATE_E2E_NO_SANDBOX: "1"
+          RUNOVA_SYSTEM_TESTS: "1"
+          RUNOVA_TEST_SERVER_IMAGES: ${{ matrix.image }}
+          RUNOVA_E2E_NO_SANDBOX: "1"
         run: >-
           xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24"
-          pnpm --filter @agentmat/desktop test:e2e deployFullStack.e2e.ts
+          pnpm --filter @runova/desktop test:e2e deployFullStack.e2e.ts
 
       - name: Upload report and traces
         if: ${{ !cancelled() }}
@@ -249,7 +249,7 @@ jobs:
             apps/desktop/playwright-report
             apps/desktop/test-results
 
-  # E19 to E21: Playwright driving the built app against the AgentMate Connector on WordPress in
+  # E19 to E21: Playwright driving the built app against the Runova Connector on WordPress in
   # Docker (deployWordPress.e2e.ts): connect with a key, a WordPress project, a deploy that leaves
   # agent files behind, a refused syntax error, a rollback by the site's guard and one by hand.
   wordpress-e2e:
@@ -317,7 +317,7 @@ jobs:
       - name: Install Electron binary
         run: |
           for attempt in 1 2 3; do
-            pnpm --filter @agentmat/desktop exec install-electron && exit 0
+            pnpm --filter @runova/desktop exec install-electron && exit 0
             echo "attempt $attempt failed, retrying in 15s"
             sleep 15
           done
@@ -327,18 +327,18 @@ jobs:
         run: pnpm build:packages
 
       - name: Rebuild native modules for Electron
-        run: pnpm --filter @agentmat/desktop rebuild:native
+        run: pnpm --filter @runova/desktop rebuild:native
 
       - name: Build the connector zip
         run: node scripts/wordpress-connector.mjs build
 
       - name: WordPress end to end
         env:
-          AGENTMATE_SYSTEM_TESTS: "1"
-          AGENTMATE_E2E_NO_SANDBOX: "1"
+          RUNOVA_SYSTEM_TESTS: "1"
+          RUNOVA_E2E_NO_SANDBOX: "1"
         run: >-
           xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24"
-          pnpm --filter @agentmat/desktop test:e2e deployWordPress.e2e.ts
+          pnpm --filter @runova/desktop test:e2e deployWordPress.e2e.ts
 
       - name: Upload report and traces
         if: ${{ !cancelled() }}
@@ -380,10 +380,10 @@ jobs:
           dotnet-version: 10.0.4xx
 
       - name: Restore
-        run: dotnet restore AgentMate.ServerCore.slnx --locked-mode
+        run: dotnet restore Runova.ServerCore.slnx --locked-mode
 
       - name: Build
-        run: dotnet build AgentMate.ServerCore.slnx --no-restore --configuration Release
+        run: dotnet build Runova.ServerCore.slnx --no-restore --configuration Release
 
       - name: System tests
-        run: dotnet test --project tests/AgentMate.ServerCore.SystemTests --no-build --configuration Release
+        run: dotnet test --project tests/Runova.ServerCore.SystemTests --no-build --configuration Release

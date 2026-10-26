@@ -6,7 +6,7 @@ import {
   type StudioDocument,
   sceneConfig,
   sceneUrl,
-} from '@agentmat/studio';
+} from '@runova/studio';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { runLabel } from '../ai/runSettings';

@@ -21,7 +21,7 @@ export function SshPasswordButton({
 
   useEffect(
     () =>
-      window.agentmat.ssh.onPasswordPrompt((payload) => {
+      window.runova.ssh.onPasswordPrompt((payload) => {
         if (payload.sessionId === sessionId) setPrompting(payload.prompting);
       }),
     [sessionId],
@@ -32,7 +32,7 @@ export function SshPasswordButton({
   async function typePassword(): Promise<void> {
     setTyping(true);
     try {
-      const typed = await window.agentmat.ssh.typePassword(sessionId);
+      const typed = await window.runova.ssh.typePassword(sessionId);
       if (typed) setPrompting(false);
       else toast.error("Couldn't read the saved password. Type it in the terminal instead.");
     } catch {

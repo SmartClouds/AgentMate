@@ -47,7 +47,7 @@ export function buildHealthSetupPrompt(input: HealthSetupPromptInput): string {
       : `This target uses a Bearer key. Read the SHA-256 hash of the key from \`${HEALTH_ENV.tokenHash}\`.`;
 
   return [
-    `Add a healthcheck endpoint to ${input.projectName} that follows the AgentMate Health Protocol below, so AgentMate can monitor it${where.length > 0 ? ` on ${where.join(', ')}` : ''}.`,
+    `Add a healthcheck endpoint to ${input.projectName} that follows the Runova Health Protocol below, so Runova can monitor it${where.length > 0 ? ` on ${where.join(', ')}` : ''}.`,
     '',
     `- Serve it at \`${input.path}\`.`,
     `- ${auth} I will set that variable on the server myself; do not invent a value, do not commit one, and add it to the example env file with an empty value.`,

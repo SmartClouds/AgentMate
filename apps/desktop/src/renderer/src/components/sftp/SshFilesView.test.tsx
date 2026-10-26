@@ -19,8 +19,8 @@ import { resolveConfirm, useConfirmStore } from '@/stores/confirmStore';
 import { usePageHeaderStore } from '@/stores/pageHeaderStore';
 import { PANEL_WIDTHS } from '@/stores/panelWidthStore';
 import { resetSftpStore, serverFiles, useSftpStore } from '@/stores/sftpStore';
-import type { BridgeOverrides } from '../../../../test/renderer/agentmatBridge';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
+import type { BridgeOverrides } from '../../../../test/renderer/runovaBridge';
 import { SftpConflictHost } from './SftpConflictHost';
 import { SshFilesView, type SshFilesViewProps } from './SshFilesView';
 

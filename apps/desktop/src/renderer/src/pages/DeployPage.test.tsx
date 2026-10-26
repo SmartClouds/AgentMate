@@ -90,7 +90,7 @@ function LocationProbe(): React.JSX.Element {
 
 const CORE: DeployCoreRecord = {
   version: '1.53.0',
-  release: '/opt/agentmate-core/releases/1.53.0-abababababab',
+  release: '/opt/runova-core/releases/1.53.0-abababababab',
   transport: 'streamlocal',
   installedAt: Date.now() - 3 * 86_400_000,
   os: 'Ubuntu 24.04.1 LTS',
@@ -198,7 +198,7 @@ function renderPage(bridge: Record<string, unknown> = {}, route = '/deploy') {
         // Deploy lists only the servers the user chose. Unless a test says otherwise, they chose
         // every server it lists, as it lists them when the choice is read.
         ...chosenSettings(async () =>
-          (await window.agentmat.deploy.listServers()).map((one) => one.id),
+          (await window.runova.deploy.listServers()).map((one) => one.id),
         ),
         'deploy.preflight': async () => PREFLIGHT,
         'deploy.health': async () => HEALTH,
@@ -831,14 +831,14 @@ describe('DeployPage removal', () => {
     const { user } = renderPage({
       'deploy.listServers': async () => [server({ core: CORE })],
       'deploy.uninstall': async () => {
-        throw new Error('Stop the server core failed: Failed to stop agentmate-core.service');
+        throw new Error('Stop the server core failed: Failed to stop runova-core.service');
       },
     });
 
     await user.click(await screen.findByRole('button', { name: 'More actions' }));
     await user.click(await screen.findByRole('menuitem', { name: /keep its data/ }));
     await user.click(await screen.findByRole('button', { name: 'Remove the core' }));
-    expect(await screen.findByText(/Failed to stop agentmate-core\.service/)).toBeTruthy();
+    expect(await screen.findByText(/Failed to stop runova-core\.service/)).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: 'Dismiss' }));
 

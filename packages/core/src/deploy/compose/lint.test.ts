@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { LEGACY_CORE_PATHS } from '../deployLegacyNames.js';
 import { type ComposeLintOptions, lintComposeProject, unacknowledgedRisks } from './lint.js';
 import { parseComposeFile } from './parse.js';
 
@@ -57,7 +58,7 @@ describe('lintComposeProject', () => {
         'volumes:',
         '  - /var/run/docker.sock:/var/run/docker.sock:ro',
         '  - /:/rootfs:ro',
-        '  - /var/lib/agentmate-core:/core',
+        '  - /var/lib/runova-core:/core',
         '  - /etc/nginx:/etc/nginx',
         '  - /proc:/host/proc:ro',
         '  - ../../shared:/shared',
@@ -72,10 +73,13 @@ describe('lintComposeProject', () => {
         '    target: /cache',
       ),
     );
+    expect(ids(lint(service('volumes:', `  - ${LEGACY_CORE_PATHS[0]}:/core`)))).toEqual([
+      `core-data:app:${LEGACY_CORE_PATHS[0]}`,
+    ]);
     expect(risks.map((risk) => [risk.id, risk.severity])).toEqual([
       ['docker-socket:app:/var/run/docker.sock', 'critical'],
       ['host-root:app:/', 'critical'],
-      ['core-data:app:/var/lib/agentmate-core', 'critical'],
+      ['core-data:app:/var/lib/runova-core', 'critical'],
       ['sensitive-mount:app:/etc/nginx', 'critical'],
       ['sensitive-mount:app:/proc', 'high'],
       ['outside-project:app:../../shared', 'critical'],
@@ -206,7 +210,7 @@ describe('lintComposeProject', () => {
       '    image: nginx:1.27',
       '    restart: always',
       '    healthcheck: { test: ["CMD", "true"] }',
-      '    env_file: [.env, /etc/agentmate-core/core.json, { path: ../secrets.env, required: false }]',
+      '    env_file: [.env, /etc/runova-core/core.json, { path: ../secrets.env, required: false }]',
       '    extends: { file: ../base.yaml, service: web }',
       '    build:',
       '      context: ../..',
@@ -226,7 +230,7 @@ describe('lintComposeProject', () => {
       ['remote-include:-:https://example.com/compose.yaml', 'high'],
       ['host-file:-:secrets.shadow:/etc/shadow', 'high'],
       ['host-file:-:configs.up:../config.json', 'high'],
-      ['env-file-outside:app:/etc/agentmate-core/core.json', 'high'],
+      ['env-file-outside:app:/etc/runova-core/core.json', 'high'],
       ['env-file-outside:app:../secrets.env', 'high'],
       ['extends-file:app:../base.yaml', 'medium'],
       ['build-outside:app:../..', 'high'],

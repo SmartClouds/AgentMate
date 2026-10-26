@@ -21,14 +21,14 @@ import { PUBLISHER, useUpdateCheck } from './mainNav';
 const APP_ICON_DARK = `${icon28} 28w, ${icon56} 56w, ${icon72} 72w, ${icon144} 144w`;
 const APP_ICON_LIGHT = `${iconLight28} 28w, ${iconLight56} 56w, ${iconLight72} 72w, ${iconLight144} 144w`;
 
-/** AgentMate's own icon in the colours that suit the current theme, drawn `size` px square. */
+/** Runova's own icon in the colours that suit the current theme, drawn `size` px square. */
 export function AppIcon({
   size,
   alt = '',
   className,
 }: {
   size: number;
-  /** Empty when the icon sits inside something that already says AgentMate. */
+  /** Empty when the icon sits inside something that already says Runova. */
   alt?: string;
   className?: string;
 }): React.JSX.Element {
@@ -105,7 +105,7 @@ const HOVER_WASH =
   'pointer-events-none absolute inset-0 rounded-[inherit] bg-primary/0 transition-colors group-hover:bg-primary/[0.07]';
 
 /**
- * The foot of the sidebar: the AgentMate icon, the app's name and maker, and the running
+ * The foot of the sidebar: the Runova icon, the app's name and maker, and the running
  * version. The whole card opens the About dialog. On the icon rail it shrinks to just the icon.
  */
 export function AboutCard({ collapsed }: { collapsed: boolean }): React.JSX.Element {
@@ -167,7 +167,7 @@ export function AboutCard({ collapsed }: { collapsed: boolean }): React.JSX.Elem
         </span>
         <span className="relative min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold leading-tight text-foreground">
-            AgentMate
+            Runova
           </span>
           <span className="block truncate text-[11px] leading-tight text-muted-foreground">
             by {PUBLISHER}

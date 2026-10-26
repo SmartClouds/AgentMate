@@ -4,7 +4,14 @@
 
 import { appendFileSync, mkdtempSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { removeTree, skipReason, TEMP_PREFIX, TEMP_ROOT, warn } from './shared.mjs';
+import {
+  LEGACY_TEMP_PREFIX,
+  removeTree,
+  skipReason,
+  TEMP_PREFIX,
+  TEMP_ROOT,
+  warn,
+} from './shared.mjs';
 
 const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 
@@ -18,7 +25,7 @@ try {
     // A job whose runner died never ran its post step. No job runs this long, so a folder this
     // old cannot belong to a job that is still running on another runner of the same machine.
     for (const name of readdirSync(root)) {
-      if (!name.startsWith(TEMP_PREFIX)) continue;
+      if (!name.startsWith(TEMP_PREFIX) && !name.startsWith(LEGACY_TEMP_PREFIX)) continue;
       const path = join(root, name);
       try {
         const stats = statSync(path);

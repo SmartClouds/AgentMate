@@ -24,6 +24,6 @@ export const useUiStore = create<UiState>()(
           return { sidebarMode: SIDEBAR_MODE_CYCLE[nextIndex] };
         }),
     }),
-    { name: 'agentmate-ui' },
+    { name: 'runova-ui' },
   ),
 );

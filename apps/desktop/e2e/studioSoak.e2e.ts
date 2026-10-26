@@ -6,22 +6,22 @@ import { type LaunchedApp, launchApp } from './app';
 import { startFakeTtsApis, TTS_KEY } from './fakeTtsApis';
 
 /**
- * Studio's soak (E39): for AGENTMATE_STUDIO_SOAK minutes (15 for the acceptance run), the built app
+ * Studio's soak (E39): for RUNOVA_STUDIO_SOAK minutes (15 for the acceptance run), the built app
  * edits, narrates and renders a video over and over while the main process's event loop delay and
  * memory are sampled. It passes when main's event-loop p99 stays at 50 ms or less and the memory
  * shows no climbing trend once warmed up. Too long for every run, so it runs only when asked:
  *
- *   AGENTMATE_STUDIO_SOAK=15 npx playwright test -c e2e/playwright.config.ts studioSoak
+ *   RUNOVA_STUDIO_SOAK=15 npx playwright test -c e2e/playwright.config.ts studioSoak
  */
 
-const minutes = Number(process.env.AGENTMATE_STUDIO_SOAK ?? 0);
+const minutes = Number(process.env.RUNOVA_STUDIO_SOAK ?? 0);
 const hasFfmpeg = ['ffmpeg', 'ffprobe'].every(
   (tool) => spawnSync(tool, ['-version'], { windowsHide: true, stdio: 'ignore' }).status === 0,
 );
 const FLICKS = 705_600_000;
 
 type Bridge = {
-  agentmat: {
+  runova: {
     studio: {
       updateSettings(p: unknown): Promise<unknown>;
       create(input: unknown): Promise<{ id: string }>;
@@ -55,7 +55,7 @@ test.afterEach(async () => {
   await Promise.all(opened.splice(0).map((launched) => launched.close()));
 });
 
-test.skip(!minutes, 'The soak runs only with AGENTMATE_STUDIO_SOAK=<minutes>.');
+test.skip(!minutes, 'The soak runs only with RUNOVA_STUDIO_SOAK=<minutes>.');
 test.skip(!hasFfmpeg, 'ffmpeg is not installed here; Dev Setup (Studio) installs it.');
 
 test('holds steady under a long session of edits, narration and renders', async () => {
@@ -63,7 +63,7 @@ test('holds steady under a long session of edits, narration and renders', async 
   const tts = await startFakeTtsApis();
   const app = await launchApp({
     settings: { openaiApiKey: TTS_KEY },
-    env: { AGENTMATE_STUDIO_TTS_URL: tts.url },
+    env: { RUNOVA_STUDIO_TTS_URL: tts.url },
   });
   opened.push(app);
   const page = app.page;
@@ -80,7 +80,7 @@ test('holds steady under a long session of edits, narration and renders', async 
     });
     const videoId = await page.evaluate(
       async ({ library, flicks }) => {
-        const { studio, studioScenes } = (window as unknown as Bridge).agentmat;
+        const { studio, studioScenes } = (window as unknown as Bridge).runova;
         await studio.updateSettings({ defaultRoot: library, autoResumeRenders: false });
         const video = await studio.create({
           title: 'Soak',
@@ -135,7 +135,7 @@ test('holds steady under a long session of edits, narration and renders', async 
         }
         return video.id;
       },
-      { library: join(app.root, 'Videos', 'AgentMate Studio'), flicks: FLICKS },
+      { library: join(app.root, 'Videos', 'Runova Studio'), flicks: FLICKS },
     );
 
     const samples: { minute: number; heapMb: number; rssMb: number; appMb: number }[] = [];
@@ -165,7 +165,7 @@ test('holds steady under a long session of edits, narration and renders', async 
       round += 1;
       await page.evaluate(
         async ({ id, round: n }) => {
-          const { studio, studioAudio, studioRender } = (window as unknown as Bridge).agentmat;
+          const { studio, studioAudio, studioRender } = (window as unknown as Bridge).runova;
           let seq = (await studio.open(id)).session.status.seq;
           for (let k = 0; k < 20; k++) {
             const done = await studio.applyEdits({

@@ -70,13 +70,13 @@ export const vitestAdapter: TestAdapter = {
   stream: () => vitestStream(),
 };
 
-const JEST_MARK = '@@agentmate-jest ';
+const JEST_MARK = '@@runova-jest ';
 
 /**
  * Jest only writes its JSON report when every file is done, and its text output has no reliable
  * per-test lines. This reporter prints each test file's results the moment that file finishes.
  */
-const JEST_REPORTER = `class AgentMateReporter {
+const JEST_REPORTER = `class RunovaReporter {
   onTestResult(_test, result) {
     try {
       const entry = {
@@ -96,7 +96,7 @@ const JEST_REPORTER = `class AgentMateReporter {
     } catch {}
   }
 }
-module.exports = AgentMateReporter;
+module.exports = RunovaReporter;
 `;
 
 function jestStream(): StreamParser {
@@ -121,7 +121,7 @@ export const jestAdapter: TestAdapter = {
   plan(project, target, ctx) {
     const { command, prefix } = nodeRunner(project, 'jest', ctx);
     const report = reportPath(ctx, 'jest.json');
-    const reporter = reportPath(ctx, 'agentmate-jest-reporter.cjs');
+    const reporter = reportPath(ctx, 'runova-jest-reporter.cjs');
     const { files, names } = selectionArgs(project, target);
     return {
       command,
@@ -214,14 +214,14 @@ function jsStatus(status: string | undefined): ParsedTestResult['status'] {
   return 'skipped';
 }
 
-const PLAYWRIGHT_MARK = '@@agentmate-playwright ';
+const PLAYWRIGHT_MARK = '@@runova-playwright ';
 
 /**
  * Playwright writes its JSON report only once the whole run is over, and a suite that drives a real
  * app can take many minutes. This reporter prints a line for every test the moment it ends, so the
  * panel can tick results off as they come in.
  */
-const PLAYWRIGHT_REPORTER = `class AgentMateReporter {
+const PLAYWRIGHT_REPORTER = `class RunovaReporter {
   onTestEnd(test, result) {
     try {
       const error = result.error || {};
@@ -240,7 +240,7 @@ const PLAYWRIGHT_REPORTER = `class AgentMateReporter {
     } catch {}
   }
 }
-module.exports = AgentMateReporter;
+module.exports = RunovaReporter;
 `;
 
 function playwrightStream(): StreamParser {
@@ -282,7 +282,7 @@ export const playwrightAdapter: TestAdapter = {
   plan(project, target, ctx) {
     const { command, prefix } = nodeRunner(project, 'playwright', ctx);
     const report = reportPath(ctx, 'playwright.json');
-    const reporter = reportPath(ctx, 'agentmate-playwright-reporter.cjs');
+    const reporter = reportPath(ctx, 'runova-playwright-reporter.cjs');
     const config = project.meta?.config;
     const selection: string[] = [];
     const unlined: string[] = [];

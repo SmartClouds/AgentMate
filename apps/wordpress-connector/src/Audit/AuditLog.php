@@ -3,13 +3,13 @@
  * The capped audit log: pairings, pulls, deploys, rollbacks and auth failures. Details are plain
  * text written by the plugin, never a secret.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Audit;
+namespace Runova\Connector\Audit;
 
-use AgentMate\Connector\Storage\Storage;
-use AgentMate\Connector\Support\Text;
+use Runova\Connector\Storage\Storage;
+use Runova\Connector\Support\Text;
 
 final class AuditLog
 {

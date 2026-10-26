@@ -1,4 +1,4 @@
-import type { BoardFile } from '@agentmat/core';
+import type { BoardFile } from '@runova/core';
 import {
   type AgentStatus,
   createRelay,
@@ -27,7 +27,7 @@ import {
   relayCapabilities,
   relayQueue,
   triggerVerdict,
-} from '@agentmat/core';
+} from '@runova/core';
 import type {
   RelayApplyResult,
   RelayChangedEvent,

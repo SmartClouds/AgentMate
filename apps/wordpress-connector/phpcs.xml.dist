@@ -1,11 +1,12 @@
 <?xml version="1.0"?>
-<ruleset name="AgentMate Connector">
+<ruleset name="Runova Connector">
     <description>PHP 7.4+ compatibility, plus the WordPress security and SQL sniffs.</description>
 
-    <file>agentmate-connector.php</file>
+    <file>runova-connector.php</file>
     <file>uninstall.php</file>
     <file>rescue.php</file>
     <file>guard</file>
+    <file>legacy</file>
     <file>src</file>
 
     <arg name="extensions" value="php"/>

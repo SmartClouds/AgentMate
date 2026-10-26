@@ -52,7 +52,7 @@ export function GuidedFix({
           size="sm"
           variant="soft"
           onClick={() => {
-            void window.agentmat.shell.openExternal(TOKEN_PAGE);
+            void window.runova.shell.openExternal(TOKEN_PAGE);
             void queryClient.invalidateQueries({ queryKey: queryKeys.cloudflareStatus });
           }}
         >

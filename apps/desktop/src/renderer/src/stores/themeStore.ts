@@ -1,4 +1,4 @@
-import { isThemeMode, type ThemeMode } from '@agentmat/core';
+import { isThemeMode, type ThemeMode } from '@runova/core';
 import { create } from 'zustand';
 
 interface ThemeState {
@@ -87,12 +87,12 @@ export const useThemeStore = create<ThemeState>((set) => ({
     applyThemeClass(theme);
     syncThemeInUrl(theme);
     set({ theme });
-    void window.agentmat.settings.update({ theme });
+    void window.runova.settings.update({ theme });
   },
 }));
 
 export async function initTheme(): Promise<void> {
-  const settings = await window.agentmat.settings.get();
+  const settings = await window.runova.settings.get();
   applyThemeClass(settings.theme);
   useThemeStore.setState({ theme: settings.theme });
 

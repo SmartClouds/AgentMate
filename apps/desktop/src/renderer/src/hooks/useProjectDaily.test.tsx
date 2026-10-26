@@ -11,11 +11,11 @@ import { useProjectDaily } from './useProjectDaily';
 
 const claude = usageOf(
   'claude-code',
-  splitOf([projectRow({ key: 'project:p1', name: 'AgentMate', tokens: [0, 100, 0, 0, 0, 0, 0] })]),
+  splitOf([projectRow({ key: 'project:p1', name: 'Runova', tokens: [0, 100, 0, 0, 0, 0, 0] })]),
 );
 const codex = usageOf(
   'codex',
-  splitOf([projectRow({ key: 'project:p1', name: 'AgentMate', tokens: [0, 0, 0, 0, 0, 0, 50] })]),
+  splitOf([projectRow({ key: 'project:p1', name: 'Runova', tokens: [0, 0, 0, 0, 0, 0, 50] })]),
 );
 
 describe('useProjectDaily', () => {
@@ -28,7 +28,7 @@ describe('useProjectDaily', () => {
     expect(result.current.isPending).toBe(false);
     expect(result.current.isError).toBe(false);
     const [row] = result.current.split?.projects ?? [];
-    expect(row.name).toBe('AgentMate');
+    expect(row.name).toBe('Runova');
     expect(row.tokens.reduce((sum, value) => sum + value, 0)).toBe(100 * 4 + 50 * 4);
   });
 

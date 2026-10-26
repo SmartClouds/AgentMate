@@ -1,4 +1,4 @@
-import { ENVIRONMENT_KIND_LABELS, ENVIRONMENT_KINDS, type EnvironmentKind } from '@agentmat/core';
+import { ENVIRONMENT_KIND_LABELS, ENVIRONMENT_KINDS, type EnvironmentKind } from '@runova/core';
 import type { EnvFolderFile, EnvImportPick, ProjectEnvironment } from '@shared/apiTypes';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -72,7 +72,7 @@ export function ImportEnvFilesDialog({
     setError(null);
     setSubmitting(false);
     let cancelled = false;
-    window.agentmat.environments
+    window.runova.environments
       .scanFolder(projectId)
       .then((files) => {
         if (cancelled) return;
@@ -127,7 +127,7 @@ export function ImportEnvFilesDialog({
 
     setSubmitting(true);
     try {
-      const result = await window.agentmat.environments.importFromFolder(projectId, picks);
+      const result = await window.runova.environments.importFromFolder(projectId, picks);
       for (const message of result.errors) toast.error(message);
       if (result.imported > 0) {
         toast.success(`Imported ${result.imported} ${result.imported === 1 ? 'file' : 'files'}.`);
@@ -147,7 +147,7 @@ export function ImportEnvFilesDialog({
         <DialogHeader>
           <DialogTitle>Import env files from the project folder</DialogTitle>
           <DialogDescription>
-            Copies the .env files in the project root into AgentMate, encrypted. The files in the
+            Copies the .env files in the project root into Runova, encrypted. The files in the
             folder are left as they are. A file with the same name in the chosen environment is
             replaced.
           </DialogDescription>

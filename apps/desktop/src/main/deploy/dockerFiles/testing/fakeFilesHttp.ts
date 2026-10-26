@@ -15,7 +15,7 @@ import { type CoreTransport, devTcpTransport } from '../../connection/transport'
  * transport, so `CoreHttpClient` talks to it exactly as it talks to a core:
  *
  * - `GET /api/v1/files/{sessionId}/content?path=` answers the bytes with `Content-Length` and
- *   `X-AgentMate-Mtime-Ms`, and a `Range: bytes=a-b` with 206 (416 past the end).
+ *   `X-Runova-Mtime-Ms`, and a `Range: bytes=a-b` with 206 (416 past the end).
  * - `PUT` the same path, `&mode=<octal>` optional, takes the raw body (411 without a
  *   Content-Length) and only once every byte has arrived writes the file and answers its
  *   FileEntry. A body cut off on the way writes nothing.
@@ -122,7 +122,7 @@ export async function startFakeFilesHttp(core: FakeCore): Promise<FakeFilesHttp>
     const all = Buffer.from(file.bytes);
     const headers: Record<string, string> = {
       'content-type': 'application/octet-stream',
-      'x-agentmate-mtime-ms': String(file.mtimeMs),
+      'x-runova-mtime-ms': String(file.mtimeMs),
     };
     const wanted = range ? RANGE.exec(range) : null;
     if (range && !wanted) {
@@ -193,7 +193,7 @@ export async function startFakeFilesHttp(core: FakeCore): Promise<FakeFilesHttp>
       url: request.url ?? '',
       headers: request.headers,
     });
-    const url = new URL(request.url ?? '/', 'http://agentmate-core');
+    const url = new URL(request.url ?? '/', 'http://runova-core');
     const route = CONTENT.exec(url.pathname);
     const path = url.searchParams.get('path');
     if (!route || path === null) {

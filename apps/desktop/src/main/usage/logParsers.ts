@@ -6,7 +6,7 @@ import {
   CODEX_LOG_FALLBACK_MODEL,
   COPILOT_LOG_FALLBACK_MODEL,
   GEMINI_LOG_FALLBACK_MODEL,
-} from '@agentmat/core';
+} from '@runova/core';
 import { codexCwdFromHead, cwdsIn, launchFolder, topLevelDir } from './sessionFolders';
 
 // Parsing for the local-log usage providers (Claude Code, Codex, Copilot, Gemini

@@ -23,7 +23,7 @@ export function startRunSessionFeed(): () => void {
     const offSessions = useTerminalStore.subscribe((state, previous) => {
       if (state.sessions !== previous.sessions) sync();
     });
-    const offData = window.agentmat.terminal.onData(({ sessionId, data }) => {
+    const offData = window.runova.terminal.onData(({ sessionId, data }) => {
       if (runIds.has(sessionId)) useRunSessionStore.getState().noteOutput(sessionId, data);
     });
     stopFeed = () => {

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { ProjectDraft, ProjectDraftStatus, ScheduledTask } from '@agentmat/core';
+import type { ProjectDraft, ProjectDraftStatus, ScheduledTask } from '@runova/core';
 import { ipcMain } from 'electron';
 import type {
   CreateProjectDraftInput,

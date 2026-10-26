@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { PackageInfo, PackageManagerSection } from '@shared/apiTypes';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { Field, FormSection } from '@/components/health/formParts';

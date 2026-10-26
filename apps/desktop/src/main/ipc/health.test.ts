@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { buildHealthSpecMarkdown, HEALTH_ENV } from '@agentmat/core';
+import { buildHealthSpecMarkdown, HEALTH_ENV } from '@runova/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   HealthCreateResult,
@@ -53,7 +53,7 @@ function input(overrides: Partial<HealthTargetInput> = {}): HealthTargetInput {
     name: 'API',
     serverLabel: 'web-1',
     serverLink: null,
-    url: `${endpoint.url}/_agentmate/health`,
+    url: `${endpoint.url}/_runova/health`,
     intervalSec: 60,
     timeoutSec: 5,
     authMode: 'bearer',
@@ -80,7 +80,7 @@ const failing = {
   status: 'fail',
   checks: {
     'postgres:connection': [
-      { status: 'fail', output: 'connect ECONNREFUSED', agentmate: { detail: 'password=hunter2' } },
+      { status: 'fail', output: 'connect ECONNREFUSED', runova: { detail: 'password=hunter2' } },
     ],
   },
 };
@@ -130,7 +130,7 @@ describe('create and rotate, the only two that reveal a secret', () => {
     expect(secret).toEqual({
       targetId: target.id,
       authMode: 'bearer',
-      secret: expect.stringMatching(/^amh_[A-Za-z0-9_-]{43}$/),
+      secret: expect.stringMatching(/^rnh_[A-Za-z0-9_-]{43}$/),
       sha256: sha256Hex(secret.secret),
       basicUser: null,
       hashEnvVar: HEALTH_ENV.tokenHash,
@@ -144,10 +144,10 @@ describe('create and rotate, the only two that reveal a secret', () => {
   });
 
   it('makes a Basic password with the password hash variable', async () => {
-    const { secret } = await create({ authMode: 'basic', basicUser: 'agentmate' });
+    const { secret } = await create({ authMode: 'basic', basicUser: 'runova' });
     expect(secret).toMatchObject({
       authMode: 'basic',
-      basicUser: 'agentmate',
+      basicUser: 'runova',
       hashEnvVar: HEALTH_ENV.passwordHash,
     });
     expect(secret.secret).toMatch(/^[A-Za-z0-9_-]{32}$/);
@@ -174,9 +174,9 @@ describe('create and rotate, the only two that reveal a secret', () => {
     const key = await deriveKey('a passkey nobody typed', salt);
     userData.writeData('ssh-vault.json', {
       salt,
-      verifier: Buffer.from(JSON.stringify(encryptWithKey('agentmate-ssh-vault', key))).toString(
-        'base64',
-      ),
+      verifier: Buffer.from(
+        JSON.stringify(encryptWithKey('agentmate-ssh-vault', key) /* legacy-name */),
+      ).toString('base64'),
     });
     await expect(create()).rejects.toThrow('The vault is locked.');
   });
@@ -327,7 +327,7 @@ describe('probing and incidents', () => {
     expect(setup.spec).toBe(buildHealthSpecMarkdown());
     expect(setup.prompt).toContain('Add a healthcheck endpoint to Shop');
     expect(setup.prompt).toContain('the Production environment, server web-1');
-    expect(setup.prompt).toContain('`/_agentmate/health`');
+    expect(setup.prompt).toContain('`/_runova/health`');
     expect(setup.prompt).toContain(HEALTH_ENV.tokenHash);
     expect(setup.prompt).not.toContain(secret.secret);
     expect(setup.prompt).not.toContain(secret.sha256);
@@ -336,7 +336,7 @@ describe('probing and incidents', () => {
   it('suggests the default path when the URL has none', async () => {
     const { target } = await create({ url: endpoint.url });
     const setup = await invoke<HealthSetupPrompt>(IPC.health.setupPrompt, target.id);
-    expect(setup.prompt).toContain('`/_agentmate/health`');
+    expect(setup.prompt).toContain('`/_runova/health`');
   });
 });
 

@@ -1,5 +1,5 @@
-import type { AppSettings } from '@agentmat/core';
-import { GEMINI_API_MODELS, OPENAI_API_MODELS } from '@agentmat/core';
+import type { AppSettings } from '@runova/core';
+import { GEMINI_API_MODELS, OPENAI_API_MODELS } from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -143,7 +143,7 @@ export function HelpChat({ onClose }: HelpChatProps): React.JSX.Element {
 
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
   });
   const settings = settingsQuery.data;
 
@@ -166,18 +166,18 @@ export function HelpChat({ onClose }: HelpChatProps): React.JSX.Element {
 
   const statusQuery = useQuery({
     queryKey: ['help-index-status', provider],
-    queryFn: () => window.agentmat.help.status(provider),
+    queryFn: () => window.runova.help.status(provider),
     enabled: ready,
   });
 
   const ollamaModelsQuery = useQuery({
     queryKey: ['ollama-models'],
-    queryFn: () => window.agentmat.ai.listOllamaModels(),
+    queryFn: () => window.runova.ai.listOllamaModels(),
     enabled: ready && provider === 'ollama',
     retry: false,
   });
 
-  useEffect(() => window.agentmat.help.onIndexProgress(setProgress), []);
+  useEffect(() => window.runova.help.onIndexProgress(setProgress), []);
 
   useCitationLabels(listRef, messages);
 
@@ -223,7 +223,7 @@ export function HelpChat({ onClose }: HelpChatProps): React.JSX.Element {
     const requestId = crypto.randomUUID();
     setPendingId(requestId);
     try {
-      const result = await window.agentmat.help.ask({
+      const result = await window.runova.help.ask({
         provider,
         model,
         question: text,
@@ -251,7 +251,7 @@ export function HelpChat({ onClose }: HelpChatProps): React.JSX.Element {
   }
 
   function stop(): void {
-    if (pendingId) void window.agentmat.help.cancel(pendingId);
+    if (pendingId) void window.runova.help.cancel(pendingId);
   }
 
   const status = statusQuery.data;
@@ -321,8 +321,8 @@ export function HelpChat({ onClose }: HelpChatProps): React.JSX.Element {
             {messages.length === 0 ? (
               <div className="flex h-full flex-col justify-end gap-3 pb-1">
                 <p className="text-[13px] leading-6 text-muted-foreground">
-                  Ask how to do something in AgentMate. The guide reads the help articles, answers
-                  in your language, and links the sections it used.
+                  Ask how to do something in Runova. The guide reads the help articles, answers in
+                  your language, and links the sections it used.
                 </p>
                 <div className="flex flex-col items-start gap-1.5">
                   {STARTERS.map((s) => (

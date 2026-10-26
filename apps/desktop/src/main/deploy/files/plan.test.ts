@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { rmSync, statSync, utimesSync } from 'node:fs';
 import { join } from 'node:path';
-import type { RemoteTimeSource } from '@agentmat/core';
+import type { RemoteTimeSource } from '@runova/core';
 import { describe, expect, it } from 'vitest';
 import { filesErrorCode } from '../../../shared/deployFilesErrors';
 import type { FilesPlanView } from '../../../shared/deployFilesTypes';
@@ -65,7 +65,7 @@ interface SetupOptions extends FakeRemoteOptions {
 
 function setup(options: SetupOptions = {}) {
   const { remoteRoot = ROOT, overrides, ...fakeOptions } = options;
-  const local = tempDir('agentmate-plan-');
+  const local = tempDir('runova-plan-');
   const fake = createFakeRemote(fakeOptions);
   fake.setDir(remoteRoot);
   const theSite = site({ localFolder: local, remoteRoot });
@@ -255,27 +255,27 @@ describe('plan: what is read on the server', () => {
   it('keeps part files a stopped upload left for the run, and never takes them for site files', async () => {
     const t = setup();
     t.write({ 'new/c.txt': 'new' });
-    t.fake.setFile(`${ROOT}/new/c.txt.agentmate-0123abcd.part`, 'ne');
+    t.fake.setFile(`${ROOT}/new/c.txt.runova-0123abcd.part`, 'ne');
 
     const view = await t.planner.plan('site1');
 
     expect(view.changes[0]).toMatchObject({ path: 'new/c.txt', remote: 'missing' });
     expect(view.firstDeploy).toBeNull();
     const kept = t.planner.take('site1', view.planId);
-    expect(kept.partFiles).toEqual([`${ROOT}/new/c.txt.agentmate-0123abcd.part`]);
+    expect(kept.partFiles).toEqual([`${ROOT}/new/c.txt.runova-0123abcd.part`]);
     expect(kept.existingDirs).toContain('new');
   });
 
   it('keeps the backups a stopped replace left for the run, and never takes them for site files', async () => {
     const t = setup();
     t.write({ 'new/c.txt': 'new' });
-    t.fake.setFile(`${ROOT}/new/c.txt.agentmate-0123abcd.old`, 'old');
+    t.fake.setFile(`${ROOT}/new/c.txt.runova-0123abcd.old`, 'old');
 
     const view = await t.planner.plan('site1');
 
     expect(view.firstDeploy).toBeNull();
     const kept = t.planner.take('site1', view.planId);
-    expect(kept.backupFiles).toEqual([`${ROOT}/new/c.txt.agentmate-0123abcd.old`]);
+    expect(kept.backupFiles).toEqual([`${ROOT}/new/c.txt.runova-0123abcd.old`]);
     expect(kept.partFiles).toEqual([]);
   });
 

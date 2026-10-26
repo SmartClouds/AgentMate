@@ -1,4 +1,4 @@
-import type { ApiTreeNode } from '@agentmat/core';
+import type { ApiTreeNode } from '@runova/core';
 import type { ApiCollectionSummary } from '@shared/apiClientTypes';
 import { useEffect, useMemo, useState } from 'react';
 import { Folder, FolderPlus, FolderTree, Save, TriangleAlert } from '@/components/icons';

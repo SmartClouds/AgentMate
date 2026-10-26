@@ -71,7 +71,7 @@ beforeAll(async () => {
 }, 120_000);
 
 beforeEach(async () => {
-  folder = realpathSync(tempDir('agentmate-site-'));
+  folder = realpathSync(tempDir('runova-site-'));
   userData.writeData('projects.json', [
     { id: 'p1', name: 'Shop', folderPath: folder, createdAt: '2026-01-01T00:00:00Z' },
     { id: 'p2', name: 'Blog', folderPath: folder, createdAt: '2026-01-01T00:00:00Z' },
@@ -401,7 +401,7 @@ describe('checking what the dialog sent', () => {
 
     it('cannot be the home folder itself', async () => {
       // The harness puts home inside userData, which is refused for a reason of its own.
-      const home = realpathSync(tempDir('agentmate-home-'));
+      const home = realpathSync(tempDir('runova-home-'));
       setElectronPath('home', home);
       await expect(sites.createFileSite(input({ localFolder: home }))).rejects.toThrow(/home/);
       const inside = join(home, 'site');
@@ -417,13 +417,11 @@ describe('checking what the dialog sent', () => {
       ).rejects.toThrow(/root/);
     });
 
-    it("cannot be inside AgentMate's own data", async () => {
+    it("cannot be inside Runova's own data", async () => {
       const inside = join(userData.dir, 'data');
-      await expect(sites.createFileSite(input({ localFolder: inside }))).rejects.toThrow(
-        /AgentMate/,
-      );
+      await expect(sites.createFileSite(input({ localFolder: inside }))).rejects.toThrow(/Runova/);
       await expect(sites.createFileSite(input({ localFolder: userData.dir }))).rejects.toThrow(
-        /AgentMate/,
+        /Runova/,
       );
     });
   });

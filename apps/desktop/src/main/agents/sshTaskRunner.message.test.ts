@@ -43,7 +43,7 @@ const fake = vi.hoisted(() => {
   /** Answers a line typed with the hidden markers, the way bash would. */
   function type(sessionId: string, line: string): void {
     const hidden = line.match(
-      /^printf '\\033\]7750;AgentMate:Start:(\w+)\\007'; (.*); printf '\\033\]7750;AgentMate:Done:\1:%s\\007' "\$\?"[\r\n]$/,
+      /^printf '\\033\]7750;Runova:Start:(\w+)\\007'; (.*); printf '\\033\]7750;Runova:Done:\1:%s\\007' "\$\?"[\r\n]$/,
     );
     const body = hidden?.[2];
     if (!hidden || body === undefined) return;
@@ -54,9 +54,9 @@ const fake = vi.hoisted(() => {
     };
     const respond = (): void => {
       emit(sessionId, `${line.trimEnd()}\r\n`);
-      emit(sessionId, `\x1b]7750;AgentMate:Start:${hidden[1]}\x07`);
+      emit(sessionId, `\x1b]7750;Runova:Start:${hidden[1]}\x07`);
       emit(sessionId, answer.output);
-      emit(sessionId, `\x1b]7750;AgentMate:Done:${hidden[1]}:${answer.code}\x07`);
+      emit(sessionId, `\x1b]7750;Runova:Done:${hidden[1]}:${answer.code}\x07`);
     };
     const hold = state.holds.get(body);
     if (hold) void hold.then(respond);
@@ -135,7 +135,7 @@ vi.mock('../store', () => ({
 vi.mock('../notifications/petNotifier', () => ({ speakOnPet: vi.fn() }));
 vi.mock('../notifications/osNotification', () => ({ showOsNotification: vi.fn(() => true) }));
 vi.mock('../mainWindow', () => ({ getMainWindow: () => null }));
-vi.mock('@agentmat/core', () => ({
+vi.mock('@runova/core', () => ({
   getCliDefinition: (id: string) => (id === 'claude' ? { name: 'Claude Code' } : undefined),
   runArgsFor: () => [],
 }));

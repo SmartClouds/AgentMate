@@ -1,4 +1,4 @@
-import type { BackupPlanPreview } from './protocol/generated/AgentMate.ServerCore.Contracts';
+import type { BackupPlanPreview } from './protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * A backup plan's schedule (E28) as the plan editor offers it, and the five-field cron line the

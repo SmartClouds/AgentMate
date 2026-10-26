@@ -11,7 +11,7 @@ describe('HealthTargetCard', () => {
     expect(within(card).getByText('web-1')).toBeInTheDocument();
     expect(within(card).getByText('api.example.com')).toBeInTheDocument();
     expect(card).not.toHaveTextContent('probe=1');
-    expect(card).not.toHaveTextContent('_agentmate');
+    expect(card).not.toHaveTextContent('_runova');
     expect(within(card).getByText('Healthy')).toBeInTheDocument();
   });
 

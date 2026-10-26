@@ -1,5 +1,5 @@
-import type { AppNotification, UpdateCheckSource } from '@agentmat/core';
-import { AGENT_TOOL_REGISTRY, CLI_REGISTRY } from '@agentmat/core';
+import type { AppNotification, UpdateCheckSource } from '@runova/core';
+import { AGENT_TOOL_REGISTRY, CLI_REGISTRY } from '@runova/core';
 import { IPC } from '../../shared/ipcChannels';
 import { detectAllClis } from '../ipc/cliDetection';
 import { broadcastToWindows } from '../ipc/send';

@@ -1,4 +1,4 @@
-import type { GenJobView } from '@agentmat/studio';
+import type { GenJobView } from '@runova/studio';
 import { screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';

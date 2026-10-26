@@ -7,27 +7,59 @@ import { coreErrorCode } from '../../shared/coreErrors';
 import type {
   CoreUpdateRequest,
   CoreUpdateResult,
-} from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
-import type { DeployCoreRecord, DeployHealth, DeploySetupProgress } from '../../shared/deployTypes';
+  LayoutMigrationResult,
+} from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
+import type {
+  DeployCoreLayout,
+  DeployCoreRecord,
+  DeployHealth,
+  DeploySetupProgress,
+} from '../../shared/deployTypes';
 import type { ReleaseSource } from './bootstrap/releaseSource';
 import { type CoreHttpClient, CoreHttpError, type CoreStreamOptions } from './connection/coreHttp';
+import { LEGACY_CORE, RUNOVA_CORE } from './coreLayout';
 import { CORE_UPDATE_PATH, type CoreUpdateDeps, updateCoreLive } from './coreUpdate';
 
 const SHA = 'b'.repeat(64);
-const FILE = 'agentmate-core-1.64.0-linux-x64.tar.gz';
-const URL = `https://github.com/SmartClouds/AgentMate/releases/download/v1.64.0/${FILE}`;
+const FILE = 'runova-core-1.64.0-linux-x64.tar.gz';
+const URL = `https://github.com/SmartClouds/Runova/releases/download/v1.64.0/${FILE}`;
 const RECORD: DeployCoreRecord = {
   version: '1.63.0',
-  release: '/opt/agentmate-core/releases/1.63.0-aaaaaaaaaaaa',
+  release: '/opt/runova-core/releases/1.63.0-aaaaaaaaaaaa',
+  layout: 'runova',
   transport: 'streamlocal',
   installedAt: 1,
   os: 'Ubuntu 24.04 LTS',
   architecture: 'x86_64',
 };
 
-function health(version: string, startedAtUnixMs: number): DeployHealth {
-  return { version, apiVersion: 1, startedAtUnixMs, checkedAt: 0 };
+/** A server set up before the rename: its record has no layout, its core the old names. */
+const LEGACY_RECORD: DeployCoreRecord = {
+  version: '1.63.0',
+  release: `${LEGACY_CORE.releases}/1.63.0-aaaaaaaaaaaa`,
+  transport: 'streamlocal',
+  installedAt: 1,
+  os: 'Ubuntu 24.04 LTS',
+  architecture: 'x86_64',
+};
+const LEGACY_FILE = `${LEGACY_CORE.tarballPrefix}1.64.0-linux-x64.tar.gz`;
+const LEGACY_URL = `https://github.com/SmartClouds/Runova/releases/download/v1.64.0/${LEGACY_FILE}`;
+
+function health(
+  version: string,
+  startedAtUnixMs: number,
+  layout: DeployCoreLayout = 'runova',
+  migrationError?: string,
+): DeployHealth {
+  return {
+    version,
+    apiVersion: 1,
+    startedAtUnixMs,
+    checkedAt: 0,
+    layout,
+    ...(migrationError ? { migrationError } : {}),
+  };
 }
 
 interface Upload {
@@ -61,6 +93,11 @@ function setup(
     uploadError?: Error;
     cameBackAs?: string;
     roles?: string[] | null;
+    /** The server is on the layout from before the rename. */
+    legacy?: boolean;
+    migration?: LayoutMigrationResult;
+    /** How the core comes back from a migration: under its new name, or put back with a reason. */
+    migrated?: { layout: DeployCoreLayout; error?: string };
   } = {},
 ) {
   const progress: DeploySetupProgress[] = [];
@@ -69,11 +106,13 @@ function setup(
   const stepUps: unknown[] = [];
   const requests: CoreUpdateRequest[] = [];
   let checks = 0;
+  let migrating = false;
   const releases: ReleaseSource = {
     release: vi.fn(async (rid) => ({
       version: '1.64.0',
       rid,
       file: FILE,
+      legacyFile: LEGACY_FILE,
       sha256: SHA,
       localPath: tarball,
     })),
@@ -87,6 +126,7 @@ function setup(
             sha256: SHA,
             size: 4096,
             url: URL,
+            legacy: { file: LEGACY_FILE, url: LEGACY_URL },
           }),
         }),
   };
@@ -99,6 +139,10 @@ function setup(
       requests.push(request);
       if (options.hubError) throw options.hubError;
       return options.answer?.(request) ?? { outcome: 'switching', runningVersion: '1.63.0' };
+    }),
+    migrateLayout: vi.fn(async () => {
+      migrating = true;
+      return options.migration ?? { outcome: 'started' };
     }),
   } as unknown as ICoreHub;
   const client = {
@@ -114,7 +158,7 @@ function setup(
   const resetLink = vi.fn();
   const deps: CoreUpdateDeps = {
     releases,
-    record: async () => RECORD,
+    record: async () => (options.legacy ? LEGACY_RECORD : RECORD),
     saveRecord: async (_id, record) => {
       saved.push(record);
     },
@@ -122,20 +166,98 @@ function setup(
     withCoreHttp: (_id, work) => work(client, 'token'),
     health: async () => {
       checks += 1;
-      if (checks === 1) return health('1.63.0', 100);
+      const layout = options.legacy ? 'legacy' : 'runova';
+      if (checks === 1) return health('1.63.0', 100, layout);
       if (checks === 2) throw new Error('connect ECONNREFUSED');
-      return health(options.cameBackAs ?? '1.64.0', 200);
+      if (migrating) {
+        const moved = options.migrated ?? { layout: 'runova' };
+        return health('1.64.0', 300, moved.layout, moved.error);
+      }
+      return health(options.cameBackAs ?? '1.64.0', 200, layout);
     },
     roles: () => (options.roles === undefined ? ['owner'] : options.roles),
     resetLink,
     progress: (event) => progress.push(event),
     sleep: async () => undefined,
   };
-  return { deps, progress, uploads, saved, stepUps, requests, resetLink, releases };
+  return { deps, progress, uploads, saved, stepUps, requests, resetLink, releases, hub };
 }
 
 const phases = (events: DeploySetupProgress[]) =>
   events.map((event) => `${event.phase}:${event.status}`);
+
+describe('updateCoreLive on a server from before the rename', () => {
+  it('asks the old core for the tarball under its old name, then moves the server', async () => {
+    const { deps, progress, saved, requests, hub } = setup({ legacy: true });
+
+    const result = await updateCoreLive(deps, { serverId: 's1', password: 'pw' });
+
+    expect(requests).toEqual([
+      { version: '1.64.0', file: LEGACY_FILE, sha256: SHA, size: 4096, downloadUrl: LEGACY_URL },
+    ]);
+    expect(hub.migrateLayout).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ outcome: 'updated', layout: 'runova' });
+    expect(result).not.toHaveProperty('migrationError');
+    expect(phases(progress).slice(-2)).toEqual(['migrate:running', 'migrate:done']);
+    expect(saved.at(-1)).toMatchObject({
+      layout: 'runova',
+      release: `${RUNOVA_CORE.releases}/1.64.0-${SHA.slice(0, 12)}`,
+    });
+  });
+
+  it('sends the upload under both header names, and the old file name', async () => {
+    const { deps, uploads } = setup({
+      legacy: true,
+      answer: () => ({ outcome: 'downloadFailed', runningVersion: '1.63.0', problem: 'offline' }),
+    });
+
+    await updateCoreLive(deps, { serverId: 's1' });
+
+    expect(uploads[0]?.options.headers).toEqual({
+      'x-runova-core-version': '1.64.0',
+      'x-runova-core-file': FILE,
+      'x-runova-core-sha256': SHA,
+      [LEGACY_CORE.versionHeader]: '1.64.0',
+      [LEGACY_CORE.fileHeader]: LEGACY_FILE,
+      [LEGACY_CORE.sha256Header]: SHA,
+    });
+  });
+
+  it('keeps the update when the move is put back, and says why', async () => {
+    const { deps, progress, saved } = setup({
+      legacy: true,
+      migrated: { layout: 'legacy', error: 'Moving the state folder failed: busy' },
+    });
+
+    const result = await updateCoreLive(deps, { serverId: 's1', password: 'pw' });
+
+    expect(result).toMatchObject({
+      outcome: 'updated',
+      version: '1.64.0',
+      layout: 'legacy',
+      migrationError: 'Moving the state folder failed: busy',
+    });
+    expect(phases(progress).at(-1)).toBe('migrate:failed');
+    expect(saved.at(-1)).toMatchObject({
+      layout: 'legacy',
+      release: `${LEGACY_CORE.releases}/1.64.0-${SHA.slice(0, 12)}`,
+    });
+  });
+
+  it('reports a refused move without failing the update', async () => {
+    const { deps } = setup({
+      legacy: true,
+      migration: { outcome: 'refused', problem: 'Confirm or undo these first: a firewall change.' },
+    });
+
+    const result = await updateCoreLive(deps, { serverId: 's1', password: 'pw' });
+
+    expect(result).toMatchObject({
+      layout: 'legacy',
+      migrationError: 'Confirm or undo these first: a firewall change.',
+    });
+  });
+});
 
 describe('updateCoreLive', () => {
   it('lets the server download the release itself and waits for it to come back on it', async () => {
@@ -148,6 +270,7 @@ describe('updateCoreLive', () => {
       version: '1.64.0',
       previousVersion: '1.63.0',
       via: 'server-download',
+      layout: 'runova',
     });
     expect(requests).toEqual([
       { version: '1.64.0', file: FILE, sha256: SHA, size: 4096, downloadUrl: URL },
@@ -164,7 +287,7 @@ describe('updateCoreLive', () => {
     expect(saved).toEqual([
       expect.objectContaining({
         version: '1.64.0',
-        release: `/opt/agentmate-core/releases/1.64.0-${SHA.slice(0, 12)}`,
+        release: `/opt/runova-core/releases/1.64.0-${SHA.slice(0, 12)}`,
       }),
     ]);
     expect(resetLink).toHaveBeenCalledWith('s1');
@@ -197,9 +320,9 @@ describe('updateCoreLive', () => {
       token: 'token',
       contentLength: 4096,
       headers: {
-        'x-agentmate-core-version': '1.64.0',
-        'x-agentmate-core-file': FILE,
-        'x-agentmate-core-sha256': SHA,
+        'x-runova-core-version': '1.64.0',
+        'x-runova-core-file': FILE,
+        'x-runova-core-sha256': SHA,
       },
     });
     expect(phases(progress)).toEqual([

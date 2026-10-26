@@ -4,13 +4,13 @@ import {
   type ProjectDaily,
   type ProjectDailyUsage,
   type UsageTokens,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { UsageEntry } from './shared';
 
 // The per-project split behind the Token Usage chart "Projects by weekday": tokens and estimated
 // cost for each project on each local day of the last 28. Pure, so it is tested without a scan.
 //
-// A project is a registered AgentMate project, or one of its git worktrees. Any other folder is
+// A project is a registered Runova project, or one of its git worktrees. Any other folder is
 // its own row. Folders are compared as normalized paths, so the Windows and Git Bash spellings of
 // one folder land on one row.
 

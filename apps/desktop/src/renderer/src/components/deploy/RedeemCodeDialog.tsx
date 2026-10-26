@@ -74,7 +74,7 @@ export function RedeemCodeDialog({
     setProblem(null);
     try {
       const access = await withHostKeyTrust(server.id, () =>
-        window.agentmat.deploySecurity.redeemEnrollmentCode({
+        window.runova.deploySecurity.redeemEnrollmentCode({
           serverId: server.id,
           code: code.trim(),
           userName,
@@ -108,7 +108,7 @@ export function RedeemCodeDialog({
             <DialogDescription>
               An Owner of this core makes the code for you under Security, Users. This computer gets
               a key of its own; your password goes to the core and is not saved here. No sudo is
-              needed, but your SSH login has to be in the server's agentmate group.
+              needed, but your SSH login has to be in the server's runova group.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">

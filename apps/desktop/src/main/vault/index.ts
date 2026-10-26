@@ -109,7 +109,7 @@ export function registerVaultIpc(): void {
         const stamp = new Date().toISOString().slice(0, 10);
         const result = await dialog.showSaveDialog({
           title: 'Export vault as plain text CSV',
-          defaultPath: `agentmate-vault-${format}-${stamp}.csv`,
+          defaultPath: `runova-vault-${format}-${stamp}.csv`,
           filters: [{ name: 'CSV', extensions: ['csv'] }],
         });
         return result.canceled ? null : (result.filePath ?? null);

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import type { Project, WorktreeInfo } from '@agentmat/core';
+import type { Project, WorktreeInfo } from '@runova/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { type FakeBridge, installAgentmatBridge } from '../../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../../test/renderer/runovaBridge';
 import { type MergeFlowDeps, mergeBaseInFlow, mergeWorktreeFlow } from './worktreeActions';
 
 const project = { id: 'p1', name: 'App', folderPath: 'C:\\code\\app' } as Project;
@@ -22,7 +22,7 @@ let bridge: FakeBridge;
 let deps: MergeFlowDeps;
 
 beforeEach(() => {
-  bridge = installAgentmatBridge();
+  bridge = installRunovaBridge();
   deps = {
     confirm: vi.fn(async () => true),
     notify: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },

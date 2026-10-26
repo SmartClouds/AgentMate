@@ -34,7 +34,7 @@ async function unlockedService() {
 }
 
 beforeEach(async () => {
-  dir = await mkdtemp(join(tmpdir(), 'agentmate-vault-io-'));
+  dir = await mkdtemp(join(tmpdir(), 'runova-vault-io-'));
 });
 
 afterEach(async () => {
@@ -143,10 +143,10 @@ describe('vault export', () => {
     });
     const out = join(dir, 'vault-export.csv');
 
-    expect(await service.exportCsv('not the password', 'agentmate', out)).toBe(false);
+    expect(await service.exportCsv('not the password', 'runova', out)).toBe(false);
     await expect(stat(out)).rejects.toThrow();
 
-    expect(await service.exportCsv(PASSWORD, 'agentmate', out)).toBe(true);
+    expect(await service.exportCsv(PASSWORD, 'runova', out)).toBe(true);
     expect(await readFile(out, 'utf-8')).toContain('S3NT1NEL-pin');
 
     const other = await unlockedService();

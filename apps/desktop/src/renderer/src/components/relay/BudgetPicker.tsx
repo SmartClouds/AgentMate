@@ -1,4 +1,4 @@
-import { formatTokenCount, RELAY_BUDGET_CHOICES } from '@agentmat/core';
+import { formatTokenCount, RELAY_BUDGET_CHOICES } from '@runova/core';
 import { cn } from '@/lib/utils';
 
 /** The session budget, as a row of the choices the board knows. */

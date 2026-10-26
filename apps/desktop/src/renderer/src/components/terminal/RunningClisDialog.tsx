@@ -1,5 +1,5 @@
-import { type AgentStatus, getCliDefinition, type Project } from '@agentmat/core';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
+import { type AgentStatus, getCliDefinition, type Project } from '@runova/core';
 import type { TerminalSessionUsage } from '@shared/apiTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -158,14 +158,14 @@ export function RunningClisDialog(): React.JSX.Element {
 
   const usageQuery = useQuery({
     queryKey: queryKeys.terminalUsage,
-    queryFn: () => window.agentmat.terminal.usage(),
+    queryFn: () => window.runova.terminal.usage(),
     enabled: open,
     refetchInterval: open ? POLL_INTERVAL_MS : false,
     meta: { silentLoading: true },
   });
   const projectsQuery = useQuery<Project[]>({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
     enabled: open,
   });
   const statuses = useAgentStatusStore((s) => s.statuses);
@@ -343,7 +343,7 @@ export function RunningClisDialog(): React.JSX.Element {
     } else if (row.source === 'ssh') {
       useTerminalStore.getState().closeSession(row.id);
     } else {
-      void window.agentmat.terminal.kill(row.id);
+      void window.runova.terminal.kill(row.id);
     }
   }
 

@@ -78,7 +78,7 @@ describe('help:ask', () => {
     expect([provider, model]).toEqual(['openai', 'gpt-test']);
     expect(prompt).toMatch(/^Help passages:/);
     expect(prompt).toContain('[1] ');
-    expect(system).toMatch(/AgentMate guide/);
+    expect(system).toMatch(/Runova guide/);
     expect(existsSync(join(userData.dir, 'data', 'help-index.db'))).toBe(true);
   });
 

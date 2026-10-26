@@ -5,7 +5,7 @@ import {
   type GrammarSettings,
   LANGUAGETOOL_DEFAULT_PORT,
   LANGUAGETOOL_DOWNLOAD_URL,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { GrammarLocalStatus } from '@shared/grammar';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -104,7 +104,7 @@ export function WritingCheckSettings({ settings }: { settings: AppSettings }): R
 
   const save = useMutation({
     mutationFn: (patch: Partial<GrammarSettings>) =>
-      window.agentmat.settings.update({ grammar: { ...grammar, ...patch } }),
+      window.runova.settings.update({ grammar: { ...grammar, ...patch } }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.settings });
     },
@@ -112,7 +112,7 @@ export function WritingCheckSettings({ settings }: { settings: AppSettings }): R
 
   const statusQuery = useQuery({
     queryKey: queryKeys.grammarLocalStatus,
-    queryFn: () => window.agentmat.grammar.localStatus(),
+    queryFn: () => window.runova.grammar.localStatus(),
     // Cheap (a port probe and a directory read), and the folder can change under
     // us while this page is open.
     refetchInterval: 15_000,
@@ -120,7 +120,7 @@ export function WritingCheckSettings({ settings }: { settings: AppSettings }): R
   const status = statusQuery.data;
 
   useEffect(() => {
-    return window.agentmat.grammar.onLocalStatus((next) => {
+    return window.runova.grammar.onLocalStatus((next) => {
       queryClient.setQueryData(queryKeys.grammarLocalStatus, next);
     });
   }, [queryClient]);
@@ -137,8 +137,8 @@ export function WritingCheckSettings({ settings }: { settings: AppSettings }): R
     try {
       const next =
         action === 'start'
-          ? await window.agentmat.grammar.startLocal()
-          : await window.agentmat.grammar.stopLocal();
+          ? await window.runova.grammar.startLocal()
+          : await window.runova.grammar.stopLocal();
       queryClient.setQueryData(queryKeys.grammarLocalStatus, next);
       if (action === 'start' && next.serverState !== 'running') {
         toast.error(next.error ?? 'LanguageTool did not start.');
@@ -292,7 +292,7 @@ export function WritingCheckSettings({ settings }: { settings: AppSettings }): R
               <li>
                 2. Extract it into the tools folder below (a LanguageTool-x.y folder is fine).
               </li>
-              <li>3. Start the server. AgentMate stops it when it quits.</li>
+              <li>3. Start the server. Runova stops it when it quits.</li>
             </ol>
 
             <code className="block overflow-x-auto whitespace-pre rounded bg-muted px-2 py-1.5 font-mono text-xs">
@@ -302,11 +302,11 @@ export function WritingCheckSettings({ settings }: { settings: AppSettings }): R
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="soft"
-                onClick={() => void window.agentmat.shell.openExternal(LANGUAGETOOL_DOWNLOAD_URL)}
+                onClick={() => void window.runova.shell.openExternal(LANGUAGETOOL_DOWNLOAD_URL)}
               >
                 <Download /> Download
               </Button>
-              <Button variant="soft" onClick={() => void window.agentmat.grammar.openToolsFolder()}>
+              <Button variant="soft" onClick={() => void window.runova.grammar.openToolsFolder()}>
                 <FolderOpen /> Open tools folder
               </Button>
               {status?.serverState === 'running' ? (

@@ -1,4 +1,4 @@
-import { type Project, parseScopeId, type WorktreeInfo } from '@agentmat/core';
+import { type Project, parseScopeId, type WorktreeInfo } from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { EllipsisVertical, FolderTree, GitBranch, Plus } from '@/components/icons';
 import { Chip, type ChipTone, EmptyState, Notice } from '@/components/pageKit';
@@ -121,9 +121,7 @@ function WorktreeRow({
             </span>
           </span>
           {!worktree.createdByApp ? (
-            <span className="block text-[10px] text-muted-foreground/80">
-              Added outside AgentMate
-            </span>
+            <span className="block text-[10px] text-muted-foreground/80">Added outside Runova</span>
           ) : null}
         </span>
       </button>
@@ -166,7 +164,7 @@ export function WorktreesSection({ project }: { project: Project }): React.JSX.E
   const query = useWorktrees(projectId);
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   });
   // Commands need the project itself; inside a worktree `project` is the worktree's view of it.
   const parent =

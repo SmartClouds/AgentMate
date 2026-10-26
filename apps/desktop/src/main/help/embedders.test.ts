@@ -1,4 +1,4 @@
-import { HELP_EMBEDDING_MODEL_OPTIONS, HELP_EMBEDDING_MODELS } from '@agentmat/core';
+import { HELP_EMBEDDING_MODEL_OPTIONS, HELP_EMBEDDING_MODELS } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createEmbedder, listEmbeddingModels } from './embedders';
 

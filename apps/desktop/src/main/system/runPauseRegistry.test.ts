@@ -28,7 +28,7 @@ let file = '';
 let now = 1_000;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'agentmate-run-pause-'));
+  dir = mkdtempSync(join(tmpdir(), 'runova-run-pause-'));
   file = join(dir, 'paused-runs.json');
   now = 1_000;
 });

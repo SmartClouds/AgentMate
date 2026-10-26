@@ -50,8 +50,14 @@ afterEach(async () => {
 
 function talk(messages: unknown[], sessionId = 'tab-1'): Promise<Record<string, unknown>[]> {
   return new Promise((resolve, reject) => {
-    const env = { ...process.env, AGENTMATE_SESSION_ID: sessionId };
-    if (!sessionId) delete (env as Record<string, string | undefined>).AGENTMATE_SESSION_ID;
+    const env: Record<string, string | undefined> = {
+      ...process.env,
+      RUNOVA_SESSION_ID: sessionId,
+    };
+    if (!sessionId) delete env.RUNOVA_SESSION_ID;
+    // The script also reads the name from before the rename to Runova; a test run inside such a
+    // terminal must not hand it a real session.
+    delete env.AGENTMATE_SESSION_ID; // legacy-name
     const child = spawn(process.execPath, [script], { env });
     let stdout = '';
     child.stdout.on('data', (chunk: Buffer) => {
@@ -92,7 +98,7 @@ describe('relay MCP bridge', () => {
     ]);
     expect(lines[0]).toMatchObject({
       id: 1,
-      result: { protocolVersion: '2025-06-18', serverInfo: { name: 'agentmate_relay' } },
+      result: { protocolVersion: '2025-06-18', serverInfo: { name: 'runova_relay' } },
     });
     const tools = (lines[1].result as { tools: { name: string }[] }).tools.map((tool) => tool.name);
     expect(tools).toEqual([...RELAY_MCP_TOOLS]);
@@ -122,15 +128,15 @@ describe('relay MCP bridge', () => {
     expect(text(byId.get(6)!).text).toBe('answer for context_status');
   });
 
-  it('refuses outside a session AgentMate started, without asking', async () => {
+  it('refuses outside a session Runova started, without asking', async () => {
     const lines = await talk([call(7, 'current_leg')], '');
     expect(text(lines[0]).isError).toBe(true);
     expect(requests).toEqual([]);
   });
 
-  it('says AgentMate is not running when the port file is gone', async () => {
+  it('says Runova is not running when the port file is gone', async () => {
     rmSync(portFile);
     const lines = await talk([call(8, 'current_leg')]);
-    expect(text(lines[0])).toEqual({ text: 'AgentMate is not running.', isError: true });
+    expect(text(lines[0])).toEqual({ text: 'Runova is not running.', isError: true });
   });
 });

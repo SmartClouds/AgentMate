@@ -1,4 +1,4 @@
-import type { AndroidSdkStatus } from '@agentmat/core';
+import type { AndroidSdkStatus } from '@runova/core';
 import {
   Android,
   CircleCheck,
@@ -30,9 +30,9 @@ interface SdkSetupPanelProps {
 
 function CheckedPaths({ sdk }: { sdk: AndroidSdkStatus }): React.JSX.Element {
   return (
-    <section aria-label="Where AgentMate looked" className={cn(GLASS_CARD, 'overflow-hidden')}>
+    <section aria-label="Where Runova looked" className={cn(GLASS_CARD, 'overflow-hidden')}>
       <div className="flex h-10 items-center pl-3.5 pr-2 shadow-[inset_0_-1px_0_hsl(var(--foreground)/0.08)]">
-        <p className={SECTION_HEADING}>Where AgentMate looked</p>
+        <p className={SECTION_HEADING}>Where Runova looked</p>
       </div>
       <ul className="settings-rows">
         {sdk.checked.map((path) => {
@@ -75,8 +75,8 @@ export function SdkSetupPanel({
           title={overrideInvalid ? "That folder isn't an Android SDK" : 'Android SDK not found'}
           description={
             overrideInvalid
-              ? 'The Android SDK path in Settings points somewhere that has no SDK in it. Pick the right folder, or clear the override and let AgentMate find one.'
-              : 'AgentMate checked ANDROID_HOME, ANDROID_SDK_ROOT and the usual install folders for this system and came up empty. Point it at your SDK, or install one.'
+              ? 'The Android SDK path in Settings points somewhere that has no SDK in it. Pick the right folder, or clear the override and let Runova find one.'
+              : 'Runova checked ANDROID_HOME, ANDROID_SDK_ROOT and the usual install folders for this system and came up empty. Point it at your SDK, or install one.'
           }
           action={
             <div className="flex flex-wrap items-center justify-center gap-2">
@@ -97,7 +97,7 @@ export function SdkSetupPanel({
                 size="sm"
                 variant="ghost"
                 className="text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground"
-                onClick={() => void window.agentmat.shell.openExternal(INSTALL_URL)}
+                onClick={() => void window.runova.shell.openExternal(INSTALL_URL)}
               >
                 <ExternalLink className="h-3.5 w-3.5" />
                 How to install

@@ -1,4 +1,4 @@
-import type { VaultEntrySummary, VaultSearchHit, VaultSort } from '@agentmat/core';
+import type { VaultEntrySummary, VaultSearchHit, VaultSort } from '@runova/core';
 import { LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import { forwardRef } from 'react';
 import {

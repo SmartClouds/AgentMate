@@ -3,7 +3,7 @@ import {
   COMMIT_MESSAGE_STYLES,
   type CommitMessageSettings,
   DEFAULT_COMMIT_MESSAGE_SETTINGS,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { cliOptionIcon } from '@/components/cliLogos';
@@ -22,7 +22,7 @@ export function CommitMessageSettingsForm(): React.JSX.Element {
   const queryClient = useQueryClient();
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
   });
   const saved = settingsQuery.data?.commitMessage ?? DEFAULT_COMMIT_MESSAGE_SETTINGS;
   const [draft, setDraft] = useState<CommitMessageSettings>(saved);
@@ -37,7 +37,7 @@ export function CommitMessageSettingsForm(): React.JSX.Element {
 
   const mutation = useMutation({
     mutationFn: (next: CommitMessageSettings) =>
-      window.agentmat.settings.update({ commitMessage: next }),
+      window.runova.settings.update({ commitMessage: next }),
     meta: { silentLoading: true },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.settings }),
   });

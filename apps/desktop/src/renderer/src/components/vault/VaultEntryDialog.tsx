@@ -3,7 +3,7 @@ import type {
   VaultEntry,
   VaultEntrySummary,
   VaultEntryType,
-} from '@agentmat/core';
+} from '@runova/core';
 import { vaultErrorMessage } from '@shared/vaultErrors';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
@@ -212,7 +212,7 @@ export function VaultEntryDialog({
 
   const entryQuery = useQuery({
     queryKey: queryKeys.vaultEntry(editId ?? ''),
-    queryFn: () => window.agentmat.vault.getForEdit(editId as string),
+    queryFn: () => window.runova.vault.getForEdit(editId as string),
     enabled: open && editId !== null,
     gcTime: 0,
     staleTime: 0,
@@ -274,7 +274,7 @@ export function VaultEntryDialog({
     setError(null);
     try {
       const input = buildInput(draft, editId ? baseline : null, editId ?? undefined);
-      const saved = await window.agentmat.vault.save(input);
+      const saved = await window.runova.vault.save(input);
       void queryClient.invalidateQueries({ queryKey: queryKeys.vaultEntries });
       toast.success(editId ? 'Changes saved' : 'Entry added');
       onSaved?.(saved);
@@ -296,7 +296,7 @@ export function VaultEntryDialog({
     iconTriedFor.current = url;
     setFetchingIcon(true);
     try {
-      const icon = await window.agentmat.vault.fetchIcon(url);
+      const icon = await window.runova.vault.fetchIcon(url);
       if (!icon) {
         if (!silent) toast.error("Couldn't find an icon on that site.");
         return;

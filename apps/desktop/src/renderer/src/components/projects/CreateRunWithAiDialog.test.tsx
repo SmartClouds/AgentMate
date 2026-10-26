@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
@@ -29,7 +29,7 @@ const project = {
 const SESSION = {
   ok: true,
   mcpConfigPath: 'C:\\data\\run-suggestions\\p1\\mcp.json',
-  allowedTools: ['mcp__agentmate__list_run_commands', 'mcp__agentmate__propose_run_command'],
+  allowedTools: ['mcp__runova__list_run_commands', 'mcp__runova__propose_run_command'],
 };
 
 function renderDialog(
@@ -125,8 +125,8 @@ describe('CreateRunWithAiDialog', () => {
       '--mcp-config',
       'C:\\data\\run-suggestions\\p1\\mcp.json',
       '--allowedTools',
-      'mcp__agentmate__list_run_commands',
-      'mcp__agentmate__propose_run_command',
+      'mcp__runova__list_run_commands',
+      'mcp__runova__propose_run_command',
     ]);
     expect(launched.runLabel).toBe('Run command setup');
     expect(navigate).toHaveBeenCalledWith('/workspace/p1');

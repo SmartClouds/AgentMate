@@ -1,5 +1,5 @@
 {
-  "name": "AgentMate Examples",
+  "name": "Runova Examples",
   "description": "A small bundled set of example skills to demonstrate the Skill Marketplace.",
   "skills": [
     {
@@ -8,7 +8,7 @@
       "description": "A structured checklist an agent should run through before approving a code review.",
       "category": "Code Review",
       "tags": ["review", "quality"],
-      "author": "AgentMate",
+      "author": "Runova",
       "version": "1.0.0",
       "popularity": 100,
       "dependencies": [],
@@ -21,7 +21,7 @@
       "description": "Conventions an agent should follow when writing git commit messages.",
       "category": "Documentation",
       "tags": ["git", "docs"],
-      "author": "AgentMate",
+      "author": "Runova",
       "version": "1.0.0",
       "popularity": 80,
       "dependencies": [],

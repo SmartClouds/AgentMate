@@ -22,17 +22,17 @@ export const PANEL_WIDTHS = {
 
 export type PanelId = keyof typeof PANEL_WIDTHS;
 
-const STORAGE_KEY = 'agentmate-panel-widths';
+const STORAGE_KEY = 'runova-panel-widths';
 
 /**
  * Where the widths were kept before they shared one store. A rail kept a single `width`, a
  * group of panels kept a `widths` map keyed the same way the new store is.
  */
 const LEGACY_KEYS: ReadonlyArray<{ key: string; panel?: PanelId }> = [
-  { key: 'agentmate-deploy-rail', panel: 'deployRail' },
-  { key: 'agentmate-cloudflare-rail', panel: 'cloudflareRail' },
-  { key: 'agentmate-catalog-layout' },
-  { key: 'agentmate-pane-layout' },
+  { key: 'runova-deploy-rail', panel: 'deployRail' },
+  { key: 'runova-cloudflare-rail', panel: 'cloudflareRail' },
+  { key: 'runova-catalog-layout' },
+  { key: 'runova-pane-layout' },
 ];
 
 function isPanelId(value: string): value is PanelId {

@@ -1,4 +1,4 @@
-import type { AppSettings } from '@agentmat/core';
+import type { AppSettings } from '@runova/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Android, CircleCheck, CircleX, FolderOpen } from '@/components/icons';
@@ -26,12 +26,12 @@ export function AndroidSdkSettings({ settings }: { settings: AppSettings }): Rea
 
   const sdkQuery = useQuery({
     queryKey: queryKeys.androidSdk,
-    queryFn: () => window.agentmat.android.sdk(),
+    queryFn: () => window.runova.android.sdk(),
     meta: { silentLoading: true },
   });
 
   const setSdkPath = useMutation({
-    mutationFn: (path: string | null) => window.agentmat.android.setSdkPath(path),
+    mutationFn: (path: string | null) => window.runova.android.setSdkPath(path),
     onSuccess: (sdk) => {
       queryClient.setQueryData(queryKeys.androidSdk, sdk);
       toast.success(sdk.status === 'found' ? 'Android SDK found.' : 'Saved.');
@@ -40,12 +40,12 @@ export function AndroidSdkSettings({ settings }: { settings: AppSettings }): Rea
   });
 
   const saveSetting = useMutation({
-    mutationFn: (updates: Partial<AppSettings>) => window.agentmat.settings.update(updates),
+    mutationFn: (updates: Partial<AppSettings>) => window.runova.settings.update(updates),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.settings }),
   });
 
   const browse = async (): Promise<void> => {
-    const picked = await window.agentmat.android.pickSdkPath();
+    const picked = await window.runova.android.pickSdkPath();
     if (picked) setSdkPath.mutate(picked);
   };
 
@@ -108,7 +108,7 @@ export function AndroidSdkSettings({ settings }: { settings: AppSettings }): Rea
 
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 space-y-1">
-            <Label htmlFor="android-stop-on-quit">Stop emulators when AgentMate quits</Label>
+            <Label htmlFor="android-stop-on-quit">Stop emulators when Runova quits</Label>
             <p className="text-xs text-muted-foreground">
               Off by default. An emulator is a window you can close yourself, and it takes a while
               to boot again.

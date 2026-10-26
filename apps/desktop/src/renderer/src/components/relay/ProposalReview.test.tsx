@@ -1,4 +1,4 @@
-import type { ProposalEntry, RelayProposal } from '@agentmat/core';
+import type { ProposalEntry, RelayProposal } from '@runova/core';
 import { screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';

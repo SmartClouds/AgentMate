@@ -50,12 +50,12 @@ function AddUsedSkillContent({
 
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   });
 
   const inspectionQuery = useQuery({
     queryKey: queryKeys.usedSkillInspection(stat.skill),
-    queryFn: () => window.agentmat.skills.inspectUsedSkill({ skill: stat.skill, projectPaths }),
+    queryFn: () => window.runova.skills.inspectUsedSkill({ skill: stat.skill, projectPaths }),
     staleTime: 0,
   });
 
@@ -78,7 +78,7 @@ function AddUsedSkillContent({
 
   const addMutation = useMutation({
     mutationFn: (projectIds: string[]) =>
-      window.agentmat.skills.addUsedSkillToProjects({
+      window.runova.skills.addUsedSkillToProjects({
         skill: stat.skill,
         projectPaths,
         projectIds,

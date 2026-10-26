@@ -24,7 +24,7 @@ afterEach(() => {
 });
 
 /** A folder removed after the test, whatever it ends up containing. */
-export function tempDir(prefix = 'agentmate-test-'): string {
+export function tempDir(prefix = 'runova-test-'): string {
   const dir = mkdtempSync(join(tmpdir(), prefix));
   created.push(dir);
   return dir;
@@ -48,10 +48,10 @@ function git(cwd: string, ...args: string[]): string {
       ...process.env,
       GIT_CONFIG_NOSYSTEM: '1',
       GIT_CONFIG_GLOBAL: join(cwd, '.gitconfig-test'),
-      GIT_AUTHOR_NAME: 'AgentMate Test',
-      GIT_AUTHOR_EMAIL: 'test@agentmate.invalid',
-      GIT_COMMITTER_NAME: 'AgentMate Test',
-      GIT_COMMITTER_EMAIL: 'test@agentmate.invalid',
+      GIT_AUTHOR_NAME: 'Runova Test',
+      GIT_AUTHOR_EMAIL: 'test@runova.invalid',
+      GIT_COMMITTER_NAME: 'Runova Test',
+      GIT_COMMITTER_EMAIL: 'test@runova.invalid',
     },
   });
 }
@@ -75,10 +75,10 @@ export function initGitRepo(files: Record<string, string> = { 'README.md': '# te
   git: (...args: string[]) => string;
   commitAll: (message: string) => void;
 } {
-  const dir = tempDir('agentmate-repo-');
+  const dir = tempDir('runova-repo-');
   git(dir, 'init', '--initial-branch=main');
-  git(dir, 'config', 'user.name', 'AgentMate Test');
-  git(dir, 'config', 'user.email', 'test@agentmate.invalid');
+  git(dir, 'config', 'user.name', 'Runova Test');
+  git(dir, 'config', 'user.email', 'test@runova.invalid');
   git(dir, 'config', 'commit.gpgsign', 'false');
   writeTree(dir, files);
   git(dir, 'add', '.');

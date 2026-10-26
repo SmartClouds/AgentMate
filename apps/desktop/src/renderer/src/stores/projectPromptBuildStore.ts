@@ -1,4 +1,4 @@
-import type { PromptType, TargetAI } from '@agentmat/core';
+import type { PromptType, TargetAI } from '@runova/core';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -27,7 +27,7 @@ interface ProjectPromptBuildState {
   clear: (projectId: string) => void;
 }
 
-const STORE_NAME = 'agentmate-project-prompt-build';
+const STORE_NAME = 'runova-project-prompt-build';
 
 export const useProjectPromptBuildStore = create<ProjectPromptBuildState>()(
   persist(

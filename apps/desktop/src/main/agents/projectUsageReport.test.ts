@@ -1,4 +1,4 @@
-import { getModelPrice, MODEL_PRICES, type UsageTokens } from '@agentmat/core';
+import { getModelPrice, MODEL_PRICES, type UsageTokens } from '@runova/core';
 import { describe, expect, it } from 'vitest';
 import {
   buildProjectReport,

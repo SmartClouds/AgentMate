@@ -13,7 +13,7 @@ import { E2E_OUT_DIR } from './paths';
 /**
  * The Vault in the real app: a master password, entries saved through the UI, the clipboard
  * cleared by main, locking by hand, by idle time and after wrong guesses, and nothing readable
- * left on disk. Timers are shortened through AGENTMATE_VAULT_TEST_TIMERS, which only an
+ * left on disk. Timers are shortened through RUNOVA_VAULT_TEST_TIMERS, which only an
  * unpackaged build honors.
  */
 
@@ -26,7 +26,7 @@ let launched: LaunchedApp | undefined;
 let relaunched: ElectronApplication | undefined;
 
 function useTimers(value: string): void {
-  process.env.AGENTMATE_VAULT_TEST_TIMERS = value;
+  process.env.RUNOVA_VAULT_TEST_TIMERS = value;
 }
 
 test.afterEach(async () => {
@@ -34,7 +34,7 @@ test.afterEach(async () => {
   relaunched = undefined;
   await launched?.close();
   launched = undefined;
-  delete process.env.AGENTMATE_VAULT_TEST_TIMERS;
+  delete process.env.RUNOVA_VAULT_TEST_TIMERS;
 });
 
 async function openVault(page: Page): Promise<void> {
@@ -78,8 +78,8 @@ async function addLoginThroughUi(page: Page): Promise<void> {
 async function seedEntries(page: Page): Promise<void> {
   await page.evaluate(async () => {
     const vault = (
-      window as unknown as { agentmat: { vault: { save(input: unknown): Promise<unknown> } } }
-    ).agentmat.vault;
+      window as unknown as { runova: { vault: { save(input: unknown): Promise<unknown> } } }
+    ).runova.vault;
     await vault.save({
       type: 'login',
       title: 'GitLab',
@@ -116,17 +116,17 @@ async function relaunch(current: LaunchedApp): Promise<Page> {
     args: [
       join(E2E_OUT_DIR, 'main', 'index.mjs'),
       `--user-data-dir=${current.userDataDir}`,
-      ...(process.env.AGENTMATE_E2E_NO_SANDBOX === '1' ? ['--no-sandbox'] : []),
+      ...(process.env.RUNOVA_E2E_NO_SANDBOX === '1' ? ['--no-sandbox'] : []),
     ],
     env: {
       ...(process.env as Record<string, string>),
       ELECTRON_RENDERER_URL: '',
-      AGENTMATE_USER_DATA_DIR: current.userDataDir,
-      AGENTMATE_E2E: '1', // As in launchApp. Without it, firstWindow() is the splash.
+      RUNOVA_USER_DATA_DIR: current.userDataDir,
+      RUNOVA_E2E: '1', // As in launchApp. Without it, firstWindow() is the splash.
     },
   });
   const page = await relaunched.firstWindow();
-  await page.waitForFunction(() => Boolean((window as { agentmat?: unknown }).agentmat));
+  await page.waitForFunction(() => Boolean((window as { runova?: unknown }).runova));
   return page;
 }
 
@@ -301,9 +301,9 @@ test('a backup carries the vault, which opens with its own master password after
   const exported = await source.page.evaluate(() =>
     (
       window as unknown as {
-        agentmat: { backup: { export(zip: boolean, o: unknown): Promise<{ ok: boolean }> } };
+        runova: { backup: { export(zip: boolean, o: unknown): Promise<{ ok: boolean }> } };
       }
-    ).agentmat.backup.export(false, { includeVault: true }),
+    ).runova.backup.export(false, { includeVault: true }),
   );
   expect(exported.ok).toBe(true);
   expect(readFileSync(backupPath, 'utf-8')).not.toContain(SECRET_PASSWORD);
@@ -316,14 +316,14 @@ test('a backup carries the vault, which opens with its own master password after
     const restored = await target.page.evaluate(async () => {
       const api = (
         window as unknown as {
-          agentmat: {
+          runova: {
             backup: {
               open(): Promise<{ ok: boolean; token?: string; vault?: unknown }>;
               restore(token: string, options: unknown): Promise<{ ok: boolean }>;
             };
           };
         }
-      ).agentmat.backup;
+      ).runova.backup;
       const opened = await api.open();
       if (!opened.token) return { opened, restored: null };
       return {

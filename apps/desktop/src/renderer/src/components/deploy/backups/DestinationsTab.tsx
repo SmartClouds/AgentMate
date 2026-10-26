@@ -1,5 +1,5 @@
 import { coreErrorMessage } from '@shared/coreErrors';
-import type { BackupDestinationInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { BackupDestinationInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployServer } from '@shared/deployTypes';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -45,7 +45,7 @@ export function DestinationsTab({
     setTesting(destination.id);
     setProblem(null);
     try {
-      const result = await window.agentmat.deployServerBackups.testDestination({
+      const result = await window.runova.deployServerBackups.testDestination({
         serverId: server.id,
         destination: {
           id: destination.id,
@@ -76,7 +76,7 @@ export function DestinationsTab({
     setProblem(null);
     try {
       await stepUp.run(() =>
-        window.agentmat.deployServerBackups.deleteDestination({
+        window.runova.deployServerBackups.deleteDestination({
           serverId: server.id,
           id: destination.id,
         }),

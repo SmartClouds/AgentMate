@@ -3,10 +3,10 @@
  * The `bundle` part of a request: gzip of a frame. Its size and hash are known before any of it
  * is read into memory.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Http;
+namespace Runova\Connector\Http;
 
 interface Bundle
 {

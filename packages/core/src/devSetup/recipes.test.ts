@@ -76,7 +76,7 @@ describe('recipeArgv', () => {
     ]);
   });
 
-  it('has no argv for recipes AgentMate runs itself or hands to the user', () => {
+  it('has no argv for recipes Runova runs itself or hands to the user', () => {
     expect(recipeArgv({ kind: 'managed', installer: 'flutter-archive' })).toBeNull();
     expect(recipeArgv({ kind: 'bundled', with: 'node' })).toBeNull();
     expect(recipeArgv({ kind: 'terminal-only', command: 'x' })).toBeNull();

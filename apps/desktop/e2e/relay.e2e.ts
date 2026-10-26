@@ -24,12 +24,12 @@ test.afterEach(async ({}, info) => {
       .evaluate(async () => {
         const api = (
           window as unknown as {
-            agentmat: {
+            runova: {
               projects: { list(): Promise<{ id: string }[]> };
               relay: { runs(id: string): Promise<unknown[]> };
             };
           }
-        ).agentmat;
+        ).runova;
         const projects = await api.projects.list();
         return Promise.all(projects.map((project) => api.relay.runs(project.id)));
       })
@@ -119,7 +119,7 @@ type RelayApi = {
 
 async function startRelay(page: Page, input: Record<string, unknown>): Promise<string> {
   const result = await page.evaluate(
-    (payload) => (window as unknown as { agentmat: RelayApi }).agentmat.relay.start(payload),
+    (payload) => (window as unknown as { runova: RelayApi }).runova.relay.start(payload),
     input,
   );
   expect(result.ok, result.error).toBe(true);
@@ -128,7 +128,7 @@ async function startRelay(page: Page, input: Record<string, unknown>): Promise<s
 
 async function runsOf(page: Page, projectId: string) {
   return page.evaluate(
-    (id) => (window as unknown as { agentmat: RelayApi }).agentmat.relay.runs(id),
+    (id) => (window as unknown as { runova: RelayApi }).runova.relay.runs(id),
     projectId,
   );
 }
@@ -156,7 +156,7 @@ test('runs two tasks in order, rolling the second over into a new session', asyn
   await expect.poll(() => statusOf(projectDir, 'T001'), { timeout: 60_000 }).toBe('done');
   await expect.poll(() => statusOf(projectDir, 'T002'), { timeout: 90_000 }).toBe('done');
 
-  const launches = launched.claudeLaunches().filter((line) => line.includes('AgentMate Relay'));
+  const launches = launched.claudeLaunches().filter((line) => line.includes('Runova Relay'));
   expect(launches).toHaveLength(3);
   expect(launches[0]).toContain('task T001');
   expect(launches[1]).toMatch(/task T002 .*session 1/);
@@ -188,7 +188,7 @@ test('tells a session near its budget to hand off, and finishes the task in a fr
     'continue',
     'done',
   ]);
-  const launches = launched.claudeLaunches().filter((line) => line.includes('AgentMate Relay'));
+  const launches = launched.claudeLaunches().filter((line) => line.includes('Runova Relay'));
   expect(launches).toHaveLength(2);
   expect(launches[1]).toMatch(/session 2/);
 });
@@ -210,7 +210,7 @@ test('pauses on a blocked handoff and leaves the task blocked', async () => {
     .poll(async () => (await runsOf(page, projectId))[0]?.status, { timeout: 30_000 })
     .toBe('paused');
   expect(statusOf(projectDir, 'T002')).toBe('todo');
-  const launches = launched.claudeLaunches().filter((line) => line.includes('AgentMate Relay'));
+  const launches = launched.claudeLaunches().filter((line) => line.includes('Runova Relay'));
   expect(launches).toHaveLength(1);
 });
 
@@ -228,7 +228,7 @@ test('approves a clean plan through the hook and switches the session to auto mo
   });
 
   await expect.poll(() => statusOf(projectDir, 'T001'), { timeout: 60_000 }).toBe('done');
-  const launch = launched.claudeLaunches().find((line) => line.includes('AgentMate Relay')) ?? '';
+  const launch = launched.claudeLaunches().find((line) => line.includes('Runova Relay')) ?? '';
   expect(launch).toContain('--permission-mode plan');
   const approval = fakeLog(projectDir).find((entry) => entry.kind === 'plan-approved');
   expect(approval).toMatchObject({ by: 'hook', mode: 'auto' });
@@ -283,7 +283,7 @@ test('splits a request with the planner and runs it after a task the relay is wo
 
   const planned = await page.evaluate(
     (id) =>
-      (window as unknown as { agentmat: RelayApi }).agentmat.relay.decompose({
+      (window as unknown as { runova: RelayApi }).runova.relay.decompose({
         requestId: 'split-e2e',
         projectId: id,
         request: 'Add patient search with an API and a page.',
@@ -294,7 +294,7 @@ test('splits a request with the planner and runs it after a task the relay is wo
   expect(planned.ok, planned.error).toBe(true);
   await page.evaluate(
     ({ id, proposal }) =>
-      (window as unknown as { agentmat: RelayApi }).agentmat.relay.applyProposal(id, proposal),
+      (window as unknown as { runova: RelayApi }).runova.relay.applyProposal(id, proposal),
     { id: projectId, proposal: planned.proposal },
   );
   expect(statusOf(projectDir, 'T003')).toBe('todo');
@@ -372,7 +372,7 @@ test('picks up a project in progress, then carries on from the half-done task', 
 
   await page.getByRole('button', { name: 'Run relay' }).first().click();
   await expect.poll(() => statusOf(projectDir, 'T003'), { timeout: 90_000 }).toBe('done');
-  const launches = launched.claudeLaunches().filter((line) => line.includes('AgentMate Relay'));
+  const launches = launched.claudeLaunches().filter((line) => line.includes('Runova Relay'));
   // The finished task needs no session; the half-done one is told to build on its handoff.
   expect(launches).toHaveLength(2);
   expect(launches[0]).toContain('task T002');

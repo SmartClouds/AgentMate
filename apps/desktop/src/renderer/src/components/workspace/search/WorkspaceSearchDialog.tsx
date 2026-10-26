@@ -1,5 +1,5 @@
-import type { GitChangeStatus, Project } from '@agentmat/core';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
+import type { GitChangeStatus, Project } from '@runova/core';
 import type { TextSearchOptions, WorkspaceGitState } from '@shared/apiTypes';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
@@ -208,7 +208,7 @@ function SearchPanel({
   // Files: the explorer's own list, shared with its search box, ranked here on every keystroke.
   const index = useQuery({
     queryKey: queryKeys.workspaceExplorerFiles(projectId),
-    queryFn: () => window.agentmat.explorer.listFiles(projectId),
+    queryFn: () => window.runova.explorer.listFiles(projectId),
     meta: { silentLoading: true },
     staleTime: 30_000,
   });
@@ -258,7 +258,7 @@ function SearchPanel({
   // Git status letters, from the changes panel's copy; the panel keeps it current.
   const gitState = useQuery<WorkspaceGitState>({
     queryKey: queryKeys.gitWorkspaceState(projectId),
-    queryFn: () => window.agentmat.git.workspaceState(projectId),
+    queryFn: () => window.runova.git.workspaceState(projectId),
     enabled: false,
   });
   const statusByPath = useMemo(() => {

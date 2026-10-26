@@ -20,7 +20,7 @@ import {
   TRACKS_FOR,
   trackFor,
   videoLength,
-} from '@agentmat/studio';
+} from '@runova/studio';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { errorMessage } from '../format';
 import { Button, ErrorBoundary, Pause, Play, Plus, SimpleTooltip, toast } from '../kit';

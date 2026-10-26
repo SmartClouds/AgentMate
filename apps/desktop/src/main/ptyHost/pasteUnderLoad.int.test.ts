@@ -12,7 +12,7 @@ import type { SessionListener } from './sessionManager';
  * paste boost in `pasteBoost.ts` is what gets it through.
  *
  * It pegs every core for the length of the test, so it only runs when asked for:
- *   AGENTMATE_STRESS_TESTS=1 pnpm vitest run src/main/ptyHost/pasteUnderLoad.int.test.ts
+ *   RUNOVA_STRESS_TESTS=1 pnpm vitest run src/main/ptyHost/pasteUnderLoad.int.test.ts
  */
 const ptyLoads = await (async (): Promise<boolean> => {
   try {
@@ -23,8 +23,7 @@ const ptyLoads = await (async (): Promise<boolean> => {
   }
 })();
 
-const enabled =
-  process.platform === 'win32' && process.env.AGENTMATE_STRESS_TESTS === '1' && ptyLoads;
+const enabled = process.platform === 'win32' && process.env.RUNOVA_STRESS_TESTS === '1' && ptyLoads;
 
 /** Reads raw input the way a Node CLI does and reports the bracketed paste it got. */
 const READER = `
@@ -62,7 +61,7 @@ describe.skipIf(!enabled)('a large paste on a machine at 100% CPU', async () => 
   let burner: ChildProcess | null = null;
 
   beforeAll(() => {
-    dir = mkdtempSync(join(tmpdir(), 'agentmate-paste-load-'));
+    dir = mkdtempSync(join(tmpdir(), 'runova-paste-load-'));
     writeFileSync(join(dir, 'reader.cjs'), READER, 'utf-8');
     burner = spawn(process.execPath, ['-e', BURNER], { stdio: 'ignore' });
   });

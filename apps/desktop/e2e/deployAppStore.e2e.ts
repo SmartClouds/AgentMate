@@ -14,7 +14,7 @@ import { type DevHost, dotnetAvailable, startDevHost } from './devHost';
 
 test.skip(!dotnetAvailable(), 'needs the .NET SDK to build the server core DevHost');
 
-const DEV_PASSWORD = 'agentmate-local-password';
+const DEV_PASSWORD = 'runova-local-password';
 
 let devHost: DevHost | undefined;
 let launched: LaunchedApp | undefined;
@@ -51,7 +51,7 @@ test('installs Redis from the App Store and shows how to connect', async () => {
   if (!devHost) throw new Error('DevHost did not start');
   launched = await launchApp({
     settings: {},
-    env: { AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port) },
+    env: { RUNOVA_DEPLOY_DEV_CORE: String(devHost.port) },
   });
   const { page } = launched;
   await signIn(page);
@@ -94,7 +94,7 @@ test('makes a container that publishes on every address private', async () => {
   if (!devHost) throw new Error('DevHost did not start');
   launched = await launchApp({
     settings: {},
-    env: { AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port) },
+    env: { RUNOVA_DEPLOY_DEV_CORE: String(devHost.port) },
   });
   const { page, projectDir } = launched;
   writeFileSync(
@@ -116,9 +116,9 @@ test('makes a container that publishes on every address private', async () => {
   const serverId = await page.evaluate(async () => {
     const api = (
       window as unknown as {
-        agentmat: { deploy: { listServers(): Promise<Array<{ id: string }>> } };
+        runova: { deploy: { listServers(): Promise<Array<{ id: string }>> } };
       }
-    ).agentmat;
+    ).runova;
     const [server] = await api.deploy.listServers();
     return server.id;
   });
@@ -126,7 +126,7 @@ test('makes a container that publishes on every address private', async () => {
     async ({ serverId: server, projectId: project }) => {
       const stacks = (
         window as unknown as {
-          agentmat: {
+          runova: {
             deployStacks: {
               preview(input: unknown): Promise<{ requiresAcknowledgment: string[] }>;
               create(
@@ -136,7 +136,7 @@ test('makes a container that publishes on every address private', async () => {
             };
           };
         }
-      ).agentmat.deployStacks;
+      ).runova.deployStacks;
       const source = { projectId: project, composePath: 'compose.yaml', environmentId: null };
       const preview = await stacks.preview({ ...source, proxiedServices: [] });
       const created = await stacks.create({
@@ -175,7 +175,7 @@ test('makes a container that publishes on every address private', async () => {
   });
   await expect(row.getByText('127.0.0.1:18080 to 80/tcp')).toBeVisible({ timeout: 30_000 });
 
-  // Something AgentMate did not start gets the change to make instead.
+  // Something Runova did not start gets the change to make instead.
   const grafana = ports.getByRole('listitem', { name: 'monitoring-grafana-1' }).first();
   await grafana.getByRole('button', { name: 'Make private' }).click();
   const outside = page.getByRole('dialog', {

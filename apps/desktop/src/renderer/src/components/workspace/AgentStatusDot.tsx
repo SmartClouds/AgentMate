@@ -1,4 +1,4 @@
-import type { AgentStatus } from '@agentmat/core';
+import type { AgentStatus } from '@runova/core';
 import { Chip, type ChipTone } from '@/components/pageKit';
 import { cn } from '@/lib/utils';
 

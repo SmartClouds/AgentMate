@@ -1,4 +1,4 @@
-import { SKILL_RISK_CATEGORIES } from '@agentmat/core';
+import { SKILL_RISK_CATEGORIES } from '@runova/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -58,7 +58,7 @@ export function SkillSecurityDialog({
 
   const historyQuery = useQuery({
     queryKey: queryKeys.skillAuditsFor(subject?.skillId ?? ''),
-    queryFn: () => window.agentmat.skills.listAudits({ skillId: subject!.skillId, limit: 20 }),
+    queryFn: () => window.runova.skills.listAudits({ skillId: subject!.skillId, limit: 20 }),
     enabled: !!subject,
   });
 
@@ -68,7 +68,7 @@ export function SkillSecurityDialog({
       if (!subject) throw new Error('Nothing to scan.');
       const id = crypto.randomUUID();
       setRequestId(id);
-      return window.agentmat.skills.runAudit({
+      return window.runova.skills.runAudit({
         target: subject.target,
         ...deepReviewInput(deepReview, cliId),
         requestId: id,
@@ -181,7 +181,7 @@ export function SkillSecurityDialog({
               type="button"
               variant="soft"
               onClick={() => {
-                if (requestId) void window.agentmat.skills.cancelAudit(requestId);
+                if (requestId) void window.runova.skills.cancelAudit(requestId);
               }}
             >
               <X /> Cancel

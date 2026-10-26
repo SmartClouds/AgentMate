@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { DockerContainerRow } from '@/components/docker/DockerContainerRow';
 import { RemoveContainerDialog } from '@/components/docker/RemoveContainerDialog';
@@ -23,13 +23,13 @@ export function DockerTab({ project }: { project: Project }): React.JSX.Element 
   const queryKey = queryKeys.dockerListForProject(project.id);
   const availabilityQuery = useQuery({
     queryKey: queryKeys.dockerAvailability,
-    queryFn: () => window.agentmat.docker.availability(),
+    queryFn: () => window.runova.docker.availability(),
     meta: { silentLoading: true },
   });
   const available = availabilityQuery.data;
   const listQuery = useQuery({
     queryKey,
-    queryFn: () => window.agentmat.docker.listForProject(project.folderPath),
+    queryFn: () => window.runova.docker.listForProject(project.folderPath),
     enabled: available === true,
     refetchInterval: available === true ? 4000 : false,
     meta: { silentLoading: true },

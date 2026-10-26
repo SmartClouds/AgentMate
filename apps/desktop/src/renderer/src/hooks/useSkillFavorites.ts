@@ -1,4 +1,4 @@
-import { bundledSkillsShDirectory } from '@agentmat/core';
+import { bundledSkillsShDirectory } from '@runova/core';
 import type { FavoriteSkillInput, FavoriteSkillRecord } from '@shared/apiTypes';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useRef } from 'react';
@@ -60,7 +60,7 @@ export function useSkillFavorites(): SkillFavorites {
 
   const favoritesQuery = useQuery({
     queryKey: queryKeys.skillFavorites,
-    queryFn: () => window.agentmat.skills.listFavorites(),
+    queryFn: () => window.runova.skills.listFavorites(),
   });
 
   const favorites = useMemo(() => favoritesQuery.data ?? [], [favoritesQuery.data]);
@@ -77,8 +77,8 @@ export function useSkillFavorites(): SkillFavorites {
   const mutation = useMutation({
     mutationFn: ({ skill, starred }: { skill: FavoriteSkillInput; starred: boolean }) =>
       starred
-        ? window.agentmat.skills.removeFavorite(skill.skillId)
-        : window.agentmat.skills.addFavorite(skill),
+        ? window.runova.skills.removeFavorite(skill.skillId)
+        : window.runova.skills.addFavorite(skill),
     onSuccess: (next, { skill, starred }) => {
       queryClient.setQueryData(queryKeys.skillFavorites, next);
       toast.success(starred ? `${skill.name} removed from favorites.` : `${skill.name} favorited.`);

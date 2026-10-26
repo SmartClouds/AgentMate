@@ -72,8 +72,8 @@ async function openServerTab(replies: string[]): Promise<Page> {
   await page.evaluate(
     (input) =>
       (
-        window as unknown as { agentmat: { ssh: { saveServer(i: unknown): Promise<unknown> } } }
-      ).agentmat.ssh.saveServer(input),
+        window as unknown as { runova: { ssh: { saveServer(i: unknown): Promise<unknown> } } }
+      ).runova.ssh.saveServer(input),
     {
       nickname: 'E2E server',
       host: server.host,
@@ -144,8 +144,8 @@ test('runs commands with clean output and answers sudo with the saved password',
   expect(text).toMatch(/^0$/m);
   expect(text).toContain(`${SHELL_PROMPT} echo tick1; sleep 3; echo tick2`);
   expect(text).toMatch(/^tick1\ntick2$/m);
-  expect(text).not.toContain('AGENTMATE');
-  expect(text).not.toContain('AgentMate:');
+  expect(text).not.toContain('RUNOVA');
+  expect(text).not.toContain('Runova:');
   expect(text).not.toContain('printf');
   expect(text).not.toContain(SSH_PASSWORD);
   expect(text).not.toContain('a password is required');
@@ -231,7 +231,7 @@ test('shows a failing command with its error and passes the exit code on', async
   const text = await terminalText(page);
   expect(text).toContain(`${SHELL_PROMPT} ls /does-not-exist`);
   expect(text).toContain("ls: cannot access '/does-not-exist': No such file or directory");
-  expect(text).not.toContain('AgentMate:');
+  expect(text).not.toContain('Runova:');
   expect(ollama?.prompts.at(-1)).toContain('$ ls /does-not-exist [exit code 2]');
 });
 

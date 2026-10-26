@@ -4,7 +4,7 @@ import type {
   JobInfo,
   JobLogLine,
   MetricsSample,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployConnection } from '@shared/deployTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -25,7 +25,7 @@ export function useConnectionUpdates(): void {
   const queryClient = useQueryClient();
   useEffect(
     () =>
-      window.agentmat.deploy.onConnection((connection) => {
+      window.runova.deploy.onConnection((connection) => {
         const key = queryKeys.deployConnection(connection.serverId);
         const before = queryClient.getQueryData<DeployConnection>(key);
         queryClient.setQueryData(key, connection);
@@ -49,7 +49,7 @@ export function useDeployConnection(
 ): DeployConnection | undefined {
   const query = useQuery({
     queryKey: queryKeys.deployConnection(serverId),
-    queryFn: async () => (await window.agentmat.deploy.connection(serverId)) ?? null,
+    queryFn: async () => (await window.runova.deploy.connection(serverId)) ?? null,
     enabled,
     staleTime: Number.POSITIVE_INFINITY,
   });
@@ -93,14 +93,14 @@ export function useLiveSamples(serverId: string, enabled: boolean): LiveSamples 
 
     const startStream = (sinceUnixMs?: number) => {
       stopStream = ownedSubscription({
-        listen: window.agentmat.deploySystem.onMetrics,
+        listen: window.runova.deploySystem.onMetrics,
         start: () =>
-          window.agentmat.deploySystem.watchMetrics({
+          window.runova.deploySystem.watchMetrics({
             serverId,
             intervalMs: 2_000,
             ...(sinceUnixMs ? { sinceUnixMs } : {}),
           }),
-        stop: window.agentmat.deploySystem.unwatchMetrics,
+        stop: window.runova.deploySystem.unwatchMetrics,
         onEvent: (event) => {
           append(event.samples);
           setReady(true);
@@ -113,7 +113,7 @@ export function useLiveSamples(serverId: string, enabled: boolean): LiveSamples 
       });
     };
 
-    window.agentmat.deploySystem.metricsHistory({ serverId, resolution: 'live' }).then(
+    window.runova.deploySystem.metricsHistory({ serverId, resolution: 'live' }).then(
       (history) => {
         if (disposed) return;
         const stored = history?.samples ?? [];
@@ -166,7 +166,7 @@ export function useLiveAlerts(serverId: string, enabled: boolean): LiveAlerts {
   useEffect(() => {
     if (!enabled) return;
     let disposed = false;
-    window.agentmat.deployAlerts.list({ serverId }).then(
+    window.runova.deployAlerts.list({ serverId }).then(
       (alerts) => {
         if (disposed) return;
         mergeAll(alerts ?? []);
@@ -179,9 +179,9 @@ export function useLiveAlerts(serverId: string, enabled: boolean): LiveAlerts {
       },
     );
     const stop = ownedSubscription({
-      listen: window.agentmat.deployAlerts.onChanged,
-      start: () => window.agentmat.deployAlerts.watch(serverId),
-      stop: window.agentmat.deployAlerts.unwatch,
+      listen: window.runova.deployAlerts.onChanged,
+      start: () => window.runova.deployAlerts.watch(serverId),
+      stop: window.runova.deployAlerts.unwatch,
       onEvent: (event) => {
         mergeAll(event.alerts);
         setError(null);
@@ -223,9 +223,9 @@ export function useJobLog(serverId: string, initial: JobInfo | null): JobLog {
     setLog({ job: initial, lines: [], ended: false, error: null });
     if (!jobId) return;
     return ownedSubscription({
-      listen: window.agentmat.deployJobs.onLog,
-      start: () => window.agentmat.deployJobs.watch({ serverId, jobId }),
-      stop: window.agentmat.deployJobs.unwatch,
+      listen: window.runova.deployJobs.onLog,
+      start: () => window.runova.deployJobs.watch({ serverId, jobId }),
+      stop: window.runova.deployJobs.unwatch,
       onEvent: (event) =>
         setLog((current) => {
           const last = current.lines.at(-1)?.seq ?? 0;

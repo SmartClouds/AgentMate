@@ -1,4 +1,4 @@
-import type { PostmanRequestItem } from '@agentmat/core';
+import type { PostmanRequestItem } from '@runova/core';
 import type { ApiExecutionResult } from '@shared/apiClientTypes';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { isTabDirty, useApiClientTabsStore } from './apiClientTabsStore';

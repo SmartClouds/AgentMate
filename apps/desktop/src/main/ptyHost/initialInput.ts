@@ -12,7 +12,7 @@
  * line after a while anyway, the way it always did.
  */
 
-const PROMPT_READY = '\x1b]7750;AgentMate:PromptReady:1';
+const PROMPT_READY = '\x1b]7750;Runova:PromptReady:1';
 
 /** A little under macOS's MAX_CANON of 1024, which counts the end of the line too. */
 export const CANONICAL_LINE_LIMIT = 1000;

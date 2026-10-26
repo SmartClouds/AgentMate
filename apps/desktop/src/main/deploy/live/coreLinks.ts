@@ -1,8 +1,8 @@
 import type {
   AlertInfo,
   MetricsSample,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import type { DeployConnection } from '../../../shared/deployTypes';
 import type { LiveHubSession } from '../connection/liveHub';
 import { CoreLink } from './coreLink';

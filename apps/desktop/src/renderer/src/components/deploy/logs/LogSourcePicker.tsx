@@ -1,7 +1,7 @@
 import type {
   ContainerList,
   SiteInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { Combobox } from '@/components/ui/combobox';
 import type { LogSource } from './useLogSource';
 
@@ -16,7 +16,7 @@ export const COMMON_UNITS = [
   'docker.service',
   'nginx.service',
   'ssh.service',
-  'agentmate-core.service',
+  'runova-core.service',
 ];
 
 export function sourceValue(source: LogSource): string {

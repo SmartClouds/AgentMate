@@ -11,7 +11,7 @@ import type {
   SkillRepository,
   SkillRepositoryIndex,
   SkillRepositorySourceType,
-} from '@agentmat/core';
+} from '@runova/core';
 import {
   allProjectSkillRemoveDirs,
   isUiProAiTarget,
@@ -24,7 +24,7 @@ import {
   UI_UX_PRO_MAX_NPM_PACKAGE,
   UI_UX_PRO_MAX_PSEUDO_REPOSITORY_ID,
   UI_UX_PRO_MAX_SKILL_ID,
-} from '@agentmat/core';
+} from '@runova/core';
 import { app, dialog, ipcMain } from 'electron';
 import type {
   AddUsedSkillInput,
@@ -80,7 +80,7 @@ function repoCacheDir(repositoryId: string): string {
 }
 
 function installedSkillsFilePath(projectFolderPath: string): string {
-  return join(projectFolderPath, '.agentmate', 'installed-skills.json');
+  return join(projectFolderPath, '.runova', 'installed-skills.json');
 }
 
 /** ~/.claude is the scope root for globally-installed skills, mirroring Claude Code's own global skills dir. */
@@ -416,7 +416,7 @@ async function collectInstalledSkill(
   }
 
   throw new Error(
-    `Could not find "${skillId}" on disk. Skills installed by their own CLI may live outside AgentMate's install folders.`,
+    `Could not find "${skillId}" on disk. Skills installed by their own CLI may live outside Runova's install folders.`,
   );
 }
 
@@ -428,7 +428,7 @@ async function collectAuditSubject(target: SkillAuditTarget): Promise<AuditSubje
     return collectInstalledSkill(target.projectId, target.skillId);
   }
 
-  // A folder anywhere on disk: nothing is added to AgentMate, the files are just read where
+  // A folder anywhere on disk: nothing is added to Runova, the files are just read where
   // they are. The skill id is the path, so re-checking the same folder builds one history.
   if (target.kind === 'folder') {
     const files = await readSkillPathFiles(target.path);
@@ -490,7 +490,7 @@ async function skillParentDirs(scope: SkillScope, projectId: string | null): Pro
 }
 
 /**
- * Lists the skills actually sitting in a project's agent dirs, whether or not AgentMate installed
+ * Lists the skills actually sitting in a project's agent dirs, whether or not Runova installed
  * them. A cloned repository arrives with `.claude/skills/…` already populated and no record of it
  * here, and those are exactly the skills worth checking before an agent reads them.
  */
@@ -965,7 +965,7 @@ export function registerSkillHandlers(): void {
       if (record?.repositoryId === UI_UX_PRO_MAX_PSEUDO_REPOSITORY_ID) {
         // Nothing to delete here: `uipro uninstall` owns the files it wrote, and the renderer
         // runs it in a visible terminal (it prints what it removed and can ask for a platform).
-        // This handler only drops AgentMate's own bookkeeping entry.
+        // This handler only drops Runova's own bookkeeping entry.
       } else if (record?.repositoryId === SKILLS_SH_PSEUDO_REPOSITORY_ID) {
         const skillName = params.skillId.split('/').pop() ?? params.skillId;
         if (SKILL_NAME_PATTERN.test(skillName)) {
@@ -1052,7 +1052,7 @@ export function registerSkillHandlers(): void {
       if (trimmed.length < 2) return [];
       const response = await fetch(
         `https://www.skills.sh/api/search?q=${encodeURIComponent(trimmed)}`,
-        { headers: { 'User-Agent': 'AgentMate' } },
+        { headers: { 'User-Agent': 'Runova' } },
       );
       if (!response.ok) throw new Error(`skills.sh search failed: HTTP ${response.status}`);
       const json = (await response.json()) as {
@@ -1078,7 +1078,7 @@ export function registerSkillHandlers(): void {
     IPC.skills.getSkillsShDetail,
     async (_event, skillPath: string): Promise<SkillsShDetail> => {
       const response = await fetch(`https://www.skills.sh/${skillPath}`, {
-        headers: { 'User-Agent': 'AgentMate' },
+        headers: { 'User-Agent': 'Runova' },
       });
       if (!response.ok) throw new Error(`skills.sh fetch failed: HTTP ${response.status}`);
       const html = await response.text();
@@ -1102,7 +1102,7 @@ export function registerSkillHandlers(): void {
 
   // The actual `skills add` command now runs in a visible terminal (opened from the renderer)
   // instead of a detached child process, since it can prompt for confirmation or a choice partway
-  // through. This handler just records the install in AgentMate's own bookkeeping once the
+  // through. This handler just records the install in Runova's own bookkeeping once the
   // renderer has opened that terminal, so the skill shows up in the installed-skills lists.
   ipcMain.handle(
     IPC.skills.recordSkillsShInstall,
@@ -1171,7 +1171,7 @@ export function registerSkillHandlers(): void {
 
   // Like the skills.sh flow, `uipro init` runs in a visible terminal opened by the renderer,
   // since it prints the files it writes and can prompt. This only records the install so the
-  // skill shows up in AgentMate's installed lists.
+  // skill shows up in Runova's installed lists.
   ipcMain.handle(
     IPC.skills.recordUiProInstall,
     async (_event, params: RecordUiProInstallInput): Promise<void> => {

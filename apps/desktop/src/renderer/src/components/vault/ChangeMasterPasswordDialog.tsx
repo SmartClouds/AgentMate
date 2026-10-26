@@ -1,4 +1,4 @@
-import { masterPasswordProblem } from '@agentmat/core';
+import { masterPasswordProblem } from '@runova/core';
 import { vaultErrorMessage } from '@shared/vaultErrors';
 import { useId, useState } from 'react';
 import { toast } from 'sonner';
@@ -47,7 +47,7 @@ export function ChangeMasterPasswordDialog({
     setBusy(true);
     setError(null);
     try {
-      if (await window.agentmat.vault.changePassword(current, next)) {
+      if (await window.runova.vault.changePassword(current, next)) {
         toast.success('Master password changed', {
           description: 'Use the new password the next time you unlock the vault.',
         });

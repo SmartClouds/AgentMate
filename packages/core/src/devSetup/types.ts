@@ -96,7 +96,7 @@ export type DevRecipe =
     }
   | { kind: 'npm-global'; pkg: string }
   | { kind: 'dotnet-tool'; pkg: string }
-  /** AgentMate runs its own installer (download, verify, unpack, or drive sdkmanager). */
+  /** Runova runs its own installer (download, verify, unpack, or drive sdkmanager). */
   | { kind: 'managed'; installer: DevManagedInstaller; sdkPackage?: string; target?: StudioToolId }
   /** Arrives with another item, so there is nothing to run. */
   | { kind: 'bundled'; with: DevItemId }

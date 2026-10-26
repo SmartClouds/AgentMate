@@ -150,7 +150,7 @@ export async function launchApp(seed: {
    */
   reuseRoot?: string;
 }): Promise<LaunchedApp> {
-  const root = seed.reuseRoot ?? mkdtempSync(join(tmpdir(), 'agentmate-e2e-'));
+  const root = seed.reuseRoot ?? mkdtempSync(join(tmpdir(), 'runova-e2e-'));
   const userDataDir = join(root, 'user-data');
   const projectDir = join(root, 'project');
   const binDir = join(root, 'bin');
@@ -169,7 +169,7 @@ export async function launchApp(seed: {
         keepTerminalsRunning: false,
         // Deploy lists only the servers the user chose, and a launch with the DevHost is there to
         // work on it, so it starts out chosen. A test of the choice itself passes its own list.
-        ...(seed.env?.AGENTMATE_DEPLOY_DEV_CORE ? { deployServerIds: ['devhost'] } : {}),
+        ...(seed.env?.RUNOVA_DEPLOY_DEV_CORE ? { deployServerIds: ['devhost'] } : {}),
         ...seed.settings,
       }),
     );
@@ -181,7 +181,7 @@ export async function launchApp(seed: {
       join(E2E_OUT_DIR, 'main', 'index.mjs'),
       `--user-data-dir=${userDataDir}`,
       // Ubuntu runners block the unprivileged user namespaces Chromium's sandbox needs.
-      ...(process.env.AGENTMATE_E2E_NO_SANDBOX === '1' ? ['--no-sandbox'] : []),
+      ...(process.env.RUNOVA_E2E_NO_SANDBOX === '1' ? ['--no-sandbox'] : []),
       ...(seed.args ?? []),
     ],
     env: {
@@ -191,8 +191,8 @@ export async function launchApp(seed: {
       // src/main/testMode.ts reads these before anything touches userData: the profile moves,
       // the single-instance lock and terminal host pipe move with it, and the startup work that
       // reaches outside the profile (the docker scan sweep, update checks) stays off.
-      AGENTMATE_USER_DATA_DIR: userDataDir,
-      AGENTMATE_E2E: '1',
+      RUNOVA_USER_DATA_DIR: userDataDir,
+      RUNOVA_E2E: '1',
       // Terminal tabs run zsh on macOS, which reads the user's .zshenv and .zshrc. Claude Code's
       // installer puts ~/.local/bin at the front of PATH in there, so on a machine that has it the
       // real CLI started in place of the fake one above. An empty folder keeps those files out.
@@ -202,7 +202,7 @@ export async function launchApp(seed: {
   });
   const mainLogFile = captureMainOutput(app, root);
   const page = await app.firstWindow();
-  await page.waitForFunction(() => Boolean((window as { agentmat?: unknown }).agentmat));
+  await page.waitForFunction(() => Boolean((window as { runova?: unknown }).runova));
 
   return {
     app,
@@ -235,7 +235,7 @@ export async function launchApp(seed: {
 
 /**
  * Closes an app through Playwright's own API, or it keeps a handle on the app and the worker sits
- * at teardown until it times out. AGENTMATE_E2E lets the quit guard through, so this no longer
+ * at teardown until it times out. RUNOVA_E2E lets the quit guard through, so this no longer
  * waits for the "quit while agents are running?" confirmation.
  *
  * Playwright's close() only resolves once the app's stdio pipes close, and anything the app
@@ -350,9 +350,9 @@ export async function createProject(launched: LaunchedApp): Promise<string> {
   return page.evaluate(async (folderPath) => {
     const api = (
       window as unknown as {
-        agentmat: { projects: { create(input: unknown): Promise<{ id: string }> } };
+        runova: { projects: { create(input: unknown): Promise<{ id: string }> } };
       }
-    ).agentmat;
+    ).runova;
     const project = await api.projects.create({
       name: 'e2e project',
       folderPath,

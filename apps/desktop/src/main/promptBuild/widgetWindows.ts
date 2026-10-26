@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import type { DesktopPromptBuildWidgetInstance } from '@agentmat/core';
+import type { DesktopPromptBuildWidgetInstance } from '@runova/core';
 import { BrowserWindow } from 'electron';
 import icon from '../../../resources/icon.ico?asset';
 import { store } from '../store';

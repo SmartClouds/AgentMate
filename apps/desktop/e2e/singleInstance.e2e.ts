@@ -6,7 +6,7 @@ import { type LaunchedApp, launchApp } from './app';
 import { E2E_OUT_DIR } from './paths';
 
 /**
- * The whole suite leans on one thing: an AgentMate started with its own profile never touches
+ * The whole suite leans on one thing: a Runova started with its own profile never touches
  * another one. Two guarantees back that up, and both are checked here.
  *
  * A second app on the SAME profile must lose the single-instance lock and quit, leaving the first
@@ -43,14 +43,14 @@ function startOnProfile(userDataDir: string): ChildProcess {
     [
       join(E2E_OUT_DIR, 'main', 'index.mjs'),
       `--user-data-dir=${userDataDir}`,
-      ...(process.env.AGENTMATE_E2E_NO_SANDBOX === '1' ? ['--no-sandbox'] : []),
+      ...(process.env.RUNOVA_E2E_NO_SANDBOX === '1' ? ['--no-sandbox'] : []),
     ],
     {
       env: {
         ...(process.env as Record<string, string>),
         ELECTRON_RENDERER_URL: '',
-        AGENTMATE_USER_DATA_DIR: userDataDir,
-        AGENTMATE_E2E: '1',
+        RUNOVA_USER_DATA_DIR: userDataDir,
+        RUNOVA_E2E: '1',
       },
       stdio: 'ignore',
     },
@@ -94,8 +94,8 @@ test('two apps on different profiles both run', async () => {
   expect(other.settingsOnDisk().theme).toBe('light');
   await other.page.evaluate(() =>
     (
-      window as unknown as { agentmat: { settings: { update(patch: unknown): Promise<unknown> } } }
-    ).agentmat.settings.update({ theme: 'vs2026' }),
+      window as unknown as { runova: { settings: { update(patch: unknown): Promise<unknown> } } }
+    ).runova.settings.update({ theme: 'vs2026' }),
   );
   await expect.poll(() => other?.settingsOnDisk().theme).toBe('vs2026');
   expect(launched.settingsOnDisk().theme).toBe('dark');

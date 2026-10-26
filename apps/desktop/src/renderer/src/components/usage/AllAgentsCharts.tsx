@@ -1,4 +1,4 @@
-import type { WidgetPeriod } from '@agentmat/core';
+import type { WidgetPeriod } from '@runova/core';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useState } from 'react';
 import { SparklineChart } from '@/components/dashboard/SparklineChart';

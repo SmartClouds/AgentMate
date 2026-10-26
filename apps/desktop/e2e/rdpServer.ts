@@ -4,7 +4,7 @@ import { APP_ROOT } from './paths';
 
 export { dockerAvailable } from './sshServer';
 
-const IMAGE = 'agentmate-e2e-rdp-server';
+const IMAGE = 'runova-e2e-rdp-server';
 
 export const RDP_USER = 'rdpuser';
 export const RDP_PASSWORD = 'rdp-pass-123';
@@ -73,7 +73,7 @@ export function buildRdpServerImage(): void {
  */
 export async function startRdpServer(): Promise<RdpTestServer> {
   buildRdpServerImage();
-  const name = `agentmate-e2e-rdp-${process.pid}-${Date.now()}`;
+  const name = `runova-e2e-rdp-${process.pid}-${Date.now()}`;
   docker(['run', '-d', '--rm', '--name', name, '-p', '127.0.0.1::3389', IMAGE]);
   const stop = () => {
     try {

@@ -1,10 +1,10 @@
-import type { Project, ProjectRunCommand } from '@agentmat/core';
+import type { Project, ProjectRunCommand } from '@runova/core';
 import {
   configuredRunCommands,
   parseRunInputs,
   projectRunCommandTitle,
   runCommandSummary,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useEffect, useRef } from 'react';
 import { Play } from '@/components/icons';
 import { RunInputForm } from '@/components/projects/RunInputForm';

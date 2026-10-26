@@ -4,7 +4,7 @@ import {
   type GenericColumnTarget,
   type GenericMapping,
   VAULT_IMPORT_FORMAT_LABELS,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { VaultImportPreview, VaultImportResult } from '@shared/apiTypes';
 import { vaultErrorMessage } from '@shared/vaultErrors';
 import { useQueryClient } from '@tanstack/react-query';
@@ -71,7 +71,7 @@ export function VaultImportDialog({
 
   function close(): void {
     // A picked file that was never imported still sits parsed in main. Let it go.
-    if (preview && !result) void window.agentmat.vault.importCancel(preview.token);
+    if (preview && !result) void window.runova.vault.importCancel(preview.token);
     onOpenChange(false);
   }
 
@@ -79,7 +79,7 @@ export function VaultImportDialog({
     setBusy(true);
     setError(null);
     try {
-      const opened = await window.agentmat.vault.importOpen();
+      const opened = await window.runova.vault.importOpen();
       if (opened) {
         setPreview(opened);
         setMapping(opened.format ? null : opened.mapping);
@@ -96,7 +96,7 @@ export function VaultImportDialog({
     const next = { columns: mapping.columns.map((t, i) => (i === column ? target : t)) };
     setMapping(next);
     try {
-      setPreview(await window.agentmat.vault.importPreview(preview.token, next));
+      setPreview(await window.runova.vault.importPreview(preview.token, next));
     } catch (err) {
       setError(vaultErrorMessage(err));
     }
@@ -107,7 +107,7 @@ export function VaultImportDialog({
     setBusy(true);
     setError(null);
     try {
-      setResult(await window.agentmat.vault.importCommit(preview.token, mapping, policy));
+      setResult(await window.runova.vault.importCommit(preview.token, mapping, policy));
       void queryClient.invalidateQueries({ queryKey: queryKeys.vaultEntries });
     } catch (err) {
       setError(vaultErrorMessage(err));
@@ -139,8 +139,8 @@ export function VaultImportDialog({
               <div className="space-y-1">
                 <p className="text-sm font-medium">Works with exports from</p>
                 <p className="text-sm text-muted-foreground">
-                  Chrome, Edge, Firefox, Bitwarden, 1Password and AgentMate. For any other CSV you
-                  pick which column is which.
+                  Chrome, Edge, Firefox, Bitwarden, 1Password and Runova. For any other CSV you pick
+                  which column is which.
                 </p>
               </div>
               <Button onClick={() => void choose()} disabled={busy}>

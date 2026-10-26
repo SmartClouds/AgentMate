@@ -20,7 +20,7 @@ import {
   wpItemKey,
   wpItemRoot,
   wpMirrorPath,
-} from '@agentmat/core';
+} from '@runova/core';
 import type {
   DeployWordPressDeployResult,
   DeployWordPressPhase,
@@ -86,7 +86,7 @@ const REFUSAL_TEXT: Record<WpRefusalReason, string> = {
   reservedName: 'a name is reserved on Windows',
   hardDenied: 'it is on the list of files that never leave this computer',
   itemUnknown: 'the site has no such theme or plugin',
-  itemProtected: 'it belongs to AgentMate Connector itself',
+  itemProtected: 'it belongs to Runova Connector itself',
   notWritable: 'PHP cannot write there',
   symlink: 'it is a link on the site',
   tooLarge: 'it is too large',

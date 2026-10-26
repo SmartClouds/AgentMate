@@ -26,14 +26,14 @@ describe('panelWidthStore', () => {
   });
 
   it('picks up the widths saved under the old keys', async () => {
-    localStorage.setItem('agentmate-deploy-rail', JSON.stringify({ state: { width: 300 } }));
-    localStorage.setItem('agentmate-cloudflare-rail', JSON.stringify({ state: { width: 310 } }));
+    localStorage.setItem('runova-deploy-rail', JSON.stringify({ state: { width: 300 } }));
+    localStorage.setItem('runova-cloudflare-rail', JSON.stringify({ state: { width: 310 } }));
     localStorage.setItem(
-      'agentmate-catalog-layout',
+      'runova-catalog-layout',
       JSON.stringify({ state: { widths: { mcpRepositories: 280, unknownPanel: 999 } } }),
     );
     localStorage.setItem(
-      'agentmate-pane-layout',
+      'runova-pane-layout',
       JSON.stringify({ state: { widths: { vaultList: 400, remoteFilesPlaces: 250 } } }),
     );
 
@@ -48,9 +48,9 @@ describe('panelWidthStore', () => {
   });
 
   it('prefers its own key over the old ones once it has saved', async () => {
-    localStorage.setItem('agentmate-deploy-rail', JSON.stringify({ state: { width: 300 } }));
+    localStorage.setItem('runova-deploy-rail', JSON.stringify({ state: { width: 300 } }));
     localStorage.setItem(
-      'agentmate-panel-widths',
+      'runova-panel-widths',
       JSON.stringify({ state: { widths: { deployRail: 220 } }, version: 0 }),
     );
 
@@ -61,13 +61,13 @@ describe('panelWidthStore', () => {
   it('saves a resize under its own key', async () => {
     const { usePanelWidthStore } = await freshStore();
     usePanelWidthStore.getState().setWidth('pipelinesFilters', 300);
-    const saved = JSON.parse(localStorage.getItem('agentmate-panel-widths') ?? '{}');
+    const saved = JSON.parse(localStorage.getItem('runova-panel-widths') ?? '{}');
     expect(saved.state.widths).toEqual({ pipelinesFilters: 300 });
   });
 
   it('skips an old value that no longer parses', async () => {
-    localStorage.setItem('agentmate-deploy-rail', '{not json');
-    localStorage.setItem('agentmate-cloudflare-rail', JSON.stringify({ state: { width: 310 } }));
+    localStorage.setItem('runova-deploy-rail', '{not json');
+    localStorage.setItem('runova-cloudflare-rail', JSON.stringify({ state: { width: 310 } }));
     const { usePanelWidthStore } = await freshStore();
     expect(usePanelWidthStore.getState().widths).toEqual({ cloudflareRail: 310 });
   });

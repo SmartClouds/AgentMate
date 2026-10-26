@@ -1,4 +1,4 @@
-import type { LinkCandidateProject, RemoteProject } from '@agentmat/core';
+import type { LinkCandidateProject, RemoteProject } from '@runova/core';
 import type { ErrorIssueQuery } from '@shared/errorTrackingTypes';
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -28,8 +28,8 @@ const toast = vi.hoisted(() =>
   }),
 );
 vi.mock('sonner', () => ({ toast }));
-vi.mock('@agentmat/core', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@agentmat/core')>()),
+vi.mock('@runova/core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@runova/core')>()),
   suggestRemoteProjects: (candidate: LinkCandidateProject, remote: readonly RemoteProject[]) =>
     remote.filter((one) => one.slug.startsWith(candidate.name.toLowerCase())),
 }));

@@ -3,7 +3,7 @@ import type {
   SiteInfo,
   SiteRatePeriod,
   SiteReferrerPolicy,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * A site as its editor holds it: text for every number (so a half-typed value stays as typed),

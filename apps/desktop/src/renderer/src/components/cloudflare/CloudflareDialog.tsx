@@ -74,14 +74,14 @@ function CloudflareContent(): React.JSX.Element {
 
   const statusQuery = useQuery({
     queryKey: queryKeys.cloudflareStatus,
-    queryFn: () => window.agentmat.cloudflare.status(),
+    queryFn: () => window.runova.cloudflare.status(),
   });
   const status = statusQuery.data;
   const ready = Boolean(status?.configured && !status.locked);
   const zoneQueries = useQueries({
     queries: (status?.accounts ?? []).map((account) => ({
       queryKey: queryKeys.cloudflareAccountZones(account.id),
-      queryFn: () => window.agentmat.cloudflare.listZones(account.id),
+      queryFn: () => window.runova.cloudflare.listZones(account.id),
       enabled: ready,
     })),
   });

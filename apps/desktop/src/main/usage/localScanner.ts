@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, sep } from 'node:path';
 import { Worker } from 'node:worker_threads';
-import type { ProjectDaily, ProviderUsage, SubscriptionUsage, UsageWindow } from '@agentmat/core';
+import type { ProjectDaily, ProviderUsage, SubscriptionUsage, UsageWindow } from '@runova/core';
 import { app } from 'electron';
 import { getLiveWindows, readClaudeAccount } from './claudeAccount';
 import { codexSubscription } from './codexLimits';

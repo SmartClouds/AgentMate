@@ -1,4 +1,4 @@
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { normalizeRegistry, registryCredentialProblem } from '../../../shared/deploy/registries';
 import type {
   DeployRegistryProof,

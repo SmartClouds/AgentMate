@@ -1,9 +1,5 @@
-import type { ScannerPreflight, ScannerRequirement, SecurityScannerId } from '@agentmat/core';
-import {
-  codeqlLanguageNeedsBuild,
-  getAgentToolDefinition,
-  SECURITY_SCANNERS,
-} from '@agentmat/core';
+import type { ScannerPreflight, ScannerRequirement, SecurityScannerId } from '@runova/core';
+import { codeqlLanguageNeedsBuild, getAgentToolDefinition, SECURITY_SCANNERS } from '@runova/core';
 import type { SecurityScannerConfig } from './adapters';
 import { getCodeqlStatus } from './codeqlLocal';
 import { probe } from './exec';
@@ -119,7 +115,7 @@ async function requirementsFor(
     }
 
     case 'codeql': {
-      // CodeQL is the one scanner that can be installed into AgentMate's own tools folder rather
+      // CodeQL is the one scanner that can be installed into Runova's own tools folder rather
       // than onto PATH, so the plain PATH probe is not the whole answer here.
       const codeql = await getCodeqlStatus();
       const requirements: ScannerRequirement[] = [
@@ -128,13 +124,13 @@ async function requirementsFor(
               'binary',
               'CodeQL is installed',
               codeql.version
-                ? `${codeql.version}${codeql.onPath ? '' : ' (managed by AgentMate)'}`
+                ? `${codeql.version}${codeql.onPath ? '' : ' (managed by Runova)'}`
                 : null,
             )
           : unmet(
               'binary',
               'CodeQL is installed',
-              'AgentMate can download CodeQL for you from its card on the Agent Tools page.',
+              'Runova can download CodeQL for you from its card on the Agent Tools page.',
               { kind: 'install-tool', toolId: scanner.toolId },
             ),
       ];

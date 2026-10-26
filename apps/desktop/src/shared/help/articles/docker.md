@@ -17,7 +17,7 @@ Click **Docker** in the sidebar under **Ship**, or open the command palette and 
 
 ## If Docker is not installed
 
-If AgentMate cannot find the `docker` command on your PATH, the page shows "Docker isn't available" with the text "AgentMate couldn't find the docker command on PATH. Install Docker Desktop (or the Docker Engine CLI) and reopen this page." Install Docker, make sure Docker is running, and open the page again.
+If Runova cannot find the `docker` command on your PATH, the page shows "Docker isn't available" with the text "Runova couldn't find the docker command on PATH. Install Docker Desktop (or the Docker Engine CLI) and reopen this page." Install Docker, make sure Docker is running, and open the page again.
 
 The Docker entry in the status bar is hidden completely while Docker is not available.
 
@@ -91,7 +91,7 @@ If the tab is empty, it says "No containers for this project". Run `docker compo
 
 ## When you stop a run
 
-Stopping a project's run ends its terminal and everything the terminal started, but it does not stop Docker containers. If the run was `docker compose up -d`, the containers keep running and keep using memory and CPU. So when you stop a run, AgentMate checks whether that project still has containers running and offers to stop them too.
+Stopping a project's run ends its terminal and everything the terminal started, but it does not stop Docker containers. If the run was `docker compose up -d`, the containers keep running and keep using memory and CPU. So when you stop a run, Runova checks whether that project still has containers running and offers to stop them too.
 
 The run always stops first, straight away. Docker is checked in the background, so a slow or stopped Docker never makes the Stop button wait. If the project has no containers running, or Docker is not installed, nothing more happens and you see no message about Docker.
 
@@ -108,7 +108,7 @@ The dialog never takes focus onto a button, so a stray Enter or Space while you 
 
 Stopping two runs close together gives one dialog, not two.
 
-To change the remembered choice later, open **Settings**, **General**, and use **Docker containers when a run stops**. It can be **Ask me**, **Always stop them** or **Never stop them**. With **Never stop them**, AgentMate does not even look at Docker when a run stops. See [Settings](settings.md).
+To change the remembered choice later, open **Settings**, **General**, and use **Docker containers when a run stops**. It can be **Ask me**, **Always stop them** or **Never stop them**. With **Never stop them**, Runova does not even look at Docker when a run stops. See [Settings](settings.md).
 
 > [!NOTE]
 > Only containers started with `docker compose` from the project's own folder are found, the same ones the project's Docker tab shows. A container started with plain `docker run`, or a Compose setup started from a different folder with `-f`, is not linked to the project, so it is left alone. Stop those from the Docker page.
@@ -116,7 +116,7 @@ To change the remembered choice later, open **Settings**, **General**, and use *
 ## Tips
 
 - The Docker page and the project Docker tab share the same cards, so what you learn in one works in the other.
-- Containers that nothing has used for a while show up on the Dashboard's **Idle Docker and Emulators** card, which can stop them for you. Its clock starts when AgentMate first sees a container, so restarting AgentMate starts it again. See [Dashboard](dashboard.md#idle-docker-and-emulators).
+- Containers that nothing has used for a while show up on the Dashboard's **Idle Docker and Emulators** card, which can stop them for you. Its clock starts when Runova first sees a container, so restarting Runova starts it again. See [Dashboard](dashboard.md#idle-docker-and-emulators).
 - To get a container's logs or open a shell, use the terminal in the [Workspace](workspace.md) and run the `docker` command there. This page covers lifecycle actions only.
 
 ## Related

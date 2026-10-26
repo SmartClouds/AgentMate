@@ -1,6 +1,6 @@
 import net from 'node:net';
 import os from 'node:os';
-import { isEmulatorSerial, normalizeIdleResourceMinutes, parseAdbDevices } from '@agentmat/core';
+import { isEmulatorSerial, normalizeIdleResourceMinutes, parseAdbDevices } from '@runova/core';
 import { resolveAvdNames } from '../android/devices';
 import { runAdb } from '../android/exec';
 import { launchedEmulatorPids, stopEmulator } from '../android/runtime';
@@ -25,10 +25,10 @@ const BASELINE = 'resource-activity';
 
 /**
  * Normally 30 seconds. A developer or a verification build can shorten it with
- * AGENTMATE_RESOURCE_TICK_MS (at least a second) instead of waiting out a real idle stretch.
+ * RUNOVA_RESOURCE_TICK_MS (at least a second) instead of waiting out a real idle stretch.
  */
 function tickMs(): number {
-  const raw = Number(process.env.AGENTMATE_RESOURCE_TICK_MS);
+  const raw = Number(process.env.RUNOVA_RESOURCE_TICK_MS);
   return Number.isFinite(raw) && raw >= 1000 ? raw : DEFAULT_TICK_MS;
 }
 

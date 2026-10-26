@@ -1,4 +1,4 @@
-import { budgetLevel, formatTokenCount } from '@agentmat/core';
+import { budgetLevel, formatTokenCount } from '@runova/core';
 import type { RelayTaskCard as Card, RelayProjectSettings, RelayRunView } from '@shared/relayTypes';
 import { motion, useReducedMotion } from 'framer-motion';
 import { CliLogo } from '@/components/cliLogos';
@@ -11,7 +11,7 @@ import { tokensUsedLabel } from './TokensUsed';
 import { useRelayContext } from './useRelay';
 
 /** The drag payload's type, so a drop elsewhere in the app ignores a card. */
-export const CARD_DRAG_TYPE = 'application/x-agentmate-relay-task';
+export const CARD_DRAG_TYPE = 'application/x-runova-relay-task';
 
 export type CardMove = { kind: 'column'; step: -1 | 1 } | { kind: 'order'; step: -1 | 1 };
 

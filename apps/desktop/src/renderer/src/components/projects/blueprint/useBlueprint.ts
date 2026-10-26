@@ -1,9 +1,4 @@
-import type {
-  BlueprintAttachment,
-  BlueprintStepId,
-  Project,
-  ProjectBlueprint,
-} from '@agentmat/core';
+import type { BlueprintAttachment, BlueprintStepId, Project, ProjectBlueprint } from '@runova/core';
 import {
   AGENT_TYPE_LABELS,
   blueprintTextHash,
@@ -11,7 +6,7 @@ import {
   buildBlueprintPrompt,
   getCliDefinition,
   targetAIForProject,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -41,17 +36,17 @@ export function useProjectBlueprint(project: Project) {
 
   const blueprintQuery = useQuery({
     queryKey: queryKeys.blueprint(projectId),
-    queryFn: () => window.agentmat.blueprints.get(projectId),
+    queryFn: () => window.runova.blueprints.get(projectId),
   });
 
   const presetsQuery = useQuery({
     queryKey: queryKeys.blueprintPresets,
-    queryFn: () => window.agentmat.blueprints.listPresets(),
+    queryFn: () => window.runova.blueprints.listPresets(),
   });
 
   const agentFileQuery = useQuery({
     queryKey: queryKeys.blueprintAgentFile(projectId),
-    queryFn: () => window.agentmat.blueprints.agentFileTarget(projectId),
+    queryFn: () => window.runova.blueprints.agentFileTarget(projectId),
   });
 
   function cache(next: ProjectBlueprint): void {
@@ -69,7 +64,7 @@ export function useProjectBlueprint(project: Project) {
    */
   async function syncAgentFile(announce: boolean): Promise<void> {
     try {
-      const result = await window.agentmat.blueprints.syncAgentFile(projectId);
+      const result = await window.runova.blueprints.syncAgentFile(projectId);
       void queryClient.invalidateQueries({ queryKey: queryKeys.blueprintAgentFile(projectId) });
       if (announce && result.written) toast.success(`Updated ${result.relativePath}.`);
     } catch (error) {
@@ -81,7 +76,7 @@ export function useProjectBlueprint(project: Project) {
 
   const saveSection = useMutation({
     mutationFn: ({ stepId, text }: { stepId: BlueprintStepId; text: string }) =>
-      window.agentmat.blueprints.updateSection(projectId, stepId, { text }),
+      window.runova.blueprints.updateSection(projectId, stepId, { text }),
     onSuccess: (next, variables) => {
       cache(next);
       refreshRevisions();
@@ -94,7 +89,7 @@ export function useProjectBlueprint(project: Project) {
 
   const setIncludeInAgentFile = useMutation({
     mutationFn: ({ stepId, value }: { stepId: BlueprintStepId; value: boolean }) =>
-      window.agentmat.blueprints.updateSection(projectId, stepId, { includeInAgentFile: value }),
+      window.runova.blueprints.updateSection(projectId, stepId, { includeInAgentFile: value }),
     onSuccess: (next) => {
       cache(next);
       void syncAgentFile(true);
@@ -104,27 +99,27 @@ export function useProjectBlueprint(project: Project) {
   });
 
   const setDocsFolder = useMutation({
-    mutationFn: (folder: string) => window.agentmat.blueprints.setDocsFolder(projectId, folder),
+    mutationFn: (folder: string) => window.runova.blueprints.setDocsFolder(projectId, folder),
     onSuccess: cache,
     meta: QUIET,
   });
 
   const setConfirmBeforeWriting = useMutation({
     mutationFn: (value: boolean) =>
-      window.agentmat.blueprints.setConfirmBeforeWriting(projectId, value),
+      window.runova.blueprints.setConfirmBeforeWriting(projectId, value),
     onSuccess: cache,
     meta: QUIET,
   });
 
   const setRelay = useMutation({
     mutationFn: (value: { enabled: boolean; budgetTokens: number }) =>
-      window.agentmat.blueprints.setRelay(projectId, value),
+      window.runova.blueprints.setRelay(projectId, value),
     onSuccess: cache,
     meta: QUIET,
   });
 
   const saveFinalPrompt = useMutation({
-    mutationFn: (text: string) => window.agentmat.blueprints.setFinalPrompt(projectId, text),
+    mutationFn: (text: string) => window.runova.blueprints.setFinalPrompt(projectId, text),
     onSuccess: (next) => {
       cache(next);
       refreshRevisions();
@@ -135,7 +130,7 @@ export function useProjectBlueprint(project: Project) {
 
   const pickAttachments = useMutation({
     mutationFn: (stepId: BlueprintStepId) =>
-      window.agentmat.blueprints.pickAttachments(projectId, stepId),
+      window.runova.blueprints.pickAttachments(projectId, stepId),
     onSuccess: (result) => {
       // Null means the picker was cancelled, which isn't a failure or a change.
       if (!result) return;
@@ -155,7 +150,7 @@ export function useProjectBlueprint(project: Project) {
       stepId: BlueprintStepId;
       displayName: string;
       dataUrl: string;
-    }) => window.agentmat.blueprints.addAttachment(projectId, stepId, { displayName, dataUrl }),
+    }) => window.runova.blueprints.addAttachment(projectId, stepId, { displayName, dataUrl }),
     onSuccess: (result) => {
       cache(result.blueprint);
       setPendingInserts((current) => [...current, ...result.added]);
@@ -173,14 +168,14 @@ export function useProjectBlueprint(project: Project) {
       stepId: BlueprintStepId;
       attachmentId: string;
       displayName: string;
-    }) => window.agentmat.blueprints.renameAttachment(projectId, stepId, attachmentId, displayName),
+    }) => window.runova.blueprints.renameAttachment(projectId, stepId, attachmentId, displayName),
     onSuccess: cache,
     meta: QUIET,
   });
 
   const removeAttachment = useMutation({
     mutationFn: ({ stepId, attachmentId }: { stepId: BlueprintStepId; attachmentId: string }) =>
-      window.agentmat.blueprints.removeAttachment(projectId, stepId, attachmentId),
+      window.runova.blueprints.removeAttachment(projectId, stepId, attachmentId),
     onSuccess: cache,
     onError: () => toast.error('Could not remove that attachment.'),
     meta: QUIET,
@@ -210,7 +205,7 @@ export function useProjectBlueprint(project: Project) {
 
       if (!containsPersian(text)) {
         english.set(section.stepId, text);
-        await window.agentmat.blueprints
+        await window.runova.blueprints
           .updateSection(projectId, section.stepId, { textEn: text, textEnHash: hash })
           .then(cache)
           .catch(() => undefined);
@@ -218,10 +213,10 @@ export function useProjectBlueprint(project: Project) {
       }
 
       try {
-        const translated = await window.agentmat.translate.text({ text, targetLang: 'en' });
+        const translated = await window.runova.translate.text({ text, targetLang: 'en' });
         const value = translated.trim() || text;
         english.set(section.stepId, value);
-        await window.agentmat.blueprints
+        await window.runova.blueprints
           .updateSection(projectId, section.stepId, { textEn: value, textEnHash: hash })
           .then(cache)
           .catch(() => undefined);
@@ -284,7 +279,7 @@ export function useProjectBlueprint(project: Project) {
       // Saved directly rather than through saveFinalPrompt, whose "Prompt saved." toast would
       // land on top of the caller's "Prompt ready" one.
       try {
-        cache(await window.agentmat.blueprints.setFinalPrompt(projectId, prompt));
+        cache(await window.runova.blueprints.setFinalPrompt(projectId, prompt));
         refreshRevisions();
       } catch {
         toast.error('Could not save the prompt.');
@@ -310,8 +305,8 @@ export function useProjectBlueprint(project: Project) {
     if (!request.sent) return;
     void (
       request.viaCli
-        ? window.agentmat.ai.cancelAskCli(request.id)
-        : window.agentmat.ai.cancel(request.id)
+        ? window.runova.ai.cancelAskCli(request.id)
+        : window.runova.ai.cancel(request.id)
     ).catch(() => undefined);
   }
 
@@ -361,7 +356,7 @@ async function writePrompt(
   if (choice.cliId) {
     const name = getCliDefinition(choice.cliId)?.label ?? 'The CLI';
     try {
-      const result = await window.agentmat.ai.askCli({
+      const result = await window.runova.ai.askCli({
         prompt: buildBlueprintGenerationRequest(input),
         cliId: choice.cliId,
         modelId: choice.modelId,
@@ -380,7 +375,7 @@ async function writePrompt(
     }
   }
 
-  const settings = await window.agentmat.settings.get();
+  const settings = await window.runova.settings.get();
   const provider = settings.promptBuilderProvider;
   const model =
     provider === 'openai'
@@ -397,7 +392,7 @@ async function writePrompt(
   }
 
   try {
-    const result = await window.agentmat.ai.ask({
+    const result = await window.runova.ai.ask({
       provider,
       model,
       prompt: buildBlueprintGenerationRequest(input),
@@ -417,7 +412,7 @@ async function writePrompt(
 
 async function logHistory(projectId: string, targetAI: string, content: string): Promise<void> {
   try {
-    await window.agentmat.promptHistory.add({
+    await window.runova.promptHistory.add({
       rawInput: '',
       promptType: 'Product',
       targetAI,

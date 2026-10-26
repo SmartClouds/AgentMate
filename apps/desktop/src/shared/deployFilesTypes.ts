@@ -4,7 +4,7 @@ import type {
   PlanAction,
   RemoteObservation,
   RemoteVerdict,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { SshAuthMethod } from './apiTypes';
 import type { FilesErrorCode } from './deployFilesErrors';
 

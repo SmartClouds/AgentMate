@@ -25,9 +25,9 @@ async function createProject(current: LaunchedApp): Promise<string> {
     async ({ folderPath, name }) => {
       const api = (
         window as unknown as {
-          agentmat: { projects: { create(input: unknown): Promise<{ id: string }> } };
+          runova: { projects: { create(input: unknown): Promise<{ id: string }> } };
         }
-      ).agentmat;
+      ).runova;
       const project = await api.projects.create({
         name,
         folderPath,
@@ -57,11 +57,11 @@ async function switchOn(current: LaunchedApp, id: string): Promise<void> {
     (projectId) =>
       (
         window as unknown as {
-          agentmat: {
+          runova: {
             runProposals: { setEnabled(projectId: string, enabled: boolean): Promise<unknown> };
           };
         }
-      ).agentmat.runProposals.setEnabled(projectId, true),
+      ).runova.runProposals.setEnabled(projectId, true),
     id,
   );
   expect(result).toEqual({ ok: true });
@@ -70,10 +70,10 @@ async function switchOn(current: LaunchedApp, id: string): Promise<void> {
 /** The bridge script the project's .mcp.json starts, exactly as Claude Code would find it. */
 function bridgeScriptOf(current: LaunchedApp): string {
   const config = JSON.parse(readFileSync(join(current.projectDir, '.mcp.json'), 'utf-8')) as {
-    mcpServers: { agentmate: { command: string; args: string[] } };
+    mcpServers: { runova: { command: string; args: string[] } };
   };
-  expect(config.mcpServers.agentmate.command).toBe('node');
-  const script = config.mcpServers.agentmate.args[0];
+  expect(config.mcpServers.runova.command).toBe('node');
+  const script = config.mcpServers.runova.args[0];
   expect(existsSync(script)).toBe(true);
   return script;
 }
@@ -206,16 +206,16 @@ test('Create with AI starts Claude Code for the project, and its suggestion need
   await expect.poll(() => current.claudeLaunches().join('\n')).toContain('--mcp-config');
   const launch = current.claudeLaunches().join('\n');
   expect(launch).toContain('--allowedTools');
-  expect(launch).toContain('mcp__agentmate__propose_run_command');
+  expect(launch).toContain('mcp__runova__propose_run_command');
   // The project's own files stay as they were: this flow never touches .mcp.json.
   expect(existsSync(join(current.projectDir, '.mcp.json'))).toBe(false);
 
   // Now play the agent: start the bridge from the config that was handed to Claude Code.
   const configPath = join(current.userDataDir, 'run-suggestions', id, 'mcp.json');
   const config = JSON.parse(readFileSync(configPath, 'utf-8')) as {
-    mcpServers: { agentmate: { command: string; args: string[] } };
+    mcpServers: { runova: { command: string; args: string[] } };
   };
-  await talkToBridge(config.mcpServers.agentmate.args[0], proposeMessages(SUGGESTED), 2);
+  await talkToBridge(config.mcpServers.runova.args[0], proposeMessages(SUGGESTED), 2);
 
   const dialog = page.getByRole('dialog', { name: `Add "android dev" to ${NAME}?` });
   await expect(dialog).toBeVisible();

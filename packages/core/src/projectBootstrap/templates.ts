@@ -26,8 +26,8 @@ export interface BootstrapPlan {
   files: BootstrapFile[];
 }
 
-/** AgentMate's own project folder, created for every agent type. */
-export const AGENTMATE_DIR = '.agentmate';
+/** Runova's own project folder, created for every agent type. */
+export const RUNOVA_DIR = '.runova';
 
 const AGENT_LABELS: Record<AgentType, string> = {
   ...AGENT_TYPE_LABELS,
@@ -74,13 +74,13 @@ ${overview(meta)}
 `;
 }
 
-function agentmateDocs(meta: ProjectMeta): BootstrapFile[] {
+function runovaDocs(meta: ProjectMeta): BootstrapFile[] {
   return [
     {
-      relativePath: `${AGENTMATE_DIR}/PROJECT_CONTEXT.md`,
+      relativePath: `${RUNOVA_DIR}/PROJECT_CONTEXT.md`,
       content: `# ${meta.name}: Project Context
 
-Background an agent can't infer from the code. Managed in AgentMate.
+Background an agent can't infer from the code. Managed in Runova.
 
 ## Overview
 
@@ -104,7 +104,7 @@ ${overview(meta)}
 `,
     },
     {
-      relativePath: `${AGENTMATE_DIR}/ROADMAP.md`,
+      relativePath: `${RUNOVA_DIR}/ROADMAP.md`,
       content: `# Roadmap
 
 ## Now
@@ -121,7 +121,7 @@ ${overview(meta)}
 `,
     },
     {
-      relativePath: `${AGENTMATE_DIR}/TASKS.md`,
+      relativePath: `${RUNOVA_DIR}/TASKS.md`,
       content: `# Tasks
 
 - [ ] (add tasks here)
@@ -140,7 +140,7 @@ function agentsMd(meta: ProjectMeta, agentLabel: string, layout: string): Bootst
     content: `# ${meta.name}
 
 Instructions for AI coding agents working in this repository.
-Primary agent: **${agentLabel}**. Scaffolded by AgentMate.
+Primary agent: **${agentLabel}**. Scaffolded by Runova.
 
 ${instructionsBody(meta)}
 ${layout}`,
@@ -182,7 +182,7 @@ function claudeCodePlan(meta: ProjectMeta): BootstrapPlan {
       '.claude/agents',
       '.claude/skills',
       '.claude/commands',
-      AGENTMATE_DIR,
+      RUNOVA_DIR,
     ],
     files: [
       {
@@ -246,7 +246,7 @@ ${REVIEW_DIFF_PROMPT}
       },
       gitkeep('.claude/agents'),
       gitkeep('.claude/skills'),
-      ...agentmateDocs(meta),
+      ...runovaDocs(meta),
     ],
   };
 }
@@ -260,7 +260,7 @@ function geminiPlan(meta: ProjectMeta): BootstrapPlan {
     agentLabel: AGENT_LABELS.gemini,
     agentDir: '.gemini',
     docsUrl: 'https://google-gemini.github.io/gemini-cli/docs/get-started/configuration.html',
-    folders: ['.gemini', '.gemini/commands', AGENTMATE_DIR],
+    folders: ['.gemini', '.gemini/commands', RUNOVA_DIR],
     files: [
       {
         relativePath: 'GEMINI.md',
@@ -297,7 +297,7 @@ ${REVIEW_DIFF_PROMPT}
 """
 `,
       },
-      ...agentmateDocs(meta),
+      ...runovaDocs(meta),
     ],
   };
 }
@@ -312,7 +312,7 @@ function codexPlan(meta: ProjectMeta): BootstrapPlan {
     agentLabel: AGENT_LABELS.codex,
     agentDir: '.codex',
     docsUrl: 'https://developers.openai.com/codex/config-advanced',
-    folders: ['.codex', '.codex/skills', AGENTMATE_DIR],
+    folders: ['.codex', '.codex/skills', RUNOVA_DIR],
     files: [
       agentsMd(
         meta,
@@ -340,7 +340,7 @@ Docs: https://developers.openai.com/codex/config-advanced
 `,
       },
       gitkeep('.codex/skills'),
-      ...agentmateDocs(meta),
+      ...runovaDocs(meta),
     ],
   };
 }
@@ -355,7 +355,7 @@ function opencodePlan(meta: ProjectMeta): BootstrapPlan {
     agentLabel: AGENT_LABELS.opencode,
     agentDir: '.opencode',
     docsUrl: 'https://opencode.ai/docs/config/',
-    folders: ['.opencode', '.opencode/agents', '.opencode/commands', AGENTMATE_DIR],
+    folders: ['.opencode', '.opencode/agents', '.opencode/commands', RUNOVA_DIR],
     files: [
       agentsMd(
         meta,
@@ -383,7 +383,7 @@ ${REVIEW_DIFF_PROMPT}
 `,
       },
       gitkeep('.opencode/agents'),
-      ...agentmateDocs(meta),
+      ...runovaDocs(meta),
     ],
   };
 }
@@ -397,7 +397,7 @@ function cursorPlan(meta: ProjectMeta): BootstrapPlan {
     agentLabel: AGENT_LABELS.cursor,
     agentDir: '.cursor',
     docsUrl: 'https://cursor.com/docs/context/rules',
-    folders: ['.cursor', '.cursor/rules', '.cursor/commands', AGENTMATE_DIR],
+    folders: ['.cursor', '.cursor/rules', '.cursor/commands', RUNOVA_DIR],
     files: [
       agentsMd(
         meta,
@@ -430,7 +430,7 @@ matching files instead of every session.
         relativePath: '.cursor/commands/review-diff.md',
         content: `${REVIEW_DIFF_PROMPT}\n`,
       },
-      ...agentmateDocs(meta),
+      ...runovaDocs(meta),
     ],
   };
 }
@@ -441,7 +441,7 @@ function genericPlan(meta: ProjectMeta): BootstrapPlan {
     agentLabel: AGENT_LABELS.generic,
     agentDir: '',
     docsUrl: 'https://agents.md',
-    folders: [AGENTMATE_DIR],
+    folders: [RUNOVA_DIR],
     files: [
       agentsMd(
         meta,
@@ -449,7 +449,7 @@ function genericPlan(meta: ProjectMeta): BootstrapPlan {
         `Most coding agents read \`AGENTS.md\` from the repository root. Docs: https://agents.md
 `,
       ),
-      ...agentmateDocs(meta),
+      ...runovaDocs(meta),
     ],
   };
 }

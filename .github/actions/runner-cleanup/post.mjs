@@ -47,11 +47,14 @@ const workspace = process.env.GITHUB_WORKSPACE;
 const toolCache = process.env.RUNNER_TOOL_CACHE;
 
 // Container, network and volume names the tests give the Docker objects they make on the host.
-const TEST_NAMES = /^(agentmate-(test|e2e|pebble|challtestsrv|wpc|acme|nginx)-|am-files-|e28-)/;
+// Runs from before the app was renamed to Runova left some under the old prefix.
+const TEST_NAMES =
+  /^((runova|agentmate)-(test|e2e|pebble|challtestsrv|wpc|acme|nginx)-|am-files-|e28-)/; // legacy-name
 // Images the tests build. A container of one of these is a test's, whatever its name.
-const TEST_IMAGES = /^agentmate-(test-server|backup-targets|nginx-harness|nginx-upstream)(:|$)/;
+const TEST_IMAGES =
+  /^(runova|agentmate)-(test-server|backup-targets|nginx-harness|nginx-upstream)(:|$)/; // legacy-name
 // Kept on purpose: Composer's download cache for the WordPress connector jobs.
-const KEEP_VOLUMES = new Set(['agentmate-wpc-composer-cache']);
+const KEEP_VOLUMES = new Set(['runova-wpc-composer-cache']);
 
 function step(title, work) {
   console.log(`::group::${title}`);
@@ -169,7 +172,7 @@ function pnpmStore() {
 
 /** Reading a file updates its access time here, unless the disk is mounted with noatime. */
 function accessTimesWork(dir) {
-  const probe = join(dir, '.agentmate-cleanup-probe');
+  const probe = join(dir, '.runova-cleanup-probe');
   try {
     writeFileSync(probe, 'probe');
     const old = new Date(Date.now() - 2 * DAY_MS);
@@ -326,7 +329,7 @@ function toolCacheVersions() {
 /** True once a day per machine, for the slower steps. */
 function dailyDue() {
   if (!toolCache) return false;
-  const dir = join(toolCache, 'agentmate-cleanup');
+  const dir = join(toolCache, 'runova-cleanup');
   const stamp = join(dir, 'last-daily');
   try {
     if (Date.now() - statSync(stamp).mtimeMs < DAY_MS) return false;

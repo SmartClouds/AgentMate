@@ -2,15 +2,15 @@
 /**
  * The WpSiteInfo record for /site/info.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Info;
+namespace Runova\Connector\Info;
 
-use AgentMate\Connector\Env\Environment;
-use AgentMate\Connector\Protocol;
-use AgentMate\Connector\Storage\Storage;
-use AgentMate\Connector\Update\ConnectorUpdater;
+use Runova\Connector\Env\Environment;
+use Runova\Connector\Protocol;
+use Runova\Connector\Storage\Storage;
+use Runova\Connector\Update\ConnectorUpdater;
 
 final class SiteInfo
 {
@@ -58,7 +58,7 @@ final class SiteInfo
             'fileModsDisabled' => !$env->fileModsAllowed(),
             'fileEditDisabled' => $env->constantOn('DISALLOW_FILE_EDIT'),
             'filesystemMethod' => $env->filesystemMethod(),
-            'readOnlyByConstant' => $env->constantOn('AGENTMATE_CONNECTOR_READ_ONLY'),
+            'readOnlyByConstant' => $env->constantOn('RUNOVA_CONNECTOR_READ_ONLY'),
             'selfUpdate' => ConnectorUpdater::replaceable($env),
             'updateDownload' => true,
             'sodium' => $env->sodiumMode(),
@@ -73,6 +73,9 @@ final class SiteInfo
                 'expiresAt' => $connection['expires_at'],
             ),
             'pendingDeploy' => $this->pendingDeploy($now),
+            // `bridge` while the site still runs from the 1.63 folder; the app then moves it.
+            'layout' => $env->layout(),
+            'endpoints' => array('restUrl' => $env->restUrl(), 'ajaxUrl' => $env->ajaxUrl()),
         );
     }
 

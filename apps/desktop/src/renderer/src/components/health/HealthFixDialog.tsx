@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { HealthTargetSummary } from '@shared/healthTypes';
 import { useQuery } from '@tanstack/react-query';
 import { FixWithAiDialog } from '@/components/workspace/FixWithAiDialog';
@@ -26,7 +26,7 @@ export function HealthFixDialog({
 }): React.JSX.Element {
   const prompt = useQuery({
     queryKey: healthFixPromptKey(target.id),
-    queryFn: async () => (await window.agentmat.health.fixPrompt(target.id)) ?? null,
+    queryFn: async () => (await window.runova.health.fixPrompt(target.id)) ?? null,
     enabled: open,
     staleTime: Number.POSITIVE_INFINITY,
     retry: false,

@@ -3,7 +3,7 @@ import { backupSize } from '@shared/deploy/backupSchedule';
 import type {
   BackupRunInfo,
   BackupRunTargetInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { History } from '@/components/icons';
 import { Chip } from '@/components/pageKit';
 import { SimpleTooltip } from '@/components/ui/tooltip';

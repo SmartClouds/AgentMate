@@ -85,7 +85,7 @@ export function ServerFilesPanel({ server }: { server: DeployServer }): React.JS
 
   const access = useQuery({
     queryKey: queryKeys.deployAccess(serverId),
-    queryFn: () => window.agentmat.deploy.access(serverId),
+    queryFn: () => window.runova.deploy.access(serverId),
     enabled: docker,
     retry: false,
     staleTime: 30_000,
@@ -95,7 +95,7 @@ export function ServerFilesPanel({ server }: { server: DeployServer }): React.JS
   const admin = hasRole(roles, 'admin');
   const status = useQuery({
     queryKey: queryKeys.deployDockerStatus(serverId),
-    queryFn: () => window.agentmat.deployDocker.status(serverId),
+    queryFn: () => window.runova.deployDocker.status(serverId),
     enabled: docker && signedIn && admin,
     retry: false,
   });
@@ -103,13 +103,13 @@ export function ServerFilesPanel({ server }: { server: DeployServer }): React.JS
     docker && signedIn && admin && status.data?.installed === true && status.data.running;
   const containers = useQuery({
     queryKey: queryKeys.deployContainers(serverId),
-    queryFn: () => window.agentmat.deployDocker.listContainers(serverId),
+    queryFn: () => window.runova.deployDocker.listContainers(serverId),
     enabled: ready && choice.source === 'container',
     retry: false,
   });
   const volumes = useQuery({
     queryKey: queryKeys.deployVolumes(serverId),
-    queryFn: () => window.agentmat.deployDocker.listVolumes(serverId),
+    queryFn: () => window.runova.deployDocker.listVolumes(serverId),
     enabled: ready && choice.source === 'volume',
     retry: false,
   });

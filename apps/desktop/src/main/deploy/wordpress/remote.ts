@@ -12,7 +12,7 @@ import {
   type WpSkippedEntry,
   wpItemRoot,
   wpMirrorPath,
-} from '@agentmat/core';
+} from '@runova/core';
 import { wordPressError } from '../../../shared/wordpressErrors';
 import { WpBatchSizer, type WpClient, WpRemoteError } from './client';
 import { sha256Hex } from './crypto';
@@ -96,7 +96,7 @@ export async function readRemoteManifest(
       if (count > WP_MAX_FILES_PER_ITEM) {
         throw wordPressError(
           'tooLarge',
-          `${wpItemRoot(item)} on the site holds more than ${WP_MAX_FILES_PER_ITEM} files, more than AgentMate syncs for one item.`,
+          `${wpItemRoot(item)} on the site holds more than ${WP_MAX_FILES_PER_ITEM} files, more than Runova syncs for one item.`,
         );
       }
       result.files[path] = { sha256: entry.sha256 as string, size: entry.size as number };
@@ -185,7 +185,7 @@ export async function readRemoteFiles(
 ): Promise<string[]> {
   for (const file of wanted) {
     if (!Number.isSafeInteger(file.size) || file.size < 0 || file.size > WP_MAX_FILE_BYTES) {
-      throw readFailed(file.path, 'it is larger than AgentMate syncs');
+      throw readFailed(file.path, 'it is larger than Runova syncs');
     }
   }
   const sizer = new WpBatchSizer(wpReadCap(options.limits));

@@ -69,7 +69,7 @@ export function SignInDialog({
     setBusy(true);
     setProblem(null);
     try {
-      await window.agentmat.deploy.signIn({
+      await window.runova.deploy.signIn({
         serverId: server.id,
         password,
         ...(needsCode && !useRecovery ? { totpCode: code.replace(/\s/g, '') } : {}),
@@ -117,7 +117,7 @@ export function SignInDialog({
               {server.dev && (
                 <p className="text-xs text-muted-foreground">
                   The DevHost's user is <span className="font-mono">dev</span>, with the password{' '}
-                  <span className="whitespace-nowrap font-mono">agentmate-local-password</span>.
+                  <span className="whitespace-nowrap font-mono">runova-local-password</span>.
                 </p>
               )}
             </div>

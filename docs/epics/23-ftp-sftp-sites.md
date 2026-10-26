@@ -6,7 +6,7 @@ local walk, ignore rules).
 ## Goal
 
 Deploy a plain site or web app to any host that offers SFTP, FTPS or FTP. A site is a local
-deploy folder, a server login and a folder on the server. AgentMate watches the local folder,
+deploy folder, a server login and a folder on the server. Runova watches the local folder,
 lists what changed since the last deploy (added, modified, deleted), and sends only that after
 the user reviews it. Before anything is sent, the server folder is compared with what the last
 deploy left there, so a file someone changed on the server is never overwritten without a
@@ -18,7 +18,7 @@ Deploy tab. An optional Deploy on save switch sends changes on its own after a q
 - [x] T0 Delivery docs: this file, the ROADMAP row and the status row.
 - [x] T1 Shared ignore rules (`core/deploy/ignoreRules.ts`, the WordPress rules now a wrapper) and
   the file-site path policy: the hard deny list without `php.ini` and `.user.ini`, a default
-  ignore list, `.agentmateignore` and the site's own patterns.
+  ignore list, `.runovaignore` and the site's own patterns.
 - [x] T2 Drift judge: a server file compared with what the last deploy saw there, by size and
   modified time from the same source, size only when the time cannot be compared, and the
   whole-hour clock shift detected.
@@ -90,12 +90,12 @@ Deploy tab. An optional Deploy on save switch sends changes on its own after a q
   folded at the end of a run and at startup. The live changes list reads the base with the
   journal applied in memory (`peekBase`), so a walk during a deploy never folds the journal under
   it.
-- An upload goes to `<name>.agentmate-<8 hex>.part` and takes the real name only when its hash
+- An upload goes to `<name>.runova-<8 hex>.part` and takes the real name only when its hash
   matches, so a failure, a cancel or a file edited mid-upload leaves the old file. On SFTP a cancel
   counts only until the rename is sent; after that the upload finishes and is recorded, or the next
-  plan would take AgentMate's own file for someone else's (found by the Docker integration test).
+  plan would take Runova's own file for someone else's (found by the Docker integration test).
 - A server that cannot rename onto an existing file gets the old file moved aside first
-  (`<name>.agentmate-<8 hex>.old`), the new one renamed in, and the backup deleted. A refused
+  (`<name>.runova-<8 hex>.old`), the new one renamed in, and the backup deleted. A refused
   second rename puts the backup back, so the live file is never gone; a later run deletes or
   restores any backup it finds.
 - A review can be up to 10 minutes old, so the run stats every path once more right before it
@@ -104,7 +104,7 @@ Deploy tab. An optional Deploy on save switch sends changes on its own after a q
 - A file deleted here is deleted on the server only when it is in the base and its folder was
   listed showing it unchanged, or when the review's conflict card says Delete. A deployed file the
   walk now leaves out (a new ignore line, too large, a link) shows under Left out and is never
-  planned as a delete. Folders are removed only when AgentMate created them, with RMD, which
+  planned as a delete. Folders are removed only when Runova created them, with RMD, which
   refuses a non-empty folder.
 - Deploy on save plans and deploys after a quiet period, one run per site. It stops for a person on
   a conflict, a first deploy over existing files or a mass delete (more than 20, at least 5 that

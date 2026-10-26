@@ -1,8 +1,8 @@
-import { findCatalogTemplate, generateCatalogSecrets, renderCatalogApp } from '@agentmat/core';
+import { findCatalogTemplate, generateCatalogSecrets, renderCatalogApp } from '@runova/core';
 import type {
   StackDetails,
   StackInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { STACK_ID, sampleJob, sampleRevision, sampleStack, T0 } from '../../apps/testing/fixtures';
 import { SERVER, signedIn } from '../../security/testing/fixtures';
 

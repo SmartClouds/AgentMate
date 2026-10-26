@@ -1,4 +1,4 @@
-import { STUDIO_GEN } from '@agentmat/core';
+import { STUDIO_GEN } from '@runova/core';
 import type { GenEstimateView, GenRequest } from '../api.js';
 
 /**

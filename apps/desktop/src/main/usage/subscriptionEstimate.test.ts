@@ -1,5 +1,5 @@
-import type { SubscriptionPlan, UsageTokens } from '@agentmat/core';
-import { estimateCost, FABLE_WEEK_LABEL } from '@agentmat/core';
+import type { SubscriptionPlan, UsageTokens } from '@runova/core';
+import { estimateCost, FABLE_WEEK_LABEL } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeTokens } from './shared';
 import { buildSessionBlocks, estimateSubscriptionWindows } from './subscriptionEstimate';

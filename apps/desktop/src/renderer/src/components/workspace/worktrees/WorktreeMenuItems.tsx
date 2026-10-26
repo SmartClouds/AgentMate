@@ -1,4 +1,4 @@
-import type { Project, WorktreeInfo } from '@agentmat/core';
+import type { Project, WorktreeInfo } from '@runova/core';
 import type { ComponentType, ReactNode } from 'react';
 import {
   Copy,

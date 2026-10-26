@@ -147,7 +147,7 @@ describe('RemotePage views', () => {
   });
 
   it('falls back to Host when the remembered view is not one it knows', () => {
-    localStorage.setItem('agentmate.remote.tab', 'telnet');
+    localStorage.setItem('runova.remote.tab', 'telnet');
     renderWithProviders(<RemotePage />, { route: '/remote' });
 
     expect(within(viewSwitcher()).getByRole('button', { name: 'Host' })).toHaveAttribute(
@@ -220,7 +220,7 @@ describe('RemotePage hosting', () => {
         hosting: true,
         hostIp: '192.168.1.20',
         pairing: {
-          code: 'AGENTMATE1:192.168.1.20:7900:abc123',
+          code: 'RUNOVA1:192.168.1.20:7900:abc123',
           qrDataUrl: 'data:image/png;base64,iVBORw0KGgo=',
           expiresAt: Date.now() + 60_000,
         },
@@ -230,12 +230,12 @@ describe('RemotePage hosting', () => {
 
     const qr = await screen.findByAltText('Pairing QR code');
     expect(qr).toHaveAttribute('src', 'data:image/png;base64,iVBORw0KGgo=');
-    expect(screen.getByDisplayValue('AGENTMATE1:192.168.1.20:7900:abc123')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('RUNOVA1:192.168.1.20:7900:abc123')).toBeInTheDocument();
 
     await user.click(action(/Copy code/));
     // user-event installs its own clipboard, so the copied text is read back rather than spied on.
     await waitFor(async () =>
-      expect(await navigator.clipboard.readText()).toBe('AGENTMATE1:192.168.1.20:7900:abc123'),
+      expect(await navigator.clipboard.readText()).toBe('RUNOVA1:192.168.1.20:7900:abc123'),
     );
     expect(toast.success).toHaveBeenCalledWith('Pairing code copied.');
   });
@@ -330,8 +330,8 @@ describe('RemotePage saved servers', () => {
 
     await openView(user, 'Connect');
     await user.type(
-      await screen.findByPlaceholderText('AGENTMATE1:…'),
-      'AGENTMATE1:192.168.1.44:7900:stale',
+      await screen.findByPlaceholderText('RUNOVA1:…'),
+      'RUNOVA1:192.168.1.44:7900:stale',
     );
     await user.click(action('Connect'));
 

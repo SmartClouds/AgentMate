@@ -2,7 +2,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
-const STORAGE_PREFIX = 'agentmate:last-good:';
+const STORAGE_PREFIX = 'runova:last-good:';
 
 interface Snapshot<T> {
   data: T;

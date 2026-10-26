@@ -99,7 +99,7 @@ hub method is covered by a policy; every sensitive action lands in a tamper-evid
   is optional. When the core installs but the account cannot be set up, the install still
   succeeds and the server card offers to enroll. The DevHost has no SSH, so it enrolls through a
   loopback-only `/dev/enroll` with a fixed development owner, `dev` with the password
-  `agentmate-local-password`. The first password, `agentmate-dev-password`, was refused by the
+  `runova-local-password`. The first password, `runova-dev-password`, was refused by the
   core's own rule against passwords that contain the user name, which only the e2e test caught.
 - **T11.** Minting (`CreateEnrollmentCode`, Owner, needs a step-up) and redeeming
   (`POST /api/v1/auth/enroll`) are in the core and tested. The screens for them come with E15 T1

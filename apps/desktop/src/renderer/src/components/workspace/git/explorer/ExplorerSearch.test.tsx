@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -7,7 +7,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { toggleExplorerSearch, useExplorerStore } from '@/stores/explorerStore';
 import { useWorkspaceSearchStore } from '@/stores/workspaceSearchStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
-import { installAgentmatBridge } from '../../../../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../../../../test/renderer/runovaBridge';
 import { ExplorerSearch } from './ExplorerSearch';
 
 const project = { id: 'p1', name: 'App', folderPath: 'E:\\work\\app' } as Project;
@@ -55,7 +55,7 @@ beforeEach(() => {
   onClose.mockClear();
   useExplorerStore.setState({ projects: {} });
   toggleExplorerSearch(project.id, true);
-  installAgentmatBridge({
+  installRunovaBridge({
     'explorer.listFiles': { root: 'E:\\work\\app', files: FILES, truncated: false },
   });
 });
@@ -127,7 +127,7 @@ describe('ExplorerSearch', () => {
 
   it('keeps the end of a deep folder path, where the telling part is', async () => {
     const deep = 'apps/desktop/src/renderer/src/components/workspace/git/explorer/keys.ts';
-    installAgentmatBridge({
+    installRunovaBridge({
       'explorer.listFiles': { root: 'E:\\work\\app', files: [deep], truncated: false },
     });
     renderSearch();

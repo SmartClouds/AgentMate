@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Studio is built to leave AgentMate one day as its own app. These checks keep it able to:
+ * Studio is built to leave Runova one day as its own app. These checks keep it able to:
  * nothing in the package reaches for Electron, React or the app's native SQLite build, and the
  * root export (which the renderer imports) never pulls in Node-only code.
  */

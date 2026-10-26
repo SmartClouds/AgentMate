@@ -23,7 +23,7 @@ import type { SkillSecurityTarget } from './SkillSecurityDialog';
 const BATCH_META = { silentLoading: true } as const;
 
 /**
- * Checks a skill that AgentMate knows nothing about: a folder on disk, or a GitHub address.
+ * Checks a skill that Runova knows nothing about: a folder on disk, or a GitHub address.
  * Nothing is added as a repository and nothing is installed, which is the point. The location is
  * browsed first so a repository holding twenty skills lists them instead of guessing at one.
  */
@@ -58,7 +58,7 @@ export function AdHocSkillScanner({
 
   const previewQuery = useQuery({
     queryKey: queryKeys.auditSourcePreview(debouncedInput),
-    queryFn: () => window.agentmat.skills.previewAuditSource(debouncedInput),
+    queryFn: () => window.runova.skills.previewAuditSource(debouncedInput),
     enabled: debouncedInput.length > 0,
     // Browsing a repository is a network call, so do not repeat it on every focus change.
     staleTime: 60_000,
@@ -81,7 +81,7 @@ export function AdHocSkillScanner({
       // Sequential: a GitHub location means one download per skill, and hammering the API in
       // parallel is the fastest way to get rate-limited halfway through.
       for (const skill of skills) {
-        const result = await window.agentmat.skills.runAudit({
+        const result = await window.runova.skills.runAudit({
           target: skill.target,
           ...deepReviewInput(deepReview, cliId),
         });
@@ -123,7 +123,7 @@ export function AdHocSkillScanner({
   const checkingAll = checkAllMutation.isPending;
 
   async function handleBrowse(): Promise<void> {
-    const picked = await window.agentmat.skills.pickLocalRepository(input.trim() || null);
+    const picked = await window.runova.skills.pickLocalRepository(input.trim() || null);
     if (picked) {
       setInput(picked);
       setDebouncedInput(picked);

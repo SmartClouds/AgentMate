@@ -17,7 +17,7 @@ import {
 
 test.skip(!dotnetAvailable(), 'needs the .NET SDK to build the server core DevHost');
 
-const DEV_PASSWORD = 'agentmate-local-password';
+const DEV_PASSWORD = 'runova-local-password';
 
 let devHost: DevHost | undefined;
 let cloudflare: FakeCloudflareServer | undefined;
@@ -55,8 +55,8 @@ test('sends the DevHost a DNS token and locks it to Cloudflare', async () => {
   launched = await launchApp({
     settings: {},
     env: {
-      AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port),
-      AGENTMATE_E2E_CLOUDFLARE_API: cloudflare.base,
+      RUNOVA_DEPLOY_DEV_CORE: String(devHost.port),
+      RUNOVA_E2E_CLOUDFLARE_API: cloudflare.base,
     },
   });
   const { page } = launched;

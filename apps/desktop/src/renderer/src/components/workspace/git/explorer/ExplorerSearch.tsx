@@ -1,4 +1,4 @@
-import { baseName, type GitChangeStatus, type Project } from '@agentmat/core';
+import { baseName, type GitChangeStatus, type Project } from '@runova/core';
 import { isImagePath } from '@shared/imageFiles';
 import { useQuery } from '@tanstack/react-query';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
@@ -165,7 +165,7 @@ export function ExplorerSearch({
 
   const index = useQuery({
     queryKey: queryKeys.workspaceExplorerFiles(project.id),
-    queryFn: () => window.agentmat.explorer.listFiles(project.id),
+    queryFn: () => window.runova.explorer.listFiles(project.id),
     meta: { silentLoading: true },
     staleTime: 30_000,
   });

@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type {
   GithubActionsRunErrorInput,
   GithubWorkflowInfo,
@@ -288,7 +288,7 @@ export function RunDetails({
             body="This pipeline has not run yet."
             action={{
               label: 'Open workflow on GitHub',
-              run: () => void window.agentmat.shell.openExternal(workflow.htmlUrl),
+              run: () => void window.runova.shell.openExternal(workflow.htmlUrl),
             }}
           />
         </div>
@@ -344,7 +344,7 @@ export function RunDetails({
               variant="ghost"
               size="xs"
               className="text-muted-foreground"
-              onClick={() => void window.agentmat.shell.openExternal(run.htmlUrl)}
+              onClick={() => void window.runova.shell.openExternal(run.htmlUrl)}
             >
               <ExternalLink />
               Open run on GitHub

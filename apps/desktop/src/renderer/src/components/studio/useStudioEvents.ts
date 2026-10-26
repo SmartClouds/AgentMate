@@ -1,4 +1,4 @@
-import type { RenderJobView } from '@agentmat/studio';
+import type { RenderJobView } from '@runova/studio';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { studioClient } from './client';

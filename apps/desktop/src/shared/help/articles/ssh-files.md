@@ -19,7 +19,7 @@ There are three ways in, and they all open the same page:
 - In the terminal panel, while an SSH tab of a saved server is active, click the folder button (**Browse files over SFTP**) in the panel's toolbar.
 - Press `Ctrl+K` (`Cmd+K` on macOS) to open the [command palette](command-palette-search.md), type the server's nickname or host, and pick **Open SFTP files: (nickname)**.
 
-If the servers vault is locked, AgentMate asks for its passkey first. The first time you connect to a server, or if its host key has changed, you are asked to check and trust the key, the same way a terminal tab asks.
+If the servers vault is locked, Runova asks for its passkey first. The first time you connect to a server, or if its host key has changed, you are asked to check and trust the key, the same way a terminal tab asks.
 
 The page header says **Files: (nickname)**, with `user@host:port` underneath. **Disconnect** ends the session. If transfers are still running, it asks first, because those transfers are cancelled. It ends the session everywhere the server's files are shown, on the page, in the panel and in a separate window alike.
 
@@ -65,9 +65,9 @@ Nothing is overwritten until you answer. While one transfer waits for you, the o
 
 ## New folder, rename and delete
 
-- **New folder** and **Rename** (`F2`) turn a row into a text box. `Enter` or clicking away saves, `Escape` cancels. If the name is taken, AgentMate says so and the box stays open.
+- **New folder** and **Rename** (`F2`) turn a row into a text box. `Enter` or clicking away saves, `Escape` cancels. If the name is taken, Runova says so and the box stays open.
 - **Delete** (`Del`) asks first and lists what will go. On the server, deleting is permanent and includes everything inside a folder. For a folder near the top of the disk, such as `/var/www`, you type `delete` to confirm.
-- On this computer, items go to the Recycle Bin or Trash. If that fails, AgentMate asks whether to delete them permanently instead.
+- On this computer, items go to the Recycle Bin or Trash. If that fails, Runova asks whether to delete them permanently instead.
 - Deleting a link on the server removes the link only. The folder or file it points to is not touched.
 
 Right-click an item for these and more: Download or Upload, Edit, Rename, Delete or Move to Trash, New folder, Permissions and properties, Copy path and Refresh (`F5`).
@@ -107,7 +107,7 @@ The **Transfers** card at the bottom lists each upload, download, delete and per
 
 ## Keep working while files move
 
-A big upload can take a while, and you do not have to wait on the page for it. Leaving the page never disconnects: the session and its transfers keep running in the background until you click **Disconnect** or quit AgentMate.
+A big upload can take a while, and you do not have to wait on the page for it. Leaving the page never disconnects: the session and its transfers keep running in the background until you click **Disconnect** or quit Runova.
 
 ### The status bar
 
@@ -165,7 +165,7 @@ These work while a pane's list has focus.
 
 ## Security
 
-- Your password and key never reach the page. AgentMate logs in with the server's saved details, and asks for the servers vault passkey when the vault is locked.
+- Your password and key never reach the page. Runova logs in with the server's saved details, and asks for the servers vault passkey when the vault is locked.
 - An unknown or changed host key always asks before anything is sent.
 - Folder operations never follow links, so a link to `/etc` inside a folder you delete or change is not followed.
 - File names from the server cannot place a download outside the folder you chose.
@@ -173,8 +173,8 @@ These work while a pane's list has focus.
 ## Tips
 
 - To deploy a site and keep it in sync, use [FTP and SFTP sites](deploy-ftp-sftp.md) in Deploy instead. It sends only what changed since the last deploy.
-- For files on another computer running AgentMate (not an SSH server), use [Remote files](remote-files.md).
-- While an upload is running, the file shows on the server with a `.agentmate-` name that ends in `.part`. It takes its real name once it is complete.
+- For files on another computer running Runova (not an SSH server), use [Remote files](remote-files.md).
+- While an upload is running, the file shows on the server with a `.runova-` name that ends in `.part`. It takes its real name once it is complete.
 - Deleting a very large folder over SFTP is slow, since every file is removed one at a time.
 
 ## Related

@@ -11,7 +11,7 @@ import userEvent, { type UserEvent } from '@testing-library/user-event';
 import type { ReactElement, ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { type BridgeOverrides, type FakeBridge, installAgentmatBridge } from './agentmatBridge';
+import { type BridgeOverrides, type FakeBridge, installRunovaBridge } from './runovaBridge';
 
 /**
  * Renders a page or component with the providers App.tsx wraps everything in, so tests exercise
@@ -23,7 +23,7 @@ export interface ProviderOptions extends Omit<RenderOptions, 'wrapper'> {
   route?: string;
   /** The route pattern, when the component reads params: `projects/:projectId`. */
   path?: string;
-  /** Answers for `window.agentmat`, as dotted paths. */
+  /** Answers for `window.runova`, as dotted paths. */
   bridge?: BridgeOverrides;
   queryClient?: QueryClient;
 }
@@ -57,7 +57,7 @@ export function renderWithProviders(
     queryClient = createQueryClient(),
     ...rest
   } = options;
-  const bridge = installAgentmatBridge(overrides);
+  const bridge = installRunovaBridge(overrides);
   const user = userEvent.setup();
 
   const view = render(
@@ -87,7 +87,7 @@ export function renderHookWithProviders<Result, Props>(
   options: HookProviderOptions<Props> = {},
 ): RenderHookResult<Result, Props> & { bridge: FakeBridge; queryClient: QueryClient } {
   const { route = '/', bridge: overrides, queryClient = createQueryClient(), ...rest } = options;
-  const bridge: FakeBridge = installAgentmatBridge(overrides);
+  const bridge: FakeBridge = installRunovaBridge(overrides);
 
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>

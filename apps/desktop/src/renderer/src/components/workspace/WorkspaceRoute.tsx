@@ -1,4 +1,4 @@
-import { parseScopeId } from '@agentmat/core';
+import { parseScopeId } from '@runova/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';

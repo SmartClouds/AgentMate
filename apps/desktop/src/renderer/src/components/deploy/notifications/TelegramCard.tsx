@@ -38,7 +38,7 @@ export function TelegramCard({
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: queryKeys.deployTelegram(serverId),
-    queryFn: () => window.agentmat.deployTelegram.status(serverId),
+    queryFn: () => window.runova.deployTelegram.status(serverId),
     retry: false,
   });
   const stepUp = useProofStepUp(server);
@@ -58,7 +58,7 @@ export function TelegramCard({
     setProblems([]);
     try {
       const result = await stepUp.run(
-        (proof) => window.agentmat.deployTelegram.save({ serverId, ...values, ...proof }),
+        (proof) => window.runova.deployTelegram.save({ serverId, ...values, ...proof }),
         'change Telegram alerts',
       );
       if (!result) return false;
@@ -93,7 +93,7 @@ export function TelegramCard({
     setBusy('remove');
     try {
       const next = await stepUp.run(
-        (proof) => window.agentmat.deployTelegram.remove({ serverId, ...proof }),
+        (proof) => window.runova.deployTelegram.remove({ serverId, ...proof }),
         'remove Telegram alerts',
       );
       if (!next) return;
@@ -110,7 +110,7 @@ export function TelegramCard({
     setTesting(true);
     setTested(null);
     try {
-      setTested(await window.agentmat.deployTelegram.test(serverId));
+      setTested(await window.runova.deployTelegram.test(serverId));
       void query.refetch();
     } catch (error) {
       toast.error(coreErrorMessage(error));
@@ -121,7 +121,7 @@ export function TelegramCard({
 
   async function detect(botToken: string): Promise<DeployTelegramDetectResult | null> {
     try {
-      return await window.agentmat.deployTelegram.detectChat(botToken);
+      return await window.runova.deployTelegram.detectChat(botToken);
     } catch (error) {
       toast.error(coreErrorMessage(error));
       return null;

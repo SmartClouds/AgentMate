@@ -1,4 +1,4 @@
-import type { EditResponse, GenerationView } from '@agentmat/studio';
+import type { EditResponse, GenerationView } from '@runova/studio';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { studioAiClient, studioClient, studioScenesClient } from '../client';

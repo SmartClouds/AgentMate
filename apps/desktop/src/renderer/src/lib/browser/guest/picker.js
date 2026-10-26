@@ -1,9 +1,9 @@
 /**
- * AgentMate's element picker. This file is injected into pages open in a workspace browser tab
+ * Runova's element picker. This file is injected into pages open in a workspace browser tab
  * through webview.executeJavaScript, as a string (see browserRuntime.ts), so it must stay plain,
  * self-contained browser JavaScript: no imports, no build-time helpers, nothing from the app.
  *
- * It installs `window.__agentmatPicker`. The host arms it, awaits a pick (a native promise that
+ * It installs `window.__runovaPicker`. The host arms it, awaits a pick (a native promise that
  * settles on a click, a right-click or Esc), freezes the highlight while the comment card is
  * open, and draws numbered pins on the elements that have comments. Everything it draws lives in
  * a closed shadow root under one custom element, so page styles can't reach it.
@@ -12,7 +12,7 @@
  */
 (() => {
   const VERSION = 1;
-  const existing = window.__agentmatPicker;
+  const existing = window.__runovaPicker;
   if (existing && existing.version === VERSION) return true;
   if (existing) existing.teardown();
 
@@ -99,7 +99,7 @@
   // Drawing
   // ---------------------------------------------------------------------------------------------
 
-  const host = document.createElement('agentmate-picker');
+  const host = document.createElement('runova-picker');
   host.style.cssText =
     'all:initial;position:absolute;top:0;left:0;width:0;height:0;overflow:visible;z-index:2147483647;pointer-events:none;';
   const root = host.attachShadow({ mode: 'closed' });
@@ -594,7 +594,7 @@
   // API
   // ---------------------------------------------------------------------------------------------
 
-  window.__agentmatPicker = {
+  window.__runovaPicker = {
     version: VERSION,
     arm() {
       armed = true;
@@ -644,7 +644,7 @@
         const top = marker.rectPage.y - window.innerHeight / 3;
         window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
       }
-      window.__agentmatPicker.flashMarker(id);
+      window.__runovaPicker.flashMarker(id);
       return true;
     },
     /**
@@ -681,7 +681,7 @@
       window.removeEventListener('keydown', onKeyDown, true);
       window.removeEventListener('scroll', onScroll, true);
       host.remove();
-      delete window.__agentmatPicker;
+      delete window.__runovaPicker;
     },
   };
   return true;

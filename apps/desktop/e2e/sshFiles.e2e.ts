@@ -89,13 +89,13 @@ function writeBigFile(path: string, mb: number): void {
 test.beforeAll(async () => {
   test.setTimeout(600_000);
   server = await startSshServer();
-  localRoot = mkdtempSync(join(tmpdir(), 'agentmate-sftp-e2e-'));
+  localRoot = mkdtempSync(join(tmpdir(), 'runova-sftp-e2e-'));
   for (const [rel, content] of Object.entries(SITE_FILES)) {
     const parts = rel.split('/');
     mkdirSync(join(localRoot, 'site', ...parts.slice(0, -1)), { recursive: true });
     writeFileSync(join(localRoot, 'site', ...parts), content);
   }
-  bigRoot = mkdtempSync(join(tmpdir(), 'agentmate-sftp-big-'));
+  bigRoot = mkdtempSync(join(tmpdir(), 'runova-sftp-big-'));
   mkdirSync(join(bigRoot, BUNDLE));
   writeBigFile(join(bigRoot, BUNDLE, BIG_FILE), BIG_MB);
   writeFileSync(join(bigRoot, BUNDLE, 'index.html'), '<h1>New</h1>');
@@ -169,8 +169,8 @@ async function saveServer(page: Page, { changedKey = true } = {}): Promise<strin
   await page.evaluate(
     (input) =>
       (
-        window as unknown as { agentmat: { ssh: { saveServer(i: unknown): Promise<unknown> } } }
-      ).agentmat.ssh.saveServer(input),
+        window as unknown as { runova: { ssh: { saveServer(i: unknown): Promise<unknown> } } }
+      ).runova.ssh.saveServer(input),
     {
       nickname: NICKNAME,
       host: server.host,

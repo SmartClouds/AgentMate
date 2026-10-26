@@ -102,12 +102,12 @@ export const LEFT_OUT_REASON: Record<FilesLeftOutReason, { label: string; detail
   },
   agentFiles: {
     label: 'Agent files',
-    detail: 'Agent settings, skills and AgentMate files stay on this computer.',
+    detail: 'Agent settings, skills and Runova files stay on this computer.',
   },
   ignored: {
     label: 'Ignored',
     detail:
-      "Left out by an ignore line: the defaults, the folder's .agentmateignore or this site's own.",
+      "Left out by an ignore line: the defaults, the folder's .runovaignore or this site's own.",
   },
   symlink: {
     label: 'Link',

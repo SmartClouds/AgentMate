@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { lstat, readdir, readFile, readlink, stat } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
-import { type DockerignoreMatcher, dockerCleanPath, parseDockerignore } from '@agentmat/core';
+import { type DockerignoreMatcher, dockerCleanPath, parseDockerignore } from '@runova/core';
 import { create } from 'tar';
 
 /**
@@ -13,7 +13,7 @@ import { create } from 'tar';
  * again on its side.
  *
  * The caps are the server core's own (TarExtractionLimits.Default in
- * apps/server-core/src/AgentMate.ServerCore/Uploads), so a context packed here is never refused
+ * apps/server-core/src/Runova.ServerCore/Uploads), so a context packed here is never refused
  * there for its size. A context over them is refused before anything is written, with the
  * folders that make it big. Links that lead out of the context are refused too, since the core
  * would refuse them; sockets, pipes and devices are left out, as Docker leaves out sockets.

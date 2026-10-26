@@ -54,7 +54,7 @@ function renderDialog(bridge: Record<string, unknown> = {}) {
         'deployWordPress.pull': {
           downloaded: 1,
           deletedLocal: 1,
-          conflictCopies: ['.agentmate/wordpress/conflicts/theme-storefront/style.css'],
+          conflictCopies: ['.runova/wordpress/conflicts/theme-storefront/style.css'],
           leftOut: [],
         },
         ...bridge,
@@ -124,7 +124,7 @@ describe('PullFlowDialog', () => {
     expect(await screen.findByText('Pulled')).toBeTruthy();
     const copies = screen.getByRole('list', { name: 'Conflict copies' });
     expect(
-      within(copies).getByText('.agentmate/wordpress/conflicts/theme-storefront/style.css'),
+      within(copies).getByText('.runova/wordpress/conflicts/theme-storefront/style.css'),
     ).toBeTruthy();
   });
 

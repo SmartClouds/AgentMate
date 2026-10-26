@@ -1,5 +1,5 @@
 import { execFile, spawn } from 'node:child_process';
-import { constants } from 'node:fs';
+import { constants, existsSync } from 'node:fs';
 import { access, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { promisify } from 'node:util';
@@ -18,17 +18,20 @@ const execFileAsync = promisify(execFile);
  */
 
 export interface PreparedMacUpdate {
-  /** The running bundle, e.g. /Applications/AgentMate.app. */
+  /** The running bundle, e.g. /Applications/Runova.app. */
   target: string;
   /** The new bundle, unpacked and ready to move into place. */
   stagedApp: string;
+  /** Where the new bundle goes: `target`, or beside it under the new bundle's own name when the
+   *  app was renamed (an install from before the rename is replaced by Runova.app). */
+  destination: string;
   /** Hidden folder beside `target` holding `stagedApp`; the script removes it when done. */
   stagingDir: string;
   scriptPath: string;
   logPath: string;
 }
 
-/** The .app bundle holding `execPath` (…/AgentMate.app/Contents/MacOS/AgentMate). */
+/** The .app bundle holding `execPath` (…/Runova.app/Contents/MacOS/Runova). */
 export function appBundleFor(execPath: string): string | null {
   const bundle = dirname(dirname(dirname(execPath)));
   return bundle.endsWith('.app') ? bundle : null;
@@ -45,7 +48,8 @@ export function pickMacZip(names: string[], appleSilicon: boolean): string | nul
 
 /**
  * Runs as a detached process. Waits for the app to exit (at most a minute), moves the old
- * bundle aside, moves the new one in, and puts the old one back if that second move fails.
+ * bundle aside, moves the new one in (under its own name when that differs), and puts the old
+ * one back if that second move fails.
  */
 export const INSTALL_SCRIPT = `#!/bin/sh
 pid="$1"
@@ -54,6 +58,7 @@ staged="$3"
 staging="$4"
 relaunch="$5"
 log="$6"
+destination="\${7:-$target}"
 exec >>"$log" 2>&1
 echo "$(date) installing $staged over $target"
 waited=0
@@ -67,10 +72,12 @@ while kill -0 "$pid" 2>/dev/null; do
 done
 backup="$staging/previous.app"
 rm -rf "$backup"
+opened="$target"
 if mv "$target" "$backup"; then
-  if mv "$staged" "$target"; then
+  if mv "$staged" "$destination"; then
     rm -rf "$staging"
-    echo "$(date) installed"
+    opened="$destination"
+    echo "$(date) installed at $destination"
   else
     mv "$backup" "$target"
     echo "$(date) could not move the new version in, restored the old one"
@@ -79,7 +86,7 @@ else
   echo "$(date) could not move the old version aside"
 fi
 if [ "$relaunch" = "1" ]; then
-  open "$target"
+  open "$opened"
 fi
 `;
 
@@ -94,11 +101,11 @@ export async function prepareMacUpdate(options: {
 }): Promise<PreparedMacUpdate> {
   const target = appBundleFor(options.execPath);
   if (target == null) {
-    throw new DownloadFatalError('Could not find the AgentMate app bundle to update.');
+    throw new DownloadFatalError('Could not find the Runova app bundle to update.');
   }
   if (target.includes('/AppTranslocation/')) {
     throw new DownloadFatalError(
-      'macOS is running AgentMate from a temporary copy. Move AgentMate to the Applications folder, open it from there, and update again.',
+      'macOS is running Runova from a temporary copy. Move Runova to the Applications folder, open it from there, and update again.',
     );
   }
   const parent = dirname(target);
@@ -106,7 +113,7 @@ export async function prepareMacUpdate(options: {
     await access(parent, constants.W_OK);
   } catch {
     throw new DownloadFatalError(
-      `AgentMate can't write to ${parent}, so it can't replace itself. Download the new version from the releases page instead.`,
+      `Runova can't write to ${parent}, so it can't replace itself. Download the new version from the releases page instead.`,
     );
   }
 
@@ -121,6 +128,10 @@ export async function prepareMacUpdate(options: {
     throw new DownloadFatalError('The update archive did not contain an app.');
   }
   const stagedApp = join(stagingDir, appName);
+  // A bundle from before the rename is replaced by one under the new name, unless something
+  // already sits at that name.
+  const renamed = join(parent, appName);
+  const destination = renamed !== target && !existsSync(renamed) ? renamed : target;
   // The app downloads the zip itself, so it normally carries no quarantine flag, but a copy
   // that does would be blocked by Gatekeeper on first launch.
   await execFileAsync('/usr/bin/xattr', ['-dr', 'com.apple.quarantine', stagedApp]).catch(
@@ -133,6 +144,7 @@ export async function prepareMacUpdate(options: {
   return {
     target,
     stagedApp,
+    destination,
     stagingDir,
     scriptPath,
     logPath: join(options.workDir, 'install.log'),
@@ -155,6 +167,7 @@ export function launchMacInstall(
       prepared.stagingDir,
       relaunch ? '1' : '0',
       prepared.logPath,
+      prepared.destination,
     ],
     { detached: true, stdio: 'ignore' },
   );

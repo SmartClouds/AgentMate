@@ -67,7 +67,7 @@ function reassertTopmost(): void {
   // On Windows `skipTaskbar` only asks Explorer once to drop the button
   // (ITaskbarList::DeleteTab). Explorer adds it back when the window is shown
   // again, which the drag guard does on every in-app drag, and after Explorer
-  // restarts. The pet then sat in the taskbar as a second AgentMate and people
+  // restarts. The pet then sat in the taskbar as a second Runova and people
   // closed it from there. The tool window style set at creation is the real
   // fix, asking again here covers anything that still slips past.
   win.setSkipTaskbar(true);

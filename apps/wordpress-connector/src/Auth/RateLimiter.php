@@ -3,13 +3,13 @@
  * Failed-auth limiting per client IP: 30 failures inside 10 minutes locks the IP out for 15
  * minutes. While locked, requests get an unsigned 429 without any further work.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Auth;
+namespace Runova\Connector\Auth;
 
-use AgentMate\Connector\Storage\Storage;
-use AgentMate\Connector\Support\Json;
+use Runova\Connector\Storage\Storage;
+use Runova\Connector\Support\Json;
 
 final class RateLimiter
 {

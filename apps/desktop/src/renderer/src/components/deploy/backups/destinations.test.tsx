@@ -174,7 +174,7 @@ describe('DestinationsTab', () => {
         kind: 'googleDrive',
         clientId: 'abc.apps.googleusercontent.com',
         clientSecret: 'GOCSPX-1',
-        folderName: 'AgentMate backups',
+        folderName: 'Runova backups',
       }),
     );
   });

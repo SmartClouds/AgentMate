@@ -1,4 +1,4 @@
-import type { ThemeMode } from '@agentmat/core';
+import type { ThemeMode } from '@runova/core';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { type ITerminalOptions, type ITheme, Terminal } from '@xterm/xterm';
@@ -249,7 +249,7 @@ export interface CreateXtermOptions {
  * output. Telling xterm about ConPTY makes it resize the same way.
  */
 function windowsPtyOption(localPty: boolean): ITerminalOptions['windowsPty'] {
-  const { platform, windowsBuild } = window.agentmat;
+  const { platform, windowsBuild } = window.runova;
   if (!localPty || platform !== 'win32') return undefined;
   return { backend: 'conpty', buildNumber: windowsBuild ?? undefined };
 }
@@ -262,7 +262,7 @@ export function createXterm({
   sessionId,
   passThrough,
   theme = TERMINAL_THEME,
-  write = (id, data) => void window.agentmat.terminal.write(id, data),
+  write = (id, data) => void window.runova.terminal.write(id, data),
   chipPasteMode = true,
   shell = () => undefined,
   localPty = true,
@@ -297,7 +297,7 @@ export function createXterm({
   // Ctrl/Cmd+click opens a URL, as in VS Code: a plain click is how text gets selected.
   term.loadAddon(
     new WebLinksAddon((event, uri) => {
-      if (event.ctrlKey || event.metaKey) void window.agentmat.shell.openExternal(uri);
+      if (event.ctrlKey || event.metaKey) void window.runova.shell.openExternal(uri);
     }),
   );
 
@@ -387,7 +387,7 @@ function clickWentToProgram(event: MouseEvent, term: Terminal): boolean {
   if (term.modes.mouseTrackingMode === 'none') return false;
   if (!(event.target instanceof Node) || !term.element?.contains(event.target)) return false;
   const forcesSelection =
-    window.agentmat.platform === 'darwin'
+    window.runova.platform === 'darwin'
       ? event.altKey && term.options.macOptionClickForcesSelection === true
       : event.shiftKey;
   return !forcesSelection;

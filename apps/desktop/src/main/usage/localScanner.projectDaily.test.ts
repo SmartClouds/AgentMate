@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ProjectDaily } from '@agentmat/core';
+import type { ProjectDaily } from '@runova/core';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -78,7 +78,7 @@ function rowNamed(daily: ProjectDaily | undefined, name: string) {
 }
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'agentmate-project-split-'));
+  root = mkdtempSync(join(tmpdir(), 'runova-project-split-'));
   paths.userData = join(root, 'userData');
   mkdirSync(paths.userData, { recursive: true });
   now = Date.now();
@@ -99,14 +99,14 @@ afterEach(() => {
 
 describe('scanLocalProvider project split for Claude Code', () => {
   it('names each folder after its registered project, folds worktrees in, and keeps the rest', async () => {
-    writeTranscript('E--AgentMate/a.jsonl', claudeLine('E:\\AgentMate\\apps', 'a1'));
+    writeTranscript('E--Runova/a.jsonl', claudeLine('E:\\Runova\\apps', 'a1'));
     writeTranscript(
-      'E--AgentMate--claude-worktrees-feat/b.jsonl',
-      claudeLine('E:\\AgentMate\\.claude\\worktrees\\feat', 'b1'),
+      'E--Runova--claude-worktrees-feat/b.jsonl',
+      claudeLine('E:\\Runova\\.claude\\worktrees\\feat', 'b1'),
     );
     writeTranscript('E--side-project/c.jsonl', claudeLine('E:\\side-project', 'c1'));
     const knownProjects = vi.fn(async () => ({
-      projects: [{ id: 'p1', name: 'AgentMate', folderPath: 'E:\\AgentMate' }],
+      projects: [{ id: 'p1', name: 'Runova', folderPath: 'E:\\Runova' }],
       worktrees: [],
     }));
 
@@ -114,16 +114,16 @@ describe('scanLocalProvider project split for Claude Code', () => {
 
     expect(knownProjects).toHaveBeenCalledTimes(1);
     expect(usage.projectDaily?.endDay).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    const agentMate = usage.projectDaily?.projects.find((row) => row.key === 'project:p1');
-    expect(agentMate?.name).toBe('AgentMate');
-    expect(agentMate?.tokens.reduce((sum, value) => sum + value, 0)).toBe(2000);
+    const runova = usage.projectDaily?.projects.find((row) => row.key === 'project:p1');
+    expect(runova?.name).toBe('Runova');
+    expect(runova?.tokens.reduce((sum, value) => sum + value, 0)).toBe(2000);
     expect(rowNamed(usage.projectDaily as ProjectDaily, 'side-project')).toBeDefined();
     // The split is plain data, so it crosses the IPC boundary intact.
     expect(() => structuredClone(usage)).not.toThrow();
   });
 
   it('counts a message that two transcripts share once in the split as well as the totals', async () => {
-    writeTranscript('E--AgentMate/a.jsonl', claudeLine('E:\\AgentMate', 'dup'));
+    writeTranscript('E--Runova/a.jsonl', claudeLine('E:\\Runova', 'dup'));
     writeTranscript('E--side-project/b.jsonl', claudeLine('E:\\side-project', 'dup'));
 
     const usage = await scan('claude-code');

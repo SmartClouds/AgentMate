@@ -78,12 +78,10 @@ describe('ProjectStorageCard', () => {
   it('says why the folder could not be read', async () => {
     renderCard({
       'studio.projectStorage': async () => {
-        throw new Error('That project is not in AgentMate any more.');
+        throw new Error('That project is not in Runova any more.');
       },
     });
-    expect(
-      await screen.findByText('That project is not in AgentMate any more.'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('That project is not in Runova any more.')).toBeInTheDocument();
   });
 
   it('reports a save the service refused', async () => {

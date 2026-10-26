@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import type { WpDeployState, WpItemRef, WpLimits, WpPlannedChange } from '@agentmat/core';
+import type { WpDeployState, WpItemRef, WpLimits, WpPlannedChange } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { wordPressErrorCode } from '../../../shared/wordpressErrors';
 import { type WpClient, WpRemoteError } from './client';
@@ -40,7 +40,7 @@ const isFiles = new Map([
 
 let root: string;
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'agentmate-wp-deployrun-'));
+  root = mkdtempSync(join(tmpdir(), 'runova-wp-deployrun-'));
 });
 afterEach(() => {
   rmSync(root, { recursive: true, force: true });

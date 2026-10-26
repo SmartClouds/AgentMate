@@ -5,8 +5,8 @@ import type {
   SecurityFinding,
   SecurityScannerId,
   SecurityScanOptions,
-} from '@agentmat/core';
-import { parseSarif, parseSonarIssues, parseStrixRun } from '@agentmat/core';
+} from '@runova/core';
+import { parseSarif, parseSonarIssues, parseStrixRun } from '@runova/core';
 import { resolveCodeqlCommand } from './codeqlLocal';
 import { type ScanCancelToken, spawnScan } from './exec';
 import { fetchSonarFindings, waitForSonarTask } from './sonarApi';
@@ -257,7 +257,7 @@ const bearer: ScannerAdapter = {
     let result: Awaited<ReturnType<typeof spawnScan>>;
 
     if (useDocker) {
-      const containerName = `agentmate-scan-${ctx.runId}-bearer`;
+      const containerName = `runova-scan-${ctx.runId}-bearer`;
       ctx.registerContainer(containerName);
       // The report goes to stdout and is redirected into the output file by the runner rather
       // than by a shell, so the container writes nothing and the project stays read-only.
@@ -368,7 +368,7 @@ const codeql: ScannerAdapter = {
       return outcome;
     }
 
-    // Either a codeql the user put on PATH, or the copy AgentMate downloaded into its tools
+    // Either a codeql the user put on PATH, or the copy Runova downloaded into its tools
     // folder. Resolved per run rather than cached, since the managed copy can be installed or
     // removed while the app is open.
     const codeqlCommand = await resolveCodeqlCommand();
@@ -487,7 +487,7 @@ const sonarqube: ScannerAdapter = {
       return outcome;
     }
 
-    const containerName = `agentmate-scan-${ctx.runId}-sonar`;
+    const containerName = `runova-scan-${ctx.runId}-sonar`;
     ctx.registerContainer(containerName);
 
     // The scanner runs in a container and has to reach the SonarQube server, which is also a
@@ -495,7 +495,7 @@ const sonarqube: ScannerAdapter = {
     // host.docker.internal works on Docker Desktop but not on native Linux without an extra
     // --add-host flag. These are genuinely two different URLs and conflating them is the classic
     // way this integration fails.
-    const scannerUrl = 'http://agentmate-sonarqube:9000';
+    const scannerUrl = 'http://runova-sonarqube:9000';
     const network = 'bridge';
     const onSharedNetwork = await ensureSonarNetwork(ctx);
 
@@ -569,11 +569,11 @@ const sonarqube: ScannerAdapter = {
   },
 };
 
-const SONAR_NETWORK = 'agentmate-sonar';
+const SONAR_NETWORK = 'runova-sonar';
 
 /**
  * Put the scanner and the server on one user-defined network so the scanner can reach the server
- * by container name. Best effort: if the server container was not created by AgentMate this will
+ * by container name. Best effort: if the server container was not created by Runova this will
  * not apply, and the caller falls back to host.docker.internal.
  */
 async function ensureSonarNetwork(ctx: ScanContext): Promise<boolean> {
@@ -589,7 +589,7 @@ async function ensureSonarNetwork(ctx: ScanContext): Promise<boolean> {
 
   const connect = await spawnScan({
     command: 'docker',
-    args: ['network', 'connect', SONAR_NETWORK, 'agentmate-sonarqube'],
+    args: ['network', 'connect', SONAR_NETWORK, 'runova-sonarqube'],
     cwd: ctx.workDir,
     timeoutMs: 15_000,
     token: ctx.token,

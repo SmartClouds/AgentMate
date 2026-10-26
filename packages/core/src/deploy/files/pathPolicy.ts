@@ -1,3 +1,4 @@
+import { LEGACY_IGNORE_FILE, LEGACY_PROJECT_DIR } from '../../legacyNames.js';
 import { createIgnoreRules, type IgnoreLayer, type IgnoreRulesResult } from '../ignoreRules.js';
 import {
   validateWpItemPath,
@@ -20,7 +21,7 @@ import type { WpPathRejectReason } from '../wordpress/protocol.js';
  *    through them, while a WordPress theme or plugin never carries one.
  * 3. Ignore rules (see createFileSiteIgnoreRules): the WordPress default list without
  *    `.distignore` (a WordPress packaging file, plain data on any other site), plus the folder's
- *    `.agentmateignore` and the site's own patterns.
+ *    `.runovaignore` and the site's own patterns.
  *
  * The lists are imported from the WordPress module and filtered here, so a name added there is
  * denied here too.
@@ -42,12 +43,13 @@ const DENY_NAMES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Agent settings, skills and AgentMate's own files among the deny list, so a walker can tell the
+ * Agent settings, skills and Runova's own files among the deny list, so a walker can tell the
  * user these were left out on purpose. The same split as `deniedReason` in the desktop's
  * WordPress walker (localManifest.ts).
  */
 export const FILE_SITE_AGENT_DIRS: readonly string[] = [
-  '.agentmate',
+  '.runova',
+  LEGACY_PROJECT_DIR,
   '.claude',
   '.agents',
   '.codex',
@@ -74,7 +76,8 @@ export const FILE_SITE_AGENT_FILES: readonly string[] = [
   '.cursorrules',
   '.windsurfrules',
   '.roomodes',
-  '.agentmateignore',
+  '.runovaignore',
+  LEGACY_IGNORE_FILE,
 ];
 
 const AGENT_NAMES: ReadonlySet<string> = new Set([
@@ -116,7 +119,7 @@ export function validateSyncPath(
   return isFileSiteHardDenied(path) ? checked : { ok: true };
 }
 
-/** `agentFiles` for the agent and AgentMate entries of the deny list, else `hardDenied`. */
+/** `agentFiles` for the agent and Runova entries of the deny list, else `hardDenied`. */
 export function deniedReasonForSync(path: string): 'agentFiles' | 'hardDenied' {
   for (const segment of path.split('/')) {
     if (!segmentDenied(segment)) continue;
@@ -130,7 +133,7 @@ export function deniedReasonForSync(path: string): 'agentFiles' | 'hardDenied' {
 
 /**
  * Left out by default, until the server has them: the WordPress list without `.distignore`.
- * A `!` line in an `.agentmateignore` or the site's patterns puts any of these back.
+ * A `!` line in a `.runovaignore` or the site's patterns puts any of these back.
  */
 export const FILE_DEFAULT_IGNORE: readonly string[] = WP_DEFAULT_IGNORE.filter(
   (line) => line !== '.distignore',
@@ -138,7 +141,7 @@ export const FILE_DEFAULT_IGNORE: readonly string[] = WP_DEFAULT_IGNORE.filter(
 
 /**
  * The ignore rules for one site, from its layers in order: the deploy folder's
- * `.agentmateignore`, then the site's own patterns. They match paths relative to the site root.
+ * `.runovaignore`, then the site's own patterns. They match paths relative to the site root.
  */
 export function createFileSiteIgnoreRules(layers: readonly IgnoreLayer[]): IgnoreRulesResult {
   return createIgnoreRules(layers, FILE_DEFAULT_IGNORE);

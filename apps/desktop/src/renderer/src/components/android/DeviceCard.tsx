@@ -3,7 +3,7 @@ import {
   type AndroidEmulator,
   type AndroidPhysicalDevice,
   bootStageLabel,
-} from '@agentmat/core';
+} from '@runova/core';
 import { toast } from 'sonner';
 import {
   Camera,

@@ -3,7 +3,7 @@
  * the app rewrites the Content-Security-Policy of everything loaded in the default session, which
  * would break real sites, and a page's cookies and storage have no business next to the app's.
  */
-export const BROWSER_PARTITION = 'persist:agentmate-browser';
+export const BROWSER_PARTITION = 'persist:runova-browser';
 
 /**
  * Keys pressed while a page has focus never reach the app's renderer, so main catches these few

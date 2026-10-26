@@ -10,7 +10,7 @@ import { type DevHost, dotnetAvailable, startDevHost } from './devHost';
 
 test.skip(!dotnetAvailable(), 'needs the .NET SDK to build the server core DevHost');
 
-const DEV_PASSWORD = 'agentmate-local-password';
+const DEV_PASSWORD = 'runova-local-password';
 
 let devHost: DevHost | undefined;
 let launched: LaunchedApp | undefined;
@@ -44,7 +44,7 @@ test('sets up nginx, adds a site, applies it and issues a certificate', async ()
   if (!devHost) throw new Error('DevHost did not start');
   launched = await launchApp({
     settings: {},
-    env: { AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port) },
+    env: { RUNOVA_DEPLOY_DEV_CORE: String(devHost.port) },
   });
   const { page } = launched;
   await page.getByRole('link', { name: 'Deploy' }).click();
@@ -60,14 +60,14 @@ test('sets up nginx, adds a site, applies it and issues a certificate', async ()
     .getByRole('button', { name: 'Websites' })
     .click();
 
-  // nginx is there but not AgentMate's yet: set it up.
-  const setUp = page.getByRole('button', { name: /Set up nginx for AgentMate|Install nginx/ });
-  await expect(setUp.or(page.getByText('Managed by AgentMate'))).toBeVisible({ timeout: 30_000 });
+  // nginx is there but not Runova's yet: set it up.
+  const setUp = page.getByRole('button', { name: /Set up nginx for Runova|Install nginx/ });
+  await expect(setUp.or(page.getByText('Managed by Runova'))).toBeVisible({ timeout: 30_000 });
   if (await setUp.isVisible()) {
     await setUp.click();
     await finishJob(page);
   }
-  await expect(page.getByText('Managed by AgentMate')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText('Managed by Runova')).toBeVisible({ timeout: 30_000 });
 
   // A new site on a port of this server.
   await page.getByRole('button', { name: /Add a site/ }).click();

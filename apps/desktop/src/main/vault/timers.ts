@@ -9,13 +9,13 @@ export interface VaultTimers {
   backoffBaseMs: number;
 }
 
-export const VAULT_TEST_TIMERS_ENV = 'AGENTMATE_VAULT_TEST_TIMERS';
+export const VAULT_TEST_TIMERS_ENV = 'RUNOVA_VAULT_TEST_TIMERS';
 const DEFAULT_BACKOFF_BASE_MS = 1000;
 const MIN_OVERRIDE_MS = 200;
 
 /**
  * Settings in milliseconds. End-to-end tests can shorten the timers with
- * AGENTMATE_VAULT_TEST_TIMERS="autoLockMs=4000,clipboardMs=2000,backoffBaseMs=300", but only in
+ * RUNOVA_VAULT_TEST_TIMERS="autoLockMs=4000,clipboardMs=2000,backoffBaseMs=300", but only in
  * an unpackaged build, so an installed app can't be talked out of locking by its environment.
  */
 export function resolveVaultTimers(

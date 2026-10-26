@@ -14,7 +14,7 @@ describe('clientCertificate', () => {
     );
     expect(parsed.checkPrivateKey(createPrivateKey(device.privateKeyPem))).toBe(true);
     expect(parsed.verify(parsed.publicKey)).toBe(true);
-    expect(parsed.subject).toBe('CN=agentmate-device');
+    expect(parsed.subject).toBe('CN=runova-device');
     expect(parsed.issuer).toBe(parsed.subject);
     expect(parsed.keyUsage).toEqual(['1.3.6.1.5.5.7.3.2']);
     expect(parsed.ca).toBe(false);

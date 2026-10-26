@@ -71,7 +71,7 @@ test('a project is findable by name and opens its page', async () => {
   // A project created through IPC is not in the renderer's cached list, which is what the palette
   // searches, so the window is reloaded the way openWorkspace does it.
   await page.reload();
-  await page.waitForFunction(() => Boolean((window as { agentmat?: unknown }).agentmat));
+  await page.waitForFunction(() => Boolean((window as { runova?: unknown }).runova));
 
   const input = await openPalette(page);
   await page.keyboard.type('e2e project');

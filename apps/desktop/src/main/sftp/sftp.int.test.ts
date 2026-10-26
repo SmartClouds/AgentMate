@@ -107,7 +107,7 @@ function freshRoot(prefix: string): string {
 }
 
 beforeAll(async () => {
-  scratch = await mkdtemp(join(tmpdir(), 'agentmate-sftp-int-'));
+  scratch = await mkdtemp(join(tmpdir(), 'runova-sftp-int-'));
   if (!docker) return;
   server = await startSshServer();
   shared = await open();
@@ -390,18 +390,23 @@ describe.skipIf(!docker)('the SFTP file manager against OpenSSH', () => {
 
         const saved = await service.writeText(OWNER, sessionId, {
           path,
-          content: 'Edited in AgentMate\n',
+          content: 'Edited in Runova\n',
           bom: false,
           base: { size: opened.size, mtimeMs: opened.mtimeMs },
           force: false,
         });
-        expect(saved).toMatchObject({ path, size: 20, mode: 0o640, owner: SSH_USER });
-        expect(exec('cat "$1"', [path])).toBe('Edited in AgentMate');
+        expect(saved).toMatchObject({
+          path,
+          size: Buffer.byteLength('Edited in Runova\n'),
+          mode: 0o640,
+          owner: SSH_USER,
+        });
+        expect(exec('cat "$1"', [path])).toBe('Edited in Runova');
         expect(modeOf(path)).toBe(0o640);
         expect(exec('ls -A "$1"', [root])).toBe('index.html');
 
         const reopened = await service.readText(OWNER, sessionId, path);
-        expect(reopened.content).toBe('Edited in AgentMate\n');
+        expect(reopened.content).toBe('Edited in Runova\n');
         // SFTP mtimes are whole seconds; a change of size is seen whenever it happens.
         await new Promise((resolve) => setTimeout(resolve, 1100));
         exec('echo "changed on the server" >> "$1"', [path]);

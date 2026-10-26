@@ -5,7 +5,7 @@ import {
   type UsagePeriod,
   type UsageTokens,
   type UsageWindow,
-} from '@agentmat/core';
+} from '@runova/core';
 
 /** One priced token event, produced by a local-log scanner. */
 export interface UsageEntry {

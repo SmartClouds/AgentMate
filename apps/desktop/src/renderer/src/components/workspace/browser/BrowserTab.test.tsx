@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { act, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BrowserNavState } from '@/lib/browser/browserRuntime';

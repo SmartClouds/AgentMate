@@ -3,12 +3,12 @@
  * /files/read: blobs in order, offset and length, the response budget, missing files, and the
  * same path policy as writes.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Unit;
+namespace Runova\Connector\Tests\Unit;
 
-use AgentMate\Connector\Tests\Support\TestCase;
+use Runova\Connector\Tests\Support\TestCase;
 
 final class FilesReadTest extends TestCase
 {
@@ -115,13 +115,13 @@ final class FilesReadTest extends TestCase
 
     public function testOverTheFileCapIsRefusedWithoutHalvingTheBatch(): void
     {
-        $item = (new \AgentMate\Connector\Files\ItemResolver($this->env))->resolve(array('kind' => 'theme', 'slug' => 'demo'));
-        $manifest = new \AgentMate\Connector\Files\Manifest($this->storage, $this->env, 2000, 100);
-        $reader = new \AgentMate\Connector\Files\FileReader($manifest, 100);
+        $item = (new \Runova\Connector\Files\ItemResolver($this->env))->resolve(array('kind' => 'theme', 'slug' => 'demo'));
+        $manifest = new \Runova\Connector\Files\Manifest($this->storage, $this->env, 2000, 100);
+        $reader = new \Runova\Connector\Files\FileReader($manifest, 100);
         try {
             $reader->read($item, array(array('path' => 'big.bin')), 1048576, 10);
             $this->fail('A file over the cap must be refused.');
-        } catch (\AgentMate\Connector\Http\ApiError $error) {
+        } catch (\Runova\Connector\Http\ApiError $error) {
             $this->assertSame('pathRejected', $error->errorCode);
             $this->assertSame('tooLarge', $error->details['reason']);
         }

@@ -58,7 +58,7 @@ function useGithubAccountView(): {
 } {
   const query = useQuery({
     queryKey: queryKeys.githubAccount,
-    queryFn: () => window.agentmat.git.githubAccount(),
+    queryFn: () => window.runova.git.githubAccount(),
     staleTime: STALE_MS,
     refetchOnWindowFocus: true,
     refetchInterval: (q) => {
@@ -181,7 +181,7 @@ function SignedInPanel({
           <Button
             variant="ghost"
             size="xs"
-            onClick={() => void window.agentmat.shell.openExternal(profileUrl(login))}
+            onClick={() => void window.runova.shell.openExternal(profileUrl(login))}
           >
             <ExternalLink />
             Open profile

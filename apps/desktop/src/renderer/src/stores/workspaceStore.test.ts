@@ -1,6 +1,6 @@
-import { allGroups, allTabIds, findGroup, findGroupOfTab } from '@agentmat/core';
+import { allGroups, allTabIds, findGroup, findGroupOfTab } from '@runova/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { type FakeBridge, installAgentmatBridge } from '../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../test/renderer/runovaBridge';
 import { useBrowserStore } from './browserStore';
 import { useEditorRevealStore } from './editorRevealStore';
 import { useRecentFilesStore } from './recentFilesStore';
@@ -43,7 +43,7 @@ function withTerminal(projectId = 'p1'): { tabId: string; groupId: string } {
 }
 
 beforeEach(() => {
-  bridge = installAgentmatBridge();
+  bridge = installRunovaBridge();
   dispose.mockClear();
   disposeBrowser.mockClear();
   useBrowserStore.setState({ annotations: {}, recentUrls: {} });
@@ -736,7 +736,7 @@ describe('coming back from a saved layout', () => {
   }
 
   function seed(state: Record<string, unknown>): void {
-    localStorage.setItem('agentmate-workspaces', JSON.stringify({ state, version: 1 }));
+    localStorage.setItem('runova-workspaces', JSON.stringify({ state, version: 1 }));
   }
 
   function savedWorkspace(tabs: SavedTab[], patch: Record<string, unknown> = {}) {
@@ -903,7 +903,7 @@ describe('coming back from a saved layout', () => {
   });
 
   it('starts empty when there is nothing saved at all', async () => {
-    localStorage.removeItem('agentmate-workspaces');
+    localStorage.removeItem('runova-workspaces');
     await rehydrate();
     expect(store().workspaces).toEqual({});
     expect(store().railProjectIds).toEqual([]);
@@ -913,7 +913,7 @@ describe('coming back from a saved layout', () => {
     store().openProject('p1');
     store().openDiff('p1', { path: 'a.ts', side: 'unstaged' });
     store().openFile('p1', 'E:\\proj\\b.ts', { pin: true });
-    const saved = JSON.parse(localStorage.getItem('agentmate-workspaces') ?? '{}');
+    const saved = JSON.parse(localStorage.getItem('runova-workspaces') ?? '{}');
     const tabs = saved.state.workspaces.p1.tabs as Record<string, { kind: string }>;
     // A preview tab is throwaway by definition, so it never comes back after a restart.
     expect(Object.values(tabs).map((tab) => tab.kind)).toEqual(['file']);
@@ -1017,7 +1017,7 @@ describe('worktree workspaces', () => {
 
   it('brings worktree workspaces back, and drops ones whose project left the rail', async () => {
     localStorage.setItem(
-      'agentmate-workspaces',
+      'runova-workspaces',
       JSON.stringify({
         version: 1,
         state: {
@@ -1042,7 +1042,7 @@ describe('worktree workspaces', () => {
 describe('a project open only through its worktrees', () => {
   it('stays in the rail after a restart', async () => {
     localStorage.setItem(
-      'agentmate-workspaces',
+      'runova-workspaces',
       JSON.stringify({
         version: 1,
         state: {
@@ -1133,7 +1133,7 @@ describe('browser tabs', () => {
 
   it('comes back after a restart, at the page it was on', async () => {
     localStorage.setItem(
-      'agentmate-workspaces',
+      'runova-workspaces',
       JSON.stringify({
         state: {
           railProjectIds: ['p1'],

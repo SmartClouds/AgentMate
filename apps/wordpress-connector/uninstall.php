@@ -3,54 +3,68 @@
  * Removes everything the plugin made: its tables, options and private data folder. Themes and
  * plugins it deployed stay as they are.
  *
- * @package AgentMate\Connector
+ * While the site moves from the 1.63 folder to the Runova one, both folders are on disk for a
+ * while and share the same tables. Deleting either of them then removes only its files.
+ *
+ * @package Runova\Connector
  */
 
 if (!defined('WP_UNINSTALL_PLUGIN')) {
     exit;
 }
 
-require_once __DIR__ . '/src/Autoloader.php';
-\AgentMate\Connector\Autoloader::register(__DIR__ . '/src');
+// The copy in the other layout may be running in this request; its classes are the same ones.
+if (!class_exists('Runova\\Connector\\Autoloader', false)) {
+    require_once __DIR__ . '/src/Autoloader.php';
+    \Runova\Connector\Autoloader::register(__DIR__ . '/src');
+}
 
-use AgentMate\Connector\Schema;
-use AgentMate\Connector\Support\DataDir;
-use AgentMate\Connector\Support\Options;
+use Runova\Connector\Activator;
+use Runova\Connector\Crypto\SiteKeys;
+use Runova\Connector\Layout;
+use Runova\Connector\Schema;
+use Runova\Connector\Support\Constants;
+use Runova\Connector\Support\DataDir;
+use Runova\Connector\Support\Options;
+
+if (Layout::otherExists(__DIR__)) {
+    return;
+}
 
 global $wpdb;
 
-$agentmate_data_dir = null;
-$agentmate_name = Options::get(DataDir::OPTION);
-if (defined('AGENTMATE_CONNECTOR_DATA_DIR')) {
-    $agentmate_data_dir = null; // A folder the owner picked is theirs to remove.
-} elseif (is_string($agentmate_name) && preg_match(DataDir::NAME, $agentmate_name) === 1) {
-    $agentmate_data_dir = WP_CONTENT_DIR . '/' . $agentmate_name;
+$runova_data_dir = null;
+$runova_name = Options::get(DataDir::OPTION);
+if (Constants::value('RUNOVA_CONNECTOR_DATA_DIR') !== null) {
+    $runova_data_dir = null; // A folder the owner picked is theirs to remove.
+} elseif (is_string($runova_name) && preg_match(DataDir::NAME, $runova_name) === 1) {
+    $runova_data_dir = WP_CONTENT_DIR . '/' . $runova_name;
 }
 
-foreach (Schema::TABLES as $agentmate_table) {
+foreach (Schema::TABLES as $runova_table) {
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- fixed table names from Schema, no input.
-    $wpdb->query('DROP TABLE IF EXISTS ' . Schema::table($wpdb->base_prefix, $agentmate_table));
+    $wpdb->query('DROP TABLE IF EXISTS ' . Schema::table($wpdb->base_prefix, $runova_table));
 }
 
-foreach (array('agentmate_connector_site_key', 'agentmate_connector_data_dir', 'agentmate_connector_db_version') as $agentmate_option) {
-    Options::delete($agentmate_option);
+foreach (array(SiteKeys::OPTION, DataDir::OPTION, Activator::DB_VERSION_OPTION, \Runova\Connector\Update\LayoutMigration::CLEANUP_OPTION) as $runova_option) {
+    Options::delete($runova_option);
 }
-\AgentMate\Connector\Guard\GuardInstaller::uninstall();
-\AgentMate\Connector\Guard\GuardState::delete();
-@unlink(__DIR__ . '/' . \AgentMate\Connector\Guard\Rescue::CONFIG); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+\Runova\Connector\Guard\GuardInstaller::uninstall();
+\Runova\Connector\Guard\GuardState::delete();
+@unlink(__DIR__ . '/' . \Runova\Connector\Guard\Rescue::CONFIG); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 
-if ($agentmate_data_dir !== null && is_dir($agentmate_data_dir) && !is_link($agentmate_data_dir)) {
-    $agentmate_files = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator($agentmate_data_dir, FilesystemIterator::SKIP_DOTS),
+if ($runova_data_dir !== null && is_dir($runova_data_dir) && !is_link($runova_data_dir)) {
+    $runova_files = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($runova_data_dir, FilesystemIterator::SKIP_DOTS),
         RecursiveIteratorIterator::CHILD_FIRST
     );
-    foreach ($agentmate_files as $agentmate_file) {
-        $agentmate_path = $agentmate_file->getPathname();
-        if ($agentmate_file->isDir() && !$agentmate_file->isLink()) {
-            @rmdir($agentmate_path); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
+    foreach ($runova_files as $runova_file) {
+        $runova_path = $runova_file->getPathname();
+        if ($runova_file->isDir() && !$runova_file->isLink()) {
+            @rmdir($runova_path); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
         } else {
-            @unlink($agentmate_path); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+            @unlink($runova_path); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
         }
     }
-    @rmdir($agentmate_data_dir); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
+    @rmdir($runova_data_dir); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
 }

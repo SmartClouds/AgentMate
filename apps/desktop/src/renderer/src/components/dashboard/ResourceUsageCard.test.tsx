@@ -1,4 +1,4 @@
-import type { ResourceActivitySnapshot, ResourceUsagePoint } from '@agentmat/core';
+import type { ResourceActivitySnapshot, ResourceUsagePoint } from '@runova/core';
 import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';

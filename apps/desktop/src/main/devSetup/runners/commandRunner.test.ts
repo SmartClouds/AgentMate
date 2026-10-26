@@ -30,7 +30,7 @@ function token(): CancelToken {
   return { cancelled: false, child: null };
 }
 
-const spaced = () => join(tempDir('agentmate-cmd-'), 'with space', 'bin');
+const spaced = () => join(tempDir('runova-cmd-'), 'with space', 'bin');
 
 describe('runCommand', () => {
   it('runs a script from a folder with a space in its name and reports its lines', async () => {

@@ -99,7 +99,7 @@ export function RestoreDialog({
 
   useEffect(
     () =>
-      window.agentmat.deployHardening.onRestoreProgress((event) => {
+      window.runova.deployHardening.onRestoreProgress((event) => {
         if (event.serverId === server.id) setSteps((current) => fold(current, event.progress));
       }),
     [server.id],
@@ -108,7 +108,7 @@ export function RestoreDialog({
   async function pick(): Promise<void> {
     setProblem(null);
     try {
-      const picked = await window.agentmat.deployHardening.pickBackup();
+      const picked = await window.runova.deployHardening.pickBackup();
       if (picked) setFile(picked);
     } catch (error) {
       setProblem(coreErrorMessage(error));
@@ -138,7 +138,7 @@ export function RestoreDialog({
     setProblem(null);
     setSteps([]);
     try {
-      const restored = await window.agentmat.deployHardening.restore({
+      const restored = await window.runova.deployHardening.restore({
         serverId: server.id,
         fileToken: file.token,
         passphrase,

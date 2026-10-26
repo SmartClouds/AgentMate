@@ -2,15 +2,15 @@
 /**
  * The deploy transaction end to end on a fake site: apply, confirm, roll back, refuse.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Unit;
+namespace Runova\Connector\Tests\Unit;
 
-use AgentMate\Connector\Deploy\DeployService;
-use AgentMate\Connector\Audit\AuditLog;
-use AgentMate\Connector\Files\AtomicWriter;
-use AgentMate\Connector\Tests\Support\DeployTestCase;
+use Runova\Connector\Deploy\DeployService;
+use Runova\Connector\Audit\AuditLog;
+use Runova\Connector\Files\AtomicWriter;
+use Runova\Connector\Tests\Support\DeployTestCase;
 
 final class DeployTest extends DeployTestCase
 {
@@ -134,7 +134,7 @@ final class DeployTest extends DeployTestCase
             self::put('theme', 'twentytwentyfive', 'linked/a.php', '<?php', null),
             self::put('theme', 'twentytwentyfive', 'style.css/inner.txt', 'x', null),
             self::put('theme', 'twentytwentyfive', 'real', 'x', null),
-            self::put('plugin', 'agentmate-connector', 'evil.php', '<?php', null),
+            self::put('plugin', 'runova-connector', 'evil.php', '<?php', null),
             self::put('plugin', 'missing', 'a.php', '<?php', null),
         );
         $begin = $this->assertOk($this->begin($ops));
@@ -451,7 +451,7 @@ final class DeployTest extends DeployTestCase
         $this->assertGreaterThan(2, $calls);
         $this->assertOk($this->route('/deploy/rollback', $id));
         $this->assertSame('<?php // v1', $this->read('themes/twentytwentyfive/functions.php'));
-        $leftovers = glob($this->path('themes/twentytwentyfive') . '/.agentmate-tmp-*');
+        $leftovers = glob($this->path('themes/twentytwentyfive') . '/.runova-tmp-*');
         $this->assertSame(array(), $leftovers);
     }
 

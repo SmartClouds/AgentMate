@@ -1,4 +1,4 @@
-import { type AppSettings, HELP_EMBEDDING_MODELS, helpEmbeddingModel } from '@agentmat/core';
+import { type AppSettings, HELP_EMBEDDING_MODELS, helpEmbeddingModel } from '@runova/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -77,19 +77,19 @@ function ProviderRow({
 
   const statusQuery = useQuery({
     queryKey: helpStatusQueryKey(provider),
-    queryFn: () => window.agentmat.help.status(provider),
+    queryFn: () => window.runova.help.status(provider),
     enabled: ready,
   });
   const modelsQuery = useQuery({
     queryKey: ['help-embedding-models', provider, settings.ollamaBaseUrl],
-    queryFn: () => window.agentmat.help.embeddingModels(provider),
+    queryFn: () => window.runova.help.embeddingModels(provider),
     enabled: ready,
     staleTime: 60_000,
   });
 
   useEffect(
     () =>
-      window.agentmat.help.onIndexProgress((p) => {
+      window.runova.help.onIndexProgress((p) => {
         if (p.embedder === embedderId) setProgress(p);
       }),
     [embedderId],
@@ -99,7 +99,7 @@ function ProviderRow({
   // out of the full-page loading overlay, which would otherwise cover Settings for minutes.
   const reindex = useMutation({
     meta: { silentLoading: true },
-    mutationFn: (fresh: boolean) => window.agentmat.help.reindex(provider, { fresh }),
+    mutationFn: (fresh: boolean) => window.runova.help.reindex(provider, { fresh }),
     onMutate: () => setProgress(null),
     onSettled: () => {
       setProgress(null);
@@ -116,7 +116,7 @@ function ProviderRow({
   const saveModel = useMutation({
     meta: { silentLoading: true },
     mutationFn: (next: string) =>
-      window.agentmat.settings.update({
+      window.runova.settings.update({
         helpEmbeddingModels: { ...settings.helpEmbeddingModels, [provider]: next },
       }),
     onSuccess: async (saved) => {
@@ -179,10 +179,7 @@ function ProviderRow({
             disabled={!ready || running || saveModel.isPending}
           />
           {running ? (
-            <Button
-              variant="soft"
-              onClick={() => void window.agentmat.help.cancelReindex(provider)}
-            >
+            <Button variant="soft" onClick={() => void window.runova.help.cancelReindex(provider)}>
               <StopCircle className="h-3.5 w-3.5" /> Stop
             </Button>
           ) : (

@@ -4,7 +4,7 @@ import {
   type ProviderUsage,
   USAGE_PROVIDER_REGISTRY,
   type UsageProviderConfig,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { queryKeys } from '@/lib/queryKeys';
@@ -69,12 +69,12 @@ function sumSeries(items: Array<number[] | undefined>): number[] {
 export function useUsageSummary(enabled = true): UsageSummary {
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
     enabled,
   });
   const usageQuery = useQuery({
     queryKey: queryKeys.usageList,
-    queryFn: () => window.agentmat.usage.list(),
+    queryFn: () => window.runova.usage.list(),
     refetchInterval: 45_000,
     enabled,
   });

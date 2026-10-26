@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { delimiter, dirname } from 'node:path';
-import type { DevOs } from '@agentmat/core';
+import type { DevOs } from '@runova/core';
 import { pathKey } from '../windowsPath';
 import { parseRegistryPath, type UserPathDeps } from './userPath';
 

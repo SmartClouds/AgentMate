@@ -1,9 +1,9 @@
-import { validateIpOrCidr } from '@agentmat/core';
+import { validateIpOrCidr } from '@runova/core';
 import type {
   FirewallChange,
   FirewallRuleInfo,
   FirewallStatus,
-} from './protocol/generated/AgentMate.ServerCore.Contracts';
+} from './protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * Checks for the direct TLS form (as the user types) and its IPC handler, and the firewall change
@@ -15,7 +15,7 @@ export type DirectTlsCheck<T> = { ok: true; value: T } | { ok: false; reason: st
 export const MAX_SOURCES = 16;
 
 /** The comment the rule carries on ufw (firewalld keeps no comments), so it can be found again. */
-export const DIRECT_TLS_RULE_COMMENT = 'AgentMate direct TLS';
+export const DIRECT_TLS_RULE_COMMENT = 'Runova direct TLS';
 
 export function checkDirectTlsPort(input: string | number): DirectTlsCheck<number> {
   const text = String(input).trim();

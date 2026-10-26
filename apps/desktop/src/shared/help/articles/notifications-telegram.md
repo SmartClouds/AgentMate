@@ -2,12 +2,12 @@
 title: Notifications and Telegram
 category: Settings
 order: 50
-summary: How AgentMate tells you when an agent finishes or needs you, through system notifications, the Recent messages bell, the desktop pet and a Telegram bot, plus usage alerts.
+summary: How Runova tells you when an agent finishes or needs you, through system notifications, the Recent messages bell, the desktop pet and a Telegram bot, plus usage alerts.
 keywords: notifications, notify, alert, telegram, bot, botfather, chat id, toast, system notification, windows toast, bell, recent messages, hook, completion, confirmation, usage alert, threshold, reset alert, pet, away
 route: /settings?tab=notifications
 ---
 
-AgentMate can reach you when you are looking at something else. A system notification pops up when an agent finishes or asks a question, the bell in the header keeps a history of messages, your desktop pet can speak up, and a Telegram bot can send messages to your phone. This article explains each channel, how to turn it on, and what it says.
+Runova can reach you when you are looking at something else. A system notification pops up when an agent finishes or asks a question, the bell in the header keeps a history of messages, your desktop pet can speak up, and a Telegram bot can send messages to your phone. This article explains each channel, how to turn it on, and what it says.
 
 ## Where to find it
 
@@ -21,7 +21,7 @@ AgentMate can reach you when you are looking at something else. A system notific
 
 | Channel | Good for | Set up in |
 | --- | --- | --- |
-| System notification | An agent finished or needs you while AgentMate is in the background | Settings, General |
+| System notification | An agent finished or needs you while Runova is in the background | Settings, General |
 | Recent messages (bell) | A list of past alerts, errors and updates | Always on |
 | Telegram | Messages on your phone while you are away | Settings, Notifications, plus a project's Hooks |
 | Desktop pet | A short speech bubble on your desktop | Settings, AI Pet, plus a project's Hooks |
@@ -30,12 +30,12 @@ AgentMate can reach you when you are looking at something else. A system notific
 
 ### Workspace notifications
 
-**Workspace notifications** is on by default. When an agent in a Workspace tab finishes or asks you something, and you are not looking at that tab (another tab, another page, another app, or the window is minimized), AgentMate shows a system notification.
+**Workspace notifications** is on by default. When an agent in a Workspace tab finishes or asks you something, and you are not looking at that tab (another tab, another page, another app, or the window is minimized), Runova shows a system notification.
 
 - The title is "{agent} finished" or "{agent} needs your input". A question wins over a finished run if both happen at once.
 - The body names the project and the tab, adds the agent's own message when it sent one, and says "and N more tabs" when several tabs wanted you at about the same time.
 - When an agent needs your input, the taskbar icon also flashes.
-- Clicking the notification brings AgentMate forward and opens that Workspace tab.
+- Clicking the notification brings Runova forward and opens that Workspace tab.
 - If you are already looking at the tab, nothing is shown.
 
 The same switch also gates the notification you get when a version update finished in the background ("{project}: version files updated" or "version update failed"). Clicking it reopens the review.
@@ -60,11 +60,11 @@ Clicking it opens that terminal session, or brings the Remote Desktop session wi
 
 A few more things use the same system notifications:
 
-- **Server alerts** from Deploy: a warning or critical alert on one of your servers (disk filling, a failed job, a certificate that did not renew and so on) shows a notification when AgentMate is not in the foreground, and clicking it opens that server.
+- **Server alerts** from Deploy: a warning or critical alert on one of your servers (disk filling, a failed job, a certificate that did not renew and so on) shows a notification when Runova is not in the foreground, and clicking it opens that server.
 - **Relay alerts** from [Relay tasks](relay.md): a task is blocked, is done but its tests fail, a session ended or stopped without its handoff, a session is not moving, a plan is ready for you to look at, or the relay finished. A system notification appears and clicking it opens that project's Workspace. The same message is kept in Recent messages with a **Relay** tag, as a success when the relay finishes cleanly and as a warning for everything else.
 - **Usage threshold alerts** from Token Usage (see [Usage alerts](#usage-alerts)).
 
-If your system does not support notifications, AgentMate falls back to messages inside the app where it can.
+If your system does not support notifications, Runova falls back to messages inside the app where it can.
 
 ## Recent messages
 
@@ -79,10 +79,10 @@ Pipeline results, CLI and tool updates and server alerts land here too. A daily 
 You need a bot of your own. It takes a couple of minutes.
 
 1. In Telegram, message @BotFather and create a bot. Copy the token it gives you.
-2. In AgentMate, open **Settings**, **Notifications**, **Telegram bot** and paste the token into **Bot token**.
+2. In Runova, open **Settings**, **Notifications**, **Telegram bot** and paste the token into **Bot token**.
 3. In Telegram, send your new bot any message.
-4. Back in AgentMate, click **Detect from last message**. The **Chat ID** fills in from the latest message the bot received. (If it says "No messages found yet", send the bot a message and try again.)
-5. Click **Send test**. A message "This is a test notification from AgentMate." (with a waving hand in front) should arrive in Telegram.
+4. Back in Runova, click **Detect from last message**. The **Chat ID** fills in from the latest message the bot received. (If it says "No messages found yet", send the bot a message and try again.)
+5. Click **Send test**. A message "This is a test notification from Runova." (with a waving hand in front) should arrive in Telegram.
 6. Click **Save changes** (or press `Ctrl+S`). A badge on the card shows **Ready** as soon as both a token and a chat ID are filled in.
 
 **Scheduled tasks chat/group ID** is optional. Fill it in to make [scheduled prompts](scheduled-tasks.md) post to a different chat or group, such as a team group. Group ids start with a minus sign, for example -1001234567890.
@@ -113,7 +113,7 @@ To set one up:
 3. Edit the **Telegram message** (or **Companion message**). Write `{{project}}` where the project name should appear.
 4. Click **Save**, then **Send test** (or **Preview on pet**) to check it.
 
-For Claude Code, AgentMate wires the hook automatically: it writes a small script to `.agentmate/hooks/` in the project folder and adds it to the project's `.claude/settings.json` (the Completion and Desktop companion hooks use Claude Code's Stop event, Confirmation uses its Notification event). For any other agent the card shows the script path (click it to copy), and you wire that script into the agent's own hook or automation settings. The script only pings AgentMate on your own machine, and it quietly does nothing when AgentMate is closed, so your agent never sees an error.
+For Claude Code, Runova wires the hook automatically: it writes a small script to `.runova/hooks/` in the project folder and adds it to the project's `.claude/settings.json` (the Completion and Desktop companion hooks use Claude Code's Stop event, Confirmation uses its Notification event). For any other agent the card shows the script path (click it to copy), and you wire that script into the agent's own hook or automation settings. The script only pings Runova on your own machine, and it quietly does nothing when Runova is closed, so your agent never sees an error.
 
 If Telegram is not configured the Hooks section says so and offers **Open Settings**. If the pet is off, the Desktop companion hook stays quiet until you turn it on.
 
@@ -121,13 +121,13 @@ The **Hooks** section also lists **Other hooks** it finds in the project's `.cla
 
 ### Reply from Telegram
 
-After a Confirmation message is sent, AgentMate listens for your reply for up to 20 minutes. The next message you send from your chat is typed into that project's open terminal and submitted with `Enter`, so you can answer the agent from your phone. With several projects waiting, the oldest question gets the reply. Only messages from your saved chat ID are used.
+After a Confirmation message is sent, Runova listens for your reply for up to 20 minutes. The next message you send from your chat is typed into that project's open terminal and submitted with `Enter`, so you can answer the agent from your phone. With several projects waiting, the oldest question gets the reply. Only messages from your saved chat ID are used.
 
 ## Usage alerts
 
 Two alerts watch your AI subscription limits. They live on the **Token Usage** page, on the card of the watched provider (Claude Code by default), as two buttons in the card's header.
 
-- **Threshold alert** (the warning triangle). Sends a system notification the moment a watched window reaches a percentage you pick. Open the dialog, turn on **Notify at threshold**, set **Threshold (%)** between 1 and 100 (the default is 90) and choose which windows to watch: **Session (5h)**, **Weekly** or the model-specific weekly window, where your plan has one. It fires once per window and can fire again after the window rolls over. **Send a test alert** shows what it looks like. Clicking the notification opens Token Usage on that provider. AgentMate checks about once a minute.
+- **Threshold alert** (the warning triangle). Sends a system notification the moment a watched window reaches a percentage you pick. Open the dialog, turn on **Notify at threshold**, set **Threshold (%)** between 1 and 100 (the default is 90) and choose which windows to watch: **Session (5h)**, **Weekly** or the model-specific weekly window, where your plan has one. It fires once per window and can fire again after the window rolls over. **Send a test alert** shows what it looks like. Clicking the notification opens Token Usage on that provider. Runova checks about once a minute.
 - **Reset alert** (the bell). Sends a Telegram message when a watched window rolls over, so you know you have your full quota again. Open the dialog, turn on **Telegram reset alert** and pick the windows. **Chat/group ID** lets this alert use a different chat from the one in Settings (leave it empty to reuse it). The bot token always comes from Settings. **Send a test alert** checks the setup.
 
 Both are off until you turn them on. See [Token usage](token-usage.md).
@@ -138,7 +138,7 @@ When the desktop pet is on, it can show a speech bubble for several things: a pr
 
 ## Tips
 
-- If you never see system notifications, check that your operating system allows notifications for AgentMate and that Focus or Do Not Disturb is off.
+- If you never see system notifications, check that your operating system allows notifications for Runova and that Focus or Do Not Disturb is off.
 - A notification is only sent when you are not looking at the tab. Switch to another tab to test one.
 - Use **Send test** after saving the token, before you rely on a hook.
 

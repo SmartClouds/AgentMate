@@ -1,4 +1,4 @@
-import type { Project, WpItemRef } from '@agentmat/core';
+import type { Project, WpItemRef } from '@runova/core';
 import { wordPressErrorMessage } from '@shared/wordpressErrors';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
@@ -124,7 +124,7 @@ export function useItemProjectActions(siteId: string): ItemProjectActions {
     }
     // The last item goes with the link. An unlink is quick and has no progress to show.
     try {
-      updated(await window.agentmat.deployWordPress.unlinkProject(project.id));
+      updated(await window.runova.deployWordPress.unlinkProject(project.id));
       return { ok: true };
     } catch (error) {
       return { ok: false, error: wordPressErrorMessage(error) };

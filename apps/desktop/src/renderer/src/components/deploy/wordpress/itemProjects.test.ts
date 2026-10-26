@@ -1,4 +1,4 @@
-import type { WpItemRef } from '@agentmat/core';
+import type { WpItemRef } from '@runova/core';
 import { describe, expect, it } from 'vitest';
 import {
   addItemPlan,

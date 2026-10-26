@@ -2,7 +2,7 @@ import type {
   AlertKind,
   TelegramNotificationsStatus,
   TelegramNotificationsTestResult,
-} from './deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from './deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * Telegram notifications (E30): a server core sends its alerts (a failed backup, a container that

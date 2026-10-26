@@ -66,13 +66,13 @@ function validToken(sub = 'auth0|user_01'): string {
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(NOW);
-  configDir = tempDir('agentmate-cursor-config-');
+  configDir = tempDir('runova-cursor-config-');
   mkdirSync(join(configDir, 'User', 'globalStorage'), { recursive: true });
   vi.stubEnv('CURSOR_CONFIG_DIR', configDir);
   // The per-platform branches read these, so they are pinned at empty folders. Otherwise a test
   // could pick up the Cursor installation of whoever is running it.
-  vi.stubEnv('APPDATA', tempDir('agentmate-cursor-appdata-'));
-  vi.stubEnv('XDG_CONFIG_HOME', tempDir('agentmate-cursor-xdg-'));
+  vi.stubEnv('APPDATA', tempDir('runova-cursor-appdata-'));
+  vi.stubEnv('XDG_CONFIG_HOME', tempDir('runova-cursor-xdg-'));
 });
 
 afterEach(() => {
@@ -300,7 +300,7 @@ describe('the read itself', () => {
   });
 
   it('reads the Cursor folder under APPDATA on Windows', async () => {
-    const appData = tempDir('agentmate-cursor-appdata2-');
+    const appData = tempDir('runova-cursor-appdata2-');
     vi.stubEnv('CURSOR_CONFIG_DIR', '');
     vi.stubEnv('APPDATA', appData);
     writeState({ 'cursorAuth/cachedEmail': '"win@example.com"' }, join(appData, 'Cursor'));
@@ -312,7 +312,7 @@ describe('the read itself', () => {
   });
 
   it('reads XDG_CONFIG_HOME on Linux', async () => {
-    const xdg = tempDir('agentmate-cursor-xdg2-');
+    const xdg = tempDir('runova-cursor-xdg2-');
     vi.stubEnv('CURSOR_CONFIG_DIR', '');
     vi.stubEnv('XDG_CONFIG_HOME', xdg);
     writeState({ 'cursorAuth/cachedEmail': '"linux@example.com"' }, join(xdg, 'Cursor'));

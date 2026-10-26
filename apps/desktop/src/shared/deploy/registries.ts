@@ -61,7 +61,7 @@ export function registryLabel(registry: string): string {
 export function githubNewTokenUrl(): string {
   const params = new URLSearchParams({
     scopes: GITHUB_PACKAGES_SCOPE,
-    description: 'AgentMate server pulls',
+    description: 'Runova server pulls',
   });
   return `https://github.com/settings/tokens/new?${params.toString()}`;
 }

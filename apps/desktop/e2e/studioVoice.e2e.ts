@@ -26,7 +26,7 @@ const TWO = 'و این صحنه دوم است که خودم می‌خوانم.';
 type Clip = { id: string; trackId: string; start: number; duration: number };
 type Scene = { id: string; targetDuration: number; voiceRef: string | null };
 type Bridge = {
-  agentmat: {
+  runova: {
     studio: {
       updateSettings(p: unknown): Promise<unknown>;
       create(input: unknown): Promise<{ id: string }>;
@@ -101,7 +101,7 @@ test('narrates Persian scenes, captions one by its voice, records another and re
   writeToneWav(tone);
   const app = await launchApp({
     settings: { openaiApiKey: TTS_KEY },
-    env: { AGENTMATE_STUDIO_TTS_URL: tts.url },
+    env: { RUNOVA_STUDIO_TTS_URL: tts.url },
     args: [
       '--use-fake-ui-for-media-stream',
       '--use-fake-device-for-media-stream',
@@ -113,10 +113,10 @@ test('narrates Persian scenes, captions one by its voice, records another and re
   opened.push(app);
   const page = app.page;
   try {
-    const library = join(app.root, 'Videos', 'AgentMate Studio');
+    const library = join(app.root, 'Videos', 'Runova Studio');
     const videoId = await page.evaluate(
       async ({ library, html, one, two }) => {
-        const { studio, studioScenes } = (window as unknown as Bridge).agentmat;
+        const { studio, studioScenes } = (window as unknown as Bridge).runova;
         await studio.updateSettings({ defaultRoot: library });
         const video = await studio.create({
           title: 'Voice test',
@@ -166,7 +166,7 @@ test('narrates Persian scenes, captions one by its voice, records another and re
       { library, html: SCENE_HTML, one: ONE, two: TWO },
     );
     const doc = async () =>
-      (await page.evaluate((id) => (window as unknown as Bridge).agentmat.studio.open(id), videoId))
+      (await page.evaluate((id) => (window as unknown as Bridge).runova.studio.open(id), videoId))
         .session.document;
 
     await page.evaluate((id) => {
@@ -233,7 +233,7 @@ test('narrates Persian scenes, captions one by its voice, records another and re
     // An ElevenLabs key is sealed on disk, never written out as it is.
     const engines = await page.evaluate(
       (key) =>
-        (window as unknown as Bridge).agentmat.studioAudio.setKey({ engine: 'elevenlabs', key }),
+        (window as unknown as Bridge).runova.studioAudio.setKey({ engine: 'elevenlabs', key }),
       TTS_KEY,
     );
     expect(engines.find((e) => e.id === 'elevenlabs')?.problem).toBeNull();
@@ -248,7 +248,7 @@ test('narrates Persian scenes, captions one by its voice, records another and re
     await render.getByRole('button', { name: 'Render', exact: true }).click();
     await page.keyboard.press('Escape');
     const renderJobs = () =>
-      page.evaluate((id) => (window as unknown as Bridge).agentmat.studioRender.jobs(id), videoId);
+      page.evaluate((id) => (window as unknown as Bridge).runova.studioRender.jobs(id), videoId);
     // Waits for the render to end either way, then names what went wrong if it failed.
     await expect
       .poll(

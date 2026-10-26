@@ -44,7 +44,7 @@ export function AccessRulesCard({ zone }: { zone: CloudflareZone }): React.JSX.E
   const key = queryKeys.cloudflareAccessRules(zone.id);
   const rules = useQuery({
     queryKey: key,
-    queryFn: () => window.agentmat.cloudflare.listAccessRules(zone.id),
+    queryFn: () => window.runova.cloudflare.listAccessRules(zone.id),
   });
   const loadError = useCloudflareError(rules.error);
   const [value, setValue] = useState('');
@@ -58,7 +58,7 @@ export function AccessRulesCard({ zone }: { zone: CloudflareZone }): React.JSX.E
     if (!target?.ok) return;
     setBusy(true);
     try {
-      const created = await window.agentmat.cloudflare.createAccessRule(zone.id, {
+      const created = await window.runova.cloudflare.createAccessRule(zone.id, {
         mode,
         value: value.trim(),
         notes: notes.trim(),
@@ -84,7 +84,7 @@ export function AccessRulesCard({ zone }: { zone: CloudflareZone }): React.JSX.E
     });
     if (!confirmed) return;
     try {
-      await window.agentmat.cloudflare.deleteAccessRule(zone.id, rule.id);
+      await window.runova.cloudflare.deleteAccessRule(zone.id, rule.id);
       toast.success(`Deleted the rule for ${rule.value}.`);
       void queryClient.invalidateQueries({ queryKey: key });
     } catch (error) {

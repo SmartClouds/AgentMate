@@ -44,9 +44,9 @@ async function createProject(current: LaunchedApp): Promise<void> {
     async ({ folderPath, name }) => {
       const api = (
         window as unknown as {
-          agentmat: { projects: { create(input: unknown): Promise<{ id: string }> } };
+          runova: { projects: { create(input: unknown): Promise<{ id: string }> } };
         }
-      ).agentmat;
+      ).runova;
       await api.projects.create({
         name,
         folderPath,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { SiteSettings } from '../protocol/generated/AgentMate.ServerCore.Contracts';
+import type { SiteSettings } from '../protocol/generated/Runova.ServerCore.Contracts';
 import { FakeCore } from './fakeCore';
 
 /** The fake core's nginx keeps the rules the desktop's tests lean on. */

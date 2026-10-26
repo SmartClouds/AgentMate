@@ -5,7 +5,7 @@ import {
   type RemoteObservation,
   type SyncPlan,
   syncPathFolder,
-} from '@agentmat/core';
+} from '@runova/core';
 import { filesError } from '../../../shared/deployFilesErrors';
 import type { FilesPlanNotice, FilesPlanView } from '../../../shared/deployFilesTypes';
 import { limiter } from '../../util/limiter';

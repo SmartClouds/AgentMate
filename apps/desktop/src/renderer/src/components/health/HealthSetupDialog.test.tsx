@@ -22,7 +22,7 @@ const { HealthSetupDialog } = await import('./HealthSetupDialog');
 
 const setup = {
   prompt: 'Add a secured health endpoint to this app.',
-  spec: '# AgentMate Health Protocol',
+  spec: '# Runova Health Protocol',
 };
 
 function renderDialog(overrides: Record<string, unknown> = {}) {

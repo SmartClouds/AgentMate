@@ -2,14 +2,14 @@
 title: Vault
 category: Connect
 order: 40
-summary: A password manager built into AgentMate that keeps logins, API keys, secure notes and custom secrets encrypted on your computer behind one master password.
+summary: A password manager built into Runova that keeps logins, API keys, secure notes and custom secrets encrypted on your computer behind one master password.
 keywords: vault, secrets, passwords, password manager, master password, api keys, logins, notes, totp, authenticator, 2fa, lock, unlock, import, export, csv, bitwarden, 1password, generator, clipboard
 route: /vault
 ---
 
-The Vault is a password manager inside AgentMate. It stores logins, API keys, private notes and custom entries in one encrypted file on your computer. Everything is locked with a single master password that only you know. Passwords stay hidden until you ask to see or copy them, and a copied value is wiped from the clipboard after a short time.
+The Vault is a password manager inside Runova. It stores logins, API keys, private notes and custom entries in one encrypted file on your computer. Everything is locked with a single master password that only you know. Passwords stay hidden until you ask to see or copy them, and a copied value is wiped from the clipboard after a short time.
 
-The Vault never sends your data anywhere. It is stored locally, and AgentMate cannot recover the master password for you.
+The Vault never sends your data anywhere. It is stored locally, and Runova cannot recover the master password for you.
 
 ## Where to find it
 
@@ -19,9 +19,9 @@ Click **Vault** in the sidebar under **Connect**, or open the command palette an
 
 The first time you open the Vault, it shows "Create your vault".
 
-1. Type a **Master password** (at least 10 characters). A strength meter shows how strong it is. AgentMate also refuses passwords that are too easy to guess and suggests a longer phrase of unrelated words.
+1. Type a **Master password** (at least 10 characters). A strength meter shows how strong it is. Runova also refuses passwords that are too easy to guess and suggests a longer phrase of unrelated words.
 2. Type it again under **Type it again**.
-3. Tick the box saying you understand AgentMate cannot recover this password. If you forget it, the vault can only be reset, and everything in it is lost.
+3. Tick the box saying you understand Runova cannot recover this password. If you forget it, the vault can only be reset, and everything in it is lost.
 4. Click **Create vault**.
 
 > [!WARNING]
@@ -34,25 +34,25 @@ The first time you open the Vault, it shows "Create your vault".
 When the vault is locked, the page says "Vault is locked". Type your master password and click **Unlock**.
 
 - If the password is wrong, the box shakes and says "That password doesn't match this vault."
-- After a few wrong tries in a row, AgentMate makes you wait a few seconds between tries ("Too many tries. Try again in Ns.").
+- After a few wrong tries in a row, Runova makes you wait a few seconds between tries ("Too many tries. Try again in Ns.").
 - The lock screen tells you why it locked, if it knows: "Locked after N minutes without activity.", "Locked when this computer locked or went to sleep." or "Locked to restore a backup..." (use the master password of the vault in that backup).
 - If the vault file is damaged, the message offers to reset it and start a new, empty vault.
 
-The vault is locked each time you open AgentMate until you unlock it.
+The vault is locked each time you open Runova until you unlock it.
 
 ### Lock
 
 The vault locks in these cases:
 
 - You click the **Lock vault** (padlock) button in the list header, press `Ctrl+L` (`Cmd+L` on macOS), or choose **Lock Vault** in the command palette.
-- It has been idle too long. The default is 15 minutes. Clicking or typing in AgentMate counts as activity, just moving the mouse does not.
+- It has been idle too long. The default is 15 minutes. Clicking or typing in Runova counts as activity, just moving the mouse does not.
 - Your computer locks or goes to sleep (on by default).
 
 You can change the timers in Settings (see below).
 
 ### Forgot your master password
 
-Click **Forgot your master password?** on the lock screen. The dialog "Reset the vault?" explains that without the password nothing in the vault can be opened, by you or by AgentMate. Resetting sets the current vault file aside in AgentMate's data folder and starts an empty vault. Type `RESET` to confirm, then click **Reset vault**. A toast says the old file was set aside. You can also reset from **Settings**, **Vault**, **Reset vault**.
+Click **Forgot your master password?** on the lock screen. The dialog "Reset the vault?" explains that without the password nothing in the vault can be opened, by you or by Runova. Resetting sets the current vault file aside in Runova's data folder and starts an empty vault. Type `RESET` to confirm, then click **Reset vault**. A toast says the old file was set aside. You can also reset from **Settings**, **Vault**, **Reset vault**.
 
 ## The Vault page
 
@@ -121,13 +121,13 @@ Selecting an entry shows its details. Secrets are hidden behind dots.
 5. Optionally turn on **Pin to favorites**.
 6. Click **Save**, or press `Ctrl+Enter`.
 
-If you close the dialog with unsaved changes, AgentMate asks "Discard changes?".
+If you close the dialog with unsaved changes, Runova asks "Discard changes?".
 
 When you edit an entry and leave a secret unchanged, the saved secret is kept as it is.
 
 ### Site icons
 
-When you enter a website, AgentMate tries to fetch the site's icon when you leave the field. **Use site icon** fetches it on demand (and tells you if none was found). **Remove site icon** goes back to the letter tile.
+When you enter a website, Runova tries to fetch the site's icon when you leave the field. **Use site icon** fetches it on demand (and tells you if none was found). **Remove site icon** goes back to the letter tile.
 
 ### Password generator
 
@@ -144,10 +144,10 @@ Click the dice button in the password box to open the generator.
 
 ### Import from CSV
 
-Use **More vault actions**, **Import from CSV**. The dialog "Import passwords" works with exports from Chrome, Edge, Firefox, Bitwarden, 1Password and AgentMate. For any other CSV you pick which column is which.
+Use **More vault actions**, **Import from CSV**. The dialog "Import passwords" works with exports from Chrome, Edge, Firefox, Bitwarden, 1Password and Runova. For any other CSV you pick which column is which.
 
 1. Click **Choose CSV file** and pick the file.
-2. AgentMate shows the file name, the detected layout (or "Unknown layout") and a preview of what will be imported. For an unknown layout, under **Match the columns**, set each column to Title, Username, Password, Website, Notes, Tags, Authenticator key, Favorite, **Add to notes** or **Don't import**.
+2. Runova shows the file name, the detected layout (or "Unknown layout") and a preview of what will be imported. For an unknown layout, under **Match the columns**, set each column to Title, Username, Password, Website, Notes, Tags, Authenticator key, Favorite, **Add to notes** or **Don't import**.
 3. If some entries already exist but differ, pick what to do: **Keep the saved entry**, **Replace the saved entry** or **Keep both**. Identical entries are skipped automatically.
 4. Click **Import N entries**.
 5. A summary shows how many were added, replaced, skipped and unreadable.
@@ -159,7 +159,7 @@ Use **More vault actions**, **Import from CSV**. The dialog "Import passwords" w
 
 Use **More vault actions**, **Export to CSV**. The dialog "Export the vault" asks you to:
 
-1. Choose a format: **AgentMate CSV** (every field of every entry type, imports back into AgentMate exactly) or **Bitwarden CSV** (for moving to Bitwarden or another manager that reads its format).
+1. Choose a format: **Runova CSV** (every field of every entry type, imports back into Runova exactly) or **Bitwarden CSV** (for moving to Bitwarden or another manager that reads its format).
 2. Type your **Master password** to confirm it is you.
 3. Click **Export** and choose where to save the file.
 
@@ -204,13 +204,13 @@ On macOS use `Cmd` instead of `Ctrl`. When a dialog is open, or when the termina
 
 ## How it is stored and backed up
 
-- The vault is one file, `vault.json`, in AgentMate's data folder. It is encrypted with AES-256-GCM using a key made from your master password with scrypt, a slow function that makes guessing passwords expensive. Only you can unlock it.
-- It is not shared with other devices. AgentMate does not sync it.
-- **Backups.** In **Settings**, **Data**, the backup option **Include the Vault (stays encrypted with its master password)** adds the vault file to the backup. It stays locked with its master password, so the backup needs no extra password for it. When you restore a backup that contains a Vault, AgentMate asks "Restore the Vault too?". Restoring replaces this computer's Vault, which is set aside in the data folder, and the vault locks. Unlock it with the master password the vault had when the backup was made. See [Backup and restore](backup-restore.md).
+- The vault is one file, `vault.json`, in Runova's data folder. It is encrypted with AES-256-GCM using a key made from your master password with scrypt, a slow function that makes guessing passwords expensive. Only you can unlock it.
+- It is not shared with other devices. Runova does not sync it.
+- **Backups.** In **Settings**, **Data**, the backup option **Include the Vault (stays encrypted with its master password)** adds the vault file to the backup. It stays locked with its master password, so the backup needs no extra password for it. When you restore a backup that contains a Vault, Runova asks "Restore the Vault too?". Restoring replaces this computer's Vault, which is set aside in the data folder, and the vault locks. Unlock it with the master password the vault had when the backup was made. See [Backup and restore](backup-restore.md).
 
 ## Using Vault entries elsewhere
 
-The Vault is for storing and copying secrets. AgentMate does not automatically hand Vault entries to your AI CLIs, terminals or SSH connections. To use one, copy it with the copy button or shortcut and paste it where you need it.
+The Vault is for storing and copying secrets. Runova does not automatically hand Vault entries to your AI CLIs, terminals or SSH connections. To use one, copy it with the copy button or shortcut and paste it where you need it.
 
 The saved passwords for SSH and Remote Desktop servers, and the secrets in project environments, are protected separately. They use your operating system keychain, plus an optional servers passkey you can set on the Remote page. See [Remote](remote.md#the-servers-passkey).
 

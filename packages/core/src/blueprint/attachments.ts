@@ -1,3 +1,5 @@
+import { LEGACY_BLUEPRINT_FILE_SCHEME } from '../legacyNames.js';
+
 /**
  * Blueprint files are referenced from inside a step's markdown rather than
  * hanging off the step as a list, so a screenshot can sit between the sentence
@@ -8,8 +10,18 @@
  * (and seek) in the preview: a data URL would mean base64-ing the whole thing
  * into the renderer first.
  */
-export const BLUEPRINT_FILE_SCHEME = 'agentmate-file';
+export const BLUEPRINT_FILE_SCHEME = 'runova-file';
 export const BLUEPRINT_FILE_HOST = 'blueprint';
+
+/**
+ * Links saved before the app was renamed use the old scheme. Rewritten when a blueprint is read,
+ * so they keep pointing at their files.
+ */
+export function relinkLegacyAttachments(text: string): string {
+  return text.includes(`${LEGACY_BLUEPRINT_FILE_SCHEME}://`)
+    ? text.replaceAll(`${LEGACY_BLUEPRINT_FILE_SCHEME}://`, `${BLUEPRINT_FILE_SCHEME}://`)
+    : text;
+}
 
 export function blueprintFileUrl(fileName: string): string {
   return `${BLUEPRINT_FILE_SCHEME}://${BLUEPRINT_FILE_HOST}/${encodeURIComponent(fileName)}`;
@@ -79,7 +91,7 @@ export function referencedAttachmentNames(text: string): Set<string> {
  *
  * This runs before a step is translated and before it reaches the generated
  * prompt or the project's markdown. Both of those are read somewhere the app's
- * URL scheme means nothing, so an embedded `![](agentmate-file://…)` would be a
+ * URL scheme means nothing, so an embedded `![](runova-file://…)` would be a
  * dead link; the name is the part that carries the information.
  */
 export function flattenAttachmentRefs(text: string): string {

@@ -6,7 +6,7 @@ import {
   type HealthServiceResult,
   type HealthState,
   type Project,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { HealthSecretReveal, HealthTargetSummary } from '@shared/healthTypes';
 import { useQueryClient } from '@tanstack/react-query';
 import { useId, useState } from 'react';
@@ -465,7 +465,7 @@ export function HealthTargetDetail({
     try {
       const prompt = await queryClient.fetchQuery({
         queryKey: healthFixPromptKey(target.id),
-        queryFn: async () => (await window.agentmat.health.fixPrompt(target.id)) ?? null,
+        queryFn: async () => (await window.runova.health.fixPrompt(target.id)) ?? null,
         staleTime: 0,
       });
       if (prompt) copy(prompt, 'Prompt');
@@ -483,7 +483,7 @@ export function HealthTargetDetail({
     const noun = one.authMode === 'basic' ? 'password' : 'key';
     const confirmed = await confirmDialog({
       title: `Rotate the ${noun} for ${one.name}?`,
-      description: `AgentMate makes a new ${noun} and the old one stops working right away. Checks fail until the server has the new hash.`,
+      description: `Runova makes a new ${noun} and the old one stops working right away. Checks fail until the server has the new hash.`,
       icon: Key,
       confirmLabel: `Rotate ${noun}`,
     });
@@ -501,7 +501,7 @@ export function HealthTargetDetail({
     const confirmed = await confirmDialog({
       title: `Delete ${one.name}?`,
       description:
-        'AgentMate stops checking it and forgets its history, incidents and key. The endpoint in your project stays as it is.',
+        'Runova stops checking it and forgets its history, incidents and key. The endpoint in your project stays as it is.',
       icon: Trash2,
       confirmLabel: 'Delete',
       variant: 'destructive',

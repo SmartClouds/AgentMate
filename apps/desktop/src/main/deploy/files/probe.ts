@@ -85,7 +85,7 @@ export async function testConnection(
     return finish();
   }
 
-  const scratch = await mkdtemp(join(tmpdir(), 'agentmate-probe-'));
+  const scratch = await mkdtemp(join(tmpdir(), 'runova-probe-'));
   try {
     let root: string;
     try {
@@ -103,7 +103,7 @@ export async function testConnection(
       return finish();
     }
 
-    const probe = joinRemote(root, `agentmate-probe-${options.randomHex?.() ?? randomHex()}.txt`);
+    const probe = joinRemote(root, `runova-probe-${options.randomHex?.() ?? randomHex()}.txt`);
     const put = async (content: string) => {
       const path = join(scratch, `probe-${content.length}`);
       await writeFile(path, content);
@@ -116,7 +116,7 @@ export async function testConnection(
     let atomic: boolean | null = null;
     let written = false;
     try {
-      await put('AgentMate checks that it can write here. This file is removed right away.\n');
+      await put('Runova checks that it can write here. This file is removed right away.\n');
       written = true;
       pass('write');
     } catch (error) {
@@ -124,7 +124,7 @@ export async function testConnection(
     }
     if (written) {
       try {
-        atomic = (await put('AgentMate checks that it can replace a file here.\n')).atomic;
+        atomic = (await put('Runova checks that it can replace a file here.\n')).atomic;
         if (atomic) pass('replace');
         else {
           pass(

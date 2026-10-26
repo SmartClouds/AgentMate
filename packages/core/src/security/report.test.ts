@@ -112,7 +112,7 @@ describe('buildSecurityReportMarkdown', () => {
         findings: makeFindings(1, { severity: 'critical' }),
       }),
     );
-    expect(report).toContain('# Security scan: AgentMate');
+    expect(report).toContain('# Security scan: Runova');
     expect(report).toContain('**Needs attention** (score 54/100) - 1 critical, 3 medium, 2 low');
   });
 
@@ -174,7 +174,7 @@ describe('buildSecurityFixPrompt', () => {
       makeRecord({ findings: makeFindings(1, { severity: 'high' }) }),
     );
     // The instruction has to survive truncation by whatever reads it, so it comes first.
-    expect(prompt.startsWith('I ran security scanners on the "AgentMate" project.')).toBe(true);
+    expect(prompt.startsWith('I ran security scanners on the "Runova" project.')).toBe(true);
     expect(prompt.indexOf('Please fix the findings below.')).toBeLessThan(
       prompt.indexOf('### [High]'),
     );
@@ -247,7 +247,7 @@ describe('buildSecurityJson', () => {
     const record = makeRecord({ findings: makeFindings(2, { severity: 'high' }) });
     const parsed: unknown = JSON.parse(buildSecurityJson(record));
     expect(parsed).toEqual({
-      project: 'AgentMate',
+      project: 'Runova',
       createdAt: record.createdAt,
       status: 'complete',
       verdict: 'caution',
@@ -262,6 +262,6 @@ describe('buildSecurityJson', () => {
   });
 
   it('is indented, since a human reads this as often as a tool does', () => {
-    expect(buildSecurityJson(makeRecord())).toContain('\n  "project": "AgentMate"');
+    expect(buildSecurityJson(makeRecord())).toContain('\n  "project": "Runova"');
   });
 });

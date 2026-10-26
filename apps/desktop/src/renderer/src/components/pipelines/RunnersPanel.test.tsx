@@ -467,7 +467,7 @@ describe('RunnersPanel collapsing and overflow', () => {
     // The counts and a waiting job stay readable in the header.
     expect(within(panel()).getByText('1 busy')).toBeInTheDocument();
     expect(within(panel()).getByText('1 waiting')).toBeInTheDocument();
-    expect(localStorage.getItem('agentmate:runners-panel-collapsed')).toBe('true');
+    expect(localStorage.getItem('runova:runners-panel-collapsed')).toBe('true');
 
     unmount();
     await renderLoaded(full);
@@ -533,7 +533,7 @@ describe('RunnersPanel hidden orgs', () => {
     await user.click(screen.getByRole('button', { name: 'Dismiss the SmartClouds hint' }));
 
     expect(screen.queryByText(hint)).toBeNull();
-    expect(JSON.parse(localStorage.getItem('agentmate:runners-dismissed-orgs') ?? '[]')).toEqual([
+    expect(JSON.parse(localStorage.getItem('runova:runners-dismissed-orgs') ?? '[]')).toEqual([
       'SmartClouds',
     ]);
 

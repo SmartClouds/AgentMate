@@ -1,5 +1,5 @@
 import { type FSWatcher, watch } from 'node:fs';
-import { taskIdFromFileName } from '@agentmat/core';
+import { taskIdFromFileName } from '@runova/core';
 
 /**
  * Keeps the board live: watches a project's tasks folder and its handoffs folder while the board

@@ -7,7 +7,7 @@ keywords: mcp, mcp servers, model context protocol, mcp marketplace, .mcp.json, 
 route: /mcp
 ---
 
-MCP (Model Context Protocol) servers give an AI agent extra tools, such as talking to GitHub, a database or a payment API. The MCP Servers page is a marketplace: you pick a project, pick a server, and AgentMate writes the server into that project's `.mcp.json` file, which MCP-aware agents like Claude Code read. You can also add your own repositories of servers.
+MCP (Model Context Protocol) servers give an AI agent extra tools, such as talking to GitHub, a database or a payment API. The MCP Servers page is a marketplace: you pick a project, pick a server, and Runova writes the server into that project's `.mcp.json` file, which MCP-aware agents like Claude Code read. You can also add your own repositories of servers.
 
 ## Where to find it
 
@@ -15,7 +15,7 @@ Click **MCP Servers** in the sidebar under **Agents**, or open the command palet
 
 ## How it works
 
-Installing a server is project-based. AgentMate adds an entry for the server to the `.mcp.json` file in the project's folder and keeps a small record of what it installed (the server, the repository it came from and the version). Removing a server deletes that entry again. Servers are not installed globally from this page, so choose the project you want first.
+Installing a server is project-based. Runova adds an entry for the server to the `.mcp.json` file in the project's folder and keeps a small record of what it installed (the server, the repository it came from and the version). Removing a server deletes that entry again. Servers are not installed globally from this page, so choose the project you want first.
 
 ## The page
 
@@ -27,7 +27,7 @@ Use the **Project** picker at the top left. Until you choose one, the project bo
 
 The **Repository** picker selects where the catalog comes from. The first repository is selected for you.
 
-- **Bowora MCP Directory** is built in. It is bundled with AgentMate (47 servers, mostly under Developer Tools, plus a few DevOps and Infrastructure ones), so it works offline and cannot be refreshed or removed. It carries a **Built-in** badge.
+- **Bowora MCP Directory** is built in. It is bundled with Runova (47 servers, mostly under Developer Tools, plus a few DevOps and Infrastructure ones), so it works offline and cannot be refreshed or removed. It carries a **Built-in** badge.
 - Any repository you add yourself shows a refresh button and a remove button next to the picker.
 
 ### Search and filters
@@ -46,10 +46,10 @@ Servers are sorted by popularity, then by name.
 Each card shows a letter icon, the server name, its category (when the repository has several), a short description, the author, the version (when it is a specific one) and its transport (`stdio` for a local program, or an HTTP-based type for a remote one). The buttons are:
 
 - **Install** adds the server to the chosen project. While it works the button reads **Installing…**.
-- **Remove** (instead of **Install**, when the server is already installed) removes it from the chosen project. AgentMate asks you to confirm.
+- **Remove** (instead of **Install**, when the server is already installed) removes it from the chosen project. Runova asks you to confirm.
 - A globe icon opens the server's website, and a branch icon opens its source repository.
 
-A card marked **Manual setup** has no command or URL that AgentMate could parse, so its **Install** button is disabled. It is listed for discovery only, so follow the server's own docs to set it up.
+A card marked **Manual setup** has no command or URL that Runova could parse, so its **Install** button is disabled. It is listed for discovery only, so follow the server's own docs to set it up.
 
 ## Install a server
 
@@ -63,7 +63,7 @@ A card marked **Manual setup** has no command or URL that AgentMate could parse,
 
 ## Remove a server
 
-Click **Remove** on an installed server's card and confirm, or open the project's **MCP** tab and click the trash icon next to the server. Either way, AgentMate deletes the server's entry from `.mcp.json` and from its install record.
+Click **Remove** on an installed server's card and confirm, or open the project's **MCP** tab and click the trash icon next to the server. Either way, Runova deletes the server's entry from `.mcp.json` and from its install record.
 
 ## Add your own repository
 
@@ -73,13 +73,13 @@ A repository is a catalog of MCP servers described by a `repository.json` index.
 2. Enter a **Name** (required).
 3. Choose the **Type**:
    - **Local folder**: click the folder icon to browse. The folder must contain a `repository.json`.
-   - **Git repository**: a URL such as `https://github.com/org/mcp-servers.git`. AgentMate clones it and pulls updates when you refresh. The repository needs a `repository.json` at its root.
+   - **Git repository**: a URL such as `https://github.com/org/mcp-servers.git`. Runova clones it and pulls updates when you refresh. The repository needs a `repository.json` at its root.
    - **URL (JSON index)**: a link to a `repository.json` file, for example `https://example.com/repository.json`.
 4. Click **Add**.
 
 To pick up changes later, select the repository and click the refresh button. If a repository cannot be loaded, the page says "Couldn't load this repository" with a **Try again** button.
 
-To remove a repository, select it and click the trash button. This only removes it from AgentMate, and servers already installed in projects stay put.
+To remove a repository, select it and click the trash button. This only removes it from Runova, and servers already installed in projects stay put.
 
 ## Empty states
 

@@ -1,5 +1,5 @@
 import { coreErrorMessage } from '@shared/coreErrors';
-import type { AssistantMode } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { AssistantMode } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployServer } from '@shared/deployTypes';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -49,7 +49,7 @@ export function ModeSwitch({
     try {
       const info = await stepUp.run(
         (proof) =>
-          window.agentmat.deployAssistant.setMode({ serverId: server.id, mode: next, ...proof }),
+          window.runova.deployAssistant.setMode({ serverId: server.id, mode: next, ...proof }),
         'let the AI run read-only checks without asking',
       );
       if (info) queryClient.setQueryData(queryKeys.deployAssistantMode(server.id), info);

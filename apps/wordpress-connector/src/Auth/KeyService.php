@@ -3,19 +3,19 @@
  * Creates one-time connection keys (wp-admin and WP-CLI). A key is good once, for 15 minutes.
  * Its secret is stored only until the key is used, burned or expired, and never logged.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Auth;
+namespace Runova\Connector\Auth;
 
-use AgentMate\Connector\Audit\AuditLog;
-use AgentMate\Connector\Crypto\Base64Url;
-use AgentMate\Connector\Crypto\Crypto;
-use AgentMate\Connector\Crypto\SiteKeys;
-use AgentMate\Connector\Env\Environment;
-use AgentMate\Connector\Protocol;
-use AgentMate\Connector\Storage\Storage;
-use AgentMate\Connector\Support\Text;
+use Runova\Connector\Audit\AuditLog;
+use Runova\Connector\Crypto\Base64Url;
+use Runova\Connector\Crypto\Crypto;
+use Runova\Connector\Crypto\SiteKeys;
+use Runova\Connector\Env\Environment;
+use Runova\Connector\Protocol;
+use Runova\Connector\Storage\Storage;
+use Runova\Connector\Support\Text;
 
 final class KeyService
 {
@@ -49,7 +49,7 @@ final class KeyService
         if ($label === null || Text::hasControl($label) || Text::codePoints($label) > self::MAX_LABEL) {
             return null;
         }
-        // Shown in wp-admin, WP-CLI and AgentMate: nothing that could make it read as something else.
+        // Shown in wp-admin, WP-CLI and Runova: nothing that could make it read as something else.
         return Text::displaySafe($label, self::MAX_LABEL);
     }
 

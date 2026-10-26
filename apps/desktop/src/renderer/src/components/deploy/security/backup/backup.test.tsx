@@ -43,7 +43,7 @@ function renderCard(bridge: Record<string, unknown> = {}, server = SERVER) {
         backupCoreVersion: '1.52.0',
         backupHostName: 'old-web',
         backupCreatedAtUnixMs: Date.UTC(2026, 8, 30),
-        previousStateFolder: '/var/lib/agentmate-core-restore/previous',
+        previousStateFolder: '/var/lib/runova-core-restore/previous',
       }),
       ...bridge,
     },
@@ -134,7 +134,7 @@ describe('BackupCard', () => {
       password: 'correct horse battery staple',
     });
     expect(await within(dialog).findByText(/Restored the backup of old-web/)).toBeTruthy();
-    expect(within(dialog).getByText('/var/lib/agentmate-core-restore/previous')).toBeTruthy();
+    expect(within(dialog).getByText('/var/lib/runova-core-restore/previous')).toBeTruthy();
   });
 
   it('says why a restore stopped', async () => {

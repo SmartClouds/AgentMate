@@ -8,7 +8,7 @@ import { APP_ROOT } from './paths';
  * ftp-server/Dockerfile. Tests skip it without Docker; see `dockerAvailable` in sshServer.ts.
  */
 
-const IMAGE = 'agentmate-e2e-ftp-server';
+const IMAGE = 'runova-e2e-ftp-server';
 
 export const FTP_USER = 'ftpuser';
 export const FTP_PASSWORD = 'ftp-s3cret';
@@ -82,7 +82,7 @@ export function passivePortRange(pid = process.pid, attempt = 0): { min: number;
 /** Starts the container on the first passive port block nothing else on this computer holds. */
 function runContainer(): string {
   for (let attempt = 0; ; attempt++) {
-    const name = `agentmate-e2e-ftp-${process.pid}-${Date.now()}`;
+    const name = `runova-e2e-ftp-${process.pid}-${Date.now()}`;
     const { min, max } = passivePortRange(process.pid, attempt);
     try {
       docker([

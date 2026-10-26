@@ -612,7 +612,7 @@ export function VersionChangeReview({
     let diskId: string | null | undefined;
     try {
       if (change.hunks && change.beforeId && change.afterId && fromId) {
-        const result = await window.agentmat.git.writeVersionHunks({
+        const result = await window.runova.git.writeVersionHunks({
           projectId,
           path,
           fromId,
@@ -626,7 +626,7 @@ export function VersionChangeReview({
         else failure = result.message;
       } else {
         const toRevert = reverted.length > 0;
-        const result = await window.agentmat.git.swapVersionFile({
+        const result = await window.runova.git.swapVersionFile({
           projectId,
           path,
           fromId,

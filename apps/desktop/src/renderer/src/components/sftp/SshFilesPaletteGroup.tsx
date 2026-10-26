@@ -30,7 +30,7 @@ export function SshFilesPaletteGroup({
   const navigate = useNavigate();
   const serversQuery = useQuery({
     queryKey: queryKeys.sshServers,
-    queryFn: () => window.agentmat.ssh.listServers(),
+    queryFn: () => window.runova.ssh.listServers(),
     enabled,
     meta: { silentLoading: true },
   });

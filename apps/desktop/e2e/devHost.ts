@@ -14,8 +14,8 @@ import { APP_ROOT } from './paths';
  * DevHost a developer uses by hand.
  */
 
-const PROJECT = join(APP_ROOT, '..', 'server-core', 'src', 'AgentMate.ServerCore.DevHost');
-const DLL = join(PROJECT, 'bin', 'Debug', 'net10.0', 'AgentMate.ServerCore.DevHost.dll');
+const PROJECT = join(APP_ROOT, '..', 'server-core', 'src', 'Runova.ServerCore.DevHost');
+const DLL = join(PROJECT, 'bin', 'Debug', 'net10.0', 'Runova.ServerCore.DevHost.dll');
 const READY_TIMEOUT_MS = 60_000;
 
 export interface DevHost {
@@ -51,7 +51,7 @@ function freePort(): Promise<number> {
 function healthy(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const call = request(
-      { host: '127.0.0.1', port, path: '/api/v1/health', headers: { host: 'agentmate-core' } },
+      { host: '127.0.0.1', port, path: '/api/v1/health', headers: { host: 'runova-core' } },
       (response) => {
         response.resume();
         resolve(response.statusCode === 200);
@@ -67,13 +67,13 @@ function healthy(port: number): Promise<boolean> {
 export async function startDevHost(options: { args?: string[] } = {}): Promise<DevHost> {
   execFileSync('dotnet', ['build', PROJECT, '--nologo', '-v', 'quiet'], { stdio: 'inherit' });
   const port = await freePort();
-  const data = mkdtempSync(join(tmpdir(), 'agentmate-e2e-devhost-'));
+  const data = mkdtempSync(join(tmpdir(), 'runova-e2e-devhost-'));
   // Later arguments win, so this replaces the DevHost's own data folder.
   const child: ChildProcess = spawn(
     'dotnet',
     [DLL, `--Core:DataDirectory=${data}`, ...(options.args ?? [])],
     {
-      env: { ...process.env, AGENTMATE_DEV_CORE_PORT: String(port) },
+      env: { ...process.env, RUNOVA_DEV_CORE_PORT: String(port) },
       stdio: 'ignore',
     },
   );

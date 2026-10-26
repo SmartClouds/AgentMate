@@ -12,7 +12,7 @@ import type {
   PromptTemplate,
   ScheduledTask,
   SkillRepository,
-} from '@agentmat/core';
+} from '@runova/core';
 import {
   defaultProjectNotifications,
   isBlueprintStepId,
@@ -24,7 +24,7 @@ import {
   normalizeProjectRunCommands,
   normalizeProjectWorktreeSetup,
   withBlueprintDefaults,
-} from '@agentmat/core';
+} from '@runova/core';
 import type {
   BackupAttachmentBlob,
   FavoriteSkillRecord,
@@ -448,7 +448,7 @@ function buildAttachmentBlob(entry: Record_): BackupAttachmentBlob | null {
  * user when a backup carried them so they can look before running anything.
  */
 export function parseBackup(value: unknown): ParsedBackup {
-  if (!isRecord(value)) return { ok: false, error: 'That file is not a valid AgentMate backup.' };
+  if (!isRecord(value)) return { ok: false, error: 'That file is not a valid Runova backup.' };
   if (value.version !== BACKUP_VERSION) {
     return {
       ok: false,
@@ -456,7 +456,7 @@ export function parseBackup(value: unknown): ParsedBackup {
     };
   }
   if (!isRecord(value.data)) {
-    return { ok: false, error: 'That file is not a valid AgentMate backup.' };
+    return { ok: false, error: 'That file is not a valid Runova backup.' };
   }
 
   const raw = value.data;

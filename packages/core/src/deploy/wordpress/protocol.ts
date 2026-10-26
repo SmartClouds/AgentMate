@@ -1,7 +1,9 @@
 import type { ProjectWordPressItem } from '../../types/index.js';
 
+export * from './legacyNames.js';
+
 /**
- * The wire contract between AgentMate and the AgentMate Connector WordPress plugin (E19). Pure
+ * The wire contract between Runova and the Runova Connector WordPress plugin (E19). Pure
  * data: no Node or browser APIs, so the renderer, the main process and the vector generator all
  * read the same definitions. The PHP plugin mirrors every constant and shape here, and the shared
  * vectors in `vectors/protocol-v1.json` keep the two sides byte for byte in step.
@@ -23,13 +25,13 @@ export const WP_CONNECTOR_VERSION = '1.63.0';
 /** Every time on the wire, and every time the plugin reports, is whole Unix seconds. */
 export type WpUnixSeconds = number;
 /** First line of every canonical string. */
-export const WP_PROTOCOL_PREFIX = 'agentmate-wp/v1';
+export const WP_PROTOCOL_PREFIX = 'runova-wp/v1';
 export const WP_AUTH_FIELD = 'am_auth';
 export const WP_BUNDLE_FIELD = 'bundle';
 export const WP_BUNDLE_FILENAME = 'bundle.bin';
-export const WP_REST_NAMESPACE = 'agentmate/v1';
-/** `admin-ajax.php?action=agentmate_connector&route=<route>`, for sites whose REST API is blocked. */
-export const WP_AJAX_ACTION = 'agentmate_connector';
+export const WP_REST_NAMESPACE = 'runova/v1';
+/** `admin-ajax.php?action=runova_connector&route=<route>`, for sites whose REST API is blocked. */
+export const WP_AJAX_ACTION = 'runova_connector';
 /**
  * The query parameter that names the route on the admin-ajax and rescue endpoints:
  * `<rescueUrl>?route=/rescue/status`. Same multipart body, same signed reply, on every endpoint.
@@ -92,6 +94,7 @@ export const WP_ROUTES = {
   auditList: '/audit/list',
   connectionRevoke: '/connection/revoke',
   connectorUpdate: '/connector/update',
+  connectorMigrate: '/connector/migrate',
   rescueStatus: '/rescue/status',
   rescueRollback: '/rescue/rollback',
 } as const;
@@ -114,6 +117,7 @@ export const WP_WRITE_ROUTES: readonly WpRoute[] = [
   WP_ROUTES.deployRollback,
   WP_ROUTES.deployAbort,
   WP_ROUTES.connectorUpdate,
+  WP_ROUTES.connectorMigrate,
   WP_ROUTES.rescueRollback,
 ];
 
@@ -225,7 +229,7 @@ export interface WpSiteInfo {
   fileEditDisabled: boolean;
   /** What get_filesystem_method() said; anything but `direct` means no writes. */
   filesystemMethod: string;
-  /** AGENTMATE_CONNECTOR_READ_ONLY in wp-config.php. */
+  /** RUNOVA_CONNECTOR_READ_ONLY in wp-config.php. */
   readOnlyByConstant: boolean;
   /**
    * The connector can replace itself when a write connection asks (`/connector/update`): its folder
@@ -234,11 +238,14 @@ export interface WpSiteInfo {
    */
   selfUpdate?: boolean;
   /**
-   * The connector can fetch an update from the AgentMate GitHub release itself
+   * The connector can fetch an update from the Runova GitHub release itself
    * (`WpConnectorUpdateRequest.download`). Absent from connectors that only take the files from
    * the app.
    */
   updateDownload?: boolean;
+  /** Absent from a 1.63 connector. */
+  layout?: WpConnectorLayout;
+  endpoints?: WpConnectorEndpoints;
   sodium: 'native' | 'compat';
   limits: WpLimits;
   guard: { installed: boolean; rescueUrl: string | null };
@@ -404,6 +411,22 @@ export interface WpHelloResponse {
   rescueUrl: string | null;
   multisite: boolean;
   siteName: string;
+  /** Absent from a 1.63 connector, which runs in the old folder (`legacy`). */
+  layout?: WpConnectorLayout;
+  /** Where the site answers now, so an app that saved older addresses can repair them. */
+  endpoints?: WpConnectorEndpoints;
+}
+
+/**
+ * Where a site runs the connector from: its own folder (`runova`), or the 1.63 folder with the
+ * Runova code in it (`bridge`), which `/connector/migrate` moves to its own folder. A 1.63
+ * connector reports neither; the app calls that `legacy`.
+ */
+export type WpConnectorLayout = 'runova' | 'bridge';
+
+export interface WpConnectorEndpoints {
+  restUrl: string;
+  ajaxUrl: string;
 }
 
 export interface WpPairRequest {
@@ -541,9 +564,9 @@ export interface WpConnectorUpdateRequest {
   download?: { url: string };
 }
 
-/** The plugin zip on the AgentMate GitHub release of a version. Mirrors UPDATE_DOWNLOAD_URL. */
+/** The plugin zip on the Runova GitHub release of a version. Mirrors UPDATE_DOWNLOAD_URL. */
 export function wpConnectorReleaseUrl(version: string): string {
-  return `https://github.com/SmartClouds/AgentMate/releases/download/v${version}/agentmate-connector.zip`;
+  return `https://github.com/SmartClouds/Runova/releases/download/v${version}/runova-connector.zip`;
 }
 
 /** Why a site refused an update, in `details.reason` of an `updateRefused` error. */
@@ -566,6 +589,21 @@ export interface WpConnectorUpdateResponse {
   /** The version that was asked for, whether or not it stayed. */
   version: string;
   files: number;
+  checks: WpHealthCheck[];
+}
+
+/**
+ * `/connector/migrate`: a site in the bridge layout moves to its own folder, health-checks itself
+ * and puts everything back when that fails. `current` when it already runs from its own folder.
+ * The addresses are where the site answers afterwards; rescue.php moves with the folder.
+ */
+export interface WpConnectorMigrateResponse {
+  state: 'migrated' | 'current' | 'rolledBack';
+  layout: WpConnectorLayout;
+  version: string;
+  restUrl: string;
+  ajaxUrl: string;
+  rescueUrl: string | null;
   checks: WpHealthCheck[];
 }
 
@@ -597,6 +635,7 @@ export interface WpRouteMap {
   };
   '/connection/revoke': { request: Record<string, never>; response: { revoked: true } };
   '/connector/update': { request: WpConnectorUpdateRequest; response: WpConnectorUpdateResponse };
+  '/connector/migrate': { request: Record<string, never>; response: WpConnectorMigrateResponse };
   '/rescue/status': { request: Record<string, never>; response: WpRescueStatusResponse };
   '/rescue/rollback': { request: { deployId: string }; response: WpDeployStateResponse };
 }

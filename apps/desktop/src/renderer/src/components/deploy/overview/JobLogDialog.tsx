@@ -2,7 +2,7 @@ import { coreErrorMessage } from '@shared/coreErrors';
 import type {
   JobInfo,
   JobState,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useEffect, useRef, useState } from 'react';
 import { CircleCheck, CircleX, Spinner, StopCircle, TriangleAlert } from '@/components/icons';
 import { Button } from '@/components/ui/button';
@@ -96,7 +96,7 @@ export function JobLogDialog({
     setCancelling(true);
     setProblem(null);
     try {
-      await window.agentmat.deployJobs.cancel(serverId, current.id);
+      await window.runova.deployJobs.cancel(serverId, current.id);
     } catch (error) {
       setProblem(coreErrorMessage(error));
       setCancelling(false);

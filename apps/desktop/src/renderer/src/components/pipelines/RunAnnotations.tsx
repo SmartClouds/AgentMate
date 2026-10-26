@@ -64,7 +64,7 @@ export function useRunAnnotations(item: AnnotatedRun, enabled: boolean) {
   return useQuery({
     queryKey: queryKeys.runAnnotations(item.repo, item.id),
     queryFn: () =>
-      window.agentmat.pipelines.runAnnotations({
+      window.runova.pipelines.runAnnotations({
         repo: item.repo,
         runId: item.id,
         checkSuiteId: item.checkSuiteId,

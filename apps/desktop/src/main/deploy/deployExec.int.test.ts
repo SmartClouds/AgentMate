@@ -6,8 +6,8 @@ import type {
   ExecApproval,
   ExecOutput,
   JournalBatch,
-} from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { SshConnectionPool } from '../ssh/pool';
 import { approvalSigner } from './assistant/approvals';
 import { APPROVAL_INVALID, NEEDS_APPROVAL } from './assistant/coreExecutor';
@@ -34,7 +34,7 @@ import {
  * check runs in a real transient unit, an unapproved command is refused by the core and leaves no
  * trace, a signed approval runs once and its replay is refused, stopping a command takes every
  * process of its unit with it, and the journal comes from journalctl. Needs
- * AGENTMATE_SYSTEM_TESTS=1, Docker, and `pnpm server-core:publish linux-x64`.
+ * RUNOVA_SYSTEM_TESTS=1, Docker, and `pnpm server-core:publish linux-x64`.
  */
 
 const enabled = systemTestsEnabled();
@@ -102,7 +102,7 @@ async function waitFor(what: string, check: () => boolean, timeoutMs = 90_000) {
 
 /** Units the core started for StreamExec that systemd still knows about. */
 const execUnits = () =>
-  server?.run("systemctl list-units --all --no-legend --plain 'agentmate-exec-*' || true") ?? '';
+  server?.run("systemctl list-units --all --no-legend --plain 'runova-exec-*' || true") ?? '';
 
 describe.skipIf(!enabled)('StreamExec and the journal on a real server', () => {
   skipWhenNoServers(IMAGES);
@@ -200,7 +200,7 @@ describe.skipIf(!enabled)('StreamExec and the journal on a real server', () => {
           expect(items.at(-1)).toMatchObject({ ended: true, exitCode: 0, timedOut: false });
           // systemd started the command as a unit of its own and collected it afterwards.
           expect(
-            server?.run("journalctl --no-pager -q -o cat | grep -c 'agentmate-exec-' || true"),
+            server?.run("journalctl --no-pager -q -o cat | grep -c 'runova-exec-' || true"),
           ).not.toBe('0');
           expect(execUnits()).toBe('');
 
@@ -267,7 +267,7 @@ describe.skipIf(!enabled)('StreamExec and the journal on a real server', () => {
               server?.run("pgrep -a -f 'sleep 30[12]' || true") ?? '',
             ),
           );
-          expect(execUnits()).toContain('agentmate-exec-');
+          expect(execUnits()).toContain('runova-exec-');
 
           subscription.dispose();
           await waitFor(
@@ -283,7 +283,7 @@ describe.skipIf(!enabled)('StreamExec and the journal on a real server', () => {
         "reads a unit's journal from journalctl",
         async () => {
           const batches = await collect<JournalBatch>(
-            hub.streamJournal({ unit: 'agentmate-core.service', lines: 50, follow: false }),
+            hub.streamJournal({ unit: 'runova-core.service', lines: 50, follow: false }),
           );
           const lines = batches.flatMap((batch) => batch.lines);
           expect(lines.length).toBeGreaterThan(0);

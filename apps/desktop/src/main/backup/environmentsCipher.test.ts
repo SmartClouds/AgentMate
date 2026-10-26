@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { MAX_ENV_FILE_BYTES } from '@agentmat/core';
+import { MAX_ENV_FILE_BYTES } from '@runova/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type {
   SecretEnvelope,
@@ -33,7 +33,7 @@ const CHEAP = { N: 1024, r: 8, p: 1 } as const;
 const userData = { dir: '' };
 
 beforeEach(() => {
-  userData.dir = tempDir('agentmate-envcipher-');
+  userData.dir = tempDir('runova-envcipher-');
   mkdirSync(join(userData.dir, 'data'), { recursive: true });
   setElectronPath('userData', userData.dir);
   // The unlocked passkey lives in a module-level variable, so it has to be dropped by hand.

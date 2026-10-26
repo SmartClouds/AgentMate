@@ -5,6 +5,8 @@ import {
   createWpIgnoreRules,
   findWpCaseCollisions,
   isWpHardDenied,
+  LEGACY_IGNORE_FILE,
+  LEGACY_PROJECT_DIR,
   validateWpItemPath,
   WP_AGENT_PREFIXES,
   WP_MAX_FILE_BYTES,
@@ -14,7 +16,7 @@ import {
   type WpIgnoreRules,
   type WpItemRef,
   wpItemRoot,
-} from '@agentmat/core';
+} from '@runova/core';
 import type {
   DeployWordPressLeftOut,
   DeployWordPressLeftOutReason,
@@ -28,10 +30,10 @@ export { hashFile };
  * What a WordPress project holds on this computer, item by item (E19). Only the folder of each
  * linked item is walked (`wp-content/themes/<slug>`, `wp-content/plugins/<slug>`,
  * `wp-content/mu-plugins/<slug>`), so nothing at the project root can ever be sent. Inside it:
- * - the hard deny list (validateWpItemPath) leaves agent settings, AgentMate's files, version
+ * - the hard deny list (validateWpItemPath) leaves agent settings, Runova's files, version
  *   control, secrets and OS clutter out, whatever any ignore file says;
- * - the ignore layers (the item's `.distignore`, the project's `.agentmateignore`, the item's
- *   `.agentmateignore`) leave out what the user said, both ways;
+ * - the ignore layers (the item's `.distignore`, the project's `.runovaignore`, the item's
+ *   `.runovaignore`) leave out what the user said, both ways;
  * - the default list leaves out build output and editor folders, unless the site or the last
  *   sync already has the file;
  * - links (symlinks, junctions) are never followed or sent, and files too large, names that are
@@ -66,9 +68,10 @@ export interface WpWalkOptions {
   signal?: AbortSignal;
 }
 
-/** Agent settings, skills and AgentMate's own files, among the hard deny list. */
+/** Agent settings, skills and Runova's own files, among the hard deny list. */
 const AGENT_DIRS: ReadonlySet<string> = new Set([
-  '.agentmate',
+  '.runova',
+  LEGACY_PROJECT_DIR,
   '.claude',
   '.agents',
   '.codex',
@@ -94,13 +97,14 @@ const AGENT_FILES: ReadonlySet<string> = new Set([
   '.cursorrules',
   '.windsurfrules',
   '.roomodes',
-  '.agentmateignore',
+  '.runovaignore',
+  LEGACY_IGNORE_FILE,
 ]);
 /** A denied folder with more files than this is reported once, as `folder/`. */
 const DENIED_LIST_MAX = 100;
 const MAX_IGNORE_FILE_BYTES = 256 * 1024;
 
-/** `agentFiles` for the agent and AgentMate entries of the hard deny list, else `hardDenied`. */
+/** `agentFiles` for the agent and Runova entries of the hard deny list, else `hardDenied`. */
 export function deniedReason(path: string): 'agentFiles' | 'hardDenied' {
   for (const segment of path.split('/')) {
     if (!isWpHardDenied(segment)) continue;
@@ -118,7 +122,7 @@ export function deniedReason(path: string): 'agentFiles' | 'hardDenied' {
 function linkError(path: string): Error {
   return wordPressError(
     'pathRejected',
-    `${path} is a link (a symlink or junction). AgentMate only syncs real folders inside the project; move the files into the project instead.`,
+    `${path} is a link (a symlink or junction). Runova only syncs real folders inside the project; move the files into the project instead.`,
   );
 }
 
@@ -168,7 +172,18 @@ async function readIgnoreFile(
 }
 
 /**
- * The item's ignore layers, in order: its .distignore, the project's and its .agentmateignore,
+ * A folder's `.runovaignore`, or its `.agentmateignore` from before the rename when that is the
+ * only one there. The new name wins when both exist.
+ */
+async function readOwnIgnoreFile(folder: string, label: string): Promise<WpIgnoreLayer | null> {
+  return (
+    (await readIgnoreFile(join(folder, '.runovaignore'), `${label}.runovaignore`, true)) ??
+    (await readIgnoreFile(join(folder, LEGACY_IGNORE_FILE), `${label}${LEGACY_IGNORE_FILE}`, true))
+  );
+}
+
+/**
+ * The item's ignore layers, in order: its .distignore, the project's and its .runovaignore,
  * then the list the user saved for the project. What git ignores (the project's and the item's
  * .gitignore) counts like the default list: left out until the site has it.
  */
@@ -186,10 +201,8 @@ export async function itemIgnoreRules(
     isFile
       ? null
       : await readIgnoreFile(join(root, '.distignore'), `${itemRoot}/.distignore`, false),
-    await readIgnoreFile(join(projectRoot, '.agentmateignore'), '.agentmateignore', true),
-    isFile
-      ? null
-      : await readIgnoreFile(join(root, '.agentmateignore'), `${itemRoot}/.agentmateignore`, true),
+    await readOwnIgnoreFile(projectRoot, ''),
+    isFile ? null : await readOwnIgnoreFile(root, `${itemRoot}/`),
     savedIgnore.length > 0
       ? { source: 'the saved ignore list', text: savedIgnore.join('\n'), negations: true }
       : null,
@@ -339,7 +352,7 @@ export async function walkLocalItem(options: WpWalkOptions): Promise<WpLocalWalk
       if (count > maxFiles) {
         throw wordPressError(
           'tooLarge',
-          `${wpItemRoot(item)} holds more than ${maxFiles} files, more than AgentMate syncs for one item. Leave folders the site does not need out with .agentmateignore.`,
+          `${wpItemRoot(item)} holds more than ${maxFiles} files, more than Runova syncs for one item. Leave folders the site does not need out with .runovaignore.`,
         );
       }
       walk.files[path] = {

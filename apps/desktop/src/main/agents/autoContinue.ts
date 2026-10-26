@@ -7,7 +7,7 @@ import {
   type AutoContinueSignal,
   detectAutoContinueSignal,
   terminalPlainText,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { AgentSessionEntry, AutoContinuePendingMap } from '../../shared/apiTypes';
 
 /**

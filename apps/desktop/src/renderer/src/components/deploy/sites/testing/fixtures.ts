@@ -4,7 +4,7 @@ import type {
   SiteInfo,
   SiteSettings,
   StreamProxyInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { NOW, SERVER, signedIn } from '../../security/testing/fixtures';
 
 /** A signed-in user on a server whose nginx runs two sites, for the Websites section's tests. */

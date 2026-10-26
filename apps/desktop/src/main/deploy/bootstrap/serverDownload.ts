@@ -1,4 +1,4 @@
-import { quoteForShell } from '@agentmat/core';
+import { quoteForShell } from '@runova/core';
 import { CHECKSUM_MISMATCH_EXIT } from './installPlan';
 
 /**
@@ -15,7 +15,7 @@ import { CHECKSUM_MISMATCH_EXIT } from './installPlan';
 export type DownloadTool = 'curl' | 'wget';
 
 const RELEASE_URL =
-  /^https:\/\/github\.com\/[0-9A-Za-z_.-]+\/[0-9A-Za-z_.-]+\/releases\/download\/v[0-9A-Za-z][0-9A-Za-z.+-]{0,63}\/(agentmate-core-[0-9A-Za-z.+-]+-linux-(?:x64|arm64)\.tar\.gz)$/;
+  /^https:\/\/github\.com\/[0-9A-Za-z_.-]+\/[0-9A-Za-z_.-]+\/releases\/download\/v[0-9A-Za-z][0-9A-Za-z.+-]{0,63}\/(runova-core-[0-9A-Za-z.+-]+-linux-(?:x64|arm64)\.tar\.gz)$/;
 const SHA256 = /^[0-9a-f]{64}$/;
 
 /**

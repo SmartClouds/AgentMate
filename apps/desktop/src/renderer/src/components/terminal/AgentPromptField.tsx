@@ -1,4 +1,4 @@
-import type { AgentInstructionPurpose, AgentInstructionTarget } from '@agentmat/core';
+import type { AgentInstructionPurpose, AgentInstructionTarget } from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef } from 'react';
 import { toast } from 'sonner';
@@ -86,7 +86,7 @@ export const AgentPromptField = forwardRef<HTMLTextAreaElement, AgentPromptField
 
     const settingsQuery = useQuery({
       queryKey: queryKeys.settings,
-      queryFn: () => window.agentmat.settings.get(),
+      queryFn: () => window.runova.settings.get(),
       meta: { silentLoading: true },
     });
     const assist = useComposerAssist({ value, onChange, purpose, target, question });

@@ -70,7 +70,7 @@ interface PendingAttach {
 function shellEnv(env: Record<string, string> | undefined): Record<string, string> {
   const result = { ...(env ?? (process.env as Record<string, string>)) };
   // The host runs the Electron binary as plain Node. Leaking that into the shell would
-  // make anything Electron-based started from it (AgentMate, VS Code) boot as Node too.
+  // make anything Electron-based started from it (Runova, VS Code) boot as Node too.
   delete result.ELECTRON_RUN_AS_NODE;
   return result;
 }

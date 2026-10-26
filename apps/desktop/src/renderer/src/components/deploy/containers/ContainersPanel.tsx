@@ -3,7 +3,7 @@ import type {
   ContainerEnvVariable,
   ContainerSummary,
   JobInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployContainerAction } from '@shared/deployDockerTypes';
 import type { DeployServer } from '@shared/deployTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -100,7 +100,7 @@ export function ContainersPanel({ server }: { server: DeployServer }): React.JSX
 
   const access = useQuery({
     queryKey: queryKeys.deployAccess(serverId),
-    queryFn: () => window.agentmat.deploy.access(serverId),
+    queryFn: () => window.runova.deploy.access(serverId),
     retry: false,
     staleTime: 30_000,
   });
@@ -113,14 +113,14 @@ export function ContainersPanel({ server }: { server: DeployServer }): React.JSX
 
   const status = useQuery({
     queryKey: queryKeys.deployDockerStatus(serverId),
-    queryFn: () => window.agentmat.deployDocker.status(serverId),
+    queryFn: () => window.runova.deployDocker.status(serverId),
     enabled: signedIn,
     retry: false,
   });
   const ready = signedIn && status.data?.installed === true && status.data.running;
   const containers = useQuery({
     queryKey: queryKeys.deployContainers(serverId),
-    queryFn: () => window.agentmat.deployDocker.listContainers(serverId),
+    queryFn: () => window.runova.deployDocker.listContainers(serverId),
     enabled: ready,
     retry: false,
   });
@@ -148,7 +148,7 @@ export function ContainersPanel({ server }: { server: DeployServer }): React.JSX
       }
       setBusyId(container.id);
       try {
-        await window.agentmat.deployDocker.act({ serverId, containerId: container.id, action });
+        await window.runova.deployDocker.act({ serverId, containerId: container.id, action });
         toast.success(`${DONE[action]} ${container.name}.`);
       } catch (error) {
         toast.error(coreErrorMessage(error));
@@ -166,7 +166,7 @@ export function ContainersPanel({ server }: { server: DeployServer }): React.JSX
   async function remove(choice: RemoveChoice): Promise<boolean> {
     if (!removing) return false;
     try {
-      await window.agentmat.deployDocker.remove({
+      await window.runova.deployDocker.remove({
         serverId,
         containerId: removing.id,
         removeVolumes: choice.removeVolumes,
@@ -243,7 +243,7 @@ export function ContainersPanel({ server }: { server: DeployServer }): React.JSX
           canRestart={canOperate}
           onStarted={setJob}
           onRestart={() =>
-            void window.agentmat.deploySystem
+            void window.runova.deploySystem
               .restartService(serverId, 'docker')
               .then(setJob, (error: unknown) => toast.error(coreErrorMessage(error)))
           }

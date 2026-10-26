@@ -1,4 +1,4 @@
-import type { AgentHistorySession } from '@agentmat/core';
+import type { AgentHistorySession } from '@runova/core';
 import { toast } from 'sonner';
 import { CliLogo } from '@/components/cliLogos';
 import { ChevronDown, Copy, GitBranch, Play, Search } from '@/components/icons';

@@ -1,4 +1,4 @@
-import type { DevDetection, DevSetupEnvironment, DevUpdateCheck } from '@agentmat/core';
+import type { DevDetection, DevSetupEnvironment, DevUpdateCheck } from '@runova/core';
 import { act, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTerminalStore } from '@/stores/terminalStore';

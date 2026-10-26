@@ -1,5 +1,5 @@
-import type { McpRepositorySourceType, McpServer } from '@agentmat/core';
-import { BOWORA_MCP_REPOSITORY_ID } from '@agentmat/core';
+import type { McpRepositorySourceType, McpServer } from '@runova/core';
+import { BOWORA_MCP_REPOSITORY_ID } from '@runova/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -62,7 +62,7 @@ const EMPTY_SERVERS: McpServer[] = [];
 
 /** How a repository's source reads under its name in the catalog header. */
 const SOURCE_LABEL: Record<McpRepositorySourceType, string> = {
-  bundled: 'Bundled with AgentMate',
+  bundled: 'Bundled with Runova',
   url: 'JSON index',
   git: 'Git repository',
   'local-folder': 'Local folder',
@@ -180,7 +180,7 @@ const McpServerCard = memo(function McpServerCard({
                 variant="ghost"
                 size="icon-sm"
                 aria-label={`Open ${server.name} website`}
-                onClick={() => void window.agentmat.shell.openExternal(server.websiteUrl!)}
+                onClick={() => void window.runova.shell.openExternal(server.websiteUrl!)}
               >
                 <Globe className="h-3.5 w-3.5" />
               </Button>
@@ -192,7 +192,7 @@ const McpServerCard = memo(function McpServerCard({
                 variant="ghost"
                 size="icon-sm"
                 aria-label={`Open ${server.name} source repository`}
-                onClick={() => void window.agentmat.shell.openExternal(server.repositoryUrl!)}
+                onClick={() => void window.runova.shell.openExternal(server.repositoryUrl!)}
               >
                 <GitBranch className="h-3.5 w-3.5" />
               </Button>
@@ -223,11 +223,11 @@ export default function McpPage(): React.JSX.Element {
 
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   });
   const reposQuery = useQuery({
     queryKey: queryKeys.mcpRepositories,
-    queryFn: () => window.agentmat.mcp.listRepositories(),
+    queryFn: () => window.runova.mcp.listRepositories(),
   });
 
   useEffect(() => {
@@ -239,19 +239,19 @@ export default function McpPage(): React.JSX.Element {
 
   const repoIndexQuery = useQuery({
     queryKey: queryKeys.mcpRepositoryIndex(selectedRepoId),
-    queryFn: () => window.agentmat.mcp.getRepositoryIndex(selectedRepoId),
+    queryFn: () => window.runova.mcp.getRepositoryIndex(selectedRepoId),
     enabled: !!selectedRepoId,
   });
 
   const installedServersQuery = useQuery({
     queryKey: queryKeys.installedMcpServers(selectedProjectId),
-    queryFn: () => window.agentmat.mcp.listInstalled(selectedProjectId),
+    queryFn: () => window.runova.mcp.listInstalled(selectedProjectId),
     enabled: !!selectedProjectId,
   });
 
   const addRepoMutation = useMutation({
     mutationFn: () =>
-      window.agentmat.mcp.addRepository({
+      window.runova.mcp.addRepository({
         name: repoName,
         sourceType: repoSourceType,
         source: repoSource,
@@ -267,7 +267,7 @@ export default function McpPage(): React.JSX.Element {
   });
 
   const removeRepoMutation = useMutation({
-    mutationFn: (id: string) => window.agentmat.mcp.removeRepository(id),
+    mutationFn: (id: string) => window.runova.mcp.removeRepository(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.mcpRepositories });
       setSelectedRepoId('');
@@ -277,7 +277,7 @@ export default function McpPage(): React.JSX.Element {
   });
 
   const refreshRepoMutation = useMutation({
-    mutationFn: (id: string) => window.agentmat.mcp.refreshRepository(id),
+    mutationFn: (id: string) => window.runova.mcp.refreshRepository(id),
     onSuccess: () => {
       toast.success('Repository refreshed.');
       void queryClient.invalidateQueries({
@@ -289,7 +289,7 @@ export default function McpPage(): React.JSX.Element {
 
   const installMutation = useMutation({
     mutationFn: (params: { serverId: string; env?: Record<string, string> }) =>
-      window.agentmat.mcp.install({
+      window.runova.mcp.install({
         projectId: selectedProjectId,
         repositoryId: selectedRepoId,
         serverId: params.serverId,
@@ -306,7 +306,7 @@ export default function McpPage(): React.JSX.Element {
 
   const removeServerMutation = useMutation({
     mutationFn: (serverId: string) =>
-      window.agentmat.mcp.remove({ projectId: selectedProjectId, serverId }),
+      window.runova.mcp.remove({ projectId: selectedProjectId, serverId }),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.installedMcpServers(selectedProjectId),
@@ -359,7 +359,7 @@ export default function McpPage(): React.JSX.Element {
   const isLoadingIndex = reposQuery.isPending || (!!selectedRepoId && repoIndexQuery.isPending);
 
   async function handlePickLocalFolder(): Promise<void> {
-    const picked = await window.agentmat.mcp.pickLocalRepository();
+    const picked = await window.runova.mcp.pickLocalRepository();
     if (picked) setRepoSource(picked);
   }
 
@@ -386,7 +386,7 @@ export default function McpPage(): React.JSX.Element {
     const confirmed = await confirmDialog({
       title: `Remove "${repo?.name ?? 'this repository'}"?`,
       description:
-        'This only removes the repository from AgentMate. Servers already installed in projects stay put.',
+        'This only removes the repository from Runova. Servers already installed in projects stay put.',
       confirmLabel: 'Remove',
       variant: 'destructive',
     });
@@ -539,7 +539,7 @@ export default function McpPage(): React.JSX.Element {
                     {selectedRepo?.name ?? 'MCP servers'}
                   </h2>
                   {isBuiltIn && (
-                    <SimpleTooltip label="Bundled with AgentMate, always available with no network fetch needed">
+                    <SimpleTooltip label="Bundled with Runova, always available with no network fetch needed">
                       <Chip tone="primary">Built-in</Chip>
                     </SimpleTooltip>
                   )}
@@ -734,7 +734,7 @@ export default function McpPage(): React.JSX.Element {
           <DialogHeader>
             <DialogTitle>Add repository</DialogTitle>
             <DialogDescription>
-              Point AgentMate at a folder of MCP servers, a git repository, or a JSON index.
+              Point Runova at a folder of MCP servers, a git repository, or a JSON index.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">

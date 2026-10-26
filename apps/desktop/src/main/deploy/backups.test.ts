@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Writable } from 'node:stream';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { BackupInfo } from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+import type { BackupInfo } from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { DeployBackups, passphraseProblem } from './backups';
 import type { CoreHttpClient } from './connection/coreHttp';
 
@@ -34,7 +34,7 @@ function setup(
   const body = options.body ?? Buffer.from('AMBACKUP encrypted bytes');
   const info: BackupInfo = {
     id: 'b1',
-    fileName: 'agentmate-backup.ambackup',
+    fileName: 'runova-backup.rnbackup',
     sizeBytes: body.length,
     sha256: options.sha ?? createHash('sha256').update(body).digest('hex'),
     createdAtUnixMs: 1,
@@ -91,12 +91,12 @@ describe('DeployBackups', () => {
     expect(await backups.create({ serverId: 'srv', passphrase: PASSPHRASE })).toEqual({
       saved: false,
     });
-    expect(pickSavePath).toHaveBeenCalledWith('agentmate-Web-01-2026-10-02-12-30.ambackup');
+    expect(pickSavePath).toHaveBeenCalledWith('runova-Web-01-2026-10-02-12-30.rnbackup');
     expect(hub.createBackup).not.toHaveBeenCalled();
   });
 
   it('saves the encrypted file and deletes the server copy', async () => {
-    const path = join(folder(), 'web.ambackup');
+    const path = join(folder(), 'web.rnbackup');
     const { backups, hub, downloads, body } = setup({ save: path });
 
     const result = await backups.create({ serverId: 'srv', passphrase: PASSPHRASE });
@@ -110,7 +110,7 @@ describe('DeployBackups', () => {
   });
 
   it('keeps nothing when the checksum does not match, and still deletes the server copy', async () => {
-    const path = join(folder(), 'web.ambackup');
+    const path = join(folder(), 'web.rnbackup');
     const { backups, hub } = setup({ save: path, sha: 'f'.repeat(64) });
 
     await expect(backups.create({ serverId: 'srv', passphrase: PASSPHRASE })).rejects.toThrow(
@@ -131,13 +131,13 @@ describe('DeployBackups', () => {
   });
 
   it('names a picked file by a token only', async () => {
-    const path = join(folder(), 'old.ambackup');
+    const path = join(folder(), 'old.rnbackup');
     writeFileSync(path, 'AMBACKUP');
     const { backups } = setup({ open: path });
 
     const picked = await backups.pick();
 
-    expect(picked).toMatchObject({ name: 'old.ambackup', sizeBytes: 8 });
+    expect(picked).toMatchObject({ name: 'old.rnbackup', sizeBytes: 8 });
     expect(JSON.stringify(picked)).not.toContain(folders[0]);
     expect(backups.resolve(picked?.token ?? '')).toBe(path);
     expect(() => backups.resolve('made-up')).toThrow(/Pick the backup file again/);

@@ -162,8 +162,8 @@ async function openServersList(): Promise<Page> {
   await page.evaluate(
     (input) =>
       (
-        window as unknown as { agentmat: { ssh: { saveServer(i: unknown): Promise<unknown> } } }
-      ).agentmat.ssh.saveServer(input),
+        window as unknown as { runova: { ssh: { saveServer(i: unknown): Promise<unknown> } } }
+      ).runova.ssh.saveServer(input),
     {
       nickname: NICKNAME,
       host: server.host,

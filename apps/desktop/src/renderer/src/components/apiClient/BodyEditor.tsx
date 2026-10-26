@@ -1,4 +1,4 @@
-import type { BodyMode, DraftBody, RawLanguage } from '@agentmat/core';
+import type { BodyMode, DraftBody, RawLanguage } from '@runova/core';
 import { MonacoEditor } from '@/components/editor/MonacoEditor';
 import { ChevronDown, Wand2 } from '@/components/icons';
 import { Button } from '@/components/ui/button';

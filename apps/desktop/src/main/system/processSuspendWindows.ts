@@ -16,7 +16,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 
-public static class AgentMateProcessTree {
+public static class RunovaProcessTree {
   const uint TH32CS_SNAPPROCESS = 0x2;
   const uint PROCESS_SUSPEND_RESUME = 0x0800;
   const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
@@ -222,7 +222,7 @@ public static class AgentMateProcessTree {
 /** Named after the source, so a changed helper is built afresh instead of loading a stale one. */
 export function helperAssemblyPath(helperDir: string): string {
   const hash = createHash('sha256').update(PROCESS_TREE_HELPER_SOURCE).digest('hex').slice(0, 12);
-  return win32.join(helperDir, `agentmate-proc-${hash}.dll`);
+  return win32.join(helperDir, `runova-proc-${hash}.dll`);
 }
 
 function literal(path: string): string {
@@ -250,6 +250,6 @@ export function callScript(call: string, assemblyPath: string | null): string {
     ...(assemblyPath
       ? [`Add-Type -Path ${literal(assemblyPath)}`]
       : [sourceBlock(), 'Add-Type -TypeDefinition $source']),
-    `[AgentMateProcessTree]::${call}`,
+    `[RunovaProcessTree]::${call}`,
   ].join('\n');
 }

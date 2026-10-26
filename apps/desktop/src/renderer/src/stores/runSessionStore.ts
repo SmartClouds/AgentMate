@@ -1,4 +1,4 @@
-import { parseRunDevices, parseScopeId } from '@agentmat/core';
+import { parseRunDevices, parseScopeId } from '@runova/core';
 import { toast } from 'sonner';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -90,7 +90,7 @@ export const useRunSessionStore = create<RunSessionState>()(
       },
     }),
     {
-      name: 'agentmate-run-sessions',
+      name: 'runova-run-sessions',
       partialize: (state) => ({ outputs: state.outputs }),
     },
   ),

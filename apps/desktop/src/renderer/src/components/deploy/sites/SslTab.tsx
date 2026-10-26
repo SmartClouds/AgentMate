@@ -2,7 +2,7 @@ import { coreErrorMessage } from '@shared/coreErrors';
 import type {
   JobInfo,
   SiteInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployServer } from '@shared/deployTypes';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -93,7 +93,7 @@ export function SslTab({
     try {
       const result = await proof.run(
         (stepUp) =>
-          window.agentmat.deployCerts.remove({
+          window.runova.deployCerts.remove({
             serverId: server.id,
             siteId: site.settings.id,
             revoke,
@@ -134,7 +134,7 @@ export function SslTab({
     setOriginError(null);
     setProblem(null);
     try {
-      const result = await window.agentmat.cloudflareServer.originCertificate({
+      const result = await window.runova.cloudflareServer.originCertificate({
         serverId: server.id,
         siteId: site.settings.id,
       });
@@ -213,7 +213,7 @@ export function SslTab({
                           disabled={busy === 'log'}
                           onClick={() =>
                             void attempt('log', () =>
-                              window.agentmat.deployJobs.get(
+                              window.runova.deployJobs.get(
                                 server.id,
                                 certificate.lastJobId as string,
                               ),
@@ -242,7 +242,7 @@ export function SslTab({
                     disabled={busy === 'renew'}
                     onClick={() =>
                       void attempt('renew', () =>
-                        window.agentmat.deployCerts.renew(server.id, site.settings.id),
+                        window.runova.deployCerts.renew(server.id, site.settings.id),
                       )
                     }
                   >

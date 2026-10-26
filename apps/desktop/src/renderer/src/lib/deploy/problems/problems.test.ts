@@ -4,7 +4,7 @@ import type {
   ContainerPortInfo,
   ContainerSummary,
   StackInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { describe, expect, it } from 'vitest';
 import { buildProblems, PROBLEM_LABELS } from './problems';
 

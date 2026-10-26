@@ -7,7 +7,7 @@ import {
   validateWpItemPath,
   type WpFileMap,
   type WpScope,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { SecretEnvelope } from '../../../shared/apiTypes';
 import type { SealedSecretStore } from '../../ssh/vault';
 

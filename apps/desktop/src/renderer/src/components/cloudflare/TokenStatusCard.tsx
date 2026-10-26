@@ -53,7 +53,7 @@ export function TokenStatusCard({
   async function checkAgain(): Promise<void> {
     setChecking(true);
     try {
-      const next = await window.agentmat.cloudflare.checkToken(account.id);
+      const next = await window.runova.cloudflare.checkToken(account.id);
       queryClient.setQueryData(queryKeys.cloudflareStatus, next);
       void queryClient.invalidateQueries({ queryKey: queryKeys.cloudflareData });
       toast.success('Checked the token again.');
@@ -67,13 +67,13 @@ export function TokenStatusCard({
   async function remove(): Promise<void> {
     const confirmed = await confirmDialog({
       title: showName ? `Remove ${account.label}?` : 'Remove the Cloudflare token?',
-      description: `AgentMate forgets the token and stops managing ${showName ? 'the domains of this account' : 'your domains'}. The token keeps working on Cloudflare until you delete it there.`,
+      description: `Runova forgets the token and stops managing ${showName ? 'the domains of this account' : 'your domains'}. The token keeps working on Cloudflare until you delete it there.`,
       confirmLabel: 'Remove the token',
       variant: 'destructive',
     });
     if (!confirmed) return;
     try {
-      const next = await window.agentmat.cloudflare.removeToken(account.id);
+      const next = await window.runova.cloudflare.removeToken(account.id);
       queryClient.setQueryData(queryKeys.cloudflareStatus, next);
       queryClient.removeQueries({ queryKey: queryKeys.cloudflareData });
       toast.success(showName ? `Removed ${account.label}.` : 'Removed the Cloudflare token.');
@@ -164,13 +164,13 @@ export function TokenStatusCard({
                   {zoneCount === 0 && (
                     <p className="text-muted-foreground">
                       The token cannot see any domains. Under Zone Resources, include the domains
-                      AgentMate should manage.
+                      Runova should manage.
                     </p>
                   )}
                   <div className="flex flex-wrap gap-1.5">
                     <Button
                       size="sm"
-                      onClick={() => void window.agentmat.shell.openExternal(TOKEN_PAGE)}
+                      onClick={() => void window.runova.shell.openExternal(TOKEN_PAGE)}
                     >
                       <ExternalLink className="h-3.5 w-3.5" /> Edit the token on Cloudflare
                     </Button>

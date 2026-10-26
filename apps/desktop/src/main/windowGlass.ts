@@ -1,5 +1,5 @@
 import { release } from 'node:os';
-import type { ThemeMode } from '@agentmat/core';
+import type { ThemeMode } from '@runova/core';
 import { type BrowserWindowConstructorOptions, nativeTheme } from 'electron';
 
 /** How the main window's frame is drawn: a native material, or the theme's solid color. */

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# AgentMate Mobile (Android) dev launcher for macOS (equivalent of run-mobile-android.bat)
+# Runova Mobile (Android) dev launcher for macOS (equivalent of run-mobile-android.bat)
 cd "$(dirname "$0")"
 
 if ! command -v pnpm >/dev/null 2>&1; then
@@ -47,13 +47,13 @@ if [ ! -d "node_modules" ]; then
   pnpm install || { echo "Failed to install dependencies."; exit 1; }
 fi
 
-echo "Building @agentmat/protocol..."
-pnpm --filter @agentmat/protocol build || {
-  echo "Failed to build @agentmat/protocol."
+echo "Building @runova/protocol..."
+pnpm --filter @runova/protocol build || {
+  echo "Failed to build @runova/protocol."
   exit 1
 }
 
-echo "Building and installing the AgentMate Mobile debug APK on your device..."
+echo "Building and installing the Runova Mobile debug APK on your device..."
 cd apps/mobile
 if [ -d "android" ]; then
   echo "Refreshing the generated Android project so config plugins are applied..."

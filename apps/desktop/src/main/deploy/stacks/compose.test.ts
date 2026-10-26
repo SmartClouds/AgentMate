@@ -1,6 +1,6 @@
 import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { describe, expect, it } from 'vitest';
 import { tempDir } from '../../../test/main/fixtures';
 import type { ResolvedProjectEnvironment } from '../../ipc/environments';
@@ -67,7 +67,7 @@ function deps(folder: string, files: string[] = [], env = environment([])): Stac
 }
 
 function folderWith(files: Record<string, string>): string {
-  const folder = tempDir('agentmate-stack-');
+  const folder = tempDir('runova-stack-');
   for (const [path, content] of Object.entries(files)) {
     mkdirSync(join(folder, path, '..'), { recursive: true });
     writeFileSync(join(folder, path), content);

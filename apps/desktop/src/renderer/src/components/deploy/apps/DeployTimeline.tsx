@@ -3,7 +3,7 @@ import type {
   StackDeployStep,
   StackRevisionInfo,
   StackStepState,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useEffect, useRef, useState } from 'react';
 import {
   Ban,
@@ -281,7 +281,7 @@ export function DeployTimeline({
     setCancelling(true);
     setProblem(null);
     try {
-      await window.agentmat.deployJobs.cancel(serverId, revision.jobId);
+      await window.runova.deployJobs.cancel(serverId, revision.jobId);
     } catch (error) {
       setProblem(coreErrorMessage(error));
       setCancelling(false);

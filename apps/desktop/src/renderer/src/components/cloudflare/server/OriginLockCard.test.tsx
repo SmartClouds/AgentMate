@@ -3,7 +3,7 @@ import type { CloudflareOriginLockPlan } from '@shared/cloudflareTypes';
 import type {
   FirewallChangeSetInfo,
   OriginLockStatus,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';

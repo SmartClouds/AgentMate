@@ -4,7 +4,7 @@ import {
   type MergeMethod,
   type Project,
   parsePrText,
-} from '@agentmat/core';
+} from '@runova/core';
 import { ipcMain } from 'electron';
 import type {
   CleanupAfterMergeInput,

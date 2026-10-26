@@ -14,6 +14,7 @@ import {
   validateWpItemPath,
   WP_AJAX_ACTION,
   WP_CONNECTOR_VERSION,
+  WP_LEGACY_CONNECTOR_MAIN,
   WP_PROTOCOL_VERSION,
   WP_ROUTE_PARAM,
   WP_ROUTES,
@@ -44,13 +45,14 @@ import {
   wpCanonicalResponse,
   wpConnectorReleaseUrl,
   wpItemKey,
-} from '@agentmat/core';
+  wpLegacyConnectorReleaseUrl,
+} from '@runova/core';
 import { compareConnectorVersions } from '../connectorBundle';
 import { gzipBytes, privateKeyFromSeed, signEd25519, verifyEd25519 } from '../crypto';
 import { seedBytes, WP_VECTORS } from './vectors';
 
 /**
- * An AgentMate Connector in memory, behind a real HTTP server, for the desktop's tests (E19). It
+ * A Runova Connector in memory, behind a real HTTP server, for the desktop's tests (E19). It
  * speaks protocol v1 the way the plugin does: multipart in, signed envelopes out, the REST,
  * admin-ajax and rescue.php URLs, pairing with a one-time key, signature, timestamp and nonce
  * checks, read-only scope, and the deploy state machine (open, applying, applied, done, rolled
@@ -209,9 +211,9 @@ const STATUS: Record<WpErrorCode, number> = {
 };
 
 const ACTIVE: ReadonlySet<WpDeployState> = new Set(['open', 'applying', 'applied']);
-const REST_PREFIX = '/wp-json/agentmate/v1';
+const REST_PREFIX = '/wp-json/runova/v1';
 const AJAX_PATH = '/wp-admin/admin-ajax.php';
-const RESCUE_PATH = '/wp-content/plugins/agentmate-connector/rescue.php';
+const RESCUE_PATH = '/wp-content/plugins/runova-connector/rescue.php';
 const OTHER_KEY = privateKeyFromSeed(new Uint8Array(32).fill(7));
 
 function sha(bytes: Uint8Array): string {
@@ -292,6 +294,16 @@ export class FakeConnector {
   readonly uploadSizes: number[] = [];
   /** The version the plugin reports; a connector update changes it. */
   pluginVersion: string = WP_CONNECTOR_VERSION;
+  /**
+   * Where the plugin runs from. `bridge` takes only the bridge package and moves on
+   * `/connector/migrate`; null reports no layout at all, like 1.63 (whose own names this fake
+   * does not speak, so only what the app decides from the missing field can be tested).
+   */
+  layout: 'runova' | 'bridge' | null = 'runova';
+  /** `/connector/migrate` calls, with what they did. */
+  readonly moves: ('migrated' | 'current' | 'rolledBack' | 'refused')[] = [];
+  /** Makes the next moves fail their health check, or be refused as notReplaceable. */
+  moveFails: 'health' | 'refused' | null = null;
   /** Every connector update that arrived and was not refused, with its outcome. */
   readonly updates: {
     version: string;
@@ -651,6 +663,12 @@ export class FakeConnector {
             rescueUrl: this.rescueUrl,
             multisite: false,
             siteName: FAKE_SITE_NAME,
+            ...(this.layout === null
+              ? {}
+              : {
+                  layout: this.layout,
+                  endpoints: { restUrl: this.restUrl, ajaxUrl: this.ajaxUrl },
+                }),
           },
         };
       case WP_ROUTES.pair:
@@ -700,6 +718,8 @@ export class FakeConnector {
       }
       case WP_ROUTES.connectorUpdate:
         return { data: this.connectorUpdate(input, blobs, connection as FakeConnection) };
+      case WP_ROUTES.connectorMigrate:
+        return { data: this.connectorMigrate(connection as FakeConnection) };
       case WP_ROUTES.connectionRevoke:
         (connection as FakeConnection).revoked = true;
         this.record('revoked', (connection as FakeConnection).label);
@@ -814,7 +834,43 @@ export class FakeConnector {
       pendingDeploy: active
         ? { deployId: active.id, state: active.state, deadline: this.now() + 180 }
         : null,
+      ...(this.layout === null
+        ? {}
+        : { layout: this.layout, endpoints: { restUrl: this.restUrl, ajaxUrl: this.ajaxUrl } }),
     };
+  }
+
+  /** `/connector/migrate`: a bridge site moves to its own folder. */
+  private connectorMigrate(connection: FakeConnection) {
+    if (connection.scope !== 'write') {
+      throw new FakeError('readOnly', 'This connection can only read.');
+    }
+    if (this.activeDeploy()) {
+      throw new FakeError('busy', 'Another deploy is still open on this site.');
+    }
+    const reply = (state: 'migrated' | 'current' | 'rolledBack') => {
+      this.moves.push(state);
+      return {
+        state,
+        layout: state === 'rolledBack' ? 'bridge' : 'runova',
+        version: this.pluginVersion,
+        restUrl: this.restUrl,
+        ajaxUrl: this.ajaxUrl,
+        rescueUrl: this.rescueUrl,
+        checks: [],
+      };
+    };
+    if (this.layout !== 'bridge') return reply('current');
+    if (this.moveFails === 'refused') {
+      this.moves.push('refused');
+      throw new FakeError('updateRefused', 'The plugins folder is not writable.', {
+        reason: 'notReplaceable',
+      });
+    }
+    if (this.moveFails === 'health') return reply('rolledBack');
+    this.layout = 'runova';
+    this.record('connectorUpdated', connection.label, 'Moved to its own folder.');
+    return reply('migrated');
   }
 
   /** `/connector/update`: checks the files the way the plugin does, then swaps the version. */
@@ -837,7 +893,11 @@ export class FakeConnector {
     ) {
       throw new FakeError('badRequest', 'Send a version and one blob per file.');
     }
-    if (url !== undefined && (url !== wpConnectorReleaseUrl(request.version) || blobs.length > 0)) {
+    const release =
+      this.layout === 'runova'
+        ? wpConnectorReleaseUrl(request.version)
+        : wpLegacyConnectorReleaseUrl(request.version);
+    if (url !== undefined && (url !== release || blobs.length > 0)) {
       throw new FakeError(
         'badRequest',
         'An update the site downloads names the release, no blobs.',
@@ -867,7 +927,9 @@ export class FakeConnector {
         });
       }
     });
-    if (!files.some((file) => file.path === 'agentmate-connector.php')) {
+    // A site in the old folder takes only the bridge package, the way the plugin checks it.
+    const main = this.layout === 'runova' ? 'runova-connector.php' : WP_LEGACY_CONNECTOR_MAIN;
+    if (!files.some((file) => file.path === main)) {
       throw new FakeError('updateRefused', 'The main plugin file is missing.', {
         reason: 'badPackage',
       });

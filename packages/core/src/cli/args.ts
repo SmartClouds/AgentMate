@@ -1,5 +1,5 @@
 /**
- * Per-CLI extra arguments the user configured in AgentMate, keyed by CLI id, stored
+ * Per-CLI extra arguments the user configured in Runova, keyed by CLI id, stored
  * exactly as typed (e.g. "--model sonnet"). Only background runs use these (commit
  * messages, tag suggestions, version bumps, skill audits). Terminal launches never do;
  * they take the launch defaults from Settings instead.

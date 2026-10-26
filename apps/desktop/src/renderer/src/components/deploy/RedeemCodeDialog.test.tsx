@@ -104,13 +104,13 @@ describe('RedeemCodeDialog', () => {
   it('passes on what stood in the way of reaching the core at all', async () => {
     const { user } = renderDialog(async () => {
       throw new Error(
-        "Error invoking remote method 'deploySecurity:redeemEnrollmentCode': Error: The server core runs here, but your login sam cannot reach it: it is not in the agentmate group.",
+        "Error invoking remote method 'deploySecurity:redeemEnrollmentCode': Error: The server core runs here, but your login sam cannot reach it: it is not in the runova group.",
       );
     });
 
     await fill(user);
     await user.click(screen.getByRole('button', { name: 'Join' }));
 
-    expect((await screen.findByRole('alert')).textContent).toMatch(/not in the agentmate group/);
+    expect((await screen.findByRole('alert')).textContent).toMatch(/not in the runova group/);
   });
 });

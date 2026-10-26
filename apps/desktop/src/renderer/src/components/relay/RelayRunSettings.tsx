@@ -8,7 +8,7 @@ import {
   type RelayRunChoice,
   type RelayTaskOverride,
   relayCapabilities,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { RelayProjectSettings, RelaySettingsPatch } from '@shared/relayTypes';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -118,7 +118,7 @@ export function RelayCapabilityList({ cliId }: { cliId: string }): React.JSX.Ele
       </Capability>
       <Capability on={caps.contextGuard !== 'none'}>
         Tells the session to hand off when its context runs low
-        {caps.contextGuard === 'mcp' ? ' (the session asks AgentMate)' : ''}
+        {caps.contextGuard === 'mcp' ? ' (the session asks Runova)' : ''}
       </Capability>
       <Capability on={caps.stopGate}>
         Keeps the session going until its handoff is written
@@ -188,7 +188,7 @@ export function RelayRunSettingsForm({
 
   async function save(patch: RelaySettingsPatch): Promise<void> {
     try {
-      const next = await window.agentmat.relay.saveSettings(projectId, patch);
+      const next = await window.runova.relay.saveSettings(projectId, patch);
       queryClient.setQueryData(queryKeys.relayBoard(projectId), (board: unknown) =>
         board && typeof board === 'object' ? { ...board, settings: next } : board,
       );

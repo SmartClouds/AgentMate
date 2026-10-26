@@ -1,10 +1,10 @@
 import { normalizeTags, type SaveVaultEntryInput, VAULT_LIMITS } from './entries.js';
 import { hostOf } from './url.js';
 
-export type VaultImportFormat = 'agentmate' | 'chrome' | 'firefox' | 'bitwarden' | 'onePassword';
+export type VaultImportFormat = 'runova' | 'chrome' | 'firefox' | 'bitwarden' | 'onePassword';
 
 export const VAULT_IMPORT_FORMAT_LABELS: Record<VaultImportFormat, string> = {
-  agentmate: 'AgentMate',
+  runova: 'Runova',
   chrome: 'Chrome or Edge',
   firefox: 'Firefox',
   bitwarden: 'Bitwarden',
@@ -42,7 +42,7 @@ export interface ImportMapResult {
   skipped: ImportSkip[];
 }
 
-export const AGENTMATE_CSV_COLUMNS = [
+export const RUNOVA_CSV_COLUMNS = [
   'type',
   'title',
   'username',
@@ -76,7 +76,7 @@ export const BITWARDEN_CSV_COLUMNS = [
 const normalizeHeader = (header: string) => header.trim().toLowerCase();
 
 const SIGNATURES: [VaultImportFormat, string[]][] = [
-  ['agentmate', ['type', 'title', 'password', 'key_id', 'secret', 'fields']],
+  ['runova', ['type', 'title', 'password', 'key_id', 'secret', 'fields']],
   ['bitwarden', ['folder', 'type', 'name', 'login_uri', 'login_username', 'login_password']],
   ['onePassword', ['title', 'url', 'username', 'password', 'otpauth']],
   ['firefox', ['url', 'username', 'password', 'httprealm']],
@@ -245,12 +245,12 @@ function mapKnownRow(format: VaultImportFormat, get: Row): SaveVaultEntryInput |
         ],
         favorite: isTruthy(get('favorite')),
       });
-    case 'agentmate':
-      return mapAgentMateRow(get);
+    case 'runova':
+      return mapRunovaRow(get);
   }
 }
 
-function mapAgentMateRow(get: Row): SaveVaultEntryInput | string {
+function mapRunovaRow(get: Row): SaveVaultEntryInput | string {
   const shared = {
     title: clip(get('title').trim() || 'Untitled', VAULT_LIMITS.title),
     tags: normalizeTags(splitList(get('tags'), /\n/)).slice(0, VAULT_LIMITS.tags),

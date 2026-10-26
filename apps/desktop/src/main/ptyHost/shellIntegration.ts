@@ -15,7 +15,7 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const MARKER = '\\033]7750;AgentMate:PromptReady:1\\007';
+const MARKER = '\\033]7750;Runova:PromptReady:1\\007';
 
 export interface ShellLaunch {
   args: string[];
@@ -36,7 +36,7 @@ let integrationDir: string | null = null;
  */
 function writeIntegrationFile(name: string, content: string): string {
   if (!integrationDir || !existsSync(integrationDir)) {
-    integrationDir = mkdtempSync(join(tmpdir(), 'agentmate-shell-'));
+    integrationDir = mkdtempSync(join(tmpdir(), 'runova-shell-'));
     const dir = integrationDir;
     process.once('exit', () => {
       try {
@@ -66,30 +66,30 @@ function bashLaunch(): ShellLaunch {
  * zsh has no --rcfile, so ZDOTDIR points it at a folder whose .zshenv and .zshrc load the user's
  * real ones. ZDOTDIR is swapped back to the user's value while their files run (and left there once
  * .zshrc is done), so anything that reads it, including a .zshenv that moves it, sees what it
- * would outside AgentMate.
+ * would outside Runova.
  */
 function zshLaunch(env: Record<string, string> | undefined): ShellLaunch {
   writeIntegrationFile(
     '.zshenv',
     [
-      '__agentmate_zdotdir=$ZDOTDIR',
-      'ZDOTDIR=${AGENTMATE_USER_ZDOTDIR:-$HOME}',
+      '__runova_zdotdir=$ZDOTDIR',
+      'ZDOTDIR=${RUNOVA_USER_ZDOTDIR:-$HOME}',
       '[[ -f $ZDOTDIR/.zshenv ]] && . $ZDOTDIR/.zshenv',
-      'AGENTMATE_USER_ZDOTDIR=$ZDOTDIR',
-      'ZDOTDIR=$__agentmate_zdotdir',
-      'unset __agentmate_zdotdir',
+      'RUNOVA_USER_ZDOTDIR=$ZDOTDIR',
+      'ZDOTDIR=$__runova_zdotdir',
+      'unset __runova_zdotdir',
       '',
     ].join('\n'),
   );
   writeIntegrationFile(
     '.zshrc',
     [
-      'ZDOTDIR=$AGENTMATE_USER_ZDOTDIR',
-      'unset AGENTMATE_USER_ZDOTDIR',
+      'ZDOTDIR=$RUNOVA_USER_ZDOTDIR',
+      'unset RUNOVA_USER_ZDOTDIR',
       '[[ -f $ZDOTDIR/.zshrc ]] && . $ZDOTDIR/.zshrc',
       '(( ${+precmd_functions} )) || typeset -ga precmd_functions',
-      `agentmate_precmd() { printf '${MARKER}' }`,
-      'precmd_functions+=(agentmate_precmd)',
+      `runova_precmd() { printf '${MARKER}' }`,
+      'precmd_functions+=(runova_precmd)',
       '',
     ].join('\n'),
   );
@@ -98,7 +98,7 @@ function zshLaunch(env: Record<string, string> | undefined): ShellLaunch {
     args: [],
     env: {
       ZDOTDIR: integrationDir as string,
-      ...(userZdotdir ? { AGENTMATE_USER_ZDOTDIR: userZdotdir } : {}),
+      ...(userZdotdir ? { RUNOVA_USER_ZDOTDIR: userZdotdir } : {}),
     },
   };
 }
@@ -108,7 +108,7 @@ function fishLaunch(): ShellLaunch {
   return {
     args: [
       '--init-command',
-      `function __agentmate_marker --on-event fish_prompt; printf '${MARKER}'; end`,
+      `function __runova_marker --on-event fish_prompt; printf '${MARKER}'; end`,
     ],
     env: {},
   };
@@ -125,10 +125,10 @@ function fishLaunch(): ShellLaunch {
 // has no double quotes on purpose: it travels as one Windows command line argument, and quotes
 // inside it get mangled differently by each PowerShell version.
 const POWERSHELL_HOOK =
-  '$global:__agentmatePrevPrompt = $function:prompt; ' +
+  '$global:__runovaPrevPrompt = $function:prompt; ' +
   'function prompt { ' +
-  "Write-Host -NoNewline ([char]27 + ']7750;AgentMate:PromptReady:1' + [char]7); " +
-  '& $global:__agentmatePrevPrompt ' +
+  "Write-Host -NoNewline ([char]27 + ']7750;Runova:PromptReady:1' + [char]7); " +
+  '& $global:__runovaPrevPrompt ' +
   '}';
 
 function powershellLaunch(): ShellLaunch {
@@ -140,7 +140,7 @@ function powershellLaunch(): ShellLaunch {
  * own, or cmd's `$P$G` default) is kept, just prefixed. */
 function cmdLaunch(env: Record<string, string> | undefined): ShellLaunch {
   const existing = env?.PROMPT ?? process.env.PROMPT ?? '$P$G';
-  return { args: [], env: { PROMPT: `$E]7750;AgentMate:PromptReady:1$E\\${existing}` } };
+  return { args: [], env: { PROMPT: `$E]7750;Runova:PromptReady:1$E\\${existing}` } };
 }
 
 /**

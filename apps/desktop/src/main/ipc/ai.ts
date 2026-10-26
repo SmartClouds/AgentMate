@@ -1,5 +1,5 @@
 import { tmpdir } from 'node:os';
-import { buildRunAssessmentPrompt, parseRunAssessment, runArgsFor } from '@agentmat/core';
+import { buildRunAssessmentPrompt, parseRunAssessment, runArgsFor } from '@runova/core';
 import { ipcMain } from 'electron';
 import type {
   AiProvider,

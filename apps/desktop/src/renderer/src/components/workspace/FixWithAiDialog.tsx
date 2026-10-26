@@ -7,7 +7,7 @@ import {
   type PromptType,
   runChoiceArgs,
   targetAIForCliId,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';

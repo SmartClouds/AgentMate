@@ -1,4 +1,4 @@
-import { type Aspect, STYLE_PRESETS, styleById } from '@agentmat/studio';
+import { type Aspect, STYLE_PRESETS, styleById } from '@runova/studio';
 import { useId, useState } from 'react';
 import { scriptClass } from '../format';
 import {

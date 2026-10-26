@@ -1,4 +1,4 @@
-import { type AgentHistorySession, findGroup, type Project } from '@agentmat/core';
+import { type AgentHistorySession, findGroup, type Project } from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import {
@@ -53,7 +53,7 @@ export function HistorySection({ project }: { project: Project }): React.JSX.Ele
   const openConversations = useOpenConversations(project.id);
   const history = useQuery({
     queryKey: queryKeys.agentHistory(project.id),
-    queryFn: () => window.agentmat.agents.history(project.id),
+    queryFn: () => window.runova.agents.history(project.id),
     refetchInterval: 20_000,
     staleTime: 10_000,
     meta: { silentLoading: true },

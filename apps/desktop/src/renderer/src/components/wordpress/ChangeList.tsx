@@ -1,5 +1,5 @@
-import type { WpChange, WpItemRef, WpPlannedChange } from '@agentmat/core';
-import { wpItemKey, wpMirrorPath } from '@agentmat/core';
+import type { WpChange, WpItemRef, WpPlannedChange } from '@runova/core';
+import { wpItemKey, wpMirrorPath } from '@runova/core';
 import { wordPressErrorMessage } from '@shared/wordpressErrors';
 import { useQuery } from '@tanstack/react-query';
 import { MonacoDiffEditor } from '@/components/editor/MonacoDiffEditor';
@@ -378,7 +378,7 @@ export function ChangeDiff({
   const remoteQuery = useQuery({
     queryKey: queryKeys.projectWordPressRemoteFile(projectId, wpItemKey(change.item), change.path),
     queryFn: () =>
-      window.agentmat.deployWordPress.remoteFile({
+      window.runova.deployWordPress.remoteFile({
         projectId,
         item: change.item,
         path: change.path,
@@ -388,7 +388,7 @@ export function ChangeDiff({
   });
   const localQuery = useQuery({
     queryKey: queryKeys.workspaceFile(localPath),
-    queryFn: () => window.agentmat.fs.readFile(localPath),
+    queryFn: () => window.runova.fs.readFile(localPath),
     enabled: !binary && !localGone,
     meta: { silentLoading: true },
   });

@@ -10,7 +10,7 @@ import {
   verify,
 } from 'node:crypto';
 import { gunzipSync, gzipSync } from 'node:zlib';
-import { wpBase64UrlDecode, wpBase64UrlEncode } from '@agentmat/core';
+import { wpBase64UrlDecode, wpBase64UrlEncode } from '@runova/core';
 
 /**
  * The connector protocol's crypto on Node's own primitives (E19): Ed25519 for every request and

@@ -38,7 +38,7 @@ import { DownloadAbortedError, ResumableDownload } from '../updater/resumableDow
 import { DeployAppStore } from './appStore/service';
 import { approvalSigner } from './assistant/approvals';
 import { DeployAssistant } from './assistant/service';
-import { DeployBackups } from './backups';
+import { BACKUP_EXTENSION, BACKUP_EXTENSIONS, DeployBackups } from './backups';
 import {
   githubReleaseSource,
   localArtifactSource,
@@ -79,7 +79,7 @@ import type { StoredWpSite } from './wordpress/state';
 /**
  * Wires the Deploy service into Electron. Packaged builds install the core release published
  * with their own version, checked against the manifest built into the app. Development builds
- * use `pnpm server-core:publish` output, and can add the DevHost with AGENTMATE_DEPLOY_DEV_CORE
+ * use `pnpm server-core:publish` output, and can add the DevHost with RUNOVA_DEPLOY_DEV_CORE
  * (a loopback port); packaged builds ignore both. Every enrolled server keeps a lasting
  * connection while the app runs, for the Overview's live data and the alert watcher.
  */
@@ -112,7 +112,7 @@ async function downloadRelease(url: string, destination: string): Promise<void> 
       url,
       destPath: destination,
       expectedSize: null,
-      userAgent: `AgentMate/${app.getVersion()}`,
+      userAgent: `Runova/${app.getVersion()}`,
       onProgress: () => undefined,
       onReconnect: (attempt) => {
         if (attempt >= DOWNLOAD_ATTEMPTS) download.abort();
@@ -128,8 +128,7 @@ async function downloadRelease(url: string, destination: string): Promise<void> 
 
 function packagedSource(): CoreSource {
   const path = join(process.resourcesPath, MANIFEST);
-  if (!existsSync(path))
-    return unavailable('This build of AgentMate has no server core to install.');
+  if (!existsSync(path)) return unavailable('This build of Runova has no server core to install.');
   const manifest = parseReleaseManifest(JSON.parse(readFileSync(path, 'utf-8')));
   return {
     releases: githubReleaseSource(
@@ -146,7 +145,7 @@ const NO_DEV_BUILD =
 
 function developmentSource(): CoreSource {
   const directory =
-    process.env.AGENTMATE_SERVER_CORE_ARTIFACTS ?? repoReleaseDirectory(app.getAppPath());
+    process.env.RUNOVA_SERVER_CORE_ARTIFACTS ?? repoReleaseDirectory(app.getAppPath());
   if (!directory) return unavailable(NO_DEV_BUILD);
   return {
     releases: localArtifactSource(directory),
@@ -164,7 +163,7 @@ function developmentSource(): CoreSource {
 
 function devCorePort(): number | null {
   if (app.isPackaged) return null;
-  const port = Number(process.env.AGENTMATE_DEPLOY_DEV_CORE);
+  const port = Number(process.env.RUNOVA_DEPLOY_DEV_CORE);
   return Number.isInteger(port) && port > 0 && port < 65536 ? port : null;
 }
 
@@ -413,7 +412,7 @@ function registerDeployHardeningIpc(
       const options = {
         title: 'Save the server backup',
         defaultPath: suggestedName,
-        filters: [{ name: 'AgentMate server backup', extensions: ['ambackup'] }],
+        filters: [{ name: 'Runova server backup', extensions: [BACKUP_EXTENSION] }],
       };
       const win = dialogOwner();
       const result = win
@@ -425,7 +424,7 @@ function registerDeployHardeningIpc(
       const options = {
         title: 'Restore a server backup',
         properties: ['openFile' as const],
-        filters: [{ name: 'AgentMate server backup', extensions: ['ambackup'] }],
+        filters: [{ name: 'Runova server backup', extensions: BACKUP_EXTENSIONS }],
       };
       const win = dialogOwner();
       const result = win
@@ -474,7 +473,7 @@ function registerDeployServerBackupsIpc(
       const options = {
         title: 'Save the server backup',
         defaultPath: suggestedName,
-        filters: [{ name: 'AgentMate server backup', extensions: ['ambackup'] }],
+        filters: [{ name: 'Runova server backup', extensions: [BACKUP_EXTENSION] }],
       };
       const win = getMainWindow();
       const result = win
@@ -486,7 +485,7 @@ function registerDeployServerBackupsIpc(
       const options = {
         title: 'Restore a server backup',
         properties: ['openFile' as const],
-        filters: [{ name: 'AgentMate server backup', extensions: ['ambackup'] }],
+        filters: [{ name: 'Runova server backup', extensions: BACKUP_EXTENSIONS }],
       };
       const win = getMainWindow();
       const result = win

@@ -1,4 +1,4 @@
-import type { CustomDesktopPet } from '@agentmat/core';
+import type { CustomDesktopPet } from '@runova/core';
 import { ipcMain } from 'electron';
 import { IPC } from '../../shared/ipcChannels';
 import type { PetSnoozeState, PetWorkArea } from '../../shared/pet';

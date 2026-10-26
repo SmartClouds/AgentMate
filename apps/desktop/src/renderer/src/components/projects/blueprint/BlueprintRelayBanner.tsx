@@ -17,14 +17,14 @@ export function BlueprintRelayBanner({
 }): React.JSX.Element | null {
   const boardQuery = useQuery({
     queryKey: queryKeys.relayBoard(projectId),
-    queryFn: () => window.agentmat.relay.board(projectId),
+    queryFn: () => window.runova.relay.board(projectId),
     meta: { silentLoading: true },
   });
 
   useEffect(() => {
-    void Promise.resolve(window.agentmat.relay.watch(projectId)).catch(() => undefined);
+    void Promise.resolve(window.runova.relay.watch(projectId)).catch(() => undefined);
     return () => {
-      void Promise.resolve(window.agentmat.relay.unwatch(projectId)).catch(() => undefined);
+      void Promise.resolve(window.runova.relay.unwatch(projectId)).catch(() => undefined);
     };
   }, [projectId]);
 

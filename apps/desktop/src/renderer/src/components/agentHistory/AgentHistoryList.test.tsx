@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
-import type { AgentHistorySession } from '@agentmat/core';
+import type { AgentHistorySession } from '@runova/core';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { installAgentmatBridge } from '../../../../test/renderer/agentmatBridge';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
+import { installRunovaBridge } from '../../../../test/renderer/runovaBridge';
 import {
   BackgroundToggle,
   HistoryDayGroups,
@@ -39,7 +39,7 @@ function renderUi(ui: ReactElement) {
 }
 
 beforeEach(() => {
-  installAgentmatBridge({ platform: 'linux' });
+  installRunovaBridge({ platform: 'linux' });
 });
 
 afterEach(cleanup);

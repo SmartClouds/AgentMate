@@ -60,7 +60,7 @@ function useStartFolder(serverId: string, side: PaneSide, path: string | null): 
 }
 
 function SftpWindowTitleBar({ serverId }: { serverId: string }): React.JSX.Element {
-  const isMac = window.agentmat.platform === 'darwin';
+  const isMac = window.runova.platform === 'darwin';
   const [state, setState] = useState<SftpWindowState>({ isMaximized: false });
   const summary = useSftpStore(
     useShallow((store) => {

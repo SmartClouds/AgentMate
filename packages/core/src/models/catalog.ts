@@ -1,5 +1,5 @@
 /**
- * Every AI model name AgentMate knows, in one file.
+ * Every AI model name Runova knows, in one file.
  *
  * When a provider ships a new model (or renames one), this is the only file to edit. The rest of
  * the app reads from here: the run recommendation in Prompt Builder, launch defaults in Settings,

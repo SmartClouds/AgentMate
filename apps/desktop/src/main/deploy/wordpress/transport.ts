@@ -103,7 +103,7 @@ export function redirectedError(location: string | null): Error {
   const origin = cleanSiteOrigin(location);
   return wordPressError(
     'redirected',
-    `The site answered with a redirect${origin ? ` to ${origin}` : ''}, and AgentMate never follows one with a signed call. Check the site address (https, www) under Settings > General in wp-admin, then make a new connection key.`,
+    `The site answered with a redirect${origin ? ` to ${origin}` : ''}, and Runova never follows one with a signed call. Check the site address (https, www) under Settings > General in wp-admin, then make a new connection key.`,
   );
 }
 

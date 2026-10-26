@@ -1,5 +1,5 @@
 import { coreErrorMessage } from '@shared/coreErrors';
-import type { SshHardeningChangeInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { SshHardeningChangeInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeploySshHardeningInput } from '@shared/deployHardeningTypes';
 import type { DeployServer } from '@shared/deployTypes';
 import { useQuery } from '@tanstack/react-query';
@@ -46,7 +46,7 @@ export function SshFixDialog({
   const input = request ? { serverId: server.id, ...request } : null;
   const preview = useQuery({
     queryKey: ['deploy', 'security', server.id, 'ssh-preview', request],
-    queryFn: () => window.agentmat.deployHardening.previewSsh(input as DeploySshHardeningInput),
+    queryFn: () => window.runova.deployHardening.previewSsh(input as DeploySshHardeningInput),
     enabled: input !== null,
     retry: false,
     gcTime: 0,
@@ -57,7 +57,7 @@ export function SshFixDialog({
     setApplying(true);
     setProblem(null);
     try {
-      const change = await stepUp.run(() => window.agentmat.deployHardening.applySsh(input));
+      const change = await stepUp.run(() => window.runova.deployHardening.applySsh(input));
       if (change) onApplied(change);
     } catch (error) {
       setProblem(coreErrorMessage(error));

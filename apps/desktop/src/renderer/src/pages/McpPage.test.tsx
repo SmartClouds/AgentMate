@@ -1,5 +1,5 @@
-import type { McpRepository, McpServer } from '@agentmat/core';
-import { BOWORA_MCP_REPOSITORY_ID } from '@agentmat/core';
+import type { McpRepository, McpServer } from '@runova/core';
+import { BOWORA_MCP_REPOSITORY_ID } from '@runova/core';
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../test/renderer/renderWithProviders';

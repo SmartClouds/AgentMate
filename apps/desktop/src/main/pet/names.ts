@@ -1,4 +1,4 @@
-import { normalizeDesktopPetName } from '@agentmat/core';
+import { normalizeDesktopPetName } from '@runova/core';
 
 const BUILTIN_PET_NAMES: Record<string, string> = {
   fandi: 'Fandi',

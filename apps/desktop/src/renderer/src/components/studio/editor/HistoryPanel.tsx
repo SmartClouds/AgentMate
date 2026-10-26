@@ -1,4 +1,4 @@
-import type { HistoryEntryView } from '@agentmat/studio';
+import type { HistoryEntryView } from '@runova/studio';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { AiRunsList, type AiRunsListProps } from '../ai/AiRunsList';

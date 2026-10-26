@@ -1,4 +1,4 @@
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { coreHub, createCoreHubConnection } from './coreHub';
 import type { CoreTransport, CoreTransportKind } from './transport';
 

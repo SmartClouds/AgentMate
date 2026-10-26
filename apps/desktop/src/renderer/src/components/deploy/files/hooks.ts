@@ -25,14 +25,14 @@ export function useFileSites() {
   const queryClient = useQueryClient();
   useEffect(
     () =>
-      window.agentmat.deployFiles.onSitesChanged((event) => {
+      window.runova.deployFiles.onSitesChanged((event) => {
         queryClient.setQueryData<FileSite[]>(queryKeys.deployFilesSites, event.sites);
       }),
     [queryClient],
   );
   return useQuery({
     queryKey: queryKeys.deployFilesSites,
-    queryFn: async (): Promise<FileSite[]> => (await window.agentmat.deployFiles.list()) ?? [],
+    queryFn: async (): Promise<FileSite[]> => (await window.runova.deployFiles.list()) ?? [],
   });
 }
 
@@ -65,7 +65,7 @@ export async function readChanges(
   queryClient: QueryClient,
   siteId: string,
 ): Promise<FilesChangesSnapshot | null> {
-  const fresh = (await window.agentmat.deployFiles.changes(siteId)) ?? null;
+  const fresh = (await window.runova.deployFiles.changes(siteId)) ?? null;
   const current = queryClient.getQueryData<FilesChangesSnapshot | null>(
     queryKeys.deployFilesChanges(siteId),
   );
@@ -81,7 +81,7 @@ export function useFileSiteChanges(siteId: string) {
   const queryClient = useQueryClient();
   useEffect(() => {
     let live = true;
-    const api = window.agentmat.deployFiles;
+    const api = window.runova.deployFiles;
     const stop = api.onChanges((snapshot) => {
       if (snapshot.siteId === siteId) writeSnapshot(queryClient, snapshot);
     });
@@ -122,7 +122,7 @@ export function useFileSiteHistory(siteId: string) {
   return useQuery({
     queryKey: queryKeys.deployFilesHistory(siteId),
     queryFn: async (): Promise<FilesHistoryEntry[]> =>
-      (await window.agentmat.deployFiles.history(siteId)) ?? [],
+      (await window.runova.deployFiles.history(siteId)) ?? [],
     meta: QUIET,
   });
 }
@@ -131,7 +131,7 @@ export function useFileSiteHistory(siteId: string) {
 export function useSavedServerNames(): Map<string, string> {
   const query = useQuery({
     queryKey: queryKeys.sshServers,
-    queryFn: async () => (await window.agentmat.ssh.listServers()) ?? [],
+    queryFn: async () => (await window.runova.ssh.listServers()) ?? [],
     meta: QUIET,
   });
   return useMemo(
@@ -187,7 +187,7 @@ export function finishRun(queryClient: QueryClient, result: FilesRunResult): voi
 export function useFilesRunEvents(): void {
   const queryClient = useQueryClient();
   useEffect(() => {
-    const api = window.agentmat.deployFiles;
+    const api = window.runova.deployFiles;
     const stops = [
       api.onProgress((event) => useDeployFilesRunStore.getState().progress(event)),
       api.onRunFinished((result) => finishRun(queryClient, result)),

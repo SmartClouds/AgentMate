@@ -2,7 +2,7 @@ import type {
   ManagedService,
   ServiceInfo,
   ServiceState,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { CircleCheck, CircleX, Minus, RotateCw, Spinner, Wrench } from '@/components/icons';
 import { Chip } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';

@@ -12,7 +12,7 @@ import type {
   ServerRestoreStatus,
   StoredBackupInfo,
   TelegramLoginState,
-} from '../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployBackupFile } from '../shared/deployHardeningTypes';
 import type {
   DeployBackupDestinationInput,

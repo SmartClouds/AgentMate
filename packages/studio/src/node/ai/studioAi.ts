@@ -1,6 +1,6 @@
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { EffortLevel } from '@agentmat/core';
+import type { EffortLevel } from '@runova/core';
 import { type EditMedia, type EditProposal, readEditAnswer } from '../../ai/edit/answer.js';
 import {
   buildEditRequest,

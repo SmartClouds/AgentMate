@@ -1,4 +1,4 @@
-import type { WpItemRef, WpPlannedChange } from '@agentmat/core';
+import type { WpItemRef, WpPlannedChange } from '@runova/core';
 import type { DeployWordPressPlan, DeployWordPressPullResult } from '@shared/deployWordPressTypes';
 import { wordPressErrorCode, wordPressErrorMessage } from '@shared/wordpressErrors';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -89,13 +89,13 @@ export function PullFlowDialog({
 
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
     enabled: open,
   });
   const project = projectsQuery.data?.find((candidate) => candidate.id === projectId);
   const sitesQuery = useQuery({
     queryKey: queryKeys.deployWordPressSites,
-    queryFn: () => window.agentmat.deployWordPress.listSites(),
+    queryFn: () => window.runova.deployWordPress.listSites(),
     enabled: open,
     meta: SILENT,
   });
@@ -112,7 +112,7 @@ export function PullFlowDialog({
     setResolutions({});
     setOperationId(null);
     try {
-      const next = await window.agentmat.deployWordPress.planPull({
+      const next = await window.runova.deployWordPress.planPull({
         projectId,
         ...(items ? { items } : {}),
       });

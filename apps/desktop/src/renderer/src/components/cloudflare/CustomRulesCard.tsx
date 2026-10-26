@@ -37,7 +37,7 @@ export function CustomRulesCard({ zone }: { zone: CloudflareZone }): React.JSX.E
   const key = queryKeys.cloudflareCustomRules(zone.id);
   const rules = useQuery({
     queryKey: key,
-    queryFn: () => window.agentmat.cloudflare.listCustomRules(zone.id),
+    queryFn: () => window.runova.cloudflare.listCustomRules(zone.id),
   });
   const loadError = useCloudflareError(rules.error);
   const [building, setBuilding] = useState(false);
@@ -48,7 +48,7 @@ export function CustomRulesCard({ zone }: { zone: CloudflareZone }): React.JSX.E
     try {
       queryClient.setQueryData(
         key,
-        await window.agentmat.cloudflare.setCustomRuleEnabled(zone.id, rule.id, enabled),
+        await window.runova.cloudflare.setCustomRuleEnabled(zone.id, rule.id, enabled),
       );
       toast.success(`${rule.description || 'The rule'} is ${enabled ? 'on' : 'off'}.`);
     } catch (error) {
@@ -70,7 +70,7 @@ export function CustomRulesCard({ zone }: { zone: CloudflareZone }): React.JSX.E
     try {
       queryClient.setQueryData(
         key,
-        await window.agentmat.cloudflare.deleteCustomRule(zone.id, rule.id),
+        await window.runova.cloudflare.deleteCustomRule(zone.id, rule.id),
       );
       toast.success(`Deleted the rule ${nameOf(rule)}.`);
     } catch (error) {

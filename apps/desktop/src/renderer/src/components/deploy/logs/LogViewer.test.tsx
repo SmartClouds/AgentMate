@@ -1,4 +1,4 @@
-import type { ContainerList } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { ContainerList } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';

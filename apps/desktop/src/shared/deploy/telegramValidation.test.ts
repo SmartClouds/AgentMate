@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AlertKind } from './protocol/generated/AgentMate.ServerCore.Contracts';
+import type { AlertKind } from './protocol/generated/Runova.ServerCore.Contracts';
 import {
   checkBotToken,
   checkChatId,
@@ -45,14 +45,14 @@ describe('checkBotToken', () => {
 });
 
 describe('checkChatId', () => {
-  it.each(['123456789', '-1001234567890', '-4567890', '@agentmate_alerts', '  123456789 '])(
+  it.each(['123456789', '-1001234567890', '-4567890', '@runova_alerts', '  123456789 '])(
     'takes a person, a group or a channel: %s',
     (chat) => {
       expect(checkChatId(chat)).toEqual({ ok: true, value: chat.trim() });
     },
   );
 
-  it.each(['', '12 34', '@ab', 'https://t.me/agentmate', '--123'])('refuses %s', (chat) => {
+  it.each(['', '12 34', '@ab', 'https://t.me/runova', '--123'])('refuses %s', (chat) => {
     const result = checkChatId(chat);
 
     expect(result.ok).toBe(false);

@@ -1,4 +1,4 @@
-import type { AppSettings, Project } from '@agentmat/core';
+import type { AppSettings, Project } from '@runova/core';
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';

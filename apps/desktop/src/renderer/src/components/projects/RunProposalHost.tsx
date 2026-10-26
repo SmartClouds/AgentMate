@@ -1,4 +1,4 @@
-import type { ProjectRunCommand } from '@agentmat/core';
+import type { ProjectRunCommand } from '@runova/core';
 import type { RunProposal } from '@shared/apiTypes';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -31,10 +31,10 @@ export function RunProposalHost(): React.JSX.Element {
 
   useEffect(() => {
     let active = true;
-    void window.agentmat.runProposals.list().then((list) => {
+    void window.runova.runProposals.list().then((list) => {
       if (active) setPending(list);
     });
-    const unsubscribe = window.agentmat.runProposals.onChanged((changed) => {
+    const unsubscribe = window.runova.runProposals.onChanged((changed) => {
       if (active) setPending(changed.pending);
     });
     return () => {
@@ -46,7 +46,7 @@ export function RunProposalHost(): React.JSX.Element {
   const current = pending[0];
 
   async function startRun(projectId: string, command: ProjectRunCommand): Promise<void> {
-    const projects = await window.agentmat.projects.list();
+    const projects = await window.runova.projects.list();
     const project = projects.find((item) => item.id === projectId);
     if (!project) {
       toast.error('The command was added, but its project could not be found to run it.');
@@ -60,8 +60,8 @@ export function RunProposalHost(): React.JSX.Element {
     const proposal = current;
     setBusy(true);
     try {
-      const result = await window.agentmat.runProposals.decide(proposal.id, decision);
-      // AgentMate drops the suggestion either way, so it leaves the dialog either way.
+      const result = await window.runova.runProposals.decide(proposal.id, decision);
+      // Runova drops the suggestion either way, so it leaves the dialog either way.
       setPending((prev) => prev.filter((item) => item.id !== proposal.id));
       if (!result.ok) {
         toast.error(result.error);

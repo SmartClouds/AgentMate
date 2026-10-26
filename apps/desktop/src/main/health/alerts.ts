@@ -1,4 +1,4 @@
-import type { AppNotification, HealthIncident, Project } from '@agentmat/core';
+import type { AppNotification, HealthIncident, Project } from '@runova/core';
 import { IPC } from '../../shared/ipcChannels';
 import { appNotificationInbox } from '../deploy/watcher';
 import { broadcastToWindows } from '../ipc/send';

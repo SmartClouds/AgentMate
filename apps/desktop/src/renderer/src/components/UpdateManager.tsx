@@ -99,7 +99,7 @@ function progressLine(progress: UpdateDownloadProgress, reconnecting?: boolean):
 
 async function startDownload(): Promise<void> {
   try {
-    await window.agentmat.app.downloadUpdate();
+    await window.runova.app.downloadUpdate();
   } catch {
     // Status broadcast already carries the error. Don't toast over the dialog.
   }
@@ -170,7 +170,7 @@ function UpdateDialogBody({ status }: { status: UpdateStatus }): React.JSX.Eleme
             {hasPartial ? 'Finish downloading update' : 'Update available'}
           </DialogTitle>
           <DialogDescription>
-            AgentMate v{status.info.version}
+            Runova v{status.info.version}
             {sizeLabel ? ` · ${sizeLabel}` : ''}.
             {hasPartial
               ? ` ${formatUpdateBytes(status.partialBytes)} is already on disk. Resume continues from there.`
@@ -216,7 +216,7 @@ function UpdateDialogBody({ status }: { status: UpdateStatus }): React.JSX.Eleme
           <DialogDescription>
             {status.reconnecting
               ? `Connection dropped. Keeping ${formatUpdateBytes(status.progress.transferredBytes)} and retrying.`
-              : `AgentMate v${status.info.version}. You can hide this window. The download keeps going.`}
+              : `Runova v${status.info.version}. You can hide this window. The download keeps going.`}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
@@ -237,7 +237,7 @@ function UpdateDialogBody({ status }: { status: UpdateStatus }): React.JSX.Eleme
           <Button variant="soft" onClick={() => closeUpdateDialog()}>
             Hide
           </Button>
-          <Button variant="soft" onClick={() => void window.agentmat.app.pauseDownload()}>
+          <Button variant="soft" onClick={() => void window.runova.app.pauseDownload()}>
             <Pause className="h-4 w-4" />
             Pause
           </Button>
@@ -305,7 +305,7 @@ function UpdateDialogBody({ status }: { status: UpdateStatus }): React.JSX.Eleme
           ) : (
             <Button
               onClick={() => {
-                void window.agentmat.app.checkForUpdates().then((result) => {
+                void window.runova.app.checkForUpdates().then((result) => {
                   if (result.state === 'error') toast.error(result.message);
                 });
               }}
@@ -340,7 +340,7 @@ export function DownloadedDialogBody({ version }: { version: string }): React.JS
     if (restarting) return;
     setRestarting(true);
     try {
-      await window.agentmat.app.quitAndInstall();
+      await window.runova.app.quitAndInstall();
     } catch {
       setRestarting(false);
       toast.error('Restart to install failed. Quit the app and it installs on the way out.');
@@ -352,8 +352,8 @@ export function DownloadedDialogBody({ version }: { version: string }): React.JS
       <DialogHeader>
         <DialogTitle>Update ready to install</DialogTitle>
         <DialogDescription>
-          AgentMate v{version} is downloaded. Restart now to finish installing, or it installs the
-          next time you quit.
+          Runova v{version} is downloaded. Restart now to finish installing, or it installs the next
+          time you quit.
         </DialogDescription>
       </DialogHeader>
       <UpdateProgressTrack percent={100} />

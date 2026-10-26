@@ -19,7 +19,7 @@ export const CHALLTESTSRV_IMAGE = 'ghcr.io/letsencrypt/pebble-challtestsrv:2.10.
 /** Where the core finds Pebble from inside the server. */
 export const PEBBLE_DIRECTORY = 'https://127.0.0.1:14000/dir';
 
-const MINICA_PATH = '/usr/local/share/ca-certificates/agentmate-pebble-minica.crt';
+const MINICA_PATH = '/usr/local/share/ca-certificates/runova-pebble-minica.crt';
 
 // Pebble's own test configuration with Retry-After cut to a second and one ninety-day profile,
 // validating HTTP-01 on port 80, where nginx answers.
@@ -87,7 +87,7 @@ export function pointCoreAtPebble(server: TestServer): void {
     Core: { Acme: { ProductionDirectory: PEBBLE_DIRECTORY, StagingDirectory: PEBBLE_DIRECTORY } },
   });
   server.run(
-    `mkdir -p /etc/agentmate-core && echo ${Buffer.from(settings).toString('base64')} | base64 -d > /etc/agentmate-core/core.json && chmod 0600 /etc/agentmate-core/core.json`,
+    `mkdir -p /etc/runova-core && echo ${Buffer.from(settings).toString('base64')} | base64 -d > /etc/runova-core/core.json && chmod 0600 /etc/runova-core/core.json`,
   );
 }
 
@@ -95,10 +95,10 @@ export async function startPebbleOn(server: TestServer): Promise<PebbleOnServer>
   ensureImage(PEBBLE_IMAGE);
   ensureImage(CHALLTESTSRV_IMAGE);
   const suffix = `${process.pid}-${Date.now()}`;
-  const pebble = `agentmate-pebble-${suffix}`;
-  const challenges = `agentmate-challtestsrv-${suffix}`;
+  const pebble = `runova-pebble-${suffix}`;
+  const challenges = `runova-challtestsrv-${suffix}`;
   const made: string[] = [];
-  const work = mkdtempSync(join(tmpdir(), 'agentmate-pebble-'));
+  const work = mkdtempSync(join(tmpdir(), 'runova-pebble-'));
   const stop = () => {
     for (const name of made.splice(0)) {
       try {
@@ -150,14 +150,14 @@ export async function startPebbleOn(server: TestServer): Promise<PebbleOnServer>
       'PEBBLE_VA_NOSLEEP=1',
       PEBBLE_IMAGE,
       '-config',
-      '/test/config/agentmate.json',
+      '/test/config/runova.json',
       '-strict',
       '-dnsserver',
       '127.0.0.1:8053',
     ]);
-    const configuration = join(work, 'agentmate.json');
+    const configuration = join(work, 'runova.json');
     writeFileSync(configuration, JSON.stringify(CONFIGURATION, null, 2));
-    docker(['cp', configuration, `${pebble}:/test/config/agentmate.json`]);
+    docker(['cp', configuration, `${pebble}:/test/config/runova.json`]);
     const minica = join(work, 'pebble.minica.pem');
     docker(['cp', `${pebble}:/test/certs/pebble.minica.pem`, minica]);
     const trusted = Buffer.from(readFileSync(minica)).toString('base64');

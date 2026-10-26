@@ -1,4 +1,4 @@
-import type { PingIpVersion, PingMethod } from '@agentmat/core';
+import type { PingIpVersion, PingMethod } from '@runova/core';
 import { create } from 'zustand';
 
 export const DEFAULT_PING_URL = 'https://www.gstatic.com/generate_204';
@@ -32,32 +32,32 @@ export const usePingTargetsStore = create<PingTargetsState>((set) => ({
   pingUrlIntervalSeconds: DEFAULT_PING_URL_INTERVAL_SECONDS,
   setPingTargets: (targets) => {
     set({ pingTargets: targets });
-    void window.agentmat.settings.update({ pingTargets: targets });
+    void window.runova.settings.update({ pingTargets: targets });
   },
   setPingIpVersion: (version) => {
     set({ pingIpVersion: version });
-    void window.agentmat.settings.update({ pingIpVersion: version });
+    void window.runova.settings.update({ pingIpVersion: version });
   },
   setPingTargetsIpv6: (targets) => {
     set({ pingTargetsIpv6: targets });
-    void window.agentmat.settings.update({ pingTargetsIpv6: targets });
+    void window.runova.settings.update({ pingTargetsIpv6: targets });
   },
   setPingMethod: (method) => {
     set({ pingMethod: method });
-    void window.agentmat.settings.update({ pingMethod: method });
+    void window.runova.settings.update({ pingMethod: method });
   },
   setPingUrls: (urls) => {
     set({ pingUrls: urls });
-    void window.agentmat.settings.update({ pingUrls: urls });
+    void window.runova.settings.update({ pingUrls: urls });
   },
   setPingUrlIntervalSeconds: (seconds) => {
     set({ pingUrlIntervalSeconds: seconds });
-    void window.agentmat.settings.update({ pingUrlIntervalSeconds: seconds });
+    void window.runova.settings.update({ pingUrlIntervalSeconds: seconds });
   },
 }));
 
 export async function initPingTargets(): Promise<void> {
-  const settings = await window.agentmat.settings.get();
+  const settings = await window.runova.settings.get();
   usePingTargetsStore.setState({
     pingTargets: settings.pingTargets ?? [...DEFAULT_PING_TARGETS_IPV4],
     pingIpVersion: settings.pingIpVersion ?? 'ipv4',

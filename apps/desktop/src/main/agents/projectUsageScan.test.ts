@@ -113,7 +113,7 @@ describe('localDay', () => {
 
 describe('scanProjectBuckets', () => {
   it('sums the four token counts per conversation, day and model', async () => {
-    const dir = tempDir('agentmate-project-usage-');
+    const dir = tempDir('runova-project-usage-');
     const job = claudeJob(dir, [
       claudeLine({ at: at(17, 9), id: 'm1', input: 10, output: 20 }),
       claudeLine({ at: at(17, 15), id: 'm2', input: 1, cacheRead: 300, cacheWrite: 40 }),
@@ -144,7 +144,7 @@ describe('scanProjectBuckets', () => {
   });
 
   it('counts a message id once, however many lines carry it', async () => {
-    const dir = tempDir('agentmate-project-usage-');
+    const dir = tempDir('runova-project-usage-');
     const line = claudeLine({ at: at(17), id: 'dup', input: 5, output: 5 });
     const job = claudeJob(dir, [line, line, line]);
 
@@ -154,7 +154,7 @@ describe('scanProjectBuckets', () => {
   });
 
   it('counts a message copied into a resumed conversation once, for the older one', async () => {
-    const dir = tempDir('agentmate-project-usage-');
+    const dir = tempDir('runova-project-usage-');
     const original = claudeJob(dir, [claudeLine({ at: at(10), id: 'shared', input: 100 })], {
       order: 1,
     });
@@ -179,7 +179,7 @@ describe('scanProjectBuckets', () => {
   });
 
   it('leaves out events before the period and keeps the rest', async () => {
-    const dir = tempDir('agentmate-project-usage-');
+    const dir = tempDir('runova-project-usage-');
     const job = claudeJob(dir, [
       claudeLine({ at: at(3), id: 'old', input: 1000 }),
       claudeLine({ at: at(20), id: 'new', input: 5 }),
@@ -192,7 +192,7 @@ describe('scanProjectBuckets', () => {
   });
 
   it('never opens a transcript untouched since before the period', async () => {
-    const dir = tempDir('agentmate-project-usage-');
+    const dir = tempDir('runova-project-usage-');
     const stale = claudeJob(dir, [claudeLine({ at: at(3), id: 'old', input: 1000 })]);
     const live = claudeJob(dir, [claudeLine({ at: at(20), id: 'new', input: 5 })]);
     const longAgo = new Date(at(3));
@@ -209,7 +209,7 @@ describe('scanProjectBuckets', () => {
   });
 
   it("adds the conversation's subagent logs", async () => {
-    const dir = tempDir('agentmate-project-usage-');
+    const dir = tempDir('runova-project-usage-');
     const job = claudeJob(dir, [claudeLine({ at: at(17), id: 'main', input: 10 })]);
     mkdirSync(join(job.subagentDir ?? '', 'subagents'), { recursive: true });
     writeFileSync(
@@ -224,7 +224,7 @@ describe('scanProjectBuckets', () => {
   });
 
   it('skips placeholder messages that carry no tokens', async () => {
-    const dir = tempDir('agentmate-project-usage-');
+    const dir = tempDir('runova-project-usage-');
     const job = claudeJob(dir, [
       claudeLine({ at: at(17), id: 'synthetic', model: '<synthetic>' }),
       claudeLine({ at: at(17), id: 'real', input: 3 }),
@@ -237,7 +237,7 @@ describe('scanProjectBuckets', () => {
   });
 
   it('reads Codex rollouts, with the model from the turn context', async () => {
-    const dir = tempDir('agentmate-project-usage-');
+    const dir = tempDir('runova-project-usage-');
     const path = join(dir, 'rollout-2026-09-17.jsonl');
     writeFileSync(path, `${codexLines(at(17), 'gpt-5', 1000, 400, 50)}\n`, 'utf-8');
     const job: ScanJob = { key: 'codex\u0000abc', parser: 'codex', path, order: 1 };
@@ -259,7 +259,7 @@ describe('scanProjectBuckets', () => {
   });
 
   it('reads only the appended bytes the second time, without counting twice', async () => {
-    const dir = tempDir('agentmate-project-usage-');
+    const dir = tempDir('runova-project-usage-');
     const job = claudeJob(dir, [claudeLine({ at: at(17), id: 'a', input: 10 })]);
     const first = await scanProjectBuckets({ jobs: [job], sinceMs: 0, cache: {} });
 
@@ -272,7 +272,7 @@ describe('scanProjectBuckets', () => {
   });
 
   it('answers a repeat look from the cache when nothing changed', async () => {
-    const dir = tempDir('agentmate-project-usage-');
+    const dir = tempDir('runova-project-usage-');
     const job = claudeJob(dir, [claudeLine({ at: at(17), id: 'a', input: 10 })]);
     const first = await scanProjectBuckets({ jobs: [job], sinceMs: 0, cache: {} });
     const second = await scanProjectBuckets({ jobs: [job], sinceMs: 0, cache: first.cache });
@@ -282,7 +282,7 @@ describe('scanProjectBuckets', () => {
   });
 
   it('reports a transcript that is gone instead of counting it as empty', async () => {
-    const dir = tempDir('agentmate-project-usage-');
+    const dir = tempDir('runova-project-usage-');
     const gone: ScanJob = {
       key: 'claude-code\u0000gone',
       parser: 'claude-code',

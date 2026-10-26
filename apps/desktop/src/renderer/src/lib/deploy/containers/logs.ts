@@ -1,4 +1,4 @@
-import type { ContainerLogLine } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { ContainerLogLine } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * A container's log on screen (E06 T8): the lines kept (the newest few thousand), a search that

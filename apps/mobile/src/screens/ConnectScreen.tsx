@@ -62,7 +62,7 @@ export function ConnectScreen({ client }: { client: RemoteClient }): React.JSX.E
               style={styles.logo}
               resizeMode="contain"
             />
-            <Text style={styles.title}>AgentMate</Text>
+            <Text style={styles.title}>Runova</Text>
             <Text style={styles.subtitle}>Remote Control</Text>
           </View>
 
@@ -101,7 +101,7 @@ export function ConnectScreen({ client }: { client: RemoteClient }): React.JSX.E
             <TextInput
               value={code}
               onChangeText={setCode}
-              placeholder="AGENTMATE1:…"
+              placeholder="RUNOVA1:…"
               placeholderTextColor={colors.mutedForeground}
               multiline
               autoCapitalize="none"
@@ -133,9 +133,9 @@ export function ConnectScreen({ client }: { client: RemoteClient }): React.JSX.E
           </View>
 
           <Text style={styles.hint}>
-            On the computer you want to control, open AgentMate → Remote → Host tab, then start
-            hosting and share its pairing code or QR here. You only pair once; the computer is saved
-            above for future connections.
+            On the computer you want to control, open Runova → Remote → Host tab, then start hosting
+            and share its pairing code or QR here. You only pair once; the computer is saved above
+            for future connections.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>

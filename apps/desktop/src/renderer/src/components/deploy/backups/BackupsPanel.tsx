@@ -35,7 +35,7 @@ export function BackupsPanel({ server }: { server: DeployServer }): React.JSX.El
   const stepUp = useStepUp(server);
   const access = useQuery({
     queryKey: queryKeys.deployAccess(server.id),
-    queryFn: () => window.agentmat.deploy.access(server.id),
+    queryFn: () => window.runova.deploy.access(server.id),
     retry: false,
     staleTime: 30_000,
   });

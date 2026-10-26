@@ -1,7 +1,7 @@
 /**
  * The languages a Studio video can be made in. Persian and English come first and are the ones
  * verified end to end; the rest are offered because the CLIs and voice engines handle them.
- * Chinese is never offered, in any of its forms: AgentMate ships no Chinese content, and every
+ * Chinese is never offered, in any of its forms: Runova ships no Chinese content, and every
  * provider list (voices, languages) passes through `withoutChinese` before it is shown.
  */
 

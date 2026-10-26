@@ -6,7 +6,7 @@ import type {
   SceneCheckView,
   SceneCodeView,
   VideoSummary,
-} from '@agentmat/studio';
+} from '@runova/studio';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IPC } from '../../shared/ipcChannels';
 import { setElectronPath } from '../../test/main/electronMock';

@@ -1,4 +1,4 @@
-import type { VideoSummary } from '@agentmat/studio';
+import type { VideoSummary } from '@runova/studio';
 import { errorMessage } from '../format';
 import { CARD_GRID, CatalogCardShimmer, Clapperboard, EmptyState, LoadFailure } from '../kit';
 import { VideoCard } from './VideoCard';

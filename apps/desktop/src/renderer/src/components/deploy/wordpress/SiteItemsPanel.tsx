@@ -1,5 +1,5 @@
-import type { Project, ProjectWordPressItemKind, WpItem, WpItemRef } from '@agentmat/core';
-import { wpItemRoot } from '@agentmat/core';
+import type { Project, ProjectWordPressItemKind, WpItem, WpItemRef } from '@runova/core';
+import { wpItemRoot } from '@runova/core';
 import type { DeployWordPressSite, DeployWordPressSiteInfo } from '@shared/deployWordPressTypes';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -57,7 +57,7 @@ const GROUPS: ReadonlyArray<{ kind: ProjectWordPressItemKind; title: string; emp
   },
 ];
 
-const PROTECTED = "That's the AgentMate Connector itself, which is never pulled or deployed.";
+const PROTECTED = "That's the Runova Connector itself, which is never pulled or deployed.";
 
 /** Why deploying this item is off right now, or null when it can go ahead. */
 export function deployBlockedReason(

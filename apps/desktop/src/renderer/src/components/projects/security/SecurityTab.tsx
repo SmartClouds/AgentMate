@@ -1,5 +1,5 @@
-import type { Project, SecurityScannerId } from '@agentmat/core';
-import { getSecurityScanner, SECURITY_SCANNERS } from '@agentmat/core';
+import type { Project, SecurityScannerId } from '@runova/core';
+import { getSecurityScanner, SECURITY_SCANNERS } from '@runova/core';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -110,7 +110,7 @@ export function SecurityTab({ project }: { project: Project }): React.JSX.Elemen
               onSuccess: () => toast.success('Scanner settings saved.'),
             });
           }}
-          onSuggestLanguage={() => window.agentmat.security.suggestCodeqlLanguage(project.id)}
+          onSuggestLanguage={() => window.runova.security.suggestCodeqlLanguage(project.id)}
         />
       </div>
     );
@@ -230,7 +230,7 @@ export function SecurityTab({ project }: { project: Project }): React.JSX.Elemen
             onSuccess: () => toast.success('Scanner settings saved.'),
           });
         }}
-        onSuggestLanguage={() => window.agentmat.security.suggestCodeqlLanguage(project.id)}
+        onSuggestLanguage={() => window.runova.security.suggestCodeqlLanguage(project.id)}
       />
     </div>
   );

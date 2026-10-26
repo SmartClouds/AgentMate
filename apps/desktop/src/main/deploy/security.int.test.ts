@@ -31,7 +31,7 @@ import {
  *   keeps is put back by its systemd timer.
  * - A backup made on one server restores onto another, which then runs as the first did.
  *
- * Needs AGENTMATE_SYSTEM_TESTS=1, Docker, and `pnpm server-core:publish linux-x64`.
+ * Needs RUNOVA_SYSTEM_TESTS=1, Docker, and `pnpm server-core:publish linux-x64`.
  */
 
 const enabled = systemTestsEnabled();
@@ -202,9 +202,7 @@ describe.skipIf(!enabled)('the Security center on real servers', () => {
         ).rejects.toThrow(/Nothing was changed/);
         expect(sshd(server, 'passwordauthentication')).toBe('yes');
         expect(
-          server.run(
-            'test -e /etc/ssh/sshd_config.d/00-agentmate.conf && echo there || echo absent',
-          ),
+          server.run('test -e /etc/ssh/sshd_config.d/00-runova.conf && echo there || echo absent'),
         ).toBe('absent');
         expect(await passwordGetsIn(server)).toBe(true);
 
@@ -223,14 +221,12 @@ describe.skipIf(!enabled)('the Security center on real servers', () => {
         expect(proven.allowed).toBe(true);
         const change = await hardening.applySsh(passwordsOff);
         expect(change.state).toBe('awaitingConfirmation');
-        expect(server.run('systemctl list-timers --all --no-legend')).toContain(
-          'agentmate-sshrevert',
-        );
+        expect(server.run('systemctl list-timers --all --no-legend')).toContain('runova-sshrevert');
         const kept = await hardening.confirmSsh({ serverId: 'srv', changeId: change.id });
         expect(kept.state).toBe('confirmed');
         expect(steps).toContain('confirm:confirming:done');
         expect(server.run('systemctl list-timers --all --no-legend')).not.toContain(
-          'agentmate-sshrevert',
+          'runova-sshrevert',
         );
 
         expect(sshd(server, 'passwordauthentication')).toBe('no');
@@ -306,10 +302,10 @@ describe.skipIf(!enabled)('the Security center on real servers', () => {
         expect(result.backupCoreVersion).toBe('0.0.0-dev');
         expect((await second.service.account('srv')).userName).toBe('maria');
         expect(
-          second.server.run('test -d /var/lib/agentmate-core-restore/previous && echo kept'),
+          second.server.run('test -d /var/lib/runova-core-restore/previous && echo kept'),
         ).toBe('kept');
-        expect(second.server.run('stat -c %a /var/lib/agentmate-core')).toBe('700');
-        expect(second.server.run('stat -c %a /var/lib/agentmate-core/core.db')).toBe('600');
+        expect(second.server.run('stat -c %a /var/lib/runova-core')).toBe('700');
+        expect(second.server.run('stat -c %a /var/lib/runova-core/core.db')).toBe('600');
       },
       TEST_TIMEOUT_MS,
     );

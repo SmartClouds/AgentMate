@@ -3,7 +3,7 @@ import {
   type ProviderUsage,
   type UsageProviderDefinition,
   type WidgetMode,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useEffect, useState } from 'react';
 import { Pin } from '@/components/icons';
 import { Button } from '@/components/ui/button';

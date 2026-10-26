@@ -107,7 +107,7 @@ export function PointDomainDialog({
   const id = useId();
   const serversQuery = useQuery({
     queryKey: queryKeys.deployServers,
-    queryFn: () => window.agentmat.deploy.listServers(),
+    queryFn: () => window.runova.deploy.listServers(),
   });
   const servers = (serversQuery.data ?? []).filter((server) => !server.dev);
   const [serverId, setServerId] = useState('');
@@ -145,7 +145,7 @@ export function PointDomainDialog({
     setBusy('preview');
     setProblem(null);
     try {
-      setPlan(await window.agentmat.cloudflare.planPointDomain(input));
+      setPlan(await window.runova.cloudflare.planPointDomain(input));
     } catch (error) {
       setProblem(cloudflareFailureText(error, queryClient));
     } finally {
@@ -158,7 +158,7 @@ export function PointDomainDialog({
     setBusy('apply');
     setProblem(null);
     try {
-      const result = await window.agentmat.cloudflare.pointDomain(input);
+      const result = await window.runova.cloudflare.pointDomain(input);
       toast.success(`${result.plan.names[0]} now points to ${server.nickname}.`);
       void queryClient.invalidateQueries({ queryKey: queryKeys.cloudflareRecords(zone.id) });
       setDone({ names: result.plan.names, serverId: server.id, nickname: server.nickname });

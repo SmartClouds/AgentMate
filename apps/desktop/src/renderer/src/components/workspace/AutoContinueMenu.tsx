@@ -1,4 +1,4 @@
-import type { AutoContinuePending } from '@agentmat/core';
+import type { AutoContinuePending } from '@runova/core';
 import { useState } from 'react';
 import { Play } from '@/components/icons';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,7 @@ export interface AutoContinueMenuProps {
 }
 
 /**
- * Per-tab switches that have AgentMate type "continue" for the agent once its usage limit
+ * Per-tab switches that have Runova type "continue" for the agent once its usage limit
  * resets, or a few minutes after it stopped on a network error.
  */
 export function AutoContinueMenu({ projectId, tab }: AutoContinueMenuProps): React.JSX.Element {
@@ -115,9 +115,7 @@ export function AutoContinueMenu({ projectId, tab }: AutoContinueMenuProps): Rea
             <p className="px-2.5 py-1.5 text-xs text-foreground">
               {autoContinuePendingLine(pending)}
             </p>
-            <DropdownMenuItem
-              onSelect={() => void window.agentmat.agents.cancelAutoContinue(tab.id)}
-            >
+            <DropdownMenuItem onSelect={() => void window.runova.agents.cancelAutoContinue(tab.id)}>
               Cancel this time
             </DropdownMenuItem>
           </>

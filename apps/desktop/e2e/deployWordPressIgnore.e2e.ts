@@ -13,12 +13,12 @@ import {
 
 /**
  * Leaving files out of a WordPress deploy, and deploying a theme or plugin the site does not have
- * yet, end to end on a real WordPress in Docker with the AgentMate Connector:
+ * yet, end to end on a real WordPress in Docker with the Runova Connector:
  *
  * 1. a project is made from the site's theme, then given local changes: edits, new files, a
  *    folder the theme's .gitignore names, and agent folders;
  * 2. the review lists what would go, and shows what git ignores and what starts with .claude or
- *    .agentmate under "Left out";
+ *    .runova under "Left out";
  * 3. a folder is ignored from a file's menu, and two ticked files from the selection bar;
  * 4. the choices are saved on the project, still there when the review opens again, and one is
  *    taken back from the list under the review;
@@ -26,12 +26,12 @@ import {
  * 6. a new plugin made in the project is added from Deploy's "New theme or plugin", reviewed and
  *    created on the site.
  *
- * Needs AGENTMATE_SYSTEM_TESTS=1 and Docker for Linux containers. The containers are named
- * agentmate-wpc-18997-* and removed in afterAll. With SHOTS_DIR set, each screen worth a design
+ * Needs RUNOVA_SYSTEM_TESTS=1 and Docker for Linux containers. The containers are named
+ * runova-wpc-18997-* and removed in afterAll. With SHOTS_DIR set, each screen worth a design
  * review is also saved there, in the dark and the light theme.
  */
 
-test.skip(!systemTestsEnabled(), 'needs AGENTMATE_SYSTEM_TESTS=1 and Docker for Linux containers');
+test.skip(!systemTestsEnabled(), 'needs RUNOVA_SYSTEM_TESTS=1 and Docker for Linux containers');
 
 const PORT = 18_997;
 const SHOTS_DIR = process.env.SHOTS_DIR;
@@ -77,7 +77,7 @@ test.describe('Ignoring files in a WordPress deploy', () => {
 
   async function waitForColdStart(): Promise<void> {
     const p = page();
-    await p.waitForFunction(() => Boolean((window as { agentmat?: unknown }).agentmat));
+    await p.waitForFunction(() => Boolean((window as { runova?: unknown }).runova));
     await expect(p.locator('div.absolute.inset-0.z-50.backdrop-blur-xl')).toHaveCount(0, {
       timeout: MINUTE,
     });
@@ -88,9 +88,9 @@ test.describe('Ignoring files in a WordPress deploy', () => {
     return page().evaluate(async (id) => {
       const api = (
         window as unknown as {
-          agentmat: { projects: { list(): Promise<Array<{ id: string }>> } };
+          runova: { projects: { list(): Promise<Array<{ id: string }>> } };
         }
-      ).agentmat;
+      ).runova;
       return (await api.projects.list()).find((project) => project.id === id) ?? {};
     }, projectId);
   }
@@ -143,14 +143,14 @@ test.describe('Ignoring files in a WordPress deploy', () => {
       async ({ key, label, folderPath, name }) => {
         const api = (
           window as unknown as {
-            agentmat: {
+            runova: {
               deployWordPress: {
                 connect(input: unknown): Promise<{ id: string }>;
                 createProject(input: unknown): Promise<{ id: string }>;
               };
             };
           }
-        ).agentmat;
+        ).runova;
         const connected = await api.deployWordPress.connect({ connectionKey: key, label });
         const project = await api.deployWordPress.createProject({
           operationId: 'op-e2e-ignore-0001',
@@ -175,7 +175,7 @@ test.describe('Ignoring files in a WordPress deploy', () => {
     write(`${THEME_ROOT}/vendor/lib.php`, '<?php // lib\n');
     write(`${THEME_ROOT}/.gitignore`, 'vendor/\n');
     write(`${THEME_ROOT}/.claude-skills/a.md`, 'skill\n');
-    write(`${THEME_ROOT}/.agentmate-cache/b.json`, '{}\n');
+    write(`${THEME_ROOT}/.runova-cache/b.json`, '{}\n');
 
     await p.reload();
     await waitForColdStart();
@@ -207,7 +207,7 @@ test.describe('Ignoring files in a WordPress deploy', () => {
     const leftOut = dialog.getByRole('region', { name: 'Left out' });
     await expect(leftOut).toContainText('vendor/');
     await expect(leftOut).toContainText('.claude-skills/a.md');
-    await expect(leftOut).toContainText('.agentmate-cache/b.json');
+    await expect(leftOut).toContainText('.runova-cache/b.json');
     await shot('review');
   });
 
@@ -275,7 +275,7 @@ test.describe('Ignoring files in a WordPress deploy', () => {
     expect(existsOnSite(site(), `${SITE_THEMES}/assets/app.js.map`)).toBe(false);
     expect(existsOnSite(site(), `${SITE_THEMES}/vendor`)).toBe(false);
     expect(existsOnSite(site(), `${SITE_THEMES}/.claude-skills`)).toBe(false);
-    expect(existsOnSite(site(), `${SITE_THEMES}/.agentmate-cache`)).toBe(false);
+    expect(existsOnSite(site(), `${SITE_THEMES}/.runova-cache`)).toBe(false);
     await dialog.getByRole('button', { name: 'Done' }).click();
   });
 

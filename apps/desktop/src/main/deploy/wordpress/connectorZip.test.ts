@@ -9,7 +9,7 @@ import { CONNECTOR_ZIP_NAME, connectorZipPath, saveConnectorZip } from './connec
 
 let root: string;
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'agentmate-wp-zip-'));
+  root = mkdtempSync(join(tmpdir(), 'runova-wp-zip-'));
 });
 afterEach(() => {
   rmSync(root, { recursive: true, force: true });

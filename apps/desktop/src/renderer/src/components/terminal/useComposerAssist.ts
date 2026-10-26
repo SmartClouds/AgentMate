@@ -2,7 +2,7 @@ import {
   type AgentInstructionPurpose,
   type AgentInstructionTarget,
   buildAgentInstructionRequest,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -39,7 +39,7 @@ export function useComposerAssist({
 }: ComposerAssistOptions) {
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
     meta: { silentLoading: true },
   });
   const [busy, setBusy] = useState<ComposerAssistJob | null>(null);
@@ -74,7 +74,7 @@ export function useComposerAssist({
     if (!job) return;
     const before = value;
     try {
-      const translated = await window.agentmat.translate.text({
+      const translated = await window.runova.translate.text({
         text: before,
         targetLang: 'en',
         requestId: job.requestId,
@@ -92,13 +92,13 @@ export function useComposerAssist({
     if (!job) return;
     const before = value;
     try {
-      const settings = settingsQuery.data ?? (await window.agentmat.settings.get());
+      const settings = settingsQuery.data ?? (await window.runova.settings.get());
       const { provider, model } = promptProviderModel(settings);
       if (!model.trim()) {
         if (finish(job)) toast.error(`Set a ${provider} model in Settings first.`);
         return;
       }
-      const result = await window.agentmat.ai.ask({
+      const result = await window.runova.ai.ask({
         provider,
         model,
         prompt: buildAgentInstructionRequest({ text: before, purpose, target, question }),
@@ -121,8 +121,8 @@ export function useComposerAssist({
     jobRef.current = null;
     setBusy(null);
     void (job.kind === 'translate'
-      ? window.agentmat.translate.cancel(job.requestId)
-      : window.agentmat.ai.cancel(job.requestId));
+      ? window.runova.translate.cancel(job.requestId)
+      : window.runova.ai.cancel(job.requestId));
     return true;
   }
 

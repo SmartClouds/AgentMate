@@ -172,13 +172,13 @@ export const useWordPressOperationStore = create<WordPressOperationState>((set, 
           siteId: input.siteId,
           projectId: null,
         },
-        () => window.agentmat.deployWordPress.createProject(input),
+        () => window.runova.deployWordPress.createProject(input),
         (value) => ({ kind: 'project', value }),
       ),
     setProjectItems: (input, siteId) =>
       start(
         { operationId: input.operationId, kind: 'items', siteId, projectId: input.projectId },
-        () => window.agentmat.deployWordPress.setProjectItems(input),
+        () => window.runova.deployWordPress.setProjectItems(input),
         (value) => ({ kind: 'project', value }),
       ),
     linkProject: (input) =>
@@ -189,19 +189,19 @@ export const useWordPressOperationStore = create<WordPressOperationState>((set, 
           siteId: input.siteId,
           projectId: input.projectId,
         },
-        () => window.agentmat.deployWordPress.linkProject(input),
+        () => window.runova.deployWordPress.linkProject(input),
         (value) => ({ kind: 'link', value }),
       ),
     deploy: (input, context) =>
       start(
         { operationId: input.operationId, kind: 'deploy', ...context },
-        () => window.agentmat.deployWordPress.deploy(input),
+        () => window.runova.deployWordPress.deploy(input),
         (value) => ({ kind: 'deploy', value }),
       ),
     pull: (input, context) =>
       start(
         { operationId: input.operationId, kind: 'pull', ...context },
-        () => window.agentmat.deployWordPress.pull(input),
+        () => window.runova.deployWordPress.pull(input),
         (value) => ({ kind: 'pull', value }),
       ),
     cancel: async (operationId) => {
@@ -209,7 +209,7 @@ export const useWordPressOperationStore = create<WordPressOperationState>((set, 
       if (!run || run.status !== 'running') return;
       update(operationId, () => ({ cancelling: true }));
       try {
-        await window.agentmat.deployWordPress.cancel(operationId);
+        await window.runova.deployWordPress.cancel(operationId);
       } catch {
         // The run ends on its own either way, and its call says how.
         update(operationId, () => ({ cancelling: false }));
@@ -267,7 +267,7 @@ let listeningTo: unknown = null;
  * started from here call it themselves; a screen that only shows runs can call it on mount.
  */
 export function listenForWordPressProgress(): void {
-  const bridge = window.agentmat;
+  const bridge = window.runova;
   if (listeningTo === bridge) return;
   listeningTo = bridge;
   bridge.deployWordPress.onProgress(applyProgress);

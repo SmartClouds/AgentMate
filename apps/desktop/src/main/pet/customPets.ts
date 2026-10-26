@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
-import type { CustomDesktopPet } from '@agentmat/core';
+import type { CustomDesktopPet } from '@runova/core';
 import { app, dialog } from 'electron';
 import { store } from '../store';
 import { petManager } from './petWindow';

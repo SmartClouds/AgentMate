@@ -1,4 +1,4 @@
-import { parseScopeId } from '@agentmat/core';
+import { parseScopeId } from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronDown, FolderTree, GitBranch, Plus, TriangleAlert } from '@/components/icons';
 import {
@@ -32,7 +32,7 @@ export function WorkspaceScopeSwitcher({ scopeId }: { scopeId: string }): React.
   const newShortcut = useShortcutLabel('workspace.newWorktree');
   const project = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   }).data?.find((p) => p.id === projectId);
   const worktrees = useWorktrees(projectId).data ?? [];
   const current = worktrees.find((w) => w.id === worktreeId) ?? null;

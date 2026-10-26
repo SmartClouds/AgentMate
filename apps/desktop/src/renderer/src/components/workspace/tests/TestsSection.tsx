@@ -12,7 +12,7 @@ import {
   type TestRunSummary,
   type TestStatus,
   type TestTarget,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { memo, startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -131,7 +131,7 @@ export function useTestsFailedCount(projectId: string): number {
 function useDiscovery(projectId: string) {
   return useQuery({
     queryKey: queryKeys.testsDiscovery(projectId),
-    queryFn: () => window.agentmat.tests.discover(projectId),
+    queryFn: () => window.runova.tests.discover(projectId),
     staleTime: 30_000,
     meta: { silentLoading: true },
   });
@@ -139,7 +139,7 @@ function useDiscovery(projectId: string) {
 
 async function startRun(projectId: string, targets: TestTarget[]): Promise<void> {
   try {
-    await window.agentmat.tests.run(projectId, targets);
+    await window.runova.tests.run(projectId, targets);
   } catch (error) {
     toast.error('Could not run tests', {
       description:
@@ -213,7 +213,7 @@ export function TestsTabActions({ project }: { project: Project }): React.JSX.El
       {running ? (
         <PanelIconButton
           label="Stop tests"
-          onClick={() => void window.agentmat.tests.cancel(project.id)}
+          onClick={() => void window.runova.tests.cancel(project.id)}
         >
           <StopCircle className="h-2.5 w-2.5" />
         </PanelIconButton>
@@ -564,7 +564,7 @@ export function TestsSection({ project }: { project: Project }): React.JSX.Eleme
 
   useEffect(() => {
     let cancelled = false;
-    void window.agentmat.tests
+    void window.runova.tests
       .lastRun(project.id)
       .then((snapshot) => {
         if (!cancelled && snapshot) hydrate(project.id, snapshot);
@@ -646,7 +646,7 @@ export function TestsSection({ project }: { project: Project }): React.JSX.Eleme
   if (discovery.data.projects.length === 0) {
     return notice(
       'No tests found',
-      'AgentMate looks for Vitest, Jest, Playwright, Mocha, pytest, unittest, Go, Cargo, .NET, Dart, Flutter, PHPUnit, RSpec, Gradle and Maven projects.',
+      'Runova looks for Vitest, Jest, Playwright, Mocha, pytest, unittest, Go, Cargo, .NET, Dart, Flutter, PHPUnit, RSpec, Gradle and Maven projects.',
       { label: 'Look again', run: () => void discovery.refetch() },
     );
   }
@@ -678,7 +678,7 @@ export function TestsSection({ project }: { project: Project }): React.JSX.Eleme
 
   async function copyIssue(result: TestResult): Promise<void> {
     const command = result.file
-      ? await window.agentmat.tests
+      ? await window.runova.tests
           .command(project.id, {
             testProjectId: result.testProjectId,
             ...(result.path.length > 0
@@ -737,7 +737,7 @@ export function TestsSection({ project }: { project: Project }): React.JSX.Eleme
     // A run that could not finish carries its own command in the prompt, and one command cannot
     // stand for several projects, so only a single project's failed tests get a rerun command.
     const commandPromise = target
-      ? window.agentmat.tests.command(project.id, target).catch(() => null)
+      ? window.runova.tests.command(project.id, target).catch(() => null)
       : Promise.resolve(null);
     void commandPromise.then((command) =>
       setFixing((current) =>

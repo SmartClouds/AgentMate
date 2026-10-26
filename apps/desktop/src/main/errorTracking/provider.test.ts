@@ -15,7 +15,7 @@ import {
 } from './provider';
 
 /**
- * The Sentry provider (E24): the client's raw JSON turned into AgentMate's own types by the core
+ * The Sentry provider (E24): the client's raw JSON turned into Runova's own types by the core
  * parsers, the list filters turned into Sentry's query language, and the paging of long lists.
  */
 

@@ -2,7 +2,7 @@ import { coreErrorMessage } from '@shared/coreErrors';
 import type {
   ChecklistItem,
   SshHardeningChangeInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeploySshHardeningInput } from '@shared/deployHardeningTypes';
 import type { DeployServer } from '@shared/deployTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -86,7 +86,7 @@ export function ChecklistCard({
   const [twoFactor, setTwoFactor] = useState(false);
   const checklist = useQuery({
     queryKey: queryKeys.deployChecklist(server.id),
-    queryFn: () => window.agentmat.deployHardening.checklist(server.id),
+    queryFn: () => window.runova.deployHardening.checklist(server.id),
     retry: false,
   });
   const refresh = () =>
@@ -145,7 +145,7 @@ export function ChecklistCard({
         });
         if (!confirmed) return;
         await act(
-          () => window.agentmat.deploySystem.setAutomaticUpdates(server.id, true),
+          () => window.runova.deploySystem.setAutomaticUpdates(server.id, true),
           'Turning on automatic security updates. Follow the job in Overview.',
         );
         return;
@@ -162,7 +162,7 @@ export function ChecklistCard({
         await act(
           () =>
             Promise.all(
-              item.targets.map((site) => window.agentmat.deployCerts.renew(server.id, site)),
+              item.targets.map((site) => window.runova.deployCerts.renew(server.id, site)),
             ),
           'Renewing. Each renewal is a job you can follow in Websites.',
         );
@@ -192,10 +192,10 @@ export function ChecklistCard({
     try {
       const input = { serverId: server.id, changeId: change.id };
       if (kind === 'keep') {
-        await window.agentmat.deployHardening.confirmSsh(input);
+        await window.runova.deployHardening.confirmSsh(input);
         toast.success('SSH change kept. New logins need a key now.');
       } else {
-        await window.agentmat.deployHardening.revertSsh(input);
+        await window.runova.deployHardening.revertSsh(input);
         toast.success('SSH change reverted. The old settings are back.');
       }
       setApplied(null);

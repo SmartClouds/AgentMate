@@ -2,7 +2,7 @@ import {
   type AppSettings,
   VAULT_AUTO_LOCK_CHOICES,
   VAULT_CLIPBOARD_CLEAR_CHOICES,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -107,7 +107,7 @@ export function VaultSettings({ settings }: { settings: AppSettings }): React.JS
 
   const statusQuery = useQuery({
     queryKey: queryKeys.vaultStatus,
-    queryFn: () => window.agentmat.vault.status(),
+    queryFn: () => window.runova.vault.status(),
     meta: { silentLoading: true },
   });
   const state = statusQuery.data?.state;
@@ -116,7 +116,7 @@ export function VaultSettings({ settings }: { settings: AppSettings }): React.JS
     const previous = values;
     setValues({ ...values, ...patch });
     try {
-      await window.agentmat.settings.update(patch);
+      await window.runova.settings.update(patch);
       void queryClient.invalidateQueries({ queryKey: queryKeys.settings });
       void queryClient.invalidateQueries({ queryKey: queryKeys.vaultStatus });
     } catch {

@@ -1,4 +1,4 @@
-import type { ProjectDaily, ProviderUsage } from '@agentmat/core';
+import type { ProjectDaily, ProviderUsage } from '@runova/core';
 
 // The model behind "Projects by weekday". The scan sends each project's tokens and cost for each of
 // the last 28 local days. This turns that into weekday columns, ranks the projects, and gives the
@@ -318,7 +318,7 @@ export function assignSlots(
   return assigned;
 }
 
-/** The folder above a path: `E:` for `E:/AgentMate`. Used to tell two folders with one name apart. */
+/** The folder above a path: `E:` for `E:/Runova`. Used to tell two folders with one name apart. */
 function parentOf(path: string): string {
   const parts = path.split(/[\\/]/).filter(Boolean);
   return parts.length > 1 ? parts[parts.length - 2] : (parts[0] ?? path);

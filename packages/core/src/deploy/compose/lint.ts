@@ -1,3 +1,4 @@
+import { LEGACY_CORE_PATHS } from '../deployLegacyNames.js';
 import { dockerCleanPath } from '../dockerignore.js';
 import type { ComposeProject } from './parse.js';
 import { analyzeComposePorts, type ComposeServicePorts } from './ports.js';
@@ -173,12 +174,16 @@ const SOCKET_PATHS = [
   '/var/run/crio',
 ];
 
-/** Where the AgentMate core keeps its binary, settings, data and socket. */
+/**
+ * Where the Runova core keeps its binary, settings, data and socket, and where a core from
+ * before the rename kept them (links to the new ones once a server has migrated).
+ */
 const CORE_PATHS = [
-  '/var/lib/agentmate-core',
-  '/etc/agentmate-core',
-  '/opt/agentmate-core',
-  '/run/agentmate-core',
+  '/var/lib/runova-core',
+  '/etc/runova-core',
+  '/opt/runova-core',
+  '/run/runova-core',
+  ...LEGACY_CORE_PATHS,
 ];
 
 /** System folders. A writable mount lets a container change the server; read-only, read secrets. */
@@ -320,7 +325,7 @@ function mountRisk(service: string, mount: Mount): ComposeRisk | null {
       'The container can read every file on the server, keys and passwords included, and change them unless the mount is read-only. Mount only the folders it needs.',
     ],
     'core-data': [
-      `${service} mounts ${path}${through}, which holds AgentMate's own server files.`,
+      `${service} mounts ${path}${through}, which holds Runova's own server files.`,
       "The core's database, keys and program live there, and a container that reaches them can take over the core. Mount a folder of the app's own instead.",
     ],
     'sensitive-mount': [
@@ -331,7 +336,7 @@ function mountRisk(service: string, mount: Mount): ComposeRisk | null {
     ],
     'outside-project': [
       `${service} mounts ${path}${through}, which leads outside the app's folder.`,
-      "On the server the app's folder sits inside AgentMate's data, so a path with .. can reach the core's own files. Keep bind mounts inside the project.",
+      "On the server the app's folder sits inside Runova's data, so a path with .. can reach the core's own files. Keep bind mounts inside the project.",
     ],
     'home-mount': [
       `${service} mounts ${path}${through} from a home folder.`,

@@ -1,4 +1,4 @@
-import { sameFolder } from '@agentmat/core';
+import { sameFolder } from '@runova/core';
 import { opencodeSessionTable } from './opencodeStore';
 import { conversationKey, type ListedConversation, type RecordedUsage } from './projectUsageReport';
 import { localDay } from './projectUsageScan';

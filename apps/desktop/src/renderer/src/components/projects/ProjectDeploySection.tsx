@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { FileSite } from '@shared/deployFilesTypes';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';

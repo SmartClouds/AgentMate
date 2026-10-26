@@ -1,4 +1,4 @@
-import type { AgentType, Project } from '@agentmat/core';
+import type { AgentType, Project } from '@runova/core';
 import {
   AGENT_TYPE_CLI_ID,
   AGENT_TYPE_LABELS,
@@ -6,7 +6,7 @@ import {
   DIFFRAY_TOOL_ID,
   isClonableGithubUrl,
   projectRunCommandHint,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -50,7 +50,7 @@ import { timeAgo } from '@/lib/time';
 import { cn } from '@/lib/utils';
 import { usePageHeader } from '@/stores/pageHeaderStore';
 
-const VIEW_STORAGE_KEY = 'agentmate.projects.view';
+const VIEW_STORAGE_KEY = 'runova.projects.view';
 const MAX_VISIBLE_TAGS = 3;
 const AGENT_TYPE_ORDER = Object.keys(AGENT_TYPE_LABELS) as AgentType[];
 
@@ -101,11 +101,11 @@ export default function ProjectsPage(): React.JSX.Element {
 
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   });
   const toolsStatusQuery = useQuery({
     queryKey: queryKeys.toolsStatus,
-    queryFn: () => window.agentmat.tools.detectAll(),
+    queryFn: () => window.runova.tools.detectAll(),
   });
   const diffrayInstalled =
     toolsStatusQuery.data?.find((tool) => tool.id === DIFFRAY_TOOL_ID)?.installed === true;
@@ -157,7 +157,7 @@ export default function ProjectsPage(): React.JSX.Element {
       // address is kept, and the Git tab offers Clone from GitHub to retry.
       if (repo && isClonableGithubUrl(repo)) {
         try {
-          const result = await window.agentmat.git.cloneInto({
+          const result = await window.runova.git.cloneInto({
             folderPath: values.folderPath,
             repoUrl: repo,
           });
@@ -167,7 +167,7 @@ export default function ProjectsPage(): React.JSX.Element {
           cloneError = error instanceof Error ? error.message : 'Clone failed.';
         }
       }
-      const project = await window.agentmat.projects.create(values);
+      const project = await window.runova.projects.create(values);
       return { project, cloned, cloneError };
     },
     onSuccess: ({ project, cloned, cloneError }) => {
@@ -188,7 +188,7 @@ export default function ProjectsPage(): React.JSX.Element {
 
   const pinMutation = useMutation({
     mutationFn: ({ projectId, pinned }: { projectId: string; pinned: boolean }) =>
-      window.agentmat.projects.setPinned(projectId, pinned),
+      window.runova.projects.setPinned(projectId, pinned),
     onSuccess: (updated) => {
       queryClient.setQueryData<Project[]>(queryKeys.projects, (prev) =>
         prev?.map((p) => (p.id === updated.id ? updated : p)),
@@ -198,7 +198,7 @@ export default function ProjectsPage(): React.JSX.Element {
 
   const archiveMutation = useMutation({
     mutationFn: ({ projectId, archived }: { projectId: string; archived: boolean }) =>
-      window.agentmat.projects.setArchived(projectId, archived),
+      window.runova.projects.setArchived(projectId, archived),
     onSuccess: (updated) => {
       queryClient.setQueryData<Project[]>(queryKeys.projects, (prev) =>
         prev?.map((p) => (p.id === updated.id ? updated : p)),
@@ -210,7 +210,7 @@ export default function ProjectsPage(): React.JSX.Element {
   });
 
   const reorderMutation = useMutation({
-    mutationFn: (orderedIds: string[]) => window.agentmat.projects.reorder(orderedIds),
+    mutationFn: (orderedIds: string[]) => window.runova.projects.reorder(orderedIds),
     onSuccess: (updated) => {
       queryClient.setQueryData(queryKeys.projects, updated);
     },
@@ -507,7 +507,7 @@ export default function ProjectsPage(): React.JSX.Element {
           <EmptyState
             icon={<FolderPlus className="h-6 w-6" />}
             title="No projects yet"
-            description="Add a folder AgentMate can bootstrap and work in. You can pin it, run it, and build prompts from here."
+            description="Add a folder Runova can bootstrap and work in. You can pin it, run it, and build prompts from here."
             action={
               <Button onClick={() => setDialogOpen(true)}>
                 <Plus /> New Project
@@ -1170,7 +1170,7 @@ function ProjectMetaLinks({
           className="-ml-1 flex min-w-0 max-w-full cursor-pointer items-center gap-1 rounded-md px-1 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           onClick={(e) => {
             e.stopPropagation();
-            void window.agentmat.shell.openPath(project.folderPath);
+            void window.runova.shell.openPath(project.folderPath);
           }}
         >
           <Folder className="h-3 w-3 shrink-0" />
@@ -1185,7 +1185,7 @@ function ProjectMetaLinks({
             aria-label={`Open ${stripUrl(project.websiteUrl)}`}
             onClick={(e) => {
               e.stopPropagation();
-              void window.agentmat.shell.openExternal(project.websiteUrl);
+              void window.runova.shell.openExternal(project.websiteUrl);
             }}
           >
             <Globe />
@@ -1200,7 +1200,7 @@ function ProjectMetaLinks({
             aria-label={`Open ${stripUrl(project.repoUrl)}`}
             onClick={(e) => {
               e.stopPropagation();
-              void window.agentmat.shell.openExternal(project.repoUrl);
+              void window.runova.shell.openExternal(project.repoUrl);
             }}
           >
             <GitBranch />

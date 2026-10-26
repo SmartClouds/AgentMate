@@ -1,4 +1,4 @@
-import type { RunPauseReason } from '@agentmat/core';
+import type { RunPauseReason } from '@runova/core';
 import type { TerminalPauseChange, TerminalPauseResult, TerminalRunStatus } from '@shared/apiTypes';
 import { toast } from 'sonner';
 import { create } from 'zustand';
@@ -112,7 +112,7 @@ export async function pauseRuns(
   const done: { id: string; result: TerminalPauseResult }[] = [];
   await Promise.all(
     ids.map(async (id) => {
-      const result = await call(id, () => window.agentmat.terminal.pause(id, reason));
+      const result = await call(id, () => window.runova.terminal.pause(id, reason));
       setPending([id], null);
       if (result.paused && result.reason && result.pausedAt !== null) {
         setPaused(id, { reason: result.reason, pausedAt: result.pausedAt });
@@ -162,7 +162,7 @@ export async function resumeRuns(
   let resumed = 0;
   await Promise.all(
     ids.map(async (id) => {
-      const result = await call(id, () => window.agentmat.terminal.resume(id));
+      const result = await call(id, () => window.runova.terminal.resume(id));
       setPending([id], null);
       if (!result.paused) setPaused(id, null);
       if (result.ok) resumed += 1;
@@ -238,5 +238,5 @@ export function syncPausesFromStatus(
 
 /** Follows the pause changes main announces. Returns the unsubscribe. */
 export function initRunPauses(): () => void {
-  return window.agentmat.terminal.onPauseChange(applyPauseChange);
+  return window.runova.terminal.onPauseChange(applyPauseChange);
 }

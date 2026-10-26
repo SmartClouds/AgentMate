@@ -8,7 +8,7 @@ import {
 
 /**
  * An install command typed into a terminal on a machine without Node.js fails with "npm is not
- * recognized", which reads like AgentMate is broken. These pin how the program a command needs
+ * recognized", which reads like Runova is broken. These pin how the program a command needs
  * is read out of it, and that only a missing one is reported.
  */
 

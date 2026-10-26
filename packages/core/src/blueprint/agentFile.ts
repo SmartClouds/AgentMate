@@ -3,7 +3,7 @@ import { blueprintStep } from './steps.js';
 
 /**
  * Where each agent reads its project instructions from. The first entry is the
- * one AgentMate's own bootstrap writes; the rest are places the same agent also
+ * one Runova's own bootstrap writes; the rest are places the same agent also
  * reads, accepted when a repo that came from somewhere else already has one.
  *
  * Kept in step with `projectBootstrap/templates.ts`, which writes
@@ -18,8 +18,8 @@ export const AGENT_INSTRUCTION_FILES: Record<AgentType, string[]> = {
   generic: ['AGENTS.md'],
 };
 
-export const BLUEPRINT_BLOCK_START = '<!-- agentmate:blueprint:start -->';
-export const BLUEPRINT_BLOCK_END = '<!-- agentmate:blueprint:end -->';
+export const BLUEPRINT_BLOCK_START = '<!-- runova:blueprint:start -->';
+export const BLUEPRINT_BLOCK_END = '<!-- runova:blueprint:end -->';
 
 export interface BlueprintBlockSection {
   stepId: BlueprintStepId;
@@ -38,7 +38,7 @@ export function renderBlueprintBlock(sections: BlueprintBlockSection[]): string 
   return [
     '## Project blueprint',
     '',
-    '<!-- Maintained by AgentMate. Anything written inside this block is overwritten. -->',
+    '<!-- Maintained by Runova. Anything written inside this block is overwritten. -->',
     '',
     parts.join('\n\n'),
   ].join('\n');

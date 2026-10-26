@@ -1,4 +1,4 @@
-import type { SdkManagerProgress } from '@agentmat/core';
+import type { SdkManagerProgress } from '@runova/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SdkManagerStreamHandlers } from '../../android/exec';
 import type { ResolvedAndroidSdk } from '../../android/sdk';
@@ -33,10 +33,10 @@ const XML = `<?xml version='1.0'?>
 
 const HOME = 'C:\\Users\\me';
 const DEFAULT_ROOT = 'C:\\Users\\me\\AppData\\Local\\Android\\Sdk';
-const WORK = 'C:\\Users\\me\\AppData\\Roaming\\AgentMate\\tools\\dev-setup';
+const WORK = 'C:\\Users\\me\\AppData\\Roaming\\Runova\\tools\\dev-setup';
 const SDKMANAGER = `${DEFAULT_ROOT}\\cmdline-tools\\latest\\bin\\sdkmanager.bat`;
 const ZIP = `${WORK}\\commandlinetools-23.0.zip`;
-const STAGING = `${DEFAULT_ROOT}\\.agentmate-cmdline-tools-abc123`;
+const STAGING = `${DEFAULT_ROOT}\\.runova-cmdline-tools-abc123`;
 
 type SdkLike = Pick<ResolvedAndroidSdk, 'status' | 'root'> & {
   paths: { sdkmanager: string | null };
@@ -229,7 +229,7 @@ describe('the command-line tools', () => {
     await w.installer.runCmdlineTools(w.hooks);
 
     expect(w.calls).toContain(
-      'rename:D:\\Android\\Sdk\\.agentmate-cmdline-tools-abc123\\cmdline-tools->D:\\Android\\Sdk\\cmdline-tools\\latest',
+      'rename:D:\\Android\\Sdk\\.runova-cmdline-tools-abc123\\cmdline-tools->D:\\Android\\Sdk\\cmdline-tools\\latest',
     );
   });
 
@@ -469,7 +469,7 @@ describe('the licences', () => {
     expect(await w.installer.runLicenses(w.hooks)).toMatchObject({
       ok: false,
       message:
-        'The Android tools need Java and could not find it. Open a new terminal or restart AgentMate, then try again.',
+        'The Android tools need Java and could not find it. Open a new terminal or restart Runova, then try again.',
     });
   });
 

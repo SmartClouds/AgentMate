@@ -1,4 +1,4 @@
-import type { ActivityResource, ResourceActivitySnapshot } from '@agentmat/core';
+import type { ActivityResource, ResourceActivitySnapshot } from '@runova/core';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import type { UserEvent } from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

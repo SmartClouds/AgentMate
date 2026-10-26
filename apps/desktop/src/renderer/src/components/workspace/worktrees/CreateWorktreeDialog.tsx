@@ -1,4 +1,4 @@
-import { branchNameProblem, branchSlug, type Project, type WorktreeInfo } from '@agentmat/core';
+import { branchNameProblem, branchSlug, type Project, type WorktreeInfo } from '@runova/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -200,12 +200,12 @@ export function CreateWorktreeDialog({
 
   const defaultsQuery = useQuery({
     queryKey: queryKeys.worktreeDefaults(project.id),
-    queryFn: () => window.agentmat.worktrees.defaults(project.id),
+    queryFn: () => window.runova.worktrees.defaults(project.id),
     staleTime: 0,
   });
   const copyQuery = useQuery({
     queryKey: [...queryKeys.worktreeDefaults(project.id), 'copy-preview'],
-    queryFn: () => window.agentmat.worktrees.previewCopy(project.id, null),
+    queryFn: () => window.runova.worktrees.previewCopy(project.id, null),
     staleTime: 0,
   });
   const agents = useAgentChoices(project);
@@ -231,8 +231,7 @@ export function CreateWorktreeDialog({
   // A suggestion still running when the dialog closes is left to finish on its own otherwise.
   useEffect(
     () => () => {
-      if (suggestRef.current)
-        void window.agentmat.worktrees.cancelSuggestBranch(suggestRef.current);
+      if (suggestRef.current) void window.runova.worktrees.cancelSuggestBranch(suggestRef.current);
     },
     [],
   );
@@ -262,11 +261,11 @@ export function CreateWorktreeDialog({
   const debouncedBranch = useDebounced(chosenBranch, PATH_DEBOUNCE_MS);
   const pathQuery = useQuery({
     queryKey: [...queryKeys.worktreeDefaults(project.id), 'path', debouncedBranch],
-    queryFn: () => window.agentmat.worktrees.suggestPath(project.id, debouncedBranch),
+    queryFn: () => window.runova.worktrees.suggestPath(project.id, debouncedBranch),
     enabled: Boolean(debouncedBranch) && !branchNameProblem(debouncedBranch) && !parentOverride,
     staleTime: 0,
   });
-  const separator = window.agentmat.platform === 'win32' ? '\\' : '/';
+  const separator = window.runova.platform === 'win32' ? '\\' : '/';
   const customPath =
     parentOverride && chosenBranch
       ? `${parentOverride.replace(/[\\/]+$/, '')}${separator}${branchSlug(chosenBranch)}`
@@ -279,7 +278,7 @@ export function CreateWorktreeDialog({
 
   async function suggest(): Promise<void> {
     if (suggesting) {
-      void window.agentmat.worktrees.cancelSuggestBranch(suggesting);
+      void window.runova.worktrees.cancelSuggestBranch(suggesting);
       setSuggesting(null);
       suggestRef.current = null;
       return;
@@ -288,11 +287,7 @@ export function CreateWorktreeDialog({
     setSuggesting(requestId);
     setSuggestError(null);
     suggestRef.current = requestId;
-    const result = await window.agentmat.worktrees.suggestBranch(
-      project.id,
-      task.trim(),
-      requestId,
-    );
+    const result = await window.runova.worktrees.suggestBranch(project.id, task.trim(), requestId);
     if (suggestRef.current !== requestId) return;
     suggestRef.current = null;
     setSuggesting(null);
@@ -326,7 +321,7 @@ export function CreateWorktreeDialog({
     setSteps(plannedSteps(current));
     setPhase('running');
     if (saveSetup && setupChanged) {
-      void window.agentmat.projects
+      void window.runova.projects
         .update(project.id, {
           worktreeSetup: { ...project.worktreeSetup, command: effectiveSetup.trim() },
         })
@@ -334,7 +329,7 @@ export function CreateWorktreeDialog({
     }
     const outcome = await runCreateWorktree(current, setSteps, {
       create: async (input) => {
-        const result = await window.agentmat.worktrees.create(input);
+        const result = await window.runova.worktrees.create(input);
         // The new workspace resolves its folder from this list, so it must know the worktree
         // before the route changes rather than after the next refetch.
         if (result.ok) {
@@ -346,7 +341,7 @@ export function CreateWorktreeDialog({
         return result;
       },
       copyFiles: (projectId, worktreeId, files) =>
-        window.agentmat.worktrees.copyFiles(projectId, worktreeId, files),
+        window.runova.worktrees.copyFiles(projectId, worktreeId, files),
       open: (scopeId) => navigate(`/workspace/${scopeId}`),
       setup: (workspace, command) => launchSetupTab(workspace, command),
       launchAgent: (workspace, cliId, prompt) =>
@@ -362,7 +357,7 @@ export function CreateWorktreeDialog({
 
   async function pickLocation(): Promise<void> {
     const start = parentOverride ?? pathQuery.data?.replace(/[\\/][^\\/]+$/, '') ?? null;
-    const picked = await window.agentmat.worktrees.pickLocation(start);
+    const picked = await window.runova.worktrees.pickLocation(start);
     if (picked) setParentOverride(picked);
   }
 
@@ -683,7 +678,7 @@ export function CreateWorktreeDialog({
             <>
               <span className="hidden text-[11px] text-muted-foreground sm:block">
                 <kbd className="rounded border border-border px-1 py-px text-[10px] font-medium">
-                  {window.agentmat.platform === 'darwin' ? '⌘' : 'Ctrl'}+Enter
+                  {window.runova.platform === 'darwin' ? '⌘' : 'Ctrl'}+Enter
                 </kbd>{' '}
                 to create
               </span>

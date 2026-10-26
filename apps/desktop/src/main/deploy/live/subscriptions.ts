@@ -4,7 +4,7 @@ import type {
   JobInfo,
   JobLogLine,
   MetricsSample,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type {
   DeployAlertsEvent,
   DeployJobEvent,

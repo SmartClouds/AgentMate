@@ -1,4 +1,4 @@
-import type { Project, WorktreeInfo } from '@agentmat/core';
+import type { Project, WorktreeInfo } from '@runova/core';
 import { describe, expect, it } from 'vitest';
 import { resolveWorkspaceProject, worktreeInitials, worktreeLabel } from './scope';
 

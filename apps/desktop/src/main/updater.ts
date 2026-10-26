@@ -44,7 +44,7 @@ import {
  */
 const ONE_HOUR_MS = 60 * 60 * 1000;
 const GITHUB_OWNER = 'SmartClouds';
-const GITHUB_REPO = 'AgentMate';
+const GITHUB_REPO = 'Runova';
 
 let currentStatus: UpdateStatus = { state: 'idle' };
 let activeUpdateInfo: UpdateInfo | null = null;
@@ -182,7 +182,7 @@ function completePath(asset: ResolvedAsset, version: string): string {
 }
 
 function userAgent(): string {
-  return `AgentMate/${app.getVersion()} (${process.platform})`;
+  return `Runova/${app.getVersion()} (${process.platform})`;
 }
 
 function progressFromBytes(

@@ -5,7 +5,7 @@ import {
   type LaunchPickModel,
   type LaunchPickOptions,
   launchPickLabel,
-} from '@agentmat/core';
+} from '@runova/core';
 import { CostMeter } from '@/components/cli/CostMeter';
 import { CliLogo } from '@/components/cliLogos';
 import { Check, Play } from '@/components/icons';

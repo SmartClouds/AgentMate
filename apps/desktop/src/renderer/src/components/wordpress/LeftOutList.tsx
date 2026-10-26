@@ -1,4 +1,4 @@
-import { wpItemKey } from '@agentmat/core';
+import { wpItemKey } from '@runova/core';
 import type {
   DeployWordPressLeftOut,
   DeployWordPressLeftOutReason,
@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import type { SyncDirection } from './ChangeList';
 
 /**
- * What a pull or deploy leaves out, and why (E21). Agent settings and AgentMate's own files get
+ * What a pull or deploy leaves out, and why (E21). Agent settings and Runova's own files get
  * their own heading that is always open: the promise that they never leave this computer is
  * something the user should be able to check on every deploy, not dig for.
  */
@@ -39,7 +39,7 @@ export function isAgentLeftOut(entry: DeployWordPressLeftOut): boolean {
   );
 }
 
-export const AGENT_HEADING = 'Stays on this computer: agent settings and AgentMate files';
+export const AGENT_HEADING = 'Stays on this computer: agent settings and Runova files';
 
 export function LeftOutList({
   entries,
@@ -60,8 +60,8 @@ export function LeftOutList({
       <div className="flex items-start gap-2 rounded-lg bg-success/[0.07] px-3 py-2 text-sm ring-1 ring-inset ring-success/20">
         <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" />
         <p className="text-foreground/90">
-          Agent settings, skills and AgentMate's own files in this project never leave this
-          computer. Only the theme and plugin files listed for this{' '}
+          Agent settings, skills and Runova's own files in this project never leave this computer.
+          Only the theme and plugin files listed for this{' '}
           {direction === 'deploy' ? 'deploy' : 'pull'} travel.
         </p>
       </div>

@@ -1,7 +1,7 @@
 import { chmodSync, mkdirSync, writeFileSync } from 'node:fs';
 import { delimiter, join } from 'node:path';
-import type { CliUpdateCheckResult, InstalledCli } from '@agentmat/core';
-import { CLI_REGISTRY, getUpdateCommandForCurrentOS, type SupportedOS } from '@agentmat/core';
+import type { CliUpdateCheckResult, InstalledCli } from '@runova/core';
+import { CLI_REGISTRY, getUpdateCommandForCurrentOS, type SupportedOS } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IPC } from '../../shared/ipcChannels';
 import { tempDir, writeTree } from '../../test/main/fixtures';
@@ -83,7 +83,7 @@ function claude(list: InstalledCli[]): InstalledCli | undefined {
 }
 
 beforeEach(async () => {
-  binDir = join(tempDir('agentmate-clis-'), 'bin');
+  binDir = join(tempDir('runova-clis-'), 'bin');
   mkdirSync(binDir, { recursive: true });
   const key = Object.keys(process.env).find((one) => one.toUpperCase() === 'PATH') ?? 'PATH';
   // Only the fake binaries are on PATH, so a CLI really installed on this machine cannot make
@@ -139,7 +139,7 @@ describe('detecting installed CLIs', () => {
     // launchd gives a Finder-launched app /usr/bin:/bin:/usr/sbin:/sbin, and Claude Code's
     // installer puts it in ~/.local/bin through .zshrc. Searching the app's own PATH alone showed
     // it as not installed in the CLI Manager and the workspace while every terminal ran it.
-    loginShellDir = join(tempDir('agentmate-login-shell-'), '.local', 'bin');
+    loginShellDir = join(tempDir('runova-login-shell-'), '.local', 'bin');
     mkdirSync(loginShellDir, { recursive: true });
     writeFakeClaude('9.9.9', loginShellDir);
 
@@ -153,7 +153,7 @@ describe('detecting installed CLIs', () => {
   it('finds a CLI only a native installer folder has, and looks for new folders on a forced sweep', async () => {
     // Claude's native installer drops it in ~/.local/bin and adds that to PATH only through a
     // shell rc file, which the app never reads.
-    const localBin = join(tempDir('agentmate-native-'), '.local', 'bin');
+    const localBin = join(tempDir('runova-native-'), '.local', 'bin');
     mkdirSync(localBin, { recursive: true });
     writeFakeClaude('9.9.9', localBin);
     toolDirs.current = [localBin];
@@ -168,7 +168,7 @@ describe('detecting installed CLIs', () => {
   it.skipIf(process.platform === 'win32')(
     'reads the version of a CLI found only in a native installer folder',
     async () => {
-      const localBin = join(tempDir('agentmate-native-'), '.local', 'bin');
+      const localBin = join(tempDir('runova-native-'), '.local', 'bin');
       mkdirSync(localBin, { recursive: true });
       writeFakeClaude('9.9.9', localBin);
       toolDirs.current = [localBin];

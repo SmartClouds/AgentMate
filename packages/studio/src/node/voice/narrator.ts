@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { access, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { STUDIO_TTS } from '@agentmat/core';
+import { STUDIO_TTS } from '@runova/core';
 import type { NarrationJobView, StudioEvent } from '../../api.js';
 import { applyOps, type EditOp } from '../../document/ops.js';
 import type { StudioDocument } from '../../document/schema.js';

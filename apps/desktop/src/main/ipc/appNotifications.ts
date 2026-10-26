@@ -1,4 +1,4 @@
-import type { AppNotification } from '@agentmat/core';
+import type { AppNotification } from '@runova/core';
 import { ipcMain } from 'electron';
 import { IPC } from '../../shared/ipcChannels';
 import { store } from '../store';

@@ -1,4 +1,4 @@
-import type { SetupSummary as Summary } from '@agentmat/core';
+import type { SetupSummary as Summary } from '@runova/core';
 import { RefreshCw, Spinner } from '@/components/icons';
 import { GLASS_CARD } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';

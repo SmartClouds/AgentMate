@@ -5,7 +5,7 @@ import {
   STATUS_BAR_USAGE_PROVIDERS,
   type StatusBarUsageProviderId,
   type StatusBarUsageSettings,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChartColumn } from '@/components/icons';
 import { ProviderLogo } from '@/components/providerLogos';
@@ -24,7 +24,7 @@ export function StatusBarUsageSettings({ settings }: { settings: AppSettings }):
 
   const save = useMutation({
     mutationFn: (statusBarUsage: StatusBarUsageSettings) =>
-      window.agentmat.settings.update({ statusBarUsage }),
+      window.runova.settings.update({ statusBarUsage }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.settings }),
   });
   // Show the switch where it was flipped to while the write is in flight.

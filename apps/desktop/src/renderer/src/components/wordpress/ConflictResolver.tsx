@@ -1,5 +1,5 @@
-import type { WpChange, WpPlannedChange } from '@agentmat/core';
-import { wpItemKey } from '@agentmat/core';
+import type { WpChange, WpPlannedChange } from '@runova/core';
+import { wpItemKey } from '@runova/core';
 import { TriangleAlert } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';

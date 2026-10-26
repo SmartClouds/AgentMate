@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { renderTaskFile } from '@agentmat/core';
+import { renderTaskFile } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   applyProposalFiles,

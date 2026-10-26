@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { PullRequestStatus } from '@shared/apiTypes';
 import { ExternalLink, GitPullRequest, RefreshCw } from '@/components/icons';
 import { Button } from '@/components/ui/button';
@@ -80,7 +80,7 @@ export function PullRequestDialog({
                   variant="ghost"
                   size="icon-sm"
                   aria-label="Open on GitHub"
-                  onClick={() => void window.agentmat.shell.openExternal(pr.url)}
+                  onClick={() => void window.runova.shell.openExternal(pr.url)}
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
                 </Button>

@@ -186,7 +186,7 @@ describe('describeConnectError', () => {
     });
     expect(describeConnectError(ironError(6, CAPABILITIES_FAILURE), null)).toMatchObject({
       code: 'security-settings',
-      message: "AgentMate and the server couldn't agree on security settings.",
+      message: "Runova and the server couldn't agree on security settings.",
     });
   });
 

@@ -3,13 +3,13 @@ import type {
   SecurityScanRecord,
   SecuritySeverity,
   SecurityVerdict,
-} from '@agentmat/core';
+} from '@runova/core';
 import {
   getSecurityScanner,
   SECURITY_SEVERITIES,
   SECURITY_SEVERITY_LABEL,
   SECURITY_VERDICT_LABEL,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useMemo, useState } from 'react';
 import { CircleCheck, Filter, Shield, TriangleAlert } from '@/components/icons';
 import { Badge } from '@/components/ui/badge';

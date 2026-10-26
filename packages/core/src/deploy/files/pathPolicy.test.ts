@@ -56,7 +56,7 @@ describe('the file-site hard deny list', () => {
     ['keys/id_ed25519.pub', true],
     ['certs/x.pem', true],
     ['putty.PPK', true],
-    ['.agentmateignore', true],
+    ['.runovaignore', true],
     ['.npmrc', true],
     ['.DS_Store', true],
     // Lookalikes a case-insensitive disk may fold into a denied name (the long s).
@@ -140,12 +140,12 @@ describe('validateSyncPath', () => {
 describe('deniedReasonForSync', () => {
   it.each([
     ['.claude/settings.json', 'agentFiles'],
-    ['sub/.agentmate/x', 'agentFiles'],
+    ['sub/.runova/x', 'agentFiles'],
     ['AGENTS.md', 'agentFiles'],
     ['.aider.chat.history.md', 'agentFiles'],
-    ['.agentmateignore', 'agentFiles'],
+    ['.runovaignore', 'agentFiles'],
     ['.claude-plugin/plugin.json', 'agentFiles'],
-    ['sub/.agentmate-cache/x', 'agentFiles'],
+    ['sub/.runova-cache/x', 'agentFiles'],
     ['.curſor/rules/r.mdc', 'agentFiles'],
     ['.git/HEAD', 'hardDenied'],
     ['.env', 'hardDenied'],
@@ -190,7 +190,7 @@ describe('FILE_DEFAULT_IGNORE', () => {
 
   it("applies the site's own patterns both ways and puts defaults back with !", () => {
     const built = createFileSiteIgnoreRules([
-      { source: '.agentmateignore', text: '!/skills/\n!keep.log\n' },
+      { source: '.runovaignore', text: '!/skills/\n!keep.log\n' },
       { source: 'site patterns', text: 'drafts/\n*.psd\n' },
     ]);
     if (!built.ok) throw new Error('should compile');

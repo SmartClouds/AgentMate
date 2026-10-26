@@ -2,7 +2,7 @@ import {
   HELP_EMBEDDING_MODEL_OPTIONS,
   HELP_EMBEDDING_MODELS,
   helpEmbeddingModel,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { AiProvider } from '../../shared/apiTypes';
 
 /**

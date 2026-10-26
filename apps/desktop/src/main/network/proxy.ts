@@ -1,4 +1,4 @@
-import type { ProxySettings } from '@agentmat/core';
+import type { ProxySettings } from '@runova/core';
 import {
   defaultProxySettings,
   isProxyActive,
@@ -7,7 +7,7 @@ import {
   proxyBypassRules,
   proxyEnvUrl,
   proxyServerUrl,
-} from '@agentmat/core';
+} from '@runova/core';
 import { app, net, type Session, session } from 'electron';
 import type { ProxyStatus, ProxyTestResult } from '../../shared/apiTypes';
 import { store } from '../store';
@@ -20,9 +20,9 @@ import { parseProxyUrl, type TunnelRoute } from './tunnel';
  */
 const UPDATER_PARTITION = 'electron-updater';
 /** Left on system settings for good, so the UI can report what this machine is set to. */
-const PROBE_PARTITION = 'agentmate-proxy-probe';
+const PROBE_PARTITION = 'runova-proxy-probe';
 /** Where "Test connection" points a candidate server without touching the live one. */
-const TEST_PARTITION = 'agentmate-proxy-test';
+const TEST_PARTITION = 'runova-proxy-test';
 
 /** Any host works; Chromium only consults the config (or the PAC script) to answer. */
 const RESOLVE_TARGET = 'https://www.google.com';
@@ -51,7 +51,7 @@ let probeSessionReady: Promise<Session> | null = null;
 let pendingTestAuth: { username: string; password: string } | null = null;
 /**
  * Whatever HTTP_PROXY and friends held when the app started. The user may have
- * launched AgentMate from a shell that already had them set, and direct mode
+ * launched Runova from a shell that already had them set, and direct mode
  * means "don't add a proxy", not "throw away the one this machine came with".
  */
 let envBaseline: Record<string, string | undefined> | null = null;
@@ -131,7 +131,7 @@ function proxyUrlFromResolution(resolved: string): string | null {
   return `${scheme}://${address}`;
 }
 
-/** What this machine (or its PAC script) would use, whether or not AgentMate is set to follow it. */
+/** What this machine (or its PAC script) would use, whether or not Runova is set to follow it. */
 export async function resolveSystemProxy(): Promise<string | null> {
   try {
     const probe = await probeSession();

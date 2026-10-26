@@ -172,12 +172,12 @@ describe('SshConnection.openStream', () => {
       },
     });
 
-    const stream = await connection.openStream({ socketPath: '/run/agentmate-core/core.sock' });
+    const stream = await connection.openStream({ socketPath: '/run/runova-core/core.sock' });
     const echoed = readAll(stream, 5);
     stream.write('hello');
 
     expect((await echoed).toString()).toBe('hello');
-    expect(targets).toEqual([{ kind: 'unix', path: '/run/agentmate-core/core.sock' }]);
+    expect(targets).toEqual([{ kind: 'unix', path: '/run/runova-core/core.sock' }]);
     stream.destroy();
   });
 
@@ -203,7 +203,7 @@ describe('SshConnection.openStream', () => {
     const { connection } = await connect({ neverAnswer: 'tunnels' });
 
     const failure = await connection
-      .openStream({ socketPath: '/run/agentmate-core/core.sock' }, { timeoutMs: 100 })
+      .openStream({ socketPath: '/run/runova-core/core.sock' }, { timeoutMs: 100 })
       .catch((error: unknown) => error);
 
     expect(failure).toBeInstanceOf(Error);
@@ -215,8 +215,8 @@ describe('SshConnection.openStream', () => {
     const { connection } = await connect({ forward: () => null });
 
     await expect(
-      connection.openStream({ socketPath: '/run/agentmate-core/core.sock' }),
-    ).rejects.toThrow(/could not open a tunnel to \/run\/agentmate-core\/core\.sock/i);
+      connection.openStream({ socketPath: '/run/runova-core/core.sock' }),
+    ).rejects.toThrow(/could not open a tunnel to \/run\/runova-core\/core\.sock/i);
   });
 });
 
@@ -255,12 +255,12 @@ describe('SshConnection.openExecStream', () => {
       },
     });
 
-    const stream = await connection.openExecStream('agentmate-core bridge');
+    const stream = await connection.openExecStream('runova-core bridge');
     const echoed = readAll(stream, 5);
     stream.write('hello');
 
     expect((await echoed).toString()).toBe('hello');
-    expect(commands).toEqual(['agentmate-core bridge']);
+    expect(commands).toEqual(['runova-core bridge']);
     stream.destroy();
   });
 
@@ -268,7 +268,7 @@ describe('SshConnection.openExecStream', () => {
     const { connection } = await connect({ neverAnswer: 'commands' });
 
     await expect(
-      connection.openExecStream('agentmate-core bridge', { timeoutMs: 100 }),
+      connection.openExecStream('runova-core bridge', { timeoutMs: 100 }),
     ).rejects.toThrow(/did not start within/);
   });
 
@@ -276,7 +276,7 @@ describe('SshConnection.openExecStream', () => {
     const { connection } = await connect();
     connection.close();
 
-    await expect(connection.openExecStream('agentmate-core bridge')).rejects.toThrow(/closed/);
+    await expect(connection.openExecStream('runova-core bridge')).rejects.toThrow(/closed/);
   });
 });
 
@@ -284,15 +284,15 @@ describe('SshConnection.createStagingDirectory', () => {
   it('returns the folder mktemp made', async () => {
     const { connection } = await connect({
       exec: ({ command }) => ({
-        stdout: command.startsWith('mktemp -d') ? '/tmp/agentmate.Ab12Cd34Ef\n' : '',
+        stdout: command.startsWith('mktemp -d') ? '/tmp/runova.Ab12Cd34Ef\n' : '',
       }),
     });
 
-    expect(await connection.createStagingDirectory()).toBe('/tmp/agentmate.Ab12Cd34Ef');
+    expect(await connection.createStagingDirectory()).toBe('/tmp/runova.Ab12Cd34Ef');
   });
 
-  it('refuses an answer that is not a fresh agentmate folder, since it gets removed later', async () => {
-    for (const answer of ['/\n', '/tmp\n', 'agentmate.Ab12Cd34Ef\n', '/tmp/agentmate.x y\n']) {
+  it('refuses an answer that is not a fresh runova folder, since it gets removed later', async () => {
+    for (const answer of ['/\n', '/tmp\n', 'runova.Ab12Cd34Ef\n', '/tmp/runova.x y\n']) {
       const { connection } = await connect({ exec: () => ({ stdout: answer }) });
 
       await expect(connection.createStagingDirectory()).rejects.toThrow(/staging folder/);
@@ -896,7 +896,7 @@ describe('SshConnection SFTP file operations', () => {
 describe('SshConnection.uploadFile', () => {
   let scratch = '';
   beforeAll(async () => {
-    scratch = await mkdtemp(join(tmpdir(), 'agentmate-upload-file-'));
+    scratch = await mkdtemp(join(tmpdir(), 'runova-upload-file-'));
   });
   afterAll(async () => {
     await rm(scratch, { recursive: true, force: true });
@@ -935,7 +935,7 @@ describe('SshConnection.uploadFile', () => {
     });
     expect(fake.parts()).toEqual([]);
     const opened = fake.ops.find((op) => op.startsWith('open '));
-    expect(opened).toMatch(/^open \/srv\/index\.html\.agentmate-[0-9a-f]{8}\.part$/);
+    expect(opened).toMatch(/^open \/srv\/index\.html\.runova-[0-9a-f]{8}\.part$/);
     expect(fake.ops).toContain(`fsync ${opened?.slice(5)}`);
     expect(fake.ops.some((op) => op.startsWith('posix-rename '))).toBe(true);
   });
@@ -1049,7 +1049,7 @@ describe('SshConnection.uploadFile', () => {
     expect(fake.ops).not.toContain('unlink /srv/a.css');
     expect(
       fake.ops.some((op) =>
-        /^rename \/srv\/a\.css -> \/srv\/a\.css\.agentmate-[0-9a-f]{8}\.old$/.test(op),
+        /^rename \/srv\/a\.css -> \/srv\/a\.css\.runova-[0-9a-f]{8}\.old$/.test(op),
       ),
     ).toBe(true);
     expect(fake.parts()).toEqual([]);
@@ -1275,7 +1275,7 @@ describe('SshConnection.upload', () => {
 describe('SshConnection.downloadFile', () => {
   let scratch = '';
   beforeAll(async () => {
-    scratch = await mkdtemp(join(tmpdir(), 'agentmate-download-file-'));
+    scratch = await mkdtemp(join(tmpdir(), 'runova-download-file-'));
   });
   afterAll(async () => {
     await rm(scratch, { recursive: true, force: true });
@@ -1349,7 +1349,7 @@ describe('SshConnection.downloadFile', () => {
     for (const moment of seen) {
       expect(moment.target).toBe('old local');
       expect(moment.parts).toHaveLength(1);
-      expect(moment.parts[0]).toMatch(/^target-\d+\.bin\.agentmate-[0-9a-f]{8}\.part$/);
+      expect(moment.parts[0]).toMatch(/^target-\d+\.bin\.runova-[0-9a-f]{8}\.part$/);
     }
     expect(result.replaced).toBe(true);
     await expect(readFile(local, 'utf-8')).resolves.toBe('new contents');

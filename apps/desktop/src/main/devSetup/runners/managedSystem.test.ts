@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { DevOs } from '@agentmat/core';
+import type { DevOs } from '@runova/core';
 import { describe, expect, it, vi } from 'vitest';
 import { tempDir, writeTree } from '../../../test/main/fixtures';
 import {
@@ -30,7 +30,7 @@ const token = () => ({ cancelled: false, child: null });
 const hostOs: DevOs = onWindows ? 'win32' : process.platform === 'darwin' ? 'darwin' : 'linux';
 
 function kit(
-  workDir = tempDir('agentmate-managed-'),
+  workDir = tempDir('runova-managed-'),
   overrides: Partial<Parameters<typeof createManagedKit>[1]> = {},
   os: DevOs = hostOs,
 ) {
@@ -121,7 +121,7 @@ describe('the network pieces', () => {
 
   it('creates the folder the file goes in, passes progress up and hands over a way to stop', async () => {
     const { kit: k, downloadRun, abort } = kit();
-    const dest = join(tempDir('agentmate-dl-'), 'deep', 'folder', 'x.zip');
+    const dest = join(tempDir('runova-dl-'), 'deep', 'folder', 'x.zip');
     downloadRun.mockImplementation(
       async (options: {
         onProgress: (p: { transferred: number; total: number; bytesPerSecond: number }) => void;
@@ -160,7 +160,7 @@ describe('the network pieces', () => {
     await k.download(
       {
         url: 'https://dl.google.com/android/repository/x.zip',
-        destPath: join(tempDir('agentmate-dl-'), 'x.zip'),
+        destPath: join(tempDir('runova-dl-'), 'x.zip'),
         expectedSize: null,
       },
       { onProgress: vi.fn(), registerAbort: vi.fn(), onReconnect },
@@ -179,7 +179,7 @@ describe('the network pieces', () => {
       k.download(
         {
           url: 'https://dl.google.com/android/repository/x.zip',
-          destPath: join(tempDir('agentmate-dl-'), 'x.zip'),
+          destPath: join(tempDir('runova-dl-'), 'x.zip'),
           expectedSize: null,
         },
         { onProgress: vi.fn(), registerAbort: vi.fn() },
@@ -190,7 +190,7 @@ describe('the network pieces', () => {
 
 describe('hashFile', () => {
   it('computes SHA-1 and SHA-256 of a file', async () => {
-    const dir = tempDir('agentmate-hash-');
+    const dir = tempDir('runova-hash-');
     const file = join(dir, 'a.bin');
     writeFileSync(file, 'abc');
     const { kit: k } = kit(dir);
@@ -255,7 +255,7 @@ describe('extract', () => {
     dest: string;
     workDir: string;
   } {
-    const workDir = tempDir('agentmate-extract-');
+    const workDir = tempDir('runova-extract-');
     const source = join(workDir, 'source');
     writeTree(source, {
       'flutter/bin/flutter': 'echo flutter',
@@ -300,7 +300,7 @@ describe('extract', () => {
   });
 
   it('says so when the archive is not an archive', async () => {
-    const workDir = tempDir('agentmate-extract-bad-');
+    const workDir = tempDir('runova-extract-bad-');
     const archive = join(workDir, 'broken.zip');
     writeFileSync(archive, 'this is not an archive');
     const dest = join(workDir, 'out');
@@ -314,7 +314,7 @@ describe('extract', () => {
   });
 
   it('says so when the archive is missing', async () => {
-    const workDir = tempDir('agentmate-extract-missing-');
+    const workDir = tempDir('runova-extract-missing-');
     const dest = join(workDir, 'out');
     mkdirSync(dest);
     const { kit: k } = kit(workDir);
@@ -331,7 +331,7 @@ describe('extract', () => {
 describe('which tool unpacks which archive', () => {
   // GNU tar, which is what Linux has, cannot read a zip. The Android command-line tools are a zip.
   const ARCHIVE = '/work/commandlinetools-23.0.zip';
-  const DEST = '/sdk/.agentmate-cmdline-tools-abc123';
+  const DEST = '/sdk/.runova-cmdline-tools-abc123';
   const FINISHED: SpawnStreamingResult = {
     code: 0,
     log: '',

@@ -1,4 +1,4 @@
-import type { AgentStatus } from '@agentmat/core';
+import type { AgentStatus } from '@runova/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { AgentSessionEntry, AutoContinuePendingMap } from '../../shared/apiTypes';
 import { type AutoContinue, createAutoContinue, NETWORK_RETRY_DELAYS_MS } from './autoContinue';

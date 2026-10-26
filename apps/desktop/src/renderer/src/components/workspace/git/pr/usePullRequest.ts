@@ -1,4 +1,4 @@
-import { summarizeChecks } from '@agentmat/core';
+import { summarizeChecks } from '@runova/core';
 import type {
   MergePullRequestIpcInput,
   MergePullRequestResult,
@@ -154,7 +154,7 @@ export function usePullRequest(projectId: string, watch: PullRequestWatch) {
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: queryKeys.pullRequest(projectId),
-    queryFn: () => window.agentmat.pullRequests.status(projectId),
+    queryFn: () => window.runova.pullRequests.status(projectId),
     enabled: watch.visible,
     refetchInterval: (q) => (watch.visible ? pullRequestRefetchInterval(q.state.data) : false),
     meta: { silentLoading: true },
@@ -237,7 +237,7 @@ export interface PullRequestActions {
 export function usePullRequestActions(projectId: string): PullRequestActions {
   const queryClient = useQueryClient();
   return useMemo<PullRequestActions>(() => {
-    const api = window.agentmat.pullRequests;
+    const api = window.runova.pullRequests;
     const refresh = (): void => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.pullRequest(projectId) });
     };

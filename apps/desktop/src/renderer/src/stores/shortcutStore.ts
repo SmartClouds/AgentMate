@@ -42,7 +42,7 @@ export const useShortcutStore = create<ShortcutState>()(
         }),
       resetAll: () => set({ overrides: {} }),
     }),
-    { name: 'agentmate-shortcuts' },
+    { name: 'runova-shortcuts' },
   ),
 );
 

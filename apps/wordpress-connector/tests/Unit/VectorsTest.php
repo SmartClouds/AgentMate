@@ -3,21 +3,22 @@
  * Every entry of packages/core/src/deploy/wordpress/vectors/protocol-v1.json, so the plugin and
  * the desktop agree byte for byte.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Unit;
+namespace Runova\Connector\Tests\Unit;
 
-use AgentMate\Connector\Auth\Canonical;
-use AgentMate\Connector\Auth\ConnectionKey;
-use AgentMate\Connector\Crypto\Base64Url;
-use AgentMate\Connector\Crypto\Crypto;
-use AgentMate\Connector\Crypto\SiteKeys;
-use AgentMate\Connector\Files\PathPolicy;
-use AgentMate\Connector\Http\Envelope;
-use AgentMate\Connector\Http\Frame;
-use AgentMate\Connector\Http\Gzip;
-use AgentMate\Connector\Tests\Support\TestCase;
+use Runova\Connector\Auth\Canonical;
+use Runova\Connector\Auth\ConnectionKey;
+use Runova\Connector\Crypto\Base64Url;
+use Runova\Connector\Crypto\Crypto;
+use Runova\Connector\Crypto\SiteKeys;
+use Runova\Connector\Files\PathPolicy;
+use Runova\Connector\Http\Envelope;
+use Runova\Connector\Http\Frame;
+use Runova\Connector\Http\Gzip;
+use Runova\Connector\Protocol;
+use Runova\Connector\Tests\Support\TestCase;
 
 final class VectorsTest extends TestCase
 {
@@ -61,7 +62,8 @@ final class VectorsTest extends TestCase
         $vectors = self::vectors();
         foreach ($vectors['canonicalRequest'] as $case) {
             $input = $case['input'];
-            $text = Canonical::request($input['route'], $input['timestamp'], $input['nonce'], $input['connectionId'], $input['bodySha256']);
+            $prefix = isset($input['prefix']) ? $input['prefix'] : Protocol::PREFIX;
+            $text = Canonical::request($input['route'], $input['timestamp'], $input['nonce'], $input['connectionId'], $input['bodySha256'], $prefix);
             $this->assertSame($case['text'], $text);
             $signer = Crypto::keypairFromSeed((string) hex2bin($vectors['keys'][$case['signer']]['seedHex']));
             $this->assertSame($case['signature'], Base64Url::encode(Crypto::sign($text, $signer['secret'])));
@@ -77,7 +79,8 @@ final class VectorsTest extends TestCase
         foreach ($vectors['canonicalResponse'] as $case) {
             $this->assertSame('site', $case['signer']);
             $input = $case['input'];
-            $text = Canonical::response($input['route'], $input['requestNonce'], $input['connectionId'], $input['timestamp'], $input['httpStatus'], $input['bodySha256']);
+            $prefix = isset($input['prefix']) ? $input['prefix'] : Protocol::PREFIX;
+            $text = Canonical::response($input['route'], $input['requestNonce'], $input['connectionId'], $input['timestamp'], $input['httpStatus'], $input['bodySha256'], $prefix);
             $this->assertSame($case['text'], $text);
             $this->assertSame($case['signature'], $site->sign($text));
         }
@@ -127,6 +130,36 @@ final class VectorsTest extends TestCase
         $this->assertFalse(Canonical::isValidDeviceName("a\tb"));
         $this->assertTrue(Canonical::isValidDeviceName(str_repeat('é', 64)));
         $this->assertFalse(Canonical::isValidDeviceName(str_repeat('é', 65)));
+    }
+
+    public function testLegacyPrefixCases(): void
+    {
+        $vectors = self::vectors();
+        $legacy = json_decode((string) file_get_contents(RUNOVA_TEST_VECTORS . '/legacy/canonical-v1.json'), true);
+        $this->assertNotEmpty($legacy['canonicalRequest']);
+        $site = SiteKeys::fromSeed((string) hex2bin($vectors['keys']['site']['seedHex']));
+        $desktop = Crypto::keypairFromSeed((string) hex2bin($vectors['keys']['desktop']['seedHex']));
+        foreach ($legacy['canonicalRequest'] as $case) {
+            $input = $case['input'];
+            $this->assertSame(Protocol::LEGACY_PREFIX, $input['prefix']);
+            $text = Canonical::request($input['route'], $input['timestamp'], $input['nonce'], $input['connectionId'], $input['bodySha256'], $input['prefix']);
+            $this->assertSame($case['text'], $text);
+            $this->assertSame($case['signature'], Base64Url::encode(Crypto::sign($text, $desktop['secret'])));
+        }
+        foreach ($legacy['canonicalResponse'] as $case) {
+            $input = $case['input'];
+            $text = Canonical::response($input['route'], $input['requestNonce'], $input['connectionId'], $input['timestamp'], $input['httpStatus'], $input['bodySha256'], $input['prefix']);
+            $this->assertSame($case['text'], $text);
+            $this->assertSame($case['signature'], $site->sign($text));
+        }
+        foreach ($legacy['pairProof'] as $case) {
+            $input = $case['input'];
+            $text = Canonical::pair($input['pairingId'], $input['desktopPublicKey'], $input['deviceName'], $input['timestamp'], $input['nonce'], $input['prefix']);
+            $this->assertSame($case['text'], $text);
+            $this->assertSame($case['proof'], Base64Url::encode(Crypto::hmac((string) Base64Url::decode($case['secret']), $text)));
+        }
+        $this->expectException(\InvalidArgumentException::class);
+        Canonical::request('/hello', 1, str_repeat('A', 22), null, str_repeat('a', 64), 'other-wp/v1');
     }
 
     public function testAuthFieldValidAndInvalid(): void
@@ -286,14 +319,14 @@ final class VectorsTest extends TestCase
 
     public function testVersionMatchesTheContract(): void
     {
-        $ts = (string) file_get_contents(AGENTMATE_TEST_PROTOCOL_TS);
+        $ts = (string) file_get_contents(RUNOVA_TEST_PROTOCOL_TS);
         $this->assertSame(1, preg_match("/WP_CONNECTOR_VERSION = '([^']+)'/", $ts, $match));
-        $main = (string) file_get_contents(dirname(__DIR__, 2) . '/agentmate-connector.php');
+        $main = (string) file_get_contents(dirname(__DIR__, 2) . '/runova-connector.php');
         $this->assertSame(1, preg_match('/^ \* Version:\s+(\S+)$/m', $main, $header));
-        $this->assertSame(1, preg_match("/define\('AGENTMATE_CONNECTOR_VERSION', '([^']+)'\)/", $main, $constant));
+        $this->assertSame(1, preg_match("/define\('RUNOVA_CONNECTOR_VERSION', '([^']+)'\)/", $main, $constant));
         $readme = (string) file_get_contents(dirname(__DIR__, 2) . '/readme.txt');
         $this->assertSame(1, preg_match('/^Stable tag: (\S+)$/m', $readme, $stable));
-        $guard = (string) file_get_contents(dirname(__DIR__, 2) . '/guard/00-agentmate-connector-guard.php');
+        $guard = (string) file_get_contents(dirname(__DIR__, 2) . '/guard/00-runova-connector-guard.php');
         $this->assertSame(1, preg_match('/^ \* Version:\s+(\S+)$/m', $guard, $guardVersion));
         $this->assertSame($match[1], $header[1]);
         $this->assertSame($match[1], $constant[1]);

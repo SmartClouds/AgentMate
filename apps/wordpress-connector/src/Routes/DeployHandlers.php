@@ -2,13 +2,13 @@
 /**
  * The deploy and rescue routes. Scope and kill switches were checked by the dispatcher already.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Routes;
+namespace Runova\Connector\Routes;
 
-use AgentMate\Connector\Deploy\DeployService;
-use AgentMate\Connector\Http\ApiError;
+use Runova\Connector\Deploy\DeployService;
+use Runova\Connector\Http\ApiError;
 
 final class DeployHandlers implements Handler
 {

@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { normalize } from 'node:path';
 import { promisify } from 'node:util';
-import { parseWorktreeList } from '@agentmat/core';
+import { parseWorktreeList } from '@runova/core';
 import type {
   GitBranchHistory,
   GitBranchInfo,

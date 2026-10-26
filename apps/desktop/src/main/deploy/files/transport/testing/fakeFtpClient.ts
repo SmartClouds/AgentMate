@@ -99,8 +99,8 @@ export class FakeTlsSocket extends EventEmitter {
 
 export function fakeCertificate(tls: Pick<FakeTls, 'names' | 'fingerprint256'>): PeerCertificate {
   return {
-    subject: { CN: tls.names[0] ?? 'unknown', O: 'AgentMate Test' },
-    issuer: { CN: tls.names[0] ?? 'unknown', O: 'AgentMate Test' },
+    subject: { CN: tls.names[0] ?? 'unknown', O: 'Runova Test' },
+    issuer: { CN: tls.names[0] ?? 'unknown', O: 'Runova Test' },
     subjectaltname: tls.names.map((name) => `DNS:${name}`).join(', '),
     valid_from: 'Jan  1 00:00:00 2026 GMT',
     valid_to: 'Jan  1 00:00:00 2036 GMT',

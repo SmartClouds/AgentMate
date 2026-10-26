@@ -1,7 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { TestDiscovery, TestRunEvent, TestRunSnapshot, TestRunSummary } from '@agentmat/core';
+import type { TestDiscovery, TestRunEvent, TestRunSnapshot, TestRunSummary } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IPC } from '../../shared/ipcChannels';
 
@@ -52,7 +52,7 @@ const runEvents = (): TestRunEvent[] =>
     .map((entry) => entry.payload as TestRunEvent);
 
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), 'agentmate-ipc-tests-'));
+  root = await mkdtemp(join(tmpdir(), 'runova-ipc-tests-'));
   await seedWorkspace(root);
   projects.splice(0, projects.length, { id: 'p1', folderPath: root });
   process.env.FAKE_ARGS_LOG = join(root, 'args.log');

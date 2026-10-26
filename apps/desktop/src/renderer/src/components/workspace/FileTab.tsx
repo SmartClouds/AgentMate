@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { isImagePath, isTextImagePath } from '@shared/imageFiles';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -80,7 +80,7 @@ function TextFileTab({
   const openFile = useWorkspaceStore((s) => s.openFile);
   const file = useQuery({
     queryKey: fileQueryKey(tab.path),
-    queryFn: () => window.agentmat.fs.readFile(tab.path),
+    queryFn: () => window.runova.fs.readFile(tab.path),
     meta: { silentLoading: true },
     staleTime: Number.POSITIVE_INFINITY,
   });
@@ -113,7 +113,7 @@ function TextFileTab({
     if (!dirty || draft === null || saving) return;
     setSaving(true);
     try {
-      await window.agentmat.fs.writeFile(tab.path, draft);
+      await window.runova.fs.writeFile(tab.path, draft);
       queryClient.setQueryData(fileQueryKey(tab.path), draft);
       setDraft(null);
     } catch (error) {
@@ -191,7 +191,7 @@ function TextFileTab({
             size="icon-xs"
             type="button"
             aria-label="Open in its default app"
-            onClick={() => void window.agentmat.shell.openPath(tab.path)}
+            onClick={() => void window.runova.shell.openPath(tab.path)}
           >
             <ExternalLink />
           </Button>

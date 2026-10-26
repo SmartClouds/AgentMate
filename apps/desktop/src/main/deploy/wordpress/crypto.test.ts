@@ -1,4 +1,4 @@
-import { wpBase64UrlDecode, wpBase64UrlEncode, wpCanonicalPair } from '@agentmat/core';
+import { wpBase64UrlDecode, wpBase64UrlEncode, wpCanonicalPair } from '@runova/core';
 import { describe, expect, it } from 'vitest';
 import {
   generateWpKeyPair,

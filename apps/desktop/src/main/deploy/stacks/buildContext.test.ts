@@ -43,7 +43,7 @@ async function listed(archive: string): Promise<Listed[]> {
 }
 
 function project(files: Record<string, string>): { root: string; output: string } {
-  const workspace = tempDir('agentmate-context-');
+  const workspace = tempDir('runova-context-');
   const root = join(workspace, 'project');
   mkdirSync(root);
   writeTree(root, files);
@@ -61,7 +61,7 @@ async function refusal(promise: Promise<unknown>): Promise<BuildContextError> {
 
 /** Whether this machine lets a normal user create symbolic links (Windows needs Developer Mode). */
 function canSymlink(): boolean {
-  const folder = tempDir('agentmate-link-probe-');
+  const folder = tempDir('runova-link-probe-');
   try {
     symlinkSync('target', join(folder, 'link'));
     return true;
@@ -109,7 +109,7 @@ describe('buildContextTarball', () => {
     expect(result.sha256).toBe(createHash('sha256').update(readFileSync(output)).digest('hex'));
     expect(result.skipped).toEqual([]);
 
-    const unpacked = tempDir('agentmate-context-out-');
+    const unpacked = tempDir('runova-context-out-');
     await extract({ file: output, cwd: unpacked });
     expect(readFileSync(join(unpacked, 'src/app.js'), 'utf8')).toBe('console.log(1)\n');
   });

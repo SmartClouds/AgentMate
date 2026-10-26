@@ -5,7 +5,7 @@ import type {
   FirewallPreset,
   FirewallRuleInfo,
   FirewallStatus,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /** A ufw server with SSH, the web and a database open, for the Firewall section's tests. */
 

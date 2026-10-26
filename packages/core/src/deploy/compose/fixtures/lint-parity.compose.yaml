@@ -39,4 +39,4 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: /opt/agentmate-core/shared
+      device: /opt/runova-core/shared

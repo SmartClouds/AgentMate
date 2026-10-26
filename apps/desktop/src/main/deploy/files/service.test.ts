@@ -108,7 +108,7 @@ function gate(): Gate {
 }
 
 function setup(overrides: Partial<FilesServiceDeps> = {}) {
-  const local = realpathSync(tempDir('agentmate-service-'));
+  const local = realpathSync(tempDir('runova-service-'));
   const fake = createFakeRemote();
   fake.setDir(ROOT);
   fake.setDir('/home/deploy');

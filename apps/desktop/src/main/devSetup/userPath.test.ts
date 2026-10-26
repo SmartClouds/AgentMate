@@ -180,9 +180,9 @@ describe('addToUserPath on macOS and Linux', () => {
     expect(p.fs.get('/Users/me/.zshrc')).toBe(
       [
         '',
-        '# >>> AgentMate Dev Setup: /Users/me/develop/flutter/bin >>>',
+        '# >>> Runova Dev Setup: /Users/me/develop/flutter/bin >>>',
         'export PATH="$HOME/develop/flutter/bin:$PATH"',
-        '# <<< AgentMate Dev Setup <<<',
+        '# <<< Runova Dev Setup <<<',
         '',
       ].join('\n'),
     );
@@ -217,6 +217,31 @@ describe('addToUserPath on macOS and Linux', () => {
     expect(p.fs.get('/Users/me/.zshrc')).toBe(once);
   });
 
+  it('renames a block written before the app was renamed instead of adding a second one', async () => {
+    const other = '/Users/me/Android/Sdk/platform-tools';
+    const before = [
+      'alias ll="ls -l"',
+      `# >>> AgentMate Dev Setup: ${other} >>>`, // legacy-name
+      'export PATH="$HOME/Android/Sdk/platform-tools:$PATH"',
+      '# <<< AgentMate Dev Setup <<<', // legacy-name
+      `# >>> AgentMate Dev Setup: ${BIN} >>>`, // legacy-name
+      'export PATH="$HOME/develop/flutter/bin:$PATH"',
+      '# <<< AgentMate Dev Setup <<<', // legacy-name
+      '',
+    ].join('\n');
+    const p = posix('darwin', { '/Users/me/.zshrc': before });
+
+    const result = await addToUserPath(BIN, p.deps);
+
+    expect(result.changed).toBe(false);
+    const text = p.fs.get('/Users/me/.zshrc') ?? '';
+    expect(text.match(/develop\/flutter\/bin:\$PATH/g)).toHaveLength(1);
+    expect(text).toContain(`# >>> Runova Dev Setup: ${BIN} >>>`);
+    // Only that folder's block is renamed; the other one waits for its own turn.
+    expect(text).toContain(`# >>> AgentMate Dev Setup: ${other} >>>`); // legacy-name
+    expect(text.match(/# <<< Runova Dev Setup <<</g)).toHaveLength(1);
+  });
+
   it('adds a different folder alongside the first, each marked on its own', async () => {
     const p = posix('darwin');
     await addToUserPath(BIN, p.deps);
@@ -224,7 +249,7 @@ describe('addToUserPath on macOS and Linux', () => {
     await addToUserPath('/Users/me/Android/Sdk/platform-tools', p.deps);
 
     const text = p.fs.get('/Users/me/.zshrc') ?? '';
-    expect(text.match(/>>> AgentMate Dev Setup/g)).toHaveLength(2);
+    expect(text.match(/>>> Runova Dev Setup/g)).toHaveLength(2);
   });
 
   it('picks the startup file for the shell in use', async () => {

@@ -36,7 +36,7 @@ export default function RemoteSessionRoute(): React.JSX.Element {
   const [history, setHistory] = useState<{ t: number; kbps: number }[]>([]);
   const [isMaximized, setIsMaximized] = useState(false);
   const chartColors = useChartColors();
-  const isMac = window.agentmat.platform === 'darwin';
+  const isMac = window.runova.platform === 'darwin';
 
   useEffect(() => subscribeControllerRtc(setRtc), []);
 
@@ -48,8 +48,8 @@ export default function RemoteSessionRoute(): React.JSX.Element {
   }, [rtc.quality]);
 
   useEffect(() => {
-    window.agentmat.remoteSessionWindow.isMaximized().then(setIsMaximized);
-    return window.agentmat.remoteSessionWindow.onMaximizedChange(setIsMaximized);
+    window.runova.remoteSessionWindow.isMaximized().then(setIsMaximized);
+    return window.runova.remoteSessionWindow.onMaximizedChange(setIsMaximized);
   }, []);
 
   const status = connection?.status ?? 'idle';
@@ -69,9 +69,9 @@ export default function RemoteSessionRoute(): React.JSX.Element {
 
   const controlProps: WindowControlsProps = {
     isMaximized,
-    onMinimize: () => void window.agentmat.remoteSessionWindow.minimize(),
-    onMaximizeToggle: () => void window.agentmat.remoteSessionWindow.maximizeToggle(),
-    onClose: () => void window.agentmat.remoteSessionWindow.close(),
+    onMinimize: () => void window.runova.remoteSessionWindow.minimize(),
+    onMaximizeToggle: () => void window.runova.remoteSessionWindow.maximizeToggle(),
+    onClose: () => void window.runova.remoteSessionWindow.close(),
   };
 
   const quality = rtc.quality;
@@ -83,7 +83,7 @@ export default function RemoteSessionRoute(): React.JSX.Element {
         className="relative flex h-11 shrink-0 items-center gap-3 border-b border-border pl-4 pr-2 [-webkit-app-region:drag]"
         onDoubleClick={(e) => {
           if (isTitleBarBlankDoubleClick(e))
-            void window.agentmat.remoteSessionWindow.maximizeToggle();
+            void window.runova.remoteSessionWindow.maximizeToggle();
         }}
       >
         <div className="flex shrink-0 items-center gap-2">
@@ -106,7 +106,7 @@ export default function RemoteSessionRoute(): React.JSX.Element {
             size="sm"
             variant="soft"
             disabled={!connected}
-            onClick={() => void window.agentmat.remote.sendClipboard()}
+            onClick={() => void window.runova.remote.sendClipboard()}
           >
             <Send className="h-3.5 w-3.5" /> Clipboard
           </Button>
@@ -114,7 +114,7 @@ export default function RemoteSessionRoute(): React.JSX.Element {
             size="sm"
             variant="soft"
             disabled={!connected}
-            onClick={() => void window.agentmat.remote.sendFile()}
+            onClick={() => void window.runova.remote.sendFile()}
           >
             <Upload className="h-3.5 w-3.5" /> Send file
           </Button>

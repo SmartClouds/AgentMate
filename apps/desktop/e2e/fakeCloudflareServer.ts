@@ -8,7 +8,7 @@ import {
 
 /**
  * The recorded Cloudflare fake the main-process tests use, served on loopback for an e2e run.
- * The app reaches it only through AGENTMATE_E2E_CLOUDFLARE_API, which an unpackaged e2e build
+ * The app reaches it only through RUNOVA_E2E_CLOUDFLARE_API, which an unpackaged e2e build
  * alone honours. Requests are handed to the fake as if they had gone to api.cloudflare.com.
  */
 
@@ -16,7 +16,7 @@ import {
 export const E2E_CLOUDFLARE_TOKEN = 'Gm4pR2e6Tq9VxYb1Lk0NsHjW3cZaDf7U8iOoPl5M';
 
 export interface FakeCloudflareServer {
-  /** Goes in AGENTMATE_E2E_CLOUDFLARE_API. */
+  /** Goes in RUNOVA_E2E_CLOUDFLARE_API. */
   base: string;
   fake: FakeCloudflare;
   close: () => Promise<void>;

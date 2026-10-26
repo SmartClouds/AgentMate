@@ -1,4 +1,4 @@
-import type { HealthState } from '@agentmat/core';
+import type { HealthState } from '@runova/core';
 import { Chip } from '@/components/pageKit';
 import { HEALTH_STATE_META } from './healthView';
 

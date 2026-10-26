@@ -3,7 +3,7 @@ import type { SecretEnvelope } from '../../shared/apiTypes';
 import type {
   ChallengeResponse,
   SignedInResponse,
-} from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployCoreRecord } from '../../shared/deployTypes';
 import { TunnelRefusedError } from '../ssh/connection';
 import type { CoreRest } from './auth/coreSessions';
@@ -27,7 +27,7 @@ import { DeployState } from './state';
 const PASSWORD = 'another long passphrase';
 const CODE = 'ABCDE-FGHIJ-KLMNP-QRSTU';
 const INSTALLED = {
-  release: '/opt/agentmate-core/releases/1.53.0-abababababab',
+  release: '/opt/runova-core/releases/1.53.0-abababababab',
   version: '1.53.0',
 };
 
@@ -180,6 +180,7 @@ describe('DeployService redeeming an enrollment code', () => {
       version: '1.53.0',
       release: INSTALLED.release,
       transport: 'streamlocal',
+      layout: 'runova',
       installedAt: 1_000,
       os: 'Ubuntu 24.04.1 LTS',
       architecture: 'x86_64',
@@ -218,11 +219,11 @@ describe('DeployService redeeming an enrollment code', () => {
     expect((await state.get('srv-1'))?.transport).toBe('bridge');
   });
 
-  it('says what to ask for when the login is not in the agentmate group, and keeps nothing', async () => {
+  it('says what to ask for when the login is not in the runova group, and keeps nothing', async () => {
     const { service, state, core } = setup({ groups: ['deployer'] }, { record: null });
 
     await expect(service.redeemEnrollmentCode(redeem)).rejects.toThrow(
-      /not in the agentmate group.*sudo usermod -aG agentmate deployer/,
+      /not in the runova group.*sudo usermod -aG runova deployer/,
     );
     expect(core.calls).toEqual([]);
     expect(await state.get('srv-1')).toBeNull();
@@ -231,7 +232,7 @@ describe('DeployService redeeming an enrollment code', () => {
 
   it('logs in again when the login was added to the group after it started', async () => {
     const { service, pool } = setup(
-      { groups: ['deployer'], configuredGroups: ['deployer', 'agentmate'] },
+      { groups: ['deployer'], configuredGroups: ['deployer', 'runova'] },
       { record: null },
     );
 

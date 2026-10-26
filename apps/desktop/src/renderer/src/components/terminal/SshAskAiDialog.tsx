@@ -4,7 +4,7 @@ import {
   EFFORT_LABELS,
   type EffortLevel,
   runProfileForTargetAI,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { SshAgentHistoryRun, SshAgentMode, SshAgentRunSettings } from '@shared/apiTypes';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
@@ -85,7 +85,7 @@ export function SshAskAiDialog({
 
   const cliQuery = useQuery({
     queryKey: queryKeys.cliStatus,
-    queryFn: () => window.agentmat.cli.detectAll(),
+    queryFn: () => window.runova.cli.detectAll(),
     meta: { silentLoading: true },
   });
 
@@ -95,8 +95,8 @@ export function SshAskAiDialog({
       : queryKeys.sshAgentHistory(sessionId),
     queryFn: () =>
       serverId
-        ? window.agentmat.sshAgent.serverHistory(serverId)
-        : window.agentmat.sshAgent.history(sessionId),
+        ? window.runova.sshAgent.serverHistory(serverId)
+        : window.runova.sshAgent.history(sessionId),
     enabled: open,
     meta: { silentLoading: true },
   });

@@ -1,4 +1,4 @@
-import type { PromptType, ScheduledTaskRunMode, TargetAI } from '@agentmat/core';
+import type { PromptType, ScheduledTaskRunMode, TargetAI } from '@runova/core';
 import {
   buildPromptGenerationRequest,
   CLI_REGISTRY,
@@ -11,7 +11,7 @@ import {
   resolvePromptTargetAI,
   TARGET_AIS,
   targetAIForProject,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -168,7 +168,7 @@ export default function PromptBuilderPage(): React.JSX.Element {
 
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   });
   const projects = projectsQuery.data ?? [];
   const didSyncTargetFromProject = useRef(false);
@@ -192,7 +192,7 @@ export default function PromptBuilderPage(): React.JSX.Element {
 
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
   });
 
   const trimmedHistorySearch = historySearch.trim();
@@ -202,8 +202,8 @@ export default function PromptBuilderPage(): React.JSX.Element {
       : queryKeys.promptHistory,
     queryFn: () =>
       trimmedHistorySearch
-        ? window.agentmat.promptHistory.search(trimmedHistorySearch)
-        : window.agentmat.promptHistory.list(),
+        ? window.runova.promptHistory.search(trimmedHistorySearch)
+        : window.runova.promptHistory.list(),
     enabled: historyOpen,
   });
   const historyEntries = historyQuery.data ?? [];
@@ -235,7 +235,7 @@ export default function PromptBuilderPage(): React.JSX.Element {
 
   const saveTemplateMutation = useMutation({
     mutationFn: () =>
-      window.agentmat.templates.save({
+      window.runova.templates.save({
         name: templateName,
         promptType,
         targetAI,
@@ -252,7 +252,7 @@ export default function PromptBuilderPage(): React.JSX.Element {
   const saveDraftMutation = useMutation({
     mutationFn: () => {
       if (!projectId) throw new Error('No project selected');
-      return window.agentmat.projectDrafts.create({
+      return window.runova.projectDrafts.create({
         projectId,
         rawInput,
         promptType,
@@ -270,7 +270,7 @@ export default function PromptBuilderPage(): React.JSX.Element {
   const saveScheduleMutation = useMutation({
     mutationFn: () => {
       if (!projectId) throw new Error('No project selected');
-      return window.agentmat.scheduledTasks.createMany({
+      return window.runova.scheduledTasks.createMany({
         projectId,
         tasks: scheduleQueue.map((item) => ({
           rawInput: item.text,
@@ -370,7 +370,7 @@ export default function PromptBuilderPage(): React.JSX.Element {
       // A plain translation isn't shaped by a prompt type or aimed at a particular AI,
       // so neither field applies; record them empty rather than whatever the pickers hold.
       const isTranslation = source === 'translate';
-      await window.agentmat.promptHistory.add({
+      await window.runova.promptHistory.add({
         rawInput,
         promptType: isTranslation ? '' : promptType,
         targetAI: isTranslation ? '' : targetAI,
@@ -411,7 +411,7 @@ export default function PromptBuilderPage(): React.JSX.Element {
       return;
     }
 
-    const settings = settingsQuery.data ?? (await window.agentmat.settings.get());
+    const settings = settingsQuery.data ?? (await window.runova.settings.get());
     const provider = settings.promptBuilderProvider;
     const model =
       provider === 'openai'
@@ -430,7 +430,7 @@ export default function PromptBuilderPage(): React.JSX.Element {
     try {
       // Normalize the description to English before it's inserted into the AI request,
       // regardless of what language the user typed it in.
-      const englishInput = await window.agentmat.translate.text({
+      const englishInput = await window.runova.translate.text({
         text: rawInput,
         targetLang: 'en',
       });
@@ -439,7 +439,7 @@ export default function PromptBuilderPage(): React.JSX.Element {
         promptType,
         targetAI,
       });
-      const result = await window.agentmat.ai.ask({ provider, model, prompt: request });
+      const result = await window.runova.ai.ask({ provider, model, prompt: request });
       if (!result.ok) {
         toast.error(result.error || 'Prompt generation failed.');
         return;
@@ -465,7 +465,7 @@ export default function PromptBuilderPage(): React.JSX.Element {
     runRecommendation.cancel();
     setIsTranslating(true);
     try {
-      const translated = await window.agentmat.translate.text({ text: rawInput, targetLang });
+      const translated = await window.runova.translate.text({ text: rawInput, targetLang });
       setGenerated(translated);
       void logHistory('translate', translated);
       runRecommendation.analyze({ prompt: translated, isTranslation: true });
@@ -488,7 +488,7 @@ export default function PromptBuilderPage(): React.JSX.Element {
   }
 
   async function handleExportMarkdown(): Promise<void> {
-    const savedPath = await window.agentmat.fs.saveFileAs('prompt.md', generated);
+    const savedPath = await window.runova.fs.saveFileAs('prompt.md', generated);
     if (savedPath) toast.success(`Saved to ${savedPath}`);
   }
 
@@ -497,10 +497,7 @@ export default function PromptBuilderPage(): React.JSX.Element {
       toast.error('No CLI available for this target. Set a default CLI in Settings.');
       return;
     }
-    const filePath = await window.agentmat.fs.writeScratchFile(
-      `prompt-${Date.now()}.md`,
-      generated,
-    );
+    const filePath = await window.runova.fs.writeScratchFile(`prompt-${Date.now()}.md`, generated);
     // Model and effort flags only mean something to the CLI they were picked for.
     const runArgs =
       cliForSendTo.id === runRecommendation.recommendation?.profile.cliId
@@ -508,7 +505,7 @@ export default function PromptBuilderPage(): React.JSX.Element {
         : [];
     const launch = cliLaunchCommand(cliForSendTo.id, runArgs) ?? cliForSendTo.executableNames[0];
     const command =
-      window.agentmat.platform === 'win32'
+      window.runova.platform === 'win32'
         ? `& ${launch} (Get-Content -Raw -LiteralPath "${filePath}")`
         : `${launch} "$(cat '${filePath}')"`;
     openSession({ title: cliForSendTo.name, initialInput: command });
@@ -516,10 +513,10 @@ export default function PromptBuilderPage(): React.JSX.Element {
 
   usePageHeader(
     'Prompt Builder',
-    'Describe what you want; AgentMate structures it into a professional prompt.',
+    'Describe what you want; Runova structures it into a professional prompt.',
   );
 
-  const generateShortcut = window.agentmat?.platform === 'darwin' ? '⌘ Enter' : 'Ctrl+Enter';
+  const generateShortcut = window.runova?.platform === 'darwin' ? '⌘ Enter' : 'Ctrl+Enter';
 
   return (
     // The page sits in the content island already, so the composer and the output are two glass

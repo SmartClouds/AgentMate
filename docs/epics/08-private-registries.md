@@ -33,7 +33,7 @@ Server core:
 
 - `Registries/`: `RegistryNames` (hosts as the docker CLI matches them, Docker Hub's names all
   become docker.io), `RegistryCredentials` (stored credentials, Data Protection purpose
-  `AgentMate.Registries.Credential.v1`, one row per registry, migration `Registries`) and
+  `Runova.Registries.Credential.v1`, one row per registry, migration `Registries`) and
   `RegistryAuthFolders` (the per-job DOCKER_CONFIG). Hub: `DeployStackWithRegistries` and
   `RollbackStackWithRegistries` (Operator), `ListRegistryCredentials` (Operator),
   `SaveRegistryCredential` and `DeleteRegistryCredential` (Admin and a step-up). The old
@@ -56,7 +56,7 @@ Server core:
 - Containers screen: `ImagePullRequest` takes an optional `Auth`; the engine gets it as
   X-Registry-Auth, so nothing touches the disk. Without one the stored credential for the
   image's registry is used.
-- DevHost: a pretend private registry, `registry.agentmate.test` (user `devhost`, token
+- DevHost: a pretend private registry, `registry.runova.test` (user `devhost`, token
   `devhost-registry-token-4417`). The simulated compose and the pretend engine refuse its images
   without a matching sign-in, read from the DOCKER_CONFIG the way the docker CLI reads it.
 
@@ -85,7 +85,7 @@ Acceptance criteria:
    file under the data and runtime folders (database and WAL, job logs, stacks, keys) holds the
    token or its base64 form; nor do the job log, the audit trail, the command lines or the hub's
    answers. The system test `apps/desktop/src/main/deploy/registries.int.test.ts` (gated by
-   AGENTMATE_SYSTEM_TESTS=1, a job in the `[e2e]` CI run) pulls from a registry:2 with htpasswd on
+   RUNOVA_SYSTEM_TESTS=1, a job in the `[e2e]` CI run) pulls from a registry:2 with htpasswd on
    Ubuntu 24.04 and greps the whole filesystem and the core's journal after both deploys.
 2. A token without read:packages is refused with the fix (`github.test.ts`, `service.test.ts`,
    the RTL tests of the token and gh dialogs).

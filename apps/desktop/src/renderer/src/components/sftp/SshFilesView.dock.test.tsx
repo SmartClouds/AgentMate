@@ -10,8 +10,8 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetSftpStore, serverFiles, useSftpStore } from '@/stores/sftpStore';
-import type { BridgeOverrides } from '../../../../test/renderer/agentmatBridge';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
+import type { BridgeOverrides } from '../../../../test/renderer/runovaBridge';
 import { type SshFilesVariant, SshFilesView } from './SshFilesView';
 
 const toast = vi.hoisted(() => ({

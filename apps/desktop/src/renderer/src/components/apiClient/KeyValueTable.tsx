@@ -1,4 +1,4 @@
-import type { KeyValueRow } from '@agentmat/core';
+import type { KeyValueRow } from '@runova/core';
 import { useState } from 'react';
 import { Trash2 } from '@/components/icons';
 import { Button } from '@/components/ui/button';

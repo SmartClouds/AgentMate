@@ -1,4 +1,4 @@
-import type { RootCheckView } from '@agentmat/studio';
+import type { RootCheckView } from '@runova/studio';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 import { studioClient } from '../client';

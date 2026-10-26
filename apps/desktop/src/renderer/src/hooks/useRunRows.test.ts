@@ -1,4 +1,4 @@
-import type { AndroidSnapshot } from '@agentmat/core';
+import type { AndroidSnapshot } from '@runova/core';
 import type { TerminalRunStatusResult } from '@shared/apiTypes';
 import { describe, expect, it } from 'vitest';
 import type { RunSessionMeta } from '@/stores/runSessionStore';

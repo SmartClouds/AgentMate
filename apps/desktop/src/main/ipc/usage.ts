@@ -8,7 +8,7 @@ import {
   type WidgetMode,
   type WidgetSize,
   type WidgetStyle,
-} from '@agentmat/core';
+} from '@runova/core';
 import { ipcMain } from 'electron';
 import type { SetUsageProviderConfigInput } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';

@@ -1,11 +1,11 @@
-import type { AdbDevice } from '@agentmat/core';
+import type { AdbDevice } from '@runova/core';
 import {
   type AndroidPhysicalDevice,
   isEmulatorSerial,
   parseAdbDevices,
   parseEmuAvdName,
   parseGetProp,
-} from '@agentmat/core';
+} from '@runova/core';
 import { runAdb } from './exec';
 import type { ResolvedAndroidSdk } from './sdk';
 

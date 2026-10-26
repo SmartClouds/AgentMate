@@ -7,7 +7,7 @@ import {
   type RelayRunChoice,
   recommendationFromAssessment,
   targetAIForCliId,
-} from '@agentmat/core';
+} from '@runova/core';
 import { IPC } from '../../shared/ipcChannels';
 import type { RelayLegTabEvent } from '../../shared/relayTypes';
 import { relayArmedDir } from '../agents/claudeHooks';

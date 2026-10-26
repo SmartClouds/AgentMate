@@ -35,7 +35,7 @@ vi.mock('../system/memoryStats', () => ({ sampleMemory: probes.sampleMemory }));
 vi.mock('../system/cpuArch', () => ({ readCpuArch: probes.readCpuArch }));
 vi.mock('../network/pingProbe', () => ({ probeAll: probes.probeAll }));
 vi.mock('../store', () => ({ store: { getSettings: probes.getSettings } }));
-// Only the top-apps channel uses it, and the real one pulls in all of @agentmat/core.
+// Only the top-apps channel uses it, and the real one pulls in all of @runova/core.
 vi.mock('../system/processTree', () => ({
   asArray: <T>(value: T | T[] | null | undefined): T[] =>
     value == null ? [] : Array.isArray(value) ? value : [value],

@@ -18,6 +18,6 @@ export const useDeployContainerLinksStore = create<DeployContainerLinksState>()(
       links: {},
       link: (key, projectId) => set((state) => ({ links: { ...state.links, [key]: projectId } })),
     }),
-    { name: 'agentmate-deploy-container-links' },
+    { name: 'runova-deploy-container-links' },
   ),
 );

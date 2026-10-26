@@ -3,13 +3,8 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, statfs, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join, win32 } from 'node:path';
-import {
-  androidPackagesFor,
-  type DevArch,
-  type DevOs,
-  defaultSdkInstallRoot,
-} from '@agentmat/core';
-import { parseNvidiaSmi } from '@agentmat/studio';
+import { androidPackagesFor, type DevArch, type DevOs, defaultSdkInstallRoot } from '@runova/core';
+import { parseNvidiaSmi } from '@runova/studio';
 import { app, net } from 'electron';
 import { runSdkManagerStreaming } from '../../android/exec';
 import { getAndroidSdk, refreshAndroidSdk } from '../../android/sdk';
@@ -178,11 +173,11 @@ export function studioToolsRoot(): string {
 }
 
 /**
- * The e2e suite serves Studio's tools from a fake server on loopback (AGENTMATE_STUDIO_TOOLS_URL),
+ * The e2e suite serves Studio's tools from a fake server on loopback (RUNOVA_STUDIO_TOOLS_URL),
  * as `<base>/<host>/<path>`. Only in a test run; a real install fetches from the real hosts.
  */
 function studioToolsUrl(): ((url: string) => string) | undefined {
-  const base = isE2E ? process.env.AGENTMATE_STUDIO_TOOLS_URL : undefined;
+  const base = isE2E ? process.env.RUNOVA_STUDIO_TOOLS_URL : undefined;
   if (!base) return undefined;
   return (url) => {
     const parsed = new URL(url);
@@ -191,6 +186,6 @@ function studioToolsUrl(): ((url: string) => string) | undefined {
 }
 
 function studioToolHosts(): ReadonlySet<string> {
-  const base = isE2E ? process.env.AGENTMATE_STUDIO_TOOLS_URL : undefined;
+  const base = isE2E ? process.env.RUNOVA_STUDIO_TOOLS_URL : undefined;
   return base ? new Set([...STUDIO_TOOL_HOSTS, new URL(base).hostname]) : STUDIO_TOOL_HOSTS;
 }

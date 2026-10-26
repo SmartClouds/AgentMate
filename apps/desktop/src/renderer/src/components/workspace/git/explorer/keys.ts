@@ -90,12 +90,12 @@ export function isCopyDrag(event: { ctrlKey: boolean; altKey: boolean }): boolea
 }
 
 export function revealLabel(): string {
-  const platform = window.agentmat.platform;
+  const platform = window.runova.platform;
   if (platform === 'darwin') return 'Reveal in Finder';
   if (platform === 'win32') return 'Reveal in File Explorer';
   return 'Open Containing Folder';
 }
 
 export function trashName(): string {
-  return window.agentmat.platform === 'win32' ? 'Recycle Bin' : 'Trash';
+  return window.runova.platform === 'win32' ? 'Recycle Bin' : 'Trash';
 }

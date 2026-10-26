@@ -86,7 +86,7 @@ export function GitSetupWizard({
 
   const accountQuery = useQuery({
     queryKey: queryKeys.githubAccount,
-    queryFn: () => window.agentmat.git.githubAccount(),
+    queryFn: () => window.runova.git.githubAccount(),
     enabled: open && step === 'github' && !manualMode,
     staleTime: 60_000,
   });
@@ -120,7 +120,7 @@ export function GitSetupWizard({
   }
 
   const initMutation = useMutation({
-    mutationFn: () => window.agentmat.git.init({ projectId, branch, initialCommit, commitMessage }),
+    mutationFn: () => window.runova.git.init({ projectId, branch, initialCommit, commitMessage }),
     onSuccess: (result) => {
       refreshGitState();
       if (!result.ok) {
@@ -135,7 +135,7 @@ export function GitSetupWizard({
   });
 
   const lookupMutation = useMutation({
-    mutationFn: () => window.agentmat.git.lookupGithubRepo(owner, repoName),
+    mutationFn: () => window.runova.git.lookupGithubRepo(owner, repoName),
     onSuccess: (result) => {
       setLookup(result);
       if (!result.ok) toast.error(result.error ?? 'Could not reach GitHub.');
@@ -150,7 +150,7 @@ export function GitSetupWizard({
 
       if (!manualMode) {
         if (!repo) {
-          const created = await window.agentmat.git.createGithubRepo({
+          const created = await window.runova.git.createGithubRepo({
             owner,
             name: repoName.trim(),
             isPrivate,
@@ -164,7 +164,7 @@ export function GitSetupWizard({
         url = useSsh ? repo.sshUrl : repo.cloneUrl;
       }
 
-      const result = await window.agentmat.git.connectRemote({ projectId, url, push: true });
+      const result = await window.runova.git.connectRemote({ projectId, url, push: true });
       if (!result.ok) throw new Error(result.message);
       return { message: result.message, repoUrl: repo?.htmlUrl ?? null };
     },
@@ -295,7 +295,7 @@ export function GitSetupWizard({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => void window.agentmat.shell.openExternal(GH_INSTALL_URL)}
+                        onClick={() => void window.runova.shell.openExternal(GH_INSTALL_URL)}
                       >
                         <ExternalLink className="h-3.5 w-3.5" /> Install the GitHub CLI
                       </Button>
@@ -377,7 +377,7 @@ export function GitSetupWizard({
                         variant="ghost"
                         size="sm"
                         onClick={() =>
-                          void window.agentmat.shell.openExternal(lookup.repo?.htmlUrl ?? '')
+                          void window.runova.shell.openExternal(lookup.repo?.htmlUrl ?? '')
                         }
                       >
                         <ExternalLink className="h-3.5 w-3.5" /> Open on GitHub
@@ -445,7 +445,7 @@ export function GitSetupWizard({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => void window.agentmat.shell.openExternal(finishedRepoUrl)}
+                  onClick={() => void window.runova.shell.openExternal(finishedRepoUrl)}
                 >
                   <ExternalLink className="h-3.5 w-3.5" /> Open the repository on GitHub
                 </Button>

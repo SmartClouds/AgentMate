@@ -1,4 +1,4 @@
-import type { AnyCatalogTemplate } from '@agentmat/core';
+import type { AnyCatalogTemplate } from '@runova/core';
 import { useMemo, useState } from 'react';
 import { CircleCheck, Store } from '@/components/icons';
 import {

@@ -345,7 +345,7 @@ export const IPC = {
     cancelAudit: 'skills:cancelAudit',
     /** Reports what a pasted folder path or GitHub address holds, before anything is scanned. */
     previewAuditSource: 'skills:previewAuditSource',
-    /** Skills sitting in a scope's agent dirs, whether or not AgentMate installed them. */
+    /** Skills sitting in a scope's agent dirs, whether or not Runova installed them. */
     listOnDiskSkills: 'skills:listOnDiskSkills',
     listAudits: 'skills:listAudits',
     latestAuditPerSkill: 'skills:latestAuditPerSkill',
@@ -689,7 +689,7 @@ export const IPC = {
   },
   /**
    * Studio (E31): AI video projects, where each project keeps them, and their edit history. Every
-   * input is checked against the schemas in @agentmat/studio before the service sees it.
+   * input is checked against the schemas in @runova/studio before the service sees it.
    */
   studio: {
     // ({ videoId, from, to }) -> ProposalChange[], what changed between two versions (E39)
@@ -1442,7 +1442,7 @@ export const IPC = {
     onRestoreProgress: 'deployServerBackups:onRestoreProgress',
   },
   /**
-   * WordPress sites connected through the AgentMate Connector plugin (E19 to E21): connecting
+   * WordPress sites connected through the Runova Connector plugin (E19 to E21): connecting
    * with a key, the site's items and deploy history, and pulling and deploying WordPress projects.
    */
   deployWordPress: {

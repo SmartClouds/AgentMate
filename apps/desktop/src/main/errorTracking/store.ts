@@ -16,7 +16,7 @@ import { store } from '../store';
 
 /**
  * Error tracking (E24) on disk: `error-tracking.json` in the app's data folder holds the saved
- * connections and which provider projects each AgentMate project is linked to. A connection's
+ * connections and which provider projects each Runova project is linked to. A connection's
  * token is only ever stored sealed with the Servers vault, and moves with a passkey change. Every
  * change goes through one queue, so a status check finishing while the user links a project
  * cannot lose either.

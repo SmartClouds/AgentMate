@@ -5,7 +5,7 @@ import {
   type Project,
   SENTRY_READ_SCOPES,
   SENTRY_WRITE_SCOPE,
-} from '@agentmat/core';
+} from '@runova/core';
 import type {
   ErrorIssuePage,
   ErrorIssueRef,
@@ -119,7 +119,7 @@ export interface IssueProjectGroup {
   issues: ErrorIssueSummary[];
 }
 
-/** The global page's sections: one per AgentMate project, in name order. */
+/** The global page's sections: one per Runova project, in name order. */
 export function groupIssuesByProject(
   issues: readonly ErrorIssueSummary[],
   projects: readonly Project[],
@@ -131,7 +131,7 @@ export function groupIssuesByProject(
     if (!group) {
       group = {
         projectId: one.projectId,
-        // The main process sends '' for a provider project no AgentMate project is linked to.
+        // The main process sends '' for a provider project no Runova project is linked to.
         projectName:
           names.get(one.projectId) ??
           (one.projectId ? 'Unknown project' : 'Not linked to a project'),

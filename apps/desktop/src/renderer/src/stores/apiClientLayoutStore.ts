@@ -21,6 +21,6 @@ export const useApiClientLayoutStore = create<ApiClientLayoutState>()(
       setSidebarWidth: (sidebarWidth) => set({ sidebarWidth }),
       setRequestHeight: (requestHeight) => set({ requestHeight }),
     }),
-    { name: 'agentmate-api-client-layout' },
+    { name: 'runova-api-client-layout' },
   ),
 );

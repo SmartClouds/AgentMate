@@ -7,8 +7,8 @@ import { coreErrorCode } from '../../../shared/coreErrors';
 import type {
   BackupFetchInfo,
   BackupRunInfo,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import type { CoreHttpClient } from '../connection/coreHttp';
 import { ServerBackups, type ServerBackupsDeps } from './service';
 
@@ -131,13 +131,13 @@ describe('ServerBackups runs', () => {
     const { backups, deps } = setup({ runBackupNow });
     const result = await backups.runNow({ serverId: 's1', destinationIds: [], download: true });
     expect(result).toEqual({ started: false });
-    expect(deps.pickSavePath).toHaveBeenCalledWith('agentmate-Web-1-2026-10-22-08-30.ambackup');
+    expect(deps.pickSavePath).toHaveBeenCalledWith('runova-Web-1-2026-10-22-08-30.rnbackup');
     expect(runBackupNow).not.toHaveBeenCalled();
   });
 
   it('follows a run to its end and saves it where the user picked', async () => {
     const dir = folder();
-    const path = join(dir, 'web.ambackup');
+    const path = join(dir, 'web.rnbackup');
     const states = [run('running'), run('running'), run('succeeded', { sizeBytes: 24 })];
     const getBackupRun = vi.fn(async () => states.shift());
     const runBackupNow = vi.fn(async () => run('running'));
@@ -169,7 +169,7 @@ describe('ServerBackups runs', () => {
         runBackupNow: vi.fn(async () => run('running')),
         getBackupRun: vi.fn(async () => run('failed', { error: 'No secret key' })),
       },
-      { pickSavePath: vi.fn(async () => join(dir, 'x.ambackup')) },
+      { pickSavePath: vi.fn(async () => join(dir, 'x.rnbackup')) },
     );
     await backups.runNow({ serverId: 's1', destinationIds: [], download: true });
     const watched = await backups.watchRun({ serverId: 's1', runId: 'run-1' });
@@ -200,7 +200,7 @@ describe('ServerBackups runs', () => {
 
   it('removes a partial file when the stream breaks', async () => {
     const dir = folder();
-    const path = join(dir, 'b.ambackup');
+    const path = join(dir, 'b.rnbackup');
     const { backups, client } = setup({}, { pickSavePath: vi.fn(async () => path) });
     vi.mocked(client.download).mockImplementationOnce(async (_p, destination) => {
       (destination as Writable).write('half');
@@ -217,7 +217,7 @@ describe('ServerBackups runs', () => {
 describe('ServerBackups stored backups', () => {
   it('fetches a stored backup onto the server, then streams it here', async () => {
     const dir = folder();
-    const path = join(dir, 'stored.ambackup');
+    const path = join(dir, 'stored.rnbackup');
     const fetchInfo = (state: BackupFetchInfo['state'], done: number): BackupFetchInfo => ({
       id: 'f1',
       backupId: 'b9',
@@ -267,7 +267,7 @@ describe('ServerBackups cloud drives', () => {
       kind: 'googleDrive',
       clientId: 'client-1',
       clientSecret: 'secret-1',
-      folderName: 'AgentMate backups',
+      folderName: 'Runova backups',
     });
     expect(signIn).toHaveBeenCalledWith(
       { kind: 'googleDrive', clientId: 'client-1', clientSecret: 'secret-1' },
@@ -276,7 +276,7 @@ describe('ServerBackups cloud drives', () => {
     expect(saveBackupDestination).toHaveBeenCalledWith({
       name: 'Drive',
       kind: 'googleDrive',
-      settings: { clientId: 'client-1', folderName: 'AgentMate backups' },
+      settings: { clientId: 'client-1', folderName: 'Runova backups' },
       secret: { refreshToken: 'refresh-1', clientSecret: 'secret-1' },
     });
     // What goes back to the renderer is the core's answer, which never holds the token.
@@ -312,11 +312,11 @@ describe('ServerBackups cloud drives', () => {
 describe('ServerBackups picked files', () => {
   it('names a picked file by token only', async () => {
     const dir = folder();
-    const path = join(dir, 'pick.ambackup');
+    const path = join(dir, 'pick.rnbackup');
     writeFileSync(path, 'AMBACKUP');
     const { backups } = setup({}, { pickOpenPath: vi.fn(async () => path) });
     const picked = await backups.pick();
-    expect(picked?.name).toBe('pick.ambackup');
+    expect(picked?.name).toBe('pick.rnbackup');
     expect(picked?.sizeBytes).toBe(8);
     expect(backups.resolve(picked?.token ?? '')).toBe(path);
     expect(() => backups.resolve('00000000-0000-4000-8000-000000000000')).toThrow(/again/);

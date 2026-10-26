@@ -241,7 +241,7 @@ describe('RdpProxy errors', () => {
     await vi.waitFor(() => expect(hooks.onError).toHaveBeenCalled());
 
     const failure = hooks.onError.mock.calls[0][1];
-    expect(failure.message).toBe('The session sent a request AgentMate did not understand.');
+    expect(failure.message).toBe('The session sent a request Runova did not understand.');
     expect(failure.detail).toBeTruthy();
   });
 

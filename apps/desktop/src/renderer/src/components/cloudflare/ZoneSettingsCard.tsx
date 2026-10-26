@@ -92,7 +92,7 @@ export function ZoneSettingsCard({ zone }: { zone: CloudflareZone }): React.JSX.
   const key = queryKeys.cloudflareSettings(zone.id);
   const settings = useQuery({
     queryKey: key,
-    queryFn: () => window.agentmat.cloudflare.zoneSettings(zone.id),
+    queryFn: () => window.runova.cloudflare.zoneSettings(zone.id),
   });
   const loadError = useCloudflareError(settings.error);
   const [saving, setSaving] = useState<CloudflareSettingChange['setting'] | null>(null);
@@ -100,7 +100,7 @@ export function ZoneSettingsCard({ zone }: { zone: CloudflareZone }): React.JSX.
   async function change(next: CloudflareSettingChange, done: string): Promise<void> {
     setSaving(next.setting);
     try {
-      queryClient.setQueryData(key, await window.agentmat.cloudflare.changeSetting(zone.id, next));
+      queryClient.setQueryData(key, await window.runova.cloudflare.changeSetting(zone.id, next));
       toast.success(done);
     } catch (error) {
       toast.error(cloudflareFailureText(error, queryClient));

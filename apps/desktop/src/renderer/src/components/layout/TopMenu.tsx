@@ -102,7 +102,7 @@ export function TopMenu(): React.JSX.Element {
               <VersionChipLabel
                 versionText={updateCheck.versionText}
                 checking={updateCheck.checking}
-                fallback="AgentMate"
+                fallback="Runova"
               />
               {updateCheck.updatePending && <UpdateDot className="absolute -right-0.5 -top-0.5" />}
             </button>

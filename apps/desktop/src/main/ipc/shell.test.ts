@@ -45,10 +45,10 @@ beforeEach(async () => {
 
 describe('shell:openExternal', () => {
   it('opens http and https links', async () => {
-    await invoke(IPC.shell.openExternal, 'https://agentmate.dev/docs');
+    await invoke(IPC.shell.openExternal, 'https://runova.dev/docs');
     await invoke(IPC.shell.openExternal, 'http://127.0.0.1:5173/');
     expect(electronState.openedExternal).toEqual([
-      'https://agentmate.dev/docs',
+      'https://runova.dev/docs',
       'http://127.0.0.1:5173/',
     ]);
   });
@@ -65,7 +65,7 @@ describe('shell:openExternal', () => {
   });
 
   it('rejects something that is not a url at all', async () => {
-    await expect(invoke(IPC.shell.openExternal, 'agentmate.dev')).rejects.toThrow();
+    await expect(invoke(IPC.shell.openExternal, 'runova.dev')).rejects.toThrow();
     expect(electronState.openedExternal).toEqual([]);
   });
 });

@@ -1,4 +1,4 @@
-import { DEFAULT_REVIEW_COMMANDS } from '@agentmat/core';
+import { DEFAULT_REVIEW_COMMANDS } from '@runova/core';
 import { screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';

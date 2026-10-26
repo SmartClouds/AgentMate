@@ -14,7 +14,7 @@ import {
   type VaultFieldRef,
   type VaultPayload,
   VaultPayloadSchema,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { VaultErrorCode } from '../../shared/vaultErrors';
 import {
   createVaultFile,

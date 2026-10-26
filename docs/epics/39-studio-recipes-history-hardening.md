@@ -17,7 +17,7 @@ up under long sessions and crashes.
 - **Applying a version** to a new video sets the New video dialog's fields and stage picks; once
   the editor opens it applies the render choices as one undoable edit ("Render choices from
   <name>") and remembers the voice, so the Voice view starts on it.
-- **Export and import** as `.amrecipe.json` (`agentmate-studio-recipe`, format 1), every version
+- **Export and import** as `.amrecipe.json` (`runova-studio-recipe`, format 1), every version
   included. An import is checked against the same rules as a save and always becomes a new recipe,
   so it never overwrites one already here. Files over 5 MB are refused before they are read.
 - **The history browser.** Each entry in History has Compare: the changes from that version to the
@@ -38,7 +38,7 @@ up under long sessions and crashes.
 - **Hardening.** Crash drills kill the app outright (SIGKILL) right after a burst of acknowledged
   edits and in the middle of narrating (`studioCrashDrills.e2e.ts`); the one in the middle of a
   render is E34's `studioRender.e2e.ts`. The soak (`studioSoak.e2e.ts`, only with
-  `AGENTMATE_STUDIO_SOAK=<minutes>`) edits, narrates and renders in a loop while the main
+  `RUNOVA_STUDIO_SOAK=<minutes>`) edits, narrates and renders in a loop while the main
   process's event-loop delay and memory are sampled, and writes `test-results/studio-soak.json`.
 
 ## Tasks

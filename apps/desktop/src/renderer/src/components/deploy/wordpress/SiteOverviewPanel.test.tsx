@@ -1,4 +1,4 @@
-import { WP_CONNECTOR_VERSION } from '@agentmat/core';
+import { WP_CONNECTOR_VERSION } from '@runova/core';
 import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
@@ -40,7 +40,7 @@ describe('SiteOverviewPanel', () => {
 
   it.each([
     [{ fileModsDisabled: true }, /DISALLOW_FILE_MODS is set/],
-    [{ readOnlyByConstant: true }, /AGENTMATE_CONNECTOR_READ_ONLY is set/],
+    [{ readOnlyByConstant: true }, /RUNOVA_CONNECTOR_READ_ONLY is set/],
     [{ filesystemMethod: 'ftpext' }, /through "ftpext" here/],
   ])('says why file changes are off (%o)', async (patch, expected) => {
     renderPanel(async () => wpSiteInfo(patch));
@@ -66,7 +66,7 @@ describe('SiteOverviewPanel', () => {
   it('says clearly when the connector is older than this app expects', async () => {
     renderPanel(async () => wpSiteInfo({ protocol: 0, pluginVersion: '0.9.0' }));
 
-    expect(await screen.findByText(/older than this version of AgentMate expects/)).toBeTruthy();
+    expect(await screen.findByText(/older than this version of Runova expects/)).toBeTruthy();
     expect(screen.getByText('Update the connector')).toBeTruthy();
   });
 
@@ -139,10 +139,10 @@ describe('SiteOverviewPanel', () => {
 
       const notice = await screen.findByRole('status');
       expect(notice.textContent).toContain('downloaded it from GitHub itself');
-      expect(notice.textContent).not.toContain('AgentMate sent the files');
+      expect(notice.textContent).not.toContain('Runova sent the files');
     });
 
-    it('says why AgentMate sent the files when the site could not download them', async () => {
+    it('says why Runova sent the files when the site could not download them', async () => {
       const update = vi.fn(async () =>
         done({
           source: 'app',
@@ -157,9 +157,7 @@ describe('SiteOverviewPanel', () => {
       await user.click(await screen.findByRole('button', { name: /^Update to/ }));
 
       const notice = await screen.findByRole('status');
-      expect(notice.textContent).toContain(
-        "couldn't download it itself, so AgentMate sent the files",
-      );
+      expect(notice.textContent).toContain("couldn't download it itself, so Runova sent the files");
       expect(notice.textContent).toContain('Could not resolve host: github.com');
       expect(notice.textContent).toContain('is now version');
     });
@@ -273,12 +271,10 @@ describe('SiteOverviewPanel', () => {
   it("shows the main process's own words when they say who answered", async () => {
     renderPanel(async () => {
       throw new Error(
-        "Error invoking remote method 'deployWordPress:siteInfo': Error: [wp:foreignResponse] Cloudflare answered instead of AgentMate Connector (HTTP 403), most likely with a bot check.",
+        "Error invoking remote method 'deployWordPress:siteInfo': Error: [wp:foreignResponse] Cloudflare answered instead of Runova Connector (HTTP 403), most likely with a bot check.",
       );
     });
 
-    expect(
-      await screen.findByText(/Cloudflare answered instead of AgentMate Connector/),
-    ).toBeTruthy();
+    expect(await screen.findByText(/Cloudflare answered instead of Runova Connector/)).toBeTruthy();
   });
 });

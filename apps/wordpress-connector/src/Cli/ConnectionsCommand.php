@@ -1,14 +1,14 @@
 <?php
 /**
- * `wp agentmate connections list|revoke`.
+ * `wp runova connections list|revoke`.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Cli;
+namespace Runova\Connector\Cli;
 
-use AgentMate\Connector\Audit\AuditLog;
-use AgentMate\Connector\Plugin;
+use Runova\Connector\Audit\AuditLog;
+use Runova\Connector\Plugin;
 
 /**
  * Lists and revokes the computers paired with this site.
@@ -74,12 +74,12 @@ final class ConnectionsCommand
     }
 
     /**
-     * Revokes a connection. AgentMate on that computer loses access at once.
+     * Revokes a connection. Runova on that computer loses access at once.
      *
      * ## OPTIONS
      *
      * <id>
-     * : The connection id (see `wp agentmate connections list`).
+     * : The connection id (see `wp runova connections list`).
      *
      * [--yes]
      * : Do it without asking.

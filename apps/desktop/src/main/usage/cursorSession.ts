@@ -3,7 +3,7 @@ import {
   type SubscriptionUsage,
   type SubscriptionWindow,
   type UsageWindow,
-} from '@agentmat/core';
+} from '@runova/core';
 import {
   accumulate,
   buildCostSeries,
@@ -109,7 +109,7 @@ async function request(path: string, cookie: string, body?: unknown): Promise<un
     } catch {
       throw controller.signal.aborted
         ? timedOut()
-        : new CursorRequestError('unreadable', 'Cursor sent an answer AgentMate could not read.');
+        : new CursorRequestError('unreadable', 'Cursor sent an answer Runova could not read.');
     }
   } finally {
     clearTimeout(timer);

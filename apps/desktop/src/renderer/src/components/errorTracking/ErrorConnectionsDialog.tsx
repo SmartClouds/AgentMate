@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { ErrorConnectionSummary, ErrorTokenCheck } from '@shared/errorTrackingTypes';
 import { useQueryClient } from '@tanstack/react-query';
 import { useId, useState } from 'react';
@@ -133,7 +133,7 @@ function AddConnectionForm({
     setBusy('check');
     reset();
     try {
-      const result = await window.agentmat.errorTracking.checkToken({
+      const result = await window.runova.errorTracking.checkToken({
         provider: 'sentry',
         host,
         token: token.trim(),
@@ -152,7 +152,7 @@ function AddConnectionForm({
     setBusy('save');
     setProblem(null);
     try {
-      const saved = await window.agentmat.errorTracking.addConnection({
+      const saved = await window.runova.errorTracking.addConnection({
         provider: 'sentry',
         host: check.host || host,
         token: token.trim(),
@@ -248,8 +248,8 @@ function AddConnectionForm({
           )}
           {blocked ? (
             <Notice tone="destructive" size="sm">
-              This token cannot read issues. AgentMate needs {scopeWords(check.missingScopes)}. Make
-              a new token with them.
+              This token cannot read issues. Runova needs {scopeWords(check.missingScopes)}. Make a
+              new token with them.
             </Notice>
           ) : check.organizations.length === 0 ? (
             <Notice tone="warning" size="sm">
@@ -317,7 +317,7 @@ function ConnectionRow({ conn }: { conn: ErrorConnectionSummary }): React.JSX.El
     setBusy(true);
     setProblem(null);
     try {
-      await window.agentmat.errorTracking.replaceToken(conn.id, token.trim());
+      await window.runova.errorTracking.replaceToken(conn.id, token.trim());
       setToken('');
       setReplacing(false);
       toast.success('Token replaced');
@@ -333,14 +333,14 @@ function ConnectionRow({ conn }: { conn: ErrorConnectionSummary }): React.JSX.El
     const confirmed = await confirmDialog({
       title: `Remove ${conn.label}?`,
       description:
-        'AgentMate forgets the token and the project links for this organization. Nothing changes in Sentry.',
+        'Runova forgets the token and the project links for this organization. Nothing changes in Sentry.',
       icon: Trash2,
       confirmLabel: 'Remove',
       variant: 'destructive',
     });
     if (!confirmed) return;
     try {
-      await window.agentmat.errorTracking.removeConnection(conn.id);
+      await window.runova.errorTracking.removeConnection(conn.id);
       toast.success('Connection removed');
       invalidateAll(queryClient);
     } catch (error) {
@@ -442,8 +442,8 @@ export function ErrorConnectionsDialog({
         <DialogHeader className="px-5 py-4 shadow-[inset_0_-1px_0_hsl(var(--foreground)/0.08)]">
           <DialogTitle className="text-base">Error tracking connections</DialogTitle>
           <DialogDescription className="text-xs">
-            The Sentry organizations AgentMate reads errors from. Tokens are encrypted on this
-            computer and never shown again.
+            The Sentry organizations Runova reads errors from. Tokens are encrypted on this computer
+            and never shown again.
           </DialogDescription>
         </DialogHeader>
 

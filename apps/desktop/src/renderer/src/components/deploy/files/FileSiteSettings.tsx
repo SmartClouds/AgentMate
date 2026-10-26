@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { FileSite } from '@shared/deployFilesTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
@@ -144,7 +144,7 @@ function DeployOnSaveCard({ site }: { site: FileSite }) {
   async function toggle(enabled: boolean): Promise<void> {
     setSaving(true);
     try {
-      const saved = await window.agentmat.deployFiles.setDeployOnSave(site.id, enabled);
+      const saved = await window.runova.deployFiles.setDeployOnSave(site.id, enabled);
       if (saved) update(saved);
     } catch (error) {
       toast.error(filesProblem(error));
@@ -194,7 +194,7 @@ function IgnoreCard({ site }: { site: FileSite }) {
   useEffect(() => {
     setCheck(null);
     const timer = window.setTimeout(() => {
-      Promise.resolve(window.agentmat.deployFiles.validateIgnore(splitLines(text)))
+      Promise.resolve(window.runova.deployFiles.validateIgnore(splitLines(text)))
         .then((result) => setCheck(result ?? { ok: true }))
         .catch(() => setCheck({ ok: true }));
     }, CHECK_DELAY_MS);
@@ -205,7 +205,7 @@ function IgnoreCard({ site }: { site: FileSite }) {
     setSaving(true);
     setProblem(null);
     try {
-      const saved = await window.agentmat.deployFiles.update(
+      const saved = await window.runova.deployFiles.update(
         site.id,
         siteInputFrom(site, { ignorePatterns: cleaned }),
       );
@@ -228,8 +228,8 @@ function IgnoreCard({ site }: { site: FileSite }) {
       description={
         <>
           Files to leave out of this site, one pattern a line, as in a .gitignore. Start a line with
-          ! to bring a file back. The folder's own .agentmateignore applies too, and secrets and
-          agent files are never sent whatever these say.
+          ! to bring a file back. The folder's own .runovaignore applies too, and secrets and agent
+          files are never sent whatever these say.
         </>
       }
     >
@@ -275,7 +275,7 @@ function IgnoreCard({ site }: { site: FileSite }) {
 function ProjectsCard({ site }: { site: FileSite }) {
   const projects = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: async (): Promise<Project[]> => (await window.agentmat.projects.list()) ?? [],
+    queryFn: async (): Promise<Project[]> => (await window.runova.projects.list()) ?? [],
     meta: QUIET,
   });
   const byId = new Map((projects.data ?? []).map((project) => [project.id, project]));
@@ -326,13 +326,13 @@ function StartOverCard({ site, onRemoved }: { site: FileSite; onRemoved: () => v
     const confirmed = await confirmDialog({
       title: 'Forget what was deployed to this site?',
       description:
-        "AgentMate forgets which files earlier deploys sent. The next deploy is treated as a first one: it compares the server folder by size and asks how to handle what's there. Nothing on the server changes now.",
+        "Runova forgets which files earlier deploys sent. The next deploy is treated as a first one: it compares the server folder by size and asks how to handle what's there. Nothing on the server changes now.",
       confirmLabel: 'Forget',
     });
     if (!confirmed) return;
     setBusy('forget');
     try {
-      await window.agentmat.deployFiles.forgetBase(site.id);
+      await window.runova.deployFiles.forgetBase(site.id);
       toast.success('Forgot what was deployed. The next deploy starts fresh.');
       void queryClient.invalidateQueries({ queryKey: queryKeys.deployFilesChanges(site.id) });
     } catch (error) {
@@ -347,15 +347,15 @@ function StartOverCard({ site, onRemoved }: { site: FileSite; onRemoved: () => v
       title: `Remove ${site.label}?`,
       description:
         site.connection.kind === 'saved'
-          ? 'The site goes from AgentMate with its deploy history. The server stays saved in Remote. Files on the server are not touched, and neither is the deploy folder.'
-          : 'The site goes from AgentMate, with its login and its deploy history. Files on the server are not touched, and neither is the deploy folder.',
+          ? 'The site goes from Runova with its deploy history. The server stays saved in Remote. Files on the server are not touched, and neither is the deploy folder.'
+          : 'The site goes from Runova, with its login and its deploy history. Files on the server are not touched, and neither is the deploy folder.',
       confirmLabel: 'Remove site',
       variant: 'destructive',
     });
     if (!confirmed) return;
     setBusy('remove');
     try {
-      await window.agentmat.deployFiles.remove(site.id);
+      await window.runova.deployFiles.remove(site.id);
       queryClient.setQueryData<FileSite[]>(queryKeys.deployFilesSites, (sites) =>
         sites?.filter((one) => one.id !== site.id),
       );
@@ -383,7 +383,7 @@ function StartOverCard({ site, onRemoved }: { site: FileSite; onRemoved: () => v
             Forget what was deployed
           </Button>
           <p className="text-xs text-muted-foreground">
-            For a server folder that was changed or emptied outside AgentMate.
+            For a server folder that was changed or emptied outside Runova.
           </p>
         </div>
         <div className="min-w-0 flex-1 space-y-1">
@@ -392,7 +392,7 @@ function StartOverCard({ site, onRemoved }: { site: FileSite; onRemoved: () => v
             Remove site
           </Button>
           <p className="text-xs text-muted-foreground">
-            Removes it from AgentMate. The files stay where they are.
+            Removes it from Runova. The files stay where they are.
           </p>
         </div>
       </div>

@@ -35,7 +35,7 @@ export const useHelpStore = create<HelpState>()(
       clearMessages: () => set({ messages: [] }),
     }),
     {
-      name: 'agentmate-help',
+      name: 'runova-help',
       partialize: (s) => ({ chatOpen: s.chatOpen, messages: s.messages }),
     },
   ),

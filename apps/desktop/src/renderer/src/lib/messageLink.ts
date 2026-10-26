@@ -12,7 +12,7 @@ export function pipelineRunRoute(htmlUrl: string | null): string | null {
  * opens on the Pipelines page (which scrolls to it and blinks the row) rather than GitHub.
  */
 export function openMessageLink(link: ToastHistoryLink, navigate: (route: string) => void): void {
-  if (link.notificationId) void window.agentmat.appNotifications.markRead(link.notificationId);
+  if (link.notificationId) void window.runova.appNotifications.markRead(link.notificationId);
   if (link.route) navigate(link.route);
-  else if (link.url) void window.agentmat.shell.openExternal(link.url);
+  else if (link.url) void window.runova.shell.openExternal(link.url);
 }

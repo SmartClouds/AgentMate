@@ -34,7 +34,7 @@ import { IPC } from '../shared/ipcChannels';
 type Subscribe = <T>(channel: string, callback: (payload: T) => void) => () => void;
 
 /**
- * WordPress sites connected through the AgentMate Connector plugin (E19 to E21). A connection key
+ * WordPress sites connected through the Runova Connector plugin (E19 to E21). A connection key
  * goes in through `connect` and never comes back out. Failures carry a `[wp:code]` tag (see
  * shared/wordpressErrors.ts). Long calls take an `operationId` the renderer picks, and report
  * their steps on `onProgress` under it.

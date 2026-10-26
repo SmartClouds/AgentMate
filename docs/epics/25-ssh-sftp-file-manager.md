@@ -98,7 +98,7 @@ Remote, from the terminal drawer of an SSH tab, and from the command palette.
   file's size and time before and after a transfer and fails it with `localChanged` when they
   differ. Deploy still sends its hash and is unaffected.
 - `downloadFile` mirrors `uploadFile`: 16 reads in flight, positional writes to
-  `<target>.agentmate-<8 hex>.part`, fsync, the server's time set on the file, then a rename. A
+  `<target>.runova-<8 hex>.part`, fsync, the server's time set on the file, then a rename. A
   stall or an abort removes the `.part` file and leaves the target as it was.
 - Errors reuse the `[files:*]` codes, with `exists`, `changedOnServer`, `tooLarge` and `notText`
   added. `[ssh:*]` tags pass through and a locked vault comes back as `[ssh:vault-locked]`, so the
@@ -196,7 +196,7 @@ the terminal drawer and a pop-out window.
 
 - About 512 KB is in flight per round trip. On high-latency links `DOWNLOAD_READS_IN_FLIGHT` may
   need to go up.
-- `.agentmate-*.part` files are visible on the server while an upload runs. Quitting in the middle
+- `.runova-*.part` files are visible on the server while an upload runs. Quitting in the middle
   of a transfer can leave one behind, on the server or in the local folder, because the quit does
   not wait for the cleanup. A quit warning (the service already counts `runningTransfers()`) or a
   sweep of stale `.part` files next to a target is a follow-up.

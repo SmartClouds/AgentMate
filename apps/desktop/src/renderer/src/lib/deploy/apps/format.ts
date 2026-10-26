@@ -1,4 +1,4 @@
-import type { ComposePortBinding, ComposeRisk, ComposeRiskSeverity } from '@agentmat/core';
+import type { ComposePortBinding, ComposeRisk, ComposeRiskSeverity } from '@runova/core';
 import type {
   JobLogLine,
   StackDeployStep,
@@ -7,7 +7,7 @@ import type {
   StackStatus,
   StackStepKind,
   StackStepState,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /** Words and small calculations for a server's Apps: statuses, steps, ports and durations. */
 

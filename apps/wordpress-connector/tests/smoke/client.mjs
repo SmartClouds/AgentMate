@@ -1,5 +1,5 @@
 /**
- * A small AgentMate Connector client for the smoke test: pairs with a key and makes signed calls,
+ * A small Runova Connector client for the smoke test: pairs with a key and makes signed calls,
  * checking every reply's signature. Plain Node; it repeats the wire format on purpose, so the
  * smoke test needs no build of packages/core.
  */
@@ -17,7 +17,7 @@ import { request } from './http.mjs';
 
 const b64 = (bytes) => Buffer.from(bytes).toString('base64url');
 const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
-const PREFIX = 'agentmate-wp/v1';
+const PREFIX = 'runova-wp/v1';
 
 export function parseKey(text) {
   const compact = text.replace(/\s+/g, '');
@@ -91,7 +91,7 @@ export class SiteClient {
 
   url(route, via) {
     if (via === 'ajax') {
-      return `${this.key.ajaxUrl}?action=agentmate_connector&route=${encodeURIComponent(route)}`;
+      return `${this.key.ajaxUrl}?action=runova_connector&route=${encodeURIComponent(route)}`;
     }
     if (via === 'rescue') return `${this.rescueUrl}?route=${encodeURIComponent(route)}`;
     return this.key.restUrl + route;

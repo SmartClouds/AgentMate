@@ -8,7 +8,7 @@ import {
   type StudioSettingsView,
   type VideoStatusView,
   type VideoSummary,
-} from '@agentmat/studio';
+} from '@runova/studio';
 
 /** Builders for Studio's renderer tests, so each test spells out only what it is about. */
 
@@ -18,7 +18,7 @@ export function video(overrides: Partial<VideoSummary> = {}): VideoSummary {
   return {
     id: 'v1aaaaaaaaaaaaaa',
     title: 'Launch film',
-    folder: 'C:\\Users\\me\\Videos\\AgentMate Studio\\Standalone\\Launch-film-v1aaaaaa',
+    folder: 'C:\\Users\\me\\Videos\\Runova Studio\\Standalone\\Launch-film-v1aaaaaa',
     linkedProjectId: null,
     createdAt: NOW - 3 * 3600_000,
     lastOpenedAt: null,
@@ -63,10 +63,10 @@ export const INSIDE_PROJECT: RootCheckView['problems'][number] = {
 
 export function settings(overrides: Partial<StudioSettingsView> = {}): StudioSettingsView {
   return {
-    defaultRoot: 'C:\\Users\\me\\Videos\\AgentMate Studio',
+    defaultRoot: 'C:\\Users\\me\\Videos\\Runova Studio',
     defaultRootIsCustom: false,
-    standaloneRoot: 'C:\\Users\\me\\Videos\\AgentMate Studio\\Standalone',
-    cacheDir: 'C:\\Users\\me\\AppData\\Roaming\\AgentMate\\studio-cache',
+    standaloneRoot: 'C:\\Users\\me\\Videos\\Runova Studio\\Standalone',
+    cacheDir: 'C:\\Users\\me\\AppData\\Roaming\\Runova\\studio-cache',
     cacheCapGb: 20,
     autoResumeRenders: true,
     hwEncode: true,
@@ -77,7 +77,7 @@ export function settings(overrides: Partial<StudioSettingsView> = {}): StudioSet
 export function storage(overrides: Partial<ProjectStorageView> = {}): ProjectStorageView {
   return {
     projectId: 'p1',
-    root: 'C:\\Users\\me\\Videos\\AgentMate Studio\\Projects\\Shop',
+    root: 'C:\\Users\\me\\Videos\\Runova Studio\\Projects\\Shop',
     isCustom: false,
     check: ok(),
     sceneHosts: [],

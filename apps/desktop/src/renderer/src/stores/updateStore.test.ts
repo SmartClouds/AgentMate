@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { type FakeBridge, installAgentmatBridge } from '../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../test/renderer/runovaBridge';
 import {
   closeUpdateDialog,
   initUpdateStatusListener,
@@ -14,7 +14,7 @@ function state() {
 }
 
 beforeEach(() => {
-  bridge = installAgentmatBridge();
+  bridge = installRunovaBridge();
   useUpdateStore.setState({ status: { state: 'idle' }, dialogOpen: false });
 });
 

@@ -21,7 +21,7 @@ const state = vi.hoisted(() => ({
 /** Stands in for the real runner, with the same contract: a line, a parsed progress line where
  * there is one, and a prompt whose answer goes to stdin. */
 vi.mock('./exec', async () => {
-  const { isLicensePrompt, parseSdkManagerProgress } = await import('@agentmat/core');
+  const { isLicensePrompt, parseSdkManagerProgress } = await import('@runova/core');
   return {
     AndroidCommandError: class extends Error {},
     AndroidToolMissingError: class extends Error {},

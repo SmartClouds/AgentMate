@@ -1,4 +1,4 @@
-import { budgetLevel, formatTokenCount, type Project } from '@agentmat/core';
+import { budgetLevel, formatTokenCount, type Project } from '@runova/core';
 import type { RelayBoard, RelayRunView, RelayTaskCard } from '@shared/relayTypes';
 import { useQueryClient } from '@tanstack/react-query';
 import { useReducedMotion } from 'framer-motion';
@@ -367,7 +367,7 @@ export function RelayTrack({ project }: { project: Project }): React.JSX.Element
     const startBoard = async (): Promise<void> => {
       setStarting(true);
       try {
-        await window.agentmat.relay.ensureGuide(project.id, board.docsFolder);
+        await window.runova.relay.ensureGuide(project.id, board.docsFolder);
         await queryClient.invalidateQueries({ queryKey: queryKeys.relayBoard(project.id) });
         toast.success('Board started', {
           description: `${board.docsFolder}/tasks/RELAY.md explains the format to any agent.`,

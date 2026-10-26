@@ -3,8 +3,8 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { ConfirmDialogHost } from '@/components/ConfirmDialog';
-import type { FakeBridge } from '../../../../../test/renderer/agentmatBridge';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
+import type { FakeBridge } from '../../../../../test/renderer/runovaBridge';
 import { useAppsAccess } from '../apps/hooks';
 import { SERVER, signedIn } from '../security/testing/fixtures';
 

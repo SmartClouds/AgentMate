@@ -7,7 +7,7 @@ import type {
   Project,
   ProjectNotificationSettings,
   ProjectWordPressLink,
-} from '@agentmat/core';
+} from '@runova/core';
 import {
   DEFAULT_PROJECT_WORKTREE_SETUP,
   defaultProjectNotifications,
@@ -16,7 +16,7 @@ import {
   normalizeProjectRunCommands,
   normalizeProjectWordPressLink,
   normalizeProjectWorktreeSetup,
-} from '@agentmat/core';
+} from '@runova/core';
 import { dialog, ipcMain } from 'electron';
 import type { BootstrapResult, CreateProjectInput, FaviconResult } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';

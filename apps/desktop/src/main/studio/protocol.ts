@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
-import { MEDIA_SCHEME, mediaContentType, parseMediaUrl } from '@agentmat/studio';
-import { SCENE_SCHEME, type SceneResolver, serveScene } from '@agentmat/studio/node';
+import { MEDIA_SCHEME, mediaContentType, parseMediaUrl } from '@runova/studio';
+import { SCENE_SCHEME, type SceneResolver, serveScene } from '@runova/studio/node';
 import { net, type Protocol } from 'electron';
 import { studioService } from './index';
 

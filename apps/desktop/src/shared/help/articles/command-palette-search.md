@@ -6,7 +6,7 @@ summary: Jump to any page, project, prompt, skill or Vault entry from one search
 keywords: command palette, search, ctrl+k, cmd+k, quick open, go to, find, workspace search, ctrl+p, files, symbols, text search, regex, wildcard, glob, pattern, global shortcuts
 ---
 
-AgentMate has two search tools. The command palette is a quick way to jump anywhere in the app: pages, projects, worktrees, prompt history, skills and Vault entries. Workspace search is a bigger dialog inside the Workspace that finds files, types, members and text inside one project's code, with a preview of each result.
+Runova has two search tools. The command palette is a quick way to jump anywhere in the app: pages, projects, worktrees, prompt history, skills and Vault entries. Workspace search is a bigger dialog inside the Workspace that finds files, types, members and text inside one project's code, with a preview of each result.
 
 ## Where to find it
 

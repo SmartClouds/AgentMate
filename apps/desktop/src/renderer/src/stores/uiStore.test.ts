@@ -34,7 +34,7 @@ describe('useUiStore', () => {
 describe('coming back from a saved preference', () => {
   it('restores the mode the sidebar was left in', async () => {
     localStorage.setItem(
-      'agentmate-ui',
+      'runova-ui',
       JSON.stringify({ state: { sidebarMode: 'collapsed' }, version: 0 }),
     );
     await useUiStore.persist.rehydrate();
@@ -43,7 +43,7 @@ describe('coming back from a saved preference', () => {
 
   it('saves the mode whenever it changes', () => {
     useUiStore.getState().cycleSidebarMode();
-    const saved = JSON.parse(localStorage.getItem('agentmate-ui') ?? '{}');
+    const saved = JSON.parse(localStorage.getItem('runova-ui') ?? '{}');
     expect(saved.state.sidebarMode).toBe('collapsed');
   });
 });

@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useSearchStore } from '@/stores/searchStore';
 import { useShortcutStore } from '@/stores/shortcutStore';
 import { useTerminalStore } from '@/stores/terminalStore';
-import { installAgentmatBridge } from '../../../test/renderer/agentmatBridge';
 import { renderHookWithProviders } from '../../../test/renderer/renderWithProviders';
+import { installRunovaBridge } from '../../../test/renderer/runovaBridge';
 
 /**
  * The workspace commands reach into the pane tree, the launcher and the terminal store, none of
@@ -96,7 +96,7 @@ describe('useGlobalShortcuts', () => {
 
   // The app treats Ctrl and Command as the same key, so a mac user's Cmd+K has to work too.
   it('accepts Command in place of Ctrl', () => {
-    installAgentmatBridge({ platform: 'darwin' });
+    installRunovaBridge({ platform: 'darwin' });
     renderShortcuts();
     press({ code: 'KeyK', meta: true });
     expect(useSearchStore.getState().open).toBe(true);

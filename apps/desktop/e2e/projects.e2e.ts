@@ -135,6 +135,6 @@ test('a removed project is gone after a reload, and cancelling keeps it', async 
 
   // It survives a reload, which is the app reading it back off disk rather than from its cache.
   await page.reload();
-  await page.waitForFunction(() => Boolean((window as { agentmat?: unknown }).agentmat));
+  await page.waitForFunction(() => Boolean((window as { runova?: unknown }).runova));
   await expect(page.getByRole('heading', { level: 1, name: NAME })).toBeVisible();
 });

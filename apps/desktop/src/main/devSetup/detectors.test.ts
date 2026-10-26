@@ -85,8 +85,8 @@ function rig(
     androidSdk: async () => sdk.value,
     studioToolsDir:
       os === 'win32'
-        ? 'C:\\Users\\me\\AppData\\Roaming\\AgentMate\\studio-tools'
-        : '/home/me/.config/AgentMate/studio-tools',
+        ? 'C:\\Users\\me\\AppData\\Roaming\\Runova\\studio-tools'
+        : '/home/me/.config/Runova/studio-tools',
     now: () => clock.now,
   };
   return { deps, probe, files, dirs, clock, sdk, onPath };
@@ -313,7 +313,7 @@ describe('Flutter', () => {
     expect(r.probe).not.toHaveBeenCalled();
   });
 
-  it('finds the copy AgentMate installs even when it is not on PATH yet', async () => {
+  it('finds the copy Runova installs even when it is not on PATH yet', async () => {
     const r = rig();
     r.files.set('C:\\Users\\me\\develop\\flutter\\bin\\flutter.bat', '');
     r.files.set(
@@ -657,7 +657,7 @@ describe('the detector as a whole', () => {
 });
 
 describe("Studio's local voices", () => {
-  const TOOLS = 'C:\\Users\\me\\AppData\\Roaming\\AgentMate\\studio-tools';
+  const TOOLS = 'C:\\Users\\me\\AppData\\Roaming\\Runova\\studio-tools';
 
   it('finds Piper once its install marker and its Python are both there', async () => {
     const r = rig();
@@ -684,7 +684,7 @@ describe("Studio's local voices", () => {
 
   it('finds model files only while every file the marker lists is in place, and ignores a broken marker', async () => {
     const r = rig({ os: 'linux' });
-    const tools = '/home/me/.config/AgentMate/studio-tools';
+    const tools = '/home/me/.config/Runova/studio-tools';
     r.files.set(
       `${tools}/omnivoice-weights.installed.json`,
       JSON.stringify({

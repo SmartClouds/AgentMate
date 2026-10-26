@@ -81,7 +81,7 @@ export function RemoteScreen({ screen, live }: RemoteScreenProps): React.JSX.Ele
   // Paint incoming tiles (fallback path only).
   useEffect(() => {
     if (usingVideo) return;
-    const unsub = window.agentmat.remote.onFrameTile((tile) => {
+    const unsub = window.runova.remote.onFrameTile((tile) => {
       const ctx = ctxRef.current;
       if (ctx) void drawTile(ctx, tile);
     });
@@ -106,7 +106,7 @@ export function RemoteScreen({ screen, live }: RemoteScreenProps): React.JSX.Ele
       const rect = wrapper.getBoundingClientRect();
       if (rect.width <= 0 || rect.height <= 0) return;
       const dpr = window.devicePixelRatio || 1;
-      window.agentmat.remote.setDisplaySize({
+      window.runova.remote.setDisplaySize({
         width: Math.round(rect.width * dpr),
         height: Math.round(rect.height * dpr),
       });

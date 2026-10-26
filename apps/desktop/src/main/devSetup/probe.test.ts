@@ -44,7 +44,7 @@ function writeTool(dir: string, name: string, windows: string[], posix: string[]
 }
 
 beforeEach(() => {
-  binDir = join(tempDir('agentmate-probe-'), 'bin');
+  binDir = join(tempDir('runova-probe-'), 'bin');
   mkdirSync(binDir, { recursive: true });
 });
 
@@ -128,7 +128,7 @@ describe('runProbe', () => {
   });
 
   it('runs a tool by absolute path even when the folder name has a space in it', async () => {
-    const spaced = join(tempDir('agentmate-probe-'), 'Program Files', 'Tool');
+    const spaced = join(tempDir('runova-probe-'), 'Program Files', 'Tool');
     const file = writeTool(spaced, 'spaced', ['echo spaced 4.5.6'], ['echo "spaced 4.5.6"']);
 
     const result = await runProbe(file, ['--version'], { env: envWithPath() });

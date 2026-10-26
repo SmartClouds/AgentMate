@@ -78,7 +78,7 @@ describe('createVideoFolder', () => {
   });
 
   it('creates the storage folder when it does not exist yet', async () => {
-    const root = join(await tempDir(), 'AgentMate Studio', 'My project');
+    const root = join(await tempDir(), 'Runova Studio', 'My project');
     const { folder } = await createVideoFolder(
       root,
       { id: 'abcdef1234567890', title: 'Film', language: 'en', linkedProjectId: null },

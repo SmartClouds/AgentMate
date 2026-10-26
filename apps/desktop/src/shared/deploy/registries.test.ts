@@ -51,7 +51,7 @@ describe('registries', () => {
     const url = new URL(githubNewTokenUrl());
     expect(url.origin + url.pathname).toBe('https://github.com/settings/tokens/new');
     expect(url.searchParams.get('scopes')).toBe('read:packages');
-    expect(url.searchParams.get('description')).toMatch(/AgentMate/);
+    expect(url.searchParams.get('description')).toMatch(/Runova/);
   });
 
   it('reads the scopes header the way GitHub writes it', () => {

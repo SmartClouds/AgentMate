@@ -18,7 +18,7 @@ import {
   pickFlutterRelease,
   type UpdateOffer,
   updateQueryFor,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { ProbeResult } from './probe';
 
 /**

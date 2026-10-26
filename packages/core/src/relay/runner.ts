@@ -1027,8 +1027,7 @@ export function reduceRelay(
         patchLeg(step, { agent: 'unknown', stoppedAt: null, quietSince: null });
       } else if (leg.phase !== 'failed' && leg.phase !== 'done') {
         patchLeg(step, { phase: 'interrupted' });
-        if (step.state.status === 'running')
-          pause(step, 'AgentMate restarted while a session ran.');
+        if (step.state.status === 'running') pause(step, 'Runova restarted while a session ran.');
       }
       break;
     }

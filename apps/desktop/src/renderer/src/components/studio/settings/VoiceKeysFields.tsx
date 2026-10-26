@@ -1,4 +1,4 @@
-import type { VoiceEngineView } from '@agentmat/studio';
+import type { VoiceEngineView } from '@runova/studio';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 import { studioAudioClient } from '../client';
@@ -25,7 +25,7 @@ function status(engine: VoiceEngineView | undefined): React.JSX.Element {
 }
 
 /**
- * Keys for the voice engines that AgentMate has no setting for elsewhere: ElevenLabs, and Azure
+ * Keys for the voice engines that Runova has no setting for elsewhere: ElevenLabs, and Azure
  * Speech with its region. They are sealed with the vault, like server passwords. OpenAI and Gemini
  * use the keys in Settings > AI.
  */

@@ -1,4 +1,4 @@
-import type { ScheduledTask } from '@agentmat/core';
+import type { ScheduledTask } from '@runova/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
@@ -18,7 +18,7 @@ export function useScheduledTaskRunner(): void {
     };
 
     const run = async (task: ScheduledTask): Promise<void> => {
-      const projects = await window.agentmat.projects.list();
+      const projects = await window.runova.projects.list();
       const project = projects.find((p) => p.id === task.projectId);
       const cliName = await runPromptInTerminal({
         projectId: task.projectId,
@@ -42,8 +42,8 @@ export function useScheduledTaskRunner(): void {
       refresh();
     };
 
-    const stopDue = window.agentmat.scheduledTasks.onDue((task) => void run(task));
-    const stopChanged = window.agentmat.scheduledTasks.onChanged(refresh);
+    const stopDue = window.runova.scheduledTasks.onDue((task) => void run(task));
+    const stopChanged = window.runova.scheduledTasks.onChanged(refresh);
     return () => {
       stopDue();
       stopChanged();

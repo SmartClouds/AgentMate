@@ -7,7 +7,7 @@ keywords: cloudflare, dns, domain, zone, api token, records, proxy, orange cloud
 route: /deploy?dialog=cloudflare
 ---
 
-The Cloudflare dialog manages your domains on Cloudflare without leaving AgentMate. You connect each account once with an API token, then pick a domain (a zone) to edit its DNS records, its settings, its cache and its security rules. It also links Cloudflare to your servers in Deploy: you can point a domain at a server in one step, give a server a DNS token for wildcard certificates, install a Cloudflare Origin CA certificate, and lock a server so only Cloudflare can reach it.
+The Cloudflare dialog manages your domains on Cloudflare without leaving Runova. You connect each account once with an API token, then pick a domain (a zone) to edit its DNS records, its settings, its cache and its security rules. It also links Cloudflare to your servers in Deploy: you can point a domain at a server in one step, give a server a DNS token for wildcard certificates, install a Cloudflare Origin CA certificate, and lock a server so only Cloudflare can reach it.
 
 ## Where to find it
 
@@ -19,14 +19,14 @@ Cloudflare accounts are not tied to one server, so the dialog opens from the ser
 
 The first time (or after you remove every account), the dialog shows **Connect Cloudflare** with two steps side by side, so the field for the token is in view while you follow the first step.
 
-1. **Create a token on Cloudflare.** Click **Open Cloudflare's token page**. It opens with the permissions below already chosen and the name "AgentMate". Under Zone Resources, include all zones or just the domains AgentMate should manage, then create the token and copy it.
-2. **Paste the token here.** Type or paste it into **API token** and click **Save and check**. AgentMate checks it with Cloudflare, seals it on this computer the way it seals your server passwords, and never shows it again.
+1. **Create a token on Cloudflare.** Click **Open Cloudflare's token page**. It opens with the permissions below already chosen and the name "Runova". Under Zone Resources, include all zones or just the domains Runova should manage, then create the token and copy it.
+2. **Paste the token here.** Type or paste it into **API token** and click **Save and check**. Runova checks it with Cloudflare, seals it on this computer the way it seals your server passwords, and never shows it again.
 
-AgentMate rejects things that are not an API token: your Global API Key (which can do anything on your account), an Origin CA Key, a token with spaces, or one that is too short or too long. Create a proper API token instead.
+Runova rejects things that are not an API token: your Global API Key (which can do anything on your account), an Origin CA Key, a token with spaces, or one that is too short or too long. Create a proper API token instead.
 
 The permissions the token should have:
 
-| Permission | What AgentMate uses it for |
+| Permission | What Runova uses it for |
 | --- | --- |
 | Zone > Zone > Read | See your domains |
 | Zone > DNS > Edit | Add, change and remove DNS records |
@@ -49,7 +49,7 @@ Buttons inside **Details**:
 
 - **Check again** re-reads the token and refreshes the lists.
 - **Replace token** shows the setup steps beside the domain list (and **Keep the current token** backs out). A different token can see different zones.
-- **Remove token** asks first. AgentMate forgets the token and stops managing your domains. The token keeps working on Cloudflare until you delete it there.
+- **Remove token** asks first. Runova forgets the token and stops managing your domains. The token keeps working on Cloudflare until you delete it there.
 
 > [!NOTE]
 > If your saved servers are locked with a passkey, the Cloudflare tokens are locked with them. A banner offers **Unlock**. Unlock first, then manage your domains.
@@ -64,7 +64,7 @@ You can connect as many Cloudflare accounts as you like, for example your own an
 - The same token can't be added twice.
 - Servers use the right account on their own. An Origin CA certificate is signed by the account that holds the site's domains (a certificate can't mix domains from two accounts), and a DNS token for a server is made in the account that holds the zone.
 
-If you used AgentMate before accounts existed, your saved token shows up as one account named "Cloudflare".
+If you used Runova before accounts existed, your saved token shows up as one account named "Cloudflare".
 
 ## Domains (zones)
 
@@ -79,7 +79,7 @@ A zone has four tabs: **DNS**, **Settings**, **Security** and **Servers**.
 The **DNS records** card lists every record in the zone with its **Type**, **Name** (relative to the zone, `@` for the zone itself), **Content**, **Proxy** and **TTL**. Long content is shown in full in a tooltip.
 
 - The **Proxy** switch turns Cloudflare's proxy on or off for A, AAAA and CNAME records, and says **Proxied** or **DNS only** next to it. Proxied means visitors reach Cloudflare first. DNS only means visitors reach the server directly.
-- The pencil edits a record and the trash deletes it (after a confirmation that says what stops answering). Record types AgentMate cannot edit here are listed with "Edit on Cloudflare".
+- The pencil edits a record and the trash deletes it (after a confirmation that says what stops answering). Record types Runova cannot edit here are listed with "Edit on Cloudflare".
 
 ### Add or edit a record
 
@@ -148,9 +148,9 @@ A server that holds a DNS token for the zone can get wildcard certificates and c
 
 For each server you see whether it **Holds a DNS token** (with when it was last used) or has none for the zone, plus any last error. The buttons are:
 
-- **Make a DNS token** (or **Make a new token** to replace one). AgentMate asks Cloudflare, with your account token, to create a token limited to this zone's DNS and sends it to the server. This needs the **User > API Tokens > Edit** permission on your main token.
+- **Make a DNS token** (or **Make a new token** to replace one). Runova asks Cloudflare, with your account token, to create a token limited to this zone's DNS and sends it to the server. This needs the **User > API Tokens > Edit** permission on your main token.
 - **Paste a token** opens a field where you paste a token you made yourself on Cloudflare, with only Zone > DNS > Edit on this zone. Click **Check and send**. Use this if your main token cannot create tokens.
-- **Remove** asks first. If AgentMate made the token, it is also deleted at Cloudflare. A token you pasted stays on Cloudflare, so delete it there if nothing else uses it. Wildcard certificates on that server stop renewing until it has a token again.
+- **Remove** asks first. If Runova made the token, it is also deleted at Cloudflare. A token you pasted stays on Cloudflare, so delete it there if nothing else uses it. Wildcard certificates on that server stop renewing until it has a token again.
 
 When Cloudflare refuses a step for want of a permission, a yellow box names the permission to add to the token and offers **Open Cloudflare's token page**.
 

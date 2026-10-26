@@ -1,4 +1,4 @@
-import type { VaultExportFormat } from '@agentmat/core';
+import type { VaultExportFormat } from '@runova/core';
 import { vaultErrorMessage } from '@shared/vaultErrors';
 import { useId, useState } from 'react';
 import { toast } from 'sonner';
@@ -18,9 +18,9 @@ import { cn } from '@/lib/utils';
 
 const FORMATS: { value: VaultExportFormat; label: string; hint: string }[] = [
   {
-    value: 'agentmate',
-    label: 'AgentMate CSV',
-    hint: 'Every field of every entry type. Imports back into AgentMate exactly.',
+    value: 'runova',
+    label: 'Runova CSV',
+    hint: 'Every field of every entry type. Imports back into Runova exactly.',
   },
   {
     value: 'bitwarden',
@@ -37,7 +37,7 @@ export function VaultExportDialog({
   onOpenChange: (open: boolean) => void;
 }): React.JSX.Element {
   const passwordId = useId();
-  const [format, setFormat] = useState<VaultExportFormat>('agentmate');
+  const [format, setFormat] = useState<VaultExportFormat>('runova');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +48,7 @@ export function VaultExportDialog({
     setBusy(true);
     setError(null);
     try {
-      const result = await window.agentmat.vault.exportCsv(password, format);
+      const result = await window.runova.vault.exportCsv(password, format);
       if (result.ok) {
         toast.success('Vault exported', {
           description: 'Keep the file somewhere safe and delete it when you are done.',

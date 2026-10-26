@@ -1,4 +1,4 @@
-import type { RemoteInputEvent, RemoteMouseButton } from '@agentmat/protocol';
+import type { RemoteInputEvent, RemoteMouseButton } from '@runova/protocol';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,

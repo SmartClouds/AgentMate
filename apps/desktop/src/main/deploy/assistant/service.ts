@@ -1,11 +1,11 @@
-import { buildDeployAssistantPrompt, type DeployAssistantContext } from '@agentmat/core';
+import { buildDeployAssistantPrompt, type DeployAssistantContext } from '@runova/core';
 import type { SshAgentProgress } from '../../../shared/apiTypes';
 import type {
   AssistantMode,
   AssistantModeInfo,
   ExecApproval,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import type {
   DeployAssistantContextInput,
   DeployAssistantModeInput,
@@ -101,11 +101,11 @@ export class DeployAssistant {
     const context = input.context ? await this.gather(serverId, input.context) : undefined;
     const target: TaskTarget = {
       kind: 'core',
-      description: `the server "${serverName}" through its AgentMate server core`,
+      description: `the server "${serverName}" through its Runova server core`,
       label: 'Deploy AI',
       isConnected: () => true,
       subscribeExit: () => () => undefined,
-      endedMessage: 'AgentMate is closing.',
+      endedMessage: 'Runova is closing.',
     };
     this.progress.delete(serverId);
     if (input.context) this.contexts.set(serverId, input.context);

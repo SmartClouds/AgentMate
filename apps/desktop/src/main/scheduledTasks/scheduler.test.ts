@@ -1,4 +1,4 @@
-import type { ScheduledTask } from '@agentmat/core';
+import type { ScheduledTask } from '@runova/core';
 import { describe, expect, it, vi } from 'vitest';
 import { IPC } from '../../shared/ipcChannels';
 import { useTempUserData } from '../../test/main/ipcHarness';

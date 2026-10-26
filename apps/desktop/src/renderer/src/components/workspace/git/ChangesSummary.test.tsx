@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { GitChangeEntry } from '@agentmat/core';
+import type { GitChangeEntry } from '@runova/core';
 import type { WorkspaceGitState } from '@shared/apiTypes';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';

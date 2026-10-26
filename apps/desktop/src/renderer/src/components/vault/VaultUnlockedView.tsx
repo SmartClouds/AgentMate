@@ -3,7 +3,7 @@ import {
   searchEntries,
   type VaultEntrySummary,
   type VaultSearchHit,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -101,7 +101,7 @@ function EmptyDetail(): React.JSX.Element {
 export function VaultUnlockedView(): React.JSX.Element {
   const entriesQuery = useQuery({
     queryKey: queryKeys.vaultEntries,
-    queryFn: () => window.agentmat.vault.list(),
+    queryFn: () => window.runova.vault.list(),
     meta: { silentLoading: true },
   });
   const actions = useVaultActions();
@@ -276,7 +276,7 @@ export function VaultUnlockedView(): React.JSX.Element {
       const now = Date.now();
       if (now - last < 30_000) return;
       last = now;
-      void window.agentmat.vault.touch();
+      void window.runova.vault.touch();
     }
     window.addEventListener('pointerdown', onActivity);
     window.addEventListener('keydown', onActivity);

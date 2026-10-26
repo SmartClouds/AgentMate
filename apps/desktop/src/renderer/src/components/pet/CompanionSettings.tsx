@@ -13,7 +13,7 @@ import {
   isAnimatedPetFile,
   normalizeDesktopPetActionSpeeds,
   normalizeDesktopPetName,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -32,7 +32,7 @@ import { PET_CHARACTERS } from './characters';
 export function CompanionSettings({ settings }: { settings: AppSettings }): React.JSX.Element {
   const queryClient = useQueryClient();
   const save = useMutation({
-    mutationFn: (patch: Partial<AppSettings>) => window.agentmat.settings.update(patch),
+    mutationFn: (patch: Partial<AppSettings>) => window.runova.settings.update(patch),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.settings });
     },
@@ -40,16 +40,16 @@ export function CompanionSettings({ settings }: { settings: AppSettings }): Reac
 
   const customImages = useQuery({
     queryKey: queryKeys.petCustomImages,
-    queryFn: () => window.agentmat.pet.customDataUrls(),
+    queryFn: () => window.runova.pet.customDataUrls(),
   });
 
   const snooze = useQuery({
     queryKey: queryKeys.petSnooze,
-    queryFn: () => window.agentmat.pet.getSnooze(),
+    queryFn: () => window.runova.pet.getSnooze(),
   });
 
   useEffect(() => {
-    return window.agentmat.pet.onSnoozeChanged((state) => {
+    return window.runova.pet.onSnoozeChanged((state) => {
       queryClient.setQueryData(queryKeys.petSnooze, state);
     });
   }, [queryClient]);
@@ -158,7 +158,7 @@ export function CompanionSettings({ settings }: { settings: AppSettings }): Reac
   async function handleAddPet(): Promise<void> {
     setImporting(true);
     try {
-      const pet = await window.agentmat.pet.importCustom();
+      const pet = await window.runova.pet.importCustom();
       if (!pet) return;
       toast.success(`${pet.name} is on the list.`);
       void queryClient.invalidateQueries({ queryKey: queryKeys.settings });
@@ -173,13 +173,13 @@ export function CompanionSettings({ settings }: { settings: AppSettings }): Reac
   async function handleRemovePet(id: string, name: string): Promise<void> {
     const confirmed = await confirmDialog({
       title: `Remove ${name}?`,
-      description: 'This deletes the copy AgentMate saved. Your original file is left alone.',
+      description: 'This deletes the copy Runova saved. Your original file is left alone.',
       confirmLabel: 'Remove',
       variant: 'destructive',
     });
     if (!confirmed) return;
     try {
-      await window.agentmat.pet.removeCustom(id);
+      await window.runova.pet.removeCustom(id);
       toast.success(`${name} was removed.`);
       void queryClient.invalidateQueries({ queryKey: queryKeys.settings });
       void queryClient.invalidateQueries({ queryKey: queryKeys.petCustomImages });
@@ -207,7 +207,7 @@ export function CompanionSettings({ settings }: { settings: AppSettings }): Reac
               <CardTitle>My AI Pet</CardTitle>
               <CardDescription>
                 One character on your screen. Click it for a token report, double-click to bring up
-                AgentMate, right-click for quick options. Drag it to place it.
+                Runova, right-click for quick options. Drag it to place it.
               </CardDescription>
             </div>
           </div>
@@ -235,7 +235,7 @@ export function CompanionSettings({ settings }: { settings: AppSettings }): Reac
                 variant="soft"
                 size="sm"
                 className="shrink-0"
-                onClick={() => void window.agentmat.pet.cancelSnooze()}
+                onClick={() => void window.runova.pet.cancelSnooze()}
               >
                 Show now
               </Button>

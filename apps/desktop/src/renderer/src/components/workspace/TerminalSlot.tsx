@@ -74,7 +74,7 @@ export function TerminalSlot({ projectId, tab, focused }: TerminalSlotProps): Re
         event.preventDefault();
         // Dropped files become quoted paths at the prompt, the way a native terminal does it.
         const paths = Array.from(event.dataTransfer.files)
-          .map((file) => window.agentmat.shell.pathForFile(file))
+          .map((file) => window.runova.shell.pathForFile(file))
           .filter((path): path is string => Boolean(path));
         if (paths.length === 0) return;
         terminalRuntime.pasteChips(tab.id, pathsToChips(paths, tab.shell));

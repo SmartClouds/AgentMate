@@ -1,4 +1,4 @@
-import type { MetricsHistory } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { MetricsHistory } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import {
   metricsSample,
   sampleAlert,

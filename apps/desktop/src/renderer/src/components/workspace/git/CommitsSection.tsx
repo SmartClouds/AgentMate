@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { GitCommitInfo, WorkspaceGitState } from '@shared/apiTypes';
 import { useQuery } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
@@ -23,7 +23,7 @@ function CommitFiles({
   const openDiff = useWorkspaceStore((s) => s.openDiff);
   const files = useQuery({
     queryKey: ['git-commit-files', project.id, commit.hash],
-    queryFn: () => window.agentmat.git.commitFiles(project.id, commit.hash),
+    queryFn: () => window.runova.git.commitFiles(project.id, commit.hash),
     staleTime: Number.POSITIVE_INFINITY,
     meta: { silentLoading: true },
   });
@@ -124,7 +124,7 @@ export function CommitsSection({
   const history = useQuery({
     // HEAD in the key refreshes the list the moment a commit, pull or checkout lands.
     queryKey: [...queryKeys.gitBranchHistory(project.id, branch ?? 'HEAD'), state?.head ?? ''],
-    queryFn: () => window.agentmat.git.branchHistory(project.id, branch ?? 'HEAD'),
+    queryFn: () => window.runova.git.branchHistory(project.id, branch ?? 'HEAD'),
     enabled: Boolean(state?.isRepo && state.head),
     meta: { silentLoading: true },
     placeholderData: (previous) => previous,

@@ -12,7 +12,7 @@ import { type DevHost, dotnetAvailable, startDevHost } from './devHost';
 
 test.skip(!dotnetAvailable(), 'needs the .NET SDK to build the server core DevHost');
 
-const DEV_PASSWORD = 'agentmate-local-password';
+const DEV_PASSWORD = 'runova-local-password';
 const SECTIONS = [
   'Overview',
   'Apps',
@@ -111,7 +111,7 @@ test('reaches and operates every Deploy screen by keyboard alone', async () => {
   if (!devHost) throw new Error('DevHost did not start');
   launched = await launchApp({
     settings: {},
-    env: { AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port) },
+    env: { RUNOVA_DEPLOY_DEV_CORE: String(devHost.port) },
   });
   const { page } = launched;
 

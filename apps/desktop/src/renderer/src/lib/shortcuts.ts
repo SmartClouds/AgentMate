@@ -614,7 +614,7 @@ export function keyLabel(code: string): string {
 }
 
 export function isMacPlatform(): boolean {
-  return typeof window !== 'undefined' && window.agentmat?.platform === 'darwin';
+  return typeof window !== 'undefined' && window.runova?.platform === 'darwin';
 }
 
 /** A binding as shown for its command: a digit-row one reads "Ctrl+1…9". */

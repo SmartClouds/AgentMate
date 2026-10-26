@@ -137,8 +137,8 @@ describe('AGENT_TOOL_REGISTRY invariants', () => {
       if (!docker) continue;
       expect(docker.image.trim(), tool.id).not.toBe('');
       expect(docker.containerName, tool.id).toMatch(/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/);
-      // One shared prefix keeps AgentMate's containers apart from the user's own.
-      expect(docker.containerName, tool.id).toMatch(/^agentmate-/);
+      // One shared prefix keeps Runova's containers apart from the user's own.
+      expect(docker.containerName, tool.id).toMatch(/^runova-/);
       if (docker.dashboardUrl) expect(docker.dashboardUrl, tool.id).toMatch(/^https?:\/\/\S+$/);
     }
   });

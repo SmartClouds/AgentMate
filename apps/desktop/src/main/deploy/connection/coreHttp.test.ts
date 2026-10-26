@@ -68,7 +68,7 @@ describe('CoreHttpClient', () => {
 
     await client.get('/api/v1/health');
 
-    expect(seen[0].headers.host).toBe('agentmate-core');
+    expect(seen[0].headers.host).toBe('runova-core');
     expect(seen[0].headers.origin).toBeUndefined();
   });
 
@@ -113,7 +113,7 @@ describe('CoreHttpClient', () => {
     expect(seen[0].headers['content-length']).toBe('6');
     expect(seen[0].headers['x-content-sha256']).toBe('f00');
     expect(seen[0].headers.authorization).toBe('Bearer abc');
-    expect(seen[0].headers.host).toBe('agentmate-core');
+    expect(seen[0].headers.host).toBe('runova-core');
     expect(progress).toEqual([3, 6]);
   });
 

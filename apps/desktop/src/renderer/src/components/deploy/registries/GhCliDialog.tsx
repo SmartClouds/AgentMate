@@ -35,7 +35,7 @@ export function GhCliDialog({
   const [busy, setBusy] = useState(false);
   const status = useQuery({
     queryKey: ['deploy', 'registries', 'gh-cli'],
-    queryFn: () => window.agentmat.deployRegistry.githubCliStatus(),
+    queryFn: () => window.runova.deployRegistry.githubCliStatus(),
     enabled: open,
     retry: false,
     gcTime: 0,
@@ -46,7 +46,7 @@ export function GhCliDialog({
     setBusy(true);
     setProblem(null);
     try {
-      await window.agentmat.deployRegistry.saveGithubCli({ acceptBroaderScopes: accepted });
+      await window.runova.deployRegistry.saveGithubCli({ acceptBroaderScopes: accepted });
       toast.success("The GitHub CLI's sign-in is saved for ghcr.io.");
       setAccepted(false);
       onSaved();

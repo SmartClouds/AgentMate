@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { relayCapabilities } from '@agentmat/core';
+import { relayCapabilities } from '@runova/core';
 import { app } from 'electron';
 import { portFilePath } from '../../notifications/hookServer';
 import { RELAY_MCP_SCRIPT, RELAY_MCP_SERVER, relayBridgeScriptSource } from './bridgeScript';

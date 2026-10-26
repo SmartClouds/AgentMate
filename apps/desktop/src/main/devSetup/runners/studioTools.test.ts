@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { STUDIO_OMNIVOICE, STUDIO_PIPER } from '@agentmat/core';
-import type { NvidiaGpu, PythonLock } from '@agentmat/studio';
+import { STUDIO_OMNIVOICE, STUDIO_PIPER } from '@runova/core';
+import type { NvidiaGpu, PythonLock } from '@runova/studio';
 import { describe, expect, it } from 'vitest';
 import type { CancelToken } from '../../process/spawnStreaming';
 import type { CommandResult, ManagedKit } from './managed';
@@ -13,7 +13,7 @@ import { createStudioToolsInstaller } from './studioTools';
  * kept for the next try, how pip is told to install, and every way it can go wrong.
  */
 
-const ROOT = 'C:\\Users\\me\\AppData\\Roaming\\AgentMate\\studio-tools';
+const ROOT = 'C:\\Users\\me\\AppData\\Roaming\\Runova\\studio-tools';
 const DL = `${ROOT}\\downloads`;
 const LOCKS = join(
   __dirname,
@@ -102,7 +102,7 @@ function world(options: Options = {}) {
   for (const f of [...STUDIO_PIPER.voices.flatMap((v) => v.files), ...STUDIO_OMNIVOICE.files]) {
     hashes.set(f.url, f.sha256);
   }
-  const root = os === 'win32' ? ROOT : '/home/me/.config/AgentMate/studio-tools';
+  const root = os === 'win32' ? ROOT : '/home/me/.config/Runova/studio-tools';
 
   const kit: ManagedKit = {
     os,
@@ -286,11 +286,11 @@ describe('installing a Studio Python environment', () => {
   it('says what stops it: a missing list, no room, unpacking, pip, the import, a cancel', async () => {
     const none = world({ locks: {} });
     expect((await none.installer.runEnv('piper', none.hooks)).message).toBe(
-      'The install list piper-win-x64-cpu.json is missing or damaged. Reinstall AgentMate.',
+      'The install list piper-win-x64-cpu.json is missing or damaged. Reinstall Runova.',
     );
     const full = world({ free: 1000 });
     expect((await full.installer.runEnv('piper', full.hooks)).message).toMatch(
-      /^This needs about 0\.0 GB free on the drive with AgentMate's data/,
+      /^This needs about 0\.0 GB free on the drive with Runova's data/,
     );
     const tar = world({ extractFails: true });
     expect((await tar.installer.runEnv('piper', tar.hooks)).message).toBe(

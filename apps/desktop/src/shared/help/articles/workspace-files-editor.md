@@ -48,7 +48,7 @@ The strip under the panel tabs shows the project's folder name and these buttons
 
 To rename, select a file or folder and press `F2` (`Enter` on macOS), or right-click it and choose **Rename…**. The name box opens with the file's name selected, without its extension. Open tabs follow the file to its new name, and keep any unsaved edits.
 
-To delete, select the rows and press `Delete`, or choose **Delete** in the menu. AgentMate asks first, lists what will go, and moves it to the Recycle Bin (the Trash on macOS and Linux) so you can restore it. If a file you are deleting has unsaved edits in a tab, the dialog warns that they will be lost. `Shift+Delete` deletes permanently, after a confirmation that says it cannot be undone. If the Recycle Bin cannot take something, AgentMate offers **Delete permanently** instead.
+To delete, select the rows and press `Delete`, or choose **Delete** in the menu. Runova asks first, lists what will go, and moves it to the Recycle Bin (the Trash on macOS and Linux) so you can restore it. If a file you are deleting has unsaved edits in a tab, the dialog warns that they will be lost. `Shift+Delete` deletes permanently, after a confirmation that says it cannot be undone. If the Recycle Bin cannot take something, Runova offers **Delete permanently** instead.
 
 ### Select, cut, copy and paste
 
@@ -81,7 +81,7 @@ If git still tracks something you just ignored, a message offers **Stop tracking
 
 ### Add files to an agent
 
-Choose **Add to {agent}** (the item names the agent, for example **Add to Claude Code**, or **Add to New Claude Code Tab** when none is running). AgentMate types references like `@src/app.ts @src/lib/` into the agent's input box and focuses it. Folders end in a slash, and nothing is sent until you press `Enter`, so you can type your question straight after. See [Terminals and agents](workspace-terminals-agents.md#sending-files-and-comments-to-an-agent) for how the agent is chosen.
+Choose **Add to {agent}** (the item names the agent, for example **Add to Claude Code**, or **Add to New Claude Code Tab** when none is running). Runova types references like `@src/app.ts @src/lib/` into the agent's input box and focuses it. Folders end in a slash, and nothing is sent until you press `Enter`, so you can type your question straight after. See [Terminals and agents](workspace-terminals-agents.md#sending-files-and-comments-to-an-agent) for how the agent is chosen.
 
 ### Keyboard in the Explorer
 
@@ -121,7 +121,7 @@ A file opens in a tab whose header shows its name, its folder, and these buttons
 
 - **Save** and `Ctrl+S` (`Cmd+S`) write your edits to disk. An **Unsaved** marker with an amber dot shows while there are edits to save.
 - **Reload from disk** throws away unsaved edits and reads the file again. Use it when something else changed the file.
-- **Open in its default app** opens the file outside AgentMate.
+- **Open in its default app** opens the file outside Runova.
 - For an image opened as source, **Show the picture** goes back to the viewer.
 
 The editor is the same one VS Code uses (Monaco), with syntax coloring chosen from the file extension, your app theme, word wrap on, and its usual find, multi-cursor and code editing keys. Files larger than about two million characters open read-only. A file that cannot be read shows **This file could not be opened** with the reason.

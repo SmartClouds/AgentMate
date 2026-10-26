@@ -36,7 +36,7 @@ afterEach(() => {
 // Windows has no execute bit, and node-pty starts its terminals another way there.
 describe.skipIf(process.platform === 'win32')('node-pty spawn-helper', () => {
   it('is made executable without touching the file it is linked to', () => {
-    scratch = mkdtempSync(join(tmpdir(), 'agentmate-node-pty-'));
+    scratch = mkdtempSync(join(tmpdir(), 'runova-node-pty-'));
     const store = join(scratch, 'store-file');
     writeFileSync(store, 'helper');
     chmodSync(store, 0o644);
@@ -87,7 +87,7 @@ describe('node-pty spawn-helper path', () => {
     return new Function('helperPath', `${lines.join('\n')}\nreturn helperPath;`)(helperPath);
   }
 
-  const resources = '/Applications/AgentMate.app/Contents/Resources';
+  const resources = '/Applications/Runova.app/Contents/Resources';
   const helper = 'node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper';
 
   it('points a node-pty loaded from the archive at the unpacked helper', () => {

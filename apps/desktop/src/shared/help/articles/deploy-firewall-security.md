@@ -9,7 +9,7 @@ route: /deploy
 
 The **Firewall** and **Security** sections of a server's page in Deploy let you control who can reach the server and keep an eye on how safe it is. Firewall changes are staged, reviewed and applied with a countdown, so a bad rule cannot lock you out for long. The Security section holds a checklist with one-click fixes, users, devices, the audit trail, backups and the connection settings.
 
-Both sections talk to the AgentMate server core on the server, so the server needs its core installed and you need to be signed in to it. See [Deploy servers and setup](deploy-servers-setup.md) if you have not done that yet.
+Both sections talk to the Runova server core on the server, so the server needs its core installed and you need to be signed in to it. See [Deploy servers and setup](deploy-servers-setup.md) if you have not done that yet.
 
 ## Where to find it
 
@@ -119,8 +119,8 @@ The **Exposure** card answers "what can be reached on this server?". It has two 
 
 Next to a publicly reachable container port there is a **Make private** button (Operator or higher).
 
-- For a container that belongs to an AgentMate app, it asks for confirmation, then redeploys the app as a new revision with the service bound to `127.0.0.1`. You can follow the deploy in Apps, and when it is live the card links you to Websites to put it on a domain.
-- For a container started some other way (plain `docker run`, or a compose project that was not deployed from AgentMate), a dialog shows the exact change to make where it was defined, with a **Copy the change** button.
+- For a container that belongs to a Runova app, it asks for confirmation, then redeploys the app as a new revision with the service bound to `127.0.0.1`. You can follow the deploy in Apps, and when it is live the card links you to Websites to put it on a domain.
+- For a container started some other way (plain `docker run`, or a compose project that was not deployed from Runova), a dialog shows the exact change to make where it was defined, with a **Copy the change** button.
 
 ### Cloudflare-only origin
 
@@ -217,7 +217,7 @@ A backup holds the core's database (users, computers, sites, certificates, setti
 3. Click **Choose where to save**, pick a location, and the file is saved. A toast shows the path.
 
 > [!WARNING]
-> Without the passphrase the backup cannot be opened, by you or anyone. AgentMate does not keep it. Write it down somewhere safe.
+> Without the passphrase the backup cannot be opened, by you or anyone. Runova does not keep it. Write it down somewhere safe.
 
 The action may ask for your password again (a step-up).
 

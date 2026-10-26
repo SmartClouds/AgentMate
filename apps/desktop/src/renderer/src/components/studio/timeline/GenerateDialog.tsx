@@ -1,5 +1,5 @@
-import { STUDIO_GEN } from '@agentmat/core';
-import { type Aspect, formatUsd, type GenJobView, type GenRequest } from '@agentmat/studio';
+import { STUDIO_GEN } from '@runova/core';
+import { type Aspect, formatUsd, type GenJobView, type GenRequest } from '@runova/studio';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { studioGenClient } from '../client';

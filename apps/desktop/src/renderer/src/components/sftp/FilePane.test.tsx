@@ -11,8 +11,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SFTP_DND_MIME } from '@/lib/sftp/dnd';
 import { resolveConfirm, useConfirmStore } from '@/stores/confirmStore';
 import { resetSftpStore, serverFiles, useSftpStore } from '@/stores/sftpStore';
-import type { BridgeOverrides } from '../../../../test/renderer/agentmatBridge';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
+import type { BridgeOverrides } from '../../../../test/renderer/runovaBridge';
 import { FilePane } from './FilePane';
 
 const toast = vi.hoisted(() => ({
@@ -335,7 +335,7 @@ describe('the path bar, overtaken', () => {
     const { user } = await setup();
     const list = defaults()['sftp.list'] as (s: string, p: string) => Promise<unknown>;
     act(() => {
-      (window.agentmat as unknown as { $set: (p: string, v: unknown) => void }).$set(
+      (window.runova as unknown as { $set: (p: string, v: unknown) => void }).$set(
         'sftp.list',
         (session: string, path: string) =>
           new Promise((resolve) => pending.set(path, () => resolve(list(session, path)))),

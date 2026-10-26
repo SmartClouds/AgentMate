@@ -35,7 +35,7 @@ export function BrowserTabMenu({
       </ContextMenuItem>
       <ContextMenuItem
         disabled={!hasPage}
-        onSelect={() => void window.agentmat.shell.openExternal(tab.url)}
+        onSelect={() => void window.runova.shell.openExternal(tab.url)}
       >
         <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
         Open in system browser

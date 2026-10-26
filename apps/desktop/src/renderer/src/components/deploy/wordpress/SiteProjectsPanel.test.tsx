@@ -1,4 +1,4 @@
-import type { Project, WpItemRef } from '@agentmat/core';
+import type { Project, WpItemRef } from '@runova/core';
 import { screen, waitFor, within } from '@testing-library/react';
 import { useLocation } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';

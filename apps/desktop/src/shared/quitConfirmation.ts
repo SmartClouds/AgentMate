@@ -1,6 +1,6 @@
 import type { OpenSessionSummary } from './apiTypes';
 
-export const QUIT_CONFIRM_TITLE = 'Close AgentMate?';
+export const QUIT_CONFIRM_TITLE = 'Close Runova?';
 export const QUIT_CONFIRM_LABEL = 'Close app';
 
 export function hasOpenSessions(summary: OpenSessionSummary): boolean {

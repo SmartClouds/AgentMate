@@ -7,7 +7,7 @@ keywords: settings, preferences, theme, dark mode, startup page, default cli, pr
 route: /settings
 ---
 
-Settings holds the defaults for this machine: how AgentMate looks, which agent CLI starts by default, your keyboard shortcuts, AI provider keys, notifications, the network and your backups. The page is split into nine tabs, and every card inside a tab is described below. Most cards save the moment you change them. A few hold your edits until you press **Save changes**, and this article says which.
+Settings holds the defaults for this machine: how Runova looks, which agent CLI starts by default, your keyboard shortcuts, AI provider keys, notifications, the network and your backups. The page is split into nine tabs, and every card inside a tab is described below. Most cards save the moment you change them. A few hold your edits until you press **Save changes**, and this article says which.
 
 ## Where to find it
 
@@ -31,7 +31,7 @@ When something is waiting to be saved, its card shows an **Unsaved** badge, its 
 
 ## General
 
-The **General** tab covers how AgentMate looks, where it opens and the everyday defaults for this machine.
+The **General** tab covers how Runova looks, where it opens and the everyday defaults for this machine.
 
 ### Appearance
 
@@ -45,11 +45,11 @@ Below the themes, **Main menu** chooses where the navigation lives. **Left** put
 
 ### Startup page
 
-**Startup page** decides where AgentMate opens. **Last opened page** (the default) brings back the page and project you were on, whether you closed the app, it restarted for an update or the computer shut down. You can instead pin one page from the list (Dashboard, Token Usage, Prompt Builder, Projects, Workspace, API Client, Pipelines, Deploy, Skills, MCP Servers, Agent Tools, Docker, Android, AI CLI Manager, Ask AI, Remote, Vault or Settings). The list has its own search box.
+**Startup page** decides where Runova opens. **Last opened page** (the default) brings back the page and project you were on, whether you closed the app, it restarted for an update or the computer shut down. You can instead pin one page from the list (Dashboard, Token Usage, Prompt Builder, Projects, Workspace, API Client, Pipelines, Deploy, Skills, MCP Servers, Agent Tools, Docker, Android, AI CLI Manager, Ask AI, Remote, Vault or Settings). The list has its own search box.
 
 ### Keep terminals running
 
-When **Keep terminals running** is on (the default), terminal sessions carry on in the background after you quit AgentMate and come back with their output the next time you open it. Restarting to install an update always keeps them. If you turn it off, quitting stops the sessions. When you close the app with sessions open, AgentMate asks "Close AgentMate?" first and tells you what will happen to them.
+When **Keep terminals running** is on (the default), terminal sessions carry on in the background after you quit Runova and come back with their output the next time you open it. Restarting to install an update always keeps them. If you turn it off, quitting stops the sessions. When you close the app with sessions open, Runova asks "Close Runova?" first and tells you what will happen to them.
 
 ### Docker containers when a run stops
 
@@ -97,7 +97,7 @@ Stopping a project's run does not stop the Docker containers it brought up. **Do
 
 ### Android SDK
 
-**Android SDK** says where the Android page looks for adb, the emulator and the command-line tools. The card shows the folder it found and how: set here, from `ANDROID_HOME`, from `ANDROID_SDK_ROOT`, or found in the usual install folder. If nothing is found, click **Browse** and pick the folder that holds `platform-tools` and `emulator`. **Clear** goes back to automatic detection. The switch **Stop emulators when AgentMate quits** is off by default, because an emulator is a window you can close yourself and it takes a while to boot again. See [Android](android.md).
+**Android SDK** says where the Android page looks for adb, the emulator and the command-line tools. The card shows the folder it found and how: set here, from `ANDROID_HOME`, from `ANDROID_SDK_ROOT`, or found in the usual install folder. If nothing is found, click **Browse** and pick the folder that holds `platform-tools` and `emulator`. **Clear** goes back to automatic detection. The switch **Stop emulators when Runova quits** is off by default, because an emulator is a window you can close yourself and it takes a while to boot again. See [Android](android.md).
 
 ## Agents
 
@@ -105,13 +105,13 @@ The **Agents** tab covers which CLI starts, how each one launches and how agents
 
 ### Default CLI
 
-**Default CLI** is the agent AgentMate uses when a feature needs an AI provider without asking you. Pick one from the list, or clear it to have none. When one is selected a **Background task arguments** box appears for that CLI. Those flags are used only when AgentMate runs the CLI in the background (commit messages, tag suggestions, version bumps and skill audits), never for terminals. Press `Enter` or click away to save them. Every CLI has the same box in [AI CLI Manager](cli-manager.md).
+**Default CLI** is the agent Runova uses when a feature needs an AI provider without asking you. Pick one from the list, or clear it to have none. When one is selected a **Background task arguments** box appears for that CLI. Those flags are used only when Runova runs the CLI in the background (commit messages, tag suggestions, version bumps and skill audits), never for terminals. Press `Enter` or click away to save them. Every CLI has the same box in [AI CLI Manager](cli-manager.md).
 
 ### Launch defaults
 
 **Launch defaults** sets the model, effort and permission mode each agent starts with in a Workspace tab or terminal. Each installed agent that has launch flags gets a row. Click a row to open it, then choose:
 
-- **Model**: pick from the list or type a model name and choose **Use "name"**. Grok and Cursor list the models AgentMate knows, and still accept a typed name.
+- **Model**: pick from the list or type a model name and choose **Use "name"**. Grok and Cursor list the models Runova knows, and still accept a typed name.
 - **Effort**: **Not set**, **Low**, **Med**, **High**, **XHigh** or **Max**, limited to what the chosen model supports.
 - **Mode**: cards such as **Not set** or the CLI's own permission modes. Modes that let the agent edit files and run commands without asking are marked with a warning triangle and a red-tinted note.
 
@@ -151,7 +151,7 @@ The **AI Pet** tab controls the desktop companion, a character that lives on you
 
 ### My AI Pet
 
-**My AI Pet** has the main switch **Show my AI pet**. Click the pet for a token report, double-click it to bring up AgentMate, right-click it for quick options and drag it to place it. If you hid it from its right-click menu, this card says until when and offers **Show now**. Below it are more cards: **Character** (pick one of the built-in characters or **Add your pet** with a PNG, GIF or WebP up to 8 MB, then name it and flip its walking direction), **Motion** (wander, climb, parachute, 3D rope), **Action speed**, **Alerts** (pipeline failures and passes, internet quality, CLI needs input) and **Size** (display size 50% to 160% and click area 40% to 100%).
+**My AI Pet** has the main switch **Show my AI pet**. Click the pet for a token report, double-click it to bring up Runova, right-click it for quick options and drag it to place it. If you hid it from its right-click menu, this card says until when and offers **Show now**. Below it are more cards: **Character** (pick one of the built-in characters or **Add your pet** with a PNG, GIF or WebP up to 8 MB, then name it and flip its walking direction), **Motion** (wander, climb, parachute, 3D rope), **Action speed**, **Alerts** (pipeline failures and passes, internet quality, CLI needs input) and **Size** (display size 50% to 160% and click area 40% to 100%).
 
 ## AI
 
@@ -188,7 +188,7 @@ The **Pipeline failures** card at the top of the **Notifications** tab chooses h
 - **When I click a failure** chooses where the message, its row in Recent messages and the pet's bubble take you.
   - **Project workspace** opens that project's Workspace with the **Pipelines** section of the Git panel unfolded, next to the code and terminals.
   - **Pipelines page** (the default) opens the failed run on the all-projects Pipelines page and highlights it.
-  - **Just dismiss it** makes a click do nothing. The message has no **Open** button and the pet's bubble no longer says "Click to open it in AgentMate".
+  - **Just dismiss it** makes a click do nothing. The message has no **Open** button and the pet's bubble no longer says "Click to open it in Runova".
 
 You can still open Pipelines yourself from the sidebar at any time. See [Pipelines](pipelines.md#notifications-and-the-unread-badge).
 
@@ -207,7 +207,7 @@ This card waits for **Save changes**. See [Notifications and Telegram](notificat
 
 ### Proxy
 
-**Proxy** controls how AgentMate reaches the internet: the AI providers, skill and package registries, Telegram, update checks, Remote Desktop connections, and the CLIs and git commands it runs for you. Choose **No proxy**, **System proxy** (follow this machine, PAC scripts included) or **Manual proxy** (HTTP, HTTPS, SOCKS5 or SOCKS4 with host, port, optional username and password, and a **Skip the proxy for** list). **Test connection** checks the setup, and **Save** applies it. Terminals that are already open keep the old setting until you reopen them. This card waits for a save.
+**Proxy** controls how Runova reaches the internet: the AI providers, skill and package registries, Telegram, update checks, Remote Desktop connections, and the CLIs and git commands it runs for you. Choose **No proxy**, **System proxy** (follow this machine, PAC scripts included) or **Manual proxy** (HTTP, HTTPS, SOCKS5 or SOCKS4 with host, port, optional username and password, and a **Skip the proxy for** list). **Test connection** checks the setup, and **Save** applies it. Terminals that are already open keep the old setting until you reopen them. This card waits for a save.
 
 ### Network ping targets
 
@@ -231,7 +231,7 @@ See [Vault](vault.md).
 
 ### Backup & restore
 
-The **Backup & restore** card exports your AgentMate data to a file and restores it from one. Switches choose **Compress as .zip**, **Include project environments** (asks for a password) and **Include the Vault**. **Export backup** writes the file, and **Restore from backup...** replaces what is on this machine. The details, including what is and is not in a backup, are in [Backup and restore](backup-restore.md).
+The **Backup & restore** card exports your Runova data to a file and restores it from one. Switches choose **Compress as .zip**, **Include project environments** (asks for a password) and **Include the Vault**. **Export backup** writes the file, and **Restore from backup...** replaces what is on this machine. The details, including what is and is not in a backup, are in [Backup and restore](backup-restore.md).
 
 ### About
 

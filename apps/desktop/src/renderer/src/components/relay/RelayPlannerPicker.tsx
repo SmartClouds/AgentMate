@@ -7,7 +7,7 @@ import {
   getCliDefinition,
   type RunModelOption,
   runProfileForTargetAI,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -38,7 +38,7 @@ export const useRelayPlannerStore = create<PlannerStore>()(
       choice: null,
       setChoice: (choice) => set({ choice }),
     }),
-    { name: 'agentmate-relay-planner' },
+    { name: 'runova-relay-planner' },
   ),
 );
 
@@ -73,11 +73,11 @@ export function useRelayPlanner(preferredCliId?: string | null): RelayPlanner {
   const defaultCliId = useCliStore((s) => s.defaultCliId);
   const cliQuery = useQuery({
     queryKey: queryKeys.cliStatus,
-    queryFn: () => window.agentmat.cli.detectAll(),
+    queryFn: () => window.runova.cli.detectAll(),
     meta: { silentLoading: true },
   });
 
-  const windows = window.agentmat.platform === 'win32';
+  const windows = window.runova.platform === 'win32';
   const clis = CLI_REGISTRY.filter(
     (cli) =>
       cli.promptCommand &&

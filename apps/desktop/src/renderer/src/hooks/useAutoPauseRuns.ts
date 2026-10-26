@@ -3,7 +3,7 @@ import {
   type AutoPauseRun,
   emptyAutoPauseMemory,
   planAgentRunPause,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useEffect, useRef, useState } from 'react';
 import { useAgentStatusStore } from '@/stores/agentStatusStore';
 import { pauseRuns, resumeRuns, useRunPauseStore } from '@/stores/runPauseStore';

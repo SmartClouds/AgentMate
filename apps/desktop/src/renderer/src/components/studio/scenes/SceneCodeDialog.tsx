@@ -1,4 +1,4 @@
-import type { EditResponse, SceneCheckView } from '@agentmat/studio';
+import type { EditResponse, SceneCheckView } from '@runova/studio';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Suspense, useEffect, useState } from 'react';
 import { studioScenesClient } from '../client';

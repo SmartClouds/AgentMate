@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { BrowserElementShot } from '@shared/apiTypes';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -116,7 +116,7 @@ export function usePagePicker({
       if (webContentsId === null) return null;
       await call('setChromeHidden(true)');
       try {
-        return await window.agentmat.browser.captureElement(
+        return await window.runova.browser.captureElement(
           webContentsId,
           payload.element.rectViewport,
           payload.page.viewport,

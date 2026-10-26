@@ -9,7 +9,7 @@ const MAX_LANGUAGES = 3;
 
 /**
  * The system languages first, so someone writing Persian or German gets their
- * own dictionary, then en-US, because most of what people type into AgentMate
+ * own dictionary, then en-US, because most of what people type into Runova
  * (prompts, project notes) is English either way.
  */
 function preferredLanguages(available: string[]): string[] {

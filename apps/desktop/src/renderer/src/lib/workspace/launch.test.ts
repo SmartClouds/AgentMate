@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -25,9 +25,9 @@ vi.mock('@/stores/workspaceStore', () => ({
 
 const settingsUpdate = vi.fn((_patch: unknown) => Promise.resolve({}));
 
-function stubAgentmate(hookPath: string | null = null): void {
+function stubRunova(hookPath: string | null = null): void {
   vi.stubGlobal('window', {
-    agentmat: {
+    runova: {
       platform: 'win32',
       settings: { update: settingsUpdate },
       agents: { statusHookSettings: vi.fn(() => Promise.resolve(hookPath)) },
@@ -52,7 +52,7 @@ function typed(): string | undefined {
 // machine and used to land inside the first test's 15 second limit. The transform is cached, so
 // the imports after `vi.resetModules()` are quick.
 beforeAll(async () => {
-  stubAgentmate();
+  stubRunova();
   await load();
   vi.unstubAllGlobals();
 }, 60_000);
@@ -61,7 +61,7 @@ beforeEach(() => {
   vi.resetModules();
   addTerminal.mockClear();
   settingsUpdate.mockClear();
-  stubAgentmate();
+  stubRunova();
 });
 
 afterEach(() => {
@@ -146,7 +146,7 @@ describe('launchAgentTab', () => {
   });
 
   it('adds status hooks once they have been prepared', async () => {
-    stubAgentmate('C:\\Users\\A B\\hooks.json');
+    stubRunova('C:\\Users\\A B\\hooks.json');
     const { prepareStatusHooks, launchAgentTab } = await load();
     prepareStatusHooks(['claude-code']);
     await vi.waitFor(() => {
@@ -217,7 +217,7 @@ describe('resumeInputFor', () => {
   });
 
   it('waits for the status hooks so the resumed agent reports its status', async () => {
-    stubAgentmate('C:\\hooks.json');
+    stubRunova('C:\\hooks.json');
     const { prepareStatusHooks, statusHooksReady, resumeInputFor } = await load();
     prepareStatusHooks(['claude-code']);
     await statusHooksReady('claude-code');
@@ -249,11 +249,11 @@ describe('background task arguments never reach a terminal', () => {
   // Regression guard: the AI CLI Manager Arguments box is for background tasks only. A
   // `--model haiku` saved there once started every new workspace tab on Haiku. Every CLI and
   // every way of opening a terminal is swept, so a new launch path that reads them shows up here.
-  const BACKGROUND_ONLY = '--agentmate-background-only --model background-only-model';
+  const BACKGROUND_ONLY = '--runova-background-only --model background-only-model';
 
   async function loadWithBackgroundArgs() {
     const loaded = await load();
-    const { CLI_REGISTRY } = await import('@agentmat/core');
+    const { CLI_REGISTRY } = await import('@runova/core');
     loaded.useCliStore.setState({
       cliArgs: Object.fromEntries(CLI_REGISTRY.map((cli) => [cli.id, BACKGROUND_ONLY])),
       cliLaunchDefaults: {},
@@ -263,7 +263,7 @@ describe('background task arguments never reach a terminal', () => {
 
   function expectClean(command: string | null | undefined, where: string): void {
     expect(command, where).toBeTruthy();
-    expect(command, where).not.toContain('agentmate-background-only');
+    expect(command, where).not.toContain('runova-background-only');
     expect(command, where).not.toContain('background-only-model');
   }
 

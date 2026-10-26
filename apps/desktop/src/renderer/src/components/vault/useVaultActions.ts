@@ -1,4 +1,4 @@
-import type { VaultEntrySummary, VaultFieldRef } from '@agentmat/core';
+import type { VaultEntrySummary, VaultFieldRef } from '@runova/core';
 import { vaultErrorMessage } from '@shared/vaultErrors';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
@@ -24,7 +24,7 @@ export function useVaultActions() {
     () => ({
       async copy(id: string, ref: VaultFieldRef, label: string): Promise<void> {
         try {
-          const { clearsAt } = await window.agentmat.vault.copy(id, ref);
+          const { clearsAt } = await window.runova.vault.copy(id, ref);
           patchCache(id, { lastUsedAt: Date.now() });
           showCopiedToast(label, clearsAt);
         } catch (error) {
@@ -37,7 +37,7 @@ export function useVaultActions() {
       async setFavorite(id: string, favorite: boolean): Promise<void> {
         patchCache(id, { favorite });
         try {
-          await window.agentmat.vault.patch(id, { favorite });
+          await window.runova.vault.patch(id, { favorite });
         } catch (error) {
           patchCache(id, { favorite: !favorite });
           toast.error('Could not update favorites', { description: vaultErrorMessage(error) });
@@ -46,7 +46,7 @@ export function useVaultActions() {
 
       async duplicate(id: string): Promise<void> {
         try {
-          const copy = await window.agentmat.vault.duplicate(id);
+          const copy = await window.runova.vault.duplicate(id);
           await queryClient.invalidateQueries({ queryKey: queryKeys.vaultEntries });
           useVaultStore.getState().select(copy.id);
           toast.success('Entry duplicated');
@@ -64,7 +64,7 @@ export function useVaultActions() {
         });
         if (!ok) return;
         try {
-          await window.agentmat.vault.remove([entry.id]);
+          await window.runova.vault.remove([entry.id]);
           queryClient.setQueryData<VaultEntrySummary[]>(queryKeys.vaultEntries, (list) =>
             list?.filter((item) => item.id !== entry.id),
           );
@@ -78,7 +78,7 @@ export function useVaultActions() {
 
       async lock(): Promise<void> {
         try {
-          await window.agentmat.vault.lock();
+          await window.runova.vault.lock();
         } catch (error) {
           toast.error('Could not lock the vault', { description: vaultErrorMessage(error) });
         }

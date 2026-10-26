@@ -1,4 +1,4 @@
-import type { AppSettings } from '@agentmat/core';
+import type { AppSettings } from '@runova/core';
 import { act, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { progressEvent, runResult, SITE_ID } from '@/components/deploy/files/testing/fixtures';

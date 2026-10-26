@@ -476,21 +476,27 @@ describe('pairing codes', () => {
 
   it('uses a URL-safe body, so it survives a QR or a link', () => {
     const code = encodePairingCode(payload);
-    expect(code.startsWith('AGENTMATE1:')).toBe(true);
-    const body = code.slice('AGENTMATE1:'.length);
+    expect(code.startsWith('RUNOVA1:')).toBe(true);
+    const body = code.slice('RUNOVA1:'.length);
     expect(body).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 
   it('accepts a bare body, with surrounding whitespace, from a paste', () => {
     const code = encodePairingCode(payload);
-    const body = code.slice('AGENTMATE1:'.length);
+    const body = code.slice('RUNOVA1:'.length);
     expect(decodePairingCode(`  ${code}\n`)).toEqual(payload);
     expect(decodePairingCode(body)).toEqual(payload);
   });
 
+  it('reads a code from a desktop that still has the name from before the rename', () => {
+    const code = encodePairingCode(payload);
+    const legacy = `AGENTMATE1:${code.slice('RUNOVA1:'.length)}`; // legacy-name
+    expect(decodePairingCode(legacy)).toEqual(payload);
+  });
+
   it('defaults a missing version to 1', () => {
     // Codes minted before `v` existed have to stay pairable.
-    const legacy = `AGENTMATE1:${bytesToBase64(
+    const legacy = `RUNOVA1:${bytesToBase64(
       asciiBytes(JSON.stringify({ ip: '10.0.0.5', port: 1, token: 't', deviceName: 'old' })),
     )
       .replace(/\+/g, '-')
@@ -505,7 +511,7 @@ describe('pairing codes', () => {
     // scanner screen shows "invalid code", it does not crash.
     expect(decodePairingCode(code.slice(0, code.length - 12))).toBeNull();
     // A body that is not base64 at all.
-    expect(decodePairingCode('AGENTMATE1:!!!!!!')).toBeNull();
+    expect(decodePairingCode('RUNOVA1:!!!!!!')).toBeNull();
     expect(decodePairingCode('')).toBeNull();
     expect(decodePairingCode('hello world')).toBeNull();
   });
@@ -526,13 +532,13 @@ describe('pairing codes', () => {
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
         .replace(/=+$/, '');
-      expect(decodePairingCode(`AGENTMATE1:${body}`)).toBeNull();
+      expect(decodePairingCode(`RUNOVA1:${body}`)).toBeNull();
     }
   });
 
   it('returns null for valid base64 that is not JSON', () => {
     const body = bytesToBase64(asciiBytes('not json at all')).replace(/=+$/, '');
-    expect(decodePairingCode(`AGENTMATE1:${body}`)).toBeNull();
+    expect(decodePairingCode(`RUNOVA1:${body}`)).toBeNull();
   });
 });
 

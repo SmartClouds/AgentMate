@@ -17,8 +17,8 @@ import {
  * read correctly. Both have already been the cause of a shipped bug.
  */
 
-const WINDOWS_DATA = 'C:\\Users\\tester\\AppData\\Roaming\\AgentMate';
-const POSIX_DATA = '/home/tester/.config/AgentMate';
+const WINDOWS_DATA = 'C:\\Users\\tester\\AppData\\Roaming\\Runova';
+const POSIX_DATA = '/home/tester/.config/Runova';
 
 describe('ptyHostPaths', () => {
   it('puts the runtime files under the given userData folder', async () => {
@@ -48,7 +48,7 @@ describe('ptyHostPaths', () => {
 
   it('uses a named pipe on Windows', async () => {
     const paths = await withPlatform('win32', () => ptyHostPaths(WINDOWS_DATA));
-    expect(paths.endpoint).toMatch(/^\\\\\.\\pipe\\agentmate-pty-host-[0-9a-f]{12}$/);
+    expect(paths.endpoint).toMatch(/^\\\\\.\\pipe\\runova-pty-host-[0-9a-f]{12}$/);
   });
 
   it('uses a socket inside the runtime folder on posix', async () => {
@@ -59,17 +59,17 @@ describe('ptyHostPaths', () => {
   it('falls back to the temp folder when the socket path would be too long', async () => {
     // Unix sockets are capped near 104 bytes, and "Application Support" plus a long user name
     // gets there. Past the cap the socket has to live somewhere short instead.
-    const longData = join('/Users', 'a'.repeat(90), 'Library', 'Application Support', 'AgentMate');
+    const longData = join('/Users', 'a'.repeat(90), 'Library', 'Application Support', 'Runova');
     const paths = await withPlatform('darwin', () => ptyHostPaths(longData));
     expect(Buffer.byteLength(join(longData, 'pty-host', 'host.sock'))).toBeGreaterThanOrEqual(100);
-    expect(paths.endpoint).toMatch(/agentmate-pty-[0-9a-f]{12}\.sock$/);
+    expect(paths.endpoint).toMatch(/runova-pty-[0-9a-f]{12}\.sock$/);
     expect(paths.endpoint.startsWith(tmpdir())).toBe(true);
     // The token and log still belong to the profile, only the socket moved.
     expect(paths.runtimeDir).toBe(join(longData, 'pty-host'));
   });
 
   it('keeps the same suffix in the fallback as in the pipe name', async () => {
-    const longData = join('/Users', 'b'.repeat(90), 'Library', 'Application Support', 'AgentMate');
+    const longData = join('/Users', 'b'.repeat(90), 'Library', 'Application Support', 'Runova');
     const [socket, pipe] = await Promise.all([
       withPlatform('darwin', () => ptyHostPaths(longData)),
       withPlatform('win32', () => ptyHostPaths(longData)),

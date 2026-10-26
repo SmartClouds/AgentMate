@@ -1,4 +1,4 @@
-import type { HealthIncident, HealthReport } from '@agentmat/core';
+import type { HealthIncident, HealthReport } from '@runova/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IPC } from '../../shared/ipcChannels';
 import { FakeBrowserWindow } from '../../test/main/electronMock';
@@ -16,7 +16,7 @@ import type { StoredHealthTarget } from './store';
 
 const userData = useTempUserData();
 const NOW = 1_760_000_000_000;
-const KEY = 'amh_theKeyMustNeverReachAPrompt_0123456789abcdefgh';
+const KEY = 'rnh_theKeyMustNeverReachAPrompt_0123456789abcdefgh';
 let health: typeof import('./store');
 let folder = '';
 

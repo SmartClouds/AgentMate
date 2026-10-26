@@ -1,4 +1,4 @@
-import { isCustomPetId } from '@agentmat/core';
+import { isCustomPetId } from '@runova/core';
 import boltSprite from '@/assets/pet/bolt.png';
 import brickSprite from '@/assets/pet/brick.png';
 import claudeSprite from '@/assets/pet/claude.webp';

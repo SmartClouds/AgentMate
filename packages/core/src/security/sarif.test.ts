@@ -516,20 +516,20 @@ describe('normalizeArtifactUri', () => {
   });
 
   it('strips a host project path, ignoring drive-letter case', () => {
-    const opts: ParseSarifOptions = { scannerId: 'semgrep', projectPath: 'E:\\AgentMate' };
-    expect(normalizeArtifactUri('e:/AgentMate/src/app.ts', opts).file).toBe('src/app.ts');
-    expect(normalizeArtifactUri('E:\\AgentMate\\src\\app.ts', opts).file).toBe('src/app.ts');
-    expect(normalizeArtifactUri('file:///E:/AgentMate/src/app.ts', opts).file).toBe('src/app.ts');
+    const opts: ParseSarifOptions = { scannerId: 'semgrep', projectPath: 'E:\\Runova' };
+    expect(normalizeArtifactUri('e:/Runova/src/app.ts', opts).file).toBe('src/app.ts');
+    expect(normalizeArtifactUri('E:\\Runova\\src\\app.ts', opts).file).toBe('src/app.ts');
+    expect(normalizeArtifactUri('file:///E:/Runova/src/app.ts', opts).file).toBe('src/app.ts');
   });
 
   it('tolerates a trailing slash on either configured root', () => {
     const opts: ParseSarifOptions = {
       scannerId: 'bearer',
       containerRoot: '/tmp/scan/',
-      projectPath: 'E:/AgentMate/',
+      projectPath: 'E:/Runova/',
     };
     expect(normalizeArtifactUri('/tmp/scan/a.ts', opts).file).toBe('a.ts');
-    expect(normalizeArtifactUri('E:/AgentMate/b.ts', opts).file).toBe('b.ts');
+    expect(normalizeArtifactUri('E:/Runova/b.ts', opts).file).toBe('b.ts');
   });
 
   it('decodes percent escapes and keeps a malformed one rather than losing the finding', () => {

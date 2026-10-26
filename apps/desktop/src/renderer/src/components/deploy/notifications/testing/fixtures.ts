@@ -1,4 +1,4 @@
-import type { TelegramNotificationsStatus } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { TelegramNotificationsStatus } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { TELEGRAM_ALERT_KINDS } from '@shared/deploy/telegramValidation';
 
 /** Telegram notifications as a core describes them, for the card's tests. */

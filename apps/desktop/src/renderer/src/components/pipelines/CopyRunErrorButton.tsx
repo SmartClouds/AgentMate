@@ -25,7 +25,7 @@ export function CopyRunErrorButton({
   async function copyError(): Promise<void> {
     setBusy(true);
     try {
-      const result = await window.agentmat.pipelines.runError(input);
+      const result = await window.runova.pipelines.runError(input);
       if (!result.ok) {
         toast.error(result.error);
         return;

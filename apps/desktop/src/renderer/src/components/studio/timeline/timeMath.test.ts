@@ -1,4 +1,4 @@
-import { secondsToFlicks } from '@agentmat/studio';
+import { secondsToFlicks } from '@runova/studio';
 import { describe, expect, it } from 'vitest';
 import {
   clampZoom,

@@ -27,12 +27,12 @@ const line = (value: unknown): string => JSON.stringify(value);
 
 describe('claude project folder names', () => {
   it('turns every non alphanumeric character into a dash', () => {
-    expect(claudeProjectDirName('E:\\AgentMate')).toBe('E--AgentMate');
+    expect(claudeProjectDirName('E:\\Runova')).toBe('E--Runova');
     expect(claudeProjectDirName('/home/me/my_app.v2/')).toBe('-home-me-my-app-v2');
   });
 
   it('compares folders loosely', () => {
-    expect(sameFolder('e:\\AgentMate\\', 'E:/agentmate', true)).toBe(true);
+    expect(sameFolder('e:\\Runova\\', 'E:/runova', true)).toBe(true);
     expect(sameFolder('/a/B', '/a/b', false)).toBe(false);
   });
 });
@@ -258,15 +258,12 @@ describe('cursor sessions', () => {
   it('reads cwd, title and prompts from meta plus prompt history', () => {
     const summary = summarizeCursorSession(
       'chat-id',
-      [
-        '{"cwd":"E:\\\\AgentMate","title":"Commit Lint Fixer"}',
-        '["Fix the flaky tests","And lint"]',
-      ],
+      ['{"cwd":"E:\\\\Runova","title":"Commit Lint Fixer"}', '["Fix the flaky tests","And lint"]'],
       [],
     );
     expect(summary).toMatchObject({
       id: 'chat-id',
-      cwd: 'E:\\AgentMate',
+      cwd: 'E:\\Runova',
       title: 'Commit Lint Fixer',
       firstPrompt: 'Fix the flaky tests',
       lastPrompt: 'And lint',
@@ -344,7 +341,7 @@ describe('freebuff chats', () => {
   });
 
   it('names the project dir after the folder basename', () => {
-    expect(freebuffProjectDirName('E:\\AgentMate')).toBe('AgentMate');
+    expect(freebuffProjectDirName('E:\\Runova')).toBe('Runova');
     expect(freebuffProjectDirName('/work/app/')).toBe('app');
   });
 
@@ -394,7 +391,7 @@ describe('freebuff chats', () => {
 describe('opencode sessions', () => {
   const row = (overrides: Partial<OpencodeSessionRow> = {}): OpencodeSessionRow => ({
     id: 'ses_abc123',
-    directory: 'E:/AgentMate',
+    directory: 'E:/Runova',
     title: 'Fix the login',
     model: '{"id":"muse-spark","providerID":"opencode","variant":"default"}',
     time_created: 1791677642527,
@@ -409,7 +406,7 @@ describe('opencode sessions', () => {
       title: 'Fix the login',
       firstPrompt: 'Fix it',
       lastPrompt: 'Then that',
-      cwd: 'E:/AgentMate',
+      cwd: 'E:/Runova',
       model: 'muse-spark',
       startedAt: 1791677642527,
     });

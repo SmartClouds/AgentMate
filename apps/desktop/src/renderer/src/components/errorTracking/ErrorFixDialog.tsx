@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { ErrorIssueSummary } from '@shared/errorTrackingTypes';
 import { ipcErrorMessage } from '@/components/projects/environments/ipcError';
 import { FixWithAiDialog } from '@/components/workspace/FixWithAiDialog';

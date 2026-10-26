@@ -1,4 +1,4 @@
-import type { RelayTrigger } from '@agentmat/core';
+import type { RelayTrigger } from '@runova/core';
 import type { RelayBoard } from '@shared/relayTypes';
 import { useMemo, useState } from 'react';
 import { CalendarDays, ChevronDown, Clock, Play, TerminalSquare } from '@/components/icons';

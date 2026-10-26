@@ -1,4 +1,4 @@
-import type { GenerationDetail } from '@agentmat/studio';
+import type { GenerationDetail } from '@runova/studio';
 import { useQueries } from '@tanstack/react-query';
 import { useState } from 'react';
 import { studioAiClient } from '../client';

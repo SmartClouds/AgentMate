@@ -3,7 +3,7 @@ import {
   STUDIO_PIPER,
   type StudioModelFile,
   type StudioToolId,
-} from '@agentmat/core';
+} from '@runova/core';
 import {
   acceleratorFor,
   lockBytes,
@@ -15,7 +15,7 @@ import {
   type StudioEnvId,
   studioPlatform,
   studioToolPaths,
-} from '@agentmat/studio';
+} from '@runova/studio';
 import type { CancelToken } from '../../process/spawnStreaming';
 import { type CommandResult, createDownloadHooks, type ManagedKit } from './managed';
 import type { RunHooks, RunResult } from './packageManagerRunner';
@@ -151,7 +151,7 @@ export function createStudioToolsInstaller(deps: StudioToolsDeps): {
     const free = await deps.freeBytes(deps.root);
     if (free !== null && free < bytes * DISK_FACTOR) {
       return fail(
-        `This needs about ${gigabytes(bytes * DISK_FACTOR)} free on the drive with AgentMate's data, and there is ${gigabytes(free)}.`,
+        `This needs about ${gigabytes(bytes * DISK_FACTOR)} free on the drive with Runova's data, and there is ${gigabytes(free)}.`,
       );
     }
     return null;
@@ -191,7 +191,7 @@ export function createStudioToolsInstaller(deps: StudioToolsDeps): {
     try {
       return pythonLockSchema.parse(await deps.readLock(name));
     } catch {
-      return fail(`The install list ${name} is missing or damaged. Reinstall AgentMate.`);
+      return fail(`The install list ${name} is missing or damaged. Reinstall Runova.`);
     }
   }
 

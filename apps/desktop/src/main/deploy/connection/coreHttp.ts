@@ -6,7 +6,8 @@ import {
   request,
 } from 'node:http';
 import type { Duplex, Readable, Writable } from 'node:stream';
-import type { HealthResponse } from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { HealthResponse } from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import { LEGACY_CORE, RUNOVA_CORE } from '../coreLayout';
 import type { CoreTransport } from './transport';
 
 /**
@@ -15,8 +16,13 @@ import type { CoreTransport } from './transport';
  * channel never outlives the request it carried.
  */
 
-/** The Host header the core accepts; it never answers to anything else. */
-export const CORE_HOST = 'agentmate-core';
+/** The Host header a new core answers to (it takes the old name too); it never answers to anything else. */
+export const CORE_HOST = RUNOVA_CORE.host;
+
+/** What to send as Host through `transport`: the old name until the transport knows the core is new. */
+export function coreHostFor(transport: CoreTransport): string {
+  return transport.host?.() ?? LEGACY_CORE.host;
+}
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
@@ -191,7 +197,7 @@ export class CoreHttpClient {
   putStream<T>(path: string, body: Readable, options: CoreStreamOptions): Promise<T> {
     const headers: Record<string, string> = {
       ...options.headers,
-      host: CORE_HOST,
+      host: coreHostFor(this.transport),
       accept: 'application/json',
       'content-type': options.contentType,
       'content-length': String(options.contentLength),
@@ -221,7 +227,7 @@ export class CoreHttpClient {
   ): Promise<number> {
     const headers: Record<string, string> = {
       ...options.headers,
-      host: CORE_HOST,
+      host: coreHostFor(this.transport),
       accept: 'application/octet-stream',
     };
     if (options.token) headers.authorization = `Bearer ${options.token}`;
@@ -237,7 +243,7 @@ export class CoreHttpClient {
         else resolve(bytes);
       };
       const outgoing = request(
-        { agent: this.agent, host: CORE_HOST, path, method: 'GET', headers },
+        { agent: this.agent, host: coreHostFor(this.transport), path, method: 'GET', headers },
         (response) => {
           const status = response.statusCode ?? 0;
           deadline.touch();
@@ -298,7 +304,10 @@ export class CoreHttpClient {
     options: CoreRequestOptions,
   ): Promise<T> {
     const payload = body === undefined ? undefined : Buffer.from(JSON.stringify(body), 'utf8');
-    const headers: Record<string, string> = { host: CORE_HOST, accept: 'application/json' };
+    const headers: Record<string, string> = {
+      host: coreHostFor(this.transport),
+      accept: 'application/json',
+    };
     if (payload) {
       headers['content-type'] = 'application/json';
       headers['content-length'] = String(payload.length);
@@ -326,7 +335,7 @@ export class CoreHttpClient {
         else resolve(value as T);
       };
       const outgoing = request(
-        { agent: this.agent, host: CORE_HOST, path, method, headers },
+        { agent: this.agent, host: coreHostFor(this.transport), path, method, headers },
         (response) => {
           const chunks: Buffer[] = [];
           let size = 0;

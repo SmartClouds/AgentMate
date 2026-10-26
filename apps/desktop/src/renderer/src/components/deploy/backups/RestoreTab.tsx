@@ -3,7 +3,7 @@ import { backupSize } from '@shared/deploy/backupSchedule';
 import type {
   PendingServerRestore,
   ServerRestoreStatus,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployBackupFile } from '@shared/deployHardeningTypes';
 import type {
   DeployBringUpResult,
@@ -137,7 +137,7 @@ export function RestoreTab({
 
   useEffect(
     () =>
-      window.agentmat.deployServerBackups.onRestoreProgress((event) => {
+      window.runova.deployServerBackups.onRestoreProgress((event) => {
         if (event.serverId !== targetId) return;
         if (event.kind === 'step') setSteps((current) => fold(current, event.progress));
         else setBringUpStatus(event.status);
@@ -185,7 +185,7 @@ export function RestoreTab({
   async function pick(): Promise<void> {
     setProblem(null);
     try {
-      const picked = await window.agentmat.deployServerBackups.pickFile();
+      const picked = await window.runova.deployServerBackups.pickFile();
       if (picked) setFile(picked);
     } catch (error) {
       setProblem(coreErrorMessage(error));
@@ -209,7 +209,7 @@ export function RestoreTab({
     setProblem(null);
     try {
       const run = () =>
-        window.agentmat.deployServerBackups.restore({
+        window.runova.deployServerBackups.restore({
           serverId: target.id,
           source,
           secret,
@@ -242,7 +242,7 @@ export function RestoreTab({
     setBringUpStatus(null);
     try {
       const done = await targetStepUp.run(() =>
-        window.agentmat.deployServerBackups.bringUp({
+        window.runova.deployServerBackups.bringUp({
           serverId: target.id,
           moveAddresses,
           ...(password ? { password } : {}),

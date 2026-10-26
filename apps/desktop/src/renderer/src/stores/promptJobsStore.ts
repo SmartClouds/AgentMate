@@ -1,5 +1,5 @@
-import type { EffortLevel, RunRecommendation } from '@agentmat/core';
-import { recommendationFromAssessment } from '@agentmat/core';
+import type { EffortLevel, RunRecommendation } from '@runova/core';
+import { recommendationFromAssessment } from '@runova/core';
 import { create } from 'zustand';
 
 /**
@@ -109,8 +109,8 @@ export function cancelPromptTask(key: string): void {
   if (!task) return;
   usePromptJobsStore.getState().setTask(key, null);
   if (!task.requestId) return;
-  if (task.kind === 'translate') void window.agentmat.translate.cancel(task.requestId);
-  else void window.agentmat.ai.cancel(task.requestId);
+  if (task.kind === 'translate') void window.runova.translate.cancel(task.requestId);
+  else void window.runova.ai.cancel(task.requestId);
 }
 
 export interface StartRunAssessmentInput {
@@ -126,13 +126,13 @@ export function startRunAssessment(key: string, input: StartRunAssessmentInput):
   if (!prompt) return;
   const { patchRun } = usePromptJobsStore.getState();
   const previous = getRun(key).requestId;
-  if (previous) void window.agentmat.ai.cancelAssessRun(previous);
+  if (previous) void window.runova.ai.cancelAssessRun(previous);
   const requestId = crypto.randomUUID();
   const target = input.targetAI;
   patchRun(key, { status: 'analyzing', error: null, requestId });
 
   const isCurrent = () => getRun(key).requestId === requestId;
-  window.agentmat.ai
+  window.runova.ai
     .assessRun({ prompt, targetAI: target, promptType: input.promptType, requestId })
     .then((result) => {
       if (!isCurrent()) return;
@@ -173,7 +173,7 @@ export function startRunAssessment(key: string, input: StartRunAssessmentInput):
 export function cancelRunAssessment(key: string): void {
   const { requestId, status } = getRun(key);
   if (!requestId) return;
-  void window.agentmat.ai.cancelAssessRun(requestId);
+  void window.runova.ai.cancelAssessRun(requestId);
   usePromptJobsStore
     .getState()
     .patchRun(key, { requestId: null, status: status === 'analyzing' ? 'idle' : status });

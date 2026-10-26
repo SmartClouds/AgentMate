@@ -7,7 +7,7 @@ import {
   parseInstallerProgress,
   phaseFromInstallerLine,
   recipeArgv,
-} from '@agentmat/core';
+} from '@runova/core';
 import type {
   CancelToken,
   SpawnStreamingOptions,

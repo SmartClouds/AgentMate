@@ -27,7 +27,7 @@ export function usePetDragGuard(): void {
       }
       if (!held) return;
       held = false;
-      window.agentmat.pet.setDragGuard(false);
+      window.runova.pet.setDragGuard(false);
     }
 
     function hold(): void {
@@ -35,7 +35,7 @@ export function usePetDragGuard(): void {
       timer = setTimeout(release, RELEASE_AFTER_MS);
       if (held) return;
       held = true;
-      window.agentmat.pet.setDragGuard(true);
+      window.runova.pet.setDragGuard(true);
     }
 
     // Capture phase so a handler that stops the event still gets us the signal.

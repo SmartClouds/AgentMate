@@ -1,6 +1,6 @@
 import { type ChildProcess, execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
-import { isLicensePrompt, parseSdkManagerProgress, type SdkManagerProgress } from '@agentmat/core';
+import { isLicensePrompt, parseSdkManagerProgress, type SdkManagerProgress } from '@runova/core';
 import { type AndroidTool, AndroidToolMissingError, type ResolvedAndroidSdk } from './sdk';
 import { toolSpawn } from './spawnTool';
 
@@ -66,7 +66,7 @@ function toolEnv(sdk: ResolvedAndroidSdk): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
   if (sdk.root) {
     // The tools read these themselves: avdmanager to find system images, the emulator to find
-    // the AVD folder. Passing them explicitly means AgentMate does not depend on the user's
+    // the AVD folder. Passing them explicitly means Runova does not depend on the user's
     // shell being set up the way the SDK expects.
     env.ANDROID_SDK_ROOT = sdk.root;
     env.ANDROID_HOME = sdk.root;

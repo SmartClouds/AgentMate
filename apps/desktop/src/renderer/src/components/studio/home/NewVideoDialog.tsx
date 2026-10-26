@@ -5,7 +5,7 @@ import {
   type RecipeView,
   UNTITLED_TITLE,
   type VideoSummary,
-} from '@agentmat/studio';
+} from '@runova/studio';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { BriefFields, type BriefValue } from '../ai/BriefFields';

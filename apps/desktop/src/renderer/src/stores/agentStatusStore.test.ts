@@ -1,9 +1,9 @@
-import type { AutoContinuePending } from '@agentmat/core';
+import type { AutoContinuePending } from '@runova/core';
 import type { AgentSessionEntry, AutoContinuePendingMap } from '@shared/apiTypes';
 import { renderHook, waitFor } from '@testing-library/react';
 import { act } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { type FakeBridge, installAgentmatBridge } from '../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../test/renderer/runovaBridge';
 
 // The runtime owns real xterm instances, which the workspace store only calls when a tab closes.
 vi.mock('@/lib/terminal/terminalRuntime', () => ({
@@ -18,7 +18,7 @@ const PENDING: AutoContinuePending = { kind: 'network', fireAt: 1_800_000_000_00
  */
 async function start(pending: AutoContinuePendingMap = {}) {
   vi.resetModules();
-  const bridge: FakeBridge = installAgentmatBridge({
+  const bridge: FakeBridge = installRunovaBridge({
     'agents.list': {},
     'agents.runInfos': {},
     'agents.autoContinuePending': pending,

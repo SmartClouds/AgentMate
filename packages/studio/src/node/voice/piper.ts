@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { STUDIO_PIPER } from '@agentmat/core';
+import { STUDIO_PIPER } from '@runova/core';
 import { TtsError } from './engines.js';
 import { runLocal } from './localProcess.js';
 

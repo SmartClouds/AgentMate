@@ -11,7 +11,7 @@ The Dashboard is the first page most people see. It shows how your machine is do
 
 ## Where to find it
 
-Click **Dashboard** in the menu (the first entry), or open the command palette and type Dashboard. It is also the page AgentMate opens on the first launch, and it is the page opened by the **Startup page** setting if you choose it. The page header reads "Dashboard", with the line "Your AI CLIs, projects, and system health at a glance."
+Click **Dashboard** in the menu (the first entry), or open the command palette and type Dashboard. It is also the page Runova opens on the first launch, and it is the page opened by the **Startup page** setting if you choose it. The page header reads "Dashboard", with the line "Your AI CLIs, projects, and system health at a glance."
 
 ## Quick actions
 
@@ -98,7 +98,7 @@ The **GitHub Actions** card charts the workflow runs of your GitHub projects: ho
 
 The **Docker and Emulator Usage** card charts how much CPU or memory your running Docker containers and Android emulators use, with one line for Docker and one for emulators, over roughly the last two hours. The **CPU** and **Memory** buttons switch between the two. CPU is measured so that 100% means one full core, so a busy container can read above 100%. A line only appears for a kind that has actually been running, so if you never use emulators you only see Docker. Hover the chart to see the value at that moment.
 
-The numbers come from AgentMate itself, which reads Docker and the Android emulators about every 30 seconds in the background. The chart keeps filling in while you are on other pages, and starts empty each time you open AgentMate. If Docker is not installed or not running the card says so, and AgentMate stops asking for a couple of minutes instead of failing every time.
+The numbers come from Runova itself, which reads Docker and the Android emulators about every 30 seconds in the background. The chart keeps filling in while you are on other pages, and starts empty each time you open Runova. If Docker is not installed or not running the card says so, and Runova stops asking for a couple of minutes instead of failing every time.
 
 ### Idle Docker and Emulators
 
@@ -108,16 +108,16 @@ The **Idle Docker and Emulators** card lists running containers and emulators th
 - The stop button at the end of a row stops that container or emulator straight away. It is easy to start again, so there is no extra question.
 - **Stop all idle** appears when two or more are idle. It lists what it will stop and asks first. Anything that became busy again while you were deciding is left running, and the message afterwards says so.
 - The gear button, **Idle settings**, sets the number of minutes (1 to 1,440, and 20 by default) and whether to be notified. They are the same options as in Settings, General. The refresh button, **Check again now**, takes a new reading right away.
-- With alerts on, AgentMate sends one system notification when something first goes idle, and again only after it has been busy and then idle again. Clicking it opens the Dashboard.
+- With alerts on, Runova sends one system notification when something first goes idle, and again only after it has been busy and then idle again. Clicking it opens the Dashboard.
 
 > [!NOTE]
-> The idle clock starts when AgentMate first sees something running. Restarting AgentMate starts it again, and so does waking the computer from sleep, so nothing is called idle for time nobody was watching. An emulator started outside AgentMate is found through its console port. If it cannot be matched to a running process the card says it cannot be measured, and never calls it idle.
+> The idle clock starts when Runova first sees something running. Restarting Runova starts it again, and so does waking the computer from sleep, so nothing is called idle for time nobody was watching. An emulator started outside Runova is found through its console port. If it cannot be matched to a running process the card says it cannot be measured, and never calls it idle.
 
 ### Stat tiles
 
 | Tile | What it shows |
 | --- | --- |
-| **Installed CLIs** | How many AI CLIs are installed out of all the CLIs AgentMate knows about, shown as a fraction. See [AI CLI Manager](cli-manager.md). |
+| **Installed CLIs** | How many AI CLIs are installed out of all the CLIs Runova knows about, shown as a fraction. See [AI CLI Manager](cli-manager.md). |
 | **Active Projects** | The number of projects that are not archived. See [Projects](projects.md). |
 | **Skill Repositories** | How many skill repositories you have added. See [Skills](skills.md). |
 | **Your Location** | A flag and your public IP address. Click the address to copy it ("IP address copied."), and use the refresh button to look it up again. It says **Unavailable** if the lookup fails. |
@@ -168,7 +168,7 @@ Each row has its own **Columns** buttons, 1, 2, 3 and 4. A row of four small til
 - Click the **X** on a card (**Remove from dashboard**) to hide it. A message confirms which card was removed.
 - Click **Add card** to open the menu of everything you can show. It has three groups: **Charts** (CPU Usage, Memory Usage, Disk I/O, GPU Usage, Network Throughput, Network Status, GitHub Activity, GitHub Actions, Docker and Emulator Usage, Idle Docker and Emulators), **Dashboard stats** (Installed CLIs, Active Projects, Skill Repositories, Your Location) and **Token Usage** (All agents, Tokens today, Tokens (7 days), Cost today, Providers tracked). Cards that are showing are ticked. Click one to add or remove it. New cards go into the last row that has a free space.
 
-A built-in chart added by a later version of AgentMate shows up on its own once. If you hide it, it stays hidden.
+A built-in chart added by a later version of Runova shows up on its own once. If you hide it, it stays hidden.
 
 ## Tips
 

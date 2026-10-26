@@ -20,7 +20,7 @@ import type { Terminal } from '@xterm/xterm';
  */
 
 const MARKER_OSC_IDENT = 7750;
-const MARKER_PAYLOAD = 'AgentMate:PromptReady:1';
+const MARKER_PAYLOAD = 'Runova:PromptReady:1';
 const PRINTABLE = /^[\x20-\x7e]$/;
 /** The terminal telling the program it gained or lost focus. Not an edit, so it just passes. */
 const FOCUS_REPORTS = ['\x1b[I', '\x1b[O'];

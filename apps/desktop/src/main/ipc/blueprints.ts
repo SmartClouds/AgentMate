@@ -9,7 +9,7 @@ import type {
   BlueprintStepId,
   Project,
   ProjectBlueprint,
-} from '@agentmat/core';
+} from '@runova/core';
 import {
   AGENT_INSTRUCTION_FILES,
   applyManagedBlock,
@@ -19,7 +19,7 @@ import {
   normalizeDocsFolder,
   removeAttachmentRefs,
   renderBlueprintBlock,
-} from '@agentmat/core';
+} from '@runova/core';
 import { dialog, ipcMain } from 'electron';
 import { z } from 'zod';
 import type {
@@ -123,7 +123,7 @@ function recordSectionRevision(blueprint: ProjectBlueprint, stepId: BlueprintSte
 
 /**
  * The instruction file this project's agent actually reads. The first candidate
- * is what AgentMate's own bootstrap writes; a repo that came from somewhere else
+ * is what Runova's own bootstrap writes; a repo that came from somewhere else
  * often has one of the others already, and writing the one nobody reads would
  * look like it worked and do nothing.
  */
@@ -163,7 +163,7 @@ async function syncAgentFile(projectId: string): Promise<BlueprintAgentFileResul
       .map((section) => ({
         stepId: section.stepId,
         // Same reason the prompt flattens them: this file lives in the user's
-        // repo, where an agentmate-file:// image would be a dead link.
+        // repo, where a runova-file:// image would be a dead link.
         text: flattenAttachmentRefs(section.textEn ?? section.text),
       })),
   );

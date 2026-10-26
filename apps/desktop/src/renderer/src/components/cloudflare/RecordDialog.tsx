@@ -221,9 +221,9 @@ export function RecordDialog({
     setBusy(true);
     try {
       if (record) {
-        await window.agentmat.cloudflare.updateRecord(zone.id, record.id, built.input);
+        await window.runova.cloudflare.updateRecord(zone.id, record.id, built.input);
       } else {
-        await window.agentmat.cloudflare.createRecord(zone.id, built.input);
+        await window.runova.cloudflare.createRecord(zone.id, built.input);
       }
       void queryClient.invalidateQueries({ queryKey: queryKeys.cloudflareRecords(zone.id) });
       toast.success(`Saved the ${built.input.type} record for ${built.input.name}.`);

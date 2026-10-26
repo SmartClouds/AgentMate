@@ -1,4 +1,4 @@
-import type { ProposalChange } from '@agentmat/studio';
+import type { ProposalChange } from '@runova/studio';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { ChangeItem } from '../ai/ProposalCard';

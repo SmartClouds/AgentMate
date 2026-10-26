@@ -1,4 +1,4 @@
-import { DEFAULT_TERMINAL_BACKGROUND_COLOR, normalizeProjectColor } from '@agentmat/core';
+import { DEFAULT_TERMINAL_BACKGROUND_COLOR, normalizeProjectColor } from '@runova/core';
 import { create } from 'zustand';
 
 interface TerminalAppearanceState {
@@ -15,17 +15,17 @@ export const useTerminalAppearanceStore = create<TerminalAppearanceState>((set) 
   backgroundColor: DEFAULT_TERMINAL_BACKGROUND_COLOR,
   setCustomBackground: (enabled) => {
     set({ customBackground: enabled });
-    void window.agentmat.settings.update({ workspaceTerminalCustomBackground: enabled });
+    void window.runova.settings.update({ workspaceTerminalCustomBackground: enabled });
   },
   setBackgroundColor: (color) => {
     const hex = normalizeProjectColor(color) ?? DEFAULT_TERMINAL_BACKGROUND_COLOR;
     set({ backgroundColor: hex });
-    void window.agentmat.settings.update({ workspaceTerminalBackgroundColor: hex });
+    void window.runova.settings.update({ workspaceTerminalBackgroundColor: hex });
   },
 }));
 
 export async function initTerminalAppearance(): Promise<void> {
-  const settings = await window.agentmat.settings.get();
+  const settings = await window.runova.settings.get();
   useTerminalAppearanceStore.setState({
     customBackground: settings.workspaceTerminalCustomBackground,
     backgroundColor: settings.workspaceTerminalBackgroundColor,

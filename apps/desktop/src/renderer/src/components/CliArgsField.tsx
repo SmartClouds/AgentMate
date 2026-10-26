@@ -1,14 +1,14 @@
-import { getCliDefinition } from '@agentmat/core';
+import { getCliDefinition } from '@runova/core';
 import { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { useCliStore } from '@/stores/cliStore';
 
 const HINT =
-  'Only for background tasks AgentMate runs with this CLI: commit messages, tag suggestions, version bumps, and skill audits. Terminals and Workspace tabs never use these; they take Launch defaults from Settings.';
+  'Only for background tasks Runova runs with this CLI: commit messages, tag suggestions, version bumps, and skill audits. Terminals and Workspace tabs never use these; they take Launch defaults from Settings.';
 
 /**
- * Extra flags for one CLI, e.g. "--model sonnet", used only when AgentMate runs it in the
+ * Extra flags for one CLI, e.g. "--model sonnet", used only when Runova runs it in the
  * background (never for terminals, which take Launch defaults). Saved on blur (and on Enter) rather
  * than per keystroke, so a half-typed flag never reaches a run.
  */

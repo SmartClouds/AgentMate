@@ -3,7 +3,7 @@ import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Studio is built so it can leave AgentMate one day as its own app. Inside the desktop app that
+ * Studio is built so it can leave Runova one day as its own app. Inside the desktop app that
  * comes down to two doors: main/studio/host.ts is the only main-process file that imports the
  * app's own modules, and components/studio/kit.ts (plus client.ts for the bridge) is the only
  * renderer file that does. Everything else under those folders talks to the package, to its own
@@ -43,9 +43,9 @@ function staysInside(file: string, spec: string): boolean {
 }
 
 const MAIN_ALLOWED =
-  /^(@agentmat\/studio(\/node)?|@agentmat\/core|electron|better-sqlite3|zod|node:.+)$/;
+  /^(@runova\/studio(\/node)?|@runova\/core|electron|better-sqlite3|zod|node:.+)$/;
 const UI_ALLOWED =
-  /^(@agentmat\/studio|@agentmat\/core|react|react-dom|react-router-dom|@tanstack\/react-query|zustand|framer-motion|zod)$/;
+  /^(@runova\/studio|@runova\/core|react|react-dom|react-router-dom|@tanstack\/react-query|zustand|framer-motion|zod)$/;
 
 export function mainViolations(files: SourceFile[]): string[] {
   return files.flatMap((file) =>
@@ -63,8 +63,8 @@ export function uiViolations(files: SourceFile[]): string[] {
     const found = importsOf(file.text)
       .filter((spec) => !UI_ALLOWED.test(spec) && !staysInside(file.path, spec))
       .map((spec) => `components/studio/${file.path} imports ${spec}`);
-    if (file.path !== 'client.ts' && /window\.agentmat\b/.test(file.text)) {
-      found.push(`components/studio/${file.path} uses window.agentmat (go through client.ts)`);
+    if (file.path !== 'client.ts' && /window\.runova\b/.test(file.text)) {
+      found.push(`components/studio/${file.path} uses window.runova (go through client.ts)`);
     }
     return found;
   });
@@ -96,12 +96,12 @@ describe('Studio module boundary', () => {
           path: 'home/Home.tsx',
           text: "import { Button } from '@/components/ui/button';\nimport { kit } from '../kit';",
         },
-        { path: 'editor/Panel.tsx', text: 'const v = window.agentmat.studio.list();' },
-        { path: 'client.ts', text: 'export const studio = () => window.agentmat.studio;' },
+        { path: 'editor/Panel.tsx', text: 'const v = window.runova.studio.list();' },
+        { path: 'client.ts', text: 'export const studio = () => window.runova.studio;' },
       ]),
     ).toEqual([
       'components/studio/home/Home.tsx imports @/components/ui/button',
-      'components/studio/editor/Panel.tsx uses window.agentmat (go through client.ts)',
+      'components/studio/editor/Panel.tsx uses window.runova (go through client.ts)',
     ]);
   });
 });

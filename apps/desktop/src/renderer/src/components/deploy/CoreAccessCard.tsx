@@ -26,7 +26,7 @@ export function CoreAccessCard({ server }: { server: DeployServer }): React.JSX.
   const [signingOut, setSigningOut] = useState(false);
   const access = useQuery({
     queryKey: queryKeys.deployAccess(server.id),
-    queryFn: () => window.agentmat.deploy.access(server.id),
+    queryFn: () => window.runova.deploy.access(server.id),
     retry: false,
     staleTime: 30_000,
   });
@@ -45,7 +45,7 @@ export function CoreAccessCard({ server }: { server: DeployServer }): React.JSX.
   async function signOut(): Promise<void> {
     setSigningOut(true);
     try {
-      await window.agentmat.deploy.signOut(server.id);
+      await window.runova.deploy.signOut(server.id);
       toast.success(`Signed out of ${server.nickname}.`);
     } catch (error) {
       toast.error(coreErrorMessage(error));
@@ -57,7 +57,7 @@ export function CoreAccessCard({ server }: { server: DeployServer }): React.JSX.
 
   async function forgetPassword(): Promise<void> {
     try {
-      await window.agentmat.deploy.forgetPassword(server.id);
+      await window.runova.deploy.forgetPassword(server.id);
       toast.success(`Your password for ${server.nickname} is forgotten on this computer.`);
     } catch (error) {
       toast.error(coreErrorMessage(error));

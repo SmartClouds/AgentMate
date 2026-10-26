@@ -1,4 +1,4 @@
-import type { WpPlannedChange } from '@agentmat/core';
+import type { WpPlannedChange } from '@runova/core';
 import { screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';

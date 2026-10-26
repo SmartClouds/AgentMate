@@ -39,7 +39,7 @@ function PurgeEverythingDialog({
     setBusy(true);
     setProblem(null);
     try {
-      await window.agentmat.cloudflare.purgeCache(zone.id, { everything: true });
+      await window.runova.cloudflare.purgeCache(zone.id, { everything: true });
       toast.success(`Purged everything for ${zone.name}.`);
       setTyped('');
       onOpenChange(false);
@@ -124,7 +124,7 @@ export function PurgeCard({ zone }: { zone: CloudflareZone }): React.JSX.Element
     setBusy(true);
     setProblem(null);
     try {
-      await window.agentmat.cloudflare.purgeCache(zone.id, { urls: checked.urls });
+      await window.runova.cloudflare.purgeCache(zone.id, { urls: checked.urls });
       const count = checked.urls.length;
       toast.success(`Purged ${count} ${count === 1 ? 'URL' : 'URLs'} from the cache.`);
       setUrls('');

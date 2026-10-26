@@ -2,7 +2,7 @@ import { FIREWALL_POLICIES } from '@shared/deploy/firewallValidation';
 import type {
   FirewallPolicy,
   FirewallStatus,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { Lock, LockOpen, TriangleAlert } from '@/components/icons';
 import { FOOTER_HAIRLINE, SECTION_HEADING } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';

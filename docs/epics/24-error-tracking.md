@@ -4,9 +4,9 @@ Milestone: standalone (Ship). Depends on: E22.
 
 ## Goal
 
-Show what breaks for the people using each project, next to whether it is up. AgentMate connects
+Show what breaks for the people using each project, next to whether it is up. Runova connects
 to an error tracker (Sentry first: sentry.io in the US and EU regions, self-hosted Sentry, and
-GlitchTip as best effort), links its projects to AgentMate projects, and lists their issues on an
+GlitchTip as best effort), links its projects to Runova projects, and lists their issues on an
 Errors tab of the Monitoring page and of each project's Monitoring tab. An issue opens on its
 latest event (stack trace, breadcrumbs, request and tags), can be copied for an agent or handed to
 the project's agent with Fix with AI, the same way a failed pipeline run is, and can be resolved
@@ -19,7 +19,7 @@ or ignored at the tracker.
   host clean-up (regions, `<org>.sentry.io`, self-hosted, plain HTTP only to loopback), the fix
   prompt and copy text capped at 12,000 characters, and project link suggestions.
 - [x] T2 Store: connections with their token sealed in the Vault (a registered sealed store),
-  links from AgentMate projects to tracker projects, pruned with the project.
+  links from Runova projects to tracker projects, pruned with the project.
 - [x] T3 Sentry client: injected `net.fetch`, a timeout, no redirects, a body cap, the org's data
   region used for every call, readable errors for a rejected token, a missing scope, rate
   limiting and the network, with the token masked; older GlitchTip paths on a 404.

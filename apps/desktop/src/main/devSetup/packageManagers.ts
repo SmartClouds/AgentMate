@@ -1,4 +1,4 @@
-import type { DevOs, PackageManagerId } from '@agentmat/core';
+import type { DevOs, PackageManagerId } from '@runova/core';
 import type { ProbeResult } from './probe';
 
 /**

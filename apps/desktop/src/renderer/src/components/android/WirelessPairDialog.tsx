@@ -49,7 +49,7 @@ export function WirelessPairDialog({
   };
 
   const pair = useMutation({
-    mutationFn: () => window.agentmat.android.pair(pairAddress, code),
+    mutationFn: () => window.runova.android.pair(pairAddress, code),
     onSuccess: (result) => {
       if (!result.ok) {
         setError(result.message ?? 'Pairing failed.');
@@ -65,7 +65,7 @@ export function WirelessPairDialog({
   });
 
   const connect = useMutation({
-    mutationFn: () => window.agentmat.android.connect(connectAddress),
+    mutationFn: () => window.runova.android.connect(connectAddress),
     onSuccess: (result) => {
       if (!result.ok) {
         setError(result.message ?? 'Could not connect.');

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import type { SkillAuditFinding, SkillAuditVerdict } from '@agentmat/core';
+import type { SkillAuditFinding, SkillAuditVerdict } from '@runova/core';
 import Database from 'better-sqlite3';
 import { app } from 'electron';
 import type { SkillAuditRecord, SkillAuditSourceKind } from '../shared/apiTypes';

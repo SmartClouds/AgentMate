@@ -1,4 +1,4 @@
-import type { ProviderUsage, WidgetPeriod } from '@agentmat/core';
+import type { ProviderUsage, WidgetPeriod } from '@runova/core';
 import { formatCost, formatTokens } from '@/lib/usageFormat';
 import { cn } from '@/lib/utils';
 

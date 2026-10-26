@@ -6,14 +6,14 @@ import type {
   ProjectGithubAction,
   ProjectNotificationHook,
   ProjectNotificationSettings,
-} from '@agentmat/core';
+} from '@runova/core';
 import {
   CLI_REGISTRY,
   configuredRunCommands,
   DIFFRAY_TOOL_ID,
   notificationHookChannel,
   runCommandSummary,
-} from '@agentmat/core';
+} from '@runova/core';
 import type {
   ApplyVersionResult,
   BootstrapResult,
@@ -230,7 +230,7 @@ export default function ProjectDetailPage(): React.JSX.Element {
 
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   });
 
   // `?edit=run` (from the Workspace Run button's menu) opens Edit project on the run commands.
@@ -283,28 +283,28 @@ export default function ProjectDetailPage(): React.JSX.Element {
 
   const installedSkillsQuery = useQuery({
     queryKey: queryKeys.installedSkills(projectId ?? ''),
-    queryFn: () => window.agentmat.skills.listInstalled(projectId!),
+    queryFn: () => window.runova.skills.listInstalled(projectId!),
     enabled: !!projectId,
   });
 
   const skillUpdatesQuery = useQuery({
     queryKey: queryKeys.skillUpdates(projectId ?? ''),
-    queryFn: () => window.agentmat.skills.checkForUpdates(projectId!),
+    queryFn: () => window.runova.skills.checkForUpdates(projectId!),
     enabled: !!projectId && (installedSkillsQuery.data?.length ?? 0) > 0,
   });
   const skillUpdateBySkillId = new Map((skillUpdatesQuery.data ?? []).map((u) => [u.skillId, u]));
 
   // Skills sitting in this project's agent dirs, including any that arrived with the repository
-  // rather than through AgentMate. Those still get read by an agent, so they still get checked.
+  // rather than through Runova. Those still get read by an agent, so they still get checked.
   const onDiskSkillsQuery = useQuery({
     queryKey: queryKeys.onDiskSkills(projectId ?? ''),
-    queryFn: () => window.agentmat.skills.listOnDiskSkills(projectId!),
+    queryFn: () => window.runova.skills.listOnDiskSkills(projectId!),
     enabled: !!projectId,
   });
 
   const latestAuditsQuery = useQuery({
     queryKey: queryKeys.skillAuditsLatest,
-    queryFn: () => window.agentmat.skills.latestAuditPerSkill(),
+    queryFn: () => window.runova.skills.latestAuditPerSkill(),
   });
   const auditBySkillId = useMemo(
     () => new Map((latestAuditsQuery.data ?? []).map((audit) => [audit.skillId, audit])),
@@ -359,7 +359,7 @@ export default function ProjectDetailPage(): React.JSX.Element {
       const records = [];
       setSkillCheckProgress({ done: 0, total: targets.length });
       for (const subject of targets) {
-        const result = await window.agentmat.skills.runAudit({
+        const result = await window.runova.skills.runAudit({
           target: subject.target,
           ...deepReviewInput(skillDeepReview, skillReviewCliId),
         });
@@ -391,12 +391,12 @@ export default function ProjectDetailPage(): React.JSX.Element {
   // Share their keys with the Prompts section, so the nav badge and the lists read one fetch.
   const draftsQuery = useQuery({
     queryKey: queryKeys.projectDrafts(projectId ?? ''),
-    queryFn: () => window.agentmat.projectDrafts.listByProject(projectId!),
+    queryFn: () => window.runova.projectDrafts.listByProject(projectId!),
     enabled: !!projectId,
   });
   const scheduledTasksQuery = useQuery({
     queryKey: queryKeys.scheduledTasks(projectId ?? ''),
-    queryFn: () => window.agentmat.scheduledTasks.listByProject(projectId!),
+    queryFn: () => window.runova.scheduledTasks.listByProject(projectId!),
     enabled: !!projectId,
   });
   const openDraftCount = (draftsQuery.data ?? []).filter(
@@ -408,20 +408,20 @@ export default function ProjectDetailPage(): React.JSX.Element {
 
   const installedMcpServersQuery = useQuery({
     queryKey: queryKeys.installedMcpServers(projectId ?? ''),
-    queryFn: () => window.agentmat.mcp.listInstalled(projectId!),
+    queryFn: () => window.runova.mcp.listInstalled(projectId!),
     enabled: !!projectId,
   });
 
   const toolsStatusQuery = useQuery({
     queryKey: queryKeys.toolsStatus,
-    queryFn: () => window.agentmat.tools.detectAll(),
+    queryFn: () => window.runova.tools.detectAll(),
   });
 
   // Only for the nav badge. The Security tab owns this key too, so opening the tab reuses the
   // same cached record rather than reading it twice.
   const latestSecurityScanQuery = useQuery({
     queryKey: queryKeys.securityLatest(projectId!),
-    queryFn: () => window.agentmat.security.latest(projectId!),
+    queryFn: () => window.runova.security.latest(projectId!),
     enabled: !!projectId,
     meta: { silentLoading: true },
   });
@@ -431,7 +431,7 @@ export default function ProjectDetailPage(): React.JSX.Element {
   // The preload bridge is only attached when the window is created, so a
   // hot-reloaded renderer can outrun it. Feature-detect instead of calling
   // blind, which would throw a bare TypeError.
-  const planBridgeReady = typeof window.agentmat?.projects?.bootstrapPlan === 'function';
+  const planBridgeReady = typeof window.runova?.projects?.bootstrapPlan === 'function';
 
   // Fetched from the main process rather than computed here, so the preview is
   // literally the plan that gets written. Keyed on the fields the plan derives
@@ -444,12 +444,12 @@ export default function ProjectDetailPage(): React.JSX.Element {
       project?.name,
       project?.description,
     ],
-    queryFn: () => window.agentmat.projects.bootstrapPlan(projectId!),
+    queryFn: () => window.runova.projects.bootstrapPlan(projectId!),
     enabled: !!projectId && !!project && planBridgeReady,
   });
 
   const updateMutation = useMutation({
-    mutationFn: (values: ProjectFormValues) => window.agentmat.projects.update(projectId!, values),
+    mutationFn: (values: ProjectFormValues) => window.runova.projects.update(projectId!, values),
     onSuccess: () => {
       toast.success('Project updated.');
       setEditOpen(false);
@@ -459,7 +459,7 @@ export default function ProjectDetailPage(): React.JSX.Element {
   });
 
   const notesMutation = useMutation({
-    mutationFn: (notes: string) => window.agentmat.projects.update(projectId!, { notes }),
+    mutationFn: (notes: string) => window.runova.projects.update(projectId!, { notes }),
     onSuccess: () => {
       toast.success('Notes saved.');
       void queryClient.invalidateQueries({ queryKey: queryKeys.projects });
@@ -478,11 +478,11 @@ export default function ProjectDetailPage(): React.JSX.Element {
     // the preview, the written files, and the saved description can't disagree.
     mutationFn: async ({ description, translatedFrom }: BootstrapDescription) => {
       if (description !== project?.description) {
-        await window.agentmat.projects.update(projectId!, { description });
+        await window.runova.projects.update(projectId!, { description });
       }
       if (translatedFrom) {
         try {
-          await window.agentmat.promptHistory.add({
+          await window.runova.promptHistory.add({
             rawInput: translatedFrom,
             promptType: 'Project description',
             targetAI: '',
@@ -495,7 +495,7 @@ export default function ProjectDetailPage(): React.JSX.Element {
           // Best-effort: losing the history entry shouldn't abort the bootstrap.
         }
       }
-      return window.agentmat.projects.bootstrap(projectId!);
+      return window.runova.projects.bootstrap(projectId!);
     },
     onSuccess: (raw) => {
       setDescribeOpen(false);
@@ -534,7 +534,7 @@ export default function ProjectDetailPage(): React.JSX.Element {
 
   const removeSkillMutation = useMutation({
     mutationFn: (skillId: string) =>
-      window.agentmat.skills.remove({ projectId: projectId!, skillId }),
+      window.runova.skills.remove({ projectId: projectId!, skillId }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.installedSkills(projectId ?? '') });
     },
@@ -542,7 +542,7 @@ export default function ProjectDetailPage(): React.JSX.Element {
 
   const updateSkillMutation = useMutation({
     mutationFn: (update: SkillUpdateInfo) =>
-      window.agentmat.skills.install({
+      window.runova.skills.install({
         projectId: projectId!,
         repositoryId: update.repositoryId,
         skillId: update.skillId,
@@ -556,14 +556,14 @@ export default function ProjectDetailPage(): React.JSX.Element {
   });
 
   // Whether an agent in this project may suggest run commands. The switch writes the project's
-  // .mcp.json entry, so the state is read back from the project folder, not from AgentMate's records.
+  // .mcp.json entry, so the state is read back from the project folder, not from Runova's records.
   const runSuggestionsQuery = useQuery({
     queryKey: queryKeys.runProposalsEnabled(projectId ?? ''),
-    queryFn: async () => Boolean(await window.agentmat.runProposals.getEnabled(projectId!)),
+    queryFn: async () => Boolean(await window.runova.runProposals.getEnabled(projectId!)),
     enabled: Boolean(projectId),
   });
   const runSuggestionsMutation = useMutation({
-    mutationFn: (enabled: boolean) => window.agentmat.runProposals.setEnabled(projectId!, enabled),
+    mutationFn: (enabled: boolean) => window.runova.runProposals.setEnabled(projectId!, enabled),
     onSuccess: (result, enabled) => {
       if (!result.ok) {
         toast.error(result.error);
@@ -583,8 +583,7 @@ export default function ProjectDetailPage(): React.JSX.Element {
   });
 
   const removeMcpServerMutation = useMutation({
-    mutationFn: (serverId: string) =>
-      window.agentmat.mcp.remove({ projectId: projectId!, serverId }),
+    mutationFn: (serverId: string) => window.runova.mcp.remove({ projectId: projectId!, serverId }),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.installedMcpServers(projectId ?? ''),
@@ -593,7 +592,7 @@ export default function ProjectDetailPage(): React.JSX.Element {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => window.agentmat.projects.delete(projectId!),
+    mutationFn: () => window.runova.projects.delete(projectId!),
     onSuccess: () => {
       toast.success('Project removed.');
       void queryClient.invalidateQueries({ queryKey: queryKeys.projects });
@@ -602,7 +601,7 @@ export default function ProjectDetailPage(): React.JSX.Element {
   });
 
   const archiveMutation = useMutation({
-    mutationFn: (archived: boolean) => window.agentmat.projects.setArchived(projectId!, archived),
+    mutationFn: (archived: boolean) => window.runova.projects.setArchived(projectId!, archived),
     onSuccess: (updated) => {
       queryClient.setQueryData<Project[]>(queryKeys.projects, (prev) =>
         prev?.map((p) => (p.id === updated.id ? updated : p)),
@@ -624,7 +623,7 @@ export default function ProjectDetailPage(): React.JSX.Element {
   async function handleOpenInFileExplorer(): Promise<void> {
     if (!project) return;
     try {
-      await window.agentmat.shell.openPath(project.folderPath);
+      await window.runova.shell.openPath(project.folderPath);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to open folder.');
     }
@@ -644,7 +643,7 @@ export default function ProjectDetailPage(): React.JSX.Element {
     if (!project) return;
     void confirmDialog({
       title: `Remove "${project.name}"?`,
-      description: 'This removes it from AgentMate. Files on disk are kept.',
+      description: 'This removes it from Runova. Files on disk are kept.',
       confirmLabel: 'Remove',
       variant: 'destructive',
     }).then((confirmed) => {
@@ -1063,7 +1062,7 @@ export default function ProjectDetailPage(): React.JSX.Element {
                 <SectionCard
                   icon={FolderTree}
                   title="Also in this project"
-                  description="Skills found in this project's agent folders that AgentMate did not install, for example ones that came with the repository. Agents read these too."
+                  description="Skills found in this project's agent folders that Runova did not install, for example ones that came with the repository. Agents read these too."
                 >
                   <div className={ROWS}>
                     {projectSkillRows.map((skill) => {
@@ -1124,8 +1123,8 @@ export default function ProjectDetailPage(): React.JSX.Element {
                     Let agents suggest run commands
                   </Label>
                   <p className="text-xs leading-relaxed text-muted-foreground">
-                    An agent here can suggest a run command. You approve each one in AgentMate
-                    before it is saved.
+                    An agent here can suggest a run command. You approve each one in Runova before
+                    it is saved.
                   </p>
                 </div>
                 <Switch
@@ -1465,13 +1464,13 @@ function ProjectConfigEditor({
 }: {
   projectFolderPath: string;
 }): React.JSX.Element {
-  const configPath = `${projectFolderPath}/.agentmate/config.json`;
+  const configPath = `${projectFolderPath}/.runova/config.json`;
   const [content, setContent] = useState('{}');
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    window.agentmat.fs
+    window.runova.fs
       .readFile(configPath)
       .catch(() => '{}')
       .then((text) => {
@@ -1492,7 +1491,7 @@ function ProjectConfigEditor({
       toast.error('Config must be valid JSON.');
       return;
     }
-    await window.agentmat.fs.writeFile(configPath, content);
+    await window.runova.fs.writeFile(configPath, content);
     toast.success('Config saved.');
   }
 
@@ -1500,7 +1499,7 @@ function ProjectConfigEditor({
     <SectionCard
       icon={FileCog}
       title="Config"
-      description={<span className="font-mono">.agentmate/config.json</span>}
+      description={<span className="font-mono">.runova/config.json</span>}
       actions={
         <Button disabled={!loaded} onClick={() => void handleSave()}>
           <Save /> Save
@@ -1582,7 +1581,7 @@ function EditClaudeHookDialog({
       if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
         throw new Error('Hook body must be a JSON object.');
       }
-      return window.agentmat.projects.updateClaudeHook(projectId, hook.id, {
+      return window.runova.projects.updateClaudeHook(projectId, hook.id, {
         hook: parsed as Record<string, unknown>,
         matcher: matcher || undefined,
       });
@@ -1745,7 +1744,7 @@ function splitTag(tag: string): { prefix: string; version: string } | null {
   return { prefix: match[1], version: match[2] };
 }
 
-const TAG_TARGET_STORAGE_PREFIX = 'agentmate:tag-target:';
+const TAG_TARGET_STORAGE_PREFIX = 'runova:tag-target:';
 
 /** The tag prefix a project was last tagged or bumped with. */
 function readStoredTagPrefix(projectId: string): string | null {
@@ -2045,13 +2044,13 @@ function GitTab({
 
   const statusQuery = useQuery({
     queryKey: queryKeys.gitStatus(projectId),
-    queryFn: () => window.agentmat.git.status(projectId),
+    queryFn: () => window.runova.git.status(projectId),
     meta: GIT_REFRESH_META,
   });
 
   const tagsQuery = useQuery({
     queryKey: queryKeys.gitTags(projectId),
-    queryFn: () => window.agentmat.git.tags(projectId),
+    queryFn: () => window.runova.git.tags(projectId),
     enabled: statusQuery.data?.isRepo === true,
     meta: GIT_REFRESH_META,
   });
@@ -2073,17 +2072,17 @@ function GitTab({
   }
 
   const fetchMutation = useMutation({
-    mutationFn: () => window.agentmat.git.fetch(projectId),
+    mutationFn: () => window.runova.git.fetch(projectId),
     onSuccess: reportOpResult,
     meta: GIT_OP_META,
   });
   const pullMutation = useMutation({
-    mutationFn: () => window.agentmat.git.pull(projectId),
+    mutationFn: () => window.runova.git.pull(projectId),
     onSuccess: reportOpResult,
     meta: GIT_OP_META,
   });
   const pushMutation = useMutation({
-    mutationFn: () => window.agentmat.git.push(projectId),
+    mutationFn: () => window.runova.git.push(projectId),
     onSuccess: (result) => {
       reportOpResult(result);
       void queryClient.invalidateQueries({ queryKey: queryKeys.pipelineStatus(projectId) });
@@ -2091,7 +2090,7 @@ function GitTab({
     meta: GIT_OP_META,
   });
   const syncMutation = useMutation({
-    mutationFn: () => window.agentmat.git.sync(projectId),
+    mutationFn: () => window.runova.git.sync(projectId),
     onSuccess: (result) => {
       reportOpResult(result);
       void queryClient.invalidateQueries({ queryKey: queryKeys.pipelineStatus(projectId) });
@@ -2099,7 +2098,7 @@ function GitTab({
     meta: GIT_OP_META,
   });
   const createBranchMutation = useMutation({
-    mutationFn: (name: string) => window.agentmat.git.createBranch(projectId, name),
+    mutationFn: (name: string) => window.runova.git.createBranch(projectId, name),
     onSuccess: (result) => {
       reportOpResult(result);
       if (result.ok) setBranchName('');
@@ -2107,12 +2106,12 @@ function GitTab({
     meta: GIT_OP_META,
   });
   const checkoutBranchMutation = useMutation({
-    mutationFn: (name: string) => window.agentmat.git.checkoutBranch(projectId, name),
+    mutationFn: (name: string) => window.runova.git.checkoutBranch(projectId, name),
     onSuccess: reportOpResult,
     meta: GIT_OP_META,
   });
   const setDefaultBranchMutation = useMutation({
-    mutationFn: (name: string) => window.agentmat.git.setDefaultBranch(projectId, name),
+    mutationFn: (name: string) => window.runova.git.setDefaultBranch(projectId, name),
     onSuccess: (result) => {
       reportOpResult(result);
       if (result.ok) setDefaultBranchPick('');
@@ -2122,7 +2121,7 @@ function GitTab({
   const renameBranchMutation = useMutation({
     mutationFn: () => {
       if (!renameTarget) return Promise.resolve({ ok: false, message: 'No branch selected.' });
-      return window.agentmat.git.renameBranch({
+      return window.runova.git.renameBranch({
         projectId,
         from: renameTarget.name,
         to: renameTo,
@@ -2142,7 +2141,7 @@ function GitTab({
   const deleteBranchMutation = useMutation({
     mutationFn: () => {
       if (!deleteTarget) return Promise.resolve({ ok: false, message: 'No branch selected.' });
-      return window.agentmat.git.deleteBranch({
+      return window.runova.git.deleteBranch({
         projectId,
         branchName: deleteTarget.name,
         deleteRemote,
@@ -2160,7 +2159,7 @@ function GitTab({
     meta: GIT_OP_META,
   });
   const commitMutation = useMutation({
-    mutationFn: (message: string) => window.agentmat.git.commit(projectId, message),
+    mutationFn: (message: string) => window.runova.git.commit(projectId, message),
     onSuccess: (result) => {
       reportOpResult(result);
       if (result.ok) setCommitMessage('');
@@ -2184,7 +2183,7 @@ function GitTab({
     branchRequestRef.current = requestId;
     setSuggestingBranch(true);
     try {
-      const result = await window.agentmat.git.suggestBranchName(projectId, requestId);
+      const result = await window.runova.git.suggestBranchName(projectId, requestId);
       if (result.cancelled) return;
       if (result.ok && result.text?.trim()) {
         setBranchName(sanitizeBranchName(result.text));
@@ -2202,7 +2201,7 @@ function GitTab({
     commitRequestRef.current = requestId;
     setSuggestingCommit(true);
     try {
-      const result = await window.agentmat.git.suggestCommitMessage(projectId, requestId);
+      const result = await window.runova.git.suggestCommitMessage(projectId, requestId);
       if (result.cancelled) return;
       if (result.ok && result.text?.trim()) {
         setCommitMessage(sanitizeCommitMessage(result.text));
@@ -2507,7 +2506,7 @@ function GitTab({
               disabled={status.files.length === 0}
               onStart={() => void handleSuggestBranchName()}
               onCancel={() =>
-                cancelSuggestion(branchRequestRef, window.agentmat.git.cancelSuggestBranchName)
+                cancelSuggestion(branchRequestRef, window.runova.git.cancelSuggestBranchName)
               }
             />
           </div>
@@ -2704,10 +2703,7 @@ function GitTab({
                   disabled={status.files.length === 0}
                   onStart={() => void handleSuggestCommitMessage()}
                   onCancel={() =>
-                    cancelSuggestion(
-                      commitRequestRef,
-                      window.agentmat.git.cancelSuggestCommitMessage,
-                    )
+                    cancelSuggestion(commitRequestRef, window.runova.git.cancelSuggestCommitMessage)
                   }
                 />
                 <span className="ml-auto">
@@ -2991,7 +2987,7 @@ function ApplyVersionDialog({
     // notification (fired minutes after the run settles) still finds it in the cache.
     gcTime: 30 * 60 * 1000,
     mutationFn: ({ tag: versionTag, requestId }: { tag: string; requestId: string }) =>
-      window.agentmat.git.applyVersion({ projectId, tag: versionTag, requestId }),
+      window.runova.git.applyVersion({ projectId, tag: versionTag, requestId }),
     onSettled: (result) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.gitStatus(projectId) });
       // Fires even if this dialog (or the project it belongs to) has since gone off screen,
@@ -3039,7 +3035,7 @@ function ApplyVersionDialog({
   // Only the files the user kept go in, so nothing else lying around the tree gets swept up.
   const commitMutation = useMutation({
     mutationFn: ({ message, paths }: { message: string; paths: string[] }) =>
-      window.agentmat.git.commit(projectId, message, paths),
+      window.runova.git.commit(projectId, message, paths),
     onSuccess: (result) => {
       if (result.ok) toast.success(result.message);
       else toast.error(result.message);
@@ -3070,7 +3066,7 @@ function ApplyVersionDialog({
   function handleCancel(): void {
     const requestId = currentRun?.variables?.requestId;
     if (!requestId) return;
-    void window.agentmat.git.cancelApplyVersion(requestId);
+    void window.runova.git.cancelApplyVersion(requestId);
   }
 
   function handleRetry(): void {
@@ -3402,7 +3398,7 @@ function TagVersionDialog({
   // prefix exactly as typed, so the numbers always describe the tag on screen.
   const prefixTagsQuery = useQuery({
     queryKey: queryKeys.gitTagsForPrefix(projectId, trimmedPrefix),
-    queryFn: () => window.agentmat.git.tags(projectId, trimmedPrefix),
+    queryFn: () => window.runova.git.tags(projectId, trimmedPrefix),
     enabled: open,
     meta: GIT_REFRESH_META,
   });
@@ -3467,7 +3463,7 @@ function TagVersionDialog({
   const looksSemver = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(trimmedVersion);
   const createTagMutation = useMutation({
     mutationFn: (nextTag: string) =>
-      window.agentmat.git.createTag({ projectId, tag: nextTag, message, push: hasRemote }),
+      window.runova.git.createTag({ projectId, tag: nextTag, message, push: hasRemote }),
     onSuccess: (result, nextTag) => {
       if (result.ok) {
         toast.success(result.message);
@@ -3522,7 +3518,7 @@ function TagVersionDialog({
     mutationFn: () => {
       const requestId = crypto.randomUUID();
       suggestRequestRef.current = requestId;
-      return window.agentmat.git.suggestTag(projectId, requestId, trimmedPrefix);
+      return window.runova.git.suggestTag(projectId, requestId, trimmedPrefix);
     },
     onSettled: () => {
       suggestRequestRef.current = null;
@@ -3558,7 +3554,7 @@ function TagVersionDialog({
     const requestId = suggestRequestRef.current;
     if (!requestId) return;
     suggestRequestRef.current = null;
-    void window.agentmat.git.cancelSuggestTag(requestId);
+    void window.runova.git.cancelSuggestTag(requestId);
   }
 
   // This dialog belongs to one project and is replaced when the user switches to another. A
@@ -3568,7 +3564,7 @@ function TagVersionDialog({
       const requestId = suggestRequestRef.current;
       if (!requestId) return;
       suggestRequestRef.current = null;
-      void window.agentmat.git.cancelSuggestTag(requestId);
+      void window.runova.git.cancelSuggestTag(requestId);
     },
     [],
   );
@@ -4091,13 +4087,13 @@ function CreatePrDialog({
   }, [open]);
 
   const createPrMutation = useMutation({
-    mutationFn: () => window.agentmat.git.createPullRequest({ projectId, title, body, base }),
+    mutationFn: () => window.runova.git.createPullRequest({ projectId, title, body, base }),
     onSuccess: (result) => {
       if (result.ok) {
         toast.success(
           result.usedFallback ? 'Opened compare page in your browser.' : 'Pull request created.',
         );
-        if (result.url) void window.agentmat.shell.openExternal(result.url);
+        if (result.url) void window.runova.shell.openExternal(result.url);
         onOpenChange(false);
         setTitle('');
         setBody('');
@@ -4182,17 +4178,17 @@ function HooksTab({ project }: { project: Project }): React.JSX.Element {
 
   const cliQuery = useQuery({
     queryKey: queryKeys.cliStatus,
-    queryFn: () => window.agentmat.cli.detectAll(),
+    queryFn: () => window.runova.cli.detectAll(),
   });
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
   });
   const claudeHooksQuery = useQuery({
     queryKey: queryKeys.claudeHooks(project.id),
-    queryFn: () => window.agentmat.projects.listClaudeHooks(project.id),
+    queryFn: () => window.runova.projects.listClaudeHooks(project.id),
   });
-  const otherHooks = (claudeHooksQuery.data ?? []).filter((h) => !h.managedByAgentMate);
+  const otherHooks = (claudeHooksQuery.data ?? []).filter((h) => !h.managedByRunova);
 
   const installedAgents = CLI_REGISTRY.filter(
     (cli) => cliQuery.data?.find((c) => c.id === cli.id)?.installed,
@@ -4204,7 +4200,7 @@ function HooksTab({ project }: { project: Project }): React.JSX.Element {
 
   const saveMutation = useMutation({
     mutationFn: (notifications: ProjectNotificationSettings) =>
-      window.agentmat.projects.updateNotifications(project.id, notifications),
+      window.runova.projects.updateNotifications(project.id, notifications),
     onSuccess: () => {
       toast.success('Notification hook saved.');
       void queryClient.invalidateQueries({ queryKey: queryKeys.projects });
@@ -4212,7 +4208,7 @@ function HooksTab({ project }: { project: Project }): React.JSX.Element {
   });
 
   const deleteHookMutation = useMutation({
-    mutationFn: (hookId: string) => window.agentmat.projects.deleteClaudeHook(project.id, hookId),
+    mutationFn: (hookId: string) => window.runova.projects.deleteClaudeHook(project.id, hookId),
     onSuccess: () => {
       toast.success('Hook removed.');
       void queryClient.invalidateQueries({ queryKey: queryKeys.claudeHooks(project.id) });
@@ -4252,7 +4248,7 @@ function HooksTab({ project }: { project: Project }): React.JSX.Element {
         kind="confirmation"
         icon={CircleQuestion}
         title="Confirmation"
-        description="Sends a Telegram message when the agent needs your confirmation to continue. Reply on Telegram and AgentMate forwards your reply to this project's open terminal."
+        description="Sends a Telegram message when the agent needs your confirmation to continue. Reply on Telegram and Runova forwards your reply to this project's open terminal."
         project={project}
         installedAgents={installedAgents}
         onSave={(hook) => saveMutation.mutate({ ...project.notifications, confirmation: hook })}
@@ -4262,7 +4258,7 @@ function HooksTab({ project }: { project: Project }): React.JSX.Element {
         kind="pet"
         icon={Paw}
         title="Desktop companion"
-        description="Speaks the message through the desktop pet when the agent finishes, so you see it without leaving your desk. It only shows while AgentMate is open with the companion on screen; any other time the hook stays silent instead of failing."
+        description="Speaks the message through the desktop pet when the agent finishes, so you see it without leaving your desk. It only shows while Runova is open with the companion on screen; any other time the hook stays silent instead of failing."
         project={project}
         installedAgents={installedAgents}
         petEnabled={petEnabled}
@@ -4278,7 +4274,7 @@ function HooksTab({ project }: { project: Project }): React.JSX.Element {
             Hooks found in this project's{' '}
             <code className="rounded bg-foreground/[0.06] px-1">.claude/settings.json</code> and{' '}
             <code className="rounded bg-foreground/[0.06] px-1">settings.local.json</code> that
-            AgentMate didn't create.
+            Runova didn't create.
           </>
         }
       >
@@ -4400,7 +4396,7 @@ function NotificationHookCard({
 
   const channel = notificationHookChannel(kind);
   const scriptFileName = `notify-${kind}.cjs`;
-  const scriptPath = `${project.folderPath}/.agentmate/hooks/${scriptFileName}`;
+  const scriptPath = `${project.folderPath}/.runova/hooks/${scriptFileName}`;
   const savedCli = CLI_REGISTRY.find((c) => c.id === saved.cliId);
   const wiredAutomatically = saved.cliId === 'claude-code';
 
@@ -4415,8 +4411,8 @@ function NotificationHookCard({
       const rendered = message.replaceAll('{{project}}', project.name);
       const result =
         channel === 'pet'
-          ? await window.agentmat.notifications.sendPetTest({ message: rendered })
-          : await window.agentmat.notifications.sendTest({ message: rendered });
+          ? await window.runova.notifications.sendPetTest({ message: rendered })
+          : await window.runova.notifications.sendTest({ message: rendered });
       if (result.ok) {
         toast.success(
           channel === 'pet' ? 'Your companion is saying it now.' : 'Sent. Check Telegram.',
@@ -4587,13 +4583,13 @@ export function ProjectVersionDialogs({
   const active = open || applyVersionTag !== null;
   const statusQuery = useQuery({
     queryKey: queryKeys.gitStatus(projectId),
-    queryFn: () => window.agentmat.git.status(projectId),
+    queryFn: () => window.runova.git.status(projectId),
     enabled: active,
     meta: GIT_REFRESH_META,
   });
   const tagsQuery = useQuery({
     queryKey: queryKeys.gitTags(projectId),
-    queryFn: () => window.agentmat.git.tags(projectId),
+    queryFn: () => window.runova.git.tags(projectId),
     enabled: active && statusQuery.data?.isRepo === true,
     meta: GIT_REFRESH_META,
   });

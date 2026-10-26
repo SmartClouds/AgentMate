@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, realpathSync, statSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { BaseEntry, BaseMap, LocalFileMap } from '@agentmat/core';
+import type { BaseEntry, BaseMap, LocalFileMap } from '@runova/core';
 import { describe, expect, it, vi } from 'vitest';
 import { filesError } from '../../../shared/deployFilesErrors';
 import type { FilesChangesSnapshot, FilesLeftOut } from '../../../shared/deployFilesTypes';
@@ -558,12 +558,12 @@ describe('a folder that cannot be listed', () => {
 
   it('says error for an ignore file that cannot be read, or anything else that fails', async () => {
     const t = setup({
-      walk: filesError('invalidInput', 'Line 3 of .agentmateignore cannot be read.'),
+      walk: filesError('invalidInput', 'Line 3 of .runovaignore cannot be read.'),
     });
     const snapshot = await t.service.subscribe('site1', 'window1');
     expect(snapshot).toMatchObject({
       state: 'error',
-      error: 'Line 3 of .agentmateignore cannot be read.',
+      error: 'Line 3 of .runovaignore cannot be read.',
       files: [],
     });
     t.walk.set(Object.assign(new Error('EACCES: permission denied'), { code: 'EACCES' }));
@@ -624,7 +624,7 @@ describe('left-out paths', () => {
 
 describe('on a real folder', () => {
   it('lists what the walk finds, with what is left out', async () => {
-    const root = realpathSync(tempDir('agentmate-changes-'));
+    const root = realpathSync(tempDir('runova-changes-'));
     writeTree(root, {
       'index.html': '<h1>hi</h1>',
       'css/site.css': 'body{}',
@@ -671,7 +671,7 @@ describe('the base it reads by default', () => {
   it('applies a running journal without folding it, so the run keeps what it finished', async () => {
     const bases = await import('./bases');
     const changes = await import('./changes');
-    const root = realpathSync(tempDir('agentmate-changes-'));
+    const root = realpathSync(tempDir('runova-changes-'));
     writeTree(root, { 'a.txt': 'a' });
     const theSite = site({ localFolder: root });
     await bases.readBase('site1', bases.baseTargetOf(theSite));

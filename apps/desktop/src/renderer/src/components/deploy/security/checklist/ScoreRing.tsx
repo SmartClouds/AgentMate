@@ -1,4 +1,4 @@
-import type { ChecklistItem } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { ChecklistItem } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { cn } from '@/lib/utils';
 
 /**

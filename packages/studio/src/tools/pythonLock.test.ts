@@ -101,25 +101,20 @@ describe('choosing a build', () => {
 
 describe('where tools live', () => {
   it('lays out environments, Python builds and models on Windows and elsewhere', () => {
-    const win = studioToolPaths(
-      'C:\\Users\\me\\AppData\\Roaming\\AgentMate\\studio-tools',
-      'win32',
-    );
+    const win = studioToolPaths('C:\\Users\\me\\AppData\\Roaming\\Runova\\studio-tools', 'win32');
     expect(win.envPython('piper')).toBe(
-      'C:\\Users\\me\\AppData\\Roaming\\AgentMate\\studio-tools\\envs\\piper\\Scripts\\python.exe',
+      'C:\\Users\\me\\AppData\\Roaming\\Runova\\studio-tools\\envs\\piper\\Scripts\\python.exe',
     );
     expect(win.basePython(win.pythonDir('3.12.15', 'win-x64'))).toMatch(
       /\\python\\3\.12\.15-win-x64\\python\.exe$/,
     );
-    const mac = studioToolPaths('/Users/me/Library/AgentMate/studio-tools', 'darwin');
+    const mac = studioToolPaths('/Users/me/Library/Runova/studio-tools', 'darwin');
     expect(mac.envPython('omnivoice')).toBe(
-      '/Users/me/Library/AgentMate/studio-tools/envs/omnivoice/bin/python3',
+      '/Users/me/Library/Runova/studio-tools/envs/omnivoice/bin/python3',
     );
     expect(mac.modelsDir('piper-voices')).toBe(
-      '/Users/me/Library/AgentMate/studio-tools/models/piper-voices',
+      '/Users/me/Library/Runova/studio-tools/models/piper-voices',
     );
-    expect(mac.marker('piper')).toBe(
-      '/Users/me/Library/AgentMate/studio-tools/piper.installed.json',
-    );
+    expect(mac.marker('piper')).toBe('/Users/me/Library/Runova/studio-tools/piper.installed.json');
   });
 });

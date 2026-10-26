@@ -53,7 +53,7 @@ const PROJECT = {
 
 describe.skipIf(!ripgrepPath())('createSymbolIndexer', () => {
   it('finds declarations in every language it knows', async () => {
-    const folder = writeTree(tempDir('agentmate-symbols-'), PROJECT);
+    const folder = writeTree(tempDir('runova-symbols-'), PROJECT);
     const indexer = createSymbolIndexer();
     const index = full(await indexer.get(folder));
     expect(index.unavailable).toBe(false);
@@ -83,7 +83,7 @@ describe.skipIf(!ripgrepPath())('createSymbolIndexer', () => {
   });
 
   it('leaves out what .gitignore leaves out', async () => {
-    const folder = writeTree(tempDir('agentmate-symbols-'), {
+    const folder = writeTree(tempDir('runova-symbols-'), {
       '.gitignore': 'gen/\n',
       'gen/out.ts': 'export class Generated {}\n',
       'src/a.ts': 'export class Kept {}\n',
@@ -93,7 +93,7 @@ describe.skipIf(!ripgrepPath())('createSymbolIndexer', () => {
   });
 
   it('answers "unchanged" when the window already has this version', async () => {
-    const folder = writeTree(tempDir('agentmate-symbols-'), { 'a.ts': 'export class A {}\n' });
+    const folder = writeTree(tempDir('runova-symbols-'), { 'a.ts': 'export class A {}\n' });
     const indexer = createSymbolIndexer();
     const first = full(await indexer.get(folder));
     expect(await indexer.get(folder, { sinceVersion: first.version })).toEqual({
@@ -103,7 +103,7 @@ describe.skipIf(!ripgrepPath())('createSymbolIndexer', () => {
   });
 
   it('rescans only what changed, and drops deleted files', async () => {
-    const folder = writeTree(tempDir('agentmate-symbols-'), {
+    const folder = writeTree(tempDir('runova-symbols-'), {
       'a.ts': 'export class A {}\n',
       'b.ts': 'export class B {}\n',
     });
@@ -122,7 +122,7 @@ describe.skipIf(!ripgrepPath())('createSymbolIndexer', () => {
   });
 
   it('keeps the version when nothing changed', async () => {
-    const folder = writeTree(tempDir('agentmate-symbols-'), { 'a.ts': 'export class A {}\n' });
+    const folder = writeTree(tempDir('runova-symbols-'), { 'a.ts': 'export class A {}\n' });
     const indexer = createSymbolIndexer({ staleMs: 0 });
     const first = full(await indexer.get(folder));
     const again = await indexer.get(folder, { sinceVersion: first.version, fresh: true });
@@ -130,7 +130,7 @@ describe.skipIf(!ripgrepPath())('createSymbolIndexer', () => {
   });
 
   it('builds once for callers that arrive together', async () => {
-    const folder = writeTree(tempDir('agentmate-symbols-'), { 'a.ts': 'export class A {}\n' });
+    const folder = writeTree(tempDir('runova-symbols-'), { 'a.ts': 'export class A {}\n' });
     const list = counting();
     const indexer = createSymbolIndexer({ listFiles: list.listFiles });
     const [one, two] = await Promise.all([indexer.get(folder), indexer.get(folder)]);
@@ -140,15 +140,15 @@ describe.skipIf(!ripgrepPath())('createSymbolIndexer', () => {
 
   it('stops at the symbol cap and says so', async () => {
     const lines = Array.from({ length: 50 }, (_, at) => `export function f${at}() {}`).join('\n');
-    const folder = writeTree(tempDir('agentmate-symbols-'), { 'a.ts': `${lines}\n` });
+    const folder = writeTree(tempDir('runova-symbols-'), { 'a.ts': `${lines}\n` });
     const index = full(await createSymbolIndexer({ maxSymbols: 10 }).get(folder));
     expect(index.names).toHaveLength(10);
     expect(index.truncated).toBe(true);
   });
 
   it('forgets the least recently used project', async () => {
-    const a = writeTree(tempDir('agentmate-symbols-'), { 'a.ts': 'export class A {}\n' });
-    const b = writeTree(tempDir('agentmate-symbols-'), { 'b.ts': 'export class B {}\n' });
+    const a = writeTree(tempDir('runova-symbols-'), { 'a.ts': 'export class A {}\n' });
+    const b = writeTree(tempDir('runova-symbols-'), { 'b.ts': 'export class B {}\n' });
     const list = counting();
     const indexer = createSymbolIndexer({ listFiles: list.listFiles, maxProjects: 1 });
     await indexer.get(a);
@@ -158,7 +158,7 @@ describe.skipIf(!ripgrepPath())('createSymbolIndexer', () => {
   });
 
   it('says so when ripgrep is missing', async () => {
-    const folder = writeTree(tempDir('agentmate-symbols-'), { 'a.ts': 'export class A {}\n' });
+    const folder = writeTree(tempDir('runova-symbols-'), { 'a.ts': 'export class A {}\n' });
     const index = full(await createSymbolIndexer({ rgPath: null }).get(folder));
     expect(index.unavailable).toBe(true);
     expect(index.names).toEqual([]);

@@ -2,12 +2,12 @@
 /**
  * An AdminContext with settable capabilities and nonces.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Support;
+namespace Runova\Connector\Tests\Support;
 
-use AgentMate\Connector\Admin\AdminContext;
+use Runova\Connector\Admin\AdminContext;
 
 final class FakeAdminContext implements AdminContext
 {

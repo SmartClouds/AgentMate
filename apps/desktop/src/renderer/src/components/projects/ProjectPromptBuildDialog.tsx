@@ -1,11 +1,11 @@
-import type { Project, PromptType, TargetAI } from '@agentmat/core';
+import type { Project, PromptType, TargetAI } from '@runova/core';
 import {
   cliIdForTargetAI,
   EFFORT_LABELS,
   getCliDefinition,
   PROMPT_TYPES,
   TARGET_AIS,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -124,7 +124,7 @@ export function ProjectPromptBuildDialog({
   // The switch decides whether Generate and Translate size their result, so it is read first.
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
     enabled: open,
   });
   const autoSize = settingsQuery.data?.promptBuilderAutoSize ?? true;
@@ -239,7 +239,7 @@ export function ProjectPromptBuildDialog({
   async function handlePinToDesktop(): Promise<void> {
     setIsPinning(true);
     try {
-      await window.agentmat.promptBuildWidget.openWidget(projectId, projectName);
+      await window.runova.promptBuildWidget.openWidget(projectId, projectName);
       onOpenChange(false);
       toast.success('Build Prompt added to your desktop.');
     } catch (err) {
@@ -258,7 +258,7 @@ export function ProjectPromptBuildDialog({
 
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
     enabled: open,
   });
   const project = projectsQuery.data?.find((p) => p.id === projectId) ?? null;
@@ -291,7 +291,7 @@ export function ProjectPromptBuildDialog({
   const [splitting, setSplitting] = useState(false);
   const scheduleMutation = useMutation({
     mutationFn: (values: ComposerValues) =>
-      window.agentmat.scheduledTasks.createMany({
+      window.runova.scheduledTasks.createMany({
         projectId,
         tasks: [
           {

@@ -49,13 +49,13 @@ export function SshVaultUnlockDialog({
     setError(null);
     try {
       if (mode === 'unlock') {
-        const ok = await window.agentmat.ssh.unlockVault(passphrase);
+        const ok = await window.runova.ssh.unlockVault(passphrase);
         if (!ok) {
           setError('Wrong passkey.');
           return;
         }
       } else {
-        const result = await window.agentmat.ssh.setPasskey(passphrase);
+        const result = await window.runova.ssh.setPasskey(passphrase);
         if (!result.ok) {
           setError(result.error ?? 'Could not set the passkey.');
           return;

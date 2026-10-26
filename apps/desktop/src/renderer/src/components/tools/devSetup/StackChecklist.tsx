@@ -1,4 +1,4 @@
-import type { ChecklistGroup, ChecklistRow } from '@agentmat/core';
+import type { ChecklistGroup, ChecklistRow } from '@runova/core';
 import { Chip, SectionCard } from '@/components/pageKit';
 import { DevItemRow } from './DevItemRow';
 import type { RowAction, RowView } from './devSetupView';

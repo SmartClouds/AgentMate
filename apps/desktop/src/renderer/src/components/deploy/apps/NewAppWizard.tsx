@@ -1,10 +1,10 @@
-import { validateStackName } from '@agentmat/core';
+import { validateStackName } from '@runova/core';
 import { coreErrorMessage } from '@shared/coreErrors';
 import type {
   JobInfo,
   StackDetails,
   StackRevisionInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployStackUploadProgress, DeployStackUploadResult } from '@shared/deployStacksTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -185,7 +185,7 @@ export function NewAppWizard({
 
   useEffect(
     () =>
-      window.agentmat.deployStacks.onUploadProgress((event) => {
+      window.runova.deployStacks.onUploadProgress((event) => {
         if (event.serverId === serverId) setProgress(event);
       }),
     [serverId],
@@ -203,7 +203,7 @@ export function NewAppWizard({
   );
   const preview = useQuery({
     queryKey: queryKeys.deployAppPreview(previewInput),
-    queryFn: () => window.agentmat.deployStacks.preview(previewInput),
+    queryFn: () => window.runova.deployStacks.preview(previewInput),
     enabled: ready && step !== 'source',
     retry: false,
     placeholderData: (previous) => previous,
@@ -264,14 +264,14 @@ export function NewAppWizard({
     setRun({ phase: 'starting', result });
     try {
       if (accept.length > 0) {
-        await window.agentmat.deployStacks.acknowledge({
+        await window.runova.deployStacks.acknowledge({
           serverId,
           stackId: result.stack.id,
           revision: result.revision.number,
           riskIds: [...accept],
         });
       }
-      const job = await window.agentmat.deployStacks.deploy({
+      const job = await window.runova.deployStacks.deploy({
         serverId,
         stackId: result.stack.id,
         revision: result.revision.number,
@@ -298,8 +298,8 @@ export function NewAppWizard({
     let result: DeployStackUploadResult;
     try {
       result = existing
-        ? await window.agentmat.deployStacks.upload({ ...common, stackId: existing.stack.id })
-        : await window.agentmat.deployStacks.create({ ...common, name: source.name });
+        ? await window.runova.deployStacks.upload({ ...common, stackId: existing.stack.id })
+        : await window.runova.deployStacks.create({ ...common, name: source.name });
     } catch (error) {
       setRun({ phase: 'error', message: coreErrorMessage(error) });
       return;

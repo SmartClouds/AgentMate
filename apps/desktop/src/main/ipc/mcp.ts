@@ -8,8 +8,8 @@ import type {
   McpRepositoryIndex,
   McpRepositorySourceType,
   McpServer,
-} from '@agentmat/core';
-import { bundledMcpDirectory, bundledMcpRepository, parseMcpRepositoryIndex } from '@agentmat/core';
+} from '@runova/core';
+import { bundledMcpDirectory, bundledMcpRepository, parseMcpRepositoryIndex } from '@runova/core';
 import { app, dialog, ipcMain } from 'electron';
 import type { InstalledMcpServerRecord } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';
@@ -22,7 +22,7 @@ function repoCacheDir(repositoryId: string): string {
 }
 
 function installedServersFilePath(projectFolderPath: string): string {
-  return join(projectFolderPath, '.agentmate', 'installed-mcp-servers.json');
+  return join(projectFolderPath, '.runova', 'installed-mcp-servers.json');
 }
 
 function mcpConfigFilePath(projectFolderPath: string): string {

@@ -3,7 +3,7 @@ title: Studio
 category: Build
 order: 40
 summary: Studio makes videos for your projects, or on their own. An AI CLI on your computer writes the scenario from your brief, you edit it by hand or by asking AI, and every video keeps its edits and full history in a folder you choose, always outside the project's source. Nothing in the history is ever deleted, and you can go back to any earlier version.
-keywords: studio, video, videos, film, movie, scenario, script, brief, animate, animation, motion graphics, style, styles, preview, scene code, code, versions, check, network, ai, write with ai, ask ai, edit by typing, proposal, recipe, recipes, cli, model, effort, claude code, codex, gemini, grok, cursor, opencode, scene, scenes, narration, voice over, voice, voices, text to speech, tts, record, microphone, openai, elevenlabs, azure speech, captions, ducking, piper, omnivoice, local voices, offline, clone, cloning, voice profile, my voice, consent, non-commercial, generate, generated, image, picture, clip, gemini omni, gpt image, nano banana, cost, compare, diff, branch, export recipe, import recipe, amrecipe, recipe versions, backup, history, undo, redo, restore, version, versions, storage, folder, location, library, standalone, project videos, lock, another agentmate, take over, move, locate, persian, rtl
+keywords: studio, video, videos, film, movie, scenario, script, brief, animate, animation, motion graphics, style, styles, preview, scene code, code, versions, check, network, ai, write with ai, ask ai, edit by typing, proposal, recipe, recipes, cli, model, effort, claude code, codex, gemini, grok, cursor, opencode, scene, scenes, narration, voice over, voice, voices, text to speech, tts, record, microphone, openai, elevenlabs, azure speech, captions, ducking, piper, omnivoice, local voices, offline, clone, cloning, voice profile, my voice, consent, non-commercial, generate, generated, image, picture, clip, gemini omni, gpt image, nano banana, cost, compare, diff, branch, export recipe, import recipe, amrecipe, recipe versions, backup, history, undo, redo, restore, version, versions, storage, folder, location, library, standalone, project videos, lock, another runova, take over, move, locate, persian, rtl
 route: /studio
 ---
 
@@ -28,7 +28,7 @@ Studio runs one of the AI CLIs installed on this computer (Claude Code, Codex, G
 
 While it works, a card shows which AI is writing, how long it has taken and what the CLI prints, with **Cancel**. If the answer does not fit (it is not valid, or it is in the wrong language), Studio sends it back with the exact problems, up to two times. The finished scenario lands as one entry in the history, so **Undo** brings back what was there before.
 
-Leaving the editor does not stop a run: the scenario is written into the video when it finishes. Quitting AgentMate does stop it, and the run shows as interrupted with **Try again**, since a CLI cannot pick up where it stopped.
+Leaving the editor does not stop a run: the scenario is written into the video when it finishes. Quitting Runova does stop it, and the run shows as interrupted with **Try again**, since a CLI cannot pick up where it stopped.
 
 When the video already has scenes, **Rewrite the scenario with AI** opens the same brief to write a new one.
 
@@ -58,7 +58,7 @@ Once a scene has an animation:
 - **Check** runs the checks again. If it fails, **Fix with AI** sends the problems to the AI.
 - **Code** opens the scene's files. Edit them and **Save** (or Ctrl+S); every save is a new version, and **Use this version** goes back to any earlier one. **Check** works there too.
 
-A scene page runs with no internet access and cannot reach AgentMate or your files. Each video folder also keeps a copy of every scene's current code in `scenes/`, to open in an editor of your own; changes made there are not used.
+A scene page runs with no internet access and cannot reach Runova or your files. Each video folder also keeps a copy of every scene's current code in `scenes/`, to open in an editor of your own; changes made there are not used.
 
 ## Styles
 
@@ -82,7 +82,7 @@ Long narration is sent in pieces. If a run stops part way (no connection, a refu
 
 ## Voices on this computer, and your own voice
 
-Two engines run on your computer instead of online. Install them from **Agent Tools > Dev Setup**, in the **Studio** stack (the Voice view's **Open Dev Setup** button goes there). Each one installs into its own Python inside AgentMate, nothing system-wide. Downloads carry on after a dropped connection or a restart, and every file is checked against its fingerprint before it is used.
+Two engines run on your computer instead of online. Install them from **Agent Tools > Dev Setup**, in the **Studio** stack (the Voice view's **Open Dev Setup** button goes there). Each one installs into its own Python inside Runova, nothing system-wide. Downloads carry on after a dropped connection or a restart, and every file is checked against its fingerprint before it is used.
 
 - **Piper** speaks offline. **Piper voices** adds three Persian voices, free for any use, and one English voice for non-commercial use. Piper is GPL-3.0 software.
 - **OmniVoice** speaks in a voice it clones from a few seconds of recording. Its model is licensed for **non-commercial use only**, and Studio says so wherever it is offered and on every render that uses it. It is quick with an NVIDIA graphics card or a Mac with Apple silicon and slow without one. The model is about 3.3 GB.
@@ -91,7 +91,7 @@ Two engines run on your computer instead of online. Install them from **Agent To
 
 ## Generate pictures and clips
 
-**Generate** in the Media list makes a picture (OpenAI or Google Gemini) or a short clip (Google Gemini Omni) from a description, billed to your own account with the keys in **Settings > AI**. The price is shown before anything is sent, and Studio asks once more with it before it sends the request; what you spent on the video is summed up below. A finished one lands in Media as **Generated picture** or **Generated clip**, ready to add to the timeline. A clip takes a while: it carries on even if AgentMate restarts, and one cut off before the provider answered is marked so, never sent again (it may already have been billed). If a provider declines a description, its reason is shown.
+**Generate** in the Media list makes a picture (OpenAI or Google Gemini) or a short clip (Google Gemini Omni) from a description, billed to your own account with the keys in **Settings > AI**. The price is shown before anything is sent, and Studio asks once more with it before it sends the request; what you spent on the video is summed up below. A finished one lands in Media as **Generated picture** or **Generated clip**, ready to add to the timeline. A clip takes a while: it carries on even if Runova restarts, and one cut off before the provider answered is marked so, never sent again (it may already have been billed). If a provider declines a description, its reason is shown.
 
 ## The timeline
 
@@ -118,7 +118,7 @@ Click **Render** in the editor's toolbar.
 
 The file goes in the video's `renders` folder, named from the title and format unless you type a name. Renders run one at a time; start more and they wait their turn. You can keep editing, or close the video, while one runs. Its progress shows under the toolbar, and the list in the Render dialog has **Cancel**, **Try again**, **Play**, **Show in folder** and **Remove** (which takes it off the list and keeps the file).
 
-A render is drawn in parts of about two seconds, each kept on this computer as it finishes. If AgentMate closes or crashes in the middle, the render carries on by itself the next time it starts, from the last finished part (turn that off in **Settings > Agents > Studio**). Rendering again after changing one scene draws only that scene again. A notification tells you when a render finishes, fails or is resumed.
+A render is drawn in parts of about two seconds, each kept on this computer as it finishes. If Runova closes or crashes in the middle, the render carries on by itself the next time it starts, from the last finished part (turn that off in **Settings > Agents > Studio**). Rendering again after changing one scene draws only that scene again. A notification tells you when a render finishes, fails or is resumed.
 
 Rendering needs **ffmpeg**. If it is missing, Studio says so and **Open Dev Setup** takes you to **Agent Tools > Dev Setup** with the Studio stack switched on, where ffmpeg installs in a click.
 
@@ -128,13 +128,13 @@ The History panel has two tabs. **Changes** lists every change to the video. **A
 
 **Compare** on one run and **Compare with this** on another shows the two side by side: the stage, CLI, model and effort each ran with, and a diff of what each was asked and of the full request.
 
-**Save as recipe** on a scenario run keeps how that video was made: the brief, style, language, format, length, the CLI, model and effort of each AI stage, the voice and the render choices. Saving again as **A new version of** a recipe keeps every earlier version too. **Recipes** on the Studio page lists them; **Use** starts a new video from one with all of those choices, and **Versions** starts from an earlier save. **Export** writes a recipe, with its versions, to a `.amrecipe.json` file to share; **Import a recipe file** adds one. AgentMate's own backup includes Studio's settings and recipes (your videos and media stay in their folders).
+**Save as recipe** on a scenario run keeps how that video was made: the brief, style, language, format, length, the CLI, model and effort of each AI stage, the voice and the render choices. Saving again as **A new version of** a recipe keeps every earlier version too. **Recipes** on the Studio page lists them; **Use** starts a new video from one with all of those choices, and **Versions** starts from an earlier save. **Export** writes a recipe, with its versions, to a `.amrecipe.json` file to share; **Import a recipe file** adds one. Runova's own backup includes Studio's settings and recipes (your videos and media stay in their folders).
 
 ## History, undo and restore
 
-Every change is saved the moment you make it, so closing AgentMate, a crash or a power cut never loses an edit you made.
+Every change is saved the moment you make it, so closing Runova, a crash or a power cut never loses an edit you made.
 
-- **Undo** and **Redo** in the toolbar (or Ctrl+Z and Ctrl+Shift+Z outside a text field) step back and forward. They keep working after AgentMate restarts.
+- **Undo** and **Redo** in the toolbar (or Ctrl+Z and Ctrl+Shift+Z outside a text field) step back and forward. They keep working after Runova restarts.
 - **History** lists every change ever made to the video, newest first, with who made it (You, AI or Studio) and when.
 - **Compare** on any entry shows what changed between that version and now: the scenario, each scene (with a diff of its animation code), the clips and the tracks.
 - **Restore** on any entry takes the video back to how it was after that change. A restore is itself a new entry, so nothing after it is lost and you can undo the restore too.
@@ -146,8 +146,8 @@ Nothing is ever removed from a video's history.
 
 Videos are never stored inside a project's source folder, so they cannot end up in the repository or in front of an agent working on the code.
 
-- **Standalone videos** go in the Studio library folder, by default `AgentMate Studio` in your Videos folder.
-- **Project videos** go in a folder of their own for each project, by default inside the library folder. Change it in the project's **Studio** tab with **Change folder**. Studio checks the folder as you type or browse: a folder inside the project, a system folder or one AgentMate cannot write to is refused, and a folder synced by OneDrive, Dropbox, iCloud or Google Drive, a network folder or a nearly full drive gets a warning.
+- **Standalone videos** go in the Studio library folder, by default `Runova Studio` in your Videos folder.
+- **Project videos** go in a folder of their own for each project, by default inside the library folder. Change it in the project's **Studio** tab with **Change folder**. Studio checks the folder as you type or browse: a folder inside the project, a system folder or one Runova cannot write to is refused, and a folder synced by OneDrive, Dropbox, iCloud or Google Drive, a network folder or a nearly full drive gets a warning.
 - Change the library folder in **Settings > Agents > Studio**.
 
 Each video is one folder holding `studio.json` (what the video is), `studio.db` (its full history) and `document.json` (its current state). Previews and render pieces go in a working folder on this computer, never in a synced one, and are cleared oldest first past the limit you set in Settings. Your videos and their history are never cleared.
@@ -160,8 +160,8 @@ Open a video card's **More** menu:
 - **Move to another folder** copies the video, checks the copy matches, switches to it, then offers to put the old copy in the trash.
 - **Remove from library** takes the video off the list. Its folder stays where it is, and **Add existing folder** brings it back.
 
-If a video's folder was moved or renamed outside AgentMate, its card says so. Click **Locate** and pick the folder.
+If a video's folder was moved or renamed outside Runova, its card says so. Click **Locate** and pick the folder.
 
-## Open in another AgentMate
+## Open in another Runova
 
-Only one copy of AgentMate can edit a video at a time, for example when the release and the development builds share a library, or two computers use a shared drive. The second one shows **Open in another AgentMate**, with which copy has it. If that copy stopped answering (it crashed, or that computer is off), **Take over** opens the video here.
+Only one copy of Runova can edit a video at a time, for example when the release and the development builds share a library, or two computers use a shared drive. The second one shows **Open in another Runova**, with which copy has it. If that copy stopped answering (it crashed, or that computer is off), **Take over** opens the video here.

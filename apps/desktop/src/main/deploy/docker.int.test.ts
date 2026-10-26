@@ -8,8 +8,8 @@ import type {
   ContainerStatsBatch,
   JobInfo,
   JobStreamItem,
-} from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { SshConnectionPool } from '../ssh/pool';
 import { CoreSessions } from './auth/coreSessions';
 import { localArtifactSource } from './bootstrap/releaseSource';
@@ -31,7 +31,7 @@ import {
  * job takes podman out and brings Docker Engine and Compose up (AC4), then a container's stats,
  * redacted logs and lifecycle go through the same hub the app uses. The core is installed and
  * this computer enrolled with DeployService; the hub connection is the app's own, signed in with
- * the session that enrollment left. Needs AGENTMATE_SYSTEM_TESTS=1, Docker, network access from
+ * the session that enrollment left. Needs RUNOVA_SYSTEM_TESTS=1, Docker, network access from
  * the test server, and `pnpm server-core:publish linux-x64`.
  */
 

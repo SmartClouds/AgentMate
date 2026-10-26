@@ -144,7 +144,7 @@ function setup(overrides: Overrides = {}): Harness {
     emitted,
     finished,
     busy,
-    local: tempDir('agentmate-engine-'),
+    local: tempDir('runova-engine-'),
     uploads,
     batch,
     done,
@@ -954,7 +954,7 @@ describe('folders', () => {
 
   it('never follows a local link to a folder', async () => {
     const h = setup();
-    const outside = tempDir('agentmate-engine-outside-');
+    const outside = tempDir('runova-engine-outside-');
     writeTree(outside, { 'secret.txt': 's' });
     writeTree(h.local, { 'site/a.txt': 'a' });
     symlinkSync(outside, join(h.local, 'site', 'linked'), 'junction');

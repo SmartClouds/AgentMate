@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**

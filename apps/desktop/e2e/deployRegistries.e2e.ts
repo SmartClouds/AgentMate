@@ -12,9 +12,9 @@ import { type DevHost, dotnetAvailable, startDevHost } from './devHost';
 
 test.skip(!dotnetAvailable(), 'needs the .NET SDK to build the server core DevHost');
 
-const DEV_PASSWORD = 'agentmate-local-password';
+const DEV_PASSWORD = 'runova-local-password';
 /** The DevHost's pretend private registry (DevHost.cs). */
-const REGISTRY = 'registry.agentmate.test';
+const REGISTRY = 'registry.runova.test';
 const REGISTRY_USER = 'devhost';
 const REGISTRY_TOKEN = 'devhost-registry-token-4417';
 
@@ -52,7 +52,7 @@ test('adds a registry sign-in and deploys an app from a private image', async ()
   if (!devHost) throw new Error('DevHost did not start');
   launched = await launchApp({
     settings: {},
-    env: { AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port) },
+    env: { RUNOVA_DEPLOY_DEV_CORE: String(devHost.port) },
   });
   const { page, projectDir } = launched;
   writeFileSync(join(projectDir, 'compose.yaml'), COMPOSE);
@@ -60,14 +60,14 @@ test('adds a registry sign-in and deploys an app from a private image', async ()
   await page.evaluate(async (id) => {
     const api = (
       window as unknown as {
-        agentmat: {
+        runova: {
           environments: {
             save(input: unknown): Promise<{ id: string }>;
             saveFile(input: unknown): Promise<unknown>;
           };
         };
       }
-    ).agentmat.environments;
+    ).runova.environments;
     const environment = await api.save({ projectId: id, name: 'Production', kind: 'production' });
     await api.saveFile({
       environmentId: environment.id,

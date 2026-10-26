@@ -3,7 +3,7 @@ import { connect } from 'node:net';
 import { join } from 'node:path';
 import { APP_ROOT } from './paths';
 
-const IMAGE = 'agentmate-e2e-ssh-server';
+const IMAGE = 'runova-e2e-ssh-server';
 
 export const SSH_USER = 'smartvpn';
 export const SSH_PASSWORD = 's3cret-pw';
@@ -88,7 +88,7 @@ function waitForBanner(host: string, port: number, deadline: number): Promise<vo
  */
 export async function startSshServer(): Promise<SshTestServer> {
   docker(['build', '-q', '-t', IMAGE, join(APP_ROOT, 'e2e', 'ssh-server')], 600_000);
-  const name = `agentmate-e2e-ssh-${process.pid}-${Date.now()}`;
+  const name = `runova-e2e-ssh-${process.pid}-${Date.now()}`;
   docker([
     'run',
     '-d',

@@ -11,7 +11,7 @@ import { type DevHost, dotnetAvailable, startDevHost } from './devHost';
 test.skip(!dotnetAvailable(), 'needs the .NET SDK to build the server core DevHost');
 
 /** The DevHost's fixed development owner (see its DevHost.cs). */
-const DEV_PASSWORD = 'agentmate-local-password';
+const DEV_PASSWORD = 'runova-local-password';
 
 let devHost: DevHost | undefined;
 let launched: LaunchedApp | undefined;
@@ -35,7 +35,7 @@ test('lists the shop project and shows a container’s stats and log', async () 
   if (!devHost) throw new Error('DevHost did not start');
   launched = await launchApp({
     settings: {},
-    env: { AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port) },
+    env: { RUNOVA_DEPLOY_DEV_CORE: String(devHost.port) },
   });
   const { page } = launched;
   await page.getByRole('link', { name: 'Deploy' }).click();
@@ -94,7 +94,7 @@ test('follows a compose project’s logs and runs a command in one of its contai
   if (!devHost) throw new Error('DevHost did not start');
   launched = await launchApp({
     settings: {},
-    env: { AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port) },
+    env: { RUNOVA_DEPLOY_DEV_CORE: String(devHost.port) },
   });
   const { page } = launched;
   await page.getByRole('link', { name: 'Deploy' }).click();

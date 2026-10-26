@@ -21,12 +21,12 @@ import {
   setFrontMatterValue,
   setTaskStatus,
   taskIdFromFileName,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { RelayApplyResult } from '../../shared/relayTypes';
 
 /**
  * The Relay files inside a project: `<docs>/tasks/T###-slug.md` and `<docs>/tasks/handoffs/T###.md`.
- * AgentMate writes task files (status, order, planned tasks) and the guide; only the sessions
+ * Runova writes task files (status, order, planned tasks) and the guide; only the sessions
  * write handoffs, apart from the empty template a first session finds.
  */
 

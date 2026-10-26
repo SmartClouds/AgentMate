@@ -1,4 +1,4 @@
-import type { AndroidDevice, AndroidSdkStatus } from '@agentmat/core';
+import type { AndroidDevice, AndroidSdkStatus } from '@runova/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -131,20 +131,20 @@ export default function AndroidPage(): React.JSX.Element {
 
   const sdkQuery = useQuery({
     queryKey: queryKeys.androidSdk,
-    queryFn: () => window.agentmat.android.sdk(),
+    queryFn: () => window.runova.android.sdk(),
     meta: { silentLoading: true },
   });
 
   // Another window (or the Settings card) can change the SDK path, so the page follows along
   // rather than showing a stale banner until the next manual refresh.
   useEffect(() => {
-    return window.agentmat.android.onEvent((event) => {
+    return window.runova.android.onEvent((event) => {
       if (event.kind === 'sdk') queryClient.setQueryData(queryKeys.androidSdk, event.sdk);
     });
   }, [queryClient]);
 
   const setSdkPath = useMutation({
-    mutationFn: (path: string | null) => window.agentmat.android.setSdkPath(path),
+    mutationFn: (path: string | null) => window.runova.android.setSdkPath(path),
     onSuccess: (sdk) => {
       queryClient.setQueryData(queryKeys.androidSdk, sdk);
       if (sdk.status === 'found') toast.success('Android SDK found.');
@@ -153,7 +153,7 @@ export default function AndroidPage(): React.JSX.Element {
   });
 
   const chooseFolder = async (): Promise<void> => {
-    const picked = await window.agentmat.android.pickSdkPath();
+    const picked = await window.runova.android.pickSdkPath();
     // A cancelled picker must not clear an override the user already has.
     if (picked) setSdkPath.mutate(picked);
   };

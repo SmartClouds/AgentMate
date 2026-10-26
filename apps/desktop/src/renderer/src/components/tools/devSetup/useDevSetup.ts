@@ -22,7 +22,7 @@ import {
   type UpdatePlan,
   updatableItemIds,
   updateSourceFor,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -104,11 +104,11 @@ export function useDevSetup(): UseDevSetup {
 
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
     meta: { silentLoading: true },
   });
   const saveStacks = useMutation({
-    mutationFn: (next: string[]) => window.agentmat.settings.update({ devSetupStacks: next }),
+    mutationFn: (next: string[]) => window.runova.settings.update({ devSetupStacks: next }),
     meta: { silentLoading: true },
     // Returned, so the save counts as in flight until the fresh settings have arrived. Without
     // that the chips would flash back to the old choice for the moment between the two.
@@ -121,7 +121,7 @@ export function useDevSetup(): UseDevSetup {
 
   const environmentQuery = useQuery({
     queryKey: queryKeys.devSetupEnvironment,
-    queryFn: () => window.agentmat.devSetup.environment({ force: true }),
+    queryFn: () => window.runova.devSetup.environment({ force: true }),
     meta: { silentLoading: true },
     staleTime: 30_000,
   });
@@ -140,10 +140,10 @@ export function useDevSetup(): UseDevSetup {
   // for the current state too, but never lets that answer replace events already received.
   useEffect(() => {
     let live = true;
-    const unsubscribe = window.agentmat.devSetup.onEvent((event) => {
+    const unsubscribe = window.runova.devSetup.onEvent((event) => {
       setJob((current) => applyJobEvent(current, event));
     });
-    void window.agentmat.devSetup
+    void window.runova.devSetup
       .jobState()
       .then((snapshot) => {
         if (live && snapshot) setJob((current) => (current.jobId === null ? snapshot : current));
@@ -159,7 +159,7 @@ export function useDevSetup(): UseDevSetup {
   const probes = useQueries({
     queries: items.map((item) => ({
       queryKey: queryKeys.devSetupItem(item.id),
-      queryFn: () => window.agentmat.devSetup.detect(item.id, { force: true }),
+      queryFn: () => window.runova.devSetup.detect(item.id, { force: true }),
       meta: { silentLoading: true },
       staleTime: 10_000,
       refetchInterval: waiting[item.id] ? POLL_MS : false,
@@ -195,7 +195,7 @@ export function useDevSetup(): UseDevSetup {
         const mark = `${updateRound}:${source}`;
         const force = updateRound > 0 && !forcedRounds.current.has(mark);
         forcedRounds.current.add(mark);
-        return (await window.agentmat.devSetup.updates(ids, { force })) ?? {};
+        return (await window.runova.devSetup.updates(ids, { force })) ?? {};
       },
       meta: { silentLoading: true },
       staleTime: UPDATES_STALE_MS,
@@ -208,7 +208,7 @@ export function useDevSetup(): UseDevSetup {
     queries: waitingUpdateIds.map((id) => ({
       queryKey: queryKeys.devSetupUpdateWait(id),
       queryFn: async (): Promise<Record<DevItemId, DevUpdateCheck>> =>
-        (await window.agentmat.devSetup.updates([id], { force: true })) ?? {},
+        (await window.runova.devSetup.updates([id], { force: true })) ?? {},
       meta: { silentLoading: true },
       staleTime: 0,
       refetchInterval: POLL_MS,
@@ -334,7 +334,7 @@ export function useDevSetup(): UseDevSetup {
 
   async function startInstall(ids: readonly DevItemId[], consented: boolean): Promise<void> {
     try {
-      await window.agentmat.devSetup.install({ ids: [...ids], consented });
+      await window.runova.devSetup.install({ ids: [...ids], consented });
     } catch (error) {
       if (plainMessage(error) !== CONSENT_REQUIRED) {
         toast.error(`Could not start the install. ${plainMessage(error)}`);
@@ -368,7 +368,7 @@ export function useDevSetup(): UseDevSetup {
     // asking the page's checks again then reads the fresh answer from its memory.
     const state = checklist?.rows.find((row) => row.item.id === id)?.state;
     if (state && hasUpdate(state)) {
-      void window.agentmat.devSetup
+      void window.runova.devSetup
         .updates([id], { force: true })
         .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.devSetupUpdates }))
         .catch(() => undefined);
@@ -378,7 +378,7 @@ export function useDevSetup(): UseDevSetup {
   async function update(ids: readonly DevItemId[]): Promise<void> {
     try {
       // No agreement to accept: that was done when the tool was installed.
-      await window.agentmat.devSetup.install({ ids: [...ids], intent: 'update' });
+      await window.runova.devSetup.install({ ids: [...ids], intent: 'update' });
     } catch (error) {
       toast.error(`Could not start the update. ${plainMessage(error)}`);
     }
@@ -417,7 +417,7 @@ export function useDevSetup(): UseDevSetup {
     // Only what the app can run itself. The rest is left for the person, and the button says so.
     updateAll: () => update(updatePlan?.steps ?? []),
     cancel: (id) => {
-      void window.agentmat.devSetup.cancel(id);
+      void window.runova.devSetup.cancel(id);
     },
     recheck,
     recheckAll: () => {
@@ -447,7 +447,7 @@ export function useDevSetup(): UseDevSetup {
     },
     addToPath: async ({ id, name }) => {
       try {
-        const { changed, where } = await window.agentmat.devSetup.addToPath(id);
+        const { changed, where } = await window.runova.devSetup.addToPath(id);
         if (changed) toast.success(`Added ${name} to ${where}. Open a new terminal to use it.`);
         else toast.info(`${name} is already on your PATH.`);
         // The row drops its warning once the fresh check finds the tool on the PATH.

@@ -51,7 +51,7 @@ export function GithubTokenDialog({
     setBusy('check');
     setProblem(null);
     try {
-      setCheck(await window.agentmat.deployRegistry.checkGithubToken(token.trim()));
+      setCheck(await window.runova.deployRegistry.checkGithubToken(token.trim()));
     } catch (error) {
       setProblem(coreErrorMessage(error));
     } finally {
@@ -63,7 +63,7 @@ export function GithubTokenDialog({
     setBusy('save');
     setProblem(null);
     try {
-      await window.agentmat.deployRegistry.saveGithubToken({
+      await window.runova.deployRegistry.saveGithubToken({
         token: token.trim(),
         acceptBroaderScopes: accepted,
       });
@@ -112,7 +112,7 @@ export function GithubTokenDialog({
               type="button"
               variant="soft"
               size="sm"
-              onClick={() => void window.agentmat.shell.openExternal(githubNewTokenUrl())}
+              onClick={() => void window.runova.shell.openExternal(githubNewTokenUrl())}
             >
               <ExternalLink className="h-3.5 w-3.5" /> Open GitHub's token page
             </Button>

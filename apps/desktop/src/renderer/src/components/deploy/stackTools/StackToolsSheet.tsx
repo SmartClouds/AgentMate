@@ -2,7 +2,7 @@ import type {
   ContainerList,
   ContainerSummary,
   StackServiceInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useMemo, useState } from 'react';
 import { Lock, TerminalSquare } from '@/components/icons';
 import { EmptyState } from '@/components/pageKit';

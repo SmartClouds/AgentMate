@@ -23,7 +23,7 @@ type Session = {
   };
 };
 type Bridge = {
-  agentmat: {
+  runova: {
     studio: {
       updateSettings(p: unknown): Promise<unknown>;
       create(input: unknown): Promise<{ id: string }>;
@@ -49,7 +49,7 @@ function crash(app: LaunchedApp): Promise<void> {
 }
 
 const open = (page: Page, videoId: string) =>
-  page.evaluate((id) => (window as unknown as Bridge).agentmat.studio.open(id), videoId);
+  page.evaluate((id) => (window as unknown as Bridge).runova.studio.open(id), videoId);
 
 test('keeps every acknowledged edit through a kill, one right after another', async () => {
   test.setTimeout(180_000);
@@ -57,7 +57,7 @@ test('keeps every acknowledged edit through a kill, one right after another', as
   opened.push(first);
   const result = await first.page.evaluate(
     async (library) => {
-      const { studio } = (window as unknown as Bridge).agentmat;
+      const { studio } = (window as unknown as Bridge).runova;
       await studio.updateSettings({ defaultRoot: library });
       const video = await studio.create({
         title: 'Drill',
@@ -79,7 +79,7 @@ test('keeps every acknowledged edit through a kill, one right after another', as
       }
       return { videoId: video.id, seq };
     },
-    join(first.root, 'Videos', 'AgentMate Studio'),
+    join(first.root, 'Videos', 'Runova Studio'),
   );
   await crash(first);
 
@@ -102,13 +102,13 @@ test.describe(() => {
         launchApp({
           reuseRoot,
           settings: { openaiApiKey: TTS_KEY },
-          env: { AGENTMATE_STUDIO_TTS_URL: tts.url },
+          env: { RUNOVA_STUDIO_TTS_URL: tts.url },
         });
       const first = await launch();
       opened.push(first);
       const videoId = await first.page.evaluate(
         async (library) => {
-          const { studio } = (window as unknown as Bridge).agentmat;
+          const { studio } = (window as unknown as Bridge).runova;
           await studio.updateSettings({ defaultRoot: library });
           const video = await studio.create({
             title: 'Voice drill',
@@ -145,14 +145,14 @@ test.describe(() => {
           });
           return video.id;
         },
-        join(first.root, 'Videos', 'AgentMate Studio'),
+        join(first.root, 'Videos', 'Runova Studio'),
       );
 
       // Each piece takes a while; the app is killed once the first scene is placed.
       tts.setDelay(1500);
       await first.page.evaluate(
         (id) =>
-          (window as unknown as Bridge).agentmat.studioAudio.speak({
+          (window as unknown as Bridge).runova.studioAudio.speak({
             videoId: id,
             sceneIds: ['one', 'two', 'three'],
             voiceRef: 'openai:alloy',
@@ -179,7 +179,7 @@ test.describe(() => {
       expect(before.session.document.scenario.scenes[0]?.voiceRef).toBe('openai:alloy');
       await second.page.evaluate(
         (id) =>
-          (window as unknown as Bridge).agentmat.studioAudio.speak({
+          (window as unknown as Bridge).runova.studioAudio.speak({
             videoId: id,
             sceneIds: ['one', 'two', 'three'],
             voiceRef: 'openai:alloy',
@@ -191,7 +191,7 @@ test.describe(() => {
           async () =>
             (
               await second.page.evaluate(
-                (id) => (window as unknown as Bridge).agentmat.studioAudio.jobs(id),
+                (id) => (window as unknown as Bridge).runova.studioAudio.jobs(id),
                 videoId,
               )
             )[0]?.status,
@@ -201,7 +201,7 @@ test.describe(() => {
         )
         .toBe('done');
       const [job] = await second.page.evaluate(
-        (id) => (window as unknown as Bridge).agentmat.studioAudio.jobs(id),
+        (id) => (window as unknown as Bridge).runova.studioAudio.jobs(id),
         videoId,
       );
       // What was spoken before the kill came from the cache; only the rest was asked for.

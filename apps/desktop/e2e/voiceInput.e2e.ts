@@ -45,7 +45,7 @@ function writeToneWav(path: string): void {
 async function launchWithMicrophone(settings: Record<string, unknown>): Promise<LaunchedApp> {
   const wav = join(
     process.env.TEMP ?? process.env.TMPDIR ?? '/tmp',
-    `agentmate-tone-${Date.now()}.wav`,
+    `runova-tone-${Date.now()}.wav`,
   );
   writeToneWav(wav);
   const app = await launchApp({
@@ -86,9 +86,9 @@ async function openBuildPrompt(current: LaunchedApp): Promise<Page> {
     async ({ folderPath }) => {
       const api = (
         window as unknown as {
-          agentmat: { projects: { create(input: unknown): Promise<{ id: string }> } };
+          runova: { projects: { create(input: unknown): Promise<{ id: string }> } };
         }
-      ).agentmat;
+      ).runova;
       await api.projects.create({
         name: 'Voice demo',
         folderPath,

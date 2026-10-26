@@ -1,5 +1,5 @@
-import type { BlueprintStepId, Project } from '@agentmat/core';
-import { blueprintStep } from '@agentmat/core';
+import type { BlueprintStepId, Project } from '@runova/core';
+import { blueprintStep } from '@runova/core';
 import { useState } from 'react';
 import { ArrowLeft, ArrowRight } from '@/components/icons';
 import { Button } from '@/components/ui/button';

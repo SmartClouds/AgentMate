@@ -6,7 +6,7 @@ import {
   HEALTH_DEFAULT_PATH,
   HEALTH_ENV,
   type HealthAuthMode,
-} from '@agentmat/core';
+} from '@runova/core';
 import { type IpcMainInvokeEvent, ipcMain } from 'electron';
 import { z } from 'zod';
 import type {

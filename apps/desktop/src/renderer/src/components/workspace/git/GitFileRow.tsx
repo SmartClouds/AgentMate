@@ -1,4 +1,4 @@
-import type { GitChangeEntry, Project } from '@agentmat/core';
+import type { GitChangeEntry, Project } from '@runova/core';
 import type { GitDiffSide } from '@shared/apiTypes';
 import { FileCode, Minus, Plus, Sparkles, Spinner, Trash2, Undo } from '@/components/icons';
 import { Button } from '@/components/ui/button';

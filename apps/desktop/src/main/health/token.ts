@@ -1,13 +1,13 @@
 import { createHash, randomBytes } from 'node:crypto';
 
 /**
- * The secrets a healthcheck target sends (E22). AgentMate makes them, shows them once, and keeps
+ * The secrets a healthcheck target sends (E22). Runova makes them, shows them once, and keeps
  * them sealed with the Servers vault; the project's server stores only their SHA-256.
  */
 
-/** A Bearer key: `amh_` and 32 random bytes in base64url (43 characters). */
+/** A Bearer key: `rnh_` and 32 random bytes in base64url (43 characters). */
 export function generateHealthToken(): string {
-  return `amh_${randomBytes(32).toString('base64url')}`;
+  return `rnh_${randomBytes(32).toString('base64url')}`;
 }
 
 /** An HTTP Basic password: 24 random bytes in base64url, 32 characters and never a colon. */

@@ -1,4 +1,4 @@
-import { type ApiTreeNode, findItem, isRequestItem, type PostmanRequestItem } from '@agentmat/core';
+import { type ApiTreeNode, findItem, isRequestItem, type PostmanRequestItem } from '@runova/core';
 import type { ApiCollectionSummary } from '@shared/apiClientTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -89,7 +89,7 @@ export default function ApiClientPage(): React.JSX.Element {
   const queryClient = useQueryClient();
   const collectionsQuery = useQuery({
     queryKey: queryKeys.apiCollections,
-    queryFn: () => window.agentmat.apiClient.listCollections(),
+    queryFn: () => window.runova.apiClient.listCollections(),
   });
   const collections = collectionsQuery.data ?? [];
 
@@ -117,7 +117,7 @@ export default function ApiClientPage(): React.JSX.Element {
     const requestId = crypto.randomUUID();
     store.startSending(tabId, requestId);
     try {
-      const result = await window.agentmat.apiClient.execute({
+      const result = await window.runova.apiClient.execute({
         requestId,
         request,
         events: tab.draft.events,
@@ -143,7 +143,7 @@ export default function ApiClientPage(): React.JSX.Element {
   }, []);
 
   const cancel = useCallback((tab: ApiTab) => {
-    if (tab.run.status === 'sending') void window.agentmat.apiClient.cancel(tab.run.requestId);
+    if (tab.run.status === 'sending') void window.runova.apiClient.cancel(tab.run.requestId);
   }, []);
 
   /** Writes a tab back to where it came from, or asks where a new one should go. */
@@ -159,7 +159,7 @@ export default function ApiClientPage(): React.JSX.Element {
       const item = store.itemFor(tabId, tab.source.itemId, tab.name);
       if (!item) return;
       try {
-        await window.agentmat.apiClient.saveRequest({
+        await window.runova.apiClient.saveRequest({
           collectionId: tab.source.collectionId,
           parentId: null,
           item,
@@ -178,7 +178,7 @@ export default function ApiClientPage(): React.JSX.Element {
       let collectionId: string;
       if ('newCollectionName' in destination) {
         collectionId = (
-          await window.agentmat.apiClient.createCollection(destination.newCollectionName)
+          await window.runova.apiClient.createCollection(destination.newCollectionName)
         ).id;
       } else {
         collectionId = destination.collectionId;
@@ -186,7 +186,7 @@ export default function ApiClientPage(): React.JSX.Element {
       const itemId = crypto.randomUUID();
       const item = useApiClientTabsStore.getState().itemFor(tabId, itemId, name);
       if (!item) return;
-      await window.agentmat.apiClient.saveRequest({
+      await window.runova.apiClient.saveRequest({
         collectionId,
         parentId: destination.parentId,
         item,
@@ -210,7 +210,7 @@ export default function ApiClientPage(): React.JSX.Element {
       });
       if (!discard) return;
     }
-    if (tab.run.status === 'sending') void window.agentmat.apiClient.cancel(tab.run.requestId);
+    if (tab.run.status === 'sending') void window.runova.apiClient.cancel(tab.run.requestId);
     useApiClientTabsStore.getState().closeTab(tabId);
   }, []);
 
@@ -219,7 +219,7 @@ export default function ApiClientPage(): React.JSX.Element {
       try {
         const collection = await queryClient.fetchQuery({
           queryKey: queryKeys.apiCollection(collectionId),
-          queryFn: () => window.agentmat.apiClient.getCollection(collectionId),
+          queryFn: () => window.runova.apiClient.getCollection(collectionId),
           staleTime: 0,
         });
         const item = findItem(collection, itemId);
@@ -241,7 +241,7 @@ export default function ApiClientPage(): React.JSX.Element {
         request: { method: 'GET', url: '' },
       };
       try {
-        await window.agentmat.apiClient.saveRequest({ collectionId, parentId, item });
+        await window.runova.apiClient.saveRequest({ collectionId, parentId, item });
         useApiClientTabsStore.getState().openRequest(collectionId, item);
         await refresh();
       } catch (error) {
@@ -261,7 +261,7 @@ export default function ApiClientPage(): React.JSX.Element {
       });
       if (!confirmed) return;
       try {
-        await window.agentmat.apiClient.removeCollection(collection.id);
+        await window.runova.apiClient.removeCollection(collection.id);
         useApiClientTabsStore.getState().forgetSource(collection.id);
         await refresh();
       } catch (error) {
@@ -284,7 +284,7 @@ export default function ApiClientPage(): React.JSX.Element {
       });
       if (!confirmed) return;
       try {
-        await window.agentmat.apiClient.removeItem(collectionId, node.id);
+        await window.runova.apiClient.removeItem(collectionId, node.id);
         for (const id of requestIdsUnder(node)) {
           useApiClientTabsStore.getState().forgetSource(collectionId, id);
         }
@@ -408,11 +408,11 @@ export default function ApiClientPage(): React.JSX.Element {
         onSubmit={async (name) => {
           if (!nameDialog) return;
           if (nameDialog.kind === 'newCollection') {
-            await window.agentmat.apiClient.createCollection(name);
+            await window.runova.apiClient.createCollection(name);
           } else if (nameDialog.kind === 'rename') {
-            await window.agentmat.apiClient.renameCollection(nameDialog.collection.id, name);
+            await window.runova.apiClient.renameCollection(nameDialog.collection.id, name);
           } else {
-            await window.agentmat.apiClient.createFolder(
+            await window.runova.apiClient.createFolder(
               nameDialog.collectionId,
               nameDialog.parentId,
               name,

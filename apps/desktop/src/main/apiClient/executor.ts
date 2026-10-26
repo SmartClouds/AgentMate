@@ -7,7 +7,7 @@ import {
   type PostmanCollection,
   type PostmanRequestItem,
   updateItem,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { ApiExecutionResult, ExecuteApiRequestInput } from '../../shared/apiClientTypes';
 import type {
   EngineEvent,

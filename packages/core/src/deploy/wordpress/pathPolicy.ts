@@ -1,3 +1,4 @@
+import { LEGACY_IGNORE_FILE, LEGACY_PROJECT_DIR } from '../../legacyNames.js';
 import type { ProjectWordPressItemKind } from '../../types/index.js';
 import {
   createIgnoreRules,
@@ -18,17 +19,19 @@ import {
  * plugin refuses it again on its own. The order of the checks in validateWpItemPath is part of the
  * contract, since the shared vectors pin the reason for every case.
  *
- * Three layers keep agent and AgentMate files on this computer:
+ * Three layers keep agent and Runova files on this computer:
  * 1. Only the folders of linked items are walked, so anything at the project root (`.claude/`,
- *    `AGENTS.md`, `.agentmate/`) is never even looked at.
+ *    `AGENTS.md`, `.runova/`) is never even looked at.
  * 2. The hard deny list below, matched against every path segment, without exceptions.
  * 3. Ignore rules (see createWpIgnoreRules): a default list for files that never belong on a site
- *    unless the site already has them, plus the user's own `.distignore` and `.agentmateignore`.
+ *    unless the site already has them, plus the user's own `.distignore` and `.runovaignore`.
  */
 
-/** Folders that hold agent settings, skills, AgentMate's own files, or version control. */
+/** Folders that hold agent settings, skills, Runova's own files, or version control. */
 export const WP_HARD_DENY_DIRS: readonly string[] = [
-  '.agentmate',
+  '.runova',
+  // The same folder in projects made before the rename.
+  LEGACY_PROJECT_DIR,
   // KNOWN_AGENT_DIRS in skills/installPaths.ts, and a few more assistants' folders.
   '.claude',
   '.agents',
@@ -62,7 +65,8 @@ export const WP_HARD_DENY_FILES: readonly string[] = [
   '.cursorrules',
   '.windsurfrules',
   '.roomodes',
-  '.agentmateignore',
+  '.runovaignore',
+  LEGACY_IGNORE_FILE,
   '.env',
   '.envrc',
   // Package manager and network credentials.
@@ -78,11 +82,16 @@ export const WP_HARD_DENY_FILES: readonly string[] = [
 ];
 
 /**
- * Name prefixes of an agent's or AgentMate's own files: Aider's, and any dot folder or file that
- * starts with `.claude` or `.agentmate` (`.claude-plugin/`, `.agentmate-cache/`), so a name an
- * agent or AgentMate invents later is kept here too.
+ * Name prefixes of an agent's or Runova's own files: Aider's, and any dot folder or file that
+ * starts with `.claude` or `.runova` (`.claude-plugin/`, `.runova-cache/`), so a name an
+ * agent or Runova invents later is kept here too.
  */
-export const WP_AGENT_PREFIXES: readonly string[] = ['.aider', '.claude', '.agentmate'];
+export const WP_AGENT_PREFIXES: readonly string[] = [
+  '.aider',
+  '.claude',
+  '.runova',
+  LEGACY_PROJECT_DIR,
+];
 
 /** Name prefixes: the agent ones above, `.env.local` and friends, SSH private keys. */
 export const WP_HARD_DENY_PREFIXES: readonly string[] = [
@@ -102,7 +111,7 @@ const DENY_NAMES: ReadonlySet<string> = new Set([...WP_HARD_DENY_DIRS, ...WP_HAR
  * Left out by default, in gitignore-like syntax, but only while the site does not have them:
  * build output, editor folders and logs made on this computer stay here, while a plugin that
  * really ships a `skills/` or `node_modules/` folder is still pulled and kept in step. A `!` line
- * in an `.agentmateignore` puts any of these back.
+ * in an `.runovaignore` puts any of these back.
  */
 export const WP_DEFAULT_IGNORE: readonly string[] = [
   'node_modules/',
@@ -248,7 +257,7 @@ export interface WpGitignores {
 
 /**
  * Builds the ignore rules for one item from its layers, in order: the user's `.distignore` (from
- * the item root), then `.agentmateignore` from the project root, then `.agentmateignore` from the
+ * the item root), then `.runovaignore` from the project root, then `.runovaignore` from the
  * item root. All of them match paths relative to the item root. The last matching line wins.
  *
  * What git ignores is left out by default too: the project's and the item's `.gitignore` count

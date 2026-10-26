@@ -1,4 +1,4 @@
-import type { ErrorReportingStatus } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { ErrorReportingStatus } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /** Error reporting as a core describes it, for the card's tests. */
 

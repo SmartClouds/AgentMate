@@ -1,8 +1,8 @@
 {
-  "name": "@agentmat/studio",
+  "name": "@runova/studio",
   "version": "1.63.0",
   "private": true,
-  "description": "AgentMate Studio: AI video creation. Pure domain logic and Node services, no Electron or React.",
+  "description": "Runova Studio: AI video creation. Pure domain logic and Node services, no Electron or React.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -28,7 +28,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@agentmat/core": "workspace:*",
+    "@runova/core": "workspace:*",
     "zod": "^4.6.7"
   },
   "devDependencies": {

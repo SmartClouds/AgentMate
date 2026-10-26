@@ -2,11 +2,11 @@
 title: Deploy servers and setup
 category: Deploy
 order: 20
-summary: Add a server, check it, install the AgentMate server core, sign in, turn on two-factor, and manage who and which computers can reach the core.
+summary: Add a server, check it, install the Runova server core, sign in, turn on two-factor, and manage who and which computers can reach the core.
 keywords: add server, ssh, sudo password, preflight, install, server core, setup, enroll, enrollment code, sign in, two-factor, 2fa, totp, recovery codes, users, roles, devices, sessions, uninstall, remove core, update core
 ---
 
-Before Deploy can do anything on a server, two things have to be in place: the server is saved in Remote with its SSH login, and the AgentMate server core is installed on it. The core is a small service that runs on the server and listens only on a private socket, so no port is opened. AgentMate reaches it through your SSH login.
+Before Deploy can do anything on a server, two things have to be in place: the server is saved in Remote with its SSH login, and the Runova server core is installed on it. The core is a small service that runs on the server and listens only on a private socket, so no port is opened. Runova reaches it through your SSH login.
 
 This article walks through adding a server, the preflight check, the install, your account on the core, and what you can manage afterward (users, computers and sessions).
 
@@ -23,7 +23,7 @@ Deploy does not have its own "add server" form. It uses the servers you save in 
 3. Choose how to sign in: **Password**, or **Private key** (a **Private key file** and, only if the key is protected, a **Key passphrase**).
 4. Save, then go back to **Deploy**. A new server does not show up in the list by itself: click **Choose servers to show**, tick it and click **Save**. It appears in the list with "Core not installed".
 
-If the server's host key has changed since you last connected, AgentMate stops and asks whether to trust the new key. Only an explicit "trust" stores it. If you are sure it is your server (for example after you reinstalled it), trust it. Otherwise cancel, because a changed key can also mean someone is in the middle of the connection.
+If the server's host key has changed since you last connected, Runova stops and asks whether to trust the new key. Only an explicit "trust" stores it. If you are sure it is your server (for example after you reinstalled it), trust it. Otherwise cancel, because a changed key can also mean someone is in the middle of the connection.
 
 > [!NOTE]
 > If your saved servers are protected with a passkey and locked, unlock them first with the **Unlock** button in the yellow banner at the top of Deploy.
@@ -52,7 +52,7 @@ While the check runs, a line under the placeholders says which server is being c
 
 With a clean checklist, set up the install and press the button.
 
-1. **Account on the core.** For a brand new core you create its first account, the Owner. Under **Your account on the core** enter a **User name** and a **Password** (at least 12 characters), and confirm the password. The user name can use letters, digits, dots, dashes, underscores and `@`. The password cannot contain the user name, and the core refuses very common passwords. The password is set up on the server over SSH and never saved in AgentMate.
+1. **Account on the core.** For a brand new core you create its first account, the Owner. Under **Your account on the core** enter a **User name** and a **Password** (at least 12 characters), and confirm the password. The user name can use letters, digits, dots, dashes, underscores and `@`. The password cannot contain the user name, and the core refuses very common passwords. The password is set up on the server over SSH and never saved in Runova.
 2. **Sudo password.** If the server needs a sudo password and the saved login has none, a **Sudo password for (user)** field appears. It is used for this step only and never saved. If the saved login password is used you can click **Use a different password**.
 3. Click the install button. Its label depends on the server: **Install core (version)**, **Update to core (version)** or **Reinstall core (version)**.
 4. Watch the **Install steps** timeline (see below). You can leave the page: the install keeps going and shows up again when you come back.
@@ -64,9 +64,9 @@ When it finishes, a message says the core is running on the server and the rail 
 The timeline lists the whole plan before it runs, then marks each step as waiting, in progress, done or failed. A progress bar shows for steps like uploading. The steps are:
 
 1. **Check the server**
-2. **Download the server core on the server** (when the preflight showed the server can reach GitHub; it saves the release for your AgentMate version and checks its checksum), or else **Get the server core** (the app downloads that release) followed by **Upload it to the server**
+2. **Download the server core on the server** (when the preflight showed the server can reach GitHub; it saves the release for your Runova version and checks its checksum), or else **Get the server core** (the app downloads that release) followed by **Upload it to the server**
 3. **Verify the checksum on the server**
-4. **Give your login access to the core** (adds your SSH user to the `agentmate` group)
+4. **Give your login access to the core** (adds your SSH user to the `runova` group)
 5. **Unpack the release**
 6. **Label the files for SELinux** (only on SELinux servers)
 7. **Install the system service**
@@ -130,7 +130,7 @@ Click **Sign in** on the card. The dialog **Sign in to (server)** asks for your 
 
 Common messages: "That password is not right", "That code is not right, or it was used already. Codes change every 30 seconds", "Too many attempts. Wait a minute and try again", and "The core no longer accepts this computer. Close this and enroll it again."
 
-In development builds, the DevHost shows its sign-in on the dialog: user `dev` with the password `agentmate-local-password`.
+In development builds, the DevHost shows its sign-in on the dialog: user `dev` with the password `runova-local-password`.
 
 ### Enroll this computer
 
@@ -139,19 +139,19 @@ Enrolling gives this computer its own key on the core. Use it when you have SSH 
 1. Click **Enroll this computer** (or **Enroll again**).
 2. In **Enroll this computer on (server)**, enter the **User name** and **Password** of an account the core already has.
 3. If the server asks for it, a **Sudo password** field appears. Enter it.
-4. Click **Enroll**. AgentMate makes a new key for this computer and registers it on the core over SSH, then signs in.
+4. Click **Enroll**. Runova makes a new key for this computer and registers it on the core over SSH, then signs in.
 
 You can also do this during the install by filling in the account fields, or leave them empty on an existing core and do it later from the server card.
 
 ### Redeem an enrollment code
 
-When you do not have sudo on the server, an Owner of the core can give you an enrollment code. Your SSH login still has to be in the server's `agentmate` group.
+When you do not have sudo on the server, an Owner of the core can give you an enrollment code. Your SSH login still has to be in the server's `runova` group.
 
 1. Click **Use an enrollment code** on the card, or **Join with a code** on the install panel ("The core already runs here. With an enrollment code from one of its Owners, this computer can join it without sudo").
 2. In **Join (server) with a code** enter the **Enrollment code**, your **User name** and your **Password** on the core.
 3. Click **Join**.
 
-The code works once and expires. If it is wrong, used or expired you see "That code is wrong, used or expired. Ask an Owner for a new one." If your account uses two-factor, you finish with a code from your authenticator app. No password is saved in AgentMate. See [Enrollment codes](#enrollment-codes) to make one.
+The code works once and expires. If it is wrong, used or expired you see "That code is wrong, used or expired. Ask an Owner for a new one." If your account uses two-factor, you finish with a code from your authenticator app. No password is saved in Runova. See [Enrollment codes](#enrollment-codes) to make one.
 
 ### Two-factor sign-in
 
@@ -204,7 +204,7 @@ An Owner makes a code for a user from the **Enrollment code** item (for yourself
 1. In the dialog choose **Valid for**: 15 minutes, 1 hour, 8 hours or 24 hours.
 2. Click **Make the code**.
 3. Click **Copy the code**. This is the only time it is shown. It works once, until the time shown.
-4. On the other computer: save the server in Remote with an SSH login that is in the server's `agentmate` group, open Deploy, pick the server and choose **Join with a code**.
+4. On the other computer: save the server in Remote with an SSH login that is in the server's `runova` group, open Deploy, pick the server and choose **Join with a code**.
 
 Anyone holding the code and that user's password can enroll a computer until it is used or runs out, so share it carefully.
 

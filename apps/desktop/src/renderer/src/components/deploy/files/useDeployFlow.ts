@@ -142,7 +142,7 @@ export function useDeployFlow({
           : null,
       );
       try {
-        const result = await onServer(() => window.agentmat.deployFiles.deploy(input));
+        const result = await onServer(() => window.runova.deployFiles.deploy(input));
         if (result) finishRun(queryClient, result);
       } catch (error) {
         useDeployFilesRunStore.getState().failStart(siteId, problemOf(error));
@@ -163,7 +163,7 @@ export function useDeployFlow({
         return Boolean(now?.planning) && !(now && isRunActive(now));
       };
       try {
-        const plan = await onServer(() => window.agentmat.deployFiles.plan({ siteId }));
+        const plan = await onServer(() => window.runova.deployFiles.plan({ siteId }));
         if (!plan) throw new Error('The server check sent nothing back.');
         if (!stillWanted()) return;
         useDeployFilesRunStore.getState().setReview(siteId, plan, only);
@@ -180,7 +180,7 @@ export function useDeployFlow({
   const cancel = useCallback(async (): Promise<void> => {
     setCancelling(true);
     try {
-      await window.agentmat.deployFiles.cancel(siteId);
+      await window.runova.deployFiles.cancel(siteId);
     } catch (error) {
       setCancelling(false);
       toast.error(filesProblem(error));

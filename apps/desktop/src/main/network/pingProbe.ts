@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import type { PingIpVersion, PingMethod } from '@agentmat/core';
+import type { PingIpVersion, PingMethod } from '@runova/core';
 import type { PingResult } from '../../shared/apiTypes';
 
 const execFileAsync = promisify(execFile);

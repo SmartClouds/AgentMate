@@ -1,4 +1,4 @@
-import { mergeBlockers, type PullRequestInfo, summarizeChecks } from '@agentmat/core';
+import { mergeBlockers, type PullRequestInfo, summarizeChecks } from '@runova/core';
 import { CircleCheck, ExternalLink, GitMerge, MessageSquare } from '@/components/icons';
 import { SECTION_HEADING, SECTION_WELL } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
@@ -31,7 +31,7 @@ export function PrHeader({ pr }: { pr: PullRequestInfo }): React.JSX.Element {
             variant="ghost"
             size="icon-xs"
             aria-label="Open on GitHub"
-            onClick={() => void window.agentmat.shell.openExternal(pr.url)}
+            onClick={() => void window.runova.shell.openExternal(pr.url)}
             className="shrink-0"
           >
             <ExternalLink />

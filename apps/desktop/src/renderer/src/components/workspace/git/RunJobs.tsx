@@ -149,7 +149,7 @@ function JobCard({
               variant="ghost"
               size="icon-xs"
               aria-label={`Open ${job.name} on GitHub`}
-              onClick={() => void window.agentmat.shell.openExternal(job.htmlUrl as string)}
+              onClick={() => void window.runova.shell.openExternal(job.htmlUrl as string)}
             >
               <ExternalLink />
             </Button>

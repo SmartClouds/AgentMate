@@ -7,8 +7,9 @@ import type {
   ChallengeRequest,
   LoginRequest,
   RenewRequest,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { CoreHttpError } from '../connection/coreHttp';
+import { LEGACY_CORE, RUNOVA_CORE } from '../coreLayout';
 import { DeployState } from '../state';
 import { type CoreRest, CoreSessions } from './coreSessions';
 import { authMessage, createDeviceKey } from './deviceKey';
@@ -51,12 +52,16 @@ function fakeCore(publicKey: string, clock: { now: number }) {
     issued.delete(challengeId);
     if (!challenge || challenge.purpose !== purpose || challenge.deviceId !== deviceId)
       return false;
-    const message = authMessage(purpose, challengeId, challenge.nonce, deviceId, sessionId);
-    return verify(
-      'sha256',
-      Buffer.from(message),
-      { key, dsaEncoding: 'ieee-p1363' },
-      Buffer.from(signature, 'base64'),
+    // Like the core, either prefix: the app signs with the old one until it knows the core is new.
+    return [RUNOVA_CORE.authPrefix, LEGACY_CORE.authPrefix].some((prefix) =>
+      verify(
+        'sha256',
+        Buffer.from(
+          authMessage(purpose, challengeId, challenge.nonce, deviceId, sessionId, prefix),
+        ),
+        { key, dsaEncoding: 'ieee-p1363' },
+        Buffer.from(signature, 'base64'),
+      ),
     );
   };
 
@@ -360,7 +365,7 @@ describe('CoreSessions refusals', () => {
   });
 
   it('passes on a failure that never reached the core just as it came', async () => {
-    const offline = new Error('Could not open a tunnel to /run/agentmate-core/core.sock');
+    const offline = new Error('Could not open a tunnel to /run/runova-core/core.sock');
 
     expect(await failingWith(offline)).toBe(offline);
   });

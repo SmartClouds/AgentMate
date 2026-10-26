@@ -22,7 +22,7 @@ export interface ProblemsFeedData {
 function useContainersQuery(serverId: string) {
   return useQuery({
     queryKey: queryKeys.deployContainers(serverId),
-    queryFn: () => window.agentmat.deployDocker.listContainers(serverId),
+    queryFn: () => window.runova.deployDocker.listContainers(serverId),
     refetchInterval: REFRESH_MS,
     retry: false,
     meta: { silentLoading: true },
@@ -33,20 +33,20 @@ export function useProblems(serverId: string): ProblemsFeedData {
   const containers = useContainersQuery(serverId);
   const stacks = useQuery({
     queryKey: queryKeys.deployAppsList(serverId),
-    queryFn: async () => (await window.agentmat.deployStacks.list(serverId)) ?? [],
+    queryFn: async () => (await window.runova.deployStacks.list(serverId)) ?? [],
     refetchInterval: REFRESH_MS,
     retry: false,
     meta: { silentLoading: true },
   });
   const certificates = useQuery({
     queryKey: queryKeys.deployCertificates(serverId),
-    queryFn: async () => (await window.agentmat.deployCerts.list(serverId)) ?? [],
+    queryFn: async () => (await window.runova.deployCerts.list(serverId)) ?? [],
     retry: false,
     meta: { silentLoading: true },
   });
   const exposure = useQuery({
     queryKey: queryKeys.deployFirewallExposure(serverId),
-    queryFn: () => window.agentmat.deployFirewall.exposure(serverId),
+    queryFn: () => window.runova.deployFirewall.exposure(serverId),
     retry: false,
     meta: { silentLoading: true },
   });

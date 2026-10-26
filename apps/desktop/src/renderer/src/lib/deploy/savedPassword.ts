@@ -15,7 +15,7 @@ import { queryKeys } from '@/lib/queryKeys';
  */
 export async function stepUpWithSavedPassword(serverId: string): Promise<number | null> {
   try {
-    const confirmed = await window.agentmat.deploy.stepUpSaved(serverId);
+    const confirmed = await window.runova.deploy.stepUpSaved(serverId);
     return confirmed?.stepUpUntilUnixMs ?? null;
   } catch {
     return null;
@@ -32,7 +32,7 @@ export async function rememberPassword(
   password: string,
 ): Promise<void> {
   try {
-    await window.agentmat.deploy.rememberPassword({ serverId, password });
+    await window.runova.deploy.rememberPassword({ serverId, password });
     void queryClient.invalidateQueries({ queryKey: queryKeys.deployAccess(serverId) });
   } catch (error) {
     toast.error(`Your password was not remembered. ${coreErrorMessage(error)}`);

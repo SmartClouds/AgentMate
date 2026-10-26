@@ -14,7 +14,7 @@ import { type DevHost, dotnetAvailable, startDevHost } from './devHost';
 
 test.skip(!dotnetAvailable(), 'needs the .NET SDK to build the server core DevHost');
 
-const DEV_PASSWORD = 'agentmate-local-password';
+const DEV_PASSWORD = 'runova-local-password';
 
 const compose = (image: string) => `services:
   web:
@@ -67,7 +67,7 @@ test('deploys an app from a project, follows its timeline and rolls back', async
   if (!devHost) throw new Error('DevHost did not start');
   launched = await launchApp({
     settings: {},
-    env: { AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port) },
+    env: { RUNOVA_DEPLOY_DEV_CORE: String(devHost.port) },
   });
   const { page, projectDir } = launched;
   writeFileSync(join(projectDir, 'compose.yaml'), compose('nginx:1.29'));
@@ -75,14 +75,14 @@ test('deploys an app from a project, follows its timeline and rolls back', async
   await page.evaluate(async (id) => {
     const api = (
       window as unknown as {
-        agentmat: {
+        runova: {
           environments: {
             save(input: unknown): Promise<{ id: string }>;
             saveFile(input: unknown): Promise<unknown>;
           };
         };
       }
-    ).agentmat.environments;
+    ).runova.environments;
     const environment = await api.save({ projectId: id, name: 'Production', kind: 'production' });
     await api.saveFile({
       environmentId: environment.id,

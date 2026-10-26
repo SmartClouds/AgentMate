@@ -1,4 +1,4 @@
-import type { RegistryCredentialInfo } from './deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { RegistryCredentialInfo } from './deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * Private registries (E08). Sign-ins kept on this computer go with each deploy and live on the

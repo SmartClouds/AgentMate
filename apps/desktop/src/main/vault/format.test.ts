@@ -1,4 +1,4 @@
-import type { VaultPayload } from '@agentmat/core';
+import type { VaultPayload } from '@runova/core';
 import { describe, expect, it, vi } from 'vitest';
 import { deriveKey } from '../crypto/aesGcm';
 import {
@@ -95,7 +95,7 @@ describe('vault file format', () => {
   it('creates a file that opens with the same password', async () => {
     const { file, dataKey } = await createVaultFile(PASSWORD, payload(), FAST);
     expect(file).toMatchObject({
-      format: 'agentmate-vault',
+      format: 'agentmate-vault' as const /* legacy-name */,
       version: 1,
       kdf: { name: 'scrypt', ...FAST },
     });

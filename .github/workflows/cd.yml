@@ -1,6 +1,6 @@
 name: CD
 
-# Builds the AgentMate desktop app for Windows, macOS, and Linux plus the
+# Builds the Runova desktop app for Windows, macOS, and Linux plus the
 # Android mobile app (a universal APK and one per CPU architecture), and the
 # server core the desktop installs on users' servers (linux-x64 and
 # linux-arm64), and publishes all of it to a GitHub Release.
@@ -216,19 +216,19 @@ jobs:
           "
 
       - name: Build core package
-        run: pnpm --filter @agentmat/core build
+        run: pnpm --filter @runova/core build
 
       - name: Build protocol package
-        run: pnpm --filter @agentmat/protocol build
+        run: pnpm --filter @runova/protocol build
 
       - name: Build studio package
-        run: pnpm --filter @agentmat/studio build
+        run: pnpm --filter @runova/studio build
 
       - name: Rebuild native modules for Electron
-        run: pnpm --filter @agentmat/desktop rebuild:native
+        run: pnpm --filter @runova/desktop rebuild:native
 
       - name: Build desktop app
-        run: pnpm --filter @agentmat/desktop build
+        run: pnpm --filter @runova/desktop build
 
       # electron-builder.yml copies this into the app's resources; the Deploy section refuses to
       # install a server core whose hash is not in it.
@@ -238,18 +238,20 @@ jobs:
           name: server-core-manifest
           path: apps/desktop/build
 
-      # The AgentMate Connector plugin zip (E19). electron-builder.yml copies it into the app's
+      # The Runova Connector plugin zip (E19). electron-builder.yml copies it into the app's
       # resources, so Deploy can hand it to the user to upload in wp-admin. Plain Node, no Docker.
       - name: Build the WordPress connector zip
         run: node scripts/wordpress-connector.mjs build
 
-      # One copy goes on the GitHub Release, so a site owner can get it without the app.
+      # One copy goes on the GitHub Release, so a site owner can get it without the app. The
+      # bridge beside it carries the old name: sites with a connector from before the rename to
+      # Runova only take an update under that name, and then move themselves over.
       - name: Upload the WordPress connector zip
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v7
         with:
           name: wordpress-connector
-          path: apps/wordpress-connector/dist/agentmate-connector.zip
+          path: apps/wordpress-connector/dist/*-connector.zip
           if-no-files-found: error
 
       # Spotlight indexes the disk image dmgbuild mounts while it is still
@@ -268,7 +270,7 @@ jobs:
         shell: bash
         run: |
           for attempt in 1 2 3; do
-            if pnpm --filter @agentmat/desktop exec electron-builder --publish never ${{ matrix.build_args }}; then
+            if pnpm --filter @runova/desktop exec electron-builder --publish never ${{ matrix.build_args }}; then
               exit 0
             fi
             echo "::warning::electron-builder failed on attempt $attempt of 3"
@@ -361,13 +363,13 @@ jobs:
           "
 
       - name: Build protocol package
-        run: pnpm --filter @agentmat/protocol build
+        run: pnpm --filter @runova/protocol build
 
       # apps/mobile/android is generated (gitignored) rather than committed,
       # so it's regenerated from app.json on every build via Expo's
       # Continuous Native Generation instead of being checked into git.
       - name: Generate native Android project
-        run: pnpm --filter @agentmat/mobile exec expo prebuild -p android --no-install
+        run: pnpm --filter @runova/mobile exec expo prebuild -p android --no-install
 
       # Splits the release APK by CPU architecture (in addition to the
       # existing universal APK) so most users can grab a smaller,
@@ -425,9 +427,9 @@ jobs:
             abi="${f#app-}"
             abi="${abi%-release.apk}"
             if [ "$abi" = "universal" ]; then
-              mv "$f" "AgentMate-${APP_VERSION}.apk"
+              mv "$f" "Runova-${APP_VERSION}.apk"
             else
-              mv "$f" "AgentMate-${APP_VERSION}-${abi}.apk"
+              mv "$f" "Runova-${APP_VERSION}-${abi}.apk"
             fi
           done
 
@@ -436,7 +438,7 @@ jobs:
         with:
           name: android-apk
           if-no-files-found: error
-          path: apps/mobile/android/app/build/outputs/apk/release/AgentMate-*.apk
+          path: apps/mobile/android/app/build/outputs/apk/release/Runova-*.apk
 
   release:
     name: Publish GitHub Release
@@ -497,6 +499,6 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
-          name: AgentMate ${{ steps.tag.outputs.tag }}
+          name: Runova ${{ steps.tag.outputs.tag }}
           draft: false
           files: dist-release/**/*

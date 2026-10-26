@@ -1,4 +1,4 @@
-import type { VaultEntrySummary } from '@agentmat/core';
+import type { VaultEntrySummary } from '@runova/core';
 import type { VaultStateEvent, VaultStatus } from '@shared/apiTypes';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { type RenderResult, render } from '@testing-library/react';
@@ -45,7 +45,7 @@ export interface VaultApiMock {
   emitClipboard(cleared: boolean): void;
 }
 
-/** A fake `window.agentmat.vault` whose calls are spies, plus a way to fire main-process events. */
+/** A fake `window.runova.vault` whose calls are spies, plus a way to fire main-process events. */
 export function createVaultApiMock(initial: Partial<VaultStatus> = {}): VaultApiMock {
   const stateListeners = new Set<Listener<VaultStateEvent>>();
   const entriesListeners = new Set<Listener<void>>();
@@ -112,7 +112,7 @@ export function createVaultApiMock(initial: Partial<VaultStatus> = {}): VaultApi
 
 export function installVaultApi(mock: VaultApiMock): void {
   Object.assign(window, {
-    agentmat: {
+    runova: {
       platform: 'win32',
       vault: mock.api,
       shell: { openExternal: vi.fn(async () => undefined) },

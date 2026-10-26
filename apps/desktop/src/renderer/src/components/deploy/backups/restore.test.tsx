@@ -53,7 +53,7 @@ function renderWizard(
           backupCoreVersion: '1.62.0',
           backupHostName: 'web-1',
           backupCreatedAtUnixMs: STORED.createdAtUnixMs,
-          previousStateFolder: '/var/lib/agentmate-core-restore/previous',
+          previousStateFolder: '/var/lib/runova-core-restore/previous',
         };
       },
       'deployServerBackups.bringUp': async () => ({

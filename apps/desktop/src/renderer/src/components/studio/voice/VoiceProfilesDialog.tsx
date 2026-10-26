@@ -1,4 +1,4 @@
-import { CONSENT_STATEMENT, type VoiceProfileView } from '@agentmat/studio';
+import { CONSENT_STATEMENT, type VoiceProfileView } from '@runova/studio';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { studioAudioClient } from '../client';

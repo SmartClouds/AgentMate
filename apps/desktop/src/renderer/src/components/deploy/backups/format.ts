@@ -4,7 +4,7 @@ import type {
   BackupRunInfo,
   BackupRunState,
   BackupTargetState,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { ChipTone } from '@/components/pageKit';
 
 /** Words for the Backups section (E28). */

@@ -4,7 +4,7 @@ import {
   EFFORT_LABELS,
   type EffortLevel,
   getCliDefinition,
-} from '@agentmat/core';
+} from '@runova/core';
 import { cliOptionIcon } from '@/components/cliLogos';
 import { Combobox } from '@/components/ui/combobox';
 import { useAgentChoices } from '@/components/workspace/useAgentChoices';

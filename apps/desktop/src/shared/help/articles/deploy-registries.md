@@ -36,8 +36,8 @@ Four buttons add a sign-in.
 
 For pulling images from GitHub Container Registry (`ghcr.io`). Click **GitHub packages token**.
 
-1. Click **Open GitHub's token page**. It opens in your browser with only `read:packages` ticked and the description "AgentMate server pulls". Pick an expiry, create the classic token and copy it.
-2. Paste it into **Token** and click **Check with GitHub**. AgentMate asks GitHub what the token can do and shows "Pulls packages as (user). Scopes: ...". A problem (for example a token without `read:packages`) is shown with the reason.
+1. Click **Open GitHub's token page**. It opens in your browser with only `read:packages` ticked and the description "Runova server pulls". Pick an expiry, create the classic token and copy it.
+2. Paste it into **Token** and click **Check with GitHub**. Runova asks GitHub what the token can do and shows "Pulls packages as (user). Scopes: ...". A problem (for example a token without `read:packages`) is shown with the reason.
 3. If the token allows more than reading packages, a warning lists what each extra scope allows (for instance `repo`: read and change every repository you can reach, or `workflow`: change GitHub Actions workflows) and explains that the token goes to the server for every deploy, so a server that were broken into while a deploy runs would hold all of it. Tick **I understand, and I want to use this token anyway** to continue. A token with just `read:packages` is the safer choice.
 4. Click **Save**. The field empties and the token is stored on this computer.
 

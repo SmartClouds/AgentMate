@@ -1,4 +1,4 @@
-import { checkBucket, type Project, type PullRequestInfo, summarizeChecks } from '@agentmat/core';
+import { checkBucket, type Project, type PullRequestInfo, summarizeChecks } from '@runova/core';
 import { CircleCheck } from '@/components/icons';
 import { RunStatusIcon, runTone } from '@/components/pipelines/runStatus';
 import { cn } from '@/lib/utils';
@@ -64,7 +64,7 @@ export function PrChecks({
                   type="button"
                   disabled={!check.detailsUrl}
                   onClick={() =>
-                    check.detailsUrl && void window.agentmat.shell.openExternal(check.detailsUrl)
+                    check.detailsUrl && void window.runova.shell.openExternal(check.detailsUrl)
                   }
                   className={cn(
                     'flex w-full cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/60 disabled:cursor-default disabled:hover:bg-transparent',

@@ -21,7 +21,7 @@ export interface RelayCliCapabilities {
   stopGate: boolean;
   /** The live context of a session can be read, for the fuel ring and the guard. */
   contextMeter: boolean;
-  /** How the AgentMate relay MCP server is handed to the CLI at launch, if it can be. */
+  /** How the Runova relay MCP server is handed to the CLI at launch, if it can be. */
   mcp: 'claude' | 'codex' | 'copilot' | null;
   /** Exact: the CLI says when its turn ends. Heuristic: the relay waits for its output to settle. */
   completion: 'exact' | 'heuristic';

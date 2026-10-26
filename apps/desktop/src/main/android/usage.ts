@@ -1,4 +1,4 @@
-import type { AndroidEvent } from '@agentmat/core';
+import type { AndroidEvent } from '@runova/core';
 import { sampleProcessTrees } from '../system/processTree';
 
 /**
@@ -6,7 +6,7 @@ import { sampleProcessTrees } from '../system/processTree';
  *
  * The sampler underneath is not cheap. On Windows it is a `Win32_Process` CIM query that takes
  * most of a second, so this only runs while a page is actually on screen asking for it, never
- * overlaps itself, and does nothing at all when no emulator is running. A background AgentMate
+ * overlaps itself, and does nothing at all when no emulator is running. A background Runova
  * costs nothing.
  *
  * Watching is refcounted per window: closing one of two open windows must not stop the meters in

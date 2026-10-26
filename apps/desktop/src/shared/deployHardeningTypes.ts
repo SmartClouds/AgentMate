@@ -1,4 +1,4 @@
-import type { BackupContents } from './deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { BackupContents } from './deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * The Security center's IPC shapes (E15): the checklist, its SSH fixes, and backups. SSH changes

@@ -19,7 +19,7 @@ import {
   resourceKey,
   takeNewlyIdle,
   usagePoint,
-} from '@agentmat/core';
+} from '@runova/core';
 
 /**
  * Watches the running Docker containers and Android emulators in the background and remembers

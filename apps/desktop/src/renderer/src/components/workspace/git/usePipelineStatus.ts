@@ -62,7 +62,7 @@ export function usePipelineStatus(
 ): PipelinesState {
   const status = useQuery({
     queryKey: queryKeys.pipelineStatus(projectId),
-    queryFn: () => window.agentmat.pipelines.status(projectId),
+    queryFn: () => window.runova.pipelines.status(projectId),
     enabled,
     refetchInterval: enabled ? 30_000 : false,
     meta: { silentLoading: true },

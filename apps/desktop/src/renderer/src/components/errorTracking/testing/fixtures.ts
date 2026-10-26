@@ -1,4 +1,4 @@
-import type { ErrorEvent, ErrorException, ErrorFrame, Project } from '@agentmat/core';
+import type { ErrorEvent, ErrorException, ErrorFrame, Project } from '@runova/core';
 import type {
   ErrorConnectionSummary,
   ErrorIssueDetail,

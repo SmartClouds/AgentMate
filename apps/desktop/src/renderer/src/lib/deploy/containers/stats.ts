@@ -1,7 +1,7 @@
 import type {
   ContainerStatsBatch,
   ContainerStatsSample,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * Live container figures on the Containers screen (E06): each running container's recent

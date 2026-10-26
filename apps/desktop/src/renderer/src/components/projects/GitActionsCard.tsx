@@ -1,4 +1,4 @@
-import type { ProjectGithubAction } from '@agentmat/core';
+import type { ProjectGithubAction } from '@runova/core';
 import type { GithubWorkflowInfo, GithubWorkflowRunInfo } from '@shared/apiTypes';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -69,14 +69,14 @@ export function GitActionsCard({
 
   const statusQuery = useQuery({
     queryKey: queryKeys.pipelineStatus(projectId),
-    queryFn: () => window.agentmat.pipelines.status(projectId),
+    queryFn: () => window.runova.pipelines.status(projectId),
     refetchInterval: 30_000,
     meta: QUERY_META,
   });
 
   const watchMutation = useMutation({
     mutationFn: (actions: ProjectGithubAction[]) =>
-      window.agentmat.pipelines.setMuted(projectId, actions),
+      window.runova.pipelines.setMuted(projectId, actions),
     onSuccess: (status) => {
       queryClient.setQueryData(queryKeys.pipelineStatus(projectId), status);
       void queryClient.invalidateQueries({ queryKey: queryKeys.projects });
@@ -111,7 +111,7 @@ export function GitActionsCard({
   }
 
   const cancelMutation = useMutation({
-    mutationFn: (runId: number) => window.agentmat.pipelines.cancelRun({ repo, runId }),
+    mutationFn: (runId: number) => window.runova.pipelines.cancelRun({ repo, runId }),
     onSuccess: (result) => {
       if (!result.ok) {
         toast.error(result.error);
@@ -139,7 +139,7 @@ export function GitActionsCard({
   }
 
   function handleInstallGh(): void {
-    void window.agentmat.shell.openExternal(GH_INSTALL_URL);
+    void window.runova.shell.openExternal(GH_INSTALL_URL);
   }
 
   function handleSignIn(): void {
@@ -362,7 +362,7 @@ function WorkflowRow({
             variant="ghost"
             size="icon"
             className="shrink-0"
-            onClick={() => void window.agentmat.shell.openExternal(run.htmlUrl)}
+            onClick={() => void window.runova.shell.openExternal(run.htmlUrl)}
             aria-label="Open run on GitHub"
           >
             <ExternalLink className="h-3.5 w-3.5" />

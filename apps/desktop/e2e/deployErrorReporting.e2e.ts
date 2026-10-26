@@ -15,7 +15,7 @@ import { type FakeSentryIngest, startFakeSentryIngest } from './fakeSentryIngest
 
 test.skip(!dotnetAvailable(), 'needs the .NET SDK to build the server core DevHost');
 
-const DEV_PASSWORD = 'agentmate-local-password';
+const DEV_PASSWORD = 'runova-local-password';
 const KEY = 'e2e0d4e5f60718293a4b5c6d7e8f90a1';
 const PROJECT_ID = '7';
 
@@ -76,7 +76,7 @@ test('sets error reporting up, sends a test event to Sentry, pauses it and remov
   if (!devHost || !ingest) throw new Error('The DevHost or the fake Sentry did not start');
   launched = await launchApp({
     settings: {},
-    env: { AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port) },
+    env: { RUNOVA_DEPLOY_DEV_CORE: String(devHost.port) },
   });
   const { page } = launched;
   await page.getByRole('link', { name: 'Deploy' }).click();
@@ -128,7 +128,7 @@ test('sets error reporting up, sends a test event to Sentry, pauses it and remov
   expect(request?.body).toContain('test event');
   expect(request?.body).toContain('e2e-box');
   expect(request?.body).toContain('staging');
-  expect(request?.body).toContain('agentmate-core');
+  expect(request?.body).toContain('runova-core');
   await expect(page.getByText('Sending', { exact: true })).toBeVisible({ timeout: 30_000 });
 
   // The key is on neither the screen nor this computer's disk.

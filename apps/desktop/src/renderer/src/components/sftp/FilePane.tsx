@@ -436,7 +436,7 @@ export function FilePane({
     }
     if (!remote) return;
     const paths = Array.from(data.files)
-      .map((file) => window.agentmat.shell.pathForFile(file))
+      .map((file) => window.runova.shell.pathForFile(file))
       .filter((path): path is string => typeof path === 'string' && path.length > 0);
     if (paths.length > 0) void store().transferPaths(serverId, 'local', paths, dir);
   }

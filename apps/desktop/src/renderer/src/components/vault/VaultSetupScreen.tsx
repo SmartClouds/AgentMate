@@ -1,4 +1,4 @@
-import { MASTER_PASSWORD_MIN_LENGTH, masterPasswordProblem } from '@agentmat/core';
+import { MASTER_PASSWORD_MIN_LENGTH, masterPasswordProblem } from '@runova/core';
 import { vaultErrorMessage } from '@shared/vaultErrors';
 import { useQueryClient } from '@tanstack/react-query';
 import { useId, useState } from 'react';
@@ -32,7 +32,7 @@ export function VaultSetupScreen(): React.JSX.Element {
     setBusy(true);
     setError(null);
     try {
-      await window.agentmat.vault.create(password);
+      await window.runova.vault.create(password);
       await queryClient.invalidateQueries({ queryKey: queryKeys.vaultStatus });
     } catch (err) {
       setError(vaultErrorMessage(err));
@@ -84,8 +84,8 @@ export function VaultSetupScreen(): React.JSX.Element {
             className="mt-0.5"
           />
           <Label htmlFor={ackId} className="text-xs font-normal leading-relaxed">
-            I understand AgentMate can't recover this password. If I forget it, the vault can only
-            be reset, and everything in it is lost.
+            I understand Runova can't recover this password. If I forget it, the vault can only be
+            reset, and everything in it is lost.
           </Label>
         </div>
 

@@ -9,7 +9,7 @@ import { buildShellLaunch } from './shellIntegration';
  */
 
 /** The OSC sequence every hook has to emit, in whichever escaping that shell needs. */
-const MARKER_ID = '7750;AgentMate:PromptReady:1';
+const MARKER_ID = '7750;Runova:PromptReady:1';
 
 describe('buildShellLaunch', () => {
   describe('bash', () => {
@@ -52,19 +52,19 @@ describe('buildShellLaunch', () => {
       expect(launch.env.ZDOTDIR).toBeTruthy();
       expect(launch.env.ZDOTDIR).not.toBe('/home/me/.config/zsh');
       // Without this the user's own zsh configuration would never be loaded.
-      expect(launch.env.AGENTMATE_USER_ZDOTDIR).toBe('/home/me/.config/zsh');
+      expect(launch.env.RUNOVA_USER_ZDOTDIR).toBe('/home/me/.config/zsh');
     });
 
     it('falls back to the ambient ZDOTDIR when the session env does not set one', () => {
       vi.stubEnv('ZDOTDIR', '/ambient/zdotdir');
       const launch = buildShellLaunch('zsh', 'linux', {});
-      expect(launch.env.AGENTMATE_USER_ZDOTDIR).toBe('/ambient/zdotdir');
+      expect(launch.env.RUNOVA_USER_ZDOTDIR).toBe('/ambient/zdotdir');
     });
 
-    it('omits AGENTMATE_USER_ZDOTDIR when the user has no ZDOTDIR at all', () => {
+    it('omits RUNOVA_USER_ZDOTDIR when the user has no ZDOTDIR at all', () => {
       vi.stubEnv('ZDOTDIR', undefined);
       const launch = buildShellLaunch('zsh', 'linux', undefined);
-      expect(launch.env.AGENTMATE_USER_ZDOTDIR).toBeUndefined();
+      expect(launch.env.RUNOVA_USER_ZDOTDIR).toBeUndefined();
       expect(Object.keys(launch.env)).toEqual(['ZDOTDIR']);
     });
 
@@ -77,11 +77,11 @@ describe('buildShellLaunch', () => {
 
       // .zshenv has to put ZDOTDIR back before handing control on, or a .zshenv that moves
       // ZDOTDIR itself would be reading ours instead of the user's.
-      expect(zshenv).toContain('ZDOTDIR=${AGENTMATE_USER_ZDOTDIR:-$HOME}');
-      expect(zshenv).toContain('ZDOTDIR=$__agentmate_zdotdir');
+      expect(zshenv).toContain('ZDOTDIR=${RUNOVA_USER_ZDOTDIR:-$HOME}');
+      expect(zshenv).toContain('ZDOTDIR=$__runova_zdotdir');
       expect(zshrc).toContain('[[ -f $ZDOTDIR/.zshrc ]] && . $ZDOTDIR/.zshrc');
       // Appended to precmd_functions, so a framework like Starship keeps its own hook.
-      expect(zshrc).toContain('precmd_functions+=(agentmate_precmd)');
+      expect(zshrc).toContain('precmd_functions+=(runova_precmd)');
       expect(zshrc).toContain(MARKER_ID);
     });
   });
@@ -108,11 +108,11 @@ describe('buildShellLaunch', () => {
 
         const script = launch.args[3];
         // The previous prompt is saved and called through, so a custom prompt survives.
-        expect(script).toContain('$global:__agentmatePrevPrompt = $function:prompt');
-        expect(script).toContain('& $global:__agentmatePrevPrompt');
+        expect(script).toContain('$global:__runovaPrevPrompt = $function:prompt');
+        expect(script).toContain('& $global:__runovaPrevPrompt');
         // Written as a side effect rather than returned, otherwise PSReadLine desyncs.
         expect(script).toContain('Write-Host -NoNewline');
-        expect(script).toContain("]7750;AgentMate:PromptReady:1' + [char]7");
+        expect(script).toContain("]7750;Runova:PromptReady:1' + [char]7");
         // Double quotes get mangled differently by each PowerShell version on a command line.
         expect(script).not.toContain('"');
       },
@@ -145,18 +145,18 @@ describe('buildShellLaunch', () => {
 
       expect(launch.args).toEqual([]);
       // cmd has no BEL macro, so the sequence is terminated with ST ($E\).
-      expect(launch.env.PROMPT).toBe('$E]7750;AgentMate:PromptReady:1$E\\$P$_$G');
+      expect(launch.env.PROMPT).toBe('$E]7750;Runova:PromptReady:1$E\\$P$_$G');
     });
 
     it('falls back to the ambient PROMPT, then to cmd default $P$G', () => {
       vi.stubEnv('PROMPT', '$T$G');
       expect(buildShellLaunch('cmd', 'win32', undefined).env.PROMPT).toBe(
-        '$E]7750;AgentMate:PromptReady:1$E\\$T$G',
+        '$E]7750;Runova:PromptReady:1$E\\$T$G',
       );
 
       vi.stubEnv('PROMPT', undefined);
       expect(buildShellLaunch('cmd.exe', 'win32', {}).env.PROMPT).toBe(
-        '$E]7750;AgentMate:PromptReady:1$E\\$P$G',
+        '$E]7750;Runova:PromptReady:1$E\\$P$G',
       );
     });
   });

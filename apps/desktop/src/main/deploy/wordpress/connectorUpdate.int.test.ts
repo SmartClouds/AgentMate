@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { WP_CONNECTOR_VERSION } from '@agentmat/core';
+import { WP_CONNECTOR_VERSION } from '@runova/core';
 import AdmZip from 'adm-zip';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { wordPressErrorCode } from '../../../shared/wordpressErrors';
@@ -18,13 +18,13 @@ import { createFetchTransport } from './transport';
  * the site runs the current plugin code under an older version number, the app reads the zip that
  * ships with it, sends the files over the signed channel, and the plugin swaps its own folder.
  *
- * Opt in with AGENTMATE_SYSTEM_TESTS=1 (Linux containers), like wordpress.int.test.ts.
+ * Opt in with RUNOVA_SYSTEM_TESTS=1 (Linux containers), like wordpress.int.test.ts.
  */
 
 const enabled = systemTestsEnabled();
 const PORT = 18_996;
 const OLD_VERSION = '1.0.0';
-const PLUGIN_DIR = '/var/www/html/wp-content/plugins/agentmate-connector';
+const PLUGIN_DIR = '/var/www/html/wp-content/plugins/runova-connector';
 const APP_PATH = fileURLToPath(new URL('../../../../', import.meta.url));
 
 interface Fixture {
@@ -39,7 +39,7 @@ interface Fixture {
 function olderZip(folder: string): string {
   const shipped = connectorZipPath({ isPackaged: false, resourcesPath: '', appPath: APP_PATH });
   const zip = new AdmZip(shipped);
-  for (const name of ['agentmate-connector/agentmate-connector.php']) {
+  for (const name of ['runova-connector/runova-connector.php']) {
     const entry = zip.getEntry(name);
     if (!entry) throw new Error(`${name} is not in the shipped zip.`);
     zip.updateFile(
@@ -58,7 +58,7 @@ describe.skipIf(!enabled)('Connector update against the real plugin', () => {
   let service: WordPressProjectService;
 
   beforeAll(async () => {
-    dir = mkdtempSync(join(tmpdir(), 'agentmate-wp-update-'));
+    dir = mkdtempSync(join(tmpdir(), 'runova-wp-update-'));
     const fixture = new URL(
       '../../../../../wordpress-connector/tests/smoke/fixture.mjs',
       import.meta.url,
@@ -123,11 +123,11 @@ describe.skipIf(!enabled)('Connector update against the real plugin', () => {
     expect(after.pluginVersion).toBe(WP_CONNECTOR_VERSION);
     expect(after.selfUpdate).toBe(true);
     expect(after.guard.installed).toBe(true);
-    const header = site.exec(`grep -m1 "Version:" ${PLUGIN_DIR}/agentmate-connector.php`);
+    const header = site.exec(`grep -m1 "Version:" ${PLUGIN_DIR}/runova-connector.php`);
     expect(header).toContain(WP_CONNECTOR_VERSION);
-    expect(site.exec('ls -A /var/www/html/wp-content/plugins')).not.toContain('.agentmate');
+    expect(site.exec('ls -A /var/www/html/wp-content/plugins')).not.toContain('.runova');
     expect(site.wp(['plugin', 'list', '--status=active', '--field=name'])).toContain(
-      'agentmate-connector',
+      'runova-connector',
     );
 
     const again = await service.updateConnector(connected.id);

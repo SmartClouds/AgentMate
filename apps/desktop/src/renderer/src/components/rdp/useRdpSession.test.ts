@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { type FakeBridge, installAgentmatBridge } from '../../../../test/renderer/agentmatBridge';
 import { Backend, FakeSession } from '../../../../test/renderer/mocks/ironRdp';
+import { type FakeBridge, installRunovaBridge } from '../../../../test/renderer/runovaBridge';
 
 interface FakeFile {
   name: string;
@@ -125,7 +125,7 @@ const ticket = {
 let bridge: FakeBridge;
 
 beforeEach(() => {
-  bridge = installAgentmatBridge({ 'rdp.getTicket': ticket });
+  bridge = installRunovaBridge({ 'rdp.getTicket': ticket });
   mount.connectError = null;
   mount.beforeConnect = null;
   mount.session = new FakeSession();
@@ -243,7 +243,7 @@ describe('useRdpSession when the connection fails', () => {
       bridge.$emit('rdp.onProxyError', {
         sessionId: 's1',
         code: 'certificate-changed',
-        message: 'office is presenting a different certificate than the one AgentMate saved.',
+        message: 'office is presenting a different certificate than the one Runova saved.',
       });
     };
     const { result } = renderSession();
@@ -291,7 +291,7 @@ describe('useRdpSession files copied on the server', () => {
 
   function connectWithFileTransfer(overrides: Record<string, unknown> = {}) {
     let staged = 0;
-    bridge = installAgentmatBridge({
+    bridge = installRunovaBridge({
       'rdp.getTicket': {
         ...ticket,
         options: { ...ticket.options, clipboard: true, fileTransfer: true },

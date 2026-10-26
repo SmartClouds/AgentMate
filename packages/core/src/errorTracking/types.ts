@@ -113,7 +113,7 @@ export interface PageLinks {
   previous: string | null;
 }
 
-/** A provider project, for linking it to an AgentMate project. */
+/** A provider project, for linking it to a Runova project. */
 export interface RemoteProject {
   id: string;
   slug: string;

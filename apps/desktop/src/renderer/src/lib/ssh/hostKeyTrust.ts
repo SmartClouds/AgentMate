@@ -15,8 +15,8 @@ export interface HostKeyTrustSource {
 
 function savedServerSource(serverId: string): HostKeyTrustSource {
   return {
-    status: () => window.agentmat.ssh.hostKeyStatus(serverId),
-    trust: (fingerprint) => window.agentmat.ssh.trustHostKey(serverId, fingerprint),
+    status: () => window.runova.ssh.hostKeyStatus(serverId),
+    trust: (fingerprint) => window.runova.ssh.trustHostKey(serverId, fingerprint),
   };
 }
 

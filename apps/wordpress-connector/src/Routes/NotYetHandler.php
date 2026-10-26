@@ -2,17 +2,17 @@
 /**
  * Answers routes this build of the connector does not serve yet, after full authentication.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Routes;
+namespace Runova\Connector\Routes;
 
-use AgentMate\Connector\Http\ApiError;
+use Runova\Connector\Http\ApiError;
 
 final class NotYetHandler implements Handler
 {
     public function handle(RequestContext $context): Result
     {
-        throw new ApiError('badRequest', 'This version of AgentMate Connector does not handle ' . $context->route . ' yet.', array(), 501);
+        throw new ApiError('badRequest', 'This version of Runova Connector does not handle ' . $context->route . ' yet.', array(), 501);
     }
 }

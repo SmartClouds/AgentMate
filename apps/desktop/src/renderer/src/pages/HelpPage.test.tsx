@@ -55,7 +55,7 @@ describe('Help home', () => {
   it('lists every category with its articles', () => {
     renderHelp();
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
-      'Find your way around AgentMate',
+      'Find your way around Runova',
     );
     for (const group of helpArticlesByCategory()) {
       const section = screen.getByRole('region', { name: group.category });

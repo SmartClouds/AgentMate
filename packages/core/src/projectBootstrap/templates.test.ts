@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AgentType } from '../types/index.js';
-import { AGENTMATE_DIR, getBootstrapPlan, type ProjectMeta } from './templates.js';
+import { getBootstrapPlan, type ProjectMeta, RUNOVA_DIR } from './templates.js';
 
 /**
  * Every path in a plan is joined onto the project folder and written through the
@@ -39,13 +39,13 @@ describe('getBootstrapPlan', () => {
     }
   });
 
-  it("creates AgentMate's own folder and docs for every agent type", () => {
+  it("creates Runova's own folder and docs for every agent type", () => {
     for (const agentType of ALL_AGENT_TYPES) {
       const plan = getBootstrapPlan(meta({ agentType }));
-      expect(plan.folders, agentType).toContain(AGENTMATE_DIR);
+      expect(plan.folders, agentType).toContain(RUNOVA_DIR);
       const paths = plan.files.map((file) => file.relativePath);
-      expect(paths, agentType).toContain(`${AGENTMATE_DIR}/PROJECT_CONTEXT.md`);
-      expect(paths, agentType).toContain(`${AGENTMATE_DIR}/ROADMAP.md`);
+      expect(paths, agentType).toContain(`${RUNOVA_DIR}/PROJECT_CONTEXT.md`);
+      expect(paths, agentType).toContain(`${RUNOVA_DIR}/ROADMAP.md`);
     }
   });
 
@@ -153,7 +153,7 @@ describe('rendered templates', () => {
     const project = meta({ name: 'Habit Tracker', description: 'Tracks daily habits.' });
     for (const agentType of ALL_AGENT_TYPES) {
       const files = getBootstrapPlan({ ...project, agentType }).files;
-      const context = files.find((f) => f.relativePath === `${AGENTMATE_DIR}/PROJECT_CONTEXT.md`);
+      const context = files.find((f) => f.relativePath === `${RUNOVA_DIR}/PROJECT_CONTEXT.md`);
       expect(context?.content, agentType).toContain('Habit Tracker');
       expect(context?.content, agentType).toContain('Tracks daily habits.');
     }
@@ -161,7 +161,7 @@ describe('rendered templates', () => {
 
   it('substitute a prompt for a missing description rather than leaving a blank section', () => {
     const files = getBootstrapPlan(meta({ description: '' })).files;
-    const context = files.find((f) => f.relativePath === `${AGENTMATE_DIR}/PROJECT_CONTEXT.md`);
+    const context = files.find((f) => f.relativePath === `${RUNOVA_DIR}/PROJECT_CONTEXT.md`);
     expect(context?.content).toContain('_(describe what this project does)_');
   });
 
@@ -187,9 +187,7 @@ describe('rendered templates', () => {
     for (const file of plan.files) {
       expect(file.content, file.relativePath).not.toContain('undefined');
     }
-    const context = plan.files.find(
-      (f) => f.relativePath === `${AGENTMATE_DIR}/PROJECT_CONTEXT.md`,
-    );
+    const context = plan.files.find((f) => f.relativePath === `${RUNOVA_DIR}/PROJECT_CONTEXT.md`);
     expect(context?.content).toContain('`My` ${App} "quoted" \\slash');
   });
 

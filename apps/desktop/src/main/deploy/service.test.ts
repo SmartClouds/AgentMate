@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import type { HealthResponse } from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { HealthResponse } from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployCoreRecord, DeploySetupProgressEvent } from '../../shared/deployTypes';
 import { tempDir } from '../../test/main/fixtures';
 import { TunnelRefusedError } from '../ssh/connection';
@@ -45,7 +45,7 @@ const SAVED = [
 
 const RECORD: DeployCoreRecord = {
   version: '1.52.0',
-  release: '/opt/agentmate-core/releases/1.52.0-cdcdcdcdcdcd',
+  release: '/opt/runova-core/releases/1.52.0-cdcdcdcdcdcd',
   transport: 'bridge',
   installedAt: 5,
   os: 'Rocky Linux 9.4 (Blue Onyx)',
@@ -69,7 +69,7 @@ function releases(): ReleaseSource {
     release: async (rid) => ({
       version: '1.53.0',
       rid,
-      file: `agentmate-core-1.53.0-${rid}.tar.gz`,
+      file: `runova-core-1.53.0-${rid}.tar.gz`,
       sha256: SHA,
       localPath,
     }),
@@ -83,10 +83,10 @@ function publicReleases(): ReleaseSource {
     remote: (rid) => ({
       version: '1.53.0',
       rid,
-      file: `agentmate-core-1.53.0-${rid}.tar.gz`,
+      file: `runova-core-1.53.0-${rid}.tar.gz`,
       sha256: SHA,
       size: 1024,
-      url: `https://github.com/SmartClouds/AgentMate/releases/download/v1.53.0/agentmate-core-1.53.0-${rid}.tar.gz`,
+      url: `https://github.com/SmartClouds/Runova/releases/download/v1.53.0/runova-core-1.53.0-${rid}.tar.gz`,
     }),
   };
 }
@@ -226,7 +226,7 @@ describe('DeployService.preflight', () => {
     const preflight = await service.preflight('srv-1');
 
     expect(preflight.available).toBeNull();
-    expect(preflight.problems).toContain('This build of AgentMate has no server core to install.');
+    expect(preflight.problems).toContain('This build of Runova has no server core to install.');
   });
 
   it('uses the reason the build gives for having no core', async () => {
@@ -268,8 +268,9 @@ describe('DeployService.install', () => {
     expect(result).toMatchObject({ version: '1.53.0', transport: 'streamlocal' });
     expect(await state.get('srv-1')).toEqual({
       version: '1.53.0',
-      release: '/opt/agentmate-core/releases/1.53.0-abababababab',
+      release: '/opt/runova-core/releases/1.53.0-abababababab',
       transport: 'streamlocal',
+      layout: 'runova',
       installedAt: 1_000,
       os: 'Ubuntu 24.04.1 LTS',
       architecture: 'x86_64',
@@ -335,6 +336,8 @@ describe('DeployService.health', () => {
       startedAtUnixMs: 99,
       checkedAt: 1_000,
       transport: 'bridge',
+      // The fake core does not say, as a core from before the rename would not.
+      layout: 'legacy',
     });
     expect(transports.map((transport) => transport.kind)).toEqual(['bridge']);
     expect(released).toHaveBeenCalled();

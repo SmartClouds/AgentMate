@@ -1,11 +1,13 @@
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { LEGACY_MCP_SERVER_NAME, LEGACY_PROJECT_DIR } from '@runova/core';
 
 /**
  * The server name is part of the contract with the agent: its tools show up to the agent as
- * `mcp__agentmate__...`, so renaming this breaks every project that already has the entry.
+ * `mcp__runova__...`. Projects set up before the rename have the entry under the old name;
+ * {@link moveLegacyRunProposals} replaces it.
  */
-export const RUN_COMMANDS_SERVER_NAME = 'agentmate';
+export const RUN_COMMANDS_SERVER_NAME = 'runova';
 export const RUN_COMMANDS_SCRIPT_NAME = 'run-commands-mcp.cjs';
 
 interface McpJson {
@@ -14,7 +16,7 @@ interface McpJson {
 }
 
 export function runCommandsScriptPath(folder: string): string {
-  return join(folder, '.agentmate', RUN_COMMANDS_SCRIPT_NAME);
+  return join(folder, '.runova', RUN_COMMANDS_SCRIPT_NAME);
 }
 
 function mcpJsonPath(folder: string): string {
@@ -71,7 +73,7 @@ export async function enableRunProposals(folder: string, scriptSource: string): 
   const existing = config.mcpServers?.[RUN_COMMANDS_SERVER_NAME];
   if (existing && !isOurEntry(existing, scriptPath)) {
     throw new Error(
-      "The project's .mcp.json already has an 'agentmate' server that AgentMate did not write, so it was left as it was.",
+      "The project's .mcp.json already has a 'runova' server that Runova did not write, so it was left as it was.",
     );
   }
 
@@ -82,6 +84,34 @@ export async function enableRunProposals(folder: string, scriptSource: string): 
     [RUN_COMMANDS_SERVER_NAME]: { command: 'node', args: [scriptPath] },
   };
   await writeFile(mcpJsonPath(folder), JSON.stringify(config, null, 2), 'utf-8');
+}
+
+/**
+ * A project set up before the rename has the bridge under the old server name, pointing at a
+ * script in the old project folder (which has moved to `.runova` by now). Swaps that entry for
+ * the current one and rewrites the script. Returns whether there was one; anything that isn't
+ * ours is left alone.
+ */
+export async function moveLegacyRunProposals(
+  folder: string,
+  scriptSource: string,
+): Promise<boolean> {
+  if (folder.trim() === '') return false;
+  const config = await readMcpJson(folder).catch(() => null);
+  const legacy = config?.mcpServers?.[LEGACY_MCP_SERVER_NAME];
+  const legacyScript = join(folder, LEGACY_PROJECT_DIR, RUN_COMMANDS_SCRIPT_NAME);
+  if (!config || !legacy) return false;
+  if (!isOurEntry(legacy, legacyScript) && !isOurEntry(legacy, runCommandsScriptPath(folder))) {
+    return false;
+  }
+  const { [LEGACY_MCP_SERVER_NAME]: _removed, ...others } = config.mcpServers ?? {};
+  await writeFile(
+    mcpJsonPath(folder),
+    JSON.stringify({ ...config, mcpServers: others }, null, 2),
+    'utf-8',
+  );
+  await enableRunProposals(folder, scriptSource);
+  return true;
 }
 
 /** Removes only the entry and script this module wrote. Anything else in the folder is left alone. */

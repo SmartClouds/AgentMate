@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { Project, ProjectRunCommand } from '@agentmat/core';
-import { configuredRunCommands, normalizeProjectRunCommands } from '@agentmat/core';
+import type { Project, ProjectRunCommand } from '@runova/core';
+import { configuredRunCommands, normalizeProjectRunCommands } from '@runova/core';
 import type {
   RunProposal,
   RunProposalDecision,
@@ -27,12 +27,12 @@ import { validateRunProposal } from './validate';
 /** More than this waiting for one project is a loop, not a plan, so the agent is told to stop. */
 const MAX_WAITING_PER_PROJECT = 10;
 
-/** How long a run setup started from AgentMate may keep suggesting. */
+/** How long a run setup started from Runova may keep suggesting. */
 const GUIDED_MS = 2 * 60 * 60 * 1000;
 
 const SAFE_PROJECT_ID = /^[A-Za-z0-9_-]+$/;
 
-/** The tools the bridge offers. Allowed by name when the agent is launched from AgentMate. */
+/** The tools the bridge offers. Allowed by name when the agent is launched from Runova. */
 const RUN_COMMANDS_TOOLS = ['list_run_commands', 'propose_run_command'] as const;
 
 /** Projects with a run setup under way, and when that permission ends. Memory only, like the rest. */
@@ -40,7 +40,7 @@ const guidedUntil = new Map<string, number>();
 
 /**
  * Suggestions waiting for the user. Kept in memory on purpose: one nobody answered is dropped when
- * AgentMate quits, so a stale suggestion never comes back on its own.
+ * Runova quits, so a stale suggestion never comes back on its own.
  */
 const pending = new Map<string, RunProposal>();
 
@@ -68,7 +68,7 @@ function failure(status: number, error: string): RunCommandsResponse {
 }
 
 /**
- * Starts a run setup from AgentMate: the agent is launched with an MCP config of its own, kept
+ * Starts a run setup from Runova: the agent is launched with an MCP config of its own, kept
  * outside the project folder, so the project needs no `.mcp.json` entry. The tools are named here
  * so the launcher can allow them without a prompt. The user still approves every suggestion.
  */
@@ -77,7 +77,7 @@ export async function startGuidedRunSession(
   options: { directory: string; portFile: string },
 ): Promise<RunSetupSession> {
   const project = await findProject(projectId);
-  if (!project) return { ok: false, error: 'AgentMate does not know this project.' };
+  if (!project) return { ok: false, error: 'Runova does not know this project.' };
   // The id becomes a folder name, so anything that could leave the sessions folder is refused.
   if (!SAFE_PROJECT_ID.test(project.id)) {
     return { ok: false, error: 'This project cannot start a run setup.' };
@@ -134,7 +134,7 @@ export async function handleRunCommandsRequest(body: unknown): Promise<RunComman
   const request = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>;
   const projectId = typeof request.projectId === 'string' ? request.projectId : '';
   const project = projectId ? await findProject(projectId) : undefined;
-  if (!project) return failure(404, 'AgentMate does not know this project.');
+  if (!project) return failure(404, 'Runova does not know this project.');
   if (!(await mayPropose(project))) {
     return failure(
       403,
@@ -164,10 +164,10 @@ async function proposeRunCommand(
 
   const waiting = listPendingRunProposals().filter((item) => item.projectId === project.id);
   if (waiting.some((item) => item.command === checked.command)) {
-    return failure(409, 'AgentMate is already waiting for your approval of that command.');
+    return failure(409, 'Runova is already waiting for your approval of that command.');
   }
   if (waiting.length >= MAX_WAITING_PER_PROJECT) {
-    return failure(429, 'Too many suggestions are waiting. Review them in AgentMate first.');
+    return failure(429, 'Too many suggestions are waiting. Review them in Runova first.');
   }
 
   const proposal: RunProposal = {
@@ -187,7 +187,7 @@ async function proposeRunCommand(
     payload: {
       ok: true,
       id: proposal.id,
-      message: `Suggested ${named} for ${project.name}. It waits for the user to approve it in AgentMate. Nothing runs until they approve it and press Run.`,
+      message: `Suggested ${named} for ${project.name}. It waits for the user to approve it in Runova. Nothing runs until they approve it and press Run.`,
     },
   };
 }
@@ -247,7 +247,7 @@ export async function setRunProposalsEnabled(
   portFile: string,
 ): Promise<RunProposalResult> {
   const project = await findProject(projectId);
-  if (!project) return { ok: false, error: 'AgentMate does not know this project.' };
+  if (!project) return { ok: false, error: 'Runova does not know this project.' };
   try {
     if (enabled) {
       await enableRunProposals(project.folderPath, bridgeScriptSource({ portFile, projectId }));

@@ -1,4 +1,4 @@
-import type { AuthErrorCode } from './deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { AuthErrorCode } from './deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { sshErrorMessage } from './sshErrors';
 
 /**

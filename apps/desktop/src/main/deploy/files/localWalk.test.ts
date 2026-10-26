@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { mkdirSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { type BaseMap, findWpCaseCollisions } from '@agentmat/core';
+import { type BaseMap, findWpCaseCollisions } from '@runova/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { filesErrorCode } from '../../../shared/deployFilesErrors';
 import { tempDir, writeTree } from '../../../test/main/fixtures';
@@ -17,7 +17,7 @@ import { seedHashCache, walkSiteFolder } from './localWalk';
 let root: string;
 
 beforeEach(() => {
-  root = tempDir('agentmate-files-walk-');
+  root = tempDir('runova-files-walk-');
 });
 
 function put(files: Record<string, string>): void {
@@ -94,7 +94,7 @@ describe('the hard deny list', () => {
       '.env': 'SECRET=1',
       'AGENTS.md': '# agents',
       'docs/CLAUDE.md': '# claude',
-      '.agentmateignore': '# nothing\n',
+      '.runovaignore': '# nothing\n',
       'keys/id_rsa': 'key',
     });
     const walk = await walkSiteFolder({
@@ -105,7 +105,7 @@ describe('the hard deny list', () => {
     });
     expect(Object.keys(walk.files)).toEqual(['index.html']);
     expect(reasons(walk)).toEqual({
-      '.agentmateignore': 'agentFiles',
+      '.runovaignore': 'agentFiles',
       '.claude/settings.json': 'agentFiles',
       '.env': 'hardDenied',
       '.git/HEAD': 'hardDenied',
@@ -170,20 +170,20 @@ describe('ignore layers', () => {
     expect(walk.dirs).toEqual(['node_modules', 'node_modules/x']);
   });
 
-  it('applies the folder .agentmateignore, with ! putting a default back', async () => {
+  it('applies the folder .runovaignore, with ! putting a default back', async () => {
     put({
       'index.html': 'x',
       'drafts/post.html': 'x',
       'notes.txt': 'x',
       'debug.log': 'log',
-      '.agentmateignore': 'drafts/\nnotes.txt\n!debug.log\n',
+      '.runovaignore': 'drafts/\nnotes.txt\n!debug.log\n',
     });
     const walk = await walkSiteFolder({ root, ignorePatterns: [] });
     expect(Object.keys(walk.files).sort()).toEqual(['debug.log', 'index.html']);
     // A `!` line could put back something inside any folder, so folders are walked and their
     // files reported one by one.
     expect(reasons(walk)).toEqual({
-      '.agentmateignore': 'agentFiles',
+      '.runovaignore': 'agentFiles',
       'drafts/post.html': 'ignored',
       'notes.txt': 'ignored',
     });
@@ -196,7 +196,7 @@ describe('ignore layers', () => {
       'private/a.html': 'x',
       'blog/private/b.html': 'x',
       'notes.txt': 'x',
-      '.agentmateignore': 'notes.txt\n',
+      '.runovaignore': 'notes.txt\n',
     });
     const walk = await walkSiteFolder({
       root,
@@ -214,12 +214,12 @@ describe('ignore layers', () => {
   });
 
   it('says which ignore line it cannot read', async () => {
-    put({ 'index.html': 'x', '.agentmateignore': 'ok\n[z-a]\n' });
+    put({ 'index.html': 'x', '.runovaignore': 'ok\n[z-a]\n' });
     const error = await walkSiteFolder({ root, ignorePatterns: [] }).catch((caught) => caught);
     expect(filesErrorCode(error)).toBe('invalidInput');
-    expect(error.message).toContain('Line 2 of .agentmateignore');
+    expect(error.message).toContain('Line 2 of .runovaignore');
 
-    put({ '.agentmateignore': '' });
+    put({ '.runovaignore': '' });
     const fromSite = await walkSiteFolder({ root, ignorePatterns: ['a', 'b', '[z-a]'] }).catch(
       (caught) => caught,
     );
@@ -227,17 +227,17 @@ describe('ignore layers', () => {
     expect(fromSite.message).toContain('Line 3 of site settings');
   });
 
-  it('does not read a linked or oversized .agentmateignore', async () => {
+  it('does not read a linked or oversized .runovaignore', async () => {
     put({
       'index.html': 'x',
       'notes.txt': 'x',
-      '.agentmateignore': `${'#'.repeat(300 * 1024)}\nindex.html\n`,
+      '.runovaignore': `${'#'.repeat(300 * 1024)}\nindex.html\n`,
     });
     expect((await walkSiteFolder({ root, ignorePatterns: [] })).files['index.html']).toBeDefined();
-    const outside = tempDir('agentmate-files-outside-');
+    const outside = tempDir('runova-files-outside-');
     writeFileSync(join(outside, 'rules'), 'notes.txt\n');
-    rmSync(join(root, '.agentmateignore'));
-    if (!link(join(outside, 'rules'), '.agentmateignore', false)) return;
+    rmSync(join(root, '.runovaignore'));
+    if (!link(join(outside, 'rules'), '.runovaignore', false)) return;
     const walk = await walkSiteFolder({ root, ignorePatterns: [] });
     expect(walk.files['notes.txt']).toBeDefined();
   });
@@ -246,7 +246,7 @@ describe('ignore layers', () => {
 describe('links, caps and odd names', () => {
   it('never follows a link or sends one', async () => {
     put({ 'index.html': 'x' });
-    const outside = tempDir('agentmate-files-outside-');
+    const outside = tempDir('runova-files-outside-');
     writeTree(outside, { 'id.txt': 'secret' });
     if (!link(outside, 'leak', true)) return;
     const walk = await walkSiteFolder({ root, ignorePatterns: [] });

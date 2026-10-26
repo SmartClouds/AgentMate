@@ -1,5 +1,6 @@
 import { generateKeyPairSync, sign } from 'node:crypto';
-import type { AuthPurpose } from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { AuthPurpose } from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import { RUNOVA_CORE } from '../coreLayout';
 
 /**
  * The key a desktop proves itself with to a server core, one per server: ECDSA P-256. The public
@@ -33,6 +34,7 @@ export function signMessage(privateKeyPem: string, message: string): string {
 /**
  * The exact text the core verifies (its AuthMessage): every field that decides what a signature
  * is good for, so a signature for one purpose, challenge, device or session is useless for another.
+ * `prefix` is the layout's: a core from before the rename only takes the old one.
  */
 export function authMessage(
   purpose: AuthPurpose,
@@ -40,8 +42,7 @@ export function authMessage(
   nonce: string,
   deviceId: string,
   sessionId: string | null,
+  prefix: string = RUNOVA_CORE.authPrefix,
 ): string {
-  return ['agentmate-core/auth/v1', purpose, challengeId, nonce, deviceId, sessionId ?? '-'].join(
-    '\n',
-  );
+  return [prefix, purpose, challengeId, nonce, deviceId, sessionId ?? '-'].join('\n');
 }

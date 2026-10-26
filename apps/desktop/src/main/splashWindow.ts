@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import type { ThemeMode } from '@agentmat/core';
+import type { ThemeMode } from '@runova/core';
 import { app, BrowserWindow, ipcMain, nativeTheme } from 'electron';
 import icon from '../../resources/icon.ico?asset';
 import { IPC } from '../shared/ipcChannels';

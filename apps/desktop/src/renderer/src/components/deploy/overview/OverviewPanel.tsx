@@ -3,7 +3,7 @@ import type {
   AlertInfo,
   JobInfo,
   ManagedService,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployCoreRecord, DeployServer } from '@shared/deployTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -102,7 +102,7 @@ export function OverviewPanel({
 
   const access = useQuery({
     queryKey: queryKeys.deployAccess(serverId),
-    queryFn: () => window.agentmat.deploy.access(serverId),
+    queryFn: () => window.runova.deploy.access(serverId),
     retry: false,
     staleTime: 30_000,
   });
@@ -118,26 +118,25 @@ export function OverviewPanel({
   const info = useQuery({
     ...read,
     queryKey: queryKeys.deploySystemInfo(serverId),
-    queryFn: () => window.agentmat.deploySystem.info(serverId),
+    queryFn: () => window.runova.deploySystem.info(serverId),
     refetchInterval: 5 * 60_000,
   });
   const services = useQuery({
     ...read,
     queryKey: queryKeys.deployServices(serverId),
-    queryFn: () => window.agentmat.deploySystem.services(serverId),
+    queryFn: () => window.runova.deploySystem.services(serverId),
     refetchInterval: 60_000,
   });
   const updates = useQuery({
     ...read,
     queryKey: queryKeys.deployUpdates(serverId),
-    queryFn: () => window.agentmat.deploySystem.updates(serverId),
+    queryFn: () => window.runova.deploySystem.updates(serverId),
   });
   const activeJobs = useQuery({
     ...read,
     queryKey: queryKeys.deployActiveJobs(serverId),
     queryFn: async () =>
-      (await window.agentmat.deployJobs.list({ serverId, activeOnly: true, limit: 10 }))?.jobs ??
-      [],
+      (await window.runova.deployJobs.list({ serverId, activeOnly: true, limit: 10 }))?.jobs ?? [],
     refetchInterval: 30_000,
   });
   const live = useLiveSamples(serverId, signedIn);
@@ -199,9 +198,9 @@ export function OverviewPanel({
     void start(
       () =>
         kind === 'security'
-          ? window.agentmat.deploySystem.upgradeSecurity(serverId)
+          ? window.runova.deploySystem.upgradeSecurity(serverId)
           : stepUp.run(
-              (proof) => window.agentmat.deploySystem.upgradeAll({ serverId, ...proof }),
+              (proof) => window.runova.deploySystem.upgradeAll({ serverId, ...proof }),
               'Installing every update',
             ),
       'log',
@@ -211,7 +210,7 @@ export function OverviewPanel({
   async function restart(service: ManagedService): Promise<void> {
     setRestarting(service);
     try {
-      await start(() => window.agentmat.deploySystem.restartService(serverId, service), 'log');
+      await start(() => window.runova.deploySystem.restartService(serverId, service), 'log');
     } finally {
       setRestarting(null);
     }
@@ -220,7 +219,7 @@ export function OverviewPanel({
   async function acknowledge(alert: AlertInfo): Promise<void> {
     setAcknowledging(alert.id);
     try {
-      alerts.merge(await window.agentmat.deployAlerts.acknowledge(serverId, alert.id));
+      alerts.merge(await window.runova.deployAlerts.acknowledge(serverId, alert.id));
     } catch (error) {
       toast.error(coreErrorMessage(error));
     } finally {
@@ -241,7 +240,7 @@ export function OverviewPanel({
     const job = await start(
       () =>
         stepUp.run(
-          (proof) => window.agentmat.deploySystem.reboot({ serverId, ...proof }),
+          (proof) => window.runova.deploySystem.reboot({ serverId, ...proof }),
           'Rebooting',
         ),
       'none',
@@ -433,12 +432,12 @@ export function OverviewPanel({
             canOperate={canOperate}
             canAdmin={canAdmin}
             onCheck={() =>
-              void start(() => window.agentmat.deploySystem.checkUpdates(serverId), 'quiet')
+              void start(() => window.runova.deploySystem.checkUpdates(serverId), 'quiet')
             }
             onUpgrade={upgrade}
             onAutomatic={(enabled) =>
               void start(
-                () => window.agentmat.deploySystem.setAutomaticUpdates(serverId, enabled),
+                () => window.runova.deploySystem.setAutomaticUpdates(serverId, enabled),
                 'quiet',
               )
             }

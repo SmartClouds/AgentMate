@@ -1,5 +1,5 @@
-import { isGrammarMistake } from '@agentmat/core';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
+import { isGrammarMistake } from '@runova/core';
 import type { GrammarIssue } from '@shared/grammar';
 import { useState } from 'react';
 import { Ban, Check, RefreshCw, SpellCheck, Spinner, X } from '@/components/icons';

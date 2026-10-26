@@ -1,4 +1,4 @@
-import { bundledSkillsShDirectory } from '@agentmat/core';
+import { bundledSkillsShDirectory } from '@runova/core';
 import { act, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { FavoriteSkillRecord } from '../../../shared/apiTypes';

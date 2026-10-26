@@ -1,4 +1,4 @@
-import type { SystemInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { SystemInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { CircleCheck, Power, Server, TriangleAlert } from '@/components/icons';
 import { Chip } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';

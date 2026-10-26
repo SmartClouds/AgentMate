@@ -7,7 +7,7 @@ import {
   type PlannedChange,
   type RemoteObservation,
   syncPathFolder,
-} from '@agentmat/core';
+} from '@runova/core';
 import {
   type FilesErrorCode,
   filesError,
@@ -52,7 +52,7 @@ import type { FilesConnectTarget, StoredFileSite } from './types';
  * 1. part files a stopped upload left in the listed folders are removed, an old file a stopped
  *    replace moved aside is deleted (or put back, when its file is gone), and paths deleted here
  *    and already gone from the server leave the base;
- * 2. the folders the uploads need are made, top down, and each one AgentMate made is recorded,
+ * 2. the folders the uploads need are made, top down, and each one Runova made is recorded,
  *    since those are the only folders it may remove again;
  * 3. uploads, as many at once as the connection allows (4 on SFTP, 1 on FTP). Each file is
  *    checked against the plan first (size and time, then the hash), and one edited since the
@@ -60,7 +60,7 @@ import type { FilesConnectTarget, StoredFileSite } from './types';
  *    since the plan is left alone and listed as a `conflict` failure;
  * 4. deletes, only of files the plan saw on the server as the last deploy left them, or that the
  *    review chose to delete;
- * 5. folders AgentMate made and that are now empty are removed. The server refuses a folder that
+ * 5. folders Runova made and that are now empty are removed. The server refuses a folder that
  *    still holds anything, so someone else's file keeps its folder;
  * 6. on FTP, the time of each file the upload could not report is read once more.
  *

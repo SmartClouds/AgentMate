@@ -88,7 +88,7 @@ export function RuleBuilderDialog({
     setBusy(true);
     setProblem(null);
     try {
-      const rules = await window.agentmat.cloudflare.createCustomRule(zone.id, {
+      const rules = await window.runova.cloudflare.createCustomRule(zone.id, {
         description: text.trim(),
         spec,
       });

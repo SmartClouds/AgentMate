@@ -1,4 +1,4 @@
-import type { AppSettings } from '@agentmat/core';
+import type { AppSettings } from '@runova/core';
 import type {
   GithubActionsHistoryItem,
   GithubRunner,
@@ -40,8 +40,8 @@ export interface RunnerRunTarget {
   htmlUrl: string;
 }
 
-const COLLAPSED_KEY = 'agentmate:runners-panel-collapsed';
-const DISMISSED_KEY = 'agentmate:runners-dismissed-orgs';
+const COLLAPSED_KEY = 'runova:runners-panel-collapsed';
+const DISMISSED_KEY = 'runova:runners-dismissed-orgs';
 
 /** More than this and the grid gets a "Show all" toggle, so a big fleet does not push the runs off screen. */
 const VISIBLE_TILES = 8;
@@ -449,19 +449,19 @@ export function RunnersPanel({
 
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
     meta: { silentLoading: true },
   });
   const links = settingsQuery.data?.runnerMachineLinks ?? NO_LINKS;
   const serversQuery = useQuery({
     queryKey: queryKeys.sshServers,
-    queryFn: () => window.agentmat.ssh.listServers(),
+    queryFn: () => window.runova.ssh.listServers(),
     meta: { silentLoading: true },
   });
   const servers = serversQuery.data ?? NO_SERVERS;
   const saveLinks = useMutation({
     mutationFn: (next: Record<string, RunnerMachineLink>) =>
-      window.agentmat.settings.update({ runnerMachineLinks: next }),
+      window.runova.settings.update({ runnerMachineLinks: next }),
     meta: { silentLoading: true },
     onError: (error) => {
       toast.error(
@@ -491,7 +491,7 @@ export function RunnersPanel({
       const fresh = askFresh.current;
       askFresh.current = false;
       try {
-        return await window.agentmat.pipelines.runners({
+        return await window.runova.pipelines.runners({
           runs: runs.map((run) => ({
             repo: run.repo,
             runId: run.id,

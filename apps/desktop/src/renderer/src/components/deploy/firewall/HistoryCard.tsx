@@ -1,4 +1,4 @@
-import type { FirewallChangeSetInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { FirewallChangeSetInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import {
   ChevronRight,
   CircleCheck,

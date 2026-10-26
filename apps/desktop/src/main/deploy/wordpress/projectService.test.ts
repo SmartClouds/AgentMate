@@ -7,7 +7,7 @@ import {
   type Project,
   type WpItemRef,
   wpItemKey,
-} from '@agentmat/core';
+} from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { DeployWordPressProgressEvent } from '../../../shared/deployWordPressTypes';
 import { wordPressErrorCode } from '../../../shared/wordpressErrors';
@@ -115,7 +115,7 @@ beforeEach(async () => {
     { active: true, mainFile: 'tools/tools.php', name: 'Tools' },
   );
   fake.addItem(HELLO, { 'hello.php': '<?php // hello' }, { isFile: true, name: 'Hello' });
-  dir = mkdtempSync(join(tmpdir(), 'agentmate-wp-projects-'));
+  dir = mkdtempSync(join(tmpdir(), 'runova-wp-projects-'));
   events = [];
   onProgress = null;
   projects = new Map();
@@ -268,11 +268,9 @@ describe('createProject', () => {
   });
 
   it('refuses the connector itself', async () => {
-    fake.addItem({ kind: 'plugin', slug: 'agentmate-connector' }, {}, { protected: true });
+    fake.addItem({ kind: 'plugin', slug: 'runova-connector' }, {}, { protected: true });
     expect(
-      wordPressErrorCode(
-        await failure(createShop([{ kind: 'plugin', slug: 'agentmate-connector' }])),
-      ),
+      wordPressErrorCode(await failure(createShop([{ kind: 'plugin', slug: 'runova-connector' }]))),
     ).toBe('itemProtected');
   });
 });
@@ -308,14 +306,14 @@ describe('deploy', () => {
     expect(await state.inflight(siteId)).toBeNull();
     expect(await bases.readPending(project.id)).toBeNull();
     expect((await service.planDeploy({ projectId: project.id })).changes).toEqual([]);
-    expect(fake.deploys.at(-1)?.label).toBe('AgentMate: Shop');
+    expect(fake.deploys.at(-1)?.label).toBe('Runova: Shop');
     const phases = events.filter((event) => event.kind === 'deploy').map((event) => event.phase);
     expect(phases).toEqual(
       expect.arrayContaining(['hashing', 'upload', 'validate', 'verify', 'finalize', 'done']),
     );
   });
 
-  it('never sends agent or AgentMate files: the shared fixture', async () => {
+  it('never sends agent or Runova files: the shared fixture', async () => {
     const project = await createShop([THEME]);
     const root = 'wp-content/themes/shop';
     for (const file of WP_AGENT_FILES.files) write(project, `${root}/${file.path}`, file.path);
@@ -721,7 +719,7 @@ describe('pull', () => {
     expect(local(project, 'wp-content/themes/shop/index.php')).toBe('my index');
     expect(result.conflictCopies).toHaveLength(1);
     expect(result.conflictCopies[0]).toMatch(
-      /^\.agentmate\/wordpress\/conflicts\/[0-9T-]+Z\/wp-content\/themes\/shop\/style\.css$/,
+      /^\.runova\/wordpress\/conflicts\/[0-9T-]+Z\/wp-content\/themes\/shop\/style\.css$/,
     );
     expect(local(project, result.conflictCopies[0])).toBe('mine');
 
@@ -779,7 +777,7 @@ describe('pull', () => {
     const project = await createShop([THEME]);
     rmSync(join(project.folderPath, 'wp-content'), { recursive: true });
     fake.setFile(THEME, 'notes.log', 'log');
-    write(project, '.agentmateignore', 'secret-dir/\n');
+    write(project, '.runovaignore', 'secret-dir/\n');
     fake.setFile(THEME, 'secret-dir/a.txt', 'x');
     const plan = await service.planPull({ projectId: project.id });
     expect(plan.leftOut).toContainEqual({

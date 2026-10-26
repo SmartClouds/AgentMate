@@ -7,7 +7,7 @@ keywords: backup, restore, export, import, zip, json, migrate, new computer, env
 route: /settings?tab=data
 ---
 
-AgentMate can save a copy of your projects, settings and other data to one file, and load that file back later. Use it before a reinstall, to move to a new computer, or just as a safety net. The file is a plain JSON file (or a zip that contains it), so keep it somewhere private: it includes your saved API keys and your Telegram bot token.
+Runova can save a copy of your projects, settings and other data to one file, and load that file back later. Use it before a reinstall, to move to a new computer, or just as a safety net. The file is a plain JSON file (or a zip that contains it), so keep it somewhere private: it includes your saved API keys and your Telegram bot token.
 
 ## Where to find it
 
@@ -39,14 +39,14 @@ Blueprint attachments travel inside the backup as files. A single attachment ove
    - **Compress as .zip** (off by default) saves a zip file instead of a plain JSON file. The zip is smaller but it is not password protected.
    - **Include project environments** (off by default) adds the env files and credentials of your project environments. Turning it on shows two password boxes. See the next section.
    - **Include the Vault (stays encrypted with its master password)** (on by default) adds your Vault file. It stays locked with its master password, so the backup needs no extra password for it.
-3. Click **Export backup**. A save dialog opens with a name like `agentmate-backup-YYYY-MM-DD.json` (or `.zip`), using today's date. Choose where to save it.
+3. Click **Export backup**. A save dialog opens with a name like `runova-backup-YYYY-MM-DD.json` (or `.zip`), using today's date. Choose where to save it.
 4. A message says "Backup saved to" followed by the path.
 
 If the file cannot be written (a full disk or a read-only folder, for example) you see "Could not write that file" with the reason, and your data is untouched.
 
 ### Include project environments with a password
 
-Project environments are stored encrypted for this computer, so another computer could not read them. For a backup, AgentMate decrypts them and seals them again with a password you choose.
+Project environments are stored encrypted for this computer, so another computer could not read them. For a backup, Runova decrypts them and seals them again with a password you choose.
 
 1. Turn on **Include project environments**.
 2. Type a **Backup password** and repeat it in **Confirm password**. It needs at least 8 characters, and the two boxes must match. The card tells you what is wrong ("Use at least 8 characters." or "The passwords do not match.") and **Export backup** stays disabled until it is fixed.
@@ -64,22 +64,22 @@ Restoring replaces the data on this machine with the contents of the file. It ca
 1. In the **Restore** panel click **Restore from backup...**.
 2. Read the warning "Restore from backup?" and click **Choose backup file...**. Click **Cancel** to stop here.
 3. Pick the `.json` or `.zip` file.
-4. If the backup contains a Vault, AgentMate asks **Restore the Vault too?** Choose **Restore the Vault** to replace this computer's Vault with the one in the backup, or **Keep my current Vault** to leave it alone.
+4. If the backup contains a Vault, Runova asks **Restore the Vault too?** Choose **Restore the Vault** to replace this computer's Vault with the one in the backup, or **Keep my current Vault** to leave it alone.
 5. If the backup contains project environments, the **Backup password** dialog opens. Type the password you chose when you exported and click **Restore**. A wrong password shows "That password does not open this backup." and you can try again. **Restore without them** restores everything else and keeps the environments you have now.
-6. AgentMate restores the data. Any warnings appear as messages (see below).
-7. A dialog says **Backup restored** and that AgentMate needs to restart to load the restored data. Click **Restart now**, or **Later** if you want to finish something first.
+6. Runova restores the data. Any warnings appear as messages (see below).
+7. A dialog says **Backup restored** and that Runova needs to restart to load the restored data. Click **Restart now**, or **Later** if you want to finish something first.
 
-The whole file is checked before anything is written, so a damaged file cannot leave you with half your data replaced. If writing fails partway, AgentMate puts back what was there and says "Your existing data was left in place." Sections that a backup does not contain (for example one made by an older version) are left as they are.
+The whole file is checked before anything is written, so a damaged file cannot leave you with half your data replaced. If writing fails partway, Runova puts back what was there and says "Your existing data was left in place." Sections that a backup does not contain (for example one made by an older version) are left as they are.
 
 ### If the file is rejected
 
 - "Could not read that file." means it is not valid JSON or zip.
-- "That file is not a valid AgentMate backup." means it is a different kind of file.
-- "That backup was written in an unsupported format" means it comes from a version of AgentMate with an incompatible backup format.
+- "That file is not a valid Runova backup." means it is a different kind of file.
+- "That backup was written in an unsupported format" means it comes from a version of Runova with an incompatible backup format.
 
 ### Warnings after a restore
 
-AgentMate shows a warning for anything it skipped or that deserves a second look:
+Runova shows a warning for anything it skipped or that deserves a second look:
 
 - "This backup set custom CLI arguments. Review them in Settings before running an agent." Those flags are added to every background CLI run, so look at them in Settings, **Agents**.
 - "This backup set project run commands. Check them on each project before using Run."
@@ -88,12 +88,12 @@ AgentMate shows a warning for anything it skipped or that deserves a second look
 
 ### What happens to the Vault
 
-When you choose **Restore the Vault**, AgentMate locks the Vault, sets your current Vault file aside in AgentMate's data folder as `vault.json.pre-restore-` followed by the time, and writes the one from the backup. If that fails your current Vault is put back. After the restart, unlock it with the master password the Vault had when the backup was made. See [Vault](vault.md).
+When you choose **Restore the Vault**, Runova locks the Vault, sets your current Vault file aside in Runova's data folder as `vault.json.pre-restore-` followed by the time, and writes the one from the backup. If that fails your current Vault is put back. After the restart, unlock it with the master password the Vault had when the backup was made. See [Vault](vault.md).
 
 ## Move to a new computer
 
 1. On the old computer export a backup with **Include project environments** (set a password) and **Include the Vault**.
-2. Install AgentMate on the new one and copy the file over.
+2. Install Runova on the new one and copy the file over.
 3. Restore it as described above. The project folders themselves are not in the backup, so make sure each project's folder exists at the same path, or fix the folder on the project afterwards.
 4. Reinstall your AI CLIs from [AI CLI Manager](cli-manager.md).
 

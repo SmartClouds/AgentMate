@@ -8,7 +8,7 @@ import {
   type RelayLegRecord,
   type RelayOptions,
   type RelayState,
-} from '@agentmat/core';
+} from '@runova/core';
 import { app } from 'electron';
 import { z } from 'zod';
 import type { RelayProjectSettings, RelaySettingsPatch } from '../../shared/relayTypes';

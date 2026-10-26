@@ -3,7 +3,7 @@ import {
   emptyUsageTokens,
   estimateCost,
   type UsageTokens,
-} from '@agentmat/core';
+} from '@runova/core';
 import type {
   ProjectUsageAgent,
   ProjectUsageConversation,

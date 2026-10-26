@@ -1,6 +1,6 @@
 import { createWriteStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
-import { STUDIO_GEN } from '@agentmat/core';
+import { STUDIO_GEN } from '@runova/core';
 
 /**
  * The providers that make Studio's pictures and clips (E38), as their docs stood in October 2026:

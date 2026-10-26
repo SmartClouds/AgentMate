@@ -1,4 +1,4 @@
-import type { SkillRepositorySourceType, UiProInstallMethod } from '@agentmat/core';
+import type { SkillRepositorySourceType, UiProInstallMethod } from '@runova/core';
 import {
   buildUiProUninstallCommands,
   bundledSkillsShDirectory,
@@ -7,7 +7,7 @@ import {
   SKILLS_SH_SNAPSHOT_DATE,
   UI_UX_PRO_MAX_AI_TARGETS,
   UI_UX_PRO_MAX_PSEUDO_REPOSITORY_ID,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -252,7 +252,7 @@ const SkillsShDirectoryCard = memo(function SkillsShDirectoryCard({
                 variant="ghost"
                 size="icon-sm"
                 aria-label={`Open ${skill.name} on skills.sh`}
-                onClick={() => void window.agentmat.shell.openExternal(skill.url)}
+                onClick={() => void window.runova.shell.openExternal(skill.url)}
               >
                 <ExternalLink className="h-3.5 w-3.5" />
               </Button>
@@ -352,7 +352,7 @@ export default function SkillsPage(): React.JSX.Element {
 
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   });
 
   const filteredProjectsForPicker = useMemo(() => {
@@ -366,7 +366,7 @@ export default function SkillsPage(): React.JSX.Element {
 
   const reposQuery = useQuery({
     queryKey: queryKeys.repositories,
-    queryFn: () => window.agentmat.skills.listRepositories(),
+    queryFn: () => window.runova.skills.listRepositories(),
   });
 
   const showingAllRepos = selectedRepoId === ALL_REPOSITORIES;
@@ -390,7 +390,7 @@ export default function SkillsPage(): React.JSX.Element {
   const repoIndexes = useQueries({
     queries: visibleRepos.map((repo) => ({
       queryKey: queryKeys.repositoryIndex(repo.id),
-      queryFn: () => window.agentmat.skills.getRepositoryIndex(repo.id),
+      queryFn: () => window.runova.skills.getRepositoryIndex(repo.id),
       enabled: activeTab === 'marketplace',
     })),
     combine: (results) => ({
@@ -408,7 +408,7 @@ export default function SkillsPage(): React.JSX.Element {
   // user commits to adding it.
   const folderPreviewQuery = useQuery({
     queryKey: queryKeys.localSkillFolderPreview(debouncedRepoSource),
-    queryFn: () => window.agentmat.skills.previewLocalRepository(debouncedRepoSource),
+    queryFn: () => window.runova.skills.previewLocalRepository(debouncedRepoSource),
     enabled: addRepoOpen && repoSourceType === 'local-folder' && debouncedRepoSource.trim() !== '',
     staleTime: 0,
   });
@@ -419,7 +419,7 @@ export default function SkillsPage(): React.JSX.Element {
   // the folder refreshes the marketplace on its own.
   useEffect(
     () =>
-      window.agentmat.skills.onRepositoryChanged((repositoryId) => {
+      window.runova.skills.onRepositoryChanged((repositoryId) => {
         void queryClient.invalidateQueries({
           queryKey: queryKeys.repositoryIndex(repositoryId),
         });
@@ -430,7 +430,7 @@ export default function SkillsPage(): React.JSX.Element {
 
   const addRepoMutation = useMutation({
     mutationFn: () =>
-      window.agentmat.skills.addRepository({
+      window.runova.skills.addRepository({
         name: repoName.trim() || (folderPreview?.suggestedName ?? ''),
         sourceType: repoSourceType,
         source: repoSource.trim(),
@@ -448,7 +448,7 @@ export default function SkillsPage(): React.JSX.Element {
   });
 
   const removeRepoMutation = useMutation({
-    mutationFn: (id: string) => window.agentmat.skills.removeRepository(id),
+    mutationFn: (id: string) => window.runova.skills.removeRepository(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.repositories });
       setSelectedRepoId(ALL_REPOSITORIES);
@@ -459,7 +459,7 @@ export default function SkillsPage(): React.JSX.Element {
   const refreshRepoMutation = useMutation({
     mutationFn: async (ids: string[]) => {
       const results = await Promise.allSettled(
-        ids.map((id) => window.agentmat.skills.refreshRepository(id)),
+        ids.map((id) => window.runova.skills.refreshRepository(id)),
       );
       const failure = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
       return { count: results.length - (failure ? 1 : 0), failure };
@@ -501,7 +501,7 @@ export default function SkillsPage(): React.JSX.Element {
               cwd: project?.folderPath,
               projectId: project?.id,
             });
-            await window.agentmat.skills.recordSkillsShInstall({
+            await window.runova.skills.recordSkillsShInstall({
               projectId: target,
               owner: skill.owner,
               repo: skill.repo,
@@ -519,7 +519,7 @@ export default function SkillsPage(): React.JSX.Element {
 
       const results = await Promise.allSettled(
         targets.map((projectId) =>
-          window.agentmat.skills.install({
+          window.runova.skills.install({
             projectId,
             repositoryId: installTarget.repositoryId,
             skillId: installTarget.skillId,
@@ -607,7 +607,7 @@ export default function SkillsPage(): React.JSX.Element {
 
   const liveShSearchQuery = useQuery({
     queryKey: queryKeys.skillsShSearch(shDebouncedSearch.trim().toLowerCase()),
-    queryFn: () => window.agentmat.skills.searchSkillsSh(shDebouncedSearch.trim()),
+    queryFn: () => window.runova.skills.searchSkillsSh(shDebouncedSearch.trim()),
     enabled: shMode === 'live' && shDebouncedSearch.trim().length >= 2,
   });
 
@@ -626,7 +626,7 @@ export default function SkillsPage(): React.JSX.Element {
 
   const shDetailQuery = useQuery({
     queryKey: queryKeys.skillsShDetail(shSelected?.id ?? ''),
-    queryFn: () => window.agentmat.skills.getSkillsShDetail(shSelected!.id),
+    queryFn: () => window.runova.skills.getSkillsShDetail(shSelected!.id),
     enabled: !!shSelected && shSelected.description === undefined,
   });
 
@@ -635,14 +635,14 @@ export default function SkillsPage(): React.JSX.Element {
 
   const globalInstalledQuery = useQuery({
     queryKey: queryKeys.installedSkills(null),
-    queryFn: () => window.agentmat.skills.listInstalled(null),
+    queryFn: () => window.runova.skills.listInstalled(null),
   });
 
   // One row per skill that has ever been checked, so cards can show their last verdict without
   // anyone having to open the dialog again.
   const latestAuditsQuery = useQuery({
     queryKey: queryKeys.skillAuditsLatest,
-    queryFn: () => window.agentmat.skills.latestAuditPerSkill(),
+    queryFn: () => window.runova.skills.latestAuditPerSkill(),
   });
 
   const auditBySkillId = useMemo(
@@ -652,7 +652,7 @@ export default function SkillsPage(): React.JSX.Element {
 
   const auditHistoryQuery = useQuery({
     queryKey: queryKeys.skillAudits,
-    queryFn: () => window.agentmat.skills.listAudits({ limit: 200 }),
+    queryFn: () => window.runova.skills.listAudits({ limit: 200 }),
     enabled: activeTab === 'security',
   });
 
@@ -660,13 +660,13 @@ export default function SkillsPage(): React.JSX.Element {
   // that shows the counts. Later scans read the appended bytes and are cheap.
   const usageQuery = useQuery({
     queryKey: queryKeys.skillUsage,
-    queryFn: () => window.agentmat.skills.getUsage(),
+    queryFn: () => window.runova.skills.getUsage(),
     enabled: activeTab === 'usage' || activeTab === 'favorites',
     staleTime: 60_000,
   });
 
   const rescanUsageMutation = useMutation({
-    mutationFn: () => window.agentmat.skills.rescanUsage(),
+    mutationFn: () => window.runova.skills.rescanUsage(),
     onSuccess: (report) => {
       queryClient.setQueryData(queryKeys.skillUsage, report);
       toast.success(`Read ${report.filesScanned} session${report.filesScanned === 1 ? '' : 's'}.`);
@@ -680,7 +680,7 @@ export default function SkillsPage(): React.JSX.Element {
   );
 
   const removeAuditMutation = useMutation({
-    mutationFn: (id: string) => window.agentmat.skills.removeAudit(id),
+    mutationFn: (id: string) => window.runova.skills.removeAudit(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.skillAudits });
       void queryClient.invalidateQueries({ queryKey: queryKeys.skillAuditsLatest });
@@ -689,7 +689,7 @@ export default function SkillsPage(): React.JSX.Element {
   });
 
   const clearAuditsMutation = useMutation({
-    mutationFn: () => window.agentmat.skills.clearAudits(),
+    mutationFn: () => window.runova.skills.clearAudits(),
     onSuccess: () => {
       toast.success('Security check history cleared.');
       void queryClient.invalidateQueries({ queryKey: queryKeys.skillAudits });
@@ -700,7 +700,7 @@ export default function SkillsPage(): React.JSX.Element {
 
   const globalSkillUpdatesQuery = useQuery({
     queryKey: queryKeys.skillUpdates(null),
-    queryFn: () => window.agentmat.skills.checkForUpdates(null),
+    queryFn: () => window.runova.skills.checkForUpdates(null),
     enabled: (globalInstalledQuery.data?.length ?? 0) > 0,
   });
 
@@ -732,7 +732,7 @@ export default function SkillsPage(): React.JSX.Element {
           }).join('; '),
         });
       }
-      await window.agentmat.skills.remove({ projectId: null, skillId: record.skillId });
+      await window.runova.skills.remove({ projectId: null, skillId: record.skillId });
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.installedSkills(null) });
@@ -743,7 +743,7 @@ export default function SkillsPage(): React.JSX.Element {
 
   const updateGlobalSkillMutation = useMutation({
     mutationFn: (update: SkillUpdateInfo) =>
-      window.agentmat.skills.install({
+      window.runova.skills.install({
         projectId: null,
         repositoryId: update.repositoryId,
         skillId: update.skillId,
@@ -759,7 +759,7 @@ export default function SkillsPage(): React.JSX.Element {
   async function handlePickLocalFolder(): Promise<void> {
     // Whatever is typed wins as the starting directory; the main process falls back to the
     // projects folder from Settings when the field is empty or points nowhere.
-    const picked = await window.agentmat.skills.pickLocalRepository(repoSource);
+    const picked = await window.runova.skills.pickLocalRepository(repoSource);
     if (picked) {
       setRepoSource(picked);
       setDebouncedRepoSource(picked);
@@ -927,8 +927,8 @@ export default function SkillsPage(): React.JSX.Element {
       {activeTab === 'featured' && (
         <>
           <p className="px-1.5 text-sm text-muted-foreground">
-            Skills that ship their own installer instead of plain files, so AgentMate walks you
-            through their CLI rather than copying a folder.
+            Skills that ship their own installer instead of plain files, so Runova walks you through
+            their CLI rather than copying a folder.
           </p>
           <UiUxProMaxCard />
         </>
@@ -1183,7 +1183,7 @@ export default function SkillsPage(): React.JSX.Element {
                               variant="soft"
                               size="sm"
                               onClick={() =>
-                                void window.agentmat.shell.openExternal(skill.documentationUrl!)
+                                void window.runova.shell.openExternal(skill.documentationUrl!)
                               }
                             >
                               Docs
@@ -1268,7 +1268,7 @@ export default function SkillsPage(): React.JSX.Element {
               <button
                 type="button"
                 className="underline underline-offset-2 hover:text-foreground"
-                onClick={() => void window.agentmat.shell.openExternal('https://www.skills.sh')}
+                onClick={() => void window.runova.shell.openExternal('https://www.skills.sh')}
               >
                 skills.sh
               </button>{' '}
@@ -1493,7 +1493,7 @@ export default function SkillsPage(): React.JSX.Element {
           <DialogHeader>
             <DialogTitle>Add repository</DialogTitle>
             <DialogDescription>
-              Point AgentMate at a folder of skills, a git repository, or a JSON index.
+              Point Runova at a folder of skills, a git repository, or a JSON index.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -1674,7 +1674,7 @@ export default function SkillsPage(): React.JSX.Element {
             <Button
               type="button"
               variant="soft"
-              onClick={() => shSelected && void window.agentmat.shell.openExternal(shSelected.url)}
+              onClick={() => shSelected && void window.runova.shell.openExternal(shSelected.url)}
             >
               <ExternalLink /> Open on skills.sh
             </Button>

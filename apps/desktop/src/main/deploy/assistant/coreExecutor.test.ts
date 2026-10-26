@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import type {
   ExecOutput,
   ExecRequest,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { ApprovalRequiredError } from '../../agents/sshTaskRunner';
 import { execApprovalMessage } from './approvals';
 import { APPROVAL_INVALID, CORE_ASKS, coreExecutor, NEEDS_APPROVAL } from './coreExecutor';
@@ -141,7 +141,7 @@ describe('coreExecutor', () => {
 describe('execApprovalMessage', () => {
   it('is the core’s message, one field per line, the command last', () => {
     expect(execApprovalMessage('n', 'abc', 'dev', 'ses', 'df -h\nuptime')).toBe(
-      'agentmate-core/exec/v1\nn\nabc\ndev\nses\ndf -h\nuptime',
+      'runova-core/exec/v1\nn\nabc\ndev\nses\ndf -h\nuptime',
     );
   });
 });

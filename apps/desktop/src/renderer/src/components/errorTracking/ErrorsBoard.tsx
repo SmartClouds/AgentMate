@@ -1,4 +1,4 @@
-import type { ErrorPeriod, Project } from '@agentmat/core';
+import type { ErrorPeriod, Project } from '@runova/core';
 import type {
   ErrorIssueSort,
   ErrorIssueSummary,
@@ -99,7 +99,7 @@ const STEPS: { title: string; body: React.ReactNode }[] = [
   },
   {
     title: 'Connect it',
-    body: 'Paste the token and pick your organization. AgentMate checks what the token can read before it saves anything.',
+    body: 'Paste the token and pick your organization. Runova checks what the token can read before it saves anything.',
   },
   {
     title: 'Link your projects',
@@ -213,7 +213,7 @@ export function ErrorsBoard({ projectId }: { projectId?: string }): React.JSX.El
 
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: async (): Promise<Project[]> => (await window.agentmat.projects.list()) ?? [],
+    queryFn: async (): Promise<Project[]> => (await window.runova.projects.list()) ?? [],
     meta: QUIET,
   });
   const projects = projectsQuery.data ?? [];

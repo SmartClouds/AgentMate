@@ -3,7 +3,7 @@ import {
   HANDOFF_SECTIONS,
   type Project,
   type RelayLegRecord,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { RelayBoard } from '@shared/relayTypes';
 import { useQuery } from '@tanstack/react-query';
 import { MarkdownMessage } from '@/components/askAi/MarkdownMessage';
@@ -85,7 +85,7 @@ export function RelayTaskDetail({
 }): React.JSX.Element {
   const query = useQuery({
     queryKey: queryKeys.relayTask(board.projectId, taskId),
-    queryFn: () => window.agentmat.relay.task(board.projectId, taskId),
+    queryFn: () => window.runova.relay.task(board.projectId, taskId),
   });
   const card = board.tasks.find((task) => task.id === taskId);
   const column = columnSpec(card?.status ?? 'todo');

@@ -8,7 +8,7 @@ import {
   type TestRunEvent,
   type TestRunSnapshot,
   type TestRunSummary,
-} from '@agentmat/core';
+} from '@runova/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -181,7 +181,7 @@ beforeEach(() => {
   writeText.mockClear();
   toast.success.mockClear();
   toast.error.mockClear();
-  Object.assign(window, { agentmat: { tests: api, shell: { openPath: vi.fn() } } });
+  Object.assign(window, { runova: { tests: api, shell: { openPath: vi.fn() } } });
   Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
 });
 

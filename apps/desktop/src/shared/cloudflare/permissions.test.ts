@@ -10,7 +10,7 @@ import {
 } from './permissions';
 
 /**
- * The permissions AgentMate asks for, in the words Cloudflare's token page uses, so a guided fix
+ * The permissions Runova asks for, in the words Cloudflare's token page uses, so a guided fix
  * can say exactly what to add and nothing more.
  */
 
@@ -41,7 +41,7 @@ describe('the permission catalog', () => {
     ]);
     expect(url.searchParams.get('accountId')).toBe('*');
     expect(url.searchParams.get('zoneId')).toBe('all');
-    expect(url.searchParams.get('name')).toBe('AgentMate');
+    expect(url.searchParams.get('name')).toBe('Runova');
   });
 });
 

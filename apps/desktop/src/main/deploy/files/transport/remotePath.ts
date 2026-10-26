@@ -41,10 +41,10 @@ export function folderChain(path: string): string[] {
  * refuse dot files. It matches `PART_FILE` in types.ts.
  */
 export function partPathFor(remotePath: string, random = randomBytes(4).toString('hex')): string {
-  return `${normalizeRemote(remotePath)}.agentmate-${random}.part`;
+  return `${normalizeRemote(remotePath)}.runova-${random}.part`;
 }
 
 /** Where the old file waits while a replace moves it aside. It matches `BACKUP_FILE` in types.ts. */
 export function backupPathFor(remotePath: string, random = randomBytes(4).toString('hex')): string {
-  return `${normalizeRemote(remotePath)}.agentmate-${random}.old`;
+  return `${normalizeRemote(remotePath)}.runova-${random}.old`;
 }

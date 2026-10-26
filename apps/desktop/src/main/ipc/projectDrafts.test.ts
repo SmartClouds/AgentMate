@@ -1,4 +1,4 @@
-import type { ProjectDraft, ScheduledTask } from '@agentmat/core';
+import type { ProjectDraft, ScheduledTask } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IPC } from '../../shared/ipcChannels';
 import {

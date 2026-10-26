@@ -2,12 +2,12 @@
 title: Deploy
 category: Deploy
 order: 10
-summary: Manage your own Linux servers from AgentMate: see how they are doing, run containers and websites, and keep them updated, all over SSH.
+summary: Manage your own Linux servers from Runova: see how they are doing, run containers and websites, and keep them updated, all over SSH.
 keywords: deploy, server, linux, vps, ssh, server core, overview, health score, metrics, charts, updates, reboot, services, alerts, monitoring, pulse
 route: /deploy
 ---
 
-Deploy is where you manage your own Linux servers. You install a small program called the server core on a server (AgentMate reaches it through your SSH login, so no extra port is opened), and from then on you can watch the server live, update it, reboot it, run Docker containers, publish websites, set up a firewall and more.
+Deploy is where you manage your own Linux servers. You install a small program called the server core on a server (Runova reaches it through your SSH login, so no extra port is opened), and from then on you can watch the server live, update it, reboot it, run Docker containers, publish websites, set up a firewall and more.
 
 This article explains the page itself: the server list, the sections of a server, and the Overview with its health score, charts, updates, services and reboot. Adding a server and installing the core is in [Deploy: servers and setup](deploy-servers-setup.md).
 
@@ -25,11 +25,11 @@ Each entry shows the server's nickname and a status line with a status mark:
 | --- | --- |
 | Core not installed | The server is saved but the server core is not on it yet. |
 | Installing the core… / Removing the core… | A setup run is in progress (a spinner shows). |
-| Connecting… | AgentMate is asking the core whether it answers. |
+| Connecting… | Runova is asking the core whether it answers. |
 | Online, core 1.2.3 | The core answers. The version number is shown. |
 | Not answering | The last check did not get an answer. |
 
-Click a server to open it. AgentMate checks each core's health every 30 seconds while the page is open. Under the list there are three shortcuts: **Choose servers to show**, **Add or edit servers in Remote** and **Cloudflare: domains and DNS** (see [Cloudflare](cloudflare.md)).
+Click a server to open it. Runova checks each core's health every 30 seconds while the page is open. Under the list there are three shortcuts: **Choose servers to show**, **Add or edit servers in Remote** and **Cloudflare: domains and DNS** (see [Cloudflare](cloudflare.md)).
 
 If you have no saved servers at all, the page says **No servers yet** and offers **Open Remote** and **Manage Cloudflare**. If you have saved servers but have not picked any for Deploy, it says **No servers chosen yet** and offers **Choose servers to show**.
 
@@ -51,7 +51,7 @@ Further down the rail, the **FTP and SFTP sites** group lists folders you deploy
 
 Above the sections you see the server's nickname and its login as `user@host:port`. Two extra markers can appear:
 
-- **Development** (a badge): this is the DevHost, a built-in test server that only exists in development builds of AgentMate. It has no SSH, so you cannot update or remove its core from the page.
+- **Development** (a badge): this is the DevHost, a built-in test server that only exists in development builds of Runova. It has no SSH, so you cannot update or remove its core from the page.
 - A connection badge on the right (once the core is installed). It says **Connected**, **Connecting**, **Reconnecting**, **Not connected**, **Sign-in needed**, **Access to set up again** or **Servers locked**. Hover it for the reason and what happens next. When the connection is live it also says how it travels (SSH, direct TLS or loopback). If a direct TLS certificate does not match the pinned one the badge says **Certificate mismatch**.
 
 ### Locked servers banner
@@ -134,7 +134,7 @@ The **System** card shows what the server is: host name and OS, processor model 
 
 ### Reboot
 
-Operators and above see a **Reboot** button on the System card. It asks you to type the server's nickname to confirm, and warns that websites and apps are down until the server is back, usually within a couple of minutes. Rebooting also asks you to confirm your password (see below). After you confirm, a banner says the server is about to reboot, then that AgentMate is waiting for it to come back. The page reconnects by itself, and a message says "(server) is back." when it does.
+Operators and above see a **Reboot** button on the System card. It asks you to type the server's nickname to confirm, and warns that websites and apps are down until the server is back, usually within a couple of minutes. Rebooting also asks you to confirm your password (see below). After you confirm, a banner says the server is about to reboot, then that Runova is waiting for it to come back. The page reconnects by itself, and a message says "(server) is back." when it does.
 
 ### Updates
 
@@ -158,7 +158,7 @@ At the bottom of the Overview are two cards about the core itself. **Server core
 
 Some changes (installing every update, rebooting, and sensitive security changes) ask for your password again in a dialog called **Confirm it is you**. If your account uses two-factor you can switch to **Use a code from your authenticator app**. The confirmation counts for the next 10 minutes, so you are not asked again for each step.
 
-To skip the question altogether, tick **Remember my password on this computer** in that dialog. The password is kept sealed in the Servers vault, and from then on AgentMate answers **Confirm it is you** for you. It is only kept after the core accepted it, and it is never kept for an authenticator code. **Your access** says when a password is remembered and has **Forget it**. Signing out of the server forgets it too, and so does a password the core stops accepting. If the Servers vault is locked, you are asked as before.
+To skip the question altogether, tick **Remember my password on this computer** in that dialog. The password is kept sealed in the Servers vault, and from then on Runova answers **Confirm it is you** for you. It is only kept after the core accepted it, and it is never kept for an authenticator code. **Your access** says when a password is remembered and has **Forget it**. Signing out of the server forgets it too, and so does a password the core stops accepting. If the Servers vault is locked, you are asked as before.
 
 ## Tips
 

@@ -1,4 +1,4 @@
-import type { ComposeRiskSeverity } from '@agentmat/core';
+import type { ComposeRiskSeverity } from '@runova/core';
 import { useId } from 'react';
 import { CircleCheck, CircleInfo } from '@/components/icons';
 import { Chip, type ChipTone, SECTION_WELL } from '@/components/pageKit';

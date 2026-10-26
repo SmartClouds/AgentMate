@@ -1,4 +1,4 @@
-import { isSameOrInside, remapPath } from '@agentmat/core';
+import { isSameOrInside, remapPath } from '@runova/core';
 import { create } from 'zustand';
 
 /** An inline name box in the explorer: renaming a row, or naming a new file or folder. */

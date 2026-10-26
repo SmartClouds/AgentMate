@@ -2,7 +2,7 @@ import { coreErrorMessage } from '@shared/coreErrors';
 import type {
   NginxProblemInfo,
   SiteInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { MonacoDiffEditor } from '@/components/editor/MonacoDiffEditor';
@@ -84,7 +84,7 @@ export function AdvancedTab({
     setBusy(true);
     setFailure(null);
     try {
-      const result = await window.agentmat.deploySites.setSnippets(serverId, {
+      const result = await window.runova.deploySites.setSnippets(serverId, {
         siteId: site.settings.id,
         ...(text.serverSnippet ? { serverSnippet: text.serverSnippet } : {}),
         ...(text.locationSnippet ? { locationSnippet: text.locationSnippet } : {}),

@@ -4,7 +4,7 @@ Milestone: standalone (Projects). Depends on: E19, E20.
 
 ## Goal
 
-Make "WordPress site" a kind of project. AgentMate pulls the chosen themes and plugins into a local
+Make "WordPress site" a kind of project. Runova pulls the chosen themes and plugins into a local
 folder that keeps the site's layout, so agents work on them like any other code, and deploys the
 changes back through the connector after a review that shows exactly what goes and what stays.
 
@@ -37,7 +37,7 @@ changes back through the connector after a review that shows exactly what goes a
 - [x] T10 What git ignores is left out by default: the project's and the item's `.gitignore` count
   like the default list (left out until the site has the file, a `!` line in them cannot put a
   built-in default back, an unreadable line is skipped, and a project `.gitignore` that ignores the
-  whole item folder is not used). Any name that starts with `.claude` or `.agentmate` joins the hard
+  whole item folder is not used). Any name that starts with `.claude` or `.runova` joins the hard
   deny list on both sides, with shared vectors.
 - [x] T11 Deploy a theme or plugin the site does not have yet: "New theme or plugin" in Deploy's
   Themes and plugins and in the project's WordPress section lists the theme and plugin folders in
@@ -48,12 +48,12 @@ changes back through the connector after a review that shows exactly what goes a
 
 1. A new WordPress project holds `wp-content/themes/<slug>` and `wp-content/plugins/<slug>` for the
    picked items and nothing else from the site.
-2. Agent settings, skills and AgentMate files anywhere in the project folder are never deployed,
+2. Agent settings, skills and Runova files anywhere in the project folder are never deployed,
    and the review lists every one it left out with the reason.
 3. Someone else's change on the site since the last pull shows as a conflict, and a deploy over it
    needs an explicit choice.
 4. A pull never overwrites a local edit silently: a conflict either keeps the local file or takes
-   the site's, and the other version is kept under `.agentmate/wordpress/conflicts/`.
+   the site's, and the other version is kept under `.runova/wordpress/conflicts/`.
 5. Unlinking keeps the files; only the link goes.
 6. Linking an existing project never overwrites a file already in it.
 7. A file or folder ignored in one review stays out of every later review, deploy and pull of that

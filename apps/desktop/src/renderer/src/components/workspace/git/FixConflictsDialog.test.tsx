@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { WorkspaceGitState } from '@shared/apiTypes';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';

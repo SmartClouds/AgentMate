@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { SecretEnvelope } from '../../../shared/apiTypes';
-import type { RegistryAuth } from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { RegistryAuth } from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import {
   DOCKER_HUB,
   GITHUB_REGISTRY,
@@ -197,7 +197,7 @@ export class DeployRegistries {
       source,
       registry: GITHUB_REGISTRY,
       // GHCR takes any user name with a classic token; the token's owner reads best in the logs.
-      username: check.username ?? 'agentmate',
+      username: check.username ?? 'runova',
       secret: token,
       scopes: check.scopes,
       broaderScopes: check.broaderScopes,

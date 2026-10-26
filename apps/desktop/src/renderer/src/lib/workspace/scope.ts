@@ -1,4 +1,4 @@
-import { baseName, type Project, parseScopeId, type WorktreeInfo } from '@agentmat/core';
+import { baseName, type Project, parseScopeId, type WorktreeInfo } from '@runova/core';
 
 /**
  * A project as one workspace sees it. For a git worktree's workspace the id is the scope id and

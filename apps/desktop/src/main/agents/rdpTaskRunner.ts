@@ -3,7 +3,7 @@ import { mkdtempSync } from 'node:fs';
 import { rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { getCliDefinition, runArgsFor, supportsPromptImages } from '@agentmat/core';
+import { getCliDefinition, runArgsFor, supportsPromptImages } from '@runova/core';
 import type {
   AiProvider,
   RdpAgentFrame,
@@ -514,7 +514,7 @@ export function startRdpTask(
     runArgs: runArgsFor(input.cliId, input.modelId, input.effort),
     imageMode,
     // Made up front, so a stop can never race its creation and leave it behind.
-    runDir: cliId ? mkdtempSync(join(tmpdir(), 'agentmate-rdp-')) : null,
+    runDir: cliId ? mkdtempSync(join(tmpdir(), 'runova-rdp-')) : null,
     cliRequestId: null,
     prompt: prompt.trim(),
     followUps: [],

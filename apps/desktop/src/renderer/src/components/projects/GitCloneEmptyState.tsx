@@ -1,4 +1,4 @@
-import { browsableRepoUrl, isClonableGithubUrl, normalizeCloneUrl } from '@agentmat/core';
+import { browsableRepoUrl, isClonableGithubUrl, normalizeCloneUrl } from '@runova/core';
 import type { CloneProjectResult } from '@shared/apiTypes';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -57,7 +57,7 @@ export function GitCloneEmptyState({
       url: string;
       attach: boolean;
     }): Promise<{ url: string; result: CloneProjectResult }> => {
-      const result = await window.agentmat.git.cloneProject({ projectId, repoUrl: url, attach });
+      const result = await window.runova.git.cloneProject({ projectId, repoUrl: url, attach });
       return { url, result };
     },
     onSuccess: async ({ url, result }) => {
@@ -82,7 +82,7 @@ export function GitCloneEmptyState({
       const link = browsableRepoUrl(url);
       if (link !== repoUrl) {
         // The address that worked becomes the project's repository link.
-        await window.agentmat.projects.update(projectId, { repoUrl: link });
+        await window.runova.projects.update(projectId, { repoUrl: link });
         void queryClient.invalidateQueries({ queryKey: queryKeys.projects });
       }
       void queryClient.invalidateQueries({ queryKey: queryKeys.gitStatus(projectId) });

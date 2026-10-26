@@ -50,7 +50,7 @@ describe('AGENT_INSTRUCTION_FILES', () => {
     }
   });
 
-  it("puts the file AgentMate's own bootstrap writes first", () => {
+  it("puts the file Runova's own bootstrap writes first", () => {
     // The rest are only accepted when a repo from elsewhere already has one.
     expect(AGENT_INSTRUCTION_FILES['claude-code'][0]).toBe('.claude/CLAUDE.md');
     expect(AGENT_INSTRUCTION_FILES.gemini[0]).toBe('GEMINI.md');
@@ -68,7 +68,7 @@ describe('renderBlueprintBlock', () => {
     ).toMatchInlineSnapshot(`
       "## Project blueprint
 
-      <!-- Maintained by AgentMate. Anything written inside this block is overwritten. -->
+      <!-- Maintained by Runova. Anything written inside this block is overwritten. -->
 
       ### Main idea
 

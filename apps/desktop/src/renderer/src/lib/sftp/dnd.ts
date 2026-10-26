@@ -5,10 +5,10 @@
  * the source while the pointer is still moving.
  */
 
-export const SFTP_DND_MIME = 'application/x-agentmate-sftp';
+export const SFTP_DND_MIME = 'application/x-runova-sftp';
 const SIDE_MIME = {
-  local: 'application/x-agentmate-sftp-local',
-  remote: 'application/x-agentmate-sftp-remote',
+  local: 'application/x-runova-sftp-local',
+  remote: 'application/x-runova-sftp-remote',
 } as const;
 
 export type DragSide = 'local' | 'remote';

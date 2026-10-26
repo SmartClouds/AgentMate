@@ -1,4 +1,4 @@
-import type { ContainerSummary } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { ContainerSummary } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployServer } from '@shared/deployTypes';
 import { useState } from 'react';
 import { CircleCheck, CircleX, FolderKanban, Robot, TriangleAlert } from '@/components/icons';

@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import type { HealthResponse } from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { HealthResponse } from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployRestoreProgress } from '../../../shared/deployHardeningTypes';
 import { tempDir } from '../../../test/main/fixtures';
 import { restoreCore } from './restore';
@@ -72,7 +72,7 @@ describe('restoreCore', () => {
     expect(restored.enrollment.userName).toBe('maria');
     expect(restored.previousStateFolder).toBe(PREVIOUS);
     expect(server.uploads).toEqual([
-      { path: '/tmp/agentmate.Test123456/backup.ambackup', bytes: 19, mode: 0o600 },
+      { path: '/tmp/runova.Test123456/backup.rnbackup', bytes: 19, mode: 0o600 },
     ]);
     const stage = server.rootStdin.find((entry) => entry.command.includes('admin restore-stage'));
     expect(stage?.stdin).toBe(`${PASSPHRASE}\n`);
@@ -81,11 +81,11 @@ describe('restoreCore', () => {
       .map((command) =>
         command.includes('restore-stage')
           ? 'stage'
-          : command === 'systemctl stop agentmate-core'
+          : command === 'systemctl stop runova-core'
             ? 'stop'
-            : command.startsWith('rm -rf /var/lib/agentmate-core-restore/previous')
+            : command.startsWith('rm -rf /var/lib/runova-core-restore/previous')
               ? 'swap'
-              : command === 'systemctl start agentmate-core'
+              : command === 'systemctl start runova-core'
                 ? 'start'
                 : command.includes('enroll-device')
                   ? 'enroll'
@@ -104,13 +104,11 @@ describe('restoreCore', () => {
       'enroll:done',
       'cleanup:done',
     ]);
-    expect(server.commands.some((command) => command.startsWith('rm -rf /tmp/agentmate.'))).toBe(
-      true,
-    );
+    expect(server.commands.some((command) => command.startsWith('rm -rf /tmp/runova.'))).toBe(true);
   });
 
   it('stages a backup the core already fetched onto the server, without an upload (E28)', async () => {
-    const fetched = '/var/lib/agentmate-core/backups/0f8b0f8b0f8b0f8b0f8b0f8b0f8b0f8b.ambackup';
+    const fetched = '/var/lib/runova-core/backups/0f8b0f8b0f8b0f8b0f8b0f8b0f8b0f8b.ambackup';
     const { server, run, phases } = setup(
       { coreUsers: [{ userName: 'maria', roles: ['owner'] }] },
       undefined,
@@ -178,7 +176,7 @@ describe('restoreCore', () => {
       /ECONNREFUSED The server went back to the state it had before/,
     );
     expect(server.rootCommands.at(-1)).toContain(
-      'mv -T /var/lib/agentmate-core-restore/previous /var/lib/agentmate-core',
+      'mv -T /var/lib/runova-core-restore/previous /var/lib/runova-core',
     );
     expect(phases()).toContain('rollback:done');
     expect(server.rootCommands.some((command) => command.includes('enroll-device'))).toBe(false);
@@ -188,8 +186,8 @@ describe('restoreCore', () => {
     const { run } = setup({
       failures: [
         {
-          match: 'systemctl start agentmate-core',
-          stderr: 'Job for agentmate-core.service failed.',
+          match: 'systemctl start runova-core',
+          stderr: 'Job for runova-core.service failed.',
         },
       ],
     });

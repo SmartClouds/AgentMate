@@ -1,11 +1,11 @@
+import * as PopoverPrimitive from '@radix-ui/react-popover';
 import {
   type AgentStatus,
   bootStageLabel,
   type KeepAwakeMode,
   type Project,
   type SubscriptionWindow,
-} from '@agentmat/core';
-import * as PopoverPrimitive from '@radix-ui/react-popover';
+} from '@runova/core';
 import type { KeepAwakeStatus } from '@shared/apiTypes';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
@@ -145,7 +145,7 @@ function AgentSegments(): React.JSX.Element {
   const statuses = useAgentStatusStore((s) => s.statuses);
   const projectsQuery = useQuery<Project[]>({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   });
   const projectName = (id: string): string =>
     projectsQuery.data?.find((p) => p.id === id)?.name ?? 'Project';
@@ -392,14 +392,14 @@ function ProviderLimitSegment({ chip }: { chip: LimitChip }): React.JSX.Element 
 function UsageLimitSegments(): React.JSX.Element {
   const usageQuery = useQuery({
     queryKey: queryKeys.usageList,
-    queryFn: () => window.agentmat.usage.list(),
+    queryFn: () => window.runova.usage.list(),
     refetchInterval: 60_000,
     staleTime: 30_000,
     meta: { silentLoading: true },
   });
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
     meta: { silentLoading: true },
   });
   // Until settings load every provider counts as on, so the bar does not flash empty.
@@ -419,13 +419,13 @@ function DockerSegment(): React.JSX.Element | null {
   const navigate = useNavigate();
   const availabilityQuery = useQuery({
     queryKey: queryKeys.dockerAvailability,
-    queryFn: () => window.agentmat.docker.availability(),
+    queryFn: () => window.runova.docker.availability(),
     meta: { silentLoading: true },
   });
   const available = availabilityQuery.data;
   const listQuery = useQuery({
     queryKey: queryKeys.dockerList,
-    queryFn: () => window.agentmat.docker.list(),
+    queryFn: () => window.runova.docker.list(),
     enabled: available === true,
     refetchInterval: available === true ? SAMPLE_INTERVAL_MS : false,
     meta: { silentLoading: true },
@@ -508,14 +508,14 @@ function AndroidSegment(): React.JSX.Element | null {
 
   const sdkQuery = useQuery({
     queryKey: queryKeys.androidSdk,
-    queryFn: () => window.agentmat.android.sdk(),
+    queryFn: () => window.runova.android.sdk(),
     meta: { silentLoading: true },
   });
   const available = sdkQuery.data?.status === 'found';
 
   const snapshotQuery = useQuery({
     queryKey: queryKeys.androidSnapshot,
-    queryFn: () => window.agentmat.android.refresh(),
+    queryFn: () => window.runova.android.refresh(),
     enabled: available,
     refetchInterval: available ? SAMPLE_INTERVAL_MS : false,
     meta: { silentLoading: true },
@@ -523,9 +523,9 @@ function AndroidSegment(): React.JSX.Element | null {
 
   useEffect(() => {
     if (!open) return;
-    void window.agentmat.android.watchUsage(true);
+    void window.runova.android.watchUsage(true);
     return () => {
-      void window.agentmat.android.watchUsage(false);
+      void window.runova.android.watchUsage(false);
     };
   }, [open]);
 
@@ -660,7 +660,7 @@ function CoreBars({ percents }: { percents: number[] }): React.JSX.Element {
 function TopApps({ resource }: { resource: 'cpu' | 'memory' }): React.JSX.Element | null {
   const top = useQuery({
     queryKey: queryKeys.topResourceApps(resource),
-    queryFn: () => window.agentmat.system.topApps(resource),
+    queryFn: () => window.runova.system.topApps(resource),
     refetchInterval: 5000,
     meta: { silentLoading: true },
   });
@@ -895,19 +895,19 @@ const BUSY_LABEL: Record<string, string> = {
   sftp: 'file transfers',
 };
 
-/** Whether the machine may sleep while AgentMate runs, and what is holding it awake. */
+/** Whether the machine may sleep while Runova runs, and what is holding it awake. */
 function KeepAwakeSegment(): React.JSX.Element | null {
   const [status, setStatus] = useState<KeepAwakeStatus | null>(null);
 
   useEffect(() => {
-    void window.agentmat.power.keepAwakeStatus().then(setStatus);
-    return window.agentmat.power.onKeepAwake(setStatus);
+    void window.runova.power.keepAwakeStatus().then(setStatus);
+    return window.runova.power.onKeepAwake(setStatus);
   }, []);
 
   if (!status) return null;
   const pick = (mode: KeepAwakeMode): void => {
     setStatus({ ...status, mode });
-    void window.agentmat.power.setKeepAwake(mode).then(setStatus);
+    void window.runova.power.setKeepAwake(mode).then(setStatus);
   };
   const why = status.busy.map((reason) => BUSY_LABEL[reason] ?? reason).join(', ');
 
@@ -1137,7 +1137,7 @@ function RunDetail({
         <div key={url} className="flex items-center gap-1">
           <button
             type="button"
-            onClick={() => void window.agentmat.shell.openExternal(url)}
+            onClick={() => void window.runova.shell.openExternal(url)}
             className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-1 py-0.5 text-left text-[11px] text-primary transition-colors hover:bg-foreground/[0.07] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             <Globe className="h-2.5 w-2.5 shrink-0" />

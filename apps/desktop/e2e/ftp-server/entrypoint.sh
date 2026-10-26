@@ -8,13 +8,13 @@ ADDRESS=${PASV_ADDRESS:-127.0.0.1}
 MID=$(( (MIN + MAX) / 2 ))
 
 {
-  cat /etc/proftpd/agentmate.conf
+  cat /etc/proftpd/runova.conf
   echo "PassivePorts $MIN $MID"
   echo "MasqueradeAddress $ADDRESS"
 } > /etc/proftpd/proftpd.conf
 
 {
-  cat /etc/vsftpd-agentmate.conf
+  cat /etc/vsftpd-runova.conf
   echo "pasv_min_port=$(( MID + 1 ))"
   echo "pasv_max_port=$MAX"
   echo "pasv_address=$ADDRESS"

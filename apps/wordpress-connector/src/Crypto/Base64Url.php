@@ -2,10 +2,10 @@
 /**
  * base64url without padding (RFC 4648 section 5), strict: one accepted spelling per byte string.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Crypto;
+namespace Runova\Connector\Crypto;
 
 final class Base64Url
 {

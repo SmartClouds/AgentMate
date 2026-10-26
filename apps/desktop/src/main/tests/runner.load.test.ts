@@ -7,7 +7,7 @@ import {
   type TestProject,
   type TestResult,
   type TestRunEvent,
-} from '@agentmat/core';
+} from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SpawnStreamingOptions, SpawnStreamingResult } from '../process/spawnStreaming';
 
@@ -86,7 +86,7 @@ function trimEveryLineMs(lines: string[]): number {
 let root = '';
 
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), 'agentmate-runner-load-'));
+  root = await mkdtemp(join(tmpdir(), 'runova-runner-load-'));
 });
 
 afterEach(async () => {

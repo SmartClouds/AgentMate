@@ -60,7 +60,7 @@ let latestByName: Record<string, string | null> = {};
 beforeEach(async () => {
   cliState.calls = [];
   cliState.handler = () => ({});
-  root = tempDir('agentmate-dart-adapter-');
+  root = tempDir('runova-dart-adapter-');
   latestByName = {};
   pub = await startHttpServer((request, response) => {
     const name = decodeURIComponent(/\/api\/packages\/(.+)$/.exec(request.url ?? '')?.[1] ?? '');

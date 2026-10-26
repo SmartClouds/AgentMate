@@ -115,7 +115,7 @@ export function AuditLogList({ site }: { site: DeployWordPressSite }): React.JSX
     <DeployCard
       icon={<FileText />}
       title="Audit log"
-      description="What the connector recorded on the site, newest first: keys, connections, refused requests, pulls, deploys and rollbacks. wp-admin shows the same log under Tools > AgentMate Connector."
+      description="What the connector recorded on the site, newest first: keys, connections, refused requests, pulls, deploys and rollbacks. wp-admin shows the same log under Tools > Runova Connector."
       actions={
         <Button
           size="sm"

@@ -11,7 +11,7 @@ import type {
   DnsCredentialInfo,
   OriginLockResult,
   OriginLockStatus,
-} from '../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { IPC } from '../shared/ipcChannels';
 
 /**

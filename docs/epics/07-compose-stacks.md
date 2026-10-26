@@ -78,7 +78,7 @@ Acceptance criteria:
 1. Core tests upload zip-slip, absolute, escaping-link, hard-link, device and bomb archives through
    the REST endpoint and find nothing written outside the stack folder.
 2. and 3. and 4. The system test `apps/desktop/src/main/deploy/stacks.int.test.ts` (gated by
-   AGENTMATE_SYSTEM_TESTS=1) deploys from a project on Ubuntu 24.04 with Docker, checks the env
+   RUNOVA_SYSTEM_TESTS=1) deploys from a project on Ubuntu 24.04 with Docker, checks the env
    value inside the container, the 127.0.0.1-only binding of a port published on all interfaces,
    and a rollback to the first revision's files and environment.
 5. Component tests for every wizard step and `e2e/deployApps.e2e.ts` against the DevHost.

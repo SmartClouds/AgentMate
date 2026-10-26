@@ -51,12 +51,12 @@ function setupCopy(
         : 'Connect Cloudflare',
     description: additional
       ? 'Each Cloudflare account gets its own API token, made on that account. Its domains then show up beside the others. The token stays on this computer, sealed like your server passwords, and is never shown again.'
-      : 'AgentMate manages your domains with an API token that can only do what is listed below. The token stays on this computer, sealed like your server passwords, and is never shown again.',
+      : 'Runova manages your domains with an API token that can only do what is listed below. The token stays on this computer, sealed like your server passwords, and is never shown again.',
   };
 }
 
 /**
- * Connecting Cloudflare with a token limited to what AgentMate uses. The token page opens with
+ * Connecting Cloudflare with a token limited to what Runova uses. The token page opens with
  * those permissions chosen; the token pasted back goes to the main process once, to be checked
  * and sealed, and the field is emptied right after.
  *
@@ -99,7 +99,7 @@ export function TokenSetupCard({
     setProblem(null);
     try {
       const typedName = name.trim();
-      const status = await window.agentmat.cloudflare.saveToken({
+      const status = await window.runova.cloudflare.saveToken({
         token: pasted,
         ...(account ? { accountId: account.id } : {}),
         ...(!account && typedName !== '' ? { label: typedName } : {}),
@@ -135,7 +135,7 @@ export function TokenSetupCard({
         <Step number={1} title="Create a token on Cloudflare" className="@3xl:pr-8">
           <p className="text-sm text-muted-foreground">
             The page opens with these permissions already chosen. Under Zone Resources, include all
-            zones or just the domains AgentMate should manage, then create the token and copy it.
+            zones or just the domains Runova should manage, then create the token and copy it.
           </p>
           {firstTime ? (
             <PermissionList />
@@ -153,7 +153,7 @@ export function TokenSetupCard({
             type="button"
             variant="soft"
             size="sm"
-            onClick={() => void window.agentmat.shell.openExternal(tokenTemplateUrl())}
+            onClick={() => void window.runova.shell.openExternal(tokenTemplateUrl())}
           >
             <ExternalLink className="h-3.5 w-3.5" /> Open Cloudflare's token page
           </Button>

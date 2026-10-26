@@ -1,7 +1,7 @@
 import type {
   AlertInfo,
   AlertSeverity,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { Bell, Check, CircleInfo, CircleX, TriangleAlert } from '@/components/icons';
 import { Chip, type ChipTone } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';

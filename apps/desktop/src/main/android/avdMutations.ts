@@ -16,7 +16,7 @@ import {
   parseSdkManagerList,
   type SystemImage,
   sortSystemImages,
-} from '@agentmat/core';
+} from '@runova/core';
 import { runAvdManager, runSdkManager } from './exec';
 import type { ResolvedAndroidSdk } from './sdk';
 

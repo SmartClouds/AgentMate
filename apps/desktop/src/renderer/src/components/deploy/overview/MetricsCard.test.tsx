@@ -1,4 +1,4 @@
-import type { MetricsSample } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { MetricsSample } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { memoryAmounts } from '@/lib/deploy/overview/metrics';

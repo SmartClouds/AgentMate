@@ -42,7 +42,7 @@ export function buildRunSetupPrompt({
 }: RunSetupPromptInput): string {
   const wanted = request.trim().slice(0, MAX_REQUEST_LENGTH) || DEFAULT_RUN_SETUP_REQUEST;
   return [
-    `AgentMate asked you to set up a run command for the project "${projectName}". The project folder is ${folderPath}.`,
+    `Runova asked you to set up a run command for the project "${projectName}". The project folder is ${folderPath}.`,
     '',
     'What the user asked for:',
     wanted,
@@ -52,7 +52,7 @@ export function buildRunSetupPrompt({
     '2. Call the list_run_commands tool first, so you do not suggest a command the project already has.',
     '3. If a script is the cleanest way to run it, create the script in the project folder first, then make the run command call it.',
     `4. Call the propose_run_command tool once with a short label and one line of shell text. ${shellNotes(platform)}`,
-    '5. The suggestion goes to the user to approve inside AgentMate. Do not run the project yourself. When the tool returns, tell the user in one sentence what you suggested and that it is waiting for their approval in AgentMate.',
+    '5. The suggestion goes to the user to approve inside Runova. Do not run the project yourself. When the tool returns, tell the user in one sentence what you suggested and that it is waiting for their approval in Runova.',
   ].join('\n');
 }
 

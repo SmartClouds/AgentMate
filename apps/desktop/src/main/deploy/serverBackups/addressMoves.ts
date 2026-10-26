@@ -1,5 +1,5 @@
 import type { StoredSshServer } from '../../../shared/apiTypes';
-import type { PendingServerRestore } from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { PendingServerRestore } from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployMovedRecord } from '../../../shared/deployServerBackupsTypes';
 import type { StoredHealthTarget } from '../../health/store';
 import type { StoredFileSite } from '../files/types';

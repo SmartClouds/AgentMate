@@ -38,7 +38,7 @@ function entryPath(): string {
 
 export function spawnRunnerHost(): HostProcess {
   return utilityProcess.fork(entryPath(), [], {
-    serviceName: 'AgentMate API Client',
+    serviceName: 'Runova API Client',
     env: scrubbedEnv(),
     execArgv: ['--no-deprecation'],
     stdio: 'ignore',

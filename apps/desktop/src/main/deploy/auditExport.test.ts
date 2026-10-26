@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AuditEventInfo } from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { AuditEventInfo } from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { auditCsv, auditJson } from './auditExport';
 
 /**

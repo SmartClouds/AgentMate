@@ -2,7 +2,7 @@ import { coreErrorMessage } from '@shared/coreErrors';
 import type {
   AuditEventInfo,
   AuditVerificationInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type {
   DeployAuditExportFormat,
   DeployAuditFilter,
@@ -173,7 +173,7 @@ export function AuditCard({ server }: { server: DeployServer }): React.JSX.Eleme
   const audit = useInfiniteQuery({
     queryKey: queryKeys.deployAudit(server.id, filter),
     queryFn: ({ pageParam }) =>
-      window.agentmat.deploySecurity.queryAudit({
+      window.runova.deploySecurity.queryAudit({
         serverId: server.id,
         ...filter,
         limit: PAGE_SIZE,
@@ -192,7 +192,7 @@ export function AuditCard({ server }: { server: DeployServer }): React.JSX.Eleme
   async function verify(): Promise<void> {
     setChecking(true);
     try {
-      setVerification(await window.agentmat.deploySecurity.verifyAudit(server.id));
+      setVerification(await window.runova.deploySecurity.verifyAudit(server.id));
     } catch (error) {
       toast.error(coreErrorMessage(error));
     } finally {
@@ -203,7 +203,7 @@ export function AuditCard({ server }: { server: DeployServer }): React.JSX.Eleme
   async function save(format: DeployAuditExportFormat): Promise<void> {
     setExporting(true);
     try {
-      const saved = await window.agentmat.deploySecurity.exportAudit({
+      const saved = await window.runova.deploySecurity.exportAudit({
         serverId: server.id,
         format,
         filter,

@@ -6,14 +6,14 @@
  * The plugin only ever writes keys. parse() exists so the shared vectors can prove both sides read
  * the format the same way; its URL check is an approximation of the WHATWG parser.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Auth;
+namespace Runova\Connector\Auth;
 
-use AgentMate\Connector\Crypto\Base64Url;
-use AgentMate\Connector\Protocol;
-use AgentMate\Connector\Support\Text;
+use Runova\Connector\Crypto\Base64Url;
+use Runova\Connector\Protocol;
+use Runova\Connector\Support\Text;
 
 final class ConnectionKey
 {

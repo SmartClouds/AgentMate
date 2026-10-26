@@ -1,4 +1,4 @@
-import { HTTP_METHODS } from '@agentmat/core';
+import { HTTP_METHODS } from '@runova/core';
 import { ChevronDown, Save, Send, StopCircle } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import {

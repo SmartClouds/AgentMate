@@ -6,7 +6,7 @@ import { join } from 'node:path';
  * Disposable Linux servers for system tests and the full-stack e2e run: the images in
  * `apps/server-core/test-servers`, with systemd as PID 1 and sshd, started privileged on a free
  * local port. Each has a root login and a `deployer` whose sudo asks for its password. Only runs
- * with AGENTMATE_SYSTEM_TESTS=1, since a test boots whole machines.
+ * with RUNOVA_SYSTEM_TESTS=1, since a test boots whole machines.
  *
  * On an Ubuntu host with AppArmor (24.04 and later), the host's `unix-chkpwd` profile confines the
  * Rocky server's unix_chkpwd too, and every password login there fails. CI unloads that profile
@@ -33,11 +33,11 @@ const ALL_IMAGES: readonly TestServerImage[] = [
 ];
 
 /**
- * The images named in AGENTMATE_TEST_SERVER_IMAGES (comma separated), or null when it is unset.
+ * The images named in RUNOVA_TEST_SERVER_IMAGES (comma separated), or null when it is unset.
  * The nightly workflow sets it to run each system test on one server of the full matrix.
  */
 export function requestedImages(
-  value: string | undefined = process.env.AGENTMATE_TEST_SERVER_IMAGES,
+  value: string | undefined = process.env.RUNOVA_TEST_SERVER_IMAGES,
 ): TestServerImage[] | null {
   if (!value?.trim()) return null;
   const names = value
@@ -60,7 +60,7 @@ export function requestedImages(
 export function testServerImages<T extends TestServerImage>(
   supported: readonly T[],
   defaults: readonly T[],
-  value: string | undefined = process.env.AGENTMATE_TEST_SERVER_IMAGES,
+  value: string | undefined = process.env.RUNOVA_TEST_SERVER_IMAGES,
 ): T[] {
   const requested = requestedImages(value);
   if (!requested) return [...defaults];
@@ -138,7 +138,7 @@ const DOCKER_PROBES = 3;
  * when it gives up.
  */
 export function systemTestsEnabled(
-  flag: string | undefined = process.env.AGENTMATE_SYSTEM_TESTS,
+  flag: string | undefined = process.env.RUNOVA_SYSTEM_TESTS,
   osType: () => string = () => docker(['info', '--format', '{{.OSType}}'], 60_000),
   // biome-ignore lint/suspicious/noConsole: a run that skips what it was asked for has to say why
   warn: (message: string) => void = (message) => console.warn(message),
@@ -153,7 +153,7 @@ export function systemTestsEnabled(
     }
   }
   warn(
-    `AGENTMATE_SYSTEM_TESTS=1, but Docker did not answer after ${DOCKER_PROBES} tries, so the system tests skip: ${failure}`,
+    `RUNOVA_SYSTEM_TESTS=1, but Docker did not answer after ${DOCKER_PROBES} tries, so the system tests skip: ${failure}`,
   );
   return false;
 }
@@ -181,7 +181,7 @@ function waitForBanner(host: string, port: number, deadline: number): Promise<vo
 }
 
 function ensureImage(image: TestServerImage): void {
-  const tag = `agentmate-test-server:${image}`;
+  const tag = `runova-test-server:${image}`;
   try {
     docker(['image', 'inspect', tag]);
   } catch {
@@ -199,9 +199,9 @@ export async function startTestServer(
     publish?: number[];
   } = {},
 ): Promise<TestServer> {
-  const tag = `agentmate-test-server:${image}`;
+  const tag = `runova-test-server:${image}`;
   ensureImage(image);
-  const name = `agentmate-test-${image}-${process.pid}-${Date.now()}`;
+  const name = `runova-test-${image}-${process.pid}-${Date.now()}`;
   // A private cgroup namespace, the setup systemd supports on cgroup v2 hosts. The host's own
   // namespace, with its cgroup tree mounted in, lets the container's systemd collide with the
   // host's where the host runs systemd too (GitHub's runners): boots that never finish there, and

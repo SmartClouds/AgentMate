@@ -1,4 +1,4 @@
-import type { AgentHistorySession } from '@agentmat/core';
+import type { AgentHistorySession } from '@runova/core';
 
 /**
  * The pure half of the AI history list: filtering, day and folder grouping, path shortening.

@@ -3,7 +3,7 @@ import {
   POSTMAN_SCHEMA_V21,
   type PostmanCollection,
   type PostmanRequestItem,
-} from '@agentmat/core';
+} from '@runova/core';
 import { describe, expect, it } from 'vitest';
 import type { ApiResponseData } from '../../shared/apiClientTypes';
 import type { EngineEvent, EngineRunSummary } from './engine/types';

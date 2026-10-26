@@ -4,12 +4,12 @@
  *   blobs/<sha256>          whole files, content-addressed, no extension (never runnable)
  *   parts/<deploy>-<op>     uploads still arriving
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Deploy;
+namespace Runova\Connector\Deploy;
 
-use AgentMate\Connector\Support\DataDir;
+use Runova\Connector\Support\DataDir;
 
 final class Staging
 {
@@ -28,7 +28,7 @@ final class Staging
     {
         if (!is_dir($this->root)) {
             if (!@mkdir($this->root, 0755, true) && !is_dir($this->root)) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_mkdir
-                throw new \RuntimeException('The AgentMate data folder could not be created.');
+                throw new \RuntimeException('The Runova data folder could not be created.');
             }
             DataDir::protect($this->root);
         }

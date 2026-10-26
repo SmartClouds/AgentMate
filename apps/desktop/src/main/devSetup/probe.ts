@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { constants } from 'node:fs';
 import { access } from 'node:fs/promises';
 import { posix, win32 } from 'node:path';
-import type { DevOs } from '@agentmat/core';
+import type { DevOs } from '@runova/core';
 import { killProcessTree, quoteForCmd, stripAnsi } from '../process/spawnStreaming';
 import { withToolPath } from '../toolPaths';
 import { pathKey } from '../windowsPath';

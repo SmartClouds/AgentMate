@@ -3,7 +3,7 @@ import {
   type PasswordOptions,
   type VaultEntryType,
   type VaultSort,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { VaultLockReason } from '@shared/apiTypes';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -66,7 +66,7 @@ export const useVaultStore = create<VaultViewState>()(
       resetView: () => set({ ...VIEW_DEFAULTS }),
     }),
     {
-      name: 'agentmate-vault-view',
+      name: 'runova-vault-view',
       // Only preferences. The search text, tags and selection describe vault contents.
       partialize: (state) => ({ sort: state.sort, generator: state.generator }),
     },

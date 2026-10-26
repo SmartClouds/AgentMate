@@ -1,21 +1,24 @@
 <?php
 /**
- * The plugin's private folder, `wp-content/agentmate-connector-<random12>/`, for staged files and
+ * The plugin's private folder, `wp-content/runova-connector-<random12>/`, for staged files and
  * snapshots. It gets a random name, deny rules for Apache and IIS, and an index.php, and what goes
  * in it has no file extension, so nothing in it can be run from the web even on nginx.
- * AGENTMATE_CONNECTOR_DATA_DIR in wp-config.php moves it anywhere (outside the web root is best).
+ * RUNOVA_CONNECTOR_DATA_DIR in wp-config.php moves it anywhere (outside the web root is best).
+ * A folder made before the rename keeps its old name, and so does the option that holds it.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Support;
+namespace Runova\Connector\Support;
+
+use Runova\Connector\Legacy;
 
 final class DataDir
 {
-    const OPTION = 'agentmate_connector_data_dir';
-    const NAME = '/^agentmate-connector-[0-9a-f]{12}$/D';
+    const OPTION = Legacy::OPTION_PREFIX . 'data_dir';
+    const NAME = '/^(?:runova|agentmate)-connector-[0-9a-f]{12}$/D'; // legacy-name
 
-    const HTACCESS = "# AgentMate Connector keeps private files here. Nothing in it is ever served.\n"
+    const HTACCESS = "# Runova Connector keeps private files here. Nothing in it is ever served.\n"
         . "<IfModule mod_authz_core.c>\n\tRequire all denied\n</IfModule>\n"
         . "<IfModule !mod_authz_core.c>\n\tOrder deny,allow\n\tDeny from all\n</IfModule>\n";
 
@@ -29,8 +32,9 @@ final class DataDir
 
     public static function path(): string
     {
-        if (defined('AGENTMATE_CONNECTOR_DATA_DIR') && is_string(AGENTMATE_CONNECTOR_DATA_DIR) && AGENTMATE_CONNECTOR_DATA_DIR !== '') {
-            return rtrim(AGENTMATE_CONNECTOR_DATA_DIR, '/\\');
+        $chosen = Constants::value('RUNOVA_CONNECTOR_DATA_DIR');
+        if (is_string($chosen) && $chosen !== '') {
+            return rtrim($chosen, '/\\');
         }
         return WP_CONTENT_DIR . '/' . self::name();
     }
@@ -42,11 +46,11 @@ final class DataDir
         if (is_string($name) && preg_match(self::NAME, $name) === 1) {
             return $name;
         }
-        Options::add(self::OPTION, 'agentmate-connector-' . bin2hex(random_bytes(6)));
+        Options::add(self::OPTION, 'runova-connector-' . bin2hex(random_bytes(6)));
         $name = Options::get(self::OPTION);
         if (!is_string($name) || preg_match(self::NAME, $name) !== 1) {
             // A bad value was stored by hand; replace it.
-            $name = 'agentmate-connector-' . bin2hex(random_bytes(6));
+            $name = 'runova-connector-' . bin2hex(random_bytes(6));
             Options::update(self::OPTION, $name);
         }
         return $name;
@@ -57,7 +61,7 @@ final class DataDir
     {
         $path = self::path();
         if (!is_dir($path) && !wp_mkdir_p($path)) {
-            throw new \RuntimeException('The AgentMate data folder could not be created.');
+            throw new \RuntimeException('The Runova data folder could not be created.');
         }
         self::protect($path);
         return $path;

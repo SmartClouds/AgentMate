@@ -4,7 +4,7 @@ import {
   type ProxySettings as ProxyConfig,
   type ProxyMode,
   type ProxyProtocol,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { ProxyTestResult } from '@shared/apiTypes';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type RefObject, useEffect, useState } from 'react';
@@ -74,7 +74,7 @@ function testMessage(result: ProxyTestResult): string {
 }
 
 /**
- * Where AgentMate's outgoing requests go. One setting covers the whole app: the
+ * Where Runova's outgoing requests go. One setting covers the whole app: the
  * AI providers, the skill and package registries, Telegram, update checks, and
  * the CLIs and git commands it spawns.
  *
@@ -122,7 +122,7 @@ export function ProxySettings({
 
   const statusQuery = useQuery({
     queryKey: queryKeys.proxyStatus,
-    queryFn: () => window.agentmat.proxy.status(),
+    queryFn: () => window.runova.proxy.status(),
   });
 
   function patch(next: Partial<ProxyConfig>): void {
@@ -148,7 +148,7 @@ export function ProxySettings({
       if (next.mode === 'manual' && next.port == null) {
         throw new Error('Enter the proxy port.');
       }
-      await window.agentmat.settings.update({ proxy: next });
+      await window.runova.settings.update({ proxy: next });
     },
     onSuccess: () => {
       setDirty(false);
@@ -180,7 +180,7 @@ export function ProxySettings({
     setTesting(true);
     setTestResult(null);
     try {
-      setTestResult(await window.agentmat.proxy.test(cleaned()));
+      setTestResult(await window.runova.proxy.test(cleaned()));
     } finally {
       setTesting(false);
     }
@@ -206,7 +206,7 @@ export function ProxySettings({
             ) : null}
           </div>
           <CardDescription>
-            How AgentMate reaches the internet. Covers the AI providers, the skill and package
+            How Runova reaches the internet. Covers the AI providers, the skill and package
             registries, Telegram, update checks, and the CLIs and git commands it runs for you.
           </CardDescription>
         </div>
@@ -248,7 +248,7 @@ export function ProxySettings({
           <p className="rounded-lg border border-border bg-background/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
             {status?.systemServer
               ? `This machine is set to ${status.systemServer}.`
-              : 'This machine has no proxy configured right now, so requests go straight out. Set one in your OS network settings and AgentMate picks it up.'}
+              : 'This machine has no proxy configured right now, so requests go straight out. Set one in your OS network settings and Runova picks it up.'}
           </p>
         ) : null}
 

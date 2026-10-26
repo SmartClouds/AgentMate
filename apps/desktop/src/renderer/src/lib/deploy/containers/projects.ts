@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 
 /**
  * Which of this computer's projects a container belongs to (E06 T9), until stacks deployed from

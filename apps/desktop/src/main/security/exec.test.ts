@@ -26,7 +26,7 @@ const onWindows = process.platform === 'win32';
 
 /** Writes an executable script that prints `lines` and exits with `code`. */
 function script(name: string, lines: string[], code = 0): string {
-  const dir = tempDir('agentmate-exec-');
+  const dir = tempDir('runova-exec-');
   if (onWindows) {
     const path = join(dir, `${name}.cmd`);
     const body = ['@echo off', ...lines.map((line) => (line ? `echo ${line}` : 'echo.'))];
@@ -116,7 +116,7 @@ describe('spawnScan', () => {
 
   it('flags a command that is not installed', async () => {
     const result = await spawnScan({
-      command: 'agentmate-scanner-that-does-not-exist',
+      command: 'runova-scanner-that-does-not-exist',
       args: [],
       cwd: tempDir(),
       timeoutMs: 15_000,
@@ -180,14 +180,14 @@ describe('probe', () => {
   });
 
   it('reports failure for a command that is not installed', async () => {
-    const result = await probe('agentmate-tool-that-does-not-exist', ['--version']);
+    const result = await probe('runova-tool-that-does-not-exist', ['--version']);
 
     expect(result.ok).toBe(false);
     expect(result.stdout).toBe('');
   });
 
   it('passes arguments through to the command', async () => {
-    const dir = tempDir('agentmate-exec-');
+    const dir = tempDir('runova-exec-');
     const path = onWindows ? join(dir, 'echoargs.cmd') : join(dir, 'echoargs.sh');
     if (onWindows) {
       writeFileSync(path, '@echo off\r\necho got:%1\r\n', 'utf-8');
@@ -212,7 +212,7 @@ describe('probe', () => {
   });
 
   it('gives up on a command that never exits', async () => {
-    const dir = tempDir('agentmate-exec-');
+    const dir = tempDir('runova-exec-');
     const path = onWindows ? join(dir, 'hang.cmd') : join(dir, 'hang.sh');
     if (onWindows) {
       // `pause` blocks on stdin, which execFile gives no input, so it waits forever.

@@ -4,7 +4,7 @@ import {
   type HealthDiagnosis,
   type HealthIncident,
   redactHealthText,
-} from '@agentmat/core';
+} from '@runova/core';
 import {
   cancelHeadlessPrompt,
   type HeadlessPromptOptions,

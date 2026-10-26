@@ -67,7 +67,7 @@ describe('createXterm key handling', () => {
     fake.hasSelection = false;
     vi.stubGlobal('window', {
       matchMedia: () => ({ matches: false }),
-      agentmat: { platform: 'win32', windowsBuild: 26200, terminal: { write: vi.fn() } },
+      runova: { platform: 'win32', windowsBuild: 26200, terminal: { write: vi.fn() } },
     });
     vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn(async () => undefined) } });
     createXterm({ sessionId: () => 'session' });
@@ -104,7 +104,7 @@ describe('createXterm options', () => {
   beforeEach(() => {
     vi.stubGlobal('window', {
       matchMedia: () => ({ matches: false }),
-      agentmat: { platform: 'win32', windowsBuild: 26200, terminal: { write: vi.fn() } },
+      runova: { platform: 'win32', windowsBuild: 26200, terminal: { write: vi.fn() } },
     });
   });
 

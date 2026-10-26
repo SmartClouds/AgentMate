@@ -8,7 +8,7 @@ import {
   uniquePath,
   type WorktreeInfo,
   type WorktreeRecord,
-} from '@agentmat/core';
+} from '@runova/core';
 import type {
   CreateWorktreeInput,
   WorktreeDefaults,
@@ -45,7 +45,7 @@ import { store } from '../store';
 /**
  * The worktrees of each project: git's own list, joined with the records in worktrees.json that
  * give each one a stable id (and so a workspace of its own). Git is the source of truth. A record
- * git no longer knows is dropped, and a worktree made outside AgentMate is adopted.
+ * git no longer knows is dropped, and a worktree made outside Runova is adopted.
  */
 
 function newWorktreeId(): string {

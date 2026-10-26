@@ -4,7 +4,7 @@ import {
   PASSWORD_LENGTH_MAX,
   PASSWORD_LENGTH_MIN,
   type PasswordOptions,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useId, useState } from 'react';
 import { Dice, RefreshCw } from '@/components/icons';
 import { Button } from '@/components/ui/button';

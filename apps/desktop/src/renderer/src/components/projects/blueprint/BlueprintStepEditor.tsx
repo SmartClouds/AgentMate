@@ -3,8 +3,8 @@ import type {
   BlueprintPreset,
   BlueprintSection,
   BlueprintStepId,
-} from '@agentmat/core';
-import { blueprintFileMarkdown, blueprintStep, referencedAttachmentNames } from '@agentmat/core';
+} from '@runova/core';
+import { blueprintFileMarkdown, blueprintStep, referencedAttachmentNames } from '@runova/core';
 import type { BlueprintAgentFileTarget } from '@shared/apiTypes';
 import { useEffect, useRef, useState } from 'react';
 import type { MarkdownEditorHandle } from '@/components/editor/MarkdownEditor';

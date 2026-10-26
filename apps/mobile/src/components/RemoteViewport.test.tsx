@@ -1,5 +1,5 @@
-import type { RemoteInputEvent } from '@agentmat/protocol';
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import type { RemoteInputEvent } from '@runova/protocol';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { MediaStream } from '../../__mocks__/react-native-webrtc';
 import { RemoteTransportMode } from '../remote/transport';

@@ -2,12 +2,12 @@
 /**
  * AdminContext from the logged-in WordPress user and the posted form.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Admin;
+namespace Runova\Connector\Admin;
 
-use AgentMate\Connector\Http\ClientIp;
+use Runova\Connector\Http\ClientIp;
 
 final class WpAdminContext implements AdminContext
 {

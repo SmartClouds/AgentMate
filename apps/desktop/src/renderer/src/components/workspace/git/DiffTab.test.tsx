@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { GitFileDiff, WorkspaceGitState } from '@shared/apiTypes';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { WorkspaceDiffTab } from '@/stores/workspaceStore';
-import { installAgentmatBridge } from '../../../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../../../test/renderer/runovaBridge';
 
 /**
  * Which viewer a changed file lands in. Git calls a picture "binary" and hands over no text, so
@@ -48,7 +48,7 @@ const state: Partial<WorkspaceGitState> = {
 };
 
 function renderDiff(fileTab: WorkspaceDiffTab, answer: GitFileDiff) {
-  installAgentmatBridge({ 'git.fileDiff': answer, 'git.workspaceState': state });
+  installRunovaBridge({ 'git.fileDiff': answer, 'git.workspaceState': state });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
@@ -108,7 +108,7 @@ describe('DiffTab conflict with AI', () => {
   };
 
   function renderConflict(run: (...args: unknown[]) => Promise<unknown>) {
-    const bridge = installAgentmatBridge({
+    const bridge = installRunovaBridge({
       'git.fileDiff': diff('src/app.ts', { modified: '<<<<<<< HEAD\n' }),
       'git.workspaceState': conflictState,
       'git.resolveConflictWithAi': run,

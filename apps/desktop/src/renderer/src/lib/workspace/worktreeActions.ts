@@ -1,4 +1,4 @@
-import type { Project, WorktreeInfo } from '@agentmat/core';
+import type { Project, WorktreeInfo } from '@runova/core';
 import { ipcErrorMessage } from '@/components/projects/environments/ipcError';
 import { asWorkspaceProject } from './scope';
 import { mergeBlockerMessage } from './worktreeText';
@@ -46,7 +46,7 @@ export async function mergeWorktreeFlow(
 ): Promise<MergeOutcome> {
   const { branch, base } = names(worktree);
   try {
-    const check = await window.agentmat.worktrees.mergePreflight(project.id, worktree.id);
+    const check = await window.runova.worktrees.mergePreflight(project.id, worktree.id);
     if (!check.ok) {
       deps.notify.error('Not ready to merge', {
         description: mergeBlockerMessage(check.blocker, branch, base),
@@ -61,7 +61,7 @@ export async function mergeWorktreeFlow(
     });
     if (!confirmed) return 'cancelled';
 
-    const result = await window.agentmat.worktrees.merge(project.id, worktree.id);
+    const result = await window.runova.worktrees.merge(project.id, worktree.id);
     if (result.ok) {
       deps.notify.success(`Merged ${branch} into ${base}`, {
         description: result.message,
@@ -95,7 +95,7 @@ export async function mergeBaseInFlow(
 ): Promise<'merged' | 'conflict' | 'failed'> {
   const { branch, base } = names(worktree);
   try {
-    const result = await window.agentmat.worktrees.mergeBaseIn(project.id, worktree.id);
+    const result = await window.runova.worktrees.mergeBaseIn(project.id, worktree.id);
     if (result.ok) {
       deps.notify.success(`Merged ${base} into ${branch}`, { description: result.message });
       return 'merged';

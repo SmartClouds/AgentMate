@@ -1,4 +1,4 @@
-import type { Project, WpItemRef } from '@agentmat/core';
+import type { Project, WpItemRef } from '@runova/core';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -87,7 +87,7 @@ describe('NewWordPressProjectDialog', () => {
       'data-state',
       'unchecked',
     );
-    expect(screen.queryByText('AgentMate Connector')).toBeNull();
+    expect(screen.queryByText('Runova Connector')).toBeNull();
     expect(screen.getByText(/version 4\.5/)).toBeTruthy();
     expect(screen.getAllByText('Active')).toHaveLength(2);
 

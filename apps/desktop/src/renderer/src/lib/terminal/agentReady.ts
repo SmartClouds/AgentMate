@@ -7,4 +7,4 @@ export {
   type AgentReadySignals,
   type AgentReadyVerdict,
   agentReadyVerdict,
-} from '@agentmat/core';
+} from '@runova/core';

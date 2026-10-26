@@ -1,4 +1,4 @@
-import { CLI_REGISTRY, type CliDefinition } from '@agentmat/core';
+import { CLI_REGISTRY, type CliDefinition } from '@runova/core';
 
 export interface AgentChoice {
   cli: CliDefinition;

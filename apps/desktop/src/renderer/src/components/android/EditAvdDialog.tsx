@@ -7,7 +7,7 @@ import {
   type AvdNetworkSpeed,
   type AvdSummary,
   androidVersionForApi,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -198,7 +198,7 @@ export function EditAvdDialog({
   // Only read once the panel is actually opened: most edits are a rename or a RAM bump.
   const configQuery = useQuery({
     queryKey: queryKeys.androidAvdConfig(avd.name),
-    queryFn: () => window.agentmat.android.avdConfig(avd.name),
+    queryFn: () => window.runova.android.avdConfig(avd.name),
     enabled: open && showAdvanced,
     meta: { silentLoading: true },
   });
@@ -279,7 +279,7 @@ export function EditAvdDialog({
   };
 
   const save = useMutation({
-    mutationFn: () => window.agentmat.android.editAvd(avd.name, changes()),
+    mutationFn: () => window.runova.android.editAvd(avd.name, changes()),
     onSuccess: (result) => {
       if (!result.ok) {
         setError(result.message ?? 'Could not save those settings.');

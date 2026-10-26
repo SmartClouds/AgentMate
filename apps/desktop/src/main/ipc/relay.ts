@@ -3,7 +3,7 @@ import {
   RELAY_TASK_STATUSES,
   type RelayProposal,
   relayCapabilities,
-} from '@agentmat/core';
+} from '@runova/core';
 import { ipcMain } from 'electron';
 import { z } from 'zod';
 import { IPC } from '../../shared/ipcChannels';

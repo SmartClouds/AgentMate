@@ -49,7 +49,7 @@ export function SitePicker({
         <RunError message={wordPressErrorMessage(error)} code={wordPressErrorCode(error)} />
       ) : ordered.length === 0 ? (
         <p className="rounded-lg bg-foreground/[0.03] px-3 py-6 text-center text-sm text-muted-foreground ring-1 ring-inset ring-foreground/[0.07]">
-          No WordPress sites are connected yet. Connect one with a key from the AgentMate Connector
+          No WordPress sites are connected yet. Connect one with a key from the Runova Connector
           plugin.
         </p>
       ) : (

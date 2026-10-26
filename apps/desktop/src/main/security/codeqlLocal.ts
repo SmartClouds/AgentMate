@@ -4,7 +4,7 @@ import { createReadStream, existsSync } from 'node:fs';
 import { chmod, mkdir, readdir, rm, stat } from 'node:fs/promises';
 import { join, sep } from 'node:path';
 import { Worker } from 'node:worker_threads';
-import type { CodeqlInstallProgress, CodeqlLocalStatus, SupportedOS } from '@agentmat/core';
+import type { CodeqlInstallProgress, CodeqlLocalStatus, SupportedOS } from '@runova/core';
 import {
   CODEQL_INSTALL_DIRNAME,
   CODEQL_LATEST_RELEASE_API,
@@ -13,7 +13,7 @@ import {
   codeqlChecksumUrl,
   codeqlDownloadUrl,
   parseChecksumFile,
-} from '@agentmat/core';
+} from '@runova/core';
 import { IPC } from '../../shared/ipcChannels';
 import { toolsDir } from '../grammar/localServer';
 import { broadcastToWindows } from '../ipc/send';
@@ -27,12 +27,12 @@ import { probe } from './exec';
  * There is no package manager for CodeQL on Windows or Linux (no winget, chocolatey or apt
  * package exists), so GitHub's documented install is "download a zip, extract it, put it on your
  * PATH". Asking that of someone who just wants to scan a project is why the Install button had
- * nothing to offer on this OS. Instead AgentMate downloads the right release asset, checks it
+ * nothing to offer on this OS. Instead Runova downloads the right release asset, checks it
  * against the SHA-256 GitHub publishes next to it, and unpacks it into its own tools folder, next
  * to where LanguageTool already lives. Nothing goes on the system PATH and nothing needs admin.
  */
 
-const USER_AGENT = 'AgentMate';
+const USER_AGENT = 'Runova';
 
 /** Where a managed copy lives: <userData>/tools/codeql, with the zip's own `codeql/` inside it. */
 export function codeqlInstallDir(): string {

@@ -61,7 +61,7 @@ export function EnrollDialog({
     setProblem(null);
     try {
       await withHostKeyTrust(server.id, () =>
-        window.agentmat.deploy.enroll({
+        window.runova.deploy.enroll({
           serverId: server.id,
           sudoPassword: needsSudo ? sudoPassword : null,
           account: toAccount(account),
@@ -90,8 +90,8 @@ export function EnrollDialog({
               <Key className="h-4 w-4 text-primary" /> Enroll this computer on {server.nickname}
             </DialogTitle>
             <DialogDescription>
-              AgentMate makes a new key for this computer and registers it on the core over SSH. Use
-              an account the core already has.
+              Runova makes a new key for this computer and registers it on the core over SSH. Use an
+              account the core already has.
             </DialogDescription>
           </DialogHeader>
           <AccountFields

@@ -86,7 +86,7 @@ function lastSent(): Sent {
 
 let shutdownSpeech: () => void = () => undefined;
 
-// The first import pulls in all of @agentmat/core, which can take longer than a hook is allowed
+// The first import pulls in all of @runova/core, which can take longer than a hook is allowed
 // on a busy machine. Paying for it once up front keeps the per-test re-imports quick.
 beforeAll(async () => {
   await import('./speech');

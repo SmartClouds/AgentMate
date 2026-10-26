@@ -1,4 +1,4 @@
-import type { SubscriptionUsage, SubscriptionWindow, SubscriptionWindowKey } from '@agentmat/core';
+import type { SubscriptionUsage, SubscriptionWindow, SubscriptionWindowKey } from '@runova/core';
 import type { RawLimit, RawLimits } from './logParsers';
 
 const DAY_MINUTES = 24 * 60;

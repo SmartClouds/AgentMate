@@ -3,7 +3,7 @@ import type {
   DeviceInfo,
   SessionInfo,
   UserInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployAccess, DeployServer } from '@shared/deployTypes';
 
 /** One server with a core and the people and machines on it, for the Security area's tests. */
@@ -21,7 +21,7 @@ export const SERVER: DeployServer = {
   username: 'deployer',
   core: {
     version: '1.53.0',
-    release: '/opt/agentmate-core/releases/1.53.0-abababababab',
+    release: '/opt/runova-core/releases/1.53.0-abababababab',
     transport: 'streamlocal',
     installedAt: NOW - 3 * DAY,
     os: 'Ubuntu 24.04.1 LTS',

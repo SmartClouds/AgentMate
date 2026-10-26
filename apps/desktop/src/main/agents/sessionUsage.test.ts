@@ -1,6 +1,6 @@
 import { appendFileSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { getModelPrice, MODEL_PRICES, type UsageTokens } from '@agentmat/core';
+import { getModelPrice, MODEL_PRICES, type UsageTokens } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AgentSessionUsage } from '../../shared/apiTypes';
 import { tempDir } from '../../test/main/fixtures';
@@ -106,7 +106,7 @@ function ok(usage: AgentSessionUsage): Extract<AgentSessionUsage, { status: 'ok'
 }
 
 beforeEach(() => {
-  root = tempDir('agentmate-session-usage-');
+  root = tempDir('runova-session-usage-');
 });
 
 afterEach(() => {

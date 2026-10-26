@@ -11,7 +11,7 @@ import { type LaunchedApp, launchApp, openWorkspace } from './app';
  * pane is split, and an element clicked in comment mode opens the comment card, gets its
  * screenshot saved and a pin drawn on the page. These are the parts jsdom cannot show.
  *
- * AGENTMATE_E2E_SHOTS=<folder> saves a screenshot of each step, for looking the UI over.
+ * RUNOVA_E2E_SHOTS=<folder> saves a screenshot of each step, for looking the UI over.
  */
 
 const PAGE = `<!doctype html>
@@ -44,7 +44,7 @@ const PAGE = `<!doctype html>
 
 let launched: LaunchedApp | undefined;
 let server: Server | undefined;
-const shotsDir = process.env.AGENTMATE_E2E_SHOTS;
+const shotsDir = process.env.RUNOVA_E2E_SHOTS;
 
 test.afterEach(async () => {
   await launched?.close();
@@ -193,7 +193,7 @@ test('a page opens over its pane, keeps its state, and takes comments on its ele
     .poll(() =>
       inGuest<string | undefined>(
         launched as LaunchedApp,
-        'window.__agentmatPicker?.inspect().highlight?.label',
+        'window.__runovaPicker?.inspect().highlight?.label',
       ),
     )
     .toMatch(/^button\.buy/);
@@ -212,7 +212,7 @@ test('a page opens over its pane, keeps its state, and takes comments on its ele
     .poll(() =>
       inGuest<number>(
         launched as LaunchedApp,
-        'window.__agentmatPicker?.inspect().markers.length ?? 0',
+        'window.__runovaPicker?.inspect().markers.length ?? 0',
       ),
     )
     .toBe(1);

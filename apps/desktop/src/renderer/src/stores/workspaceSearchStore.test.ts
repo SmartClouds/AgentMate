@@ -54,7 +54,7 @@ describe('workspaceSearchStore', () => {
 
   it('keeps picture previews on for a layout saved before the option existed', async () => {
     localStorage.setItem(
-      'agentmate-workspace-search',
+      'runova-workspace-search',
       JSON.stringify({ state: { preview: { visible: true, ratio: 0.5 } }, version: 1 }),
     );
     await useWorkspaceSearchStore.persist.rehydrate();
@@ -64,7 +64,7 @@ describe('workspaceSearchStore', () => {
   it('remembers the options and queries, but never that it was open', () => {
     store().openSearch('p1', 'abc');
     store().setOption('wholeWord', true);
-    const saved = JSON.parse(localStorage.getItem('agentmate-workspace-search') ?? '{}').state;
+    const saved = JSON.parse(localStorage.getItem('runova-workspace-search') ?? '{}').state;
     expect(saved.queries).toEqual({ p1: 'abc' });
     expect(saved.options.wholeWord).toBe(true);
     expect(saved.open).toBeUndefined();

@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { wordPressErrorMessage } from '@shared/wordpressErrors';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -23,14 +23,14 @@ export function useUnlinkWordPressProject(): {
     const ok = await confirmDialog({
       title: 'Unlink this project from the site?',
       description:
-        "It goes back to being a regular project and every file stays in the folder. AgentMate stops pulling from and deploying to the site, forgets what it last synced, and takes the site's details out of the standing prompt.",
+        "It goes back to being a regular project and every file stays in the folder. Runova stops pulling from and deploying to the site, forgets what it last synced, and takes the site's details out of the standing prompt.",
       confirmLabel: 'Unlink',
       icon: LinkOff,
     });
     if (!ok) return false;
     setUnlinking(true);
     try {
-      const updated = await window.agentmat.deployWordPress.unlinkProject(project.id);
+      const updated = await window.runova.deployWordPress.unlinkProject(project.id);
       // The WordPress section goes with the link, so the caller leaves it first.
       onUnlinked?.();
       replaceProject(queryClient, updated);

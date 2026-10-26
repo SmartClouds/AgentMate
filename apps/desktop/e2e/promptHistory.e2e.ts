@@ -33,7 +33,7 @@ test.afterEach(async () => {
 });
 
 interface HistoryApi {
-  agentmat: {
+  runova: {
     promptHistory: {
       add(input: unknown): Promise<{ id: string }>;
       list(): Promise<{ id: string; content: string }[]>;
@@ -44,7 +44,7 @@ interface HistoryApi {
 async function seed(page: Page): Promise<void> {
   await page.evaluate(
     async ([alpha, bravo, charlie]) => {
-      const history = (window as unknown as HistoryApi).agentmat.promptHistory;
+      const history = (window as unknown as HistoryApi).runova.promptHistory;
       await history.add({
         rawInput: 'alpha request',
         promptType: 'Feature',
@@ -73,7 +73,7 @@ async function seed(page: Page): Promise<void> {
 
 function contentsOnDisk(page: Page): Promise<string[]> {
   return page.evaluate(async () => {
-    const entries = await (window as unknown as HistoryApi).agentmat.promptHistory.list();
+    const entries = await (window as unknown as HistoryApi).runova.promptHistory.list();
     return entries.map((entry) => entry.content);
   });
 }
@@ -98,17 +98,17 @@ async function relaunch(current: LaunchedApp): Promise<Page> {
     args: [
       join(E2E_OUT_DIR, 'main', 'index.mjs'),
       `--user-data-dir=${current.userDataDir}`,
-      ...(process.env.AGENTMATE_E2E_NO_SANDBOX === '1' ? ['--no-sandbox'] : []),
+      ...(process.env.RUNOVA_E2E_NO_SANDBOX === '1' ? ['--no-sandbox'] : []),
     ],
     env: {
       ...(process.env as Record<string, string>),
       ELECTRON_RENDERER_URL: '',
-      AGENTMATE_USER_DATA_DIR: current.userDataDir,
-      AGENTMATE_E2E: '1',
+      RUNOVA_USER_DATA_DIR: current.userDataDir,
+      RUNOVA_E2E: '1',
     },
   });
   const page = await relaunched.firstWindow();
-  await page.waitForFunction(() => Boolean((window as { agentmat?: unknown }).agentmat));
+  await page.waitForFunction(() => Boolean((window as { runova?: unknown }).runova));
   return page;
 }
 

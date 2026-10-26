@@ -51,7 +51,7 @@ function setup() {
           }),
     send: () => undefined,
     keepAwake: () => undefined,
-    tempDir: () => join(tempDir('agentmate-sftp-docker-'), 'edits'),
+    tempDir: () => join(tempDir('runova-sftp-docker-'), 'edits'),
     localBrowse: new LocalBrowseRegistry(),
     engine: { platform: 'linux' },
   });

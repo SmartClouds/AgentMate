@@ -154,7 +154,7 @@ export function SearchPreview({ target }: { target: PreviewTarget | null }): Rea
   const image = isPicture(settled);
   const file = useQuery({
     queryKey: queryKeys.workspaceFile(path ?? ''),
-    queryFn: () => window.agentmat.fs.readFile(path as string),
+    queryFn: () => window.runova.fs.readFile(path as string),
     enabled: path !== null && !image,
     meta: { silentLoading: true },
     staleTime: 5000,
@@ -162,7 +162,7 @@ export function SearchPreview({ target }: { target: PreviewTarget | null }): Rea
   // The same cache the image tab reads, so opening the picture afterwards is instant.
   const picture = useQuery({
     queryKey: queryKeys.workspaceImage(path ?? ''),
-    queryFn: () => window.agentmat.fs.readImage(path as string),
+    queryFn: () => window.runova.fs.readImage(path as string),
     enabled: path !== null && image && showImages,
     meta: { silentLoading: true },
     staleTime: 5000,

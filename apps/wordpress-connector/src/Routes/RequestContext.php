@@ -2,12 +2,12 @@
 /**
  * A verified request, as handlers see it.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Routes;
+namespace Runova\Connector\Routes;
 
-use AgentMate\Connector\Http\Frame;
+use Runova\Connector\Http\Frame;
 
 final class RequestContext
 {

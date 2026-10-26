@@ -1,4 +1,4 @@
-import { createFileSiteIgnoreRules } from '@agentmat/core';
+import { createFileSiteIgnoreRules } from '@runova/core';
 import { filesError } from '../../../shared/deployFilesErrors';
 import type {
   FileSite,

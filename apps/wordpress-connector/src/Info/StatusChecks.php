@@ -1,17 +1,17 @@
 <?php
 /**
- * The site checks shown on the Status tab and by `wp agentmate status`: what would stop a deploy
+ * The site checks shown on the Status tab and by `wp runova status`: what would stop a deploy
  * or make it less safe here.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Info;
+namespace Runova\Connector\Info;
 
-use AgentMate\Connector\Deploy\SyntaxCheck;
-use AgentMate\Connector\Env\Environment;
-use AgentMate\Connector\Protocol;
-use AgentMate\Connector\Storage\Storage;
+use Runova\Connector\Deploy\SyntaxCheck;
+use Runova\Connector\Env\Environment;
+use Runova\Connector\Protocol;
+use Runova\Connector\Storage\Storage;
 
 final class StatusChecks
 {
@@ -51,10 +51,10 @@ final class StatusChecks
             $method === 'direct' ? 'PHP can write the files itself.' : 'WordPress would use "' . $method . '", so deploys are off. Pulling still works.'
         );
 
-        if ($env->constantOn('AGENTMATE_CONNECTOR_DISABLED')) {
-            $checks[] = self::check('switches', 'Switches in wp-config.php', false, 'AGENTMATE_CONNECTOR_DISABLED is set: the connector answers nothing.');
-        } elseif ($env->constantOn('AGENTMATE_CONNECTOR_READ_ONLY')) {
-            $checks[] = self::check('switches', 'Switches in wp-config.php', null, 'AGENTMATE_CONNECTOR_READ_ONLY is set: every key can only read.');
+        if ($env->constantOn('RUNOVA_CONNECTOR_DISABLED')) {
+            $checks[] = self::check('switches', 'Switches in wp-config.php', false, 'RUNOVA_CONNECTOR_DISABLED is set: the connector answers nothing.');
+        } elseif ($env->constantOn('RUNOVA_CONNECTOR_READ_ONLY')) {
+            $checks[] = self::check('switches', 'Switches in wp-config.php', null, 'RUNOVA_CONNECTOR_READ_ONLY is set: every key can only read.');
         } else {
             $checks[] = self::check('switches', 'Switches in wp-config.php', true, 'None set.');
         }
@@ -115,7 +115,7 @@ final class StatusChecks
             'https',
             'HTTPS',
             $https ? true : null,
-            $https ? 'The site uses HTTPS.' : 'The site uses plain HTTP. AgentMate refuses it unless you allow it for this site.'
+            $https ? 'The site uses HTTPS.' : 'The site uses plain HTTP. Runova refuses it unless you allow it for this site.'
         );
         return $checks;
     }

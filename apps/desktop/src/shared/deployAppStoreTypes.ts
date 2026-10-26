@@ -2,12 +2,12 @@ import type {
   JobInfo,
   StackInfo,
   StackRevisionInfo,
-} from './deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from './deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployStepUpInput } from './deployTypes';
 
 /**
  * The App Store of a Deploy server (E12) and "make private" (E13). The catalog itself is code in
- * @agentmat/core, so the renderer reads it directly; what crosses to the main process is what was
+ * @runova/core, so the renderer reads it directly; what crosses to the main process is what was
  * picked. The main process renders the compose file and the .env again from these choices and
  * never takes a file from the renderer. Generated secrets travel inwards once, with the install;
  * after that they are on the server only, and come back through a step-up reveal.

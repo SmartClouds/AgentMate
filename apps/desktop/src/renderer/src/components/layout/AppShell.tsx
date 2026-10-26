@@ -198,7 +198,7 @@ export function AppShell(): React.JSX.Element {
   // is part of the cold start's first batch, so the window stays behind the splash until it is in.
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
   });
   const menuOnTop = settingsQuery.data?.menuPosition === 'top';
   // The workspace mounts on first visit and then stays, so its terminals survive navigation.
@@ -240,7 +240,7 @@ export function AppShell(): React.JSX.Element {
     if (!booted || showLoading || reportedReady.current) return undefined;
     const timer = setTimeout(() => {
       reportedReady.current = true;
-      window.agentmat.app.notifyReady();
+      window.runova.app.notifyReady();
     }, READY_SETTLE_MS);
     return () => clearTimeout(timer);
   }, [booted, showLoading]);
@@ -267,8 +267,8 @@ export function AppShell(): React.JSX.Element {
       if (terminal.sessions.some((s) => s.id === id)) terminal.setActiveSession(id);
       terminal.openDrawer();
     }
-    const stop = window.agentmat.app.onNavigate(go);
-    void window.agentmat.app.pendingNavigate().then((route) => {
+    const stop = window.runova.app.onNavigate(go);
+    void window.runova.app.pendingNavigate().then((route) => {
       if (route) go(route);
     });
     return stop;

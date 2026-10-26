@@ -180,7 +180,7 @@ describe('deployServerBackups handlers', () => {
       kind: 'googleDrive',
       clientId: 'abc.apps.googleusercontent.com',
       clientSecret: 'GOCSPX-x',
-      folderName: 'AgentMate',
+      folderName: 'Runova',
     });
     expect(answer).toHaveBeenCalled();
     await expect(

@@ -1,4 +1,4 @@
-import type { CliArgsMap, CliLaunchDefault, CliLaunchDefaultsMap } from '@agentmat/core';
+import type { CliArgsMap, CliLaunchDefault, CliLaunchDefaultsMap } from '@runova/core';
 import type { LastRunInfoByCli } from '@shared/apiTypes';
 import { create } from 'zustand';
 
@@ -28,7 +28,7 @@ export const useCliStore = create<CliState>((set, get) => ({
   lastRunInfoByCli: {},
   setDefaultCliId: (cliId) => {
     set({ defaultCliId: cliId });
-    void window.agentmat.settings.update({ defaultCliId: cliId });
+    void window.runova.settings.update({ defaultCliId: cliId });
   },
   setCliArgs: (cliId, args) => {
     const next = { ...get().cliArgs };
@@ -36,7 +36,7 @@ export const useCliStore = create<CliState>((set, get) => ({
     if (args.trim()) next[cliId] = args.trim();
     else delete next[cliId];
     set({ cliArgs: next });
-    void window.agentmat.settings.update({ cliArgs: next });
+    void window.runova.settings.update({ cliArgs: next });
   },
   setCliLaunchDefault: (cliId, patch) => {
     const merged: CliLaunchDefault = { ...get().cliLaunchDefaults[cliId], ...patch };
@@ -48,18 +48,18 @@ export const useCliStore = create<CliState>((set, get) => ({
     if (Object.keys(merged).length) next[cliId] = merged;
     else delete next[cliId];
     set({ cliLaunchDefaults: next });
-    void window.agentmat.settings.update({ cliLaunchDefaults: next });
+    void window.runova.settings.update({ cliLaunchDefaults: next });
   },
   clearCliLaunchDefault: (cliId) => {
     if (!get().cliLaunchDefaults[cliId]) return;
     const next = { ...get().cliLaunchDefaults };
     delete next[cliId];
     set({ cliLaunchDefaults: next });
-    void window.agentmat.settings.update({ cliLaunchDefaults: next });
+    void window.runova.settings.update({ cliLaunchDefaults: next });
   },
   setCliOrder: (order) => {
     set({ cliOrder: order });
-    void window.agentmat.settings.update({ cliOrder: order });
+    void window.runova.settings.update({ cliOrder: order });
   },
   recordLastRun: (cliId, model, effort) => {
     if (!model) return;
@@ -71,8 +71,8 @@ export const useCliStore = create<CliState>((set, get) => ({
 
 export async function initDefaultCli(): Promise<void> {
   const [settings, lastRunInfoByCli] = await Promise.all([
-    window.agentmat.settings.get(),
-    window.agentmat.agents.lastRunInfoByCli(),
+    window.runova.settings.get(),
+    window.runova.agents.lastRunInfoByCli(),
   ]);
   useCliStore.setState({
     defaultCliId: settings.defaultCliId,

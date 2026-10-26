@@ -114,26 +114,26 @@ function SearchTrigger(): React.JSX.Element {
 
 export function TitleBar(): React.JSX.Element {
   const [isMaximized, setIsMaximized] = useState(false);
-  const isMac = window.agentmat.platform === 'darwin';
+  const isMac = window.runova.platform === 'darwin';
   const isDark = useIsDarkMode();
 
   useEffect(() => {
-    window.agentmat.window.isMaximized().then(setIsMaximized);
-    return window.agentmat.window.onMaximizedChange(setIsMaximized);
+    window.runova.window.isMaximized().then(setIsMaximized);
+    return window.runova.window.onMaximizedChange(setIsMaximized);
   }, []);
 
   const controlProps: WindowControlsProps = {
     isMaximized,
-    onMinimize: () => void window.agentmat.window.minimize(),
-    onMaximizeToggle: () => void window.agentmat.window.maximizeToggle(),
-    onClose: () => void window.agentmat.window.close(),
+    onMinimize: () => void window.runova.window.minimize(),
+    onMaximizeToggle: () => void window.runova.window.maximizeToggle(),
+    onClose: () => void window.runova.window.close(),
   };
 
   return (
     <div
       className="relative flex h-11 shrink-0 items-center justify-between border-b border-border/80 pl-4 [-webkit-app-region:drag] glass:border-b-0"
       onDoubleClick={(e) => {
-        if (isTitleBarBlankDoubleClick(e)) void window.agentmat.window.maximizeToggle();
+        if (isTitleBarBlankDoubleClick(e)) void window.runova.window.maximizeToggle();
       }}
     >
       <div className="flex items-center gap-3">
@@ -141,7 +141,7 @@ export function TitleBar(): React.JSX.Element {
         <div className="flex items-center gap-2">
           {/* macOS apps don't put an icon beside the traffic lights. */}
           {!isMac && <img src={isDark ? appIconDark : appIconLight} alt="" className="h-6 w-6" />}
-          <span className="text-sm font-semibold tracking-tight text-foreground">AgentMate</span>
+          <span className="text-sm font-semibold tracking-tight text-foreground">Runova</span>
         </div>
       </div>
 

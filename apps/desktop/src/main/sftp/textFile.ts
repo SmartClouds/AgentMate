@@ -125,7 +125,7 @@ export async function writeText(
   const target = existing ? await coded(path, () => client.sftpRealpath(path)) : path;
 
   await mkdir(tempDir, { recursive: true });
-  const temp = join(tempDir, `agentmate-edit-${randomBytes(8).toString('hex')}.tmp`);
+  const temp = join(tempDir, `runova-edit-${randomBytes(8).toString('hex')}.tmp`);
   let stat: Awaited<ReturnType<SftpFileClient['uploadFile']>>['stat'];
   try {
     await writeFile(temp, bytes);

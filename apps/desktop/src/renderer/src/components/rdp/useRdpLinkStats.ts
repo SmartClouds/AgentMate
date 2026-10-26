@@ -17,7 +17,7 @@ export function useRdpLinkStats(sessionId: string, enabled: boolean): RdpLinkSta
     }
     let cancelled = false;
     const poll = (): void => {
-      window.agentmat.rdp.getLinkStats(sessionId).then(
+      window.runova.rdp.getLinkStats(sessionId).then(
         (next) => {
           if (!cancelled) setStats(next ?? null);
         },

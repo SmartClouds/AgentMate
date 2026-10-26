@@ -1,4 +1,4 @@
-import type { DockerObservation, EmulatorObservation } from '@agentmat/core';
+import type { DockerObservation, EmulatorObservation } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ResourceActivityTracker, type TrackerDeps } from './tracker';
 

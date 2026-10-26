@@ -83,7 +83,7 @@ export function createOpenRemoteFiles(deps: ConnectDeps = {}): OpenRemoteFiles {
       throw new FilesTransportError(
         'hostKeyUnknown',
         `${login.host} presented a host key you have not trusted yet. Check its fingerprint ` +
-          'and trust it before AgentMate sends the login.',
+          'and trust it before Runova sends the login.',
         { hostKey: { presented, stored: null } },
       );
     }

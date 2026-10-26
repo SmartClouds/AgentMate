@@ -1,7 +1,7 @@
 import type {
   UpdatesInfo,
   UpgradablePackage,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useState } from 'react';
 import {
   CircleCheck,

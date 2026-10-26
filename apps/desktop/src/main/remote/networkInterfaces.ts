@@ -15,7 +15,7 @@ export function listNetworkInterfaces(): RemoteNetworkInterface[] {
       result.push({ name, address: addr.address });
     }
   }
-  // Private LAN ranges first, those are the addresses another AgentMate on the
+  // Private LAN ranges first, those are the addresses another Runova on the
   // same network will actually be able to dial.
   result.sort((a, b) => Number(isPrivate(b.address)) - Number(isPrivate(a.address)));
   return result;

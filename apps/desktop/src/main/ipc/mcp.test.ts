@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { McpRepository, McpRepositoryIndex } from '@agentmat/core';
-import { bundledMcpRepository } from '@agentmat/core';
+import type { McpRepository, McpRepositoryIndex } from '@runova/core';
+import { bundledMcpRepository } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { InstalledMcpServerRecord } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';
@@ -66,7 +66,7 @@ function indexWith(serverId = 'weather'): McpRepositoryIndex {
         description: 'Weather tools',
         category: 'data',
         tags: [],
-        author: 'AgentMate',
+        author: 'Runova',
         version: '1.2.0',
         official: false,
         popularity: 0,
@@ -84,7 +84,7 @@ function indexWith(serverId = 'weather'): McpRepositoryIndex {
 
 /** A folder holding a repository.json, the shape a local-folder repository has. */
 function localRepoFolder(index: McpRepositoryIndex = indexWith()): string {
-  const dir = tempDir('agentmate-mcp-repo-');
+  const dir = tempDir('runova-mcp-repo-');
   writeFileSync(join(dir, 'repository.json'), JSON.stringify(index), 'utf-8');
   return dir;
 }
@@ -107,7 +107,7 @@ beforeEach(async () => {
   gitCalls.calls = [];
   gitCalls.cloneIndex = null;
   gitCalls.fail = false;
-  project.dir = tempDir('agentmate-mcp-project-');
+  project.dir = tempDir('runova-mcp-project-');
   userData.writeData('projects.json', [
     { id: PROJECT_ID, name: 'Demo', folderPath: project.dir, createdAt: '2026-01-01T00:00:00Z' },
   ]);
@@ -133,7 +133,7 @@ describe('mcp repositories', () => {
   });
 
   it('checks a local folder really holds an index before saving it', async () => {
-    const empty = tempDir('agentmate-mcp-empty-');
+    const empty = tempDir('runova-mcp-empty-');
     await expect(
       invoke(IPC.mcp.addRepository, { name: 'Broken', sourceType: 'local-folder', source: empty }),
     ).rejects.toThrow();
@@ -242,7 +242,7 @@ describe('mcp repositories', () => {
   });
 
   it('returns the folder the picker chose, or null when it was cancelled', async () => {
-    const folder = tempDir('agentmate-mcp-pick-');
+    const folder = tempDir('runova-mcp-pick-');
     queueDialog('showOpenDialog', { canceled: false, filePaths: [folder] });
     expect(await invoke<string | null>(IPC.mcp.pickLocalRepository)).toBe(folder);
 
@@ -273,7 +273,7 @@ describe('installing a server into a project', () => {
       expect.objectContaining({ serverId: 'weather', repositoryId: repo.id, version: '1.2.0' }),
     ]);
     // The record lives in the project folder, beside the config it describes.
-    expect(existsSync(join(project.dir, '.agentmate', 'installed-mcp-servers.json'))).toBe(true);
+    expect(existsSync(join(project.dir, '.runova', 'installed-mcp-servers.json'))).toBe(true);
   });
 
   it('keeps other servers and other keys in an existing .mcp.json', async () => {
@@ -319,7 +319,7 @@ describe('installing a server into a project', () => {
           description: '',
           category: 'data',
           tags: [],
-          author: 'AgentMate',
+          author: 'Runova',
           version: '2.0.0',
           official: true,
           popularity: 1,

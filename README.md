@@ -1,13 +1,15 @@
 <div align="center">
-  <img src=".github/assets/logo.png" alt="AgentMate logo" width="120" />
+  <img src=".github/assets/logo.png" alt="Runova logo" width="120" />
 
-  # AgentMate
+  # Runova
 
   **An Agentic Development Environment (ADE) for AI coding agents.**
 
-  AgentMate is where you run the work, not just where you watch it. Open a workspace, split it into panes, and put Claude Code, Codex, Cursor, Gemini, Grok, OpenCode or a plain shell in each one. The git panel, the diff viewer, the file editor, the test runner and the pipelines sit right next to the agents, so a change goes from prompt to review to commit to tag without leaving the app.
+  Runova is where you run the work, not just where you watch it. Open a workspace, split it into panes, and put Claude Code, Codex, Cursor, Gemini, Grok, OpenCode or a plain shell in each one. The git panel, the diff viewer, the file editor, the test runner and the pipelines sit right next to the agents, so a change goes from prompt to review to commit to tag without leaving the app.
 
-  [![CI](https://github.com/SmartClouds/AgentMate/actions/workflows/ci.yml/badge.svg)](https://github.com/SmartClouds/AgentMate/actions/workflows/ci.yml)
+  [Website](https://runovahq.com) · [Download](https://github.com/SmartClouds/Runova/releases/latest) · [Source](https://github.com/SmartClouds/Runova)
+
+  [![CI](https://github.com/SmartClouds/Runova/actions/workflows/ci.yml/badge.svg)](https://github.com/SmartClouds/Runova/actions/workflows/ci.yml)
   ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-informational)
   ![Built with Electron](https://img.shields.io/badge/built%20with-Electron-47848F)
   ![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6)
@@ -67,11 +69,22 @@
 
 Apart from the AI Pet card, every screenshot uses demo data (a made-up shop called Northwind), taken in the default Dark theme unless it says otherwise. The Deploy screenshot shows the DevHost described under [Deploy](#deploy), not a real server.
 
+## Why "Runova"
+
+The name joins two words. A **runway** is where launches happen, and a **nova** is a new star lighting up. That is the job of the app: you bring an idea, agents build it with you, and it leaves from here as something shipped. The logo says the same thing, an R drawn as a runway with a star taking off from its corner.
+
+Runova used to be called AgentMate. If you used it under that name, updating moves everything over on its own: your settings, projects, saved secrets and terminal sessions, each project's `.agentmate` folder (now `.runova`), and the servers you manage. A few things need a step from you:
+
+- **Servers.** The first time you update a server's core from Runova, the core moves to its new name (`runova-core`) as well. Your sites and containers keep running while it does; only the core restarts, and if anything goes wrong the server is put back as it was.
+- **WordPress sites.** The connector updates once more under its old name, then moves itself to the new one. Sites you have connected stay connected.
+- **Phones.** The mobile app is a new app now. Install Runova on the phone and pair it again; the old AgentMate app can then go.
+- **Your own scripts.** `.agentmateignore`, `AGENTMATE_USER_DATA_DIR` and health endpoints built for the AgentMate Health Protocol keep working in Runova, so there is nothing to rename unless you want to.
+
 ## Why "ADE"
 
 An IDE is built around a person typing code. An ADE is built around agents writing it and a person steering. That changes what the app has to do:
 
-- **Several agent sessions in view at once.** A workspace is a pane tree, not a single editor. Each pane holds a CLI or a shell with its own working directory, and AgentMate tracks what every agent is doing (working, needs input, done) so you know which pane to look at.
+- **Several agent sessions in view at once.** A workspace is a pane tree, not a single editor. Each pane holds a CLI or a shell with its own working directory, and Runova tracks what every agent is doing (working, needs input, done) so you know which pane to look at.
 - **The loop has to close in one place.** Reading the diff, staging hunks, running the tests, reading the failure, sending it back to the agent, committing, tagging, watching the pipeline: all of it lives in the same window as the agent that wrote the code.
 - **Agents cost money and burn quota.** Tokens, cost and rate limits are first-class, not an afterthought, and an agent tab can wait out a limit and continue on its own.
 - **Long jobs outgrow one session.** Relay cuts the work into tasks that each fit an agent's context, runs them one after another in fresh sessions, and hands what each session learned to the next in a file.
@@ -88,8 +101,8 @@ Seven things make up the core:
 - **Git, diffs and the editor, right next to the agents**: Source control, Explorer, Agent sessions, Tests and Tasks as tabs in the side panel, with Changes, Stashes, Branches, Worktrees, Commits, Pull request and Pipelines inside Source control. Stage, unstage, discard, commit, create branches, browse the tree, and open a file or a diff as a tab in the pane (or send the file to VS Code), with Monaco for editing and hunk-level selection when you only want part of a change. When a merge, rebase or stash pop stops on conflicts, keep ours or theirs per file, let a headless AI resolve one file, or hand every conflict to an agent in a terminal with "Fix with AI".
 - **Tests**: detect the test setup (Vitest, Jest, Playwright, Mocha, pytest, unittest, Go, cargo, .NET, Dart, Flutter, PHPUnit, RSpec, Gradle, Maven) and run it from the workspace. Results stream in while the run is still going, with a live elapsed clock, a filterable tree of files and cases, the raw output, and a "fix with AI" hand-off that sends the failures to an agent.
 - **Review**: multi-agent code review with Diffray (bugs, security, performance, consistency) using Claude Code, Cursor Agent, OpenCode or Codex. Review the working tree, a branch, the last N commits, changed files, or the whole source tree, and save the findings as JSON.
-- **Relay**: split a job into Markdown task files that each fit one session's context (200K tokens by default), then run them one after another in fresh sessions. Every session leaves a handoff (purpose, done so far, decisions, what was rejected, next step) that the next one reads first, and the cards move across a To do, In progress, Testing, Done and Blocked board by themselves. "Split into tasks" has an AI planner size the work for you, and "Catch up" works out where a project that is already under way stands. With Claude Code AgentMate watches the real context use and tells a session to hand off at 80% of its budget. Codex and Copilot report through an MCP server, and other agents run tasks too.
-- **Token usage and auto-continue**: track tokens, cost and rate-limit quotas across 60+ providers, with local-log scanning for Claude Code and Codex (no API key needed), combined charts, a per-project weekday chart, threshold alerts, and floating glass desktop widgets. Each project's page also has a Usage tab with what its agent conversations cost, by day, agent, model and conversation. Turn auto-continue on for a tab and AgentMate types `continue` for you once a usage limit resets or a network error clears, so a long run survives a window boundary or a dropped connection.
+- **Relay**: split a job into Markdown task files that each fit one session's context (200K tokens by default), then run them one after another in fresh sessions. Every session leaves a handoff (purpose, done so far, decisions, what was rejected, next step) that the next one reads first, and the cards move across a To do, In progress, Testing, Done and Blocked board by themselves. "Split into tasks" has an AI planner size the work for you, and "Catch up" works out where a project that is already under way stands. With Claude Code Runova watches the real context use and tells a session to hand off at 80% of its budget. Codex and Copilot report through an MCP server, and other agents run tasks too.
+- **Token usage and auto-continue**: track tokens, cost and rate-limit quotas across 60+ providers, with local-log scanning for Claude Code and Codex (no API key needed), combined charts, a per-project weekday chart, threshold alerts, and floating glass desktop widgets. Each project's page also has a Usage tab with what its agent conversations cost, by day, agent, model and conversation. Turn auto-continue on for a tab and Runova types `continue` for you once a usage limit resets or a network error clears, so a long run survives a window boundary or a dropped connection.
 
 Everything else is support around that, so you don't leave the app to go and get it.
 
@@ -98,19 +111,19 @@ Everything else is support around that, so you don't leave the app to go and get
 
 ### Around the workspace
 
-- **Prompt hand-off**: launch an agent tab and AgentMate waits for the CLI to draw a real prompt, then delivers your text as a bracketed paste. Dropped files and images paste as a short chip on the input line while the shell still gets the real quoted path.
+- **Prompt hand-off**: launch an agent tab and Runova waits for the CLI to draw a real prompt, then delivers your text as a bracketed paste. Dropped files and images paste as a short chip on the input line while the shell still gets the real quoted path.
 - **Launcher menu**: the **+** menu lists every installed agent and shell. Claude Code, Codex, Gemini, Grok and Cursor have a flyout for the model and reasoning effort, so a tab starts on the one you want without a trip to Settings.
 - **Browser tab**: open your dev server in a tab next to the agent, point at an element on the page, and send your comment about it to the agent.
-- **Worktrees**: create one from the project rail, the branch switcher, `Ctrl+Shift+N` or the palette. AgentMate copies untracked files such as `.env`, runs a setup command in its own tab, and can start an agent with your task typed in as its first prompt. When the work is done, merge it back or open a pull request.
+- **Worktrees**: create one from the project rail, the branch switcher, `Ctrl+Shift+N` or the palette. Runova copies untracked files such as `.env`, runs a setup command in its own tab, and can start an agent with your task typed in as its first prompt. When the work is done, merge it back or open a pull request.
 - **Running CLIs**: one dialog lists every terminal the app owns (workspace, drawer, SSH) with live CPU and memory per process tree, plus filtering, sorting, and end or restart actions.
 - **Keep awake**: a policy under Settings decides whether the machine stays awake always, only while an agent is actually producing output, or never.
 
 ### Projects
 
-- **Project workspace**: bootstrap a repo, keep notes, pin and reorder projects, archive the ones you are done with, and launch a project's run commands from its card. Paste a GitHub link when you create a project and AgentMate clones it, private repos included, through your `gh` sign-in.
-- **Run commands**: a command can leave a value open with `{{port=3000}}`, and AgentMate asks for it in a short form before it runs. Pause freezes a dev server and everything it started so the CPU is free for something else, and Resume picks up every file change at once. Stopping a run offers to stop its Docker containers too, and an agent can propose run commands for you to approve.
-- **WordPress projects**: make a project from a connected WordPress site. AgentMate pulls the themes and plugins you pick into a folder that keeps the site's layout (`wp-content/themes/...`), so agents work on them like any other code. Review and deploy shows every file that will go, any conflicts with changes made on the site, and what stays behind: agent settings, skills and AgentMate's own files never leave your computer.
-- **Git and releases**: status, branches, tags, and branch history with the tags on each commit. Bump the version in your files with a headless CLI run, review the bump file by file (or hunk by hunk), then commit, tag and push from the app. AgentMate warns before you tag a version you never bumped, and monorepo workspaces get scoped tag prefixes.
+- **Project workspace**: bootstrap a repo, keep notes, pin and reorder projects, archive the ones you are done with, and launch a project's run commands from its card. Paste a GitHub link when you create a project and Runova clones it, private repos included, through your `gh` sign-in.
+- **Run commands**: a command can leave a value open with `{{port=3000}}`, and Runova asks for it in a short form before it runs. Pause freezes a dev server and everything it started so the CPU is free for something else, and Resume picks up every file change at once. Stopping a run offers to stop its Docker containers too, and an agent can propose run commands for you to approve.
+- **WordPress projects**: make a project from a connected WordPress site. Runova pulls the themes and plugins you pick into a folder that keeps the site's layout (`wp-content/themes/...`), so agents work on them like any other code. Review and deploy shows every file that will go, any conflicts with changes made on the site, and what stays behind: agent settings, skills and Runova's own files never leave your computer.
+- **Git and releases**: status, branches, tags, and branch history with the tags on each commit. Bump the version in your files with a headless CLI run, review the bump file by file (or hunk by hunk), then commit, tag and push from the app. Runova warns before you tag a version you never bumped, and monorepo workspaces get scoped tag prefixes.
 - **Security**: scan the project with Semgrep, Trivy, Bearer, SonarQube, CodeQL or Strix. See [Project security scanning](#project-security-scanning).
 - **Packages**: see and update dependencies for npm, pnpm, Yarn, NuGet and Dart/Flutter pub, with an outdated-only view.
 - **Environments**: keep development, test, staging, production and custom environments per project, each with its own env files and credentials, encrypted on this machine behind the vault's master password. Import existing `.env` files, copy values out when you need them, and keep the whole thing out of the repo.
@@ -119,17 +132,17 @@ Everything else is support around that, so you don't leave the app to go and get
 ### Build
 
 - **Blueprint**: a stepped builder on every project that turns an idea into a Product Manager prompt. Fill in the idea, the architecture, the backend, the frontend, CI/CD, and quality one step at a time, pull in reusable snippets you defined once in Settings, and write each step as markdown with a live preview. Drop a screenshot, a recording, or a PDF straight into the writing and it lands where the caret is, so a description can sit above it and the next point below it. The last step writes a single English prompt that tells an agent to plan the project into your docs folder: phases, epics, a task backlog, milestones, and risks. Turn on "Split into Relay tasks" there and the agent writes Relay task files instead of a backlog. Write in Persian if you like, it is translated before the prompt is generated. Every step is kept and editable, every save is a version you can read and restore, and any step you tick is mirrored into the project's CLAUDE.md or AGENTS.md.
-- **Prompt Builder**: describe what you want, and AgentMate structures it into a prompt for the agent of your choice. Generate, translate and copy from the keyboard, dictate with local Whisper speech-to-text instead of typing (Persian included), speak a prompt word for word without generating anything, and get a model and reasoning-effort recommendation for the run before you start it. "Split into tasks" turns a request into Relay tasks you review before anything is written.
+- **Prompt Builder**: describe what you want, and Runova structures it into a prompt for the agent of your choice. Generate, translate and copy from the keyboard, dictate with local Whisper speech-to-text instead of typing (Persian included), speak a prompt word for word without generating anything, and get a model and reasoning-effort recommendation for the run before you start it. "Split into tasks" turns a request into Relay tasks you review before anything is written.
 - **Prompt History**: every prompt you have generated or translated, searchable, with tags and proper Persian / RTL rendering.
 - **Scheduled prompts**: run a prompt in an agent CLI later, either when you press Run or at a set time, and follow it from the project's Prompts section and from Telegram.
-- **Writing check**: grammar, spelling, and style checking in the app's text boxes, powered by LanguageTool. Issues are underlined as you type, right-click one for its fix (or to check the text on the spot), and the counter in the corner opens the full list with one-click fixes. Uses LanguageTool's public API by default; drop the LanguageTool download into the app's tools folder and AgentMate runs the server itself, so nothing you write leaves the machine.
+- **Writing check**: grammar, spelling, and style checking in the app's text boxes, powered by LanguageTool. Issues are underlined as you type, right-click one for its fix (or to check the text on the spot), and the counter in the corner opens the full list with one-click fixes. Uses LanguageTool's public API by default; drop the LanguageTool download into the app's tools folder and Runova runs the server itself, so nothing you write leaves the machine.
 - **Ask AI**: a chat with OpenAI, Gemini or a local Ollama model, as a full page or a quick popup from any screen.
 - **API Client**: build, send and save HTTP requests in tabs, and read the status, headers, timing and body of the response. Collections (with folders) are stored as Postman files, and request scripts run in a process of their own, so a runaway script from an imported collection cannot freeze the app.
 
 ### Agents
 
 - **AI CLI Manager**: detects every AI coding CLI on the machine and installs or updates the missing ones with one click (Claude Code, Gemini, OpenCode, OpenClaude, Codex, Grok, Cursor, GitHub Copilot CLI, FreeBuff, Qwen, Aider, Goose, Cline, Continue, Pi, Muse Code).
-- **CLI arguments and launch defaults**: save the flags, model and reasoning effort each CLI should launch with. The background calls AgentMate makes for you (commit messages, branch names, tag suggestions, version bumps, run sizing, skill deep reviews) build their command line the same way, so they use the model you picked.
+- **CLI arguments and launch defaults**: save the flags, model and reasoning effort each CLI should launch with. The background calls Runova makes for you (commit messages, branch names, tag suggestions, version bumps, run sizing, skill deep reviews) build their command line the same way, so they use the model you picked.
 - **Skill Marketplace**: install agent skills from configurable repositories or skills.sh, including into a project's agent folders, with favorites, usage tracking, and update detection.
 - **Skill Security**: check what a skill actually does before you let an agent read it. A static scan over 14 risk categories, an optional deep review by an installed agent CLI, and a saved history of every check. See [Skill security](#skill-security).
 - **MCP Marketplace**: install MCP servers into a project from configurable repositories.
@@ -139,13 +152,13 @@ Everything else is support around that, so you don't leave the app to go and get
 
 - **Pipelines**: a page for GitHub Actions across the repos you connected. Run and stop workflows by hand, read run annotations without leaving the app, and hand a failed run to an agent with "Fix with AI".
 - **Deploy**: a server panel for your own Linux servers, from install to apps, containers, websites, certificates, the firewall and an AI that can look at logs, plus FTP, SFTP and WordPress sites that have no SSH. Choose which servers it lists and drag them into the order you want. See [Deploy](#deploy).
-- **Monitoring**: a page (and a tab per project) that watches each environment and server of a project through a private, key-protected endpoint in your app. It shows every service with its status and the full error of the ones that fail, charts availability by day and response time, checks each target on its own schedule, notifies you when an incident opens or resolves, runs a read-only AI diagnosis, and hands the failure to an agent with "Fix with AI". Build with AI gives Claude Code (or any agent) a prompt with the AgentMate Health Protocol, so it can add the endpoint to any stack. The Errors tab shows what Sentry recorded for each project (Sentry.io, self-hosted Sentry, or GlitchTip as a best effort) with the stack trace, ready to copy or hand to an agent.
+- **Monitoring**: a page (and a tab per project) that watches each environment and server of a project through a private, key-protected endpoint in your app. It shows every service with its status and the full error of the ones that fail, charts availability by day and response time, checks each target on its own schedule, notifies you when an incident opens or resolves, runs a read-only AI diagnosis, and hands the failure to an agent with "Fix with AI". Build with AI gives Claude Code (or any agent) a prompt with the Runova Health Protocol, so it can add the endpoint to any stack. The Errors tab shows what Sentry recorded for each project (Sentry.io, self-hosted Sentry, or GlitchTip as a best effort) with the stack trace, ready to copy or hand to an agent.
 - **Docker**: a Docker tab per project and a Docker page for the machine, grouped by compose project. Start, stop, restart, remove, bulk-stop, and jump to a container from the status bar. The Dashboard also lists the containers nobody has touched for a while, so you can stop them.
 - **Android**: start and stop emulators, create and edit virtual devices, and work with connected phones (screenshots, screen recording, APK install, `adb shell`), using the Android SDK you already have.
 
 ### Connect
 
-- **Remote**: control another AgentMate over your local network, over WebSockets, including from the companion mobile app, with a remote file manager and resumable transfers.
+- **Remote**: control another Runova over your local network, over WebSockets, including from the companion mobile app, with a remote file manager and resumable transfers.
 - **SSH**: saved servers in the vault, terminal sessions in the drawer, a two-pane SFTP file manager (upload and download files and whole folders, change permissions, edit text files on the server, and keep an eye on transfers from the status bar), and an AI task runner that prompts an agent in a RUN / FINISHED / NEEDS_INPUT loop, executes the commands in the live session, and stops for your approval on anything risky.
 - **RDP**: saved Remote Desktop servers and full sessions in their own window, built on Devolutions Iron Remote Desktop, with a shared clipboard, file copy, full screen, and an AI that can do tasks on the remote desktop for you.
 - **Vault**: passwords, API keys, and private notes, encrypted on this computer behind a master password. Ranked search, type tabs, tags and favorites, a password generator, custom fields, CSV import with column matching and duplicate handling, export behind the master password, auto-lock, clipboard clearing on a countdown, and locking with the computer. The same vault backs the SSH, RDP, and environment credentials, and every decrypted value leaves the app's cache the moment it locks.
@@ -156,22 +169,22 @@ Everything else is support around that, so you don't leave the app to go and get
 - **Status bar**: agent statuses, project runs, file transfers, plan limits, Docker containers, Android emulators, CPU and memory, network, the GitHub account, and the keep-awake state, each an interactive popover that takes you to the thing it is about.
 - **Notifications**: GitHub Actions failures, background CLI activity, and tool updates, folded into one recent-messages list, with optional Telegram delivery.
 - **Help center**: press `F1` for a guide to every part of the app. Search works offline, and an "Ask the guide" chat answers in your own words from the same articles.
-- **AI Pet**: an optional desktop companion. Click it for a token report, double-click to bring AgentMate to the front, drag it around, and let it tell you when a pipeline fails, the network drops, an agent changes status, or a project finishes. Right-click for a menu (open the app, stop it wandering, snooze it for 15 minutes to 3 hours, or send it away), and it reappears on its own when the snooze ends. Built-in characters, custom nicknames, or add your own GIF / PNG / WebP.
+- **AI Pet**: an optional desktop companion. Click it for a token report, double-click to bring Runova to the front, drag it around, and let it tell you when a pipeline fails, the network drops, an agent changes status, or a project finishes. Right-click for a menu (open the app, stop it wandering, snooze it for 15 minutes to 3 hours, or send it away), and it reappears on its own when the snooze ends. Built-in characters, custom nicknames, or add your own GIF / PNG / WebP.
 - **Settings**: tabbed General, Agents, Shortcuts, AI Pet, AI, Notifications, Network, Vault, and Data. Five themes (Light, Dark, System, VS Code Dark and VS 2026), a main menu down the left or along the top, a translucent window on Windows 11 and macOS, rebindable global and workspace shortcuts, backup and restore of your projects and settings (with environments and the Vault if you choose), and updates from GitHub Releases. Update downloads run in chunks and can be paused and resumed, so a dropped connection doesn't cost you the bytes you already have.
-- **Proxy**: one setting under Settings > Network decides how the whole app reaches the internet: straight out, through this machine's own proxy (PAC scripts included), or through an HTTP, HTTPS, or SOCKS server you type in, with a username and password if it wants one. It covers the AI providers, the skill and package registries, Telegram, update checks, and the CLIs and git commands AgentMate runs for you. Test connection checks a server before you save it and reports the address the internet saw you from.
+- **Proxy**: one setting under Settings > Network decides how the whole app reaches the internet: straight out, through this machine's own proxy (PAC scripts included), or through an HTTP, HTTPS, or SOCKS server you type in, with a username and password if it wants one. It covers the AI providers, the skill and package registries, Telegram, update checks, and the CLIs and git commands Runova runs for you. Test connection checks a server before you save it and reports the address the internet saw you from.
 - **Also in the app**: a command palette (Ctrl+K / Cmd+K), a tabbed terminal drawer (Ctrl+backtick), and a searchable history of toasts.
 
 </details>
 
 ## Skill security
 
-A skill is instructions an agent reads and acts on, so its text is as powerful as code, and most skills are installed from a repo you have never read. AgentMate can check one before you trust it.
+A skill is instructions an agent reads and acts on, so its text is as powerful as code, and most skills are installed from a repo you have never read. Runova can check one before you trust it.
 
 **Where you can run a check**
 
 - The shield button on any skill card: the Directory and Featured lists, the repositories you configured, and the skills you have already installed.
-- **Skills → Security**, where "Check any skill" takes a folder path or a GitHub URL, lists the skills it finds there, and checks one or all of them. Nothing has to be installed or added to AgentMate first.
-- A project's page, which also lists skills sitting in the project's agent folders that AgentMate did not install, so a skill someone else dropped in still gets checked.
+- **Skills → Security**, where "Check any skill" takes a folder path or a GitHub URL, lists the skills it finds there, and checks one or all of them. Nothing has to be installed or added to Runova first.
+- A project's page, which also lists skills sitting in the project's agent folders that Runova did not install, so a skill someone else dropped in still gets checked.
 
 Batch runs report progress per skill and stay out of the way while they work, so you can keep using the app.
 
@@ -221,11 +234,11 @@ Skill security checks the instructions you hand an agent. The project Security t
 | CodeQL | Deep semantic analysis via GitHub's query packs |
 | Strix | Agentic security testing |
 
-AgentMate checks the prerequisites before a run and walks you through whatever is missing. Every scanner's output is normalized into one report, so severity, scoring, and filtering work the same whichever one you ran. Findings are redacted before they are stored, per-scanner logs are kept with the run, and a scan keeps going in the main process if you navigate away, so a reopened tab rejoins it instead of starting over. CodeQL is downloaded, verified, and unpacked into AgentMate's own tools folder when it is not already on PATH. Any finding can be copied to an agent as a prompt.
+Runova checks the prerequisites before a run and walks you through whatever is missing. Every scanner's output is normalized into one report, so severity, scoring, and filtering work the same whichever one you ran. Findings are redacted before they are stored, per-scanner logs are kept with the run, and a scan keeps going in the main process if you navigate away, so a reopened tab rejoins it instead of starting over. CodeQL is downloaded, verified, and unpacked into Runova's own tools folder when it is not already on PATH. Any finding can be copied to an agent as a prompt.
 
 ## Deploy
 
-Deploy turns a Linux server you can SSH into into one you can manage from AgentMate, a bit like aaPanel but without a web panel open to the internet. Pick a saved SSH server, click Install, and AgentMate puts a small service on it (the server core, a .NET 10 program under systemd). From then on the Deploy page shows that server's sections:
+Deploy turns a Linux server you can SSH into into one you can manage from Runova, a bit like aaPanel but without a web panel open to the internet. Pick a saved SSH server, click Install, and Runova puts a small service on it (the server core, a .NET 10 program under systemd). From then on the Deploy page shows that server's sections:
 
 | Section | What you do there |
 |---|---|
@@ -243,22 +256,22 @@ Cloudflare has its own dialog: connect one or more accounts with scoped API toke
 
 **Hosting with only FTP or SFTP**
 
-Not every host gives you a shell. For one that only offers SFTP, FTPS or FTP, send a project's folder to it from Deploy. AgentMate shows what changed since the last deploy, and nothing that changed on the server in the meantime is overwritten or deleted without your say. These sites sit in Deploy next to your servers and WordPress sites.
+Not every host gives you a shell. For one that only offers SFTP, FTPS or FTP, send a project's folder to it from Deploy. Runova shows what changed since the last deploy, and nothing that changed on the server in the meantime is overwritten or deleted without your say. These sites sit in Deploy next to your servers and WordPress sites.
 
 **WordPress sites without SSH or FTP**
 
-Many WordPress sites live on hosting where there is no way in but wp-admin. For those, install the AgentMate Connector plugin (Deploy, Connect a WordPress site, Download the plugin; it is also attached to every GitHub release), make a connection key in Tools, AgentMate Connector, and paste it into AgentMate. The site then shows up in Deploy next to your servers, with its themes and plugins, its deploy history and its audit log.
+Many WordPress sites live on hosting where there is no way in but wp-admin. For those, install the Runova Connector plugin (Deploy, Connect a WordPress site, Download the plugin; it is also attached to every GitHub release), make a connection key in Tools, Runova Connector, and paste it into Runova. The site then shows up in Deploy next to your servers, with its themes and plugins, its deploy history and its audit log.
 
 - **Keys are one-time and scoped.** A key works once, for 15 minutes, and is read-only or read-write as the site's admin chose. The admin can see and revoke every connection in wp-admin, or switch everything off with `DISALLOW_FILE_MODS`.
 - **Every call is signed.** Each request is signed with a key that only this computer holds (sealed like your SSH passwords), checked for freshness and replay, and every reply is signed by the site. Plain HTTP is refused unless you allow it for that site.
 - **A deploy never leaves the site down.** Changes are staged where the web server cannot run them, PHP files are syntax checked, every file is snapshotted, and a health check runs afterwards. If the site breaks, even badly enough to stop answering, it puts the old files back on its own.
 - **Only theme, plugin and mu-plugin files move.** Uploads, the database, WordPress core and `wp-config.php` are never touched, and nothing is ever activated.
-- **The plugin updates from the app.** When AgentMate ships a newer connector, the site's Overview shows an Update button. The app sends the plugin's files over the same signed connection, the plugin checks and parses them, swaps its own folder and health-checks the site, and puts the old version back on its own if the site stops answering. The first update of a connector that predates this still takes one upload in wp-admin; every update after that is one click.
+- **The plugin updates from the app.** When Runova ships a newer connector, the site's Overview shows an Update button. The app sends the plugin's files over the same signed connection, the plugin checks and parses them, swaps its own folder and health-checks the site, and puts the old version back on its own if the site stops answering. The first update of a connector that predates this still takes one upload in wp-admin; every update after that is one click.
 
 **Security model, in short**
 
 - **No open port.** The core listens on a Unix socket only reachable by root and its own group. The app reaches it through your SSH connection, so the server's attack surface does not grow. Direct TLS (with a client certificate per computer) is an opt-in for later.
-- **Every computer is enrolled.** Each AgentMate install has its own device key, sealed on the computer. Signing in takes that key's signature plus the account password, and two-factor codes if they are on. Access tokens last 15 minutes and there is no refresh secret to steal.
+- **Every computer is enrolled.** Each Runova install has its own device key, sealed on the computer. Signing in takes that key's signature plus the account password, and two-factor codes if they are on. Access tokens last 15 minutes and there is no refresh secret to steal.
 - **Roles and an audit trail.** Owner, Admin, Operator and Viewer, checked by the core on every request and hub call. Sensitive actions ask for the password again, and every change lands in an audit trail that is chained so edits show.
 - **Changes you can take back.** Firewall and SSH changes are previewed, then rolled back by a systemd timer unless you confirm them over a fresh SSH connection, so a mistake does not lock you out.
 - **The AI cannot run anything risky on its own.** The Deploy AI may run a short list of read-only checks unattended. Anything else needs your approval, signed with this computer's key over the exact command, and the core refuses commands without one. Logs reach the model as untrusted data, with secrets taken out.
@@ -274,13 +287,13 @@ The DevHost is the real core on `127.0.0.1` with a pretend machine behind it (mo
 
 ```bash
 # Terminal 1: start the DevHost on port 7810
-dotnet run --project apps/server-core/src/AgentMate.ServerCore.DevHost
+dotnet run --project apps/server-core/src/Runova.ServerCore.DevHost
 
 # Terminal 2: start the app pointed at it (development builds only)
-AGENTMATE_DEPLOY_DEV_CORE=7810 pnpm dev
+RUNOVA_DEPLOY_DEV_CORE=7810 pnpm dev
 ```
 
-Open Deploy, pick DevHost, and sign in with its development password, `agentmate-local-password`. Packaged builds ignore `AGENTMATE_DEPLOY_DEV_CORE`.
+Open Deploy, pick DevHost, and sign in with its development password, `runova-local-password`. Packaged builds ignore `RUNOVA_DEPLOY_DEV_CORE`.
 
 The delivery plan, each epic's notes and what is still unverified are in [`docs/`](docs/DELIVERY_STATUS.md).
 
@@ -291,7 +304,7 @@ The delivery plan, each epic's notes and what is still unverified are in [`docs/
 | Desktop app | Electron, React 19, TypeScript 7, Vite (`electron-vite`), Tailwind CSS, Radix UI, TanStack Query, Zustand |
 | Editor and terminal | Monaco, xterm.js, node-pty |
 | Mobile companion | Expo / React Native, WebRTC |
-| Shared packages | `@agentmat/core` (business logic), `@agentmat/protocol` (shared types/wire protocol) |
+| Shared packages | `@runova/core` (business logic), `@runova/protocol` (shared types/wire protocol) |
 | Local storage | better-sqlite3, plus an encrypted vault file for secrets |
 | Remote | `ws` for the local-network protocol, `ssh2` for SSH, Devolutions Iron Remote Desktop for RDP |
 | API Client | Postman Runtime and Collection SDK, run in a utility process |
@@ -305,7 +318,7 @@ The delivery plan, each epic's notes and what is still unverified are in [`docs/
 ## Project structure
 
 ```
-AgentMate/
+Runova/
 ├── apps/
 │   ├── desktop/     Electron app (main, preload, renderer), the primary product
 │   ├── mobile/      Expo/React Native companion app for the Remote feature
@@ -314,8 +327,8 @@ AgentMate/
 ├── docs/            Delivery plan: roadmap, risks, status and one file per epic (Deploy, WordPress,
 │                    Monitoring, FTP and SFTP, error tracking, the SFTP file manager, Relay)
 ├── packages/
-│   ├── core/        Shared business logic (@agentmat/core)
-│   └── protocol/    Shared types and wire protocol (@agentmat/protocol)
+│   ├── core/        Shared business logic (@runova/core)
+│   └── protocol/    Shared types and wire protocol (@runova/protocol)
 └── patches/         pnpm patches for third-party packages
 ```
 
@@ -323,9 +336,9 @@ The Deploy section spans three places:
 
 ```
 apps/server-core/
-├── src/AgentMate.ServerCore/          The server core: REST and SignalR API, identity, Docker, compose,
+├── src/Runova.ServerCore/          The server core: REST and SignalR API, identity, Docker, compose,
 │                                      nginx, ACME, firewall, security checklist, backups, exec for the AI
-├── src/AgentMate.ServerCore.DevHost/  The core on loopback with a pretend machine, for development and e2e
+├── src/Runova.ServerCore.DevHost/  The core on loopback with a pretend machine, for development and e2e
 ├── tests/                             xUnit v3: the core in memory, and system tests that need Linux
 ├── test-servers/                      Dockerfiles for systemd test servers (Ubuntu, Debian, Rocky, ufw,
 │                                      firewalld) and the nginx harness
@@ -345,7 +358,7 @@ apps/desktop/src/renderer/src/components/deploy/   The Deploy screens, one folde
 
 **Prerequisites:** Node.js ≥ 20, [pnpm](https://pnpm.io) ≥ 11. Working on `apps/server-core` also needs the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (the feature band pinned in `apps/server-core/global.json`).
 
-Installers for Windows, macOS, and Linux are published on [GitHub Releases](https://github.com/SmartClouds/AgentMate/releases). The app can also check that feed and install an update from Settings. Once it is running, press `F1` for the built-in guides, which cover every page.
+Installers for Windows, macOS, and Linux are published on [GitHub Releases](https://github.com/SmartClouds/Runova/releases). The app can also check that feed and install an update from Settings. Once it is running, press `F1` for the built-in guides, which cover every page.
 
 ```bash
 pnpm install
@@ -394,28 +407,28 @@ Tests live next to the code they cover (`foo.ts` has `foo.test.ts` beside it). E
 | Component | `apps/desktop/src/renderer/**` | Vitest (jsdom) plus Testing Library |
 | End to end | `apps/desktop/e2e` | Playwright, driving the built Electron app |
 | Mobile | `apps/mobile` | Jest (`jest-expo`) plus React Native Testing Library |
-| Server core | `apps/server-core/tests/AgentMate.ServerCore.Tests` | xUnit v3 on Microsoft.Testing.Platform, with the real web host in memory |
-| Server core system | `apps/server-core/tests/AgentMate.ServerCore.SystemTests` | xUnit v3, Linux with Docker only (the nightly workflow) |
-| Deploy system | `apps/desktop/src/main/deploy/*.int.test.ts` | Vitest against systemd test servers in Docker, with the published core (`AGENTMATE_SYSTEM_TESTS=1`) |
+| Server core | `apps/server-core/tests/Runova.ServerCore.Tests` | xUnit v3 on Microsoft.Testing.Platform, with the real web host in memory |
+| Server core system | `apps/server-core/tests/Runova.ServerCore.SystemTests` | xUnit v3, Linux with Docker only (the nightly workflow) |
+| Deploy system | `apps/desktop/src/main/deploy/*.int.test.ts` | Vitest against systemd test servers in Docker, with the published core (`RUNOVA_SYSTEM_TESTS=1`) |
 | WordPress connector | `apps/wordpress-connector/tests` | PHPUnit in Docker, plus a smoke test of the plugin zip and a sync test of the desktop engine, both on a real WordPress |
 
 The desktop suite is split into two Vitest projects, configured in `apps/desktop/vitest.config.mts`:
 
-- **main** runs in Node with `electron` replaced by a fake (`src/test/main/electronMock.ts`) and `better-sqlite3` by a `node:sqlite` wrapper (`src/test/main/sqliteShim.ts`). The wrapper matters because `pnpm dev` rebuilds better-sqlite3 for Electron's ABI, after which plain Node can no longer load it. Run one project on its own with `pnpm --filter @agentmat/desktop test:main`.
+- **main** runs in Node with `electron` replaced by a fake (`src/test/main/electronMock.ts`) and `better-sqlite3` by a `node:sqlite` wrapper (`src/test/main/sqliteShim.ts`). The wrapper matters because `pnpm dev` rebuilds better-sqlite3 for Electron's ABI, after which plain Node can no longer load it. Run one project on its own with `pnpm --filter @runova/desktop test:main`.
 - **renderer** runs in jsdom with the browser APIs Radix and the charts need, and with Monaco, Iron Remote Desktop and Framer Motion stubbed. A file that needs to replace `window` itself can opt out with a `// @vitest-environment node` first line.
 
 Shared helpers sit in `apps/desktop/src/test/`:
 
 - `main/ipcHarness.ts` registers an IPC module against the fake `ipcMain` and calls its channels: `useTempUserData()`, `invoke(channel, ...)`, `expectChannelsCovered(IPC.namespace)` (which fails when a registered channel has no test).
 - `main/fixtures.ts` builds temp trees, real git repositories and local HTTP servers.
-- `renderer/agentmatBridge.ts` fakes `window.agentmat`, the preload bridge. Answers are dotted paths (`{ 'projects.list': [project] }`), unconfigured calls resolve to undefined, and events are fired with `bridge.$emit('agents.onStatus', payload)`.
+- `renderer/runovaBridge.ts` fakes `window.runova`, the preload bridge. Answers are dotted paths (`{ 'projects.list': [project] }`), unconfigured calls resolve to undefined, and events are fired with `bridge.$emit('agents.onStatus', payload)`.
 - `renderer/renderWithProviders.tsx` renders with the query client, tooltips and router that `App.tsx` provides.
 
-End-to-end runs build the app into `out-e2e/` so a running `electron-vite dev` keeps `out/`. Each test gets its own profile through `AGENTMATE_USER_DATA_DIR`, and `AGENTMATE_E2E=1` turns off the startup work that would reach outside it (the Docker scan sweep, update checks) and the quit confirmation. The main, widget, RDP and remote session windows stay hidden during a run so they don't pop up over your work; set `AGENTMATE_E2E_SHOW=1` to watch one instead. That combination is what lets the suite run while the real AgentMate is open. Set `AGENTMATE_E2E_SKIP_BUILD=1` to reuse the last build while iterating, and `AGENTMATE_E2E_NO_SANDBOX=1` where Chromium's sandbox is unavailable. Failures leave a trace in `apps/desktop/test-results`, viewable with `pnpm --filter @agentmat/desktop exec playwright show-trace <path>`.
+End-to-end runs build the app into `out-e2e/` so a running `electron-vite dev` keeps `out/`. Each test gets its own profile through `RUNOVA_USER_DATA_DIR`, and `RUNOVA_E2E=1` turns off the startup work that would reach outside it (the Docker scan sweep, update checks) and the quit confirmation. The main, widget, RDP and remote session windows stay hidden during a run so they don't pop up over your work; set `RUNOVA_E2E_SHOW=1` to watch one instead. That combination is what lets the suite run while the real Runova is open. Set `RUNOVA_E2E_SKIP_BUILD=1` to reuse the last build while iterating, and `RUNOVA_E2E_NO_SANDBOX=1` where Chromium's sandbox is unavailable. Failures leave a trace in `apps/desktop/test-results`, viewable with `pnpm --filter @runova/desktop exec playwright show-trace <path>`.
 
 Tests need Node 22.13 or newer, because the SQLite stand-in uses `node:sqlite`.
 
-The Deploy system tests boot whole Linux machines, so they only run when asked. They need Docker with Linux containers and a published core: run `pnpm server-core:publish linux-x64`, then `AGENTMATE_SYSTEM_TESTS=1 pnpm --filter @agentmat/desktop exec vitest run src/main/deploy/deploy.int.test.ts` (or any other `*.int.test.ts`). Each test has its default servers; `AGENTMATE_TEST_SERVER_IMAGES=debian-13` (comma separated) runs every test that supports them on those instead. The full-stack run, `e2e/deployFullStack.e2e.ts`, drives the built app through the whole Deploy story against one of these servers (install, two-factor, Docker, a stack, a private image, a site with a Pebble certificate, a firewall revert and a Deploy AI fix): `AGENTMATE_SYSTEM_TESTS=1 AGENTMATE_TEST_SERVER_IMAGES=ubuntu-24.04-ufw pnpm --filter @agentmat/desktop test:e2e deployFullStack.e2e.ts`. Ordinary e2e runs skip it.
+The Deploy system tests boot whole Linux machines, so they only run when asked. They need Docker with Linux containers and a published core: run `pnpm server-core:publish linux-x64`, then `RUNOVA_SYSTEM_TESTS=1 pnpm --filter @runova/desktop exec vitest run src/main/deploy/deploy.int.test.ts` (or any other `*.int.test.ts`). Each test has its default servers; `RUNOVA_TEST_SERVER_IMAGES=debian-13` (comma separated) runs every test that supports them on those instead. The full-stack run, `e2e/deployFullStack.e2e.ts`, drives the built app through the whole Deploy story against one of these servers (install, two-factor, Docker, a stack, a private image, a site with a Pebble certificate, a firewall revert and a Deploy AI fix): `RUNOVA_SYSTEM_TESTS=1 RUNOVA_TEST_SERVER_IMAGES=ubuntu-24.04-ufw pnpm --filter @runova/desktop test:e2e deployFullStack.e2e.ts`. Ordinary e2e runs skip it.
 
 ### CI
 

@@ -1,4 +1,4 @@
-import type { AppSettings } from '@agentmat/core';
+import type { AppSettings } from '@runova/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -232,7 +232,7 @@ describe('runHeadlessCliPrompt keeps terminal settings out', () => {
   // Regression guard, the mirror of the terminal one in lib/workspace/launch.test.ts: Launch
   // defaults are for terminals only and must never change a background run, for any CLI.
   it('uses the Arguments box and never the Launch defaults, for every headless CLI', async () => {
-    const { CLI_REGISTRY, cliLaunchOptions } = await import('@agentmat/core');
+    const { CLI_REGISTRY, cliLaunchOptions } = await import('@runova/core');
     // Only CLIs that can run on this OS are ever picked for a background run.
     const headless = CLI_REGISTRY.filter(
       (cli) => cli.promptCommand && (cli.supportedOS as string[]).includes(process.platform),
@@ -244,13 +244,13 @@ describe('runHeadlessCliPrompt keeps terminal settings out', () => {
       const mode = cliLaunchOptions(cli.id)?.modes[0];
       settings.current = {
         defaultCliId: cli.id,
-        cliArgs: { [cli.id]: '--agentmate-background-arg' },
+        cliArgs: { [cli.id]: '--runova-background-arg' },
         cliLaunchDefaults: {
           [cli.id]: { model: 'terminal-only-model', effort: 'max', mode: mode?.id },
         },
       };
       const { args } = await run({ preferredCliId: cli.id, strictCli: true });
-      expect(args, cli.id).toContain('--agentmate-background-arg');
+      expect(args, cli.id).toContain('--runova-background-arg');
       expect(args, cli.id).not.toContain('terminal-only-model');
       if (mode) {
         const joined = args.join(' ');

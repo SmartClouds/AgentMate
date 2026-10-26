@@ -436,19 +436,19 @@ describe('collectHistory for every CLI', () => {
         content: claudeTranscript('/work/app', 'OpenClaude here'),
         mtimeMs: 30,
       },
-      '/home/me/.gemini/tmp/agentmate/.project_root': {
+      '/home/me/.gemini/tmp/runova/.project_root': {
         content: '/work/app',
         mtimeMs: 1,
       },
-      '/home/me/.gemini/tmp/agentmate/chats/session-2026-10-07T04-30-g1.jsonl': {
+      '/home/me/.gemini/tmp/runova/chats/session-2026-10-07T04-30-g1.jsonl': {
         content: geminiChat('g1'),
         mtimeMs: 40,
       },
-      '/home/me/.qwen/tmp/agentmate/.project_root': {
+      '/home/me/.qwen/tmp/runova/.project_root': {
         content: '/work/app',
         mtimeMs: 1,
       },
-      '/home/me/.qwen/tmp/agentmate/chats/session-2026-10-07T04-30-q1.jsonl': {
+      '/home/me/.qwen/tmp/runova/chats/session-2026-10-07T04-30-q1.jsonl': {
         content: geminiChat('q1'),
         mtimeMs: 50,
       },

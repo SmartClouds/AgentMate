@@ -1,4 +1,4 @@
-import type { PostmanCollection, PostmanRequestItem } from '@agentmat/core';
+import type { PostmanCollection, PostmanRequestItem } from '@runova/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   ApiCollectionSummary,

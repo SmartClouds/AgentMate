@@ -35,7 +35,7 @@ Catalog (T1, T2):
 - 19 templates (Apache Kafka joined on 2026-10-22). MinIO was planned but is left out: as of 2026-10-01 neither `docker.io/minio/minio` nor
   `quay.io/minio/minio` can be pulled anonymously, and the catalog only takes official or vendor
   images.
-- Every rendered compose file carries a top-level `x-agentmate` block (template, version,
+- Every rendered compose file carries a top-level `x-runova` block (template, version,
   parameters, domain; never a secret). Compose keeps `x-` keys and ignores them. It travels with
   each revision, so the post-install card, the update check and a rollback all read what an app is
   from its own files (`readCatalogInstall`). String parameters are `$`-escaped like any literal.
@@ -104,7 +104,7 @@ AC3 (2026-10-03):
   `PebbleFixture`). The core dials `https://127.0.0.1:14000/dir`, which Pebble's certificate
   names; every DNS name answers 127.0.0.1, so Pebble validates against the server's own nginx on
   port 80. Pebble's test CA goes into the server's trust store before the install, and
-  `/etc/agentmate-core/core.json` points both ACME directories at Pebble.
+  `/etc/runova-core/core.json` points both ACME directories at Pebble.
 - The test found two bugs:
   - The install sheet named the site's upstream service "`<app> <service>`", with a space, which
     the core refuses ("is not a service name"), so putting any App Store app on a domain stopped

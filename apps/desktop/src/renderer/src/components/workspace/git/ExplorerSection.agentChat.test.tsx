@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useCliStore } from '@/stores/cliStore';
 import { selectRows, useExplorerStore } from '@/stores/explorerStore';
-import { installAgentmatBridge } from '../../../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../../../test/renderer/runovaBridge';
 import { ExplorerSection } from './ExplorerSection';
 
 /** "Add to agent chat" in the explorer: the menu item and its key, for one row or several. */
@@ -43,7 +43,7 @@ beforeEach(() => {
   findAgentTerminal.mockReturnValue({ kind: 'terminal', id: 't1', cliId: 'claude-code' });
   useCliStore.setState({ defaultCliId: 'claude-code' });
   useExplorerStore.setState({ projects: {} });
-  installAgentmatBridge({
+  installRunovaBridge({
     'fs.listDirectory': [
       { name: 'src', path: SRC, isDirectory: true },
       { name: 'README.md', path: README, isDirectory: false },

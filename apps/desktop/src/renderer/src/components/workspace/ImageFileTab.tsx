@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { formatImageSize, type ImageSize, ImageView } from '@/components/editor/ImageView';
@@ -25,7 +25,7 @@ export function ImageFileTab({
 }): React.JSX.Element {
   const image = useQuery({
     queryKey: queryKeys.workspaceImage(tab.path),
-    queryFn: () => window.agentmat.fs.readImage(tab.path),
+    queryFn: () => window.runova.fs.readImage(tab.path),
     meta: { silentLoading: true },
     staleTime: Number.POSITIVE_INFINITY,
   });
@@ -88,7 +88,7 @@ export function ImageFileTab({
             size="icon-xs"
             type="button"
             aria-label="Open in its default app"
-            onClick={() => void window.agentmat.shell.openPath(tab.path)}
+            onClick={() => void window.runova.shell.openPath(tab.path)}
           >
             <ExternalLink />
           </Button>

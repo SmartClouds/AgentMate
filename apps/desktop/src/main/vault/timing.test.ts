@@ -197,7 +197,7 @@ describe('resolveVaultTimers', () => {
 
   it('uses the test override only in an unpackaged build', () => {
     const env = {
-      AGENTMATE_VAULT_TEST_TIMERS: 'autoLockMs=4000,clipboardMs=2000,backoffBaseMs=300',
+      RUNOVA_VAULT_TEST_TIMERS: 'autoLockMs=4000,clipboardMs=2000,backoffBaseMs=300',
     };
     expect(resolveVaultTimers(settings, env, false)).toEqual({
       autoLockMs: 4000,
@@ -209,7 +209,7 @@ describe('resolveVaultTimers', () => {
 
   it('clamps overrides to a sane minimum and ignores junk', () => {
     const env = {
-      AGENTMATE_VAULT_TEST_TIMERS: 'autoLockMs=5,clipboardMs=abc,unknown=1,backoffBaseMs',
+      RUNOVA_VAULT_TEST_TIMERS: 'autoLockMs=5,clipboardMs=abc,unknown=1,backoffBaseMs',
     };
     expect(resolveVaultTimers(settings, env, false)).toEqual({
       autoLockMs: 200,

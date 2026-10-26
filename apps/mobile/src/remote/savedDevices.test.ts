@@ -9,7 +9,7 @@ import {
   upsertSavedDevice,
 } from './savedDevices';
 
-const STORAGE_KEY = 'agentmate.savedDevices.v1';
+const STORAGE_KEY = 'runova.savedDevices.v1';
 
 function device(overrides: Partial<SavedDevice> = {}): SavedDevice {
   return {

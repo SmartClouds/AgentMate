@@ -1,4 +1,4 @@
-import type { ComposePortBinding } from '@agentmat/core';
+import type { ComposePortBinding } from '@runova/core';
 import type { DeployStackPreview } from '@shared/deployStacksTypes';
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, Globe, Lock, LockOpen, Spinner } from '@/components/icons';

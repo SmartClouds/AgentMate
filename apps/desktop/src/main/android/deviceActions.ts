@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, resolve, sep } from 'node:path';
-import { explainInstallFailure, parseAdbInstallResult, parseGetProp } from '@agentmat/core';
+import { explainInstallFailure, parseAdbInstallResult, parseGetProp } from '@runova/core';
 import { app, shell } from 'electron';
 import { store } from '../store';
 import { runAdb, runAdbBinary } from './exec';
@@ -19,7 +19,7 @@ export interface CaptureResult {
 /** Screenshots and recordings both land here, so one guard covers revealing either. */
 async function capturesDir(kind: 'pictures' | 'videos'): Promise<string> {
   const settings = await store.getSettings();
-  const base = settings.androidCapturePath ?? join(app.getPath(kind), 'AgentMate', 'Android');
+  const base = settings.androidCapturePath ?? join(app.getPath(kind), 'Runova', 'Android');
   await mkdir(base, { recursive: true });
   return base;
 }
@@ -113,7 +113,7 @@ export function startRecording(
   label: string,
 ): { id: string; started: Promise<void> } {
   const id = `${serial}-${Date.now()}`;
-  const devicePath = `/sdcard/agentmate-${Date.now()}.mp4`;
+  const devicePath = `/sdcard/runova-${Date.now()}.mp4`;
   recordings.set(id, { sdk, serial, label, devicePath });
 
   // Deliberately not awaited: screenrecord runs on the device until it is interrupted there or
@@ -195,7 +195,7 @@ export async function revealCapture(path: string): Promise<void> {
     const base = resolve(root);
     return target === base || target.startsWith(base + sep) || target.startsWith(`${base}/`);
   });
-  if (!inside) throw new Error("That file is not one of AgentMate's captures.");
+  if (!inside) throw new Error("That file is not one of Runova's captures.");
   shell.showItemInFolder(target);
 }
 

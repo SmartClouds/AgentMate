@@ -1,9 +1,9 @@
-import type { AgentHistorySession } from '@agentmat/core';
+import type { AgentHistorySession } from '@runova/core';
 import type { SshSavedServer } from '@shared/apiTypes';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCliStore } from '@/stores/cliStore';
 import { TERMINAL_DEFAULT_HEIGHT, useTerminalStore } from '@/stores/terminalStore';
-import { installAgentmatBridge } from '../../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../../test/renderer/runovaBridge';
 import {
   openRemoteResume,
   prepareStatusHooks,
@@ -49,7 +49,7 @@ function terminal() {
 }
 
 beforeEach(() => {
-  installAgentmatBridge({ platform: 'win32' });
+  installRunovaBridge({ platform: 'win32' });
   useCliStore.setState({ cliLaunchDefaults: {} });
   useTerminalStore.setState({
     isOpen: false,
@@ -92,7 +92,7 @@ describe('remoteResumeCommand', () => {
 
   it('never adds status hooks, whose settings file only exists on this machine', async () => {
     // Local tabs of both CLIs would carry this hook file by now.
-    installAgentmatBridge({
+    installRunovaBridge({
       platform: 'win32',
       'agents.statusHookSettings': async () => 'C:\\hooks.json',
     });
@@ -135,9 +135,9 @@ describe('remoteResumeCommand', () => {
   });
 
   it('maps every history provider to a known CLI', async () => {
-    const { AGENT_HISTORY_PROVIDERS } = await import('@agentmat/core');
+    const { AGENT_HISTORY_PROVIDERS } = await import('@runova/core');
     const { HISTORY_CLI_ID } = await import('./launch');
-    const { CLI_REGISTRY } = await import('@agentmat/core');
+    const { CLI_REGISTRY } = await import('@runova/core');
     const ids = new Set(CLI_REGISTRY.map((cli) => cli.id));
     for (const provider of AGENT_HISTORY_PROVIDERS) {
       const cliId = HISTORY_CLI_ID[provider];

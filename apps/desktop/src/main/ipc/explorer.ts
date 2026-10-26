@@ -19,7 +19,7 @@ import {
   isSameOrInside,
   topLevelPaths,
   validateEntryName,
-} from '@agentmat/core';
+} from '@runova/core';
 import { ipcMain, shell } from 'electron';
 import type {
   ExplorerDeleteResult,

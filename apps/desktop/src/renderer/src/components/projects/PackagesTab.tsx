@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { PackageInfo, PackageManagerSection, PackageUpdateRequest } from '@shared/apiTypes';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
@@ -401,11 +401,11 @@ export function PackagesTab({ project }: { project: Project }): React.JSX.Elemen
 
   const scanQuery = useQuery({
     queryKey: queryKeys.packages(projectId),
-    queryFn: () => window.agentmat.packages.list(projectId),
+    queryFn: () => window.runova.packages.list(projectId),
   });
 
   useEffect(() => {
-    return window.agentmat.packages.onUpdateProgress((p) => {
+    return window.runova.packages.onUpdateProgress((p) => {
       if (p.projectId !== projectId) return;
       setBatchProgress({ completed: p.completed, total: p.total });
       setProgress((prev) => {
@@ -418,7 +418,7 @@ export function PackagesTab({ project }: { project: Project }): React.JSX.Elemen
 
   const updateMutation = useMutation({
     mutationFn: (updates: PackageUpdateRequest[]) =>
-      window.agentmat.packages.update(projectId, updates),
+      window.runova.packages.update(projectId, updates),
     onSuccess: (result) => {
       const failed = result.results.filter((r) => !r.ok);
       const count = result.results.length;
@@ -547,7 +547,7 @@ export function PackagesTab({ project }: { project: Project }): React.JSX.Elemen
         <SectionEmptyState
           icon={Package}
           title="No package manifests in this folder"
-          description="AgentMate looks for package.json, yarn.lock, pnpm-lock.yaml, bun.lock, pubspec.yaml, and .NET project files."
+          description="Runova looks for package.json, yarn.lock, pnpm-lock.yaml, bun.lock, pubspec.yaml, and .NET project files."
           action={
             <Button
               variant="outline"

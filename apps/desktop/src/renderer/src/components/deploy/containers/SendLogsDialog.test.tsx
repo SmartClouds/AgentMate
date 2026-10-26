@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { API_TOKEN, DB_PASSWORD, GRAFANA_PASSWORD } from '@shared/deploy/testing/fakeDockerData';
 import { screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

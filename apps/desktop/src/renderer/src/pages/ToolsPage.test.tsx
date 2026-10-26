@@ -1,5 +1,5 @@
-import type { InstalledAgentTool } from '@agentmat/core';
-import { AGENT_TOOL_REGISTRY, SECURITY_TOOL_CATEGORY } from '@agentmat/core';
+import type { InstalledAgentTool } from '@runova/core';
+import { AGENT_TOOL_REGISTRY, SECURITY_TOOL_CATEGORY } from '@runova/core';
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useTerminalStore } from '@/stores/terminalStore';
@@ -441,7 +441,7 @@ describe('ToolsPage Docker actions', () => {
   it('puts the docker run command in a terminal when no container exists yet', async () => {
     const { bridge, user } = renderPage({
       'tools.detectAll': [status({ id: '9router', dockerStatus: 'not-created' })],
-      'tools.getDockerCommand': async () => 'docker run -d --name agentmate-9router ...',
+      'tools.getDockerCommand': async () => 'docker run -d --name runova-9router ...',
     });
     const card = toolCard(ROUTER.name);
     await within(card).findByText('Docker: not-created');
@@ -454,7 +454,7 @@ describe('ToolsPage Docker actions', () => {
     const session = useTerminalStore
       .getState()
       .sessions.find((one) => one.title === `run ${ROUTER.name} container`);
-    expect(session?.initialInput).toBe('docker run -d --name agentmate-9router ...');
+    expect(session?.initialInput).toBe('docker run -d --name runova-9router ...');
     expect(toast.info).toHaveBeenCalledWith(
       'Press Enter in the terminal to install the container.',
     );
@@ -463,7 +463,7 @@ describe('ToolsPage Docker actions', () => {
   it('offers stop, reset and delete for a running container, but not start', async () => {
     const { bridge, user } = renderPage({
       'tools.detectAll': [status({ id: '9router', dockerStatus: 'running' })],
-      'tools.getDockerCommand': async () => 'docker stop agentmate-9router',
+      'tools.getDockerCommand': async () => 'docker stop runova-9router',
     });
     const card = toolCard(ROUTER.name);
     await within(card).findByText('Docker: running');
@@ -503,7 +503,7 @@ describe('ToolsPage settings', () => {
     expect(dialog.textContent).toContain(`Configure ${ROUTER.name}`);
     expect(dialog.textContent).toContain('This applies machine-wide');
     // The preview is built from the defaults, so it is there before anything is typed.
-    expect(within(dialog).getByText(/docker run -d --name agentmate-9router/)).toBeTruthy();
+    expect(within(dialog).getByText(/docker run -d --name runova-9router/)).toBeTruthy();
 
     await user.click(within(dialog).getByRole('button', { name: 'Run in terminal' }));
 
@@ -511,7 +511,7 @@ describe('ToolsPage settings', () => {
       const session = useTerminalStore
         .getState()
         .sessions.find((one) => one.title === `Configure ${ROUTER.name}`);
-      expect(session?.initialInput).toContain('docker run -d --name agentmate-9router');
+      expect(session?.initialInput).toContain('docker run -d --name runova-9router');
     });
   });
 

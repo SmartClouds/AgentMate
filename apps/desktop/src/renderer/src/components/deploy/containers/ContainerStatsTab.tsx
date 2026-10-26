@@ -1,4 +1,4 @@
-import type { ContainerSummary } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { ContainerSummary } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { SparklineChart } from '@/components/dashboard/SparklineChart';
 import { ChartColumn } from '@/components/icons';
 import { EmptyState, SECTION_HEADING, SECTION_WELL } from '@/components/pageKit';

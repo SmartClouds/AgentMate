@@ -5,7 +5,7 @@ import { type LaunchedApp, launchApp } from './app';
 
 /**
  * The app starts, the preload bridge is there, and everything it writes stays inside the test's
- * own profile. That last part is what lets the suite run on a machine where the real AgentMate is
+ * own profile. That last part is what lets the suite run on a machine where the real Runova is
  * open: a shared profile would fight over the single-instance lock and the terminal host pipe.
  */
 
@@ -34,7 +34,7 @@ test('the window opens with the bridge and the app version in place', async () =
 
   // The renderer cannot work at all without the preload bridge.
   const namespaces = await page.evaluate(() =>
-    Object.keys((window as unknown as { agentmat: Record<string, unknown> }).agentmat),
+    Object.keys((window as unknown as { runova: Record<string, unknown> }).runova),
   );
   expect(namespaces).toContain('settings');
   expect(namespaces).toContain('projects');

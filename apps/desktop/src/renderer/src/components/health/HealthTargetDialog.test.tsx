@@ -50,7 +50,7 @@ describe('HealthTargetDialog', () => {
     const { user } = renderWithProviders(<Harness />, { bridge });
     expect(screen.getByLabelText('Endpoint URL')).toHaveAttribute(
       'placeholder',
-      'https://your-app/_agentmate/health',
+      'https://your-app/_runova/health',
     );
     // The app's own list, not the system's: a combobox that opens a styled listbox.
     const env = screen.getByRole('combobox', { name: 'Environment' });
@@ -101,7 +101,7 @@ describe('HealthTargetDialog', () => {
 
   it('shows the new key once, with its hash and variable, and never again after closing', async () => {
     const { user, bridge: fake } = renderWithProviders(<Harness />, { bridge });
-    await fillBasics(user, 'https://api.example.com/_agentmate/health');
+    await fillBasics(user, 'https://api.example.com/_runova/health');
     await user.click(screen.getByRole('combobox', { name: 'Environment' }));
     await user.click(await screen.findByRole('option', { name: 'Staging' }));
     await user.click(screen.getByRole('button', { name: 'Add target' }));
@@ -112,7 +112,7 @@ describe('HealthTargetDialog', () => {
         projectId: 'p1',
         environmentId: 'env-staging',
         name: 'API',
-        url: 'https://api.example.com/_agentmate/health',
+        url: 'https://api.example.com/_runova/health',
         intervalSec: 60,
         timeoutSec: 10,
         authMode: 'bearer',
@@ -121,7 +121,7 @@ describe('HealthTargetDialog', () => {
       }),
     );
     expect(screen.getByText(/will not be shown again/i)).toBeInTheDocument();
-    expect(screen.getByText('AGENTMATE_HEALTH_TOKEN_SHA256')).toBeInTheDocument();
+    expect(screen.getByText('RUNOVA_HEALTH_TOKEN_SHA256')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Copy key' }));
     expect(await navigator.clipboard.readText()).toBe(reveal().secret);
@@ -129,7 +129,7 @@ describe('HealthTargetDialog', () => {
     expect(await navigator.clipboard.readText()).toBe(reveal().sha256);
     await user.click(screen.getByRole('button', { name: 'Copy variable' }));
     expect(await navigator.clipboard.readText()).toBe(
-      `AGENTMATE_HEALTH_TOKEN_SHA256=${reveal().sha256}`,
+      `RUNOVA_HEALTH_TOKEN_SHA256=${reveal().sha256}`,
     );
 
     // Hidden until asked for, so it is not on screen for anyone looking over a shoulder.
@@ -154,7 +154,7 @@ describe('HealthTargetDialog', () => {
           secret: reveal({
             authMode: 'basic',
             basicUser: 'monitor',
-            hashEnvVar: 'AGENTMATE_HEALTH_PASSWORD_SHA256',
+            hashEnvVar: 'RUNOVA_HEALTH_PASSWORD_SHA256',
           }),
         }),
       },
@@ -164,8 +164,8 @@ describe('HealthTargetDialog', () => {
     await user.type(screen.getByLabelText('Username'), 'monitor');
     await user.click(screen.getByRole('button', { name: 'Add target' }));
     await screen.findByRole('heading', { name: 'Save this password now' });
-    expect(screen.getByText('AGENTMATE_HEALTH_USER')).toBeInTheDocument();
-    expect(screen.getByText('AGENTMATE_HEALTH_PASSWORD_SHA256')).toBeInTheDocument();
+    expect(screen.getByText('RUNOVA_HEALTH_USER')).toBeInTheDocument();
+    expect(screen.getByText('RUNOVA_HEALTH_PASSWORD_SHA256')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Copy password' })).toBeInTheDocument();
   });
 

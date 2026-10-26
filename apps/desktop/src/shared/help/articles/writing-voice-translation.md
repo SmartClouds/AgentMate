@@ -6,7 +6,7 @@ summary: Set up grammar and spelling checks, dictating with your microphone, and
 keywords: grammar, spelling, spellcheck, languagetool, writing check, style, proofread, voice input, dictate, microphone, whisper, speech to text, transcription, translate, translation, retries, persian, language
 ---
 
-Three helpers make writing in AgentMate easier. The **writing check** underlines spelling, grammar and style problems in text boxes and offers fixes. **Voice input** turns what you say into text using a speech model that runs on your computer. **Translation** converts your text into another language, and Prompt Builder uses it to turn a request in any language into English. All three are set up in the **AI** tab of Settings.
+Three helpers make writing in Runova easier. The **writing check** underlines spelling, grammar and style problems in text boxes and offers fixes. **Voice input** turns what you say into text using a speech model that runs on your computer. **Translation** converts your text into another language, and Prompt Builder uses it to turn a request in any language into English. All three are set up in the **AI** tab of Settings.
 
 ## Where to find it
 
@@ -51,10 +51,10 @@ Pick **Local server** to see the setup panel. It shows badges for the server sta
 
 1. Click **Download** to get the LanguageTool desktop zip.
 2. Click **Open tools folder** and extract the zip into it. A folder named like LanguageTool-6.x inside is fine. The panel prints the exact folder path.
-3. Click **Start server**. It takes a few seconds while the rules load. AgentMate stops the server when it quits.
+3. Click **Start server**. It takes a few seconds while the rules load. Runova stops the server when it quits.
 4. Use **Re-check** if you changed something and the badges are out of date, and **Stop server** to stop it by hand.
 
-The **Port** field (default 8081, allowed range 1024 to 65535) is the port the server listens on. If something is already serving LanguageTool on that port, for example in Docker, AgentMate uses it as it is.
+The **Port** field (default 8081, allowed range 1024 to 65535) is the port the server listens on. If something is already serving LanguageTool on that port, for example in Docker, Runova uses it as it is.
 
 **Start server** stays disabled until LanguageTool is in the tools folder and Java is found. If your Java is older than 17, the panel warns you: install a newer JDK or stay on the online check.
 
@@ -78,7 +78,7 @@ At the bottom, **Check again** re-runs the check and **Fix N mistakes** applies 
 
 ### The right-click writing menu
 
-Right-click in any text field (including single-line inputs) to open AgentMate's own writing menu instead of the system one. It offers:
+Right-click in any text field (including single-line inputs) to open Runova's own writing menu instead of the system one. It offers:
 
 - spelling or grammar suggestions, first in the list,
 - **Ignore** (this one issue),
@@ -120,7 +120,7 @@ The buttons are hidden if your system cannot record audio. The pinned Build Prom
 
 You can throw a recording away instead: press `Esc` or click the **×** next to **Stop**. Nothing is transcribed, and in the dialog, the dialog stays open.
 
-A long recording on a big model can take a while to transcribe. The rest of the app keeps working in the meantime, because the speech model runs in a process of its own. To give up on it, press `Esc` or click the **×** next to **Transcribing…** (for Speak prompt, the **Cancel** button over the prompt works too). If the speech model ever stops answering, AgentMate stops it after a generous wait and says the transcription took too long.
+A long recording on a big model can take a while to transcribe. The rest of the app keeps working in the meantime, because the speech model runs in a process of its own. To give up on it, press `Esc` or click the **×** next to **Transcribing…** (for Speak prompt, the **Cancel** button over the prompt works too). If the speech model ever stops answering, Runova stops it after a generous wait and says the transcription took too long.
 
 If the recording is very short or silent, nothing is sent to the speech model and you see "Didn't catch anything. Try again a little closer to the mic." This keeps the model from inventing words for silence.
 
@@ -155,13 +155,13 @@ Translation turns text into another language. It needs an internet connection an
 
 - **Prompt Builder page**: the **Translate** button under "or translate directly" converts your request into the language you choose in the picker next to it (English, Persian, Spanish, French, German, Arabic, Chinese (Simplified), Russian, Hindi or Turkish). **Generate Prompt** also translates your request to English first, whatever language you typed in, before the prompt is written.
 - **Build Prompt dialog of a project**: **Translate** copies your request into English without generating a prompt.
-- A project's **Blueprint** and the "Describe <project>" dialog (shown when AgentMate scaffolds a new project's files) translate your text to English the same way.
+- A project's **Blueprint** and the "Describe <project>" dialog (shown when Runova scaffolds a new project's files) translate your text to English the same way.
 
 Long text is sent in pieces of about 1,200 characters, one after another, and put back together with your line breaks kept. Each piece gives up if the service does not answer within 15 seconds.
 
 ### Translation retries
 
-If a translation request fails, AgentMate tries again. In the **Translation retries** card ("Extra attempts Prompt Builder makes if a translate request fails.") enter how many extra attempts you want, from 0 to 10. The default is 3. With 0, a failure is reported straight away. There is a short, growing pause between attempts. Press **Save changes** to keep the number.
+If a translation request fails, Runova tries again. In the **Translation retries** card ("Extra attempts Prompt Builder makes if a translate request fails.") enter how many extra attempts you want, from 0 to 10. The default is 3. With 0, a failure is reported straight away. There is a short, growing pause between attempts. Press **Save changes** to keep the number.
 
 If every attempt fails you see "Translation failed. Check your internet connection and try again."
 

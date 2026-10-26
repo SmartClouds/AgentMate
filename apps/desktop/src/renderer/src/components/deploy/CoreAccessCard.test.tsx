@@ -21,7 +21,7 @@ const SERVER: DeployServer = {
   username: 'deployer',
   core: {
     version: '1.53.0',
-    release: '/opt/agentmate-core/releases/1.53.0-abababababab',
+    release: '/opt/runova-core/releases/1.53.0-abababababab',
     transport: 'streamlocal',
     installedAt: 0,
     os: 'Ubuntu 24.04.1 LTS',

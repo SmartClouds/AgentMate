@@ -5,7 +5,7 @@ import type {
   DevSetupEnvironment,
   DevUpdateCheck,
   InstallMode,
-} from '@agentmat/core';
+} from '@runova/core';
 import { describe, expect, it, vi } from 'vitest';
 import type { CancelToken } from '../process/spawnStreaming';
 import { createDevSetupInstaller, type InstallerDeps } from './installer';
@@ -277,7 +277,7 @@ describe('deciding whether it worked', () => {
         itemId: 'gh',
         result: 'failed',
         message:
-          'The installer finished but GitHub CLI was not found. Open a new terminal or restart AgentMate.',
+          'The installer finished but GitHub CLI was not found. Open a new terminal or restart Runova.',
       }),
     ]);
     expect(w.installer.jobState().items.gh).toMatchObject({ status: 'failed' });

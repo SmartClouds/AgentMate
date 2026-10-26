@@ -42,7 +42,7 @@ export interface AndroidEmulator {
   serial: string | null;
   /** How far up the boot is, 0 to 100. */
   progress: number;
-  /** True when it was already running when AgentMate looked, so we do not own its process. */
+  /** True when it was already running when Runova looked, so we do not own its process. */
   adopted: boolean;
   usage: AndroidUsage | null;
   /** The last line the emulator printed, shown on the card while it boots. */

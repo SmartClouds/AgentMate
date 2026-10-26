@@ -9,7 +9,7 @@ import {
   WP_KEY_PREFIX,
   type WpItemRef,
   wpItemKey,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { IpcMainInvokeEvent } from 'electron';
 import type {
   DeployWordPressAuditQuery,
@@ -201,14 +201,14 @@ function connectionKey(value: unknown): string {
   if (typeof value !== 'string' || value.length > MAX_KEY_RAW) {
     throw wordPressError(
       'keyInvalid',
-      'Paste the whole connection key from AgentMate Connector in wp-admin.',
+      'Paste the whole connection key from Runova Connector in wp-admin.',
     );
   }
   const compact = value.replace(/\s+/g, '');
   if (compact.length < MIN_KEY || compact.length > MAX_KEY || !compact.startsWith(WP_KEY_PREFIX)) {
     throw wordPressError(
       'keyInvalid',
-      `That is not a connection key. Copy the whole key from AgentMate Connector in wp-admin; it starts with ${WP_KEY_PREFIX}`,
+      `That is not a connection key. Copy the whole key from Runova Connector in wp-admin; it starts with ${WP_KEY_PREFIX}`,
     );
   }
   return compact;
@@ -243,7 +243,7 @@ function item(value: unknown): WpItemRef {
     throw new Error('An item is a theme, a plugin or a must-use plugin.');
   }
   if (typeof input.slug !== 'string' || !isValidWpSlug(input.slug)) {
-    throw new Error('That theme or plugin folder name is not one AgentMate can sync.');
+    throw new Error('That theme or plugin folder name is not one Runova can sync.');
   }
   return { kind: input.kind as ProjectWordPressItemKind, slug: input.slug };
 }
@@ -472,7 +472,7 @@ function remoteFileInput(value: unknown): DeployWordPressRemoteFileInput {
   const input = object(value, 'a site file');
   const path = input.path;
   if (typeof path !== 'string' || !validateWpItemPath(path).ok) {
-    throw new Error('That file path is not one AgentMate syncs.');
+    throw new Error('That file path is not one Runova syncs.');
   }
   return { projectId: projectId(input.projectId), item: item(input.item), path };
 }

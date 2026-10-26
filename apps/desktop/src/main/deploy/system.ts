@@ -11,8 +11,8 @@ import type {
   ServiceInfo,
   SystemInfo,
   UpdatesInfo,
-} from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import type { DeployStepUpInput } from '../../shared/deployTypes';
 import { hubMessage } from './connection/hubErrors';
 import type { CoreLinks } from './live/coreLinks';

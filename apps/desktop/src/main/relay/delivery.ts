@@ -1,4 +1,4 @@
-import { agentReadyVerdict } from '@agentmat/core';
+import { agentReadyVerdict } from '@runova/core';
 
 const PASTE_ON = '\x1b[?2004h';
 const PASTE_START = '\x1b[200~';

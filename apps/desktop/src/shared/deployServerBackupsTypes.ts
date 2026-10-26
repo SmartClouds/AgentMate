@@ -3,7 +3,7 @@ import type {
   BackupRunInfo,
   SaveBackupDestinationRequest,
   ServerRestoreStatus,
-} from './deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from './deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * The Backups section of a Deploy server (E28): IPC shapes the core's own contracts do not cover.

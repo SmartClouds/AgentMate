@@ -31,7 +31,7 @@ export default function VaultPage(): React.JSX.Element {
   usePageHeader('Vault', 'Passwords, API keys and private notes, encrypted on this computer.');
   const statusQuery = useQuery({
     queryKey: queryKeys.vaultStatus,
-    queryFn: () => window.agentmat.vault.status(),
+    queryFn: () => window.runova.vault.status(),
     meta: { silentLoading: true },
   });
 

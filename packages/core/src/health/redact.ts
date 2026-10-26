@@ -7,7 +7,7 @@ import { maskKnownSecrets, maskSecrets } from '../security/redact.js';
  *
  * In order: literal secrets the caller knows (the key it just sent), Authorization header values,
  * passwords inside URLs, values under secret-looking names (`KEY=value`, `key: value`,
- * `"key": "value"`, and the `Password=...;` pairs of a connection string), AgentMate health keys,
+ * `"key": "value"`, and the `Password=...;` pairs of a connection string), Runova health keys,
  * and the token shapes `maskSecrets` knows. Plain error prose is left as it is.
  */
 
@@ -55,8 +55,8 @@ function isSecretName(name: string): boolean {
   );
 }
 
-/** The keys AgentMate generates. */
-const HEALTH_KEY = /\bamh_[A-Za-z0-9_-]{16,}/g;
+/** The keys Runova generates: rnh_ now, amh_ for keys made before the app was renamed. */
+const HEALTH_KEY = /\b(?:rnh|amh)_[A-Za-z0-9_-]{16,}/g;
 
 export function redactHealthText(text: string, knownSecrets: readonly string[] = []): string {
   let output = maskKnownSecrets(text, [...knownSecrets]);

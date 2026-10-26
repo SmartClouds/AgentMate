@@ -90,17 +90,23 @@ jobs:
         if: ${{ !cancelled() }}
         run: pnpm check:deprecated-code --reporter=github
 
+      # The app's name from before the rename to Runova, outside the places that read installs
+      # from before it (scripts/check-legacy-names.mjs says which those are).
+      - name: No stray old app name
+        if: ${{ !cancelled() }}
+        run: pnpm check:legacy-names
+
       # Direct dependencies the npm registry reports as deprecated. Known
       # exceptions live in .github/deprecated-deps-allowlist.json.
       - name: No deprecated dependencies
         if: ${{ !cancelled() }}
         run: pnpm check:deprecated-deps
 
-      # Desktop and mobile type-check against @agentmat/core and
-      # @agentmat/protocol declaration output, so those have to be built first.
+      # Desktop and mobile type-check against @runova/core and
+      # @runova/protocol declaration output, so those have to be built first.
       - name: Build workspace packages
         if: ${{ !cancelled() }}
-        run: pnpm --filter @agentmat/core --filter @agentmat/protocol --filter @agentmat/studio build
+        run: pnpm --filter @runova/core --filter @runova/protocol --filter @runova/studio build
 
       - name: Typecheck
         if: ${{ !cancelled() }}
@@ -110,7 +116,7 @@ jobs:
       # no native rebuild. Packaging installers is CD's job.
       - name: Build desktop app
         if: ${{ !cancelled() }}
-        run: pnpm --filter @agentmat/desktop build
+        run: pnpm --filter @runova/desktop build
 
   # Every suite on every run, the end-to-end and system tests included. The self-hosted runner
   # costs nothing per minute, so there is no [e2e] opt-in here any more.

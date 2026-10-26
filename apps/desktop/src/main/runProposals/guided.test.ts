@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTempUserData } from '../../test/main/ipcHarness';
 
 /**
- * A run setup started from AgentMate: the agent is launched with its own MCP config, so the project
+ * A run setup started from Runova: the agent is launched with its own MCP config, so the project
  * needs no .mcp.json entry. The config lives outside the project folder, and the permission to
  * suggest lasts for a limited time.
  */
@@ -69,17 +69,17 @@ describe('guided run setup', () => {
     expect(result).toEqual({
       ok: true,
       mcpConfigPath: join(directory, 'p1', 'mcp.json'),
-      allowedTools: ['mcp__agentmate__list_run_commands', 'mcp__agentmate__propose_run_command'],
+      allowedTools: ['mcp__runova__list_run_commands', 'mcp__runova__propose_run_command'],
     });
     const config = JSON.parse(readFileSync(join(directory, 'p1', 'mcp.json'), 'utf-8')) as {
-      mcpServers: { agentmate: { command: string; args: string[] } };
+      mcpServers: { runova: { command: string; args: string[] } };
     };
-    expect(config.mcpServers.agentmate.command).toBe('node');
-    const script = config.mcpServers.agentmate.args[0];
+    expect(config.mcpServers.runova.command).toBe('node');
+    const script = config.mcpServers.runova.args[0];
     expect(script).toBe(join(directory, 'p1', 'run-commands-mcp.cjs'));
     expect(readFileSync(script, 'utf-8')).toContain('"p1"');
     expect(existsSync(join(folder, '.mcp.json'))).toBe(false);
-    expect(existsSync(join(folder, '.agentmate'))).toBe(false);
+    expect(existsSync(join(folder, '.runova'))).toBe(false);
   });
 
   it('accepts a suggestion for a project that never switched the feature on', async () => {
@@ -118,12 +118,12 @@ describe('guided run setup', () => {
     expect(late.status).toBe(403);
   });
 
-  it('refuses a project AgentMate does not know', async () => {
+  it('refuses a project Runova does not know', async () => {
     const service = await load();
 
     const result = await service.startGuidedRunSession('nope', { directory, portFile: PORT_FILE });
 
-    expect(result).toEqual({ ok: false, error: 'AgentMate does not know this project.' });
+    expect(result).toEqual({ ok: false, error: 'Runova does not know this project.' });
   });
 
   it('refuses a project id that cannot be a folder name', async () => {

@@ -13,7 +13,7 @@ import {
   type UsageResetAlertSettings,
   type UsageThresholdAlertSettings,
   type WidgetMode,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -114,11 +114,11 @@ export default function UsagePage(): React.JSX.Element {
 
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
   });
   const usageQuery = useQuery({
     queryKey: queryKeys.usageList,
-    queryFn: () => window.agentmat.usage.list(),
+    queryFn: () => window.runova.usage.list(),
     refetchInterval: 45_000,
   });
 
@@ -190,7 +190,7 @@ export default function UsagePage(): React.JSX.Element {
   }, [usageById, resetAlerts.providerId, resetAlerts.windows]);
 
   async function persistOrder(next: string[]): Promise<void> {
-    await window.agentmat.settings.update({ usageCardOrder: next });
+    await window.runova.settings.update({ usageCardOrder: next });
     await queryClient.invalidateQueries({ queryKey: queryKeys.settings });
   }
 
@@ -205,7 +205,7 @@ export default function UsagePage(): React.JSX.Element {
   async function setConfig(providerId: string, config: UsageProviderConfig): Promise<void> {
     // A provider that's no longer tracked can't feed a dashboard card either.
     if (!config.enabled && dashboardCards.includes(providerId)) toggleDashboardCard(providerId);
-    await window.agentmat.usage.setProviderConfig(providerId, config);
+    await window.runova.usage.setProviderConfig(providerId, config);
     await queryClient.invalidateQueries({ queryKey: queryKeys.settings });
     await queryClient.invalidateQueries({ queryKey: queryKeys.usageList });
   }
@@ -271,7 +271,7 @@ export default function UsagePage(): React.JSX.Element {
     const mode = cardModes[pinTarget] ?? 'tokens';
     const label = mode === 'subscription' ? `${name} plan limits` : name;
     try {
-      await window.agentmat.usage.openWidget(pinTarget, {
+      await window.runova.usage.openWidget(pinTarget, {
         ...settingsToOpenOptions(settings),
         mode,
       });
@@ -285,20 +285,20 @@ export default function UsagePage(): React.JSX.Element {
   /** Flip one card between the tokens view and the plan-limits view. */
   async function toggleCardMode(providerId: string): Promise<void> {
     const next: WidgetMode = cardModes[providerId] === 'subscription' ? 'tokens' : 'subscription';
-    await window.agentmat.settings.update({
+    await window.runova.settings.update({
       usageCardModes: { ...cardModes, [providerId]: next },
     });
     await queryClient.invalidateQueries({ queryKey: queryKeys.settings });
   }
 
   async function refreshAll(): Promise<void> {
-    await window.agentmat.usage.refresh();
+    await window.runova.usage.refresh();
     await queryClient.invalidateQueries({ queryKey: queryKeys.usageList });
     toast.info('Refreshing usage…');
   }
 
   async function saveResetAlerts(next: UsageResetAlertSettings): Promise<void> {
-    await window.agentmat.usage.setResetAlerts(next);
+    await window.runova.usage.setResetAlerts(next);
     await queryClient.invalidateQueries({ queryKey: queryKeys.settings });
   }
 
@@ -319,7 +319,7 @@ export default function UsagePage(): React.JSX.Element {
   }
 
   async function saveThresholdAlerts(next: UsageThresholdAlertSettings): Promise<void> {
-    await window.agentmat.usage.setThresholdAlerts(next);
+    await window.runova.usage.setThresholdAlerts(next);
     await queryClient.invalidateQueries({ queryKey: queryKeys.settings });
   }
 
@@ -727,7 +727,7 @@ function ResetAlertDialog({
     try {
       // Save first so the test uses the chat ID that's on screen, not the saved one.
       await onSave({ ...alerts, chatId: chatId.trim() || null });
-      const result = await window.agentmat.usage.testResetAlert();
+      const result = await window.runova.usage.testResetAlert();
       if (result.ok) toast.success('Test alert sent. Check Telegram.');
       else toast.error(result.error ?? 'Could not send the test alert.');
     } finally {
@@ -867,7 +867,7 @@ function ThresholdAlertDialog({
   async function sendTest(): Promise<void> {
     setTesting(true);
     try {
-      const result = await window.agentmat.usage.testThresholdAlert();
+      const result = await window.runova.usage.testThresholdAlert();
       if (result.ok) toast.success('Test alert sent. Check for an OS notification.');
       else toast.error(result.error ?? 'Could not send the test alert.');
     } finally {

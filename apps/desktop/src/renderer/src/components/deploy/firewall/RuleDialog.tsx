@@ -4,7 +4,7 @@ import {
   type RuleDraft,
   ruleFromDraft,
 } from '@shared/deploy/firewallValidation';
-import type { FirewallRuleSpec } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { FirewallRuleSpec } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';

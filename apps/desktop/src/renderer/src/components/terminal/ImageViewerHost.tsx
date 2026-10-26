@@ -36,7 +36,7 @@ export function ImageViewerHost(): React.JSX.Element {
     setSize(null);
     setActualSize(false);
     setShrunk(false);
-    void window.agentmat.terminalClipboard
+    void window.runova.terminalClipboard
       .previewImage(path, true)
       .catch(() => null)
       .then((next) => {
@@ -71,7 +71,7 @@ export function ImageViewerHost(): React.JSX.Element {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => void window.agentmat.shell.openPath(path)}
+              onClick={() => void window.runova.shell.openPath(path)}
             >
               <ExternalLink />
               Open in default app

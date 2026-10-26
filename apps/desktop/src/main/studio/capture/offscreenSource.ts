@@ -1,4 +1,4 @@
-import type { SceneFrame, SceneFrameSource } from '@agentmat/studio/node';
+import type { SceneFrame, SceneFrameSource } from '@runova/studio/node';
 import { app, BrowserWindow, type NativeImage, type Session, session } from 'electron';
 import { handleStudioScenes } from '../protocol';
 

@@ -258,7 +258,7 @@ function NotificationRow({
         type="button"
         disabled={!item.url}
         onClick={() => {
-          if (item.url) void window.agentmat.shell.openExternal(item.url);
+          if (item.url) void window.runova.shell.openExternal(item.url);
         }}
         className="flex min-w-0 flex-1 cursor-pointer items-start gap-3 rounded-lg px-2 py-2 text-left outline-none transition-colors hover:bg-foreground/[0.05] focus:outline-none focus-visible:bg-foreground/[0.06] disabled:cursor-default disabled:hover:bg-transparent"
       >
@@ -321,19 +321,19 @@ export function GithubActivityCard({
 
   const activityQuery = useQuery({
     queryKey: queryKeys.githubActivity,
-    queryFn: () => window.agentmat.git.githubActivity(),
+    queryFn: () => window.runova.git.githubActivity(),
     refetchInterval: 10 * 60_000,
     meta: QUERY_META,
   });
   const notificationsQuery = useQuery({
     queryKey: queryKeys.githubNotifications,
-    queryFn: () => window.agentmat.git.githubNotifications(),
+    queryFn: () => window.runova.git.githubNotifications(),
     refetchInterval: 2 * 60_000,
     meta: QUERY_META,
   });
 
   const markOne = useMutation({
-    mutationFn: (threadId: string) => window.agentmat.git.githubMarkNotificationRead(threadId),
+    mutationFn: (threadId: string) => window.runova.git.githubMarkNotificationRead(threadId),
     meta: QUERY_META,
     onSuccess: (result, threadId) => {
       if (!result.ok) {
@@ -356,7 +356,7 @@ export function GithubActivityCard({
   });
 
   const markAll = useMutation({
-    mutationFn: () => window.agentmat.git.githubMarkNotificationsRead(),
+    mutationFn: () => window.runova.git.githubMarkNotificationsRead(),
     meta: QUERY_META,
     onSuccess: (result) => {
       if (!result.ok) {
@@ -384,7 +384,7 @@ export function GithubActivityCard({
   }, [activity?.days]);
 
   function handleInstallGh(): void {
-    void window.agentmat.shell.openExternal(GH_INSTALL_URL);
+    void window.runova.shell.openExternal(GH_INSTALL_URL);
   }
 
   function handleSignIn(): void {
@@ -603,7 +603,7 @@ export function GithubActivityCard({
               variant="soft"
               size="sm"
               onClick={() => {
-                void window.agentmat.shell.openExternal(GH_NOTIFICATIONS_URL);
+                void window.runova.shell.openExternal(GH_NOTIFICATIONS_URL);
               }}
             >
               <ExternalLink className="h-3.5 w-3.5" /> Open on GitHub

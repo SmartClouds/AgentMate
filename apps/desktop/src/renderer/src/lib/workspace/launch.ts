@@ -8,7 +8,7 @@ import {
   type Project,
   quoteForShell,
   shellKindFor,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { SshSavedServer } from '@shared/apiTypes';
 import { toast } from 'sonner';
 import { terminalRuntime } from '@/lib/terminal/terminalRuntime';
@@ -23,7 +23,7 @@ export interface ShellOption {
 
 /** The shells main is willing to start on this platform, the default first. */
 export function shellOptions(): ShellOption[] {
-  const platform = window.agentmat.platform;
+  const platform = window.runova.platform;
   if (platform === 'win32') {
     return [
       { shell: 'powershell.exe', label: 'PowerShell' },
@@ -62,7 +62,7 @@ export function prepareStatusHooks(cliIds: string[]): void {
     statusHookSettings.set(cliId, null);
     statusHookLookups.set(
       cliId,
-      window.agentmat.agents
+      window.runova.agents
         .statusHookSettings(cliId)
         .then((path) => statusHookSettings.set(cliId, path))
         .catch(() => undefined),
@@ -87,7 +87,7 @@ function agentCommand(
   const { cliLaunchDefaults } = useCliStore.getState();
   return buildAgentLaunchCommand({
     cliId,
-    shellKind: shellKindFor(shell, window.agentmat.platform),
+    shellKind: shellKindFor(shell, window.runova.platform),
     launchDefaults: cliLaunchDefaults[cliId],
     runArgs,
     leadingArgs,
@@ -409,7 +409,7 @@ export function launchSetupTab(project: Project, command: string, groupId?: stri
       title: 'Setup',
       shell,
       cwd: project.folderPath,
-      launchInput: setupInput(command, shell, window.agentmat.platform),
+      launchInput: setupInput(command, shell, window.runova.platform),
     },
     groupId,
   );

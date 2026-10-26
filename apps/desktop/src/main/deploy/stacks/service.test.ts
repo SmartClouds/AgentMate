@@ -1,15 +1,15 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { Readable } from 'node:stream';
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { describe, expect, it, vi } from 'vitest';
 import { coreErrorCode } from '../../../shared/coreErrors';
 import type {
   StackInfo,
   StackRevisionInfo,
   StackRevisionUpload,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import type { DeployStackUploadProgress } from '../../../shared/deployStacksTypes';
 import { tempDir } from '../../../test/main/fixtures';
 import { type CoreHttpClient, CoreHttpError } from '../connection/coreHttp';
@@ -84,7 +84,7 @@ const RISKY = `services:
 `;
 
 function folderWith(files: Record<string, string>): string {
-  const folder = tempDir('agentmate-stack-service-');
+  const folder = tempDir('runova-stack-service-');
   for (const [path, content] of Object.entries(files)) {
     mkdirSync(dirname(join(folder, path)), { recursive: true });
     writeFileSync(join(folder, path), content);
@@ -105,7 +105,7 @@ function harness(
   const folder = folderWith(files);
   const calls: Calls = { posts: [], puts: [] };
   const progress: DeployStackUploadProgress[] = [];
-  const contextRoot = tempDir('agentmate-stack-temp-');
+  const contextRoot = tempDir('runova-stack-temp-');
   const fakeHub = {
     listStacks: vi.fn(async () => []),
     createStack: vi.fn(async () => STACK_INFO),

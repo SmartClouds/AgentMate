@@ -7,7 +7,7 @@ import {
   formatErrorIssueForCopy,
   isNewIssue,
   type RemoteProject,
-} from '@agentmat/core';
+} from '@runova/core';
 import { net } from 'electron';
 import type { SecretEnvelope } from '../../shared/apiTypes';
 import type {
@@ -47,7 +47,7 @@ import {
  * Error tracking (E24): what the Errors tab asks of the main process, on top of the store and a
  * provider. A token is checked before it is saved, sealed with the Servers vault as soon as it
  * is, and only unsealed for the call that needs it. Each connection is asked only about the
- * provider projects linked to an AgentMate project, and one that fails does not stop the others.
+ * provider projects linked to a Runova project, and one that fails does not stop the others.
  *
  * Lists are cached for a minute per query, since Sentry asks clients to poll lightly; the
  * Refresh button skips the cache, and anything this service changes drops it.
@@ -59,7 +59,7 @@ export interface ErrorTrackingServiceDeps {
   unseal: (envelope: SecretEnvelope) => Promise<string>;
   isLocked: (envelope: SecretEnvelope) => boolean;
   now: () => number;
-  /** The AgentMate projects, for names and to check a link's project exists. */
+  /** The Runova projects, for names and to check a link's project exists. */
   projects: () => Promise<{ id: string; name: string }[]>;
 }
 
@@ -72,7 +72,7 @@ const MAX_LABEL = 80;
 const DETAIL_PERIOD: ErrorPeriod = '24h';
 
 const LOCKED =
-  'The vault is locked, so AgentMate cannot read the Sentry token. Unlock the vault with your passkey first.';
+  'The vault is locked, so Runova cannot read the Sentry token. Unlock the vault with your passkey first.';
 const GONE = 'That error tracking connection no longer exists.';
 const BAD_CURSOR = 'That page of issues is no longer available. Refresh the list.';
 
@@ -555,7 +555,7 @@ export function createErrorTrackingService(
         });
         broadcastErrorTrackingChanged('connections');
         throw new Error(
-          `Sentry refused to change the issue because the token lacks the ${provider.writeScope} scope. Replace the token with one that has it to resolve and ignore from AgentMate.`,
+          `Sentry refused to change the issue because the token lacks the ${provider.writeScope} scope. Replace the token with one that has it to resolve and ignore from Runova.`,
         );
       }
       if (!connection.canWrite) {

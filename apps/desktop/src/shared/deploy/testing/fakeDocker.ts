@@ -15,7 +15,7 @@ import type {
   ImageInfo,
   NetworkInfo,
   VolumeInfo,
-} from '../protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../protocol/generated/Runova.ServerCore.Contracts';
 import type { FakeCoreConnection } from './fakeCoreConnection';
 import {
   containerStatsSample,

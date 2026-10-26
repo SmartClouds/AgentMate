@@ -1,5 +1,5 @@
 import { coreErrorMessage } from '@shared/coreErrors';
-import type { SessionInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { SessionInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployServer } from '@shared/deployTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -19,7 +19,7 @@ export function SessionsCard({ server }: { server: DeployServer }): React.JSX.El
   const queryClient = useQueryClient();
   const sessions = useQuery({
     queryKey: queryKeys.deploySessions(server.id),
-    queryFn: () => window.agentmat.deploySecurity.listSessions(server.id),
+    queryFn: () => window.runova.deploySecurity.listSessions(server.id),
     retry: false,
   });
 
@@ -42,7 +42,7 @@ export function SessionsCard({ server }: { server: DeployServer }): React.JSX.El
     });
     if (!confirmed) return;
     await end(async () => {
-      await window.agentmat.deploySecurity.revokeSession(server.id, session.id);
+      await window.runova.deploySecurity.revokeSession(server.id, session.id);
       return `${session.deviceName} is signed out.`;
     });
   }
@@ -58,7 +58,7 @@ export function SessionsCard({ server }: { server: DeployServer }): React.JSX.El
     });
     if (!confirmed) return;
     await end(async () => {
-      const count = await window.agentmat.deploySecurity.revokeOtherSessions(server.id);
+      const count = await window.runova.deploySecurity.revokeOtherSessions(server.id);
       return `Ended ${count} other ${count === 1 ? 'session' : 'sessions'}.`;
     });
   }

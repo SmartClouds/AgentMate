@@ -5,8 +5,8 @@ import type { SecretEnvelope } from '../../shared/apiTypes';
 import type {
   ChallengeResponse,
   SignedInResponse,
-} from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import type { DeploySetupProgressEvent } from '../../shared/deployTypes';
 import { tempDir } from '../../test/main/fixtures';
 import type { CoreRest } from './auth/coreSessions';
@@ -47,7 +47,7 @@ function releases() {
     release: async (rid: 'linux-x64' | 'linux-arm64') => ({
       version: '1.53.0',
       rid,
-      file: `agentmate-core-1.53.0-${rid}.tar.gz`,
+      file: `runova-core-1.53.0-${rid}.tar.gz`,
       sha256: SHA,
       localPath,
     }),
@@ -107,7 +107,7 @@ function fakeHub() {
     }),
     beginTotpSetup: vi.fn(async () => ({
       sharedKey: 'ABCD EFGH',
-      authenticatorUri: 'otpauth://totp/AgentMate%3Amaria?secret=ABCDEFGH&issuer=AgentMate',
+      authenticatorUri: 'otpauth://totp/Runova%3Amaria?secret=ABCDEFGH&issuer=Runova',
     })),
     confirmTotp: vi.fn(async (code: string) => {
       calls.push(`confirmTotp:${code}`);
@@ -418,13 +418,13 @@ describe('DeployService access', () => {
       account: { userName: 'maria', password: PASSWORD },
     });
     service.forgetTokens('srv-1');
-    core.breakWith('Could not open a tunnel to /run/agentmate-core/core.sock');
+    core.breakWith('Could not open a tunnel to /run/runova-core/core.sock');
 
     const access = await service.access('srv-1');
 
     expect(access).toEqual({
       state: 'unreachable',
-      message: 'Could not open a tunnel to /run/agentmate-core/core.sock',
+      message: 'Could not open a tunnel to /run/runova-core/core.sock',
     });
   });
 });
@@ -659,7 +659,7 @@ describe('DeployService account and two-factor', () => {
     await service.access(DEV_SERVER_ID);
     const access = await service.signIn({
       serverId: DEV_SERVER_ID,
-      password: 'agentmate-local-password',
+      password: 'runova-local-password',
     });
     await service.access(DEV_SERVER_ID);
 

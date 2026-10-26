@@ -160,8 +160,8 @@ const DOWNLOAD_READS_IN_FLIGHT = 16;
 const DEFAULT_FILE_MODE = 0o644;
 /** The SFTP status for a path that is not there (SSH_FX_NO_SUCH_FILE). */
 const NO_SUCH_FILE = 2;
-/** What `mktemp -d -t agentmate.XXXXXXXXXX` prints: an absolute path ending in that name. */
-const STAGING_DIRECTORY = /^\/[^\s'"]*\/agentmate\.[A-Za-z0-9]{6,}$/;
+/** What `mktemp -d -t runova.XXXXXXXXXX` prints: an absolute path ending in that name. */
+const STAGING_DIRECTORY = /^\/[^\s'"]*\/runova\.[A-Za-z0-9]{6,}$/;
 const TRUNCATED = '\n[output truncated]\n';
 
 class OutputCollector {
@@ -489,7 +489,7 @@ export class SshConnection {
    * like the folder mktemp was asked for, because callers remove it again with `rm -rf`.
    */
   async createStagingDirectory(): Promise<string> {
-    const result = await this.exec('mktemp -d -t agentmate.XXXXXXXXXX', { timeoutMs: 30_000 });
+    const result = await this.exec('mktemp -d -t runova.XXXXXXXXXX', { timeoutMs: 30_000 });
     const path = result.stdout.trim();
     if (result.exitCode !== 0 || !STAGING_DIRECTORY.test(path)) {
       throw new Error(
@@ -660,13 +660,13 @@ export class SshConnection {
   /**
    * Sends a local file to `remotePath` for a site deploy (E23). Unlike `upload`, it streams from
    * disk with several writes in flight, hashes the bytes as they go, and gives a new file the
-   * mode a web server needs. The bytes go to `<name>.agentmate-<8 hex>.part` in the same folder
+   * mode a web server needs. The bytes go to `<name>.runova-<8 hex>.part` in the same folder
    * first and only take the real name when their hash is the one expected (if one was given), so
    * the target keeps its old contents after a failure, a cancel or a file edited mid-upload. The
    * result carries the hash of what was sent.
    *
    * Servers without OpenSSH's posix-rename cannot rename onto an existing file; there the old
-   * file is moved aside to `<name>.agentmate-<8 hex>.old` first, deleted once the new one is in
+   * file is moved aside to `<name>.runova-<8 hex>.old` first, deleted once the new one is in
    * place (or put back when it cannot be), and the result says the replace was not atomic. Only a request that
    * goes unanswered for `stallTimeoutMs` fails the upload; the whole of it has no deadline.
    */
@@ -698,7 +698,7 @@ export class SshConnection {
         throw error;
       });
 
-    const part = `${remotePath}.agentmate-${randomBytes(4).toString('hex')}.part`;
+    const part = `${remotePath}.runova-${randomBytes(4).toString('hex')}.part`;
     let handle: Buffer | null = null;
     let partExists = false;
     let existing: SftpStat | null = null;
@@ -780,7 +780,7 @@ export class SshConnection {
           if (!(await statAfter(remotePath))) throw error;
           // The old file moves aside rather than going, so it can come back if the part cannot
           // take its name. A later deploy restores a backup whose file is missing.
-          const backup = `${remotePath}.agentmate-${randomBytes(4).toString('hex')}.old`;
+          const backup = `${remotePath}.runova-${randomBytes(4).toString('hex')}.old`;
           await commit(sftpDone((done) => sftp.rename(remotePath, backup, done)));
           try {
             await commit(sftpDone((done) => sftp.rename(part, remotePath, done)));
@@ -815,7 +815,7 @@ export class SshConnection {
 
   /**
    * Fetches `remotePath` into `localPath` for the file manager (E25), the way `uploadFile` sends:
-   * positional reads with several in flight, written to `<localPath>.agentmate-<8 hex>.part`
+   * positional reads with several in flight, written to `<localPath>.runova-<8 hex>.part`
    * beside the target, which only takes the target's place once every byte is in and on disk.
    * So the target is left as it was after a failure, a cancel, or a remote file that ended early
    * or grew while it was read (`changedOnServer`). The local file gets the remote mtime unless
@@ -852,7 +852,7 @@ export class SshConnection {
     const step = <T>(work: Promise<T>): Promise<T> =>
       this.withStallTimeout(work, what, stallMs, aborted);
 
-    const part = `${localPath}.agentmate-${randomBytes(4).toString('hex')}.part`;
+    const part = `${localPath}.runova-${randomBytes(4).toString('hex')}.part`;
     let remote: Buffer | null = null;
     let local: FileHandle | null = null;
     let partExists = false;

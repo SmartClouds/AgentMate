@@ -140,10 +140,10 @@ describe('SignInDialog', () => {
       id: 'devhost',
       dev: true,
     });
-    expect(screen.getByText('agentmate-local-password')).toBeTruthy();
+    expect(screen.getByText('runova-local-password')).toBeTruthy();
     unmount();
 
     renderDialog(async () => undefined);
-    expect(screen.queryByText('agentmate-local-password')).toBeNull();
+    expect(screen.queryByText('runova-local-password')).toBeNull();
   });
 });

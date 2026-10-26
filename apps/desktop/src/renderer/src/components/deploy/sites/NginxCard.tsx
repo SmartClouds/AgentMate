@@ -1,4 +1,4 @@
-import type { NginxStatus } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { NginxStatus } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { Rocket, Server, Spinner, TriangleAlert } from '@/components/icons';
 import { Chip, GLASS_CARD, TileHeader } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { relative } from '@/lib/deploy/sites/certificates';
 import { cn } from '@/lib/utils';
 
-/** nginx on the server: whether it is there, running and looked after by AgentMate. */
+/** nginx on the server: whether it is there, running and looked after by Runova. */
 
 function Fact({
   ok,
@@ -42,7 +42,7 @@ export function NginxCard({
   installing: boolean;
   onInstall: () => void;
 }): React.JSX.Element {
-  const action = status && !status.installed ? 'Install nginx' : 'Set up nginx for AgentMate';
+  const action = status && !status.installed ? 'Install nginx' : 'Set up nginx for Runova';
   return (
     <section className={cn(GLASS_CARD, 'space-y-3 p-4')}>
       <div className="space-y-1">
@@ -92,15 +92,15 @@ export function NginxCard({
             />
             <Fact
               ok={status.managed}
-              label={status.managed ? 'Managed by AgentMate' : 'Not set up yet'}
+              label={status.managed ? 'Managed by Runova' : 'Not set up yet'}
               detail={status.currentRelease ? `release ${status.currentRelease}` : ''}
             />
           </ul>
           {!status.managed && (
             <p className="text-sm text-muted-foreground">
               {status.installed
-                ? 'AgentMate can take over the nginx that is already here: it backs up and turns off the stock default site, and adds its own sites next to what you have.'
-                : 'AgentMate installs nginx from the official nginx.org packages and sets it up for your sites.'}
+                ? 'Runova can take over the nginx that is already here: it backs up and turns off the stock default site, and adds its own sites next to what you have.'
+                : 'Runova installs nginx from the official nginx.org packages and sets it up for your sites.'}
               {admin ? '' : ' An Admin can do this.'}
             </p>
           )}

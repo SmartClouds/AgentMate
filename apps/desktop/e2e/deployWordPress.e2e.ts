@@ -13,29 +13,29 @@ import {
 
 /**
  * WordPress through the built app, end to end (E19 to E21): a real WordPress in Docker with the
- * AgentMate Connector plugin, connected from Deploy with a key, turned into a project from
+ * Runova Connector plugin, connected from Deploy with a key, turned into a project from
  * Projects, then deployed to from the project's WordPress section.
  *
  * 1. the site connects with a pasted key and its overview shows the active theme;
  * 2. a project pulls the theme into a new folder;
- * 3. a change deploys, while agent settings and AgentMate files in the theme stay on this computer;
+ * 3. a change deploys, while agent settings and Runova files in the theme stay on this computer;
  * 4. a PHP syntax error is refused before the site changes;
  * 5. a fatal error rolls back on its own;
  * 6. the Workspace header has Deploy in place of Tag a version, and it deploys the project;
  * 7. a good deploy is rolled back by hand from Deploy > the site > Deploys.
  *
  * Every request is signed with Ed25519 in the main process, so this also proves the signing works
- * under Electron's BoringSSL, which the plain-Node unit tests can't. Needs AGENTMATE_SYSTEM_TESTS=1
- * and Docker for Linux containers; the containers are named agentmate-wpc-18998-* and removed in
+ * under Electron's BoringSSL, which the plain-Node unit tests can't. Needs RUNOVA_SYSTEM_TESTS=1
+ * and Docker for Linux containers; the containers are named runova-wpc-18998-* and removed in
  * afterAll.
  */
 
-test.skip(!systemTestsEnabled(), 'needs AGENTMATE_SYSTEM_TESTS=1 and Docker for Linux containers');
+test.skip(!systemTestsEnabled(), 'needs RUNOVA_SYSTEM_TESTS=1 and Docker for Linux containers');
 
 const PORT = 18_998;
 const SITE_LABEL = 'WP e2e site';
 const THEME = 'am-int';
-const THEME_NAME = 'AgentMate Int';
+const THEME_NAME = 'Runova Int';
 const SITE_ROOT = '/var/www/html';
 const SITE_SETUP = `${SITE_ROOT}/wp-content/themes/${THEME}/inc/setup.php`;
 const SETUP_V2 = '<?php // setup v2';
@@ -46,7 +46,7 @@ const MINUTE = 60_000;
 const RUN_TIMEOUT = 3 * MINUTE;
 
 /** Agent files inside the theme: listed as left out, never sent. */
-const THEME_AGENT_FILES = ['.claude/settings.json', 'AGENTS.md', '.agentmate/hooks/x.sh'];
+const THEME_AGENT_FILES = ['.claude/settings.json', 'AGENTS.md', '.runova/hooks/x.sh'];
 /** Agent files at the project root, outside every synced item, so not even walked. */
 const ROOT_AGENT_FILES = ['.claude/settings.json', 'AGENTS.md'];
 
@@ -132,7 +132,7 @@ test.describe('WordPress sites in Deploy and Projects', () => {
     // localhost needs no plain-HTTP opt-in.
     await expect(dialog.getByText('Plain HTTP to this computer is fine')).toBeVisible();
     await expect(dialog.getByText('Allow plain HTTP for this site')).toHaveCount(0);
-    await dialog.getByLabel('Name in AgentMate (optional)').fill(SITE_LABEL);
+    await dialog.getByLabel('Name in Runova (optional)').fill(SITE_LABEL);
     await dialog.getByRole('button', { name: 'Connect', exact: true }).click();
     await expect(dialog).toBeHidden({ timeout: MINUTE });
 
@@ -193,11 +193,11 @@ test.describe('WordPress sites in Deploy and Projects', () => {
 
     const dialog = await openReview();
     const agentFiles = dialog.getByRole('list', {
-      name: 'Stays on this computer: agent settings and AgentMate files',
+      name: 'Stays on this computer: agent settings and Runova files',
     });
     await expect(agentFiles).toContainText('.claude');
     await expect(agentFiles).toContainText('AGENTS.md');
-    await expect(agentFiles).toContainText('.agentmate');
+    await expect(agentFiles).toContainText('.runova');
 
     await deploySetupChange(dialog);
     await expect(dialog.getByRole('status').filter({ hasText: 'Deployed' })).toBeVisible({
@@ -207,7 +207,7 @@ test.describe('WordPress sites in Deploy and Projects', () => {
 
     expect(siteFile(wp(), SITE_SETUP)).toBe(SETUP_V2);
     const themeOnSite = `${SITE_ROOT}/wp-content/themes/${THEME}`;
-    for (const path of [...THEME_AGENT_FILES, '.claude', '.agentmate']) {
+    for (const path of [...THEME_AGENT_FILES, '.claude', '.runova']) {
       expect(existsOnSite(wp(), `${themeOnSite}/${path}`), path).toBe(false);
     }
     for (const path of [...ROOT_AGENT_FILES, '.claude']) {
@@ -231,7 +231,7 @@ test.describe('WordPress sites in Deploy and Projects', () => {
   });
 
   test('rolls back on its own when the change breaks the site', async () => {
-    writeSetup('<?php agentmate_e2e_missing();\n');
+    writeSetup('<?php runova_e2e_missing();\n');
 
     const dialog = await openReview();
     await deploySetupChange(dialog);
@@ -250,9 +250,9 @@ test.describe('WordPress sites in Deploy and Projects', () => {
     const projectId = await p.evaluate(async (projectFolder) => {
       const api = (
         window as unknown as {
-          agentmat: { projects: { list(): Promise<Array<{ id: string; folderPath: string }>> } };
+          runova: { projects: { list(): Promise<Array<{ id: string; folderPath: string }>> } };
         }
-      ).agentmat;
+      ).runova;
       const same = (path: string): string => path.replace(/[\\/]+$/, '').toLowerCase();
       const projects = await api.projects.list();
       return (

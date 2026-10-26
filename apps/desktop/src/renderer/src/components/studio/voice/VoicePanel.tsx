@@ -7,7 +7,7 @@ import {
   type Scene,
   type StudioDocument,
   type VoiceEngineView,
-} from '@agentmat/studio';
+} from '@runova/studio';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { rememberedVoice } from '../ai/runSettings';

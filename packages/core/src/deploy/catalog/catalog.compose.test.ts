@@ -73,7 +73,7 @@ describe.runIf(compose)('docker compose config accepts every catalog template', 
       if (!result.ok) throw new Error(result.reason);
       const { render } = result;
 
-      const folder = mkdtempSync(join(tmpdir(), 'agentmate-e12-catalog-'));
+      const folder = mkdtempSync(join(tmpdir(), 'runova-e12-catalog-'));
       folders.push(folder);
       writeFileSync(join(folder, 'compose.yaml'), render.compose);
       writeFileSync(join(folder, '.env'), render.envFile);

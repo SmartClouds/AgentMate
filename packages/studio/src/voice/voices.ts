@@ -1,9 +1,4 @@
-import {
-  STUDIO_PIPER,
-  STUDIO_TTS,
-  type StudioLocalVoice,
-  type StudioTtsVoice,
-} from '@agentmat/core';
+import { STUDIO_PIPER, STUDIO_TTS, type StudioLocalVoice, type StudioTtsVoice } from '@runova/core';
 import { withoutChinese } from '../text/languages.js';
 
 /**

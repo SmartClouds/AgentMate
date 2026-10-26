@@ -2,10 +2,10 @@
 /**
  * Normalizes rows from either adapter, since $wpdb hands back every column as a string.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Storage;
+namespace Runova\Connector\Storage;
 
 final class Rows
 {

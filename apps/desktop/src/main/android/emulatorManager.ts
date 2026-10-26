@@ -13,7 +13,7 @@ import {
   nextFreeConsolePort,
   parseBootAnim,
   parseBootCompleted,
-} from '@agentmat/core';
+} from '@runova/core';
 
 /**
  * Owns what is running.
@@ -53,7 +53,7 @@ interface Running {
   avdName: string;
   serial: string;
   state: EmulatorState;
-  /** Null for an emulator that was already up when AgentMate looked. */
+  /** Null for an emulator that was already up when Runova looked. */
   pid: number | null;
   child: LaunchedChild | null;
   startedAt: number;
@@ -312,7 +312,7 @@ export class AndroidEmulatorManager {
         return {
           ok: false,
           message:
-            'That emulator was started outside AgentMate and would not shut down. Close its window instead.',
+            'That emulator was started outside Runova and would not shut down. Close its window instead.',
         };
       }
       await new Promise((resolve) => setTimeout(resolve, GRACEFUL_STOP_MS));

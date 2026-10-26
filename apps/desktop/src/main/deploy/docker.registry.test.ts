@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { DeployDocker } from './docker';
 
 /** An image pull on the Containers screen takes this computer's sign-in for its registry (E08). */

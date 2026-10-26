@@ -145,7 +145,7 @@ describe('parseWindowsProbe', () => {
 
   it('leaves the CPU share out when WMI had no load figure', () => {
     const stdout =
-      '{"probe":"agentmate-runner","cpu":null,"cores":4,"memTotalKb":100,"memFreeKb":40,"drive":"D:","diskSize":1000,"diskFree":250}';
+      '{"probe":"runova-runner","cpu":null,"cores":4,"memTotalKb":100,"memFreeKb":40,"drive":"D:","diskSize":1000,"diskFree":250}';
 
     expect(parseWindowsProbe(stdout, AT)).toMatchObject({
       cpuPercent: null,
@@ -157,8 +157,8 @@ describe('parseWindowsProbe', () => {
   it.each([
     ['POSIX output', fixture('runner-probe-ubuntu.txt')],
     ['other JSON', '{"cpu":10}'],
-    ['broken JSON', '{"probe":"agentmate-runner",'],
-    ['a reading without the disk', '{"probe":"agentmate-runner","memTotalKb":100,"memFreeKb":40}'],
+    ['broken JSON', '{"probe":"runova-runner",'],
+    ['a reading without the disk', '{"probe":"runova-runner","memTotalKb":100,"memFreeKb":40}'],
   ])('gives up on %s', (_name, stdout) => {
     expect(parseWindowsProbe(stdout, AT)).toBeNull();
   });

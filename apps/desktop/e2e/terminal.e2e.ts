@@ -9,7 +9,7 @@ import { type LaunchedApp, launchApp } from './app';
  * comes back out, a second tab is its own shell, closing tabs ends those shells, and a quit with
  * nothing left open takes the background host with it.
  *
- * Output is read from `window.agentmat.terminal.onData` rather than from the xterm DOM: xterm
+ * Output is read from `window.runova.terminal.onData` rather than from the xterm DOM: xterm
  * renders to a canvas-backed grid where a line can be wrapped, redrawn or scrolled out from under
  * a poll, while the data stream is exactly what main sent the renderer.
  */
@@ -17,11 +17,11 @@ import { type LaunchedApp, launchApp } from './app';
 /** A shell writes the command back as it is typed, so the marker is assembled by the shell. */
 function marker(): { command: string; expected: string } {
   const id = randomBytes(6).toString('hex');
-  return { command: `echo agentmate-"e2e"-${id}`, expected: `agentmate-e2e-${id}` };
+  return { command: `echo runova-"e2e"-${id}`, expected: `runova-e2e-${id}` };
 }
 
 interface TerminalApi {
-  agentmat: {
+  runova: {
     terminal: {
       write(sessionId: string, data: string): Promise<void>;
       usage(): Promise<{ sessions: { sessionId: string; pid: number; surface?: string }[] }>;
@@ -52,7 +52,7 @@ async function captureOutput(page: Page): Promise<void> {
     const target = window as unknown as TerminalApi;
     if (target.__e2eTerminalOutput) return;
     target.__e2eTerminalOutput = {};
-    target.agentmat.terminal.onData(({ sessionId, data }) => {
+    target.runova.terminal.onData(({ sessionId, data }) => {
       const store = target.__e2eTerminalOutput!;
       store[sessionId] = (store[sessionId] ?? '') + data;
     });
@@ -70,7 +70,7 @@ function drawerSessions(
   page: Page,
 ): Promise<{ sessionId: string; pid: number; surface?: string }[]> {
   return page.evaluate(async () => {
-    const usage = await (window as unknown as TerminalApi).agentmat.terminal.usage();
+    const usage = await (window as unknown as TerminalApi).runova.terminal.usage();
     return usage.sessions.filter((session) => session.surface !== 'workspace');
   });
 }
@@ -148,7 +148,7 @@ test('a shell runs a command, a second tab is its own, and closing tabs ends bot
 
   const { command, expected } = marker();
   await page.evaluate(
-    ({ id, text }) => (window as unknown as TerminalApi).agentmat.terminal.write(id, `${text}\r`),
+    ({ id, text }) => (window as unknown as TerminalApi).runova.terminal.write(id, `${text}\r`),
     { id: first.sessionId, text: command },
   );
   // The shell has to start, read the line and answer, which is slow on a cold Windows profile.

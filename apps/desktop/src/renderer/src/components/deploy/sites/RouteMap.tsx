@@ -1,4 +1,4 @@
-import type { SiteInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { SiteInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { Lock, LockOpen, Route, Server } from '@/components/icons';
 import { Chip } from '@/components/pageKit';
 import { SimpleTooltip } from '@/components/ui/tooltip';

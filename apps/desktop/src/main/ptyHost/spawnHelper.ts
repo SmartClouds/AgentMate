@@ -68,7 +68,7 @@ function defaultIsExecutable(path: string): boolean {
 
 function defaultRepair(path: string): string | null {
   try {
-    const copy = `${path}.agentmate-tmp`;
+    const copy = `${path}.runova-tmp`;
     copyFileSync(path, copy);
     chmodSync(copy, 0o755);
     renameSync(copy, path);

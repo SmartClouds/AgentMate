@@ -1,6 +1,6 @@
 import type { TerminalPauseResult } from '@shared/apiTypes';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { type FakeBridge, installAgentmatBridge } from '../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../test/renderer/runovaBridge';
 import {
   initRunPauses,
   pauseRuns,
@@ -53,7 +53,7 @@ function runTab(id: string, label = 'Dev', over: Partial<TerminalSessionMeta> = 
 }
 
 beforeEach(() => {
-  bridge = installAgentmatBridge({
+  bridge = installRunovaBridge({
     'terminal.pause': async (_id: string, reason: 'user' | 'agent') => result({ reason }),
     'terminal.resume': async () => result({ paused: false, reason: null, pausedAt: null }),
   });

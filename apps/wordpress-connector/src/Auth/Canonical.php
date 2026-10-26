@@ -4,13 +4,13 @@
  * packages/core/src/deploy/wordpress/canonical.ts line for line. Lines are joined with "\n" and
  * there is no trailing newline.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Auth;
+namespace Runova\Connector\Auth;
 
-use AgentMate\Connector\Protocol;
-use AgentMate\Connector\Support\Text;
+use Runova\Connector\Protocol;
+use Runova\Connector\Support\Text;
 
 final class Canonical
 {
@@ -33,11 +33,14 @@ final class Canonical
         return preg_match(self::CONNECTION_ID, $value) === 1;
     }
 
-    /** What the desktop signs for every request. */
-    public static function request(string $route, int $timestamp, string $nonce, ?string $connectionId, string $bodySha256): string
+    /**
+     * What the desktop signs for every request. $prefix is Protocol::PREFIX, or
+     * Protocol::LEGACY_PREFIX for a 1.63 desktop.
+     */
+    public static function request(string $route, int $timestamp, string $nonce, ?string $connectionId, string $bodySha256, string $prefix = Protocol::PREFIX): string
     {
         return implode("\n", array(
-            Protocol::PREFIX,
+            self::prefix($prefix),
             self::line('The route', $route),
             self::timestamp($timestamp),
             self::line('The nonce', $nonce),
@@ -47,13 +50,13 @@ final class Canonical
     }
 
     /** What the plugin signs with the site key for every reply. */
-    public static function response(string $route, string $requestNonce, ?string $connectionId, int $timestamp, int $httpStatus, string $bodySha256): string
+    public static function response(string $route, string $requestNonce, ?string $connectionId, int $timestamp, int $httpStatus, string $bodySha256, string $prefix = Protocol::PREFIX): string
     {
         if ($httpStatus < 100 || $httpStatus > 599) {
             throw new \InvalidArgumentException('An HTTP status runs from 100 to 599.');
         }
         return implode("\n", array(
-            Protocol::PREFIX . '/response',
+            self::prefix($prefix) . '/response',
             self::line('The route', $route),
             self::line('The nonce', $requestNonce),
             $connectionId === null ? '-' : self::line('The connection id', $connectionId),
@@ -64,10 +67,10 @@ final class Canonical
     }
 
     /** What the pair proof is an HMAC of, keyed with the pairing secret. */
-    public static function pair(string $pairingId, string $desktopPublicKey, string $deviceName, int $timestamp, string $nonce): string
+    public static function pair(string $pairingId, string $desktopPublicKey, string $deviceName, int $timestamp, string $nonce, string $prefix = Protocol::PREFIX): string
     {
         return implode("\n", array(
-            Protocol::PREFIX . '/pair',
+            self::prefix($prefix) . '/pair',
             self::line('The pairing id', $pairingId),
             self::line('The public key', $desktopPublicKey),
             self::line('The device name', $deviceName),
@@ -133,6 +136,14 @@ final class Canonical
             'nonce' => $nonce,
             'signature' => $signature === '-' ? null : $signature,
         );
+    }
+
+    private static function prefix(string $prefix): string
+    {
+        if ($prefix !== Protocol::PREFIX && $prefix !== Protocol::LEGACY_PREFIX) {
+            throw new \InvalidArgumentException('That is not a signing prefix of this protocol.');
+        }
+        return $prefix;
     }
 
     private static function line(string $name, string $value): string

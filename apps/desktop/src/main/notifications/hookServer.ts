@@ -2,8 +2,8 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { join } from 'node:path';
-import type { AgentHookEvent, NotificationHookKind } from '@agentmat/core';
-import { NOTIFICATION_HOOK_KINDS } from '@agentmat/core';
+import type { AgentHookEvent, NotificationHookKind } from '@runova/core';
+import { NOTIFICATION_HOOK_KINDS } from '@runova/core';
 import { app } from 'electron';
 import type { ConfirmationForwardedPayload } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';
@@ -115,7 +115,7 @@ async function runPollLoop(): Promise<void> {
 const MAX_BODY_BYTES = 64 * 1024;
 
 /**
- * Written next to the port so only scripts AgentMate generated (which read the file) can
+ * Written next to the port so only scripts Runova generated (which read the file) can
  * move a tab's status. Other local processes can reach the port, but not the file.
  */
 const agentEventToken = randomBytes(24).toString('hex');
@@ -218,7 +218,7 @@ function readBodyUpTo(req: IncomingMessage, limit: number): Promise<string | nul
 }
 
 /**
- * The bridge in a project's `.agentmate` folder asks here about run commands. A request that does
+ * The bridge in a project's `.runova` folder asks here about run commands. A request that does
  * not carry the secret from the port file is refused before anything is read from the project.
  */
 async function handleRunCommandsHttp(req: IncomingMessage, res: ServerResponse): Promise<void> {

@@ -5,7 +5,7 @@ export const SAVE_DELAY_MS = 1000;
 /** Tasks kept per saved server. The same cap the server's AI history lists. */
 const DEFAULT_PER_SERVER = 50;
 
-const CLOSED_NOTE = 'AgentMate closed while this was running.';
+const CLOSED_NOTE = 'Runova closed while this was running.';
 
 export interface SshHistoryStoreOptions {
   read: () => Promise<unknown>;

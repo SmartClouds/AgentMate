@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import type { SkillAuditFinding } from '@agentmat/core';
+import type { SkillAuditFinding } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SkillAuditRecord } from '../shared/apiTypes';
 import { useTempUserData } from '../test/main/ipcHarness';
@@ -76,7 +76,7 @@ function audit(overrides: Partial<NewAudit> = {}): NewAudit {
     skillId: 'skill-a',
     skillName: 'Deploy helper',
     sourceKind: 'repository',
-    sourceLabel: 'agentmate/skills',
+    sourceLabel: 'runova/skills',
     projectId: null,
     verdict: 'risky',
     score: 40,

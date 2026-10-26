@@ -59,7 +59,7 @@ function writeInteractiveClaude(root: string): void {
 }
 
 interface OutputApi {
-  agentmat: {
+  runova: {
     terminal: {
       write(sessionId: string, data: string): Promise<void>;
       onData(callback: (payload: { sessionId: string; data: string }) => void): () => void;
@@ -72,7 +72,7 @@ async function captureOutput(page: Page): Promise<void> {
   await page.evaluate(() => {
     const target = window as unknown as OutputApi;
     target.__e2eOutput = {};
-    target.agentmat.terminal.onData(({ sessionId, data }) => {
+    target.runova.terminal.onData(({ sessionId, data }) => {
       const store = target.__e2eOutput ?? {};
       store[sessionId] = (store[sessionId] ?? '') + data;
       target.__e2eOutput = store;
@@ -151,12 +151,12 @@ test('a network error schedules a continue that can be cancelled', async () => {
   await expect
     .poll(() =>
       page.evaluate(async (id) => {
-        await (window as unknown as OutputApi).agentmat.terminal.write(id, 'go\r');
+        await (window as unknown as OutputApi).runova.terminal.write(id, 'go\r');
         await new Promise((resolve) => setTimeout(resolve, 500));
         const api = window as unknown as {
-          agentmat: { agents: { autoContinuePending(): Promise<Record<string, unknown>> } };
+          runova: { agents: { autoContinuePending(): Promise<Record<string, unknown>> } };
         };
-        return Object.keys(await api.agentmat.agents.autoContinuePending());
+        return Object.keys(await api.runova.agents.autoContinuePending());
       }, sessionId),
     )
     .toContain(sessionId);

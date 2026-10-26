@@ -1,8 +1,8 @@
 import { access, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { STUDIO_PIPER } from '@agentmat/core';
-import { installMarkerSchema, parseWav, studioToolPaths } from '@agentmat/studio';
-import type { LocalVoiceTools } from '@agentmat/studio/node';
+import { STUDIO_PIPER } from '@runova/core';
+import { installMarkerSchema, parseWav, studioToolPaths } from '@runova/studio';
+import type { LocalVoiceTools } from '@runova/studio/node';
 
 /**
  * What Dev Setup has installed of Studio's local voices (E37), read from the markers each install

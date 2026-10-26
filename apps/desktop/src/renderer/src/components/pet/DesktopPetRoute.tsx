@@ -9,7 +9,7 @@ import {
   normalizeDesktopPetName,
   petBoxSize,
   petClickRect,
-} from '@agentmat/core';
+} from '@runova/core';
 import { type PetPipelineMessage, type PetWorkArea, pipelineRunRoute } from '@shared/pet';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -89,11 +89,11 @@ export default function DesktopPetRoute(): React.JSX.Element {
   const queryClient = useQueryClient();
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
   });
   const customImages = useQuery({
     queryKey: queryKeys.petCustomImages,
-    queryFn: () => window.agentmat.pet.customDataUrls(),
+    queryFn: () => window.runova.pet.customDataUrls(),
   });
 
   const customs = settingsQuery.data?.desktopPetCustoms ?? [];
@@ -334,9 +334,9 @@ export default function DesktopPetRoute(): React.JSX.Element {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: applyPose only touches refs, so resubscribing every render for it would gain nothing
   useEffect(() => {
-    return window.agentmat.pet.onSettingsChanged(() => {
+    return window.runova.pet.onSettingsChanged(() => {
       void (async () => {
-        const settings = await window.agentmat.settings.get();
+        const settings = await window.runova.settings.get();
         queryClient.setQueryData(queryKeys.settings, settings);
         const nextBox = petBoxSize(clampDesktopPetScale(settings.desktopPetScale));
         const nextClickArea = clampDesktopPetClickArea(settings.desktopPetClickArea);
@@ -366,7 +366,7 @@ export default function DesktopPetRoute(): React.JSX.Element {
   }, [queryClient]);
 
   useEffect(() => {
-    return window.agentmat.pet.onPipelineMessage((payload) => {
+    return window.runova.pet.onPipelineMessage((payload) => {
       setSpeech(payload);
       const current = actorRef.current;
       if (current) {
@@ -421,8 +421,8 @@ export default function DesktopPetRoute(): React.JSX.Element {
 
     async function boot(): Promise<void> {
       const [area, settings] = await Promise.all([
-        window.agentmat.pet.getWorkArea(),
-        window.agentmat.settings.get(),
+        window.runova.pet.getWorkArea(),
+        window.runova.settings.get(),
       ]);
       if (cancelled) return;
       areaRef.current = area;
@@ -463,7 +463,7 @@ export default function DesktopPetRoute(): React.JSX.Element {
     }
 
     void boot();
-    const unsubscribe = window.agentmat.pet.onDisplayChanged((area) => {
+    const unsubscribe = window.runova.pet.onDisplayChanged((area) => {
       areaRef.current = area;
       if (actorRef.current) {
         clampActor(actorRef.current, stageFromArea(area));
@@ -475,14 +475,14 @@ export default function DesktopPetRoute(): React.JSX.Element {
       cancelled = true;
       cancelAnimationFrame(frame);
       unsubscribe();
-      window.agentmat.pet.setClickThrough(true);
+      window.runova.pet.setClickThrough(true);
     };
   }, []);
 
   function setHit(next: boolean): void {
     if (hitRef.current === next) return;
     hitRef.current = next;
-    window.agentmat.pet.setClickThrough(!next);
+    window.runova.pet.setClickThrough(!next);
   }
 
   function hitTest(clientX: number, clientY: number): boolean {
@@ -512,7 +512,7 @@ export default function DesktopPetRoute(): React.JSX.Element {
    */
   function openApp(): void {
     const run = runRefOf(speechRef.current);
-    window.agentmat.pet.showMainWindow(run ? pipelineRunRoute(run) : undefined);
+    window.runova.pet.showMainWindow(run ? pipelineRunRoute(run) : undefined);
   }
 
   function dismissSpeech(): void {
@@ -557,7 +557,7 @@ export default function DesktopPetRoute(): React.JSX.Element {
       if (run) {
         setOpen(false);
         setMenu(null);
-        window.agentmat.pet.showMainWindow(pipelineRunRoute(run));
+        window.runova.pet.showMainWindow(pipelineRunRoute(run));
       }
       return;
     }
@@ -637,27 +637,27 @@ export default function DesktopPetRoute(): React.JSX.Element {
 
   function handleToggleMove(): void {
     setMenu(null);
-    void window.agentmat.settings.update({ desktopPetCanMove: !canMove });
+    void window.runova.settings.update({ desktopPetCanMove: !canMove });
   }
 
   function handleSelectCardView(next: DesktopPetCardView): void {
     // Painted from the cache right away so the tab switches under the cursor;
     // the saved value comes back through onSettingsChanged a moment later.
-    queryClient.setQueryData<Awaited<ReturnType<typeof window.agentmat.settings.get>>>(
+    queryClient.setQueryData<Awaited<ReturnType<typeof window.runova.settings.get>>>(
       queryKeys.settings,
       (prev) => (prev ? { ...prev, desktopPetCardView: next } : prev),
     );
-    void window.agentmat.settings.update({ desktopPetCardView: next });
+    void window.runova.settings.update({ desktopPetCardView: next });
   }
 
   function handleSnooze(minutes: number): void {
     setMenu(null);
-    void window.agentmat.pet.snooze(minutes);
+    void window.runova.pet.snooze(minutes);
   }
 
   function handleTurnOff(): void {
     setMenu(null);
-    void window.agentmat.settings.update({ desktopPetEnabled: false });
+    void window.runova.settings.update({ desktopPetEnabled: false });
   }
 
   const hit = actor ? hitRectFor(actor) : null;
@@ -776,7 +776,7 @@ export default function DesktopPetRoute(): React.JSX.Element {
           {speech.run ? (
             <p className="pet-speech-link">
               <ExternalLink className="h-3 w-3" />
-              <span>Click to open it in AgentMate</span>
+              <span>Click to open it in Runova</span>
             </p>
           ) : null}
         </div>

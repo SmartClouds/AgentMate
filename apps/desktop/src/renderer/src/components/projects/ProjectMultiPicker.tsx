@@ -1,5 +1,5 @@
-import type { Project } from '@agentmat/core';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
+import type { Project } from '@runova/core';
 import { Command as CommandPrimitive } from 'cmdk';
 import { useState } from 'react';
 import { Check, Plus, Search, X } from '@/components/icons';

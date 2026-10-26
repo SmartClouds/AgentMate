@@ -1,5 +1,5 @@
-import { validateDomain, validateIpOrCidr, validatePort } from '@agentmat/core';
-import type { SiteSettings } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import { validateDomain, validateIpOrCidr, validatePort } from '@runova/core';
+import type { SiteSettings } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { SiteDraft } from './draft';
 
 /**

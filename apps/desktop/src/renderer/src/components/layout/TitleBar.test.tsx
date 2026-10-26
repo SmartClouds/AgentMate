@@ -27,7 +27,7 @@ describe('TitleBar on Windows and Linux', () => {
   it('shows the app name and the search box', async () => {
     renderWithProviders(<TitleBar />);
 
-    expect(screen.getByText('AgentMate')).toBeTruthy();
+    expect(screen.getByText('Runova')).toBeTruthy();
     expect(await screen.findByText('Search projects, history, skills…')).toBeTruthy();
   });
 

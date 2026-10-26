@@ -247,7 +247,7 @@ export function describeConnectError(
     case ErrorKind.NegotiationFailure:
       return describeFailure(
         'security-settings',
-        "AgentMate and the server couldn't agree on security settings.",
+        "Runova and the server couldn't agree on security settings.",
       );
     case ErrorKind.RDCleanPath:
     case ErrorKind.ProxyConnect:

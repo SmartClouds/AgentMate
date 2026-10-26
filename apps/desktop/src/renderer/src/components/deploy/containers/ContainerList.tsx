@@ -1,7 +1,7 @@
 import type {
   ContainerList as ContainerListData,
   ContainerSummary,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployContainerAction } from '@shared/deployDockerTypes';
 import { useMemo, useState } from 'react';
 import {

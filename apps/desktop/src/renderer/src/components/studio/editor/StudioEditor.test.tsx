@@ -1,4 +1,4 @@
-import type { ApplyResult, EditResponse, StudioDocument } from '@agentmat/studio';
+import type { ApplyResult, EditResponse, StudioDocument } from '@runova/studio';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
@@ -57,23 +57,23 @@ describe('StudioEditor opening', () => {
     expect(screen.getByLabelText('Opening the video')).toHaveAttribute('aria-busy', 'true');
   });
 
-  it('says another AgentMate has it, and offers to take over only when that one went quiet', async () => {
-    const holder = { appId: 'AgentMate Dev', host: 'laptop', pid: 9, heartbeatAt: NOW - 120_000 };
+  it('says another Runova has it, and offers to take over only when that one went quiet', async () => {
+    const holder = { appId: 'Runova Dev', host: 'laptop', pid: 9, heartbeatAt: NOW - 120_000 };
     const { user, bridge } = renderEditor({
       'studio.open': async () => ({ state: 'locked', holder, stale: true }),
       'studio.takeOver': async () => opened(),
     });
-    expect(await screen.findByText('Open in another AgentMate')).toBeInTheDocument();
-    expect(screen.getByText(/AgentMate Dev on laptop has this video open/)).toBeInTheDocument();
+    expect(await screen.findByText('Open in another Runova')).toBeInTheDocument();
+    expect(screen.getByText(/Runova Dev on laptop has this video open/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Take over' }));
     expect(await screen.findByLabelText('Video title')).toHaveValue('Launch film');
     expect(bridge.$fn('studio.takeOver')).toHaveBeenCalledWith(ID);
   });
 
   it('offers no take over while the other copy still answers', async () => {
-    const holder = { appId: 'AgentMate', host: 'desk', pid: 9, heartbeatAt: NOW };
+    const holder = { appId: 'Runova', host: 'desk', pid: 9, heartbeatAt: NOW };
     renderEditor({ 'studio.open': async () => ({ state: 'locked', holder, stale: false }) });
-    expect(await screen.findByText('Open in another AgentMate')).toBeInTheDocument();
+    expect(await screen.findByText('Open in another Runova')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Take over' })).not.toBeInTheDocument();
   });
 

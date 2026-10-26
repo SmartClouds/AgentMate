@@ -80,7 +80,7 @@ describe('SitesPanel states', () => {
     expect(within(shop).getByText('No SSL')).toBeInTheDocument();
     expect(within(shop).getByText('http://10.0.0.5:8080')).toBeInTheDocument();
     expect(within(shop).getByText('Not applied yet')).toBeInTheDocument();
-    expect(screen.getByText('Managed by AgentMate')).toBeInTheDocument();
+    expect(screen.getByText('Managed by Runova')).toBeInTheDocument();
     expect(screen.getByText(/Last applied 1 hour ago by maria/)).toBeInTheDocument();
   });
 
@@ -105,7 +105,7 @@ describe('SitesPanel nginx', () => {
     expect(await screen.findByText(/Set up nginx above, then add a site/)).toBeInTheDocument();
     expect(screen.getByText(/backs up and turns off the stock default site/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Add a site/ })).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Set up nginx for AgentMate' }));
+    await user.click(screen.getByRole('button', { name: 'Set up nginx for Runova' }));
     expect(bridge.$fn('deploySites.install')).toHaveBeenCalledWith(SERVER.id);
     expect(await screen.findByRole('dialog', { name: 'Install nginx' })).toBeInTheDocument();
   });

@@ -48,7 +48,7 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
   useEffect(() => {
     if (!open || run) return;
     let cancelled = false;
-    window.agentmat.deployAssistant.state(server.id).then(
+    window.runova.deployAssistant.state(server.id).then(
       (state) => {
         if (!cancelled && state?.progress) {
           useDeployAssistantStore
@@ -72,7 +72,7 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
   async function start(prompt: string, cliId: string | null): Promise<boolean> {
     try {
       reset(serverId);
-      await window.agentmat.deployAssistant.start({
+      await window.runova.deployAssistant.start({
         serverId,
         prompt,
         cliId,
@@ -149,11 +149,11 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
         <AssistantTimeline
           steps={run?.steps ?? []}
           progress={progress}
-          onApprove={() => act(window.agentmat.deployAssistant.approve(serverId))}
-          onSkip={() => act(window.agentmat.deployAssistant.skip(serverId))}
-          onAnswer={(answer) => act(window.agentmat.deployAssistant.answer(serverId, answer))}
-          onResume={() => act(window.agentmat.deployAssistant.resume(serverId))}
-          onStop={() => act(window.agentmat.deployAssistant.stop(serverId))}
+          onApprove={() => act(window.runova.deployAssistant.approve(serverId))}
+          onSkip={() => act(window.runova.deployAssistant.skip(serverId))}
+          onAnswer={(answer) => act(window.runova.deployAssistant.answer(serverId, answer))}
+          onResume={() => act(window.runova.deployAssistant.resume(serverId))}
+          onStop={() => act(window.runova.deployAssistant.stop(serverId))}
         />
       </div>
 
@@ -165,7 +165,7 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
           initialPrompt={draft?.serverId === serverId ? draft.prompt : ''}
           disabled={!mode.info}
           onStart={start}
-          onStop={() => act(window.agentmat.deployAssistant.stop(serverId))}
+          onStop={() => act(window.runova.deployAssistant.stop(serverId))}
         />
       </footer>
     </aside>

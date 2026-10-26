@@ -3,7 +3,7 @@ import {
   catalogInstallFacts,
   checkCatalogUpdate,
   type RenderedCatalogFact,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Copy, Eye, EyeOff, History, Lock, Plug, RefreshCw, Spinner } from '@/components/icons';

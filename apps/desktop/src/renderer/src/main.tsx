@@ -1,3 +1,5 @@
+// First, before any store reads its saved state: keys saved under the old app name move over.
+import './lib/legacyStorage';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
@@ -15,7 +17,7 @@ applyWindowGlass(document.documentElement, window.location.search);
 // Same for the theme: waiting on the settings call left a light page on a dark window. A window
 // opened on a route (the SFTP pop-out) carries it in the hash instead.
 applyInitialTheme(window.location.search, window.location.hash);
-trackWindowFocus(document.documentElement, window.agentmat?.window);
+trackWindowFocus(document.documentElement, window.runova?.window);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

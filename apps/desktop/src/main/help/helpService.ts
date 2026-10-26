@@ -18,7 +18,7 @@ import { reciprocalRankFusion } from './fusion';
 import { HelpIndex, type HelpIndexOptions } from './helpIndex';
 
 /**
- * The help chat: retrieval-augmented answers about AgentMate, drawn only from the Help articles.
+ * The help chat: retrieval-augmented answers about Runova, drawn only from the Help articles.
  *
  * A question is looked up two ways (keywords through FTS5, meaning through the provider's
  * embeddings), the two rankings are fused, and the best passages go to the chat model with an
@@ -34,19 +34,19 @@ const EMBED_BATCH = 32;
 /** What Ollama gives a model when the user has not set a context length. */
 const OLLAMA_DEFAULT_CONTEXT_TOKENS = 4096;
 
-export const HELP_REWRITE_PROMPT = `You turn the user's latest message into a short English search query for the AgentMate help articles.
+export const HELP_REWRITE_PROMPT = `You turn the user's latest message into a short English search query for the Runova help articles.
 Use the conversation to resolve words like "it" or "that". Translate to English if needed.
 Reply with the query only: no quotes, no explanation, at most 12 words.`;
 
-export const HELP_SYSTEM_PROMPT = `You are the AgentMate guide, the help assistant built into the AgentMate desktop app.
-Answer questions about using AgentMate. Use only the numbered help passages in the user's message. Do not rely on outside knowledge about AgentMate, and never invent buttons, menus, settings or shortcuts.
+export const HELP_SYSTEM_PROMPT = `You are the Runova guide, the help assistant built into the Runova desktop app.
+Answer questions about using Runova. Use only the numbered help passages in the user's message. Do not rely on outside knowledge about Runova, and never invent buttons, menus, settings or shortcuts.
 
 How to answer:
 - Start with the direct answer, then the steps. Use numbered steps for tasks and bold for UI labels, like **Settings** > **AI**.
 - Say where things are in the app (which page, tab or button), the way the passages describe it.
 - Cite the passages you used with their numbers in square brackets, like [2], right after the sentence they support.
 - If the passages do not cover the question, say plainly that the help articles do not cover it, then point to the closest related topic if there is one. Do not guess.
-- If the question is not about AgentMate, say briefly that you can only help with using AgentMate.
+- If the question is not about Runova, say briefly that you can only help with using Runova.
 - Keep it short and practical. Reply in the same language the user writes in, but keep UI labels exactly as they appear in the passages.`;
 
 export interface HelpServiceDeps {

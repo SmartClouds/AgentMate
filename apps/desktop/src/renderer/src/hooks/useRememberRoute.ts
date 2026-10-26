@@ -8,6 +8,6 @@ import { useLocation } from 'react-router-dom';
 export function useRememberRoute(): void {
   const { pathname, search } = useLocation();
   useEffect(() => {
-    window.agentmat.app.setLastRoute(`${pathname}${search}`);
+    window.runova.app.setLastRoute(`${pathname}${search}`);
   }, [pathname, search]);
 }

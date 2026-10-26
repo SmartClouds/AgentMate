@@ -1,4 +1,4 @@
-import type { ConsoleRequest } from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { ConsoleRequest } from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { CoreLinks } from './coreLinks';
 import {
   ConsoleFeed,

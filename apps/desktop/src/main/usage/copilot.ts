@@ -7,7 +7,7 @@ import {
   type UsageProviderConfig,
   type UsageSegment,
   type UsageTokens,
-} from '@agentmat/core';
+} from '@runova/core';
 
 export { parseCopilotUsageRecord } from './logParsers';
 

@@ -87,7 +87,7 @@ export const useToastHistoryStore = create<ToastHistoryState>()(
       clear: () => set({ items: [] }),
     }),
     {
-      name: 'agentmate-toast-history',
+      name: 'runova-toast-history',
       partialize: (state) => ({ items: state.items }),
     },
   ),

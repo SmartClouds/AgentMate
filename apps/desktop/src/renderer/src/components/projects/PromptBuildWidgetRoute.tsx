@@ -1,5 +1,5 @@
-import type { PromptType, TargetAI } from '@agentmat/core';
-import { cliIdForTargetAI, PROMPT_TYPES, TARGET_AIS } from '@agentmat/core';
+import type { PromptType, TargetAI } from '@runova/core';
+import { cliIdForTargetAI, PROMPT_TYPES, TARGET_AIS } from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
@@ -36,7 +36,7 @@ export default function PromptBuildWidgetRoute(): React.JSX.Element {
 
   const instanceQuery = useQuery({
     queryKey: ['prompt-build-widget-instance', id],
-    queryFn: () => window.agentmat.promptBuildWidget.getWidget(id),
+    queryFn: () => window.runova.promptBuildWidget.getWidget(id),
   });
 
   const instance = instanceQuery.data ?? null;
@@ -82,7 +82,7 @@ export default function PromptBuildWidgetRoute(): React.JSX.Element {
         <SimpleTooltip label="Close widget" side="bottom">
           <button
             className="widget-no-drag flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/70 hover:bg-foreground/10 hover:text-foreground"
-            onClick={() => void window.agentmat.promptBuildWidget.closeWidget(id)}
+            onClick={() => void window.runova.promptBuildWidget.closeWidget(id)}
           >
             <X className="h-3 w-3" />
           </button>

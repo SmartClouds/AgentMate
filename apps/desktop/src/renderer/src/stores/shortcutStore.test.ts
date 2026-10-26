@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { type KeyEventLike, SHORTCUT_COMMANDS, type Shortcut } from '@/lib/shortcuts';
-import { installAgentmatBridge } from '../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../test/renderer/runovaBridge';
 import {
   bindingsFor,
   commandForEvent,
@@ -31,7 +31,7 @@ function overrides() {
 }
 
 beforeEach(() => {
-  installAgentmatBridge({ platform: 'win32' });
+  installRunovaBridge({ platform: 'win32' });
   useShortcutStore.setState({ overrides: {} });
 });
 
@@ -238,7 +238,7 @@ describe('conflictingCommand', () => {
 describe('coming back from saved shortcuts', () => {
   it('restores only what the user changed', async () => {
     localStorage.setItem(
-      'agentmate-shortcuts',
+      'runova-shortcuts',
       JSON.stringify({
         state: { overrides: { 'nav.projects': [{ code: 'KeyJ', mod: true }] } },
         version: 0,
@@ -251,7 +251,7 @@ describe('coming back from saved shortcuts', () => {
 
   it('saves a change straight away', () => {
     useShortcutStore.getState().setBindings('vault.lock', [{ code: 'KeyQ', mod: true }]);
-    const saved = JSON.parse(localStorage.getItem('agentmate-shortcuts') ?? '{}');
+    const saved = JSON.parse(localStorage.getItem('runova-shortcuts') ?? '{}');
     expect(saved.state.overrides['vault.lock']).toEqual([{ code: 'KeyQ', mod: true }]);
   });
 });

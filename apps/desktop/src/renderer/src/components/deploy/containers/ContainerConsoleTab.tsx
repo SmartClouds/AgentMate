@@ -1,4 +1,4 @@
-import type { ContainerSummary } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { ContainerSummary } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { EXEC_USER } from '@shared/dockerNames';
 import { useId, useState } from 'react';
 import { Lock, Play, TerminalSquare } from '@/components/icons';

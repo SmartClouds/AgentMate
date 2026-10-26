@@ -1,5 +1,5 @@
-import type { GitChangeEntry, Project } from '@agentmat/core';
-import { baseName, findGroup, parseScopeId } from '@agentmat/core';
+import type { GitChangeEntry, Project } from '@runova/core';
+import { baseName, findGroup, parseScopeId } from '@runova/core';
 import type { GitDiffSide, GitOpResult, WorkspaceGitState } from '@shared/apiTypes';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
@@ -129,7 +129,7 @@ function SyncControls({
   async function run(kind: SyncKind): Promise<void> {
     if (running) return;
     setRunning(kind);
-    const git = window.agentmat.git;
+    const git = window.runova.git;
     let result: GitOpResult;
     try {
       result =
@@ -240,7 +240,7 @@ function useInitialFetch(projectId: string, hasRemote: boolean | undefined): voi
   useEffect(() => {
     if (!hasRemote || fetchedFor.current === projectId) return;
     fetchedFor.current = projectId;
-    void window.agentmat.git.fetch(projectId).then(() => {
+    void window.runova.git.fetch(projectId).then(() => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.gitWorkspaceState(projectId) });
     });
   }, [projectId, hasRemote, queryClient]);
@@ -983,7 +983,7 @@ export function GitPanel({
           <PanelIconButton
             label="Open in VS Code"
             onClick={() =>
-              void window.agentmat.shell
+              void window.runova.shell
                 .openInEditor(project.folderPath)
                 .catch((error: Error) => toast.error(error.message))
             }

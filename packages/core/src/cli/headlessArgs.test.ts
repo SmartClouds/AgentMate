@@ -20,10 +20,10 @@ describe('buildHeadlessCliArgs: every CLI in the registry', () => {
   it.each(HEADLESS_CLIS.map((c) => [c.id, c] as const))(
     '%s keeps the saved arguments where the CLI reads them',
     (_id, definition) => {
-      const saved = ['--agentmate-saved', 'value with space'];
+      const saved = ['--runova-saved', 'value with space'];
       const args = buildHeadlessCliArgs({
         cli: definition,
-        savedArgs: '--agentmate-saved "value with space"',
+        savedArgs: '--runova-saved "value with space"',
       });
       expect(containsRun(args, saved)).toBe(true);
 

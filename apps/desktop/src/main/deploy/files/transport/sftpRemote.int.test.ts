@@ -166,7 +166,7 @@ describe.skipIf(!docker)('SFTP transport against real servers', () => {
   it(
     'says whether each server replaces a file in one step, consistently with what a replace did',
     async () => {
-      const scratch = await mkdtemp(join(tmpdir(), 'agentmate-sftp-int-'));
+      const scratch = await mkdtemp(join(tmpdir(), 'runova-sftp-int-'));
       const local = join(scratch, 'a.txt');
       await writeFile(local, 'replace me');
       const file = { sha256: createHash('sha256').update('replace me').digest('hex'), size: 10 };

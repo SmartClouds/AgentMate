@@ -1,4 +1,4 @@
-import type { CertificateInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { CertificateInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * A certificate in words: how long it has left, whether it renews by itself and how its last

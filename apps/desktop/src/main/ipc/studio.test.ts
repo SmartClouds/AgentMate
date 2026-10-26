@@ -10,8 +10,8 @@ import type {
   RootCheckView,
   StudioSettingsView,
   VideoSummary,
-} from '@agentmat/studio';
-import { createScene, type StudioDocument } from '@agentmat/studio';
+} from '@runova/studio';
+import { createScene, type StudioDocument } from '@runova/studio';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IPC } from '../../shared/ipcChannels';
 import {
@@ -79,7 +79,7 @@ async function openVideo(videoId: string) {
 describe('settings and folders', () => {
   it('reads and changes Studio settings, with the library under Videos', async () => {
     const settings = await invoke<StudioSettingsView>(IPC.studio.settings);
-    expect(settings.defaultRoot).toBe(join(videosDir, 'AgentMate Studio'));
+    expect(settings.defaultRoot).toBe(join(videosDir, 'Runova Studio'));
     const changed = await invoke<StudioSettingsView>(IPC.studio.updateSettings, { cacheCapGb: 40 });
     expect(changed.cacheCapGb).toBe(40);
   });
@@ -92,7 +92,7 @@ describe('settings and folders', () => {
     const storage = await invoke<ProjectStorageView>(IPC.studio.projectStorage, {
       projectId: 'p1',
     });
-    expect(storage.root).toBe(join(videosDir, 'AgentMate Studio', 'Projects', 'Shop'));
+    expect(storage.root).toBe(join(videosDir, 'Runova Studio', 'Projects', 'Shop'));
     const elsewhere = join(userData.dir, 'media');
     const changed = await invoke<ProjectStorageView>(IPC.studio.setProjectRoot, {
       projectId: 'p1',

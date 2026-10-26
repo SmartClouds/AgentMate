@@ -16,9 +16,9 @@ import { focusMainWindow } from '../mainWindow';
  * to the object (even when the click is what started the app).
  */
 
-const ROUTE_ARG = 'agentmate-route';
+const ROUTE_ARG = 'runova-route';
 /** Names the notification in a toast's launch args, so its onClick can be found again. */
-const ID_ARG = 'agentmate-notification';
+const ID_ARG = 'runova-notification';
 /** Enough to keep recent toasts clickable without holding on to every one ever shown. */
 const MAX_LIVE = 50;
 /** The instance event and the activation callback both fire for one click on Windows. */
@@ -75,7 +75,7 @@ function iconForToast(): string | null {
   if (toastIconUrl !== undefined) return toastIconUrl;
   try {
     const png = nativeImage.createFromPath(icon).toPNG();
-    const path = join(app.getPath('temp'), 'agentmate-notification-icon.png');
+    const path = join(app.getPath('temp'), 'runova-notification-icon.png');
     writeFileSync(path, png);
     toastIconUrl = png.length > 0 ? pathToFileURL(path).href : null;
   } catch {

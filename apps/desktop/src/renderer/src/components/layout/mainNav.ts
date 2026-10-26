@@ -116,12 +116,12 @@ export function useNavBadges(): {
   const queryClient = useQueryClient();
   const unreadQuery = useQuery({
     queryKey: queryKeys.appNotificationUnread,
-    queryFn: () => window.agentmat.appNotifications.unreadCount(),
+    queryFn: () => window.runova.appNotifications.unreadCount(),
     refetchInterval: 60_000,
   });
 
   useEffect(() => {
-    return window.agentmat.appNotifications.onChanged(() => {
+    return window.runova.appNotifications.onChanged(() => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.appNotificationUnread });
       void queryClient.invalidateQueries({ queryKey: queryKeys.appNotifications });
     });
@@ -130,12 +130,12 @@ export function useNavBadges(): {
   // The same list the Monitoring page reads, so the badge and the page never disagree.
   const healthQuery = useQuery({
     queryKey: queryKeys.healthList(),
-    queryFn: async () => (await window.agentmat.health.list()) ?? [],
+    queryFn: async () => (await window.runova.health.list()) ?? [],
     meta: { silentLoading: true },
   });
 
   useEffect(() => {
-    return window.agentmat.health.onChanged(() => {
+    return window.runova.health.onChanged(() => {
       void queryClient.invalidateQueries(
         { queryKey: queryKeys.healthList() },
         { cancelRefetch: false },
@@ -163,7 +163,7 @@ export const PUBLISHER = 'SmartClouds';
  * About dialog they open, plus the update check the dialog runs.
  */
 export function useUpdateCheck(): {
-  /** The about button's accessible name: "AgentMate v1.2.3, by SmartClouds, about". */
+  /** The about button's accessible name: "Runova v1.2.3, by SmartClouds, about". */
   label: string;
   /** The about button's hover hint. */
   tooltip: string;
@@ -176,7 +176,7 @@ export function useUpdateCheck(): {
 } {
   const appVersionQuery = useQuery({
     queryKey: queryKeys.appVersion,
-    queryFn: () => window.agentmat.app.getVersion(),
+    queryFn: () => window.runova.app.getVersion(),
   });
   const checking = useUpdateStore((s) => s.status.state === 'checking');
   const updatePending = useUpdateStore((s) => PENDING_STATES.has(s.status.state));
@@ -187,7 +187,7 @@ export function useUpdateCheck(): {
    */
   async function checkForUpdates(): Promise<void> {
     if (checking) return;
-    const result = await window.agentmat.app.checkForUpdates();
+    const result = await window.runova.app.checkForUpdates();
     if (result.state === 'not-available') toast.success("You're on the latest version.");
     else if (result.state === 'error') toast.error(result.message);
     else openUpdateDialog();
@@ -197,11 +197,11 @@ export function useUpdateCheck(): {
   const versionText = version == null ? '' : version === 'dev' ? 'dev' : `v${version}`;
   // The name starts with the product and version so a screen reader says those first, then any
   // update news, and ends with where the button goes.
-  const name = versionText ? `AgentMate ${versionText}` : 'AgentMate';
+  const name = versionText ? `Runova ${versionText}` : 'Runova';
   const status = checking ? 'checking for updates, ' : updatePending ? 'update available, ' : '';
   return {
     label: `${name}, by ${PUBLISHER}, ${status}about`,
-    tooltip: updatePending ? 'About AgentMate. An update is available' : 'About AgentMate',
+    tooltip: updatePending ? 'About Runova. An update is available' : 'About Runova',
     versionText,
     checking,
     updatePending,

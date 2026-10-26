@@ -42,12 +42,12 @@ const hosts: FakeHost[] = [];
 function endpointFor(dir: string): string {
   const suffix = randomBytes(6).toString('hex');
   return process.platform === 'win32'
-    ? `\\\\.\\pipe\\agentmate-test-${suffix}`
+    ? `\\\\.\\pipe\\runova-test-${suffix}`
     : join(dir, `h-${suffix}.sock`);
 }
 
 async function startFakeHost(token = 'correct-token'): Promise<FakeHost> {
-  const dir = mkdtempSync(join(tmpdir(), 'agentmate-hostclient-'));
+  const dir = mkdtempSync(join(tmpdir(), 'runova-hostclient-'));
   dirs.push(dir);
   const tokenFile = join(dir, 'token');
   writeFileSync(tokenFile, `${token}\n`, 'utf-8');

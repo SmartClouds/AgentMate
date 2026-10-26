@@ -1,5 +1,5 @@
-import type { Project } from '@agentmat/core';
-import { findGroup } from '@agentmat/core';
+import type { Project } from '@runova/core';
+import { findGroup } from '@runova/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { onBrowserShortcut } from '@/lib/browser/browserSync';
 import { queryKeys } from '@/lib/queryKeys';
@@ -7,7 +7,7 @@ import { queryClient } from '@/queryClient';
 import { useCliStore } from '@/stores/cliStore';
 import { useWorkspaceSearchStore } from '@/stores/workspaceSearchStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
-import { installAgentmatBridge } from '../../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../../test/renderer/runovaBridge';
 import {
   DIFF_CHANGE_EVENT,
   isWorkspacePath,
@@ -47,7 +47,7 @@ function openWorkspace(): { tabId: string; groupId: string } {
 }
 
 beforeEach(() => {
-  installAgentmatBridge({ platform: 'win32' });
+  installRunovaBridge({ platform: 'win32' });
   queryClient.clear();
   queryClient.setQueryData(queryKeys.projects, [project]);
   useWorkspaceStore.setState({ workspaces: {}, railProjectIds: [], activeProjectId: null });

@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useEditorRevealStore } from '@/stores/editorRevealStore';
 import { useWorkspaceStore, type WorkspaceFileTab } from '@/stores/workspaceStore';
-import { installAgentmatBridge } from '../../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../../test/renderer/runovaBridge';
 
 // Monaco needs a real layout engine, and neither test below is about the editor itself.
 const revealed = vi.hoisted(() => [] as string[]);
@@ -75,7 +75,7 @@ afterEach(cleanup);
 
 describe('FileTab', () => {
   it('shows a picture in the viewer instead of its bytes', async () => {
-    installAgentmatBridge({
+    installRunovaBridge({
       'fs.readImage': { dataUrl: 'data:image/png;base64,AAA', bytes: 2048 },
     });
     renderTab(tab('E:\\work\\app\\assets\\logo.png'));
@@ -87,7 +87,7 @@ describe('FileTab', () => {
   });
 
   it('says why an image could not be opened', async () => {
-    installAgentmatBridge({
+    installRunovaBridge({
       'fs.readImage': () => Promise.reject(new Error('This image is too large to show here.')),
     });
     renderTab(tab('E:\\work\\app\\assets\\huge.png'));
@@ -97,7 +97,7 @@ describe('FileTab', () => {
   });
 
   it('lets an SVG switch between the picture and its source', async () => {
-    installAgentmatBridge({
+    installRunovaBridge({
       'fs.readImage': { dataUrl: 'data:image/svg+xml;base64,BBB', bytes: 300 },
       'fs.readFile': () => '<svg />',
     });
@@ -112,7 +112,7 @@ describe('FileTab', () => {
   });
 
   it('re-reads the file from disk on demand', async () => {
-    const bridge = installAgentmatBridge({
+    const bridge = installRunovaBridge({
       'fs.readImage': { dataUrl: 'data:image/png;base64,AAA', bytes: 2048 },
     });
     renderTab(tab('E:\\work\\app\\assets\\logo.png'));
@@ -124,7 +124,7 @@ describe('FileTab', () => {
   });
 
   it('hands the picture to its default app when asked', async () => {
-    const bridge = installAgentmatBridge({
+    const bridge = installRunovaBridge({
       'fs.readImage': { dataUrl: 'data:image/png;base64,AAA', bytes: 2048 },
     });
     renderTab(tab('E:\\work\\app\\assets\\logo.png'));
@@ -135,7 +135,7 @@ describe('FileTab', () => {
   });
 
   it('does not offer the source of a picture that has none', async () => {
-    installAgentmatBridge({
+    installRunovaBridge({
       'fs.readImage': { dataUrl: 'data:image/png;base64,AAA', bytes: 2048 },
     });
     renderTab(tab('E:\\work\\app\\assets\\logo.png'));
@@ -144,7 +144,7 @@ describe('FileTab', () => {
   });
 
   it('goes back to the viewer when the tab is reused for another file', async () => {
-    installAgentmatBridge({
+    installRunovaBridge({
       'fs.readImage': { dataUrl: 'data:image/svg+xml;base64,BBB', bytes: 300 },
       'fs.readFile': () => '<svg />',
     });
@@ -159,7 +159,7 @@ describe('FileTab', () => {
   });
 
   it('opens at the line a search result asked for, once', async () => {
-    installAgentmatBridge({ 'fs.readFile': () => 'a\nb\nc\n' });
+    installRunovaBridge({ 'fs.readFile': () => 'a\nb\nc\n' });
     const path = 'E:\\work\\app\\src\\index.ts';
     useEditorRevealStore.getState().requestReveal(path, { line: 3, column: 2 });
     renderTab(tab(path));
@@ -176,7 +176,7 @@ describe('FileTab', () => {
       'E:\\work\\app\\docs\\guide.md': '# Guide',
       'E:\\work\\app\\docs\\notes.md': '# Notes',
     };
-    installAgentmatBridge({ 'fs.readFile': (path: string) => texts[path] });
+    installRunovaBridge({ 'fs.readFile': (path: string) => texts[path] });
     const view = renderTab(tab('E:\\work\\app\\README.md', true));
     expect(await screen.findByTestId('monaco')).toHaveTextContent('# Readme');
     fireEvent.click(screen.getByText('type'));
@@ -195,7 +195,7 @@ describe('FileTab', () => {
     const original = useWorkspaceStore.getState().openFile;
     useWorkspaceStore.setState({ openFile });
     try {
-      installAgentmatBridge({ 'fs.readFile': () => '# Readme' });
+      installRunovaBridge({ 'fs.readFile': () => '# Readme' });
       renderTab(tab('E:\\work\\app\\README.md', true));
       await screen.findByTestId('monaco');
       fireEvent.click(screen.getByText('type'));
@@ -206,7 +206,7 @@ describe('FileTab', () => {
   });
 
   it('keeps a plain file in the editor', async () => {
-    installAgentmatBridge({ 'fs.readFile': () => 'const a = 1;\n' });
+    installRunovaBridge({ 'fs.readFile': () => 'const a = 1;\n' });
     renderTab(tab('E:\\work\\app\\src\\index.ts'));
 
     expect(await screen.findByTestId('monaco')).toHaveTextContent('const a = 1;');

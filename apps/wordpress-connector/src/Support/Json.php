@@ -2,12 +2,12 @@
 /**
  * JSON in and out with the plugin's flags. Works with or without WordPress loaded.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Support;
+namespace Runova\Connector\Support;
 
-use AgentMate\Connector\Protocol;
+use Runova\Connector\Protocol;
 
 final class Json
 {

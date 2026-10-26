@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { WorkspaceGitState } from '@shared/apiTypes';
 import { act } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { queryKeys } from '@/lib/queryKeys';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
-import { currentBridge, installAgentmatBridge } from '../../../../../test/renderer/agentmatBridge';
 import { renderHookWithProviders } from '../../../../../test/renderer/renderWithProviders';
+import { currentBridge, installRunovaBridge } from '../../../../../test/renderer/runovaBridge';
 import {
   openChangedFile,
   useAiResolving,
@@ -26,7 +26,7 @@ const project = { id: 'p1', name: 'App', folderPath: 'E:\\work\\app' } as Projec
 const openFile = vi.fn();
 
 beforeEach(() => {
-  installAgentmatBridge();
+  installRunovaBridge();
   openFile.mockClear();
   useWorkspaceStore.setState({ openFile } as never);
 });

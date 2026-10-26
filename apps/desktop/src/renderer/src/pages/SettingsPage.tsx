@@ -7,7 +7,7 @@ import type {
   RunDockerStopMode,
   StartupPage,
   ThemeMode,
-} from '@agentmat/core';
+} from '@runova/core';
 import {
   CLI_REGISTRY,
   DEFAULT_GEMINI_API_MODEL,
@@ -20,7 +20,7 @@ import {
   SPEECH_LANGUAGES,
   speechModelTooSmallFor,
   WHISPER_MODELS,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { OllamaConnectionTest } from '@shared/apiTypes';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -216,7 +216,7 @@ const TAB_META: {
   {
     id: 'general',
     label: 'General',
-    description: 'How AgentMate looks, where it opens and the everyday defaults for this machine.',
+    description: 'How Runova looks, where it opens and the everyday defaults for this machine.',
     icon: SettingsIcon,
     keywords: 'appearance theme terminal sessions projects folder skills blueprint presets',
   },
@@ -255,14 +255,14 @@ const TAB_META: {
   {
     id: 'notifications',
     label: 'Notifications',
-    description: 'Where AgentMate reaches you when a pipeline fails or you are away from the app.',
+    description: 'Where Runova reaches you when a pipeline fails or you are away from the app.',
     icon: Bell,
     keywords: `telegram bot chat notify ${PIPELINE_FAILURE_KEYWORDS}`,
   },
   {
     id: 'network',
     label: 'Network',
-    description: 'How AgentMate reaches the internet and how connection quality is measured.',
+    description: 'How Runova reaches the internet and how connection quality is measured.',
     icon: NetworkIcon,
     keywords: PROXY_KEYWORDS,
   },
@@ -276,7 +276,7 @@ const TAB_META: {
   {
     id: 'data',
     label: 'Data',
-    description: 'Back up or restore everything on this machine, and keep AgentMate up to date.',
+    description: 'Back up or restore everything on this machine, and keep Runova up to date.',
     icon: HardDrive,
     keywords: 'backup restore ping network about version update',
   },
@@ -520,7 +520,7 @@ function ExternalLinkButton({
     <button
       type="button"
       className="underline underline-offset-2 hover:text-foreground"
-      onClick={() => void window.agentmat.shell.openExternal(href)}
+      onClick={() => void window.runova.shell.openExternal(href)}
     >
       {children}
     </button>
@@ -865,17 +865,17 @@ export default function SettingsPage(): React.JSX.Element {
 
   const reposQuery = useQuery({
     queryKey: queryKeys.repositories,
-    queryFn: () => window.agentmat.skills.listRepositories(),
+    queryFn: () => window.runova.skills.listRepositories(),
   });
 
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
   });
 
   const appVersionQuery = useQuery({
     queryKey: queryKeys.appVersion,
-    queryFn: () => window.agentmat.app.getVersion(),
+    queryFn: () => window.runova.app.getVersion(),
   });
 
   const [botToken, setBotToken] = useState('');
@@ -898,7 +898,7 @@ export default function SettingsPage(): React.JSX.Element {
 
   const saveTelegramMutation = useMutation({
     mutationFn: () =>
-      window.agentmat.settings.update({
+      window.runova.settings.update({
         telegramBotToken: botToken.trim() || null,
         telegramChatId: chatId.trim() || null,
         telegramScheduledTasksChatId: scheduledTasksChatId.trim() || null,
@@ -912,13 +912,13 @@ export default function SettingsPage(): React.JSX.Element {
 
   const keepTerminalsMutation = useMutation({
     mutationFn: (keepTerminalsRunning: boolean) =>
-      window.agentmat.settings.update({ keepTerminalsRunning }),
+      window.runova.settings.update({ keepTerminalsRunning }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.settings }),
   });
 
   const stopDockerWithRunMutation = useMutation({
     mutationFn: (stopDockerWithRun: RunDockerStopMode) =>
-      window.agentmat.settings.update({ stopDockerWithRun }),
+      window.runova.settings.update({ stopDockerWithRun }),
     // The picker shows the choice, so there is no need for the loading overlay.
     meta: { silentLoading: true },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.settings }),
@@ -928,18 +928,18 @@ export default function SettingsPage(): React.JSX.Element {
 
   const workspaceNotificationsMutation = useMutation({
     mutationFn: (workspaceNotifications: boolean) =>
-      window.agentmat.settings.update({ workspaceNotifications }),
+      window.runova.settings.update({ workspaceNotifications }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.settings }),
   });
 
   const terminalAiNotificationsMutation = useMutation({
     mutationFn: (terminalAiNotifications: boolean) =>
-      window.agentmat.settings.update({ terminalAiNotifications }),
+      window.runova.settings.update({ terminalAiNotifications }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.settings }),
   });
 
   const pipelineFailureMutation = useMutation({
-    mutationFn: (patch: Partial<AppSettings>) => window.agentmat.settings.update(patch),
+    mutationFn: (patch: Partial<AppSettings>) => window.runova.settings.update(patch),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.settings }),
   });
   // The switch shows what was just clicked until the saved value comes back.
@@ -949,19 +949,19 @@ export default function SettingsPage(): React.JSX.Element {
 
   const checkToolUpdatesMutation = useMutation({
     mutationFn: (checkToolUpdatesEnabled: boolean) =>
-      window.agentmat.settings.update({ checkToolUpdatesEnabled }),
+      window.runova.settings.update({ checkToolUpdatesEnabled }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.settings }),
   });
 
   const startupPageMutation = useMutation({
-    mutationFn: (startupPage: StartupPage) => window.agentmat.settings.update({ startupPage }),
+    mutationFn: (startupPage: StartupPage) => window.runova.settings.update({ startupPage }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.settings }),
   });
 
   // The shell reads the same settings query, so writing the saved answer straight into the cache
   // moves the menu in the same render. The tile shows the choice, so no loading overlay either.
   const menuPositionMutation = useMutation({
-    mutationFn: (menuPosition: MenuPosition) => window.agentmat.settings.update({ menuPosition }),
+    mutationFn: (menuPosition: MenuPosition) => window.runova.settings.update({ menuPosition }),
     meta: { silentLoading: true },
     onSuccess: (next: AppSettings) => {
       queryClient.setQueryData(queryKeys.settings, next);
@@ -980,7 +980,7 @@ export default function SettingsPage(): React.JSX.Element {
     setDetectingChatId(true);
     try {
       await saveTelegramMutation.mutateAsync();
-      const result = await window.agentmat.notifications.detectChatId();
+      const result = await window.runova.notifications.detectChatId();
       if (!result.chatId) {
         toast.error(result.error ?? 'Could not detect a chat ID.');
         return;
@@ -997,8 +997,8 @@ export default function SettingsPage(): React.JSX.Element {
     setSendingTest(true);
     try {
       if (telegramDirty) await saveTelegramMutation.mutateAsync();
-      const result = await window.agentmat.notifications.sendTest({
-        message: '👋 This is a test notification from AgentMate.',
+      const result = await window.runova.notifications.sendTest({
+        message: '👋 This is a test notification from Runova.',
       });
       if (result.ok) {
         toast.success('Test message sent. Check Telegram.');
@@ -1051,7 +1051,7 @@ export default function SettingsPage(): React.JSX.Element {
   // Only probed while the AI tab is on screen, so a stopped Ollama doesn't error on every visit.
   const ollamaModelsQuery = useQuery({
     queryKey: ['settings-ollama-models', debouncedOllamaUrl],
-    queryFn: () => window.agentmat.ai.listOllamaModels(debouncedOllamaUrl),
+    queryFn: () => window.runova.ai.listOllamaModels(debouncedOllamaUrl),
     enabled: tab === 'ai' || Boolean(query),
     retry: false,
     staleTime: 30_000,
@@ -1069,7 +1069,7 @@ export default function SettingsPage(): React.JSX.Element {
   async function handleTestOllama(): Promise<void> {
     setTestingOllama(true);
     try {
-      const result = await window.agentmat.ai.testOllama(ollamaBaseUrl);
+      const result = await window.runova.ai.testOllama(ollamaBaseUrl);
       setOllamaTest(result);
       if (!result.ok) {
         toast.error(result.error ?? 'Could not reach Ollama.');
@@ -1088,7 +1088,7 @@ export default function SettingsPage(): React.JSX.Element {
 
   const saveAiMutation = useMutation({
     mutationFn: () =>
-      window.agentmat.settings.update({
+      window.runova.settings.update({
         openaiApiKey: openaiApiKey.trim() || null,
         openaiModel: openaiModel.trim() || DEFAULT_OPENAI_API_MODEL,
         ollamaBaseUrl: ollamaBaseUrl.trim() || 'http://localhost:11434',
@@ -1167,7 +1167,7 @@ export default function SettingsPage(): React.JSX.Element {
 
   const saveProjectsRootMutation = useMutation({
     mutationFn: () =>
-      window.agentmat.settings.update({ projectsRootPath: projectsRootPath.trim() || null }),
+      window.runova.settings.update({ projectsRootPath: projectsRootPath.trim() || null }),
     onSuccess: (settings) => {
       setProjectsRootPath(settings.projectsRootPath ?? '');
       toast.success(
@@ -1181,7 +1181,7 @@ export default function SettingsPage(): React.JSX.Element {
   });
 
   async function handleBrowseProjectsRoot(): Promise<void> {
-    const picked = await window.agentmat.projects.pickFolder();
+    const picked = await window.runova.projects.pickFolder();
     if (!picked) return;
     setProjectsRootPath(picked);
     setProjectsRootDirty(true);
@@ -1199,7 +1199,7 @@ export default function SettingsPage(): React.JSX.Element {
   const saveTranslateRetriesMutation = useMutation({
     mutationFn: () => {
       const parsed = Math.max(0, Math.trunc(Number(translateMaxRetriesText)) || 0);
-      return window.agentmat.settings.update({ translateMaxRetries: parsed });
+      return window.runova.settings.update({ translateMaxRetries: parsed });
     },
     onSuccess: (settings) => {
       setTranslateMaxRetriesText(String(settings.translateMaxRetries));
@@ -1213,7 +1213,7 @@ export default function SettingsPage(): React.JSX.Element {
   // the settings cache right away and the card moves in the same render, like the main menu does.
   const buildPromptSizingMutation = useMutation({
     mutationFn: (promptBuilderAutoSize: boolean) =>
-      window.agentmat.settings.update({ promptBuilderAutoSize }),
+      window.runova.settings.update({ promptBuilderAutoSize }),
     meta: { silentLoading: true },
     onSuccess: (next: AppSettings) => {
       queryClient.setQueryData(queryKeys.settings, next);
@@ -1238,7 +1238,7 @@ export default function SettingsPage(): React.JSX.Element {
   }, [settingsQuery.data, speechDirty]);
 
   const saveSpeechMutation = useMutation({
-    mutationFn: () => window.agentmat.settings.update({ speechModel, speechLanguage }),
+    mutationFn: () => window.runova.settings.update({ speechModel, speechLanguage }),
     onSuccess: () => {
       toast.success('Voice input settings saved.');
       setSpeechDirty(false);
@@ -1273,7 +1273,7 @@ export default function SettingsPage(): React.JSX.Element {
     }
     setExportingBackup(true);
     try {
-      const result = await window.agentmat.backup.export(compressBackup, {
+      const result = await window.runova.backup.export(compressBackup, {
         environmentsPassword: backupEnvironments ? backupPassword : undefined,
         includeVault: backupVault,
       });
@@ -1295,18 +1295,18 @@ export default function SettingsPage(): React.JSX.Element {
     for (const warning of warnings) toast.warning(warning);
     const restart = await confirmDialog({
       title: 'Backup restored',
-      description: 'AgentMate needs to restart to load the restored data.',
+      description: 'Runova needs to restart to load the restored data.',
       confirmLabel: 'Restart now',
       cancelLabel: 'Later',
     });
-    if (restart) void window.agentmat.app.relaunch();
+    if (restart) void window.runova.app.relaunch();
   }
 
   async function restoreBackup(
     token: string,
     environmentsPassword: string | null,
   ): Promise<'done' | 'wrong-password'> {
-    const result = await window.agentmat.backup.restore(token, {
+    const result = await window.runova.backup.restore(token, {
       environmentsPassword,
       restoreVault: restoreVaultRef.current,
     });
@@ -1323,7 +1323,7 @@ export default function SettingsPage(): React.JSX.Element {
     const confirmed = await confirmDialog({
       title: 'Restore from backup?',
       description:
-        "This replaces your current projects, settings, templates, and other AgentMate data with a backup file's contents. This cannot be undone.",
+        "This replaces your current projects, settings, templates, and other Runova data with a backup file's contents. This cannot be undone.",
       confirmLabel: 'Choose backup file…',
       variant: 'destructive',
     });
@@ -1331,7 +1331,7 @@ export default function SettingsPage(): React.JSX.Element {
 
     setImportingBackup(true);
     try {
-      const opened = await window.agentmat.backup.open();
+      const opened = await window.runova.backup.open();
       if (!opened.ok || !opened.token) {
         if (opened.error) toast.error(opened.error);
         return;
@@ -1340,7 +1340,7 @@ export default function SettingsPage(): React.JSX.Element {
         ? await confirmDialog({
             title: 'Restore the Vault too?',
             description:
-              "The backup includes a Vault. Restoring it replaces this computer's Vault, which is set aside in AgentMate's data folder. Unlock it afterwards with the master password it had when the backup was made.",
+              "The backup includes a Vault. Restoring it replaces this computer's Vault, which is set aside in Runova's data folder. Unlock it afterwards with the master password it had when the backup was made.",
             confirmLabel: 'Restore the Vault',
             cancelLabel: 'Keep my current Vault',
           })
@@ -1361,7 +1361,7 @@ export default function SettingsPage(): React.JSX.Element {
   const [restartingForUpdate, setRestartingForUpdate] = useState(false);
 
   async function handleCheckForUpdates(): Promise<void> {
-    const result = await window.agentmat.app.checkForUpdates();
+    const result = await window.runova.app.checkForUpdates();
     if (result.state === 'not-available') toast.success("You're on the latest version.");
     else if (result.state === 'error') toast.error(result.message);
   }
@@ -1370,7 +1370,7 @@ export default function SettingsPage(): React.JSX.Element {
     if (restartingForUpdate) return;
     setRestartingForUpdate(true);
     try {
-      await window.agentmat.app.quitAndInstall();
+      await window.runova.app.quitAndInstall();
     } catch {
       setRestartingForUpdate(false);
       toast.error('Restart to install failed. Quit the app and it installs on the way out.');
@@ -1712,7 +1712,7 @@ export default function SettingsPage(): React.JSX.Element {
                   <SettingsCard
                     icon={THEME_OPTIONS.find((option) => option.value === theme)?.icon ?? Monitor}
                     title="Appearance"
-                    description="How AgentMate looks on this machine."
+                    description="How Runova looks on this machine."
                   >
                     <div
                       role="group"
@@ -1802,7 +1802,7 @@ export default function SettingsPage(): React.JSX.Element {
                       <SettingsRow
                         icon={History}
                         title="Startup page"
-                        description="Where AgentMate opens. Last opened page brings back the page and project you were on, whether you closed the app, it restarted for an update or the computer shut down."
+                        description="Where Runova opens. Last opened page brings back the page and project you were on, whether you closed the app, it restarted for an update or the computer shut down."
                         control={
                           <Combobox
                             ariaLabel="Startup page"
@@ -1826,7 +1826,7 @@ export default function SettingsPage(): React.JSX.Element {
                       <SettingsRow
                         icon={Power}
                         title="Keep terminals running"
-                        description="Terminal sessions carry on in the background after you quit AgentMate, and come back with their output the next time you open it. Restarting to install an update always keeps them."
+                        description="Terminal sessions carry on in the background after you quit Runova, and come back with their output the next time you open it. Restarting to install an update always keeps them."
                         control={
                           <Switch
                             checked={
@@ -1845,7 +1845,7 @@ export default function SettingsPage(): React.JSX.Element {
                       <SettingsRow
                         icon={Docker}
                         title="Docker containers when a run stops"
-                        description="Stopping a run does not stop the Docker containers it brought up, so they keep using memory in the background. Choose whether AgentMate asks, stops them for you or leaves them alone. Only containers started with Docker Compose from the project's folder are included."
+                        description="Stopping a run does not stop the Docker containers it brought up, so they keep using memory in the background. Choose whether Runova asks, stops them for you or leaves them alone. Only containers started with Docker Compose from the project's folder are included."
                         control={
                           <Combobox
                             ariaLabel="Docker containers when a run stops"
@@ -1869,7 +1869,7 @@ export default function SettingsPage(): React.JSX.Element {
                       <SettingsRow
                         icon={Clock}
                         title="Idle Docker containers and emulators"
-                        description="The Dashboard lists running containers and emulators that nothing has used for this long, so you can stop them and free the memory. A container counts as used while it spends CPU or moves network or disk data, an emulator while it spends CPU. The clock starts when AgentMate first sees something running, so restarting AgentMate begins it again."
+                        description="The Dashboard lists running containers and emulators that nothing has used for this long, so you can stop them and free the memory. A container counts as used while it spends CPU or moves network or disk data, an emulator while it spends CPU. The clock starts when Runova first sees something running, so restarting Runova begins it again."
                         control={
                           <div className="flex items-center gap-2">
                             <IdleMinutesInput
@@ -2880,7 +2880,7 @@ export default function SettingsPage(): React.JSX.Element {
                         <div className="rounded-lg border border-border bg-background/40 p-4">
                           <p className="text-sm font-medium">Export</p>
                           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                            Save a copy of this machine's AgentMate data.
+                            Save a copy of this machine's Runova data.
                           </p>
                           <div className="mt-3 flex items-center gap-2">
                             <Switch
@@ -2988,7 +2988,7 @@ export default function SettingsPage(): React.JSX.Element {
                   <SettingsCard
                     icon={CircleQuestion}
                     title="About"
-                    description={`AgentMate ${versionLabel}`}
+                    description={`Runova ${versionLabel}`}
                     action={
                       updateStatus.state === 'downloaded' ? (
                         <Button
@@ -3001,7 +3001,7 @@ export default function SettingsPage(): React.JSX.Element {
                         <div className="flex items-center gap-2">
                           <Button
                             variant="soft"
-                            onClick={() => void window.agentmat.app.pauseDownload()}
+                            onClick={() => void window.runova.app.pauseDownload()}
                           >
                             <Pause className="h-4 w-4" />
                             Pause
@@ -3016,7 +3016,7 @@ export default function SettingsPage(): React.JSX.Element {
                         <Button
                           onClick={() => {
                             openUpdateDialog();
-                            void window.agentmat.app.downloadUpdate();
+                            void window.runova.app.downloadUpdate();
                           }}
                         >
                           {updateStatus.state === 'available' && updateStatus.partialBytes === 0 ? (

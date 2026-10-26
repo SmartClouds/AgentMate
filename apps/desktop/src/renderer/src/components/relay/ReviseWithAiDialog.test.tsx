@@ -1,4 +1,4 @@
-import type { ProposalEntry, RelayProposal } from '@agentmat/core';
+import type { ProposalEntry, RelayProposal } from '@runova/core';
 import { screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';

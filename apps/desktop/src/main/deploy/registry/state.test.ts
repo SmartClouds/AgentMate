@@ -93,7 +93,7 @@ describe('RegistryState', () => {
   });
 
   it('writes the file for this user only', async () => {
-    const path = join(tempDir('agentmate-registries-'), 'data', 'registries.json');
+    const path = join(tempDir('runova-registries-'), 'data', 'registries.json');
     const state = new RegistryState(registryFilePort(path));
     await state.save(credential());
 

@@ -1,4 +1,4 @@
-import type { DesktopPromptBuildWidgetInstance } from '@agentmat/core';
+import type { DesktopPromptBuildWidgetInstance } from '@runova/core';
 import { ipcMain } from 'electron';
 import { IPC } from '../../shared/ipcChannels';
 import { promptBuildWidgetManager } from '../promptBuild/widgetWindows';

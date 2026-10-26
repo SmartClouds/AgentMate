@@ -86,7 +86,7 @@ export function ServerCredentialDialog({
     setProblem(null);
     try {
       const saved = await proof.run(
-        (step) => window.agentmat.deployRegistry.serverSave({ ...input, ...step }),
+        (step) => window.runova.deployRegistry.serverSave({ ...input, ...step }),
         'Storing a registry credential',
       );
       if (saved) {

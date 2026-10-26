@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { type FakeBridge, installAgentmatBridge } from '../../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../../test/renderer/runovaBridge';
 import { sshTerminalAdapter } from './sshAdapter';
 
 let bridge: FakeBridge;
 
 beforeEach(() => {
-  bridge = installAgentmatBridge({
+  bridge = installRunovaBridge({
     'ssh.create': async () => ({ sessionId: 'ssh-1' }),
   });
 });
@@ -48,7 +48,7 @@ describe('sshTerminalAdapter', () => {
 
   it('strips Electron is IPC boilerplate off a connect failure', async () => {
     // What is left is the line shown in the terminal pane, so it has to be the real reason.
-    bridge = installAgentmatBridge({
+    bridge = installRunovaBridge({
       'ssh.create': async () => {
         throw new Error(
           "Error invoking remote method 'ssh:create': Error: All configured authentication methods failed",
@@ -61,7 +61,7 @@ describe('sshTerminalAdapter', () => {
   });
 
   it('keeps a message that has no boilerplate around it', async () => {
-    bridge = installAgentmatBridge({
+    bridge = installRunovaBridge({
       'ssh.create': async () => {
         throw new Error('Host unreachable');
       },
@@ -70,7 +70,7 @@ describe('sshTerminalAdapter', () => {
   });
 
   it('turns something thrown that is not an Error into one', async () => {
-    bridge = installAgentmatBridge({
+    bridge = installRunovaBridge({
       'ssh.create': async () => {
         throw 'timed out';
       },
@@ -79,7 +79,7 @@ describe('sshTerminalAdapter', () => {
   });
 
   it('keeps the original message when stripping would leave nothing', async () => {
-    bridge = installAgentmatBridge({
+    bridge = installRunovaBridge({
       'ssh.create': async () => {
         throw new Error("Error invoking remote method 'ssh:create': Error:");
       },
@@ -154,7 +154,7 @@ describe('sshTerminalAdapter and a changed host key', () => {
       .mockRejectedValueOnce(changed())
       .mockResolvedValueOnce({ sessionId: 'ssh-2' });
     const trust = vi.fn(async () => undefined);
-    installAgentmatBridge({
+    installRunovaBridge({
       'ssh.create': create,
       'ssh.hostKeyStatus': status,
       'ssh.trustHostKey': trust,
@@ -173,7 +173,7 @@ describe('sshTerminalAdapter and a changed host key', () => {
     const { answerHostKeyPrompt, useHostKeyPromptStore } = await import(
       '../../stores/hostKeyPromptStore'
     );
-    installAgentmatBridge({
+    installRunovaBridge({
       'ssh.create': vi.fn().mockRejectedValue(changed()),
       'ssh.hostKeyStatus': status,
     });
@@ -188,7 +188,7 @@ describe('sshTerminalAdapter and a changed host key', () => {
   });
 
   it('never shows the error code tag in the terminal', async () => {
-    installAgentmatBridge({
+    installRunovaBridge({
       'ssh.create': async () => {
         throw new Error(
           "Error invoking remote method 'ssh:create': Error: [ssh:sudo-password-required] Needs the sudo password.",

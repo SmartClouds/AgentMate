@@ -2,7 +2,7 @@ import { coreErrorMessage } from '@shared/coreErrors';
 import type {
   DockerStatus,
   JobInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useState } from 'react';
 import { Docker, Lock, RefreshCw, Spinner, TriangleAlert } from '@/components/icons';
 import { Chip, GLASS_CARD } from '@/components/pageKit';
@@ -66,7 +66,7 @@ export function DockerInstallCard({
     setProblem(null);
     try {
       onStarted(
-        await window.agentmat.deployDocker.install({
+        await window.runova.deployDocker.install({
           serverId,
           removeConflictingPackages: conflicts.length > 0 && agreed,
         }),

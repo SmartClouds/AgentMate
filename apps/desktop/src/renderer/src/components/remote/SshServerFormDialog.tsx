@@ -87,14 +87,14 @@ export function SshServerFormDialog({
     (authMethod === 'password' || privateKeyPath.trim().length > 0);
 
   async function pickPrivateKey(): Promise<void> {
-    const path = await window.agentmat.ssh.pickPrivateKeyFile();
+    const path = await window.runova.ssh.pickPrivateKeyFile();
     if (path) setPrivateKeyPath(path);
   }
 
   async function handleSubmit(): Promise<void> {
     if (!canSubmit || submitting) return;
     if (secret) {
-      const status = await window.agentmat.ssh.vaultStatus();
+      const status = await window.runova.ssh.vaultStatus();
       if (status.hasPasskey && !status.unlocked) {
         toast.error('Unlock your Servers passkey first (see the lock button above the list).');
         return;
@@ -112,7 +112,7 @@ export function SshServerFormDialog({
         privateKeyPath: authMethod === 'privateKey' ? privateKeyPath.trim() : undefined,
         secret: secret || undefined,
       };
-      const saved = await window.agentmat.ssh.saveServer(input);
+      const saved = await window.runova.ssh.saveServer(input);
       onOpenChange(false);
       onSaved(saved);
     } catch (error) {

@@ -21,7 +21,7 @@ export interface SavedDevice {
   lastConnectedAt: number;
 }
 
-const STORAGE_KEY = 'agentmate.savedDevices.v1';
+const STORAGE_KEY = 'runova.savedDevices.v1';
 
 export async function loadSavedDevices(): Promise<SavedDevice[]> {
   try {

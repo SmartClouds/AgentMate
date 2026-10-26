@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { LEGACY_IGNORE_FILE, LEGACY_PROJECT_DIR } from '../../legacyNames.js';
 import {
   createWpIgnoreRules,
   findWpCaseCollisions,
@@ -21,21 +22,29 @@ describe('the hard deny list', () => {
     expect(isWpHardDenied('claude.php')).toBe(false);
   });
 
-  it('keeps every folder or file that starts with .claude or .agentmate on this computer', () => {
+  it('keeps every folder or file that starts with .claude or .runova on this computer', () => {
     for (const path of [
       '.claude-plugin/plugin.json',
       'inc/.claude.local/x.md',
       '.claudeignore',
       '.CLAUDE-notes/a.txt',
-      '.agentmate-cache/a.json',
-      'build/.agentmate.old/a',
-      '.agentmatefoo',
+      '.runova-cache/a.json',
+      'build/.runova.old/a',
+      '.runovafoo',
     ]) {
       expect(isWpHardDenied(path), path).toBe(true);
       expect(validateWpItemPath(path), path).toEqual({ ok: false, reason: 'hardDenied' });
     }
+    // The folder and ignore file of projects made before the rename, too.
+    for (const path of [
+      `${LEGACY_PROJECT_DIR}/hooks/notify.sh`,
+      `inc/${LEGACY_PROJECT_DIR}-cache/a.json`,
+      LEGACY_IGNORE_FILE,
+    ]) {
+      expect(validateWpItemPath(path), path).toEqual({ ok: false, reason: 'hardDenied' });
+    }
     // Only the dot names: a plain word, or a longer name that merely shares the letters, is fine.
-    for (const path of ['claude-notes/a.txt', 'inc/agentmate.php', '.claudia/x', '.agent/x']) {
+    for (const path of ['claude-notes/a.txt', 'inc/runova.php', '.claudia/x', '.agent/x']) {
       expect(isWpHardDenied(path), path).toBe(false);
     }
   });
@@ -82,7 +91,7 @@ describe('ignore rules', () => {
   it("apply the user's own files both ways, and let them put defaults back", () => {
     const built = createWpIgnoreRules([
       { source: '.distignore', text: '# dev only\n/tests/\nphpunit.xml\r\n\n' },
-      { source: '.agentmateignore', text: '!.editorconfig\n!/skills/\n' },
+      { source: '.runovaignore', text: '!.editorconfig\n!/skills/\n' },
     ]);
     if (!built.ok) throw new Error('should compile');
     const { rules } = built;
@@ -111,9 +120,9 @@ describe('ignore rules', () => {
   });
 
   it('say which file and line is wrong', () => {
-    expect(createWpIgnoreRules([{ source: '.agentmateignore', text: 'ok\n[a' }])).toEqual({
+    expect(createWpIgnoreRules([{ source: '.runovaignore', text: 'ok\n[a' }])).toEqual({
       ok: false,
-      source: '.agentmateignore',
+      source: '.runovaignore',
       line: 2,
       reason: expect.stringContaining('never closed'),
     });

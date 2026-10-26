@@ -3,10 +3,10 @@
  * Ed25519, HMAC-SHA256 and randomness. Ed25519 comes from ext-sodium when PHP has it, and from
  * the sodium_compat copy WordPress ships (5.2+) when it does not.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Crypto;
+namespace Runova\Connector\Crypto;
 
 final class Crypto
 {

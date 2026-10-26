@@ -7,7 +7,7 @@ keywords: worktree, git worktree, branch, parallel, parallel agents, isolate, ne
 route: /workspace
 ---
 
-A git worktree is a second folder of the same repository, checked out on its own branch. In AgentMate, every worktree gets a full workspace of its own: its own panes, terminals, agents and changes. That lets you run several agents on different tasks at the same time without them editing each other's files, and your main checkout stays exactly as you left it.
+A git worktree is a second folder of the same repository, checked out on its own branch. In Runova, every worktree gets a full workspace of its own: its own panes, terminals, agents and changes. That lets you run several agents on different tasks at the same time without them editing each other's files, and your main checkout stays exactly as you left it.
 
 This page covers creating a worktree, moving between them, finishing one by merging it back or opening a pull request, removing one, and the settings that shape how new ones are made.
 
@@ -69,7 +69,7 @@ The switcher at the left of the Workspace header says **main checkout** or the b
 ### Other ways
 
 - Type a branch name in the command palette to find its worktree.
-- Click a branch in **Branches** that is checked out in a worktree. AgentMate opens that workspace instead, because git keeps a branch checked out in one place at a time. Such branches are tagged **in worktree**.
+- Click a branch in **Branches** that is checked out in a worktree. Runova opens that workspace instead, because git keeps a branch checked out in one place at a time. Such branches are tagged **in worktree**.
 - Use **Open {branch}** on a row in the **Worktrees** section.
 
 ### How a worktree workspace differs
@@ -80,7 +80,7 @@ The line under the page title reads **{project} · worktree {branch} · {folder}
 
 In the right panel, the **Worktrees** section of **Source control** lists every worktree of the project, with a count in its header.
 
-Each row shows the branch, a **This workspace** tag on the current one, and tags for **Folder missing**, **Locked** and **Added outside AgentMate** (for worktrees you made with plain git). Under the name are badges for changes (for example **3 changes**), commits ahead (**↑2**) and behind (**↓1**) its base, and its path. Click a row to open it. Click the **⋮** button (**More actions**), or right-click a rail tile, for:
+Each row shows the branch, a **This workspace** tag on the current one, and tags for **Folder missing**, **Locked** and **Added outside Runova** (for worktrees you made with plain git). Under the name are badges for changes (for example **3 changes**), commits ahead (**↑2**) and behind (**↓1**) its base, and its path. Click a row to open it. Click the **⋮** button (**More actions**), or right-click a rail tile, for:
 
 | Action | What it does |
 | --- | --- |
@@ -95,7 +95,7 @@ Each row shows the branch, a **This workspace** tag on the current one, and tags
 
 Merge and pull request need a branch (not a detached checkout). Several actions are off for a worktree whose folder is missing.
 
-When you are inside a worktree, the first row is **Main checkout**, to get back to the original folder. With no worktrees yet, the section explains the idea and offers **New worktree**. If some worktree folders were deleted outside AgentMate, a banner says so and **Clean up** tells git to forget them.
+When you are inside a worktree, the first row is **Main checkout**, to get back to the original folder. With no worktrees yet, the section explains the idea and offers **New worktree**. If some worktree folders were deleted outside Runova, a banner says so and **Clean up** tells git to forget them.
 
 ## Finishing a worktree
 
@@ -105,7 +105,7 @@ At the top of a worktree's **Source control** tab there is a card with the branc
 
 Click **Merge into {base}**.
 
-1. AgentMate checks both sides first. If something is in the way, it says how to fix it: commit or discard the changes in the worktree, commit or stash changes in the main checkout, switch the main checkout to the base branch, or that there is nothing to merge.
+1. Runova checks both sides first. If something is in the way, it says how to fix it: commit or discard the changes in the worktree, commit or stash changes in the main checkout, switch the main checkout to the base branch, or that there is nothing to merge.
 2. It asks **Merge {branch} into {base}?** and explains that the merge happens in the main checkout and nothing is pushed.
 3. After a successful merge you get **Merged {branch} into {base}** with a **Remove worktree** button.
 
@@ -131,9 +131,9 @@ The dialog is titled **Remove the {branch} worktree?** and shows the folder. Bef
 
 A checkbox, **Also delete branch {branch}**, is on when the branch is merged, or when the setting below says to delete merged branches. It stays off, and unavailable, for a branch with commits that exist nowhere else, and the dialog tells you to delete that branch from **Branches** once you are sure.
 
-The button reads **Remove worktree**, or **Remove anyway** when uncommitted changes would be lost. AgentMate stops the worktree's terminals first, because Windows will not delete a folder while a shell sits in it, and closes its workspace. If it fails you see the reason and the button changes to **Try again**.
+The button reads **Remove worktree**, or **Remove anyway** when uncommitted changes would be lost. Runova stops the worktree's terminals first, because Windows will not delete a folder while a shell sits in it, and closes its workspace. If it fails you see the reason and the button changes to **Try again**.
 
-If you delete a worktree's folder yourself, its workspace shows **This worktree's folder is gone** with **Back to {project}** and **Remove worktree**. If a worktree is removed outside AgentMate (for example with `git worktree remove` in a terminal), its workspace closes by itself.
+If you delete a worktree's folder yourself, its workspace shows **This worktree's folder is gone** with **Back to {project}** and **Remove worktree**. If a worktree is removed outside Runova (for example with `git worktree remove` in a terminal), its workspace closes by itself.
 
 ## Worktree settings
 

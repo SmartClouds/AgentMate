@@ -5,8 +5,8 @@ import type {
   SecurityScanOptions,
   SecurityScanProgress,
   SecurityScanRecord,
-} from '@agentmat/core';
-import { SECURITY_SCANNERS } from '@agentmat/core';
+} from '@runova/core';
+import { SECURITY_SCANNERS } from '@runova/core';
 import type { ActiveScan } from '@shared/apiTypes';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -44,7 +44,7 @@ export function useSecurityScan(projectId: string) {
 
   const preflightQuery = useQuery({
     queryKey: queryKeys.securityPreflight(projectId),
-    queryFn: () => window.agentmat.security.preflight(projectId),
+    queryFn: () => window.runova.security.preflight(projectId),
     // Probing six scanners is expensive, and the main process memoizes it anyway.
     staleTime: 30_000,
     ...QUIET,
@@ -52,19 +52,19 @@ export function useSecurityScan(projectId: string) {
 
   const latestQuery = useQuery({
     queryKey: queryKeys.securityLatest(projectId),
-    queryFn: () => window.agentmat.security.latest(projectId),
+    queryFn: () => window.runova.security.latest(projectId),
     ...QUIET,
   });
 
   const historyQuery = useQuery({
     queryKey: queryKeys.securityHistory(projectId),
-    queryFn: () => window.agentmat.security.history(projectId),
+    queryFn: () => window.runova.security.history(projectId),
     ...QUIET,
   });
 
   const configQuery = useQuery({
     queryKey: queryKeys.securityConfig(projectId),
-    queryFn: () => window.agentmat.security.getConfig(projectId),
+    queryFn: () => window.runova.security.getConfig(projectId),
     ...QUIET,
   });
 
@@ -74,7 +74,7 @@ export function useSecurityScan(projectId: string) {
    */
   const activeQuery = useQuery({
     queryKey: queryKeys.securityActive(projectId),
-    queryFn: () => window.agentmat.security.activeScan(projectId),
+    queryFn: () => window.runova.security.activeScan(projectId),
     // Progress events keep this fresh once adopted; the poll is a backstop for the case where
     // the run finishes while no event listener is attached.
     refetchInterval: (query) => (query.state.data ? 5000 : false),
@@ -154,7 +154,7 @@ export function useSecurityScan(projectId: string) {
   // Live progress. Subscribed for the life of the tab rather than only during a run, so a scan
   // that is already going when the tab is reopened still reports into it.
   useEffect(() => {
-    return window.agentmat.security.onScanProgress((payload) => {
+    return window.runova.security.onScanProgress((payload) => {
       if (payload.projectId !== projectId) return;
       if (runIdRef.current && payload.runId !== runIdRef.current) return;
       if (!payload.scannerId) return;
@@ -189,7 +189,7 @@ export function useSecurityScan(projectId: string) {
       setRunId(id);
       runIdRef.current = id;
       setProgress({});
-      return window.agentmat.security.runScan(projectId, options, id);
+      return window.runova.security.runScan(projectId, options, id);
     },
     onSuccess: (record) => {
       queryClient.setQueryData(queryKeys.securityLatest(projectId), record);
@@ -221,7 +221,7 @@ export function useSecurityScan(projectId: string) {
 
   const saveConfig = useMutation({
     mutationFn: (config: SecurityScannerSettings) =>
-      window.agentmat.security.setConfig(projectId, config),
+      window.runova.security.setConfig(projectId, config),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.securityConfig(projectId) });
       // A new token or language changes what preflight says, so it has to be re-run.
@@ -231,12 +231,12 @@ export function useSecurityScan(projectId: string) {
   });
 
   const cancel = useCallback(() => {
-    if (runId) void window.agentmat.security.cancelScan(runId);
+    if (runId) void window.runova.security.cancelScan(runId);
   }, [runId]);
 
   const loadScan = useCallback(
     async (id: string) => {
-      const record = await window.agentmat.security.getScan(id);
+      const record = await window.runova.security.getScan(id);
       if (record) queryClient.setQueryData(queryKeys.securityLatest(projectId), record);
     },
     [projectId, queryClient],

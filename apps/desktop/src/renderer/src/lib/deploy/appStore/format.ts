@@ -5,7 +5,7 @@ import {
   type CatalogVersion,
   type PinnedImage,
   validateStackName,
-} from '@agentmat/core';
+} from '@runova/core';
 
 /** Words and small decisions the App Store screens share. */
 

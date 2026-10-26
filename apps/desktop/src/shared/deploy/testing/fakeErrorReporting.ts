@@ -4,7 +4,7 @@ import type {
   ErrorReportingSaveResult,
   ErrorReportingStatus,
   ErrorReportingTestResult,
-} from '../protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * Error reporting on the pretend server (E29): what the core keeps about it and how a test event

@@ -1,4 +1,4 @@
-import { checkCatalogUpdate } from '@agentmat/core';
+import { checkCatalogUpdate } from '@runova/core';
 import { ChevronRight, RefreshCw } from '@/components/icons';
 import { Chip, GLASS_CARD, SECTION_HEADING } from '@/components/pageKit';
 import { Skeleton } from '@/components/ui/skeleton';

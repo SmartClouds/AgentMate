@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import type { AppNotification, HealthIncident, Project } from '@agentmat/core';
+import type { AppNotification, HealthIncident, Project } from '@runova/core';
 import { describe, expect, it, vi } from 'vitest';
 import { IPC } from '../../shared/ipcChannels';
 import { electronState, FakeBrowserWindow } from '../../test/main/electronMock';

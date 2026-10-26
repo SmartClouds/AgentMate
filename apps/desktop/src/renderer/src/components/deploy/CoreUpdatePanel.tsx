@@ -115,7 +115,7 @@ export function CoreUpdatePanel({
   } else if (!target) {
     body = (
       <>
-        <Notice>This build of AgentMate has no server core to update to.</Notice>
+        <Notice>This build of Runova has no server core to update to.</Notice>
         <div className="flex flex-wrap items-center gap-2">
           {sshButton}
           <Button size="sm" variant="soft" onClick={cancel}>
@@ -133,8 +133,8 @@ export function CoreUpdatePanel({
             ? `${server.nickname} already runs core ${target.version}. To put the same release on again, reinstall it over SSH.`
             : `${server.nickname} runs core ${running ?? 'of an unknown version'}. ${
                 target.serverDownload
-                  ? 'The server downloads the new release from GitHub itself; if it cannot, AgentMate uploads it over the core connection.'
-                  : 'AgentMate uploads the new release over the core connection.'
+                  ? 'The server downloads the new release from GitHub itself; if it cannot, Runova uploads it over the core connection.'
+                  : 'Runova uploads the new release over the core connection.'
               } No SSH login is needed, only your password on the core.`}
         </p>
         <div className="flex flex-wrap items-center gap-2">

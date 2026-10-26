@@ -95,7 +95,7 @@ export function CoreHealthCard({
     try {
       await queryClient.fetchQuery({
         queryKey: queryKeys.deployHealth(server.id),
-        queryFn: () => withHostKeyTrust(server.id, () => window.agentmat.deploy.health(server.id)),
+        queryFn: () => withHostKeyTrust(server.id, () => window.runova.deploy.health(server.id)),
         staleTime: 0,
       });
     } catch {
@@ -195,8 +195,8 @@ export function CoreHealthCard({
           <p className="text-muted-foreground">
             This server runs {running}.{' '}
             {newer.serverDownload
-              ? 'The server downloads the update itself, or AgentMate sends it over the core connection.'
-              : 'AgentMate sends the update over the core connection.'}
+              ? 'The server downloads the update itself, or Runova sends it over the core connection.'
+              : 'Runova sends the update over the core connection.'}
           </p>
         </Notice>
       )}

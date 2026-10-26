@@ -16,8 +16,8 @@ import {
 
 describe('pipelineRunRoute', () => {
   it('points at the Pipelines page with the run selected', () => {
-    expect(pipelineRunRoute({ runId: 1234, repo: 'agentmate/agentmate' })).toBe(
-      '/pipelines?run=1234&repo=agentmate%2Fagentmate',
+    expect(pipelineRunRoute({ runId: 1234, repo: 'runova/runova' })).toBe(
+      '/pipelines?run=1234&repo=runova%2Frunova',
     );
   });
 

@@ -1,4 +1,4 @@
-import type { AndroidDevice, AvdSummary } from '@agentmat/core';
+import type { AndroidDevice, AvdSummary } from '@runova/core';
 import { fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';

@@ -24,16 +24,16 @@ function run(cwd: string, ...args: string[]): string {
 /** A bare origin, a main checkout on `main`, and a linked worktree on a merged `feature`. */
 function mergedFeatureInWorktree(): { main: string; worktree: string; origin: string } {
   const seed = initGitRepo({ 'README.md': '# demo\n' });
-  const origin = join(tempDir('agentmate-origin-'), 'origin.git');
+  const origin = join(tempDir('runova-origin-'), 'origin.git');
   run(seed.dir, 'clone', '--bare', seed.dir, origin);
 
-  const main = join(tempDir('agentmate-main-'), 'repo');
+  const main = join(tempDir('runova-main-'), 'repo');
   run(seed.dir, 'clone', origin, main);
-  run(main, 'config', 'user.name', 'AgentMate Test');
-  run(main, 'config', 'user.email', 'test@agentmate.invalid');
+  run(main, 'config', 'user.name', 'Runova Test');
+  run(main, 'config', 'user.email', 'test@runova.invalid');
   run(main, 'config', 'commit.gpgsign', 'false');
 
-  const worktree = join(tempDir('agentmate-wt-'), 'feature');
+  const worktree = join(tempDir('runova-wt-'), 'feature');
   run(main, 'worktree', 'add', '-b', 'feature', worktree);
   writeFileSync(join(worktree, 'feature.ts'), 'export const a = 1;\n', 'utf-8');
   run(worktree, 'add', '.');

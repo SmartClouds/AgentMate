@@ -244,7 +244,7 @@ Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
-public static class AgentMateDiskTemp {
+public static class RunovaDiskTemp {
   [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
   static extern SafeFileHandle CreateFile(string name, uint access, uint share, IntPtr security, uint disposition, uint flags, IntPtr template);
   [DllImport("kernel32.dll", SetLastError = true)]
@@ -263,7 +263,7 @@ public static class AgentMateDiskTemp {
   }
 }
 '@
-$readings = foreach ($disk in 0..31) { $c = [AgentMateDiskTemp]::Read($disk); if ($c -ne [int]::MinValue) { [PSCustomObject]@{ Disk = $disk; Celsius = $c } } }
+$readings = foreach ($disk in 0..31) { $c = [RunovaDiskTemp]::Read($disk); if ($c -ne [int]::MinValue) { [PSCustomObject]@{ Disk = $disk; Celsius = $c } } }
 if ($readings) { @($readings) | ConvertTo-Json -Compress }
 `;
 

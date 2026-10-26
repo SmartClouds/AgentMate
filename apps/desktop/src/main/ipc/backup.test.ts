@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import AdmZip from 'adm-zip';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
@@ -114,7 +114,7 @@ async function open(path: string): Promise<BackupOpenResult> {
 }
 
 beforeEach(async () => {
-  out.dir = tempDir('agentmate-backup-out-');
+  out.dir = tempDir('runova-backup-out-');
   dbRows.promptHistory = [];
   dbRows.skillAudits = [];
   dbRows.blueprintRevisions = [];
@@ -150,7 +150,7 @@ describe('backup:export', () => {
     queueDialog('showSaveDialog', { canceled: true, filePath: undefined });
     await invoke(IPC.backup.export, false, {});
     expect(electronState.dialogCalls.at(-1)?.args[0]).toMatchObject({
-      defaultPath: expect.stringMatching(/^agentmate-backup-\d{4}-\d{2}-\d{2}\.json$/),
+      defaultPath: expect.stringMatching(/^runova-backup-\d{4}-\d{2}-\d{2}\.json$/),
     });
 
     queueDialog('showSaveDialog', { canceled: true, filePath: undefined });

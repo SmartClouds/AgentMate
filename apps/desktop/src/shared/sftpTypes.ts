@@ -2,7 +2,7 @@ import type { FilesErrorCode } from './deployFilesErrors';
 
 /**
  * The SFTP file manager for saved SSH servers (E25): a local pane, a remote pane and a transfer
- * queue. Everything that crosses IPC is here, and `SftpBridge` is what `window.agentmat.sftp`
+ * queue. Everything that crosses IPC is here, and `SftpBridge` is what `window.runova.sftp`
  * offers. No secret ever comes through: the main process logs in with the saved server's
  * stored credentials.
  *
@@ -376,7 +376,7 @@ export interface SftpWindowState {
 }
 
 /**
- * `window.agentmat.sftp`. Every remote call takes the `sessionId` from `open` and only works from
+ * `window.runova.sftp`. Every remote call takes the `sessionId` from `open` and only works from
  * the window that opened it; another window's id fails with `[files:invalidInput]`.
  *
  * Local writes (`localMkdir`, `localRename`, `localDelete`, and a download's `localDir`) must land

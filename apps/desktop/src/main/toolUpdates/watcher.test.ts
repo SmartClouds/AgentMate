@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { AppNotification } from '@agentmat/core';
+import type { AppNotification } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -49,8 +49,8 @@ const fakeTool = {
 };
 const fakeToolNoSource = { id: 'no-source-tool', name: 'No Source Tool' };
 
-vi.mock('@agentmat/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@agentmat/core')>();
+vi.mock('@runova/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@runova/core')>();
   return {
     ...actual,
     CLI_REGISTRY: [fakeCli],
@@ -83,7 +83,7 @@ async function readJson<T>(name: string, fallback: T): Promise<T> {
 let runToolUpdateCheck: (now?: Date) => Promise<void>;
 
 beforeEach(async () => {
-  userData.dir = await mkdtemp(join(tmpdir(), 'agentmate-tool-updates-'));
+  userData.dir = await mkdtemp(join(tmpdir(), 'runova-tool-updates-'));
   sentBroadcasts.length = 0;
   vi.clearAllMocks();
   detect.detectAllClis.mockResolvedValue([{ id: 'fake-cli', version: '1.0.0', installed: true }]);

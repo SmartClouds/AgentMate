@@ -1,4 +1,4 @@
-import { estimateCost, MODEL_PRICES } from '@agentmat/core';
+import { estimateCost, MODEL_PRICES } from '@runova/core';
 import { describe, expect, it } from 'vitest';
 import {
   buildProjectDaily,
@@ -38,16 +38,16 @@ function entry(
 
 const known: KnownProjects = {
   projects: [
-    { id: 'p1', name: 'AgentMate', folderPath: 'E:\\AgentMate' },
+    { id: 'p1', name: 'Runova', folderPath: 'E:\\Runova' },
     { id: 'p2', name: 'Outer', folderPath: 'E:\\Work' },
     { id: 'p3', name: 'Inner', folderPath: 'E:\\Work\\inner' },
   ],
-  worktrees: [{ projectId: 'p1', path: 'C:\\worktrees\\AgentMate-feature' }],
+  worktrees: [{ projectId: 'p1', path: 'C:\\worktrees\\Runova-feature' }],
 };
 
 describe('normalizeFolder', () => {
   it('uses forward slashes, one separator at a time, and no trailing slash', () => {
-    expect(normalizeFolder('E:\\AgentMate\\\\src//x/', WINDOWS)).toBe('E:/AgentMate/src/x');
+    expect(normalizeFolder('E:\\Runova\\\\src//x/', WINDOWS)).toBe('E:/Runova/src/x');
   });
 
   it('strips the \\\\?\\ prefixes and keeps UNC shares', () => {
@@ -56,9 +56,9 @@ describe('normalizeFolder', () => {
   });
 
   it('reads a Git Bash path as a drive path on Windows only', () => {
-    expect(normalizeFolder('/e/AgentMate', WINDOWS)).toBe('E:/AgentMate');
-    expect(normalizeFolder('/e/AgentMate', { caseInsensitive: false, windows: false })).toBe(
-      '/e/AgentMate',
+    expect(normalizeFolder('/e/Runova', WINDOWS)).toBe('E:/Runova');
+    expect(normalizeFolder('/e/Runova', { caseInsensitive: false, windows: false })).toBe(
+      '/e/Runova',
     );
   });
 
@@ -87,21 +87,21 @@ describe('foldWorktree', () => {
 describe('createProjectResolver', () => {
   it('puts a folder inside a registered project on that project', () => {
     const resolve = createProjectResolver(known, WINDOWS);
-    expect(resolve('E:\\AgentMate\\apps\\desktop')).toMatchObject({
+    expect(resolve('E:\\Runova\\apps\\desktop')).toMatchObject({
       key: 'project:p1',
-      name: 'AgentMate',
-      path: 'E:/AgentMate',
+      name: 'Runova',
+      path: 'E:/Runova',
     });
   });
 
-  it('puts an AgentMate worktree outside the project folder on its project', () => {
+  it('puts a Runova worktree outside the project folder on its project', () => {
     const resolve = createProjectResolver(known, WINDOWS);
-    expect(resolve('C:\\worktrees\\AgentMate-feature\\src')).toMatchObject({ key: 'project:p1' });
+    expect(resolve('C:\\worktrees\\Runova-feature\\src')).toMatchObject({ key: 'project:p1' });
   });
 
   it('puts a Claude Code worktree on the repository it belongs to', () => {
     const resolve = createProjectResolver(known, WINDOWS);
-    expect(resolve('E:\\AgentMate\\.claude\\worktrees\\agent-9')).toMatchObject({
+    expect(resolve('E:\\Runova\\.claude\\worktrees\\agent-9')).toMatchObject({
       key: 'project:p1',
     });
   });
@@ -114,8 +114,8 @@ describe('createProjectResolver', () => {
 
   it('does not treat a sibling that shares a prefix as inside the project', () => {
     const resolve = createProjectResolver(known, WINDOWS);
-    expect(resolve('E:\\AgentMate2\\src')).toMatchObject({
-      key: 'folder:e:/agentmate2/src',
+    expect(resolve('E:\\Runova2\\src')).toMatchObject({
+      key: 'folder:e:/runova2/src',
       name: 'src',
     });
   });
@@ -130,11 +130,11 @@ describe('createProjectResolver', () => {
   });
 
   it('matches case-insensitively only when the rules say so', () => {
-    expect(createProjectResolver(known, WINDOWS)('e:\\agentmate\\x')).toMatchObject({
+    expect(createProjectResolver(known, WINDOWS)('e:\\runova\\x')).toMatchObject({
       key: 'project:p1',
     });
     const strict = createProjectResolver(known, { caseInsensitive: false, windows: true });
-    expect(strict('e:\\agentmate\\x')).toMatchObject({ key: 'folder:e:/agentmate/x' });
+    expect(strict('e:\\runova\\x')).toMatchObject({ key: 'folder:e:/runova/x' });
   });
 
   it('gives a missing folder the unknown row', () => {
@@ -243,14 +243,11 @@ describe('buildProjectDaily', () => {
 
   it('rolls a worktree and its project into one row', () => {
     const split = buildProjectDaily(
-      [
-        entry(at(0, 9), 'E:\\AgentMate\\apps'),
-        entry(at(0, 10), 'C:\\worktrees\\AgentMate-feature'),
-      ],
+      [entry(at(0, 9), 'E:\\Runova\\apps'), entry(at(0, 10), 'C:\\worktrees\\Runova-feature')],
       { now, known, rules: WINDOWS },
     );
     expect(split.projects).toHaveLength(1);
-    expect(split.projects[0]).toMatchObject({ key: 'project:p1', name: 'AgentMate' });
+    expect(split.projects[0]).toMatchObject({ key: 'project:p1', name: 'Runova' });
     expect(split.projects[0].tokens[SPLIT_DAYS - 1]).toBe(2000);
   });
 

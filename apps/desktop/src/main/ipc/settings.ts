@@ -1,4 +1,4 @@
-import type { AppSettings } from '@agentmat/core';
+import type { AppSettings } from '@runova/core';
 import { ipcMain } from 'electron';
 import { IPC } from '../../shared/ipcChannels';
 import { clearGrammarCache } from '../grammar/languageToolClient';

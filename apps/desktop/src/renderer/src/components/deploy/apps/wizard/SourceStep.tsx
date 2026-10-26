@@ -27,17 +27,17 @@ export function SourceStep({
   const ids = useId();
   const projects = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   });
   const discovery = useQuery({
     queryKey: queryKeys.deployComposeFiles(source.projectId),
-    queryFn: () => window.agentmat.deployStacks.discover(source.projectId),
+    queryFn: () => window.runova.deployStacks.discover(source.projectId),
     enabled: source.projectId !== '',
     retry: false,
   });
   const environments = useQuery({
     queryKey: queryKeys.projectEnvironments(source.projectId),
-    queryFn: () => window.agentmat.environments.list(source.projectId),
+    queryFn: () => window.runova.environments.list(source.projectId),
     enabled: source.projectId !== '',
   });
 

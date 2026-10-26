@@ -1,4 +1,4 @@
-import type { AndroidUsage } from '@agentmat/core';
+import type { AndroidUsage } from '@runova/core';
 import { Cpu, MemoryStick } from '@/components/icons';
 
 /**

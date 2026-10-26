@@ -1,4 +1,4 @@
-import type { SaveVaultEntryInput } from '@agentmat/core';
+import type { SaveVaultEntryInput } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { openVaultFile, type VaultFileV1 } from './format';
 import type { KdfCost } from './kdf';
@@ -97,7 +97,7 @@ describe('VaultSession lifecycle', () => {
 
   it('reports a damaged file as corrupt instead of a wrong password', async () => {
     const files = new MemoryVaultFiles();
-    files.current = { format: 'agentmate-vault', version: 1 };
+    files.current = { format: 'agentmate-vault' as const /* legacy-name */, version: 1 };
     const { session } = makeSession(files);
     expect(await session.state()).toBe('locked');
     await expectCode(session.unlock(PASSWORD), 'corrupt');

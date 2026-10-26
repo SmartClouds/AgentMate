@@ -1,4 +1,4 @@
-import { type Project, type RemoteProject, suggestRemoteProjects } from '@agentmat/core';
+import { type Project, type RemoteProject, suggestRemoteProjects } from '@runova/core';
 import type { ErrorConnectionSummary, ErrorProjectLink } from '@shared/errorTrackingTypes';
 import { useQueryClient } from '@tanstack/react-query';
 import { useId, useMemo, useState } from 'react';
@@ -14,7 +14,7 @@ import { MultiCombobox, type MultiComboboxOption } from './MultiCombobox';
 import { useRemoteProjects } from './useErrorTracking';
 
 /**
- * Which Sentry projects hold each AgentMate project's errors (E24). A project that has no links
+ * Which Sentry projects hold each Runova project's errors (E24). A project that has no links
  * yet starts with the ones that look like it already picked, so for most users linking is one
  * look and one click. Saving replaces each changed project's links as a whole.
  */
@@ -128,7 +128,7 @@ export function ErrorLinkProjects({
             },
           ];
         });
-        await window.agentmat.errorTracking.setLinks(row.project.id, next);
+        await window.runova.errorTracking.setLinks(row.project.id, next);
       }
       setEdits({});
       toast.success(changed.length === 1 ? 'Link saved' : 'Links saved');

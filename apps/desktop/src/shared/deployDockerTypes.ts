@@ -3,7 +3,7 @@ import type {
   ContainerStatsBatch,
   DockerEvent,
   DockerPruneTarget,
-} from './deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from './deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * Plain data the Containers screen (E06) passes between the main process and the renderer.

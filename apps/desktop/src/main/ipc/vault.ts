@@ -6,7 +6,7 @@ import {
   VAULT_LIMITS,
   type VaultExportFormat,
   VaultFieldRefSchema,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { IpcMainInvokeEvent } from 'electron';
 import type {
   VaultExportResult,
@@ -174,7 +174,7 @@ export function registerVaultHandlers({
 
   handle(IPC.vault.exportCsv, async (password, format): Promise<VaultExportResult> => {
     const pass = text(password, 'Password');
-    const kind = oneOf<VaultExportFormat>(format, ['agentmate', 'bitwarden'], 'export format');
+    const kind = oneOf<VaultExportFormat>(format, ['runova', 'bitwarden'], 'export format');
     if (!(await service.verifyPassword(pass))) return { ok: false, reason: 'wrong-password' };
     const path = await dialogs.pickExportPath(kind);
     if (!path) return { ok: false, reason: 'cancelled' };

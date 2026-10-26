@@ -1,4 +1,5 @@
-import type { AgentType, Project, ProjectRunCommand, RunInput } from '@agentmat/core';
+import * as PopoverPrimitive from '@radix-ui/react-popover';
+import type { AgentType, Project, ProjectRunCommand, RunInput } from '@runova/core';
 import {
   AGENT_TYPES,
   browsableRepoUrl,
@@ -7,8 +8,7 @@ import {
   insertRunInput,
   isClonableGithubUrl,
   parseRunInputs,
-} from '@agentmat/core';
-import * as PopoverPrimitive from '@radix-ui/react-popover';
+} from '@runova/core';
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { cliOptionIcon } from '@/components/cliLogos';
@@ -273,14 +273,14 @@ export function ProjectFormDialog({
     detectedRepoPath.current = path;
     // A folder that isn't a repo, or a git that isn't installed, just leaves the
     // field empty: this is a convenience, not something to interrupt over.
-    const detected = await window.agentmat.git.detectRemote(path).catch(() => null);
+    const detected = await window.runova.git.detectRemote(path).catch(() => null);
     if (!detected) return;
     setRepoUrl(detected);
     setRepoDetected(true);
   }
 
   async function handlePickFolder(): Promise<void> {
-    const picked = await window.agentmat.projects.pickFolder();
+    const picked = await window.runova.projects.pickFolder();
     if (!picked) return;
     setFolderPath(picked);
     // Naming a new project after its folder is right often enough to be worth
@@ -291,7 +291,7 @@ export function ProjectFormDialog({
 
   async function handlePickIcon(): Promise<void> {
     try {
-      const dataUrl = await window.agentmat.projects.pickIcon();
+      const dataUrl = await window.runova.projects.pickIcon();
       if (dataUrl) setIconDataUrl(dataUrl);
     } catch (error) {
       toast.error(iconErrorMessage(error, 'Could not read that image.'));
@@ -315,7 +315,7 @@ export function ProjectFormDialog({
       if (typeof reader.result !== 'string') return;
       // Same trip a picked file makes: the main process is where an oversized
       // image gets scaled down to something worth storing as an icon.
-      void window.agentmat.projects
+      void window.runova.projects
         .normalizeIcon(reader.result)
         .then(setIconDataUrl)
         .catch((error: unknown) =>
@@ -337,7 +337,7 @@ export function ProjectFormDialog({
     autoFetchedUrl.current = url;
     setFetchingFavicon(true);
     try {
-      const result = await window.agentmat.projects.fetchFavicon(url);
+      const result = await window.runova.projects.fetchFavicon(url);
       if (!result) {
         if (!silent) toast.error("Couldn't find a favicon on that site.");
         return;
@@ -490,7 +490,7 @@ export function ProjectFormDialog({
             <DialogDescription>
               {initial
                 ? 'Update how this project looks and which tools it runs with.'
-                : 'Point AgentMate at a folder, then fine tune the rest whenever you like.'}
+                : 'Point Runova at a folder, then fine tune the rest whenever you like.'}
             </DialogDescription>
           </div>
         </DialogHeader>
@@ -577,7 +577,7 @@ export function ProjectFormDialog({
                       variant="soft"
                       className="h-9 shrink-0"
                       onClick={() =>
-                        void window.agentmat.shell.openExternal(browsableRepoUrl(repoUrl))
+                        void window.runova.shell.openExternal(browsableRepoUrl(repoUrl))
                       }
                     >
                       <GitBranch className="h-4 w-4" /> Open
@@ -809,7 +809,7 @@ export function ProjectFormDialog({
 
             <TabsContent value="agent" className="mt-5 min-h-[19rem] space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Agent type" hint="How AgentMate talks to this project's assistant.">
+                <Field label="Agent type" hint="How Runova talks to this project's assistant.">
                   <Combobox
                     value={agentType}
                     onChange={(v) => setAgentType(v as AgentType)}

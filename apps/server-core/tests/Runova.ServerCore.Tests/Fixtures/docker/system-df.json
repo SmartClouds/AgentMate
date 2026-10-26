@@ -1,0 +1,692 @@
+{
+ "LayersSize": 53230593496,
+ "Images": [
+  {
+   "Containers": 4,
+   "Created": 1789689600,
+   "Id": "sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c",
+   "Labels": {},
+   "ParentId": "",
+   "Descriptor": {
+    "mediaType": "application/vnd.oci.image.index.v1+json",
+    "digest": "sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c",
+    "size": 8933
+   },
+   "RepoDigests": [
+    "debian@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c"
+   ],
+   "RepoTags": [
+    "debian:13"
+   ],
+   "SharedSize": 183585139,
+   "Size": 186767678
+  }
+ ],
+ "Containers": [
+  {
+   "Id": "ddcdb9afe6a7ed12de64b569e697afb71c6503b085566d881396c06a3ea8df05",
+   "Names": [
+    "/migrate-once"
+   ],
+   "Image": "debian:13",
+   "ImageID": "sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c",
+   "Command": "sh -c 'echo done; exit 3'",
+   "Created": 1790855989,
+   "Ports": [],
+   "SizeRw": 4096,
+   "SizeRootFs": 134230016,
+   "Labels": {
+    "desktop.docker.io/ports.scheme": "v2"
+   },
+   "State": "exited",
+   "Status": "Exited (3) 21 seconds ago",
+   "HostConfig": {
+    "NetworkMode": "bridge"
+   },
+   "Health": {
+    "Status": "none",
+    "FailingStreak": 0
+   },
+   "NetworkSettings": {
+    "Networks": {
+     "bridge": {
+      "IPAMConfig": null,
+      "Links": null,
+      "Aliases": null,
+      "DriverOpts": null,
+      "GwPriority": 0,
+      "NetworkID": "2012f0e3996736647effb6998cc4353b1951c1f9d628d2dd6b2735d0da970ecd",
+      "EndpointID": "",
+      "Gateway": "",
+      "IPAddress": "",
+      "MacAddress": "",
+      "IPPrefixLen": 0,
+      "IPv6Gateway": "",
+      "GlobalIPv6Address": "",
+      "GlobalIPv6PrefixLen": 0,
+      "DNSNames": null
+     }
+    }
+   },
+   "Mounts": []
+  },
+  {
+   "Id": "edce09714ffbf4864e20bd9cb13438e6a85e63bf754508a8f2601d8c2d971dd4",
+   "Names": [
+    "/toolbox"
+   ],
+   "Image": "debian:13",
+   "ImageID": "sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c",
+   "Command": "sleep infinity",
+   "Created": 1790855988,
+   "Ports": [],
+   "SizeRw": 4096,
+   "SizeRootFs": 134230016,
+   "Labels": {
+    "desktop.docker.io/ports.scheme": "v2"
+   },
+   "State": "running",
+   "Status": "Up 22 seconds",
+   "HostConfig": {
+    "NetworkMode": "bridge"
+   },
+   "Health": {
+    "Status": "none",
+    "FailingStreak": 0
+   },
+   "NetworkSettings": {
+    "Networks": {
+     "bridge": {
+      "IPAMConfig": null,
+      "Links": null,
+      "Aliases": null,
+      "DriverOpts": null,
+      "GwPriority": 0,
+      "NetworkID": "2012f0e3996736647effb6998cc4353b1951c1f9d628d2dd6b2735d0da970ecd",
+      "EndpointID": "faf1fbb760b89d53437402a27f094520e183f89e61c917d5402e1bbbe2e5568b",
+      "Gateway": "172.17.0.1",
+      "IPAddress": "172.17.0.2",
+      "MacAddress": "aa:4e:4c:89:62:99",
+      "IPPrefixLen": 16,
+      "IPv6Gateway": "",
+      "GlobalIPv6Address": "",
+      "GlobalIPv6PrefixLen": 0,
+      "DNSNames": null
+     }
+    }
+   },
+   "Mounts": []
+  },
+  {
+   "Id": "7a101399abdc1002671a54d607f34e5e8a2790032c1fd0f3c9bd87d5bafb3947",
+   "Names": [
+    "/shop-worker-1"
+   ],
+   "Image": "debian:13",
+   "ImageID": "sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c",
+   "Command": "sh -c 'i=0; while true; do i=$((i+1)); echo \"processed job $i\"; sleep 1; done'",
+   "Created": 1790855988,
+   "Ports": [],
+   "SizeRw": 4096,
+   "SizeRootFs": 134230016,
+   "Labels": {
+    "com.docker.compose.config-hash": "2d46fb8c4fd31f07fbb68cc7667de66950f960257f7fa181f9bca733c51a2d15",
+    "com.docker.compose.container-number": "1",
+    "com.docker.compose.depends_on": "",
+    "com.docker.compose.image": "sha256:d5ce19d4736f0ebbacd686d1040271a5aeb0cc920f5990c1bfae1717627f0674",
+    "com.docker.compose.oneoff": "False",
+    "com.docker.compose.project": "shop",
+    "com.docker.compose.project.config_files": "C:\\Users\\arc13\\AppData\\Local\\Temp\\claude\\E--Runova\\7d43abc4-23fb-44cb-b9e4-a3c437f06180\\scratchpad\\rec\\compose.yaml",
+    "com.docker.compose.project.working_dir": "C:\\Users\\arc13\\AppData\\Local\\Temp\\claude\\E--Runova\\7d43abc4-23fb-44cb-b9e4-a3c437f06180\\scratchpad\\rec",
+    "com.docker.compose.service": "worker",
+    "com.docker.compose.version": "5.5.1",
+    "desktop.docker.io/ports.scheme": "v2"
+   },
+   "State": "running",
+   "Status": "Up 22 seconds",
+   "HostConfig": {
+    "NetworkMode": "shop_default"
+   },
+   "Health": {
+    "Status": "none",
+    "FailingStreak": 0
+   },
+   "NetworkSettings": {
+    "Networks": {
+     "shop_default": {
+      "IPAMConfig": null,
+      "Links": null,
+      "Aliases": null,
+      "DriverOpts": null,
+      "GwPriority": 0,
+      "NetworkID": "a078b70ebda238d5233119371fc987e427d89c71be729c6deb1945b4037d8609",
+      "EndpointID": "e580dfc67eb70cce243b537d1f7c6aaa04321c816aa203713d02c5d60ed0c609",
+      "Gateway": "172.27.0.1",
+      "IPAddress": "172.27.0.3",
+      "MacAddress": "72:c5:c7:86:84:a0",
+      "IPPrefixLen": 16,
+      "IPv6Gateway": "",
+      "GlobalIPv6Address": "",
+      "GlobalIPv6PrefixLen": 0,
+      "DNSNames": null
+     }
+    }
+   },
+   "Mounts": []
+  },
+  {
+   "Id": "8ac808e7678e266694d79428f372075e39d3b8f1c90c63393d47d9e63476c1e1",
+   "Names": [
+    "/shop-api-1"
+   ],
+   "Image": "debian:13",
+   "ImageID": "sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c",
+   "Command": "sh -c 'i=0; while true; do i=$((i+1)); echo \"GET /orders/$i 200 in 12ms\"; echo \"warn: slow query on orders ($i) using token $API_TOKEN\" >&2; sleep 1; done'",
+   "Created": 1790855988,
+   "Ports": [
+    {
+     "IP": "127.0.0.1",
+     "PrivatePort": 8080,
+     "PublicPort": 18080,
+     "Type": "tcp"
+    },
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8443,
+     "PublicPort": 18443,
+     "Type": "tcp"
+    }
+   ],
+   "SizeRw": 24576,
+   "SizeRootFs": 134250496,
+   "Labels": {
+    "com.docker.compose.config-hash": "5e8e7a0ba7bfe794ec846bad6042a9b56218c7d8f4d000edfcdd96c20a6d368d",
+    "com.docker.compose.container-number": "1",
+    "com.docker.compose.depends_on": "",
+    "com.docker.compose.image": "sha256:d5ce19d4736f0ebbacd686d1040271a5aeb0cc920f5990c1bfae1717627f0674",
+    "com.docker.compose.oneoff": "False",
+    "com.docker.compose.project": "shop",
+    "com.docker.compose.project.config_files": "C:\\Users\\arc13\\AppData\\Local\\Temp\\claude\\E--Runova\\7d43abc4-23fb-44cb-b9e4-a3c437f06180\\scratchpad\\rec\\compose.yaml",
+    "com.docker.compose.project.working_dir": "C:\\Users\\arc13\\AppData\\Local\\Temp\\claude\\E--Runova\\7d43abc4-23fb-44cb-b9e4-a3c437f06180\\scratchpad\\rec",
+    "com.docker.compose.service": "api",
+    "com.docker.compose.version": "5.5.1",
+    "desktop.docker.io/ports.scheme": "v2",
+    "desktop.docker.io/ports/8080/tcp": "127.0.0.1:18080",
+    "desktop.docker.io/ports/8443/tcp": ":18443"
+   },
+   "State": "running",
+   "Status": "Up 23 seconds",
+   "HostConfig": {
+    "NetworkMode": "shop_default"
+   },
+   "Health": {
+    "Status": "none",
+    "FailingStreak": 0
+   },
+   "NetworkSettings": {
+    "Networks": {
+     "shop_default": {
+      "IPAMConfig": null,
+      "Links": null,
+      "Aliases": null,
+      "DriverOpts": null,
+      "GwPriority": 0,
+      "NetworkID": "a078b70ebda238d5233119371fc987e427d89c71be729c6deb1945b4037d8609",
+      "EndpointID": "e6b0603be082144f2cb8c290f3f70bc7d319edd9c7cf951e3f76aaaa8f3db32e",
+      "Gateway": "172.27.0.1",
+      "IPAddress": "172.27.0.2",
+      "MacAddress": "96:20:5d:4e:f0:7c",
+      "IPPrefixLen": 16,
+      "IPv6Gateway": "",
+      "GlobalIPv6Address": "",
+      "GlobalIPv6PrefixLen": 0,
+      "DNSNames": null
+     }
+    }
+   },
+   "Mounts": [
+    {
+     "Type": "volume",
+     "Name": "shop_data",
+     "Source": "/var/lib/docker/volumes/shop_data/_data",
+     "Destination": "/data",
+     "Driver": "local",
+     "Mode": "rw",
+     "RW": true,
+     "Propagation": ""
+    },
+    {
+     "Type": "volume",
+     "Name": "43491c2041c0c3c4677a866ae83ca9acc6d3716f06f9bfb96c593a3bddc391b9",
+     "Source": "/var/lib/docker/volumes/43491c2041c0c3c4677a866ae83ca9acc6d3716f06f9bfb96c593a3bddc391b9/_data",
+     "Destination": "/var/cache/app",
+     "Driver": "local",
+     "Mode": "z",
+     "RW": true,
+     "Propagation": ""
+    }
+   ]
+  }
+ ],
+ "Volumes": [
+  {
+   "CreatedAt": "2026-10-01T11:59:48Z",
+   "Driver": "local",
+   "Labels": {
+    "com.docker.volume.anonymous": ""
+   },
+   "Mountpoint": "/var/lib/docker/volumes/43491c2041c0c3c4677a866ae83ca9acc6d3716f06f9bfb96c593a3bddc391b9/_data",
+   "Name": "43491c2041c0c3c4677a866ae83ca9acc6d3716f06f9bfb96c593a3bddc391b9",
+   "Options": null,
+   "Scope": "local",
+   "UsageData": {
+    "RefCount": 1,
+    "Size": 0
+   }
+  },
+  {
+   "CreatedAt": "2026-10-01T11:59:48Z",
+   "Driver": "local",
+   "Labels": {
+    "com.docker.compose.config-hash": "4e9994dd3f18d2005754ebe423d777f4baca4d40768dce9f0f672cc616414856",
+    "com.docker.compose.project": "shop",
+    "com.docker.compose.version": "5.5.1",
+    "com.docker.compose.volume": "data"
+   },
+   "Mountpoint": "/var/lib/docker/volumes/shop_data/_data",
+   "Name": "shop_data",
+   "Options": null,
+   "Scope": "local",
+   "UsageData": {
+    "RefCount": 1,
+    "Size": 0
+   }
+  }
+ ],
+ "BuildCache": [
+  {
+   "ID": "winfibozf5x2qxef4cf7qg0x1",
+   " Parents": [
+    "54x5ncsbn1ksjjtj6h4vb6zhc"
+   ],
+   "Type": "regular",
+   "Description": "[builder 2/6] COPY --from=deps /app/node_modules ./node_modules",
+   "InUse": false,
+   "Shared": false,
+   "Size": 1103781888,
+   "CreatedAt": "2026-08-16T13:06:35.292732171Z",
+   "LastUsedAt": "2026-08-16T13:07:41.622366336Z",
+   "UsageCount": 1
+  },
+  {
+   "ID": "3mct7mivd114qmhe8wdq05sdo",
+   " Parents": [
+    "gukuarcswew0oxj6uvb85ya30"
+   ],
+   "Type": "regular",
+   "Description": "[runner  7/19] COPY packages/api-client/package.json ./packages/api-client/",
+   "InUse": false,
+   "Shared": false,
+   "Size": 25085,
+   "CreatedAt": "2026-09-16T22:57:35.090399748Z",
+   "LastUsedAt": "2026-09-16T23:16:15.08455703Z",
+   "UsageCount": 1
+  }
+ ],
+ "ImageUsage": {
+  "ActiveCount": 16,
+  "Items": [
+   {
+    "Containers": 4,
+    "Created": 1789689600,
+    "Id": "sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c",
+    "Labels": {},
+    "ParentId": "",
+    "Descriptor": {
+     "mediaType": "application/vnd.oci.image.index.v1+json",
+     "digest": "sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c",
+     "size": 8933
+    },
+    "RepoDigests": [
+     "debian@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c"
+    ],
+    "RepoTags": [
+     "debian:13"
+    ],
+    "SharedSize": 183585139,
+    "Size": 186767678
+   }
+  ],
+  "Reclaimable": 39286478202,
+  "TotalCount": 89,
+  "TotalSize": 53230593496
+ },
+ "ContainerUsage": {
+  "ActiveCount": 9,
+  "Items": [
+   {
+    "Id": "ddcdb9afe6a7ed12de64b569e697afb71c6503b085566d881396c06a3ea8df05",
+    "Names": [
+     "/migrate-once"
+    ],
+    "Image": "debian:13",
+    "ImageID": "sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c",
+    "Command": "sh -c 'echo done; exit 3'",
+    "Created": 1790855989,
+    "Ports": [],
+    "SizeRw": 4096,
+    "SizeRootFs": 134230016,
+    "Labels": {
+     "desktop.docker.io/ports.scheme": "v2"
+    },
+    "State": "exited",
+    "Status": "Exited (3) 21 seconds ago",
+    "HostConfig": {
+     "NetworkMode": "bridge"
+    },
+    "Health": {
+     "Status": "none",
+     "FailingStreak": 0
+    },
+    "NetworkSettings": {
+     "Networks": {
+      "bridge": {
+       "IPAMConfig": null,
+       "Links": null,
+       "Aliases": null,
+       "DriverOpts": null,
+       "GwPriority": 0,
+       "NetworkID": "2012f0e3996736647effb6998cc4353b1951c1f9d628d2dd6b2735d0da970ecd",
+       "EndpointID": "",
+       "Gateway": "",
+       "IPAddress": "",
+       "MacAddress": "",
+       "IPPrefixLen": 0,
+       "IPv6Gateway": "",
+       "GlobalIPv6Address": "",
+       "GlobalIPv6PrefixLen": 0,
+       "DNSNames": null
+      }
+     }
+    },
+    "Mounts": []
+   },
+   {
+    "Id": "edce09714ffbf4864e20bd9cb13438e6a85e63bf754508a8f2601d8c2d971dd4",
+    "Names": [
+     "/toolbox"
+    ],
+    "Image": "debian:13",
+    "ImageID": "sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c",
+    "Command": "sleep infinity",
+    "Created": 1790855988,
+    "Ports": [],
+    "SizeRw": 4096,
+    "SizeRootFs": 134230016,
+    "Labels": {
+     "desktop.docker.io/ports.scheme": "v2"
+    },
+    "State": "running",
+    "Status": "Up 22 seconds",
+    "HostConfig": {
+     "NetworkMode": "bridge"
+    },
+    "Health": {
+     "Status": "none",
+     "FailingStreak": 0
+    },
+    "NetworkSettings": {
+     "Networks": {
+      "bridge": {
+       "IPAMConfig": null,
+       "Links": null,
+       "Aliases": null,
+       "DriverOpts": null,
+       "GwPriority": 0,
+       "NetworkID": "2012f0e3996736647effb6998cc4353b1951c1f9d628d2dd6b2735d0da970ecd",
+       "EndpointID": "faf1fbb760b89d53437402a27f094520e183f89e61c917d5402e1bbbe2e5568b",
+       "Gateway": "172.17.0.1",
+       "IPAddress": "172.17.0.2",
+       "MacAddress": "aa:4e:4c:89:62:99",
+       "IPPrefixLen": 16,
+       "IPv6Gateway": "",
+       "GlobalIPv6Address": "",
+       "GlobalIPv6PrefixLen": 0,
+       "DNSNames": null
+      }
+     }
+    },
+    "Mounts": []
+   },
+   {
+    "Id": "7a101399abdc1002671a54d607f34e5e8a2790032c1fd0f3c9bd87d5bafb3947",
+    "Names": [
+     "/shop-worker-1"
+    ],
+    "Image": "debian:13",
+    "ImageID": "sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c",
+    "Command": "sh -c 'i=0; while true; do i=$((i+1)); echo \"processed job $i\"; sleep 1; done'",
+    "Created": 1790855988,
+    "Ports": [],
+    "SizeRw": 4096,
+    "SizeRootFs": 134230016,
+    "Labels": {
+     "com.docker.compose.config-hash": "2d46fb8c4fd31f07fbb68cc7667de66950f960257f7fa181f9bca733c51a2d15",
+     "com.docker.compose.container-number": "1",
+     "com.docker.compose.depends_on": "",
+     "com.docker.compose.image": "sha256:d5ce19d4736f0ebbacd686d1040271a5aeb0cc920f5990c1bfae1717627f0674",
+     "com.docker.compose.oneoff": "False",
+     "com.docker.compose.project": "shop",
+     "com.docker.compose.project.config_files": "C:\\Users\\arc13\\AppData\\Local\\Temp\\claude\\E--Runova\\7d43abc4-23fb-44cb-b9e4-a3c437f06180\\scratchpad\\rec\\compose.yaml",
+     "com.docker.compose.project.working_dir": "C:\\Users\\arc13\\AppData\\Local\\Temp\\claude\\E--Runova\\7d43abc4-23fb-44cb-b9e4-a3c437f06180\\scratchpad\\rec",
+     "com.docker.compose.service": "worker",
+     "com.docker.compose.version": "5.5.1",
+     "desktop.docker.io/ports.scheme": "v2"
+    },
+    "State": "running",
+    "Status": "Up 22 seconds",
+    "HostConfig": {
+     "NetworkMode": "shop_default"
+    },
+    "Health": {
+     "Status": "none",
+     "FailingStreak": 0
+    },
+    "NetworkSettings": {
+     "Networks": {
+      "shop_default": {
+       "IPAMConfig": null,
+       "Links": null,
+       "Aliases": null,
+       "DriverOpts": null,
+       "GwPriority": 0,
+       "NetworkID": "a078b70ebda238d5233119371fc987e427d89c71be729c6deb1945b4037d8609",
+       "EndpointID": "e580dfc67eb70cce243b537d1f7c6aaa04321c816aa203713d02c5d60ed0c609",
+       "Gateway": "172.27.0.1",
+       "IPAddress": "172.27.0.3",
+       "MacAddress": "72:c5:c7:86:84:a0",
+       "IPPrefixLen": 16,
+       "IPv6Gateway": "",
+       "GlobalIPv6Address": "",
+       "GlobalIPv6PrefixLen": 0,
+       "DNSNames": null
+      }
+     }
+    },
+    "Mounts": []
+   },
+   {
+    "Id": "8ac808e7678e266694d79428f372075e39d3b8f1c90c63393d47d9e63476c1e1",
+    "Names": [
+     "/shop-api-1"
+    ],
+    "Image": "debian:13",
+    "ImageID": "sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c",
+    "Command": "sh -c 'i=0; while true; do i=$((i+1)); echo \"GET /orders/$i 200 in 12ms\"; echo \"warn: slow query on orders ($i) using token $API_TOKEN\" >&2; sleep 1; done'",
+    "Created": 1790855988,
+    "Ports": [
+     {
+      "IP": "127.0.0.1",
+      "PrivatePort": 8080,
+      "PublicPort": 18080,
+      "Type": "tcp"
+     },
+     {
+      "IP": "0.0.0.0",
+      "PrivatePort": 8443,
+      "PublicPort": 18443,
+      "Type": "tcp"
+     }
+    ],
+    "SizeRw": 24576,
+    "SizeRootFs": 134250496,
+    "Labels": {
+     "com.docker.compose.config-hash": "5e8e7a0ba7bfe794ec846bad6042a9b56218c7d8f4d000edfcdd96c20a6d368d",
+     "com.docker.compose.container-number": "1",
+     "com.docker.compose.depends_on": "",
+     "com.docker.compose.image": "sha256:d5ce19d4736f0ebbacd686d1040271a5aeb0cc920f5990c1bfae1717627f0674",
+     "com.docker.compose.oneoff": "False",
+     "com.docker.compose.project": "shop",
+     "com.docker.compose.project.config_files": "C:\\Users\\arc13\\AppData\\Local\\Temp\\claude\\E--Runova\\7d43abc4-23fb-44cb-b9e4-a3c437f06180\\scratchpad\\rec\\compose.yaml",
+     "com.docker.compose.project.working_dir": "C:\\Users\\arc13\\AppData\\Local\\Temp\\claude\\E--Runova\\7d43abc4-23fb-44cb-b9e4-a3c437f06180\\scratchpad\\rec",
+     "com.docker.compose.service": "api",
+     "com.docker.compose.version": "5.5.1",
+     "desktop.docker.io/ports.scheme": "v2",
+     "desktop.docker.io/ports/8080/tcp": "127.0.0.1:18080",
+     "desktop.docker.io/ports/8443/tcp": ":18443"
+    },
+    "State": "running",
+    "Status": "Up 23 seconds",
+    "HostConfig": {
+     "NetworkMode": "shop_default"
+    },
+    "Health": {
+     "Status": "none",
+     "FailingStreak": 0
+    },
+    "NetworkSettings": {
+     "Networks": {
+      "shop_default": {
+       "IPAMConfig": null,
+       "Links": null,
+       "Aliases": null,
+       "DriverOpts": null,
+       "GwPriority": 0,
+       "NetworkID": "a078b70ebda238d5233119371fc987e427d89c71be729c6deb1945b4037d8609",
+       "EndpointID": "e6b0603be082144f2cb8c290f3f70bc7d319edd9c7cf951e3f76aaaa8f3db32e",
+       "Gateway": "172.27.0.1",
+       "IPAddress": "172.27.0.2",
+       "MacAddress": "96:20:5d:4e:f0:7c",
+       "IPPrefixLen": 16,
+       "IPv6Gateway": "",
+       "GlobalIPv6Address": "",
+       "GlobalIPv6PrefixLen": 0,
+       "DNSNames": null
+      }
+     }
+    },
+    "Mounts": [
+     {
+      "Type": "volume",
+      "Name": "shop_data",
+      "Source": "/var/lib/docker/volumes/shop_data/_data",
+      "Destination": "/data",
+      "Driver": "local",
+      "Mode": "rw",
+      "RW": true,
+      "Propagation": ""
+     },
+     {
+      "Type": "volume",
+      "Name": "43491c2041c0c3c4677a866ae83ca9acc6d3716f06f9bfb96c593a3bddc391b9",
+      "Source": "/var/lib/docker/volumes/43491c2041c0c3c4677a866ae83ca9acc6d3716f06f9bfb96c593a3bddc391b9/_data",
+      "Destination": "/var/cache/app",
+      "Driver": "local",
+      "Mode": "z",
+      "RW": true,
+      "Propagation": ""
+     }
+    ]
+   }
+  ],
+  "Reclaimable": 1138688,
+  "TotalCount": 25,
+  "TotalSize": 1245184
+ },
+ "VolumeUsage": {
+  "ActiveCount": 25,
+  "Items": [
+   {
+    "CreatedAt": "2026-10-01T11:59:48Z",
+    "Driver": "local",
+    "Labels": {
+     "com.docker.volume.anonymous": ""
+    },
+    "Mountpoint": "/var/lib/docker/volumes/43491c2041c0c3c4677a866ae83ca9acc6d3716f06f9bfb96c593a3bddc391b9/_data",
+    "Name": "43491c2041c0c3c4677a866ae83ca9acc6d3716f06f9bfb96c593a3bddc391b9",
+    "Options": null,
+    "Scope": "local",
+    "UsageData": {
+     "RefCount": 1,
+     "Size": 0
+    }
+   },
+   {
+    "CreatedAt": "2026-10-01T11:59:48Z",
+    "Driver": "local",
+    "Labels": {
+     "com.docker.compose.config-hash": "4e9994dd3f18d2005754ebe423d777f4baca4d40768dce9f0f672cc616414856",
+     "com.docker.compose.project": "shop",
+     "com.docker.compose.version": "5.5.1",
+     "com.docker.compose.volume": "data"
+    },
+    "Mountpoint": "/var/lib/docker/volumes/shop_data/_data",
+    "Name": "shop_data",
+    "Options": null,
+    "Scope": "local",
+    "UsageData": {
+     "RefCount": 1,
+     "Size": 0
+    }
+   }
+  ],
+  "Reclaimable": 31341852927,
+  "TotalCount": 93,
+  "TotalSize": 33718151014
+ },
+ "BuildCacheUsage": {
+  "Items": [
+   {
+    "ID": "winfibozf5x2qxef4cf7qg0x1",
+    " Parents": [
+     "54x5ncsbn1ksjjtj6h4vb6zhc"
+    ],
+    "Type": "regular",
+    "Description": "[builder 2/6] COPY --from=deps /app/node_modules ./node_modules",
+    "InUse": false,
+    "Shared": false,
+    "Size": 1103781888,
+    "CreatedAt": "2026-08-16T13:06:35.292732171Z",
+    "LastUsedAt": "2026-08-16T13:07:41.622366336Z",
+    "UsageCount": 1
+   },
+   {
+    "ID": "3mct7mivd114qmhe8wdq05sdo",
+    " Parents": [
+     "gukuarcswew0oxj6uvb85ya30"
+    ],
+    "Type": "regular",
+    "Description": "[runner  7/19] COPY packages/api-client/package.json ./packages/api-client/",
+    "InUse": false,
+    "Shared": false,
+    "Size": 25085,
+    "CreatedAt": "2026-09-16T22:57:35.090399748Z",
+    "LastUsedAt": "2026-09-16T23:16:15.08455703Z",
+    "UsageCount": 1
+   }
+  ],
+  "Reclaimable": 21202295472,
+  "TotalCount": 382,
+  "TotalSize": 36620393678
+ }
+}

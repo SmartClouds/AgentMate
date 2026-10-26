@@ -3,10 +3,10 @@
  * Who is acting in wp-admin, and whether their form is genuine. WordPress answers in production;
  * tests answer with a fake.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Admin;
+namespace Runova\Connector\Admin;
 
 interface AdminContext
 {

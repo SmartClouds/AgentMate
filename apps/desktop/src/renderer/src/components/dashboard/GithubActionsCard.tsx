@@ -96,7 +96,7 @@ function HistoryRow({ item }: { item: GithubActionsHistoryItem }): React.JSX.Ele
         type="button"
         disabled={!item.htmlUrl}
         onClick={() => {
-          if (item.htmlUrl) void window.agentmat.shell.openExternal(item.htmlUrl);
+          if (item.htmlUrl) void window.runova.shell.openExternal(item.htmlUrl);
         }}
         className="flex min-w-0 flex-1 cursor-pointer items-start gap-3 rounded-lg px-2 py-2 text-left outline-none transition-colors hover:bg-foreground/[0.05] focus:outline-none focus-visible:bg-foreground/[0.06] disabled:cursor-default disabled:hover:bg-transparent"
       >
@@ -162,7 +162,7 @@ export function GithubActionsCard({
 
   const activityQuery = useQuery({
     queryKey: queryKeys.githubActionsActivity,
-    queryFn: () => window.agentmat.pipelines.dashboardActivity(),
+    queryFn: () => window.runova.pipelines.dashboardActivity(),
     staleTime: 60_000,
     refetchInterval: 120_000,
     meta: QUERY_META,
@@ -197,7 +197,7 @@ export function GithubActionsCard({
   );
 
   function handleInstallGh(): void {
-    void window.agentmat.shell.openExternal(GH_INSTALL_URL);
+    void window.runova.shell.openExternal(GH_INSTALL_URL);
   }
 
   function handleSignIn(): void {

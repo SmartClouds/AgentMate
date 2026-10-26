@@ -1,4 +1,4 @@
-import type { NginxApplyResult } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { NginxApplyResult } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { CircleCheck, Play, Spinner, TriangleAlert } from '@/components/icons';
 import { GLASS_CARD } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';

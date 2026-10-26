@@ -19,7 +19,7 @@ Click **Agent Tools** in the sidebar under **Agents**, or open the command palet
 
 ### Pick what you build
 
-**What do you build?** at the top has a chip for each stack. **Essentials** is always on. Turn on the others and their tools join the list. AgentMate remembers your choice.
+**What do you build?** at the top has a chip for each stack. **Essentials** is always on. Turn on the others and their tools join the list. Runova remembers your choice.
 
 | Stack | What it checks and installs |
 | --- | --- |
@@ -42,7 +42,7 @@ Beside the main button, **Open in terminal** types the same command into a termi
 
 ### Install
 
-- **One click.** **Install** runs the install inside AgentMate and shows live progress with a **Cancel** button. This is how winget on Windows and Homebrew on macOS install, and how pnpm and the Entity Framework tool install. Flutter and the Android tools have no package, so AgentMate downloads them itself from Google, checks the SHA-256 or SHA-1 checksum and unpacks them. Flutter goes into `develop/flutter` in your home folder and is added to your user PATH, and the Android tools go into the existing Android SDK folder or, if there is none, the one Android Studio would use.
+- **One click.** **Install** runs the install inside Runova and shows live progress with a **Cancel** button. This is how winget on Windows and Homebrew on macOS install, and how pnpm and the Entity Framework tool install. Flutter and the Android tools have no package, so Runova downloads them itself from Google, checks the SHA-256 or SHA-1 checksum and unpacks them. Flutter goes into `develop/flutter` in your home folder and is added to your user PATH, and the Android tools go into the existing Android SDK folder or, if there is none, the one Android Studio would use.
 - **In a terminal.** Anything that needs your password, a restart or a question (Linux packages, some Mac apps, the Windows Subsystem for Linux, the GitHub sign-in) opens a terminal with the command typed in. Press `Enter` to run it, and the row checks again by itself every few seconds.
 - **A download page.** On Windows without winget, the row opens the tool's download page. The page tells you when winget is missing and links to App Installer in the Microsoft Store.
 
@@ -52,30 +52,30 @@ Installing the Android SDK licenses or Docker Desktop first asks you to accept t
 
 ### Updates
 
-A tool that is installed can still be behind. When the page opens, AgentMate asks whatever would do the update whether a newer version exists: winget on Windows, Homebrew on a Mac, apt, dnf or pacman on Linux, the npm registry for pnpm, NuGet for the Entity Framework tool, Google's release list for Flutter and the Android SDK manager for the Android tools. Asking the same tool that will do the update means the **available** badge and the button never disagree.
+A tool that is installed can still be behind. When the page opens, Runova asks whatever would do the update whether a newer version exists: winget on Windows, Homebrew on a Mac, apt, dnf or pacman on Linux, the npm registry for pnpm, NuGet for the Entity Framework tool, Google's release list for Flutter and the Android SDK manager for the Android tools. Asking the same tool that will do the update means the **available** badge and the button never disagree.
 
 - **They do not hold the list up.** The rows show first, and each source's badges appear as soon as that source answers. The card says **Checking for updates** until the last one is in. Answers are remembered for half an hour, and **Check again** asks every source again.
 - **Ready stays ready.** A tool that is behind still counts in **6 of 6 ready**. The card counts the updates separately, and each stack shows how many of its tools have one.
-- **Update** brings one tool up to date, and **Update all** does every update AgentMate can run itself. Updates that need a terminal stay for you, and the button says how many. When nothing is missing, **Update all** takes the place of **Install all missing**. Updates do not ask you to accept any agreement again.
+- **Update** brings one tool up to date, and **Update all** does every update Runova can run itself. Updates that need a terminal stay for you, and the button says how many. When nothing is missing, **Update all** takes the place of **Install all missing**. Updates do not ask you to accept any agreement again.
 - **Docker Desktop** says **Update available** without a number, because the version Docker prints is the engine's and not the app's.
 - **Flutter** updates by running `flutter upgrade`, so it needs the copy to be a git checkout, which the official download is.
 - **Could not check for updates.** means no source answered. That is not the same as being up to date, and the card does not say so.
-- A tool that was installed some other way than the one AgentMate would use, such as Node.js through nvm, shows no update.
+- A tool that was installed some other way than the one Runova would use, such as Node.js through nvm, shows no update.
 
 ### When something fails
 
 The row says why in a sentence, such as "winget could not finish (code 1603)", and the **Install log** opens by itself with everything the installer printed. Use **Try again**, run the same install in a terminal, or **Copy log** to share it. A download that fails its checksum is deleted and never unpacked.
 
-After an install, terminals that were already open do not see the new tools, so open a new one. If an installer says a restart is needed, AgentMate says so too.
+After an install, terminals that were already open do not see the new tools, so open a new one. If an installer says a restart is needed, Runova says so too.
 
 > [!NOTE]
-> AgentMate edits your user PATH only to add Flutter's folder when it installs Flutter, or the folder of a tool when you press **Add to PATH**. On Windows it changes your user PATH in the registry and keeps every existing entry as it was. On macOS and Linux it adds one marked block to your shell startup file. If your PATH has an entry in quotes, AgentMate leaves it alone and asks you to add the folder by hand.
+> Runova edits your user PATH only to add Flutter's folder when it installs Flutter, or the folder of a tool when you press **Add to PATH**. On Windows it changes your user PATH in the registry and keeps every existing entry as it was. On macOS and Linux it adds one marked block to your shell startup file. If your PATH has an entry in quotes, Runova leaves it alone and asks you to add the folder by hand.
 
 ## The page layout
 
 ### Target project
 
-The **Target project** picker at the bottom of the left menu chooses a project for actions that work inside a codebase, such as initializing a tool in a project or writing its config file. Docker and global setup actions do not need one. If an action needs a project and none is chosen, AgentMate says "Choose a target project first." The picker and the filter box only act on tool cards, so they are hidden on **Dev Setup**.
+The **Target project** picker at the bottom of the left menu chooses a project for actions that work inside a codebase, such as initializing a tool in a project or writing its config file. Docker and global setup actions do not need one. If an action needs a project and none is chosen, Runova says "Choose a target project first." The picker and the filter box only act on tool cards, so they are hidden on **Dev Setup**.
 
 ### Category tabs
 
@@ -103,16 +103,16 @@ Nothing runs until you press `Enter` in the terminal, so you can read the comman
 
 Each tool uses the installer its makers recommend. CodeGraph, OpenClaw, Hermes Agent and RTK (on macOS and Linux) use their own install scripts, and RTK installs with WinGet on Windows. Semgrep installs with pipx. Trivy, and Bearer on Linux, are downloaded into `~/.local/bin` in your home folder, so they need no `sudo`. Bearer on macOS comes from Homebrew. 9Router and diffray install with npm.
 
-If the command needs something that is not on your machine, such as Node.js for npm, pipx, Homebrew or WinGet, AgentMate says which one is missing, for example "Semgrep needs pipx, which isn't installed.", and gives you a button to its download page. No terminal opens, since the command would only fail. This applies to installs, updates and uninstalls.
+If the command needs something that is not on your machine, such as Node.js for npm, pipx, Homebrew or WinGet, Runova says which one is missing, for example "Semgrep needs pipx, which isn't installed.", and gives you a button to its download page. No terminal opens, since the command would only fail. This applies to installs, updates and uninstalls.
 
-After installing, click **Refresh**. Tools installed with pipx, or into `~/.local/bin`, can land in a folder that is not on `PATH`. AgentMate looks there itself, so the card picks them up on Refresh.
+After installing, click **Refresh**. Tools installed with pipx, or into `~/.local/bin`, can land in a folder that is not on `PATH`. Runova looks there itself, so the card picks them up on Refresh.
 
 ## Update a tool
 
-- Click the cloud icon (**Check for updates**) on an installed tool's card. AgentMate asks npm, PyPI or GitHub Releases for the latest version.
+- Click the cloud icon (**Check for updates**) on an installed tool's card. Runova asks npm, PyPI or GitHub Releases for the latest version.
 - If there is a newer version, an **Update <name>?** dialog shows the current version, the latest version and the command. Click **Update** to open a terminal with the command typed in (press `Enter` to run it) or **Cancel**. With **Check all for updates**, the dialog steps through each tool that has an update.
 
-Once a day AgentMate can also check in the background and ring the notification bell when a CLI or tool has a new version. That is the **Check for CLI and tool updates** switch in **Settings** under **General**. See [AI CLI Manager](cli-manager.md#cli-and-tool-update-notifications).
+Once a day Runova can also check in the background and ring the notification bell when a CLI or tool has a new version. That is the **Check for CLI and tool updates** switch in **Settings** under **General**. See [AI CLI Manager](cli-manager.md#cli-and-tool-update-notifications).
 
 ## Configure a tool
 
@@ -137,7 +137,7 @@ Each Docker action opens a terminal with the Docker command typed in. Press `Ent
 
 ## The tools
 
-AgentMate currently lists 14 tools.
+Runova currently lists 14 tools.
 
 | Tool | Category | What it does |
 | --- | --- | --- |
@@ -153,7 +153,7 @@ AgentMate currently lists 14 tools.
 | **Trivy** | Security | Finds known CVEs in dependencies, hardcoded secrets and infrastructure misconfigurations. Quick action **Update vulnerability DB**. |
 | **Bearer** | Security | Data-flow analysis for sensitive data. No Windows build, so on Windows it runs through Docker (quick action **Pull Docker image**). |
 | **SonarQube Community Build** | Security | Self-hosted analysis server with a dashboard on port 9000, run as a Docker container. |
-| **CodeQL CLI** | Security | GitHub's semantic code analysis engine. Downloaded by AgentMate itself. |
+| **CodeQL CLI** | Security | GitHub's semantic code analysis engine. Downloaded by Runova itself. |
 | **Strix** | Security | Autonomous AI agent that runs your code in a sandbox and proves vulnerabilities. Needs Docker and your own LLM API key, and a run costs tokens. **Configure** copies the model and API key as environment variables. |
 
 > [!WARNING]
@@ -166,14 +166,14 @@ The **Security** tab on this page holds six scanners: Semgrep, Trivy, Bearer, So
 Setup notes for each scanner:
 
 - **Semgrep** and **Trivy** are the quick ones. Semgrep's **Auto** ruleset downloads rules from semgrep.dev on every scan, so pick one of the `p/` packs (Security audit, OWASP Top 10 or Default) to stay offline.
-- **Bearer** installs with Homebrew on macOS and an install script on Linux. On Windows, press **Pull Docker image** and AgentMate starts a container per scan with your project mounted read-only.
+- **Bearer** installs with Homebrew on macOS and an install script on Linux. On Windows, press **Pull Docker image** and Runova starts a container per scan with your project mounted read-only.
 - **SonarQube** needs these steps: click **Install with Docker** to create the server, wait for `http://localhost:9000` (the first start takes a couple of minutes), log in with `admin` / `admin`, change the password, create a token under My Account, Security, and paste it into the SonarQube setup in a project's **Security** tab. The card's **Copy setup commands** button copies these steps.
-- **CodeQL CLI** has a **Download CodeQL** button. AgentMate fetches the official release (about 420 MB to download and 700 MB unpacked), verifies its SHA-256 checksum and unpacks it into its own tools folder, with nothing on your `PATH` and no admin rights needed. A progress bar appears with a **Cancel** button. Afterwards you get **Open folder**, **Reinstall** and **Remove**. A `codeql` already on your `PATH` is used in preference, and the card says so.
+- **CodeQL CLI** has a **Download CodeQL** button. Runova fetches the official release (about 420 MB to download and 700 MB unpacked), verifies its SHA-256 checksum and unpacks it into its own tools folder, with nothing on your `PATH` and no admin rights needed. A progress bar appears with a **Cancel** button. Afterwards you get **Open folder**, **Reinstall** and **Remove**. A `codeql` already on your `PATH` is used in preference, and the card says so.
 - **Strix** costs money. A project's Security tab asks you to confirm before it starts, because it can run for up to an hour and spends tokens on your own API key.
 
 ## LanguageTool
 
-LanguageTool is the grammar, spelling and style checker behind AgentMate's writing checks. Installing it here lets every check run offline on your machine instead of sending text to LanguageTool's public service. It needs Java 17 or newer on your `PATH`.
+LanguageTool is the grammar, spelling and style checker behind Runova's writing checks. Installing it here lets every check run offline on your machine instead of sending text to LanguageTool's public service. It needs Java 17 or newer on your `PATH`.
 
 1. Click **Download zip** to get `LanguageTool-stable.zip`.
 2. Click **Open tools folder** and extract the zip there.

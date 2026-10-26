@@ -1,4 +1,4 @@
-import type { Project, WorktreeInfo } from '@agentmat/core';
+import type { Project, WorktreeInfo } from '@runova/core';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
@@ -40,7 +40,7 @@ function TileTooltip({
       <span className="font-semibold">{worktreeLabel(worktree)}</span>
       <span className="text-[10px] text-muted-foreground">
         {worktree.baseBranch ? `from ${worktree.baseBranch}` : 'git worktree'}
-        {worktree.createdByApp ? '' : ' · added outside AgentMate'}
+        {worktree.createdByApp ? '' : ' · added outside Runova'}
       </span>
       <span className="break-all font-mono text-[10px] text-muted-foreground">{worktree.path}</span>
       <span className="mt-0.5 text-[10px]">

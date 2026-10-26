@@ -1,4 +1,4 @@
-import type { UiProInstallMethod } from '@agentmat/core';
+import type { UiProInstallMethod } from '@runova/core';
 import {
   buildUiProDesignSystemCommand,
   buildUiProUpdatePlan,
@@ -9,7 +9,7 @@ import {
   UI_UX_PRO_MAX_RULE_CATEGORIES,
   UI_UX_PRO_MAX_SKILL_ID,
   UI_UX_PRO_MAX_STACK_GROUPS,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { UiProUpdateCheck } from '@shared/apiTypes';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -121,7 +121,7 @@ export function UiUxProMaxCard(): React.JSX.Element {
 
   const globalInstalledQuery = useQuery({
     queryKey: queryKeys.installedSkills(null),
-    queryFn: () => window.agentmat.skills.listInstalled(null),
+    queryFn: () => window.runova.skills.listInstalled(null),
   });
   const globalRecord = globalInstalledQuery.data?.find((s) => s.skillId === UI_UX_PRO_MAX_SKILL_ID);
 
@@ -131,7 +131,7 @@ export function UiUxProMaxCard(): React.JSX.Element {
   const isPluginInstall = installMethod === 'claude-plugin';
 
   const updateCheck = useMutation({
-    mutationFn: () => window.agentmat.skills.checkUiProUpdate(),
+    mutationFn: () => window.runova.skills.checkUiProUpdate(),
     // The button carries its own spinner, so this must not raise the full-page overlay.
     meta: UPDATE_CHECK_META,
     onSuccess: () => {
@@ -222,7 +222,7 @@ export function UiUxProMaxCard(): React.JSX.Element {
                 size="icon"
                 className="h-9 w-9"
                 aria-label="Open the repository on GitHub"
-                onClick={() => void window.agentmat.shell.openExternal(UI_UX_PRO_MAX_GITHUB_URL)}
+                onClick={() => void window.runova.shell.openExternal(UI_UX_PRO_MAX_GITHUB_URL)}
               >
                 <ExternalLink className="h-4 w-4" />
               </Button>
@@ -233,7 +233,7 @@ export function UiUxProMaxCard(): React.JSX.Element {
                 size="icon"
                 className="h-9 w-9"
                 aria-label="Open uupm.cc"
-                onClick={() => void window.agentmat.shell.openExternal(UI_UX_PRO_MAX_HOMEPAGE)}
+                onClick={() => void window.runova.shell.openExternal(UI_UX_PRO_MAX_HOMEPAGE)}
               >
                 <Globe className="h-4 w-4" />
               </Button>
@@ -398,7 +398,7 @@ export function UiUxProMaxCard(): React.JSX.Element {
             </Button>
             <Button
               variant="soft"
-              onClick={() => void window.agentmat.shell.openExternal(UI_UX_PRO_MAX_GITHUB_URL)}
+              onClick={() => void window.runova.shell.openExternal(UI_UX_PRO_MAX_GITHUB_URL)}
             >
               <ExternalLink className="h-4 w-4" /> Open on GitHub
             </Button>

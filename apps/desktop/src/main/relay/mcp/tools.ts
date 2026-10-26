@@ -8,7 +8,7 @@ import {
   RELAY_OUTCOMES,
   RELAY_TEST_RESULTS,
   taskRelPath,
-} from '@agentmat/core';
+} from '@runova/core';
 import { z } from 'zod';
 import type { RelayDriver } from '../service';
 import { readBoardFiles, readHandoff, relayFolder } from '../taskFiles';
@@ -83,7 +83,7 @@ export async function handleRelayMcp(
     case 'context_status': {
       if (leg.contextTokens === null) {
         return ok(
-          `AgentMate cannot measure this session's context. The budget is ${formatTokenCount(leg.budget)} tokens; hand off with outcome: continue if you think you are near it.`,
+          `Runova cannot measure this session's context. The budget is ${formatTokenCount(leg.budget)} tokens; hand off with outcome: continue if you think you are near it.`,
         );
       }
       const percent = Math.round((leg.contextTokens / leg.budget) * 100);
@@ -117,7 +117,7 @@ export async function handleRelayMcp(
       if (problems.length > 0)
         return refuse(`In ${handoffPath}, ${problems.join('; ')}. Then call finish_leg again.`);
       await context.driver.reportLeg(sessionId, read.meta);
-      return ok('Recorded. Stop now; AgentMate takes it from here.');
+      return ok('Recorded. Stop now; Runova takes it from here.');
     }
     case 'list_tasks': {
       const board = await readBoardFiles(folder);
@@ -153,7 +153,7 @@ export async function handleRelayMcp(
       );
       if (typeof added === 'string') return refuse(added);
       return ok(
-        'Sent to the user for review in AgentMate. Carry on with your task; do not wait for it.',
+        'Sent to the user for review in Runova. Carry on with your task; do not wait for it.',
       );
     }
   }

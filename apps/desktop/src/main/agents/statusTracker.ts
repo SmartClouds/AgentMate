@@ -9,7 +9,7 @@ import {
   getCliDefinition,
   initialAgentStatus,
   reduceAgentStatus,
-} from '@agentmat/core';
+} from '@runova/core';
 import type {
   AgentRunInfo,
   AgentRunInfoMap,

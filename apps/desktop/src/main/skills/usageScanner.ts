@@ -8,7 +8,7 @@ import { store } from '../store';
 
 // Which skills an agent actually reached for, counted straight out of its session transcripts.
 // Claude Code logs every skill invocation as a `Skill` tool_use block, so the count is what the
-// agent did rather than what AgentMate installed.
+// agent did rather than what Runova installed.
 //
 // Transcripts are append-only JSONL and grow into the hundreds of MB, so this follows the same
 // rule as the token-usage scanner: a file is never re-read. Each file's byte offset and the
@@ -199,7 +199,7 @@ async function writeCache(cache: UsageCache): Promise<void> {
   await rename(tmp, target);
 }
 
-/** Folder name, or the AgentMate project's name when one points at the same folder. */
+/** Folder name, or the Runova project's name when one points at the same folder. */
 function projectLabel(path: string, projectNames: Map<string, string>): string {
   return projectNames.get(path.toLowerCase()) ?? basename(path) ?? path;
 }

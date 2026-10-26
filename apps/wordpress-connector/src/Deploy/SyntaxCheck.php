@@ -4,10 +4,10 @@
  * be forced past. Without ext-tokenizer there is no check, which /site/info does not hide: the
  * health checks and the guard still stand behind every deploy.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Deploy;
+namespace Runova\Connector\Deploy;
 
 final class SyntaxCheck
 {

@@ -8,7 +8,7 @@ import { queryKeys } from '@/lib/queryKeys';
 export function useLocalRegistries() {
   return useQuery({
     queryKey: queryKeys.deployRegistryLocal,
-    queryFn: async () => (await window.agentmat.deployRegistry.list()) ?? [],
+    queryFn: async () => (await window.runova.deployRegistry.list()) ?? [],
     retry: false,
   });
 }
@@ -16,7 +16,7 @@ export function useLocalRegistries() {
 export function useServerRegistries(serverId: string, enabled: boolean) {
   return useQuery({
     queryKey: queryKeys.deployRegistryServer(serverId),
-    queryFn: async () => (await window.agentmat.deployRegistry.serverList(serverId)) ?? [],
+    queryFn: async () => (await window.runova.deployRegistry.serverList(serverId)) ?? [],
     enabled,
     retry: false,
   });
@@ -25,7 +25,7 @@ export function useServerRegistries(serverId: string, enabled: boolean) {
 export function useRegistryPlan(input: DeployRegistryPlanInput, enabled = true) {
   return useQuery({
     queryKey: queryKeys.deployRegistryPlan(input),
-    queryFn: () => window.agentmat.deployRegistry.plan(input),
+    queryFn: () => window.runova.deployRegistry.plan(input),
     enabled,
     retry: false,
   });

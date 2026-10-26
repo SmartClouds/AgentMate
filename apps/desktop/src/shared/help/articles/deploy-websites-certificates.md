@@ -31,14 +31,14 @@ The server core checks your role again on every call, so hiding a button is only
 
 The first card, **nginx**, shows the web server in front of your apps:
 
-- **Installed** (or "not yet"), **Running** or **Not running**, and **Managed by AgentMate** (or **Not set up yet**) with the current release name.
+- **Installed** (or "not yet"), **Running** or **Not running**, and **Managed by Runova** (or **Not set up yet**) with the current release name.
 - The version, and "from nginx.org" when it came from the official packages.
 - When the last apply happened and who did it.
 
 If nginx is not managed yet, an Admin sees one button:
 
-- **Install nginx** when nginx is missing. AgentMate installs it from the official nginx.org packages and sets it up for your sites.
-- **Set up nginx for AgentMate** when nginx is already there. AgentMate takes it over: it backs up and turns off the stock default site, and adds its own sites next to what you have.
+- **Install nginx** when nginx is missing. Runova installs it from the official nginx.org packages and sets it up for your sites.
+- **Set up nginx for Runova** when nginx is already there. Runova takes it over: it backs up and turns off the stock default site, and adds its own sites next to what you have.
 
 Either button runs as a background job and opens a log window so you can watch it. You need a managed nginx before you can add sites.
 
@@ -117,7 +117,7 @@ For a saved site, the **Logs** tab follows nginx's **Access log** and **Error lo
 Saving a site does not touch the live nginx. Saved changes wait in the **Apply changes** bar at the top of the Websites section: "Saved changes are waiting. Apply them to put them live."
 
 1. Click **Apply changes** (Admins only).
-2. AgentMate renders every site, checks the configuration with `nginx -t` and reloads nginx. The bar says it can take some 20 seconds.
+2. Runova renders every site, checks the configuration with `nginx -t` and reloads nginx. The bar says it can take some 20 seconds.
 3. When it works you see "Applied." and the sites change from **Not applied yet** to **Live**. If nginx reported warnings, they are listed in the bar.
 4. When it fails, nginx keeps running what it had, the bar turns red with "nginx kept running what it had" and lists each problem. Click a problem to open the site and field it is about. Fix it, save, and click **Apply again**.
 
@@ -170,7 +170,7 @@ Click **Upload a certificate**, paste the certificate with its chain and the pri
 
 ### Cloudflare Origin CA
 
-Click **Cloudflare Origin CA** to have Cloudflare sign a certificate for a key the server makes (the key never leaves the server). Only Cloudflare trusts it, so keep the site's DNS records proxied and set Cloudflare's SSL/TLS mode to Full (strict). It replaces the current certificate. This needs the extra "Zone > SSL and Certificates > Edit" permission on your Cloudflare token. If it is missing, AgentMate tells you exactly what to add.
+Click **Cloudflare Origin CA** to have Cloudflare sign a certificate for a key the server makes (the key never leaves the server). Only Cloudflare trusts it, so keep the site's DNS records proxied and set Cloudflare's SSL/TLS mode to Full (strict). It replaces the current certificate. This needs the extra "Zone > SSL and Certificates > Edit" permission on your Cloudflare token. If it is missing, Runova tells you exactly what to add.
 
 ### Remove a certificate
 

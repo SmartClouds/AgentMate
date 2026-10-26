@@ -1,5 +1,5 @@
-import type { Project } from '@agentmat/core';
-import type { ContainerStatsSample } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { Project } from '@runova/core';
+import type { ContainerStatsSample } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { FakeDocker } from '@shared/deploy/testing/fakeDocker';
 import { containerStatsSample, logLine } from '@shared/deploy/testing/fakeDockerData';
 import { describe, expect, it } from 'vitest';

@@ -179,7 +179,7 @@ function planApprovable(
 function guardText(leg: GateLegView): string {
   const used = leg.contextPercent === null ? 'most' : `about ${leg.contextPercent}%`;
   return (
-    `AgentMate Relay: this session has used ${used} of its context budget for ${leg.taskId}. ` +
+    `Runova Relay: this session has used ${used} of its context budget for ${leg.taskId}. ` +
     `Finish the step you are on, then rewrite ${leg.handoffRelPath} with outcome: continue and ` +
     `leg: ${leg.legNo}, so a fresh session can carry on from it, and stop.`
   );
@@ -196,7 +196,7 @@ function stopReason(leg: GateLegView): string {
 
 /**
  * Decides what a relay leg's hook answers. Every path that is unsure answers nothing, which leaves
- * Claude Code to do what it would have done without AgentMate.
+ * Claude Code to do what it would have done without Runova.
  */
 export function decideRelayGate(leg: GateLegView | null, input: RelayHookInput): GateDecision {
   if (!leg) return { output: null, observations: [] };

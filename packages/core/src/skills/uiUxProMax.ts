@@ -1,6 +1,6 @@
 /**
  * UI UX Pro Max (https://github.com/nextlevelbuilder/ui-ux-pro-max-skill), a featured skill that
- * AgentMate installs through the project's own `uipro` CLI instead of through a skill repository.
+ * Runova installs through the project's own `uipro` CLI instead of through a skill repository.
  * The repo generates every platform's files from templates at install time, so copying files out
  * of it would not produce a working install; the CLI is the supported path. Everything below
  * mirrors the project's README (v2.x).
@@ -17,7 +17,7 @@ export const UI_UX_PRO_MAX_PYTHON_URL = 'https://www.python.org/downloads/';
 
 /**
  * `repositoryId` stamped on InstalledSkillRecord entries for this skill, so removal knows to run
- * `uipro uninstall` rather than deleting a folder AgentMate itself wrote. Same idea as
+ * `uipro uninstall` rather than deleting a folder Runova itself wrote. Same idea as
  * SKILLS_SH_PSEUDO_REPOSITORY_ID: there is no matching entry in the SkillRepository store.
  */
 export const UI_UX_PRO_MAX_PSEUDO_REPOSITORY_ID = 'ui-ux-pro-max-cli';

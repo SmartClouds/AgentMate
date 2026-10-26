@@ -5,13 +5,13 @@
  * Nothing may follow the last blob. Blobs are kept as offsets into the raw bytes, so a big upload
  * is not copied until a handler asks for a blob.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Http;
+namespace Runova\Connector\Http;
 
-use AgentMate\Connector\Auth\ConnectionKey;
-use AgentMate\Connector\Protocol;
+use Runova\Connector\Auth\ConnectionKey;
+use Runova\Connector\Protocol;
 
 final class Frame
 {

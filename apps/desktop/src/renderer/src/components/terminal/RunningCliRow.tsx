@@ -1,4 +1,4 @@
-import { type AgentStatus, getCliDefinition } from '@agentmat/core';
+import { type AgentStatus, getCliDefinition } from '@runova/core';
 import type { TerminalSessionUsage } from '@shared/apiTypes';
 import { CliLogo } from '@/components/cliLogos';
 import {

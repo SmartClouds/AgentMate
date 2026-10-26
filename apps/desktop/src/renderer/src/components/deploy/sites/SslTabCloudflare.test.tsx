@@ -1,5 +1,5 @@
 import { encodeCloudflareError } from '@shared/cloudflareErrors';
-import type { SiteInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { SiteInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';

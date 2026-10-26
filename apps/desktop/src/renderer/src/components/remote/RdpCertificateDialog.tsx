@@ -94,7 +94,7 @@ export function RdpCertificateDialog({
     if (!server) return;
     setState({ kind: 'checking' });
     try {
-      const result = await window.agentmat.rdp.checkCertificate(server.id);
+      const result = await window.runova.rdp.checkCertificate(server.id);
       setState(
         result.ok
           ? { kind: 'done', check: result.check }
@@ -106,7 +106,7 @@ export function RdpCertificateDialog({
         kind: 'failed',
         failure: describeProxyFailure({
           code: 'other',
-          message: "AgentMate couldn't read the certificate.",
+          message: "Runova couldn't read the certificate.",
         }),
       });
     }
@@ -116,7 +116,7 @@ export function RdpCertificateDialog({
     if (!server) return;
     setSaving(true);
     try {
-      await window.agentmat.rdp.trustCertificate(server.id, certificate.fingerprint);
+      await window.runova.rdp.trustCertificate(server.id, certificate.fingerprint);
       toast.success('Certificate saved');
       setState({ kind: 'idle' });
       onChanged();
@@ -133,14 +133,14 @@ export function RdpCertificateDialog({
     const confirmed = await confirmDialog({
       title: `Forget the saved certificate for "${server.nickname}"?`,
       description:
-        'The next time you connect, AgentMate accepts the certificate the server shows and saves it, without asking. Only do this if you know the server was reinstalled or its certificate was replaced.',
+        'The next time you connect, Runova accepts the certificate the server shows and saves it, without asking. Only do this if you know the server was reinstalled or its certificate was replaced.',
       confirmLabel: 'Forget certificate',
       variant: 'destructive',
     });
     if (!confirmed) return;
     setSaving(true);
     try {
-      await window.agentmat.rdp.forgetCertificate(server.id);
+      await window.runova.rdp.forgetCertificate(server.id);
       toast.success('Saved certificate forgotten');
       setState({ kind: 'idle' });
       onChanged();
@@ -160,7 +160,7 @@ export function RdpCertificateDialog({
         <DialogHeader>
           <DialogTitle>Certificate for {server?.nickname}</DialogTitle>
           <DialogDescription>
-            AgentMate remembers the certificate a server shows the first time you connect, and asks
+            Runova remembers the certificate a server shows the first time you connect, and asks
             before connecting if it ever changes.
           </DialogDescription>
         </DialogHeader>
@@ -171,8 +171,8 @@ export function RdpCertificateDialog({
               <CertificateFacts details={server?.certDetails} fingerprint={savedFingerprint} />
             ) : (
               <Notice tone="neutral" size="sm">
-                Nothing is saved yet. AgentMate saves the certificate on the first connection, or
-                you can get it from the server now.
+                Nothing is saved yet. Runova saves the certificate on the first connection, or you
+                can get it from the server now.
               </Notice>
             )}
           </Section>
@@ -252,7 +252,7 @@ function CheckResult({
     <div className="flex flex-col gap-3">
       <Notice tone={status === 'changed' ? 'warning' : 'primary'} role="status">
         {status === 'changed'
-          ? "This is not the certificate AgentMate saved. That's expected after the server was reinstalled or its certificate was renewed. If neither happened, someone could be intercepting the connection."
+          ? "This is not the certificate Runova saved. That's expected after the server was reinstalled or its certificate was renewed. If neither happened, someone could be intercepting the connection."
           : 'This is the certificate the server presents. Save it to be warned if it ever changes.'}
       </Notice>
       <CertificateFacts details={certificate} fingerprint={certificate.fingerprint} />

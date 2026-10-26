@@ -112,7 +112,7 @@ export function LocalRegistriesCard({
     });
     if (!confirmed) return;
     try {
-      await window.agentmat.deployRegistry.remove(credential.id);
+      await window.runova.deployRegistry.remove(credential.id);
       toast.success(`Removed the sign-in for ${credential.registry}.`);
       onChanged();
     } catch (failure) {

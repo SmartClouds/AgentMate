@@ -4,7 +4,7 @@ import type { WpItemRef } from './protocol.js';
 /**
  * The files and folders a user chose to leave out of a WordPress project's pulls and deploys
  * (E21), kept with the project's link. Each entry is a gitignore-like line, as in an
- * `.agentmateignore`, relative to an item's root. They leave a path out both ways, whatever the
+ * `.runovaignore`, relative to an item's root. They leave a path out both ways, whatever the
  * site has, so the site's copy is neither deleted nor pulled. The key `*` holds lines for every
  * item of the project; any other key is one item (`wpItemKey`).
  */

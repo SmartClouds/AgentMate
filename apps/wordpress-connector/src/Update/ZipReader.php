@@ -5,10 +5,10 @@
  * Every offset is checked against the bytes, so a damaged or hostile zip ends in null, never in a
  * read past the end. The caller still checks each file against the hash it expects.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Update;
+namespace Runova\Connector\Update;
 
 final class ZipReader
 {
@@ -17,7 +17,7 @@ final class ZipReader
     const LOCAL = "PK\x03\x04";
 
     /**
-     * The files under $root (`agentmate-connector/`), by their path below it. Folders are left
+     * The files under $root (`runova-connector/`), by their path below it. Folders are left
      * out. Null when the bytes are not a zip this reader takes, a file sits outside $root, or the
      * limits are passed.
      *

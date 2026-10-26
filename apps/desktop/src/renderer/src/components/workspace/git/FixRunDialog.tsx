@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { GithubActionsRunErrorInput } from '@shared/apiTypes';
 import { useRunFailure } from '@/components/pipelines/useRunFailure';
 import { FixWithAiDialog } from '../FixWithAiDialog';

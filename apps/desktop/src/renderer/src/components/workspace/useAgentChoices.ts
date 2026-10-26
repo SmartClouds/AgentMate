@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { queryKeys } from '@/lib/queryKeys';
@@ -23,7 +23,7 @@ export function useAgentChoices(project: Project | null): AgentChoices {
   const cliOrder = useCliStore((s) => s.cliOrder);
   const status = useQuery({
     queryKey: queryKeys.cliStatus,
-    queryFn: () => window.agentmat.cli.detectAll(),
+    queryFn: () => window.runova.cli.detectAll(),
     staleTime: 5 * 60_000,
   });
   const defaultId = project ? projectCliId(project) : null;

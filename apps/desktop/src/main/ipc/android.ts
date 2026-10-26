@@ -8,7 +8,7 @@ import {
   type CreateAvdSpec,
   isValidAvdName,
   type SystemImage,
-} from '@agentmat/core';
+} from '@runova/core';
 import { BrowserWindow, dialog, ipcMain } from 'electron';
 import { IPC } from '../../shared/ipcChannels';
 import {

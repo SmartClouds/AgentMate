@@ -7,7 +7,7 @@ import type {
   OpenVideoResult,
   RecipeView,
   VideoSummary,
-} from '@agentmat/studio';
+} from '@runova/studio';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IPC } from '../../shared/ipcChannels';
 import { queueDialog, setElectronPath } from '../../test/main/electronMock';
@@ -277,7 +277,7 @@ describe('recipe versions and files (E39)', () => {
     queueDialog('showSaveDialog', { canceled: false, filePath: file });
     expect(await invoke(IPC.studioAi.exportRecipe, { recipeId: first.id })).toBe(file);
     expect(JSON.parse(readFileSync(file, 'utf8'))).toMatchObject({
-      format: 'agentmate-studio-recipe',
+      format: 'runova-studio-recipe',
     });
 
     queueDialog('showOpenDialog', { canceled: true, filePaths: [] });

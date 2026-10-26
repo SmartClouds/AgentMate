@@ -1,3 +1,4 @@
+import type { DeployCoreLayout } from '../../../shared/deployTypes';
 import {
   CommandTimeoutError,
   requireAnswer,
@@ -5,7 +6,7 @@ import {
   TunnelRefusedError,
 } from '../../ssh/connection';
 import { detectSudoMode, type SudoMode } from '../../ssh/sudo';
-import { CORE_BINARY_PATH } from '../connection/transport';
+import { LEGACY_CORE, RUNOVA_CORE } from '../coreLayout';
 import {
   type OsSupport,
   osSupport,
@@ -41,7 +42,8 @@ export interface PreflightReport {
    * nothing said no; the installer settles it by trying the real socket.
    */
   streamLocal: 'allowed' | 'prohibited';
-  installed: { version: string; release: string } | null;
+  /** The core that runs there, and the layout it is installed in. */
+  installed: { version: string; release: string; layout: DeployCoreLayout } | null;
   selinux: 'enforcing' | 'permissive' | 'disabled' | 'absent';
   /**
    * The tool the server can download the core with, when it reached the release itself. Null when
@@ -72,7 +74,7 @@ const PROBE_TIMEOUT_MS = 30_000;
  */
 const TUNNEL_PROBE_TIMEOUT_MS = 10_000;
 /** A path no core listens on: the answer only tells whether sshd allows the tunnel at all. */
-const STREAM_LOCAL_PROBE = '/run/agentmate-core/.preflight-probe';
+const STREAM_LOCAL_PROBE = `${RUNOVA_CORE.socketPath.slice(0, -'/core.sock'.length)}/.preflight-probe`;
 
 /** What the preflight needs from a connection. */
 export type PreflightConnection = Pick<SshConnection, 'exec' | 'endpoint' | 'openStream'>;
@@ -129,22 +131,29 @@ export async function runPreflight(
     problems.push((error as Error).message);
   }
 
+  // The new layout first: a migrated server keeps the old program folder as a link to it.
   let installed: PreflightReport['installed'] = null;
-  const current = await run('readlink -f /opt/agentmate-core/current 2>/dev/null');
-  if (current.exitCode === 0 && current.stdout.trim()) {
+  for (const names of [RUNOVA_CORE, LEGACY_CORE]) {
+    const current = await run(`readlink -f ${names.current} 2>/dev/null`);
+    if (current.exitCode !== 0 || !current.stdout.trim()) continue;
     // Not `run`: a core that hangs here is as broken as one that prints nothing, and the install
     // is what replaces it, so this probe may not fail the check.
-    const version = await connection.exec(`${CORE_BINARY_PATH} admin version 2>/dev/null`, {
+    const version = await connection.exec(`${names.binaryPath} admin version 2>/dev/null`, {
       timeoutMs,
     });
     try {
       const parsed = JSON.parse(version.stdout) as { version?: unknown };
       if (typeof parsed.version === 'string') {
-        installed = { version: parsed.version, release: current.stdout.trim() };
+        installed = {
+          version: parsed.version,
+          release: current.stdout.trim(),
+          layout: names.layout,
+        };
       }
     } catch {
       // A broken install: treat it as not installed, and let the install replace it.
     }
+    break;
   }
 
   const enforce = (

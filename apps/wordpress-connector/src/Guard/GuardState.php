@@ -6,14 +6,17 @@
  *
  * Pending value: JSON {d: deploy id, t: deadline (Unix seconds), f: real paths of changed PHP files}.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Guard;
+namespace Runova\Connector\Guard;
+
+use Runova\Connector\Legacy;
 
 final class GuardState
 {
-    const OPTION = 'agentmate_connector_guard';
+    /** Kept its 1.63 name; the guard mu-plugin reads it by that name on every request. */
+    const OPTION = Legacy::OPTION_PREFIX . 'guard';
 
     /** Creates the option, empty and autoloaded, if it is missing. */
     public static function ensure(): void

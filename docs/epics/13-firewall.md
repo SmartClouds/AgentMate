@@ -18,7 +18,7 @@ themselves if they cut the app off.
 - [x] T4 Safe apply: snapshot, apply, arm a transient systemd timer that restores the snapshot in 60
   seconds, confirm only over a new SSH connection.
 - [x] T5 Exposure inventory: listening sockets and container port bindings, public versus local,
-  with a "make private" redeploy for AgentMate stacks.
+  with a "make private" redeploy for Runova stacks.
 - [x] T6 UI: status hero, rules table with add and edit, presets, exposure view, countdown banner.
 - [x] T7 Fixture: privileged ufw and firewalld test servers that check the live IPv4 and IPv6
   rulesets, plus a lockout test over a second SSH connection.
@@ -41,25 +41,25 @@ themselves if they cut the app off.
   history and the exposure view.
 - "Make private" (T5): the exposure view's button works out whose container it is from the
   container's compose labels, the server's apps and that app's own list of containers (a compose
-  project with the same name as an app is not enough). For an AgentMate app it asks first, then
+  project with the same name as an app is not enough). For a Runova app it asks first, then
   the core copies the live revision with that service added to the loopback override (new hub
   method `ReviseStack`, audited as `stack.revise` with purpose `make-private`; the .env and files
   stay on the server) and deploys it. The row follows the deploy and, once it is live, points to
-  Websites for public access and reads the exposure again. A container AgentMate did not start
+  Websites for public access and reads the exposure again. A container Runova did not start
   gets a dialog with the compose or `docker run` change to make, ready to copy. Operators and up.
 - The DevHost's pretend exposure now lists the ports its pretend Docker Engine publishes, so the
   e2e spec can see a container go from 0.0.0.0 to 127.0.0.1.
 
 Acceptance criteria:
 
-All three: `apps/desktop/src/main/deploy/firewall.int.test.ts` (AGENTMATE_SYSTEM_TESTS=1) on
+All three: `apps/desktop/src/main/deploy/firewall.int.test.ts` (RUNOVA_SYSTEM_TESTS=1) on
    privileged ufw (Ubuntu 24.04) and firewalld (Rocky 9) test servers: live IPv4 and IPv6
    rulesets after a change, a change that blocks SSH refused without the override, a confirmation
    over a new connection, and a change nobody confirms rolled back with the core killed. All three
    passed locally on 2026-10-02 (Windows host, Docker Desktop).
 
 Tests for make private: `lib/deploy/firewall/makePrivate.test.ts`, the component tests in
-`firewall/MakePrivate.test.tsx` (AgentMate app, turned down, someone else's compose project with
+`firewall/MakePrivate.test.tsx` (Runova app, turned down, someone else's compose project with
 an app's name, docker run, refusals), `main/deploy/stacks/service.revise.test.ts`, the core's
 `StackReviseTests`, the system test `stacks.int.test.ts` (a public service moved to 127.0.0.1 on
 a real Docker, its .env intact) and `e2e/deployAppStore.e2e.ts` against the DevHost.

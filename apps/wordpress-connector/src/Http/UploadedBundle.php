@@ -3,10 +3,10 @@
  * The bundle as PHP received it: a temporary upload file. It is hashed straight from disk, so a
  * large upload is only read into memory after its signature has checked out.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Http;
+namespace Runova\Connector\Http;
 
 final class UploadedBundle implements Bundle
 {

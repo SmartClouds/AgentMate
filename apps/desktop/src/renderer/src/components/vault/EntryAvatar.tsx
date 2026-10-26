@@ -1,4 +1,4 @@
-import { avatarHue, avatarLetter, type VaultEntrySummary } from '@agentmat/core';
+import { avatarHue, avatarLetter, type VaultEntrySummary } from '@runova/core';
 import { cn } from '@/lib/utils';
 import { ENTRY_TYPE_META } from './entryTypes';
 

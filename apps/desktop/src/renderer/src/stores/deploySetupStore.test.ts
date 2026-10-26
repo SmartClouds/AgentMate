@@ -1,6 +1,6 @@
 import type { DeploySetupProgressEvent } from '@shared/deployTypes';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { type FakeBridge, installAgentmatBridge } from '../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../test/renderer/runovaBridge';
 import { useDeploySetupStore } from './deploySetupStore';
 
 /**
@@ -30,7 +30,7 @@ function deferred<T>() {
 describe('deploySetupStore', () => {
   it('collects progress for its own server while an install runs', async () => {
     const call = deferred<unknown>();
-    bridge = installAgentmatBridge({ 'deploy.install': () => call.promise });
+    bridge = installRunovaBridge({ 'deploy.install': () => call.promise });
 
     const done = useDeploySetupStore.getState().install('srv-1', ['preflight', 'upload'], null);
     bridge.$emit('deploy.onSetupProgress', progress('srv-1', 'preflight', 'running'));
@@ -53,7 +53,7 @@ describe('deploySetupStore', () => {
   });
 
   it('keeps the reason and its code when an install fails', async () => {
-    bridge = installAgentmatBridge({
+    bridge = installRunovaBridge({
       'deploy.install': async () => {
         throw new Error(
           "Error invoking remote method 'deploy:install': Error: [ssh:sudo-password-rejected] prod did not accept the sudo password for deployer.",
@@ -72,7 +72,7 @@ describe('deploySetupStore', () => {
   });
 
   it('passes the removal choice and password through', async () => {
-    bridge = installAgentmatBridge({ 'deploy.uninstall': async () => undefined });
+    bridge = installRunovaBridge({ 'deploy.uninstall': async () => undefined });
 
     const removed = await useDeploySetupStore.getState().uninstall('srv-1', false, 'pw');
 
@@ -90,7 +90,7 @@ describe('deploySetupStore', () => {
 
   it('refuses to start a second run on a server that has one going', async () => {
     const call = deferred<unknown>();
-    bridge = installAgentmatBridge({ 'deploy.install': () => call.promise });
+    bridge = installRunovaBridge({ 'deploy.install': () => call.promise });
 
     const first = useDeploySetupStore.getState().install('srv-1', ['preflight'], null);
     const second = await useDeploySetupStore.getState().install('srv-1', ['preflight'], null);
@@ -102,7 +102,7 @@ describe('deploySetupStore', () => {
   });
 
   it('forgets a finished run when asked', async () => {
-    bridge = installAgentmatBridge({ 'deploy.uninstall': async () => undefined });
+    bridge = installRunovaBridge({ 'deploy.uninstall': async () => undefined });
     await useDeploySetupStore.getState().uninstall('srv-1', true, null);
 
     useDeploySetupStore.getState().clear('srv-1');

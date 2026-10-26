@@ -1,5 +1,5 @@
 /**
- * Wire protocol shared between two AgentMate peers over a single WebSocket.
+ * Wire protocol shared between two Runova peers over a single WebSocket.
  *
  * This package is platform-agnostic on purpose: it is consumed by the desktop
  * app (Node/Electron, re-exported from `@shared/remoteProtocol`) and by the
@@ -182,8 +182,11 @@ export type RemoteRtcMessage = Extract<
  * a lost mouse-move is instantly obsoleted by the next one, so retransmitting it
  * would add latency to deliver a stale position.
  */
-export const DC_INPUT = 'agentmat-input';
-export const DC_CURSOR = 'agentmat-cursor';
+export const DC_INPUT = 'runova-input';
+export const DC_CURSOR = 'runova-cursor';
+/** The labels a host from before the rename to Runova opens its channels with. */
+export const LEGACY_DC_INPUT = 'agentmat-input'; // legacy-name
+export const LEGACY_DC_CURSOR = 'agentmat-cursor'; // legacy-name
 
 export const DC_UNRELIABLE: { ordered: false; maxRetransmits: 0 } = {
   ordered: false,
@@ -462,7 +465,9 @@ export function jpegToDataUri(jpeg: Uint8Array): string {
 
 // --- Pairing code --------------------------------------------------------------
 
-const PAIRING_PREFIX = 'AGENTMATE1:';
+const PAIRING_PREFIX = 'RUNOVA1:';
+/** Codes shown by a desktop from before the rename. */
+const LEGACY_PAIRING_PREFIX = 'AGENTMATE1:'; // legacy-name
 
 /** Everything the controller needs to reach and authenticate against a host. */
 export interface PairingPayload {
@@ -490,7 +495,8 @@ export function encodePairingCode(payload: PairingPayload): string {
 
 export function decodePairingCode(code: string): PairingPayload | null {
   const trimmed = code.trim();
-  const body = trimmed.startsWith(PAIRING_PREFIX) ? trimmed.slice(PAIRING_PREFIX.length) : trimmed;
+  const prefix = [PAIRING_PREFIX, LEGACY_PAIRING_PREFIX].find((each) => trimmed.startsWith(each));
+  const body = prefix ? trimmed.slice(prefix.length) : trimmed;
   try {
     const parsed = JSON.parse(base64UrlDecode(body)) as Partial<PairingPayload>;
     if (

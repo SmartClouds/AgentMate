@@ -23,10 +23,10 @@
  *    when allowed, else the conflicts with the state still done.
  *  - abort (open): aborted. (applying, applied): rolledBack(requested).
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Deploy;
+namespace Runova\Connector\Deploy;
 
 final class StateMachine
 {

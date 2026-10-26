@@ -17,7 +17,7 @@ export async function seedExampleRepositoryIfEmpty(): Promise<void> {
   const now = new Date().toISOString();
   repos.push({
     id: randomUUID(),
-    name: 'AgentMate Examples',
+    name: 'Runova Examples',
     sourceType: 'local-folder',
     source: getExampleRepoPath(),
     addedAt: now,

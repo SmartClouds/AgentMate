@@ -11,7 +11,7 @@ import type {
   DevOs,
   DevSetupEnvironment,
   DevUpdateCheck,
-} from '@agentmat/core';
+} from '@runova/core';
 import { app } from 'electron';
 import { IPC } from '../../shared/ipcChannels';
 import { runSdkManagerStreaming } from '../android/exec';
@@ -130,7 +130,7 @@ function createService(): DevSetupService {
   // put there and not what this machine has installed.
   const sandbox = resolveDevSetupSandbox({
     isE2E,
-    folder: process.env.AGENTMATE_DEVSETUP_SANDBOX,
+    folder: process.env.RUNOVA_DEVSETUP_SANDBOX,
     baseEnv: process.env,
     os,
   });

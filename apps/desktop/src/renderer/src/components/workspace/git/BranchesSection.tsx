@@ -1,4 +1,4 @@
-import { type Project, parseScopeId, type WorktreeInfo } from '@agentmat/core';
+import { type Project, parseScopeId, type WorktreeInfo } from '@runova/core';
 import type { GitBranchInfo, WorkspaceGitState } from '@shared/apiTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
@@ -69,13 +69,13 @@ export function BranchesSection({
   const worktrees = useWorktrees(parentId).data;
   const projects = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   }).data;
   const parent = projects?.find((p) => p.id === parentId) ?? null;
   const status = useQuery({
     // Keyed on the branch so a switch made anywhere re-reads the list.
     queryKey: [...queryKeys.gitStatus(project.id), state?.branch ?? '', state?.head ?? ''],
-    queryFn: () => window.agentmat.git.status(project.id),
+    queryFn: () => window.runova.git.status(project.id),
     enabled: Boolean(state?.isRepo),
     meta: { silentLoading: true },
     placeholderData: (previous) => previous,
@@ -121,7 +121,7 @@ export function BranchesSection({
       if (!ok) return;
     }
     setBusy(branch.name);
-    const result = await window.agentmat.git.checkoutBranch(project.id, branch.name);
+    const result = await window.runova.git.checkoutBranch(project.id, branch.name);
     setBusy(null);
     if (result.ok) toast.success(`Switched to ${branch.name}`);
     else toast.error(`Could not switch to ${branch.name}`, { description: result.message });
@@ -155,14 +155,14 @@ export function BranchesSection({
       });
       return;
     }
-    const repoUrl = await window.agentmat.git.detectRemote(project.folderPath);
+    const repoUrl = await window.runova.git.detectRemote(project.folderPath);
     if (!repoUrl) {
       toast.info('This repository has no origin remote to open');
       return;
     }
     // GitHub's /tree/<branch> takes slashes in the name as they are.
     const ref = branch.name.split('/').map(encodeURIComponent).join('/');
-    void window.agentmat.shell.openExternal(`${repoUrl}/tree/${ref}`);
+    void window.runova.shell.openExternal(`${repoUrl}/tree/${ref}`);
   }
 
   async function remove(branch: GitBranchInfo): Promise<void> {
@@ -177,7 +177,7 @@ export function BranchesSection({
     });
     if (!ok) return;
     setBusy(branch.name);
-    const result = await window.agentmat.git.deleteBranch({
+    const result = await window.runova.git.deleteBranch({
       projectId: project.id,
       branchName: branch.name,
     });
@@ -195,7 +195,7 @@ export function BranchesSection({
       return;
     }
     setBusy(name);
-    const result = await window.agentmat.git.createBranch(project.id, name);
+    const result = await window.runova.git.createBranch(project.id, name);
     setBusy(null);
     if (result.ok) {
       toast.success(`Created and switched to ${name}`);

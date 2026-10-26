@@ -1,7 +1,7 @@
 import { lookup } from 'node:dns/promises';
 import { join } from 'node:path';
 import { app, ipcMain } from 'electron';
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { registerCloudflareHandlers } from '../../ipc/cloudflare';
 import { registerCloudflareServerHandlers } from '../../ipc/cloudflareServer';
 import { getMainWindow } from '../../mainWindow';
@@ -44,7 +44,7 @@ const CORE_ADDRESS_TIMEOUT_MS = 8_000;
  * e2e run of an unpackaged build: a packaged app always talks to api.cloudflare.com.
  */
 function cloudflareApiBase(): string | undefined {
-  const base = process.env.AGENTMATE_E2E_CLOUDFLARE_API;
+  const base = process.env.RUNOVA_E2E_CLOUDFLARE_API;
   if (!isE2E || app.isPackaged || !base) return undefined;
   return /^http:\/\/127\.0\.0\.1:\d{1,5}\/client\/v4$/.test(base) ? base : undefined;
 }

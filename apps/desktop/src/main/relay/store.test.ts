@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { createRelay, DEFAULT_RELAY_OPTIONS, type RelayLegRecord } from '@agentmat/core';
+import { createRelay, DEFAULT_RELAY_OPTIONS, type RelayLegRecord } from '@runova/core';
 import { describe, expect, it } from 'vitest';
 import { useTempUserData } from '../../test/main/ipcHarness';
 

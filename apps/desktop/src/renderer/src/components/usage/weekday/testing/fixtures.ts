@@ -4,7 +4,7 @@ import {
   type ProjectDailyUsage,
   type ProviderUsage,
   type UsagePeriod,
-} from '@agentmat/core';
+} from '@runova/core';
 import { addDays, weekdayOfDay } from '@/lib/projectWeekday';
 
 /** Tuesday 13 October 2026: the last day of every fixture window. */

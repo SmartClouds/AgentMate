@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { coreErrorCode } from '../../shared/coreErrors';
-import type { FirewallChange } from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+import type { FirewallChange } from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { FAKE_CORE_PASSWORD, FakeCore } from '../../shared/deploy/testing/fakeCore';
 import { FAKE_GUARD_PHRASE } from '../../shared/deploy/testing/fakeFirewall';
 import type { DeployFirewallProgressEvent } from '../../shared/deployFirewallTypes';

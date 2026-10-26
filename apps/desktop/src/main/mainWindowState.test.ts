@@ -8,7 +8,7 @@ import { FakeBrowserWindow, setElectronPath } from '../test/main/electronMock';
 let userData: string;
 
 beforeEach(() => {
-  userData = mkdtempSync(join(tmpdir(), 'agentmate-window-state-'));
+  userData = mkdtempSync(join(tmpdir(), 'runova-window-state-'));
   setElectronPath('userData', userData);
   // The module caches what it read, so each test starts from a fresh copy.
   vi.resetModules();

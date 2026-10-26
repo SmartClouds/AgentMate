@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { tempDir } from '../../../test/main/fixtures';
+import { LEGACY_CORE } from '../coreLayout';
 import {
   githubReleaseSource,
   localArtifactSource,
@@ -24,7 +25,7 @@ function manifestFor(files: Record<string, string>, version = '1.53.0') {
     version,
     assets: Object.entries(files).map(([rid, content]) => ({
       rid,
-      file: `agentmate-core-${version}-${rid}.tar.gz`,
+      file: `runova-core-${version}-${rid}.tar.gz`,
       sha256: sha256(content),
       size: Buffer.byteLength(content),
     })),
@@ -55,7 +56,7 @@ describe('parseReleaseManifest', () => {
         assets: [
           {
             rid: 'linux-x64',
-            file: 'agentmate-core-1.0.0-linux-x64.tar.gz',
+            file: 'runova-core-1.0.0-linux-x64.tar.gz',
             sha256: 'nope',
             size: 1,
           },
@@ -75,10 +76,45 @@ describe('parseReleaseManifest', () => {
   });
 });
 
+describe('the tarball under its old name', () => {
+  const legacyFile = `${LEGACY_CORE.tarballPrefix}1.64.0-linux-x64.tar.gz`;
+  const manifest = {
+    version: '1.64.0',
+    assets: [
+      {
+        rid: 'linux-x64',
+        file: 'runova-core-1.64.0-linux-x64.tar.gz',
+        legacyFile,
+        sha256: 'c'.repeat(64),
+        size: 9,
+      },
+    ],
+  };
+
+  it('is read from the manifest and offered at its own address', () => {
+    expect(parseReleaseManifest(manifest).assets[0]?.legacyFile).toBe(legacyFile);
+    const remote = githubReleaseSource(manifest, '/nowhere', async () => undefined).remote?.(
+      'linux-x64',
+    );
+    expect(remote?.legacy).toEqual({
+      file: legacyFile,
+      url: `https://github.com/SmartClouds/Runova/releases/download/v1.64.0/${legacyFile}`,
+    });
+  });
+
+  it('has to be the same release', () => {
+    const wrong = {
+      ...manifest,
+      assets: [{ ...manifest.assets[0], legacyFile: 'something-else.tar.gz' }],
+    };
+    expect(() => parseReleaseManifest(wrong)).toThrow(/old name/);
+  });
+});
+
 describe('localArtifactSource', () => {
   it('uses a published build that matches its checksum', async () => {
     const dir = tempDir();
-    writeFileSync(join(dir, 'agentmate-core-0.0.0-dev-linux-x64.tar.gz'), 'tarball');
+    writeFileSync(join(dir, 'runova-core-0.0.0-dev-linux-x64.tar.gz'), 'tarball');
     writeFileSync(
       join(dir, 'server-core-manifest.json'),
       JSON.stringify(manifestFor({ 'linux-x64': 'tarball' }, '0.0.0-dev')),
@@ -89,15 +125,15 @@ describe('localArtifactSource', () => {
     expect(release).toEqual({
       version: '0.0.0-dev',
       rid: 'linux-x64',
-      file: 'agentmate-core-0.0.0-dev-linux-x64.tar.gz',
+      file: 'runova-core-0.0.0-dev-linux-x64.tar.gz',
       sha256: sha256('tarball'),
-      localPath: join(dir, 'agentmate-core-0.0.0-dev-linux-x64.tar.gz'),
+      localPath: join(dir, 'runova-core-0.0.0-dev-linux-x64.tar.gz'),
     });
   });
 
   it('refuses a build that no longer matches its checksum', async () => {
     const dir = tempDir();
-    writeFileSync(join(dir, 'agentmate-core-0.0.0-dev-linux-x64.tar.gz'), 'tampered');
+    writeFileSync(join(dir, 'runova-core-0.0.0-dev-linux-x64.tar.gz'), 'tampered');
     writeFileSync(
       join(dir, 'server-core-manifest.json'),
       JSON.stringify(manifestFor({ 'linux-x64': 'tarball' }, '0.0.0-dev')),
@@ -142,7 +178,7 @@ describe('githubReleaseSource', () => {
 
     expect(download).toHaveBeenCalledTimes(1);
     expect(download).toHaveBeenCalledWith(
-      releaseDownloadUrl('1.53.0', 'agentmate-core-1.53.0-linux-x64.tar.gz'),
+      releaseDownloadUrl('1.53.0', 'runova-core-1.53.0-linux-x64.tar.gz'),
       first.localPath,
     );
     expect(second.localPath).toBe(first.localPath);
@@ -162,12 +198,12 @@ describe('githubReleaseSource', () => {
     await expect(source.release('linux-x64')).rejects.toThrow(
       /does not match its published checksum/,
     );
-    expect(existsSync(join(cache, 'agentmate-core-1.53.0-linux-x64.tar.gz'))).toBe(false);
+    expect(existsSync(join(cache, 'runova-core-1.53.0-linux-x64.tar.gz'))).toBe(false);
   });
 
   it('points at the GitHub release for the version', () => {
-    expect(releaseDownloadUrl('1.53.0', 'agentmate-core-1.53.0-linux-x64.tar.gz')).toBe(
-      'https://github.com/SmartClouds/AgentMate/releases/download/v1.53.0/agentmate-core-1.53.0-linux-x64.tar.gz',
+    expect(releaseDownloadUrl('1.53.0', 'runova-core-1.53.0-linux-x64.tar.gz')).toBe(
+      'https://github.com/SmartClouds/Runova/releases/download/v1.53.0/runova-core-1.53.0-linux-x64.tar.gz',
     );
   });
 
@@ -181,10 +217,10 @@ describe('githubReleaseSource', () => {
       expect(source.remote?.('linux-arm64')).toEqual({
         version: '1.53.0',
         rid: 'linux-arm64',
-        file: 'agentmate-core-1.53.0-linux-arm64.tar.gz',
+        file: 'runova-core-1.53.0-linux-arm64.tar.gz',
         sha256: sha256('arm bytes'),
         size: 'arm bytes'.length,
-        url: 'https://github.com/SmartClouds/AgentMate/releases/download/v1.53.0/agentmate-core-1.53.0-linux-arm64.tar.gz',
+        url: 'https://github.com/SmartClouds/Runova/releases/download/v1.53.0/runova-core-1.53.0-linux-arm64.tar.gz',
       });
       expect(download).not.toHaveBeenCalled();
     });

@@ -1,4 +1,4 @@
-import type { FirewallRuleSpec } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { FirewallRuleSpec } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * Firewall rules a restored backup brought (E28), waiting for the Firewall section to stage them.

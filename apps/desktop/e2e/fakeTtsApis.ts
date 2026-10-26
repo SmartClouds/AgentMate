@@ -3,7 +3,7 @@ import type { AddressInfo } from 'node:net';
 
 /**
  * The online voice engines on loopback for the Studio voice e2e (E36), in the test process. The
- * app is pointed here with AGENTMATE_STUDIO_TTS_URL. Each engine answers in its own shape: OpenAI
+ * app is pointed here with RUNOVA_STUDIO_TTS_URL. Each engine answers in its own shape: OpenAI
  * with a 24 kHz WAV, ElevenLabs with 48 kHz PCM and character timings, plus its voice list. Speech
  * lasts a twentieth of a second a character, so the spec can work out how long a scene should be.
  */

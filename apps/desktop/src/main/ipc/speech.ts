@@ -5,7 +5,7 @@ import {
   resolveSpeechLanguage,
   WHISPER_MODELS,
   type WhisperModel,
-} from '@agentmat/core';
+} from '@runova/core';
 import { app, ipcMain, utilityProcess } from 'electron';
 import type {
   SpeechModelState,
@@ -37,7 +37,7 @@ function entryPath(): string {
 
 function spawnSpeechHost() {
   return utilityProcess.fork(entryPath(), [], {
-    serviceName: 'AgentMate Speech',
+    serviceName: 'Runova Speech',
     // A proxy that wants a password asks main, which already answers for the windows.
     respondToAuthRequestsFromMainProcess: true,
     stdio: 'ignore',

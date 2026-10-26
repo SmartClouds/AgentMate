@@ -1,4 +1,4 @@
-import type { AndroidSnapshot } from '@agentmat/core';
+import type { AndroidSnapshot } from '@runova/core';
 import type { TerminalRunStatus, TerminalRunStatusResult } from '@shared/apiTypes';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
@@ -163,7 +163,7 @@ export function useRunRows(): RunRow[] {
     queryKey: queryKeys.terminalRunStatus(ids),
     queryFn: async () => {
       const askedAt = Date.now();
-      return { ...(await window.agentmat.terminal.runStatus(ids)), askedAt };
+      return { ...(await window.runova.terminal.runStatus(ids)), askedAt };
     },
     enabled: ids.length > 0,
     refetchInterval: ids.length > 0 ? RUN_STATUS_INTERVAL_MS : false,
@@ -179,7 +179,7 @@ export function useRunRows(): RunRow[] {
   // Only reads what the Android segment already polls; never asks adb itself.
   const androidQuery = useQuery({
     queryKey: queryKeys.androidSnapshot,
-    queryFn: () => window.agentmat.android.refresh(),
+    queryFn: () => window.runova.android.refresh(),
     enabled: false,
     meta: { silentLoading: true },
   });

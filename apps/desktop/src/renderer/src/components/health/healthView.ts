@@ -10,7 +10,7 @@ import {
   type HealthCheckStatus,
   type HealthState,
   type Project,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { ProjectEnvironment } from '@shared/apiTypes';
 import type { HealthServerLink, HealthTargetInput, HealthTargetSummary } from '@shared/healthTypes';
 import type { ChipTone } from '@/components/pageKit';
@@ -390,7 +390,7 @@ export function validateHealthDraft(draft: HealthDraft): HealthDraftErrors {
   else if (!parsed || (parsed.protocol !== 'https:' && parsed.protocol !== 'http:')) {
     errors.url = 'Use a full address that starts with https://.';
   } else if (parsed.username || parsed.password) {
-    errors.url = 'Leave the sign-in out of the address. AgentMate sends it in a header.';
+    errors.url = 'Leave the sign-in out of the address. Runova sends it in a header.';
   } else if (isInsecureRemote(url) && !draft.allowInsecure) {
     errors.url =
       'This is plain http to another machine. Use https, or turn on Allow insecure HTTP.';

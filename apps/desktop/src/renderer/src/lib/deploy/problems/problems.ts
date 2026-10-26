@@ -4,7 +4,7 @@ import type {
   ContainerSummary,
   ExposureInventory,
   StackInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * The problems feed (E09 T2): what is broken on a server right now, from what the app already

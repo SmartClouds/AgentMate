@@ -15,7 +15,7 @@ import {
   type InstalledAgentTool,
   type InstalledCli,
   type ProviderUsage,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { CpuThermalState, SystemStatsSample } from '@shared/apiTypes';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as CountryFlags from 'country-flag-icons/react/3x2';
@@ -482,7 +482,7 @@ function CliUpdateRow({
   latestVersion: string;
 }): React.JSX.Element {
   async function handleUpdate(): Promise<void> {
-    const command = await window.agentmat.cli.getUpdateCommand(cli.id);
+    const command = await window.runova.cli.getUpdateCommand(cli.id);
     if (!command) {
       toast.error(`No update command available for ${cli.name} on this OS.`);
       return;
@@ -511,7 +511,7 @@ function ToolUpdateRow({
   latestVersion: string;
 }): React.JSX.Element {
   async function handleUpdate(): Promise<void> {
-    const command = await window.agentmat.tools.getUpdateCommand(tool.id);
+    const command = await window.runova.tools.getUpdateCommand(tool.id);
     if (!command) {
       toast.error(`No update command available for ${tool.name} on this OS.`);
       return;
@@ -549,7 +549,7 @@ function UpdatesCard({
   // may raise the full-page overlay.
   const toolsQuery = useQuery({
     queryKey: queryKeys.toolsStatus,
-    queryFn: () => window.agentmat.tools.detectAll(),
+    queryFn: () => window.runova.tools.detectAll(),
     staleTime: 10 * 60_000,
     enabled: deferReady,
     meta: { silentLoading: true },
@@ -562,7 +562,7 @@ function UpdatesCard({
   const cliChecks = useQueries({
     queries: installedClis.map(({ cli, status }) => ({
       queryKey: queryKeys.cliUpdateCheck(cli.id, status.version),
-      queryFn: () => window.agentmat.cli.checkForUpdate(cli.id, status.version),
+      queryFn: () => window.runova.cli.checkForUpdate(cli.id, status.version),
       staleTime: 10 * 60_000,
       enabled: deferReady,
       meta: { silentLoading: true },
@@ -571,7 +571,7 @@ function UpdatesCard({
   const toolChecks = useQueries({
     queries: installedTools.map(({ tool, status }) => ({
       queryKey: queryKeys.toolUpdateCheck(tool.id, status.version),
-      queryFn: () => window.agentmat.tools.checkForUpdate(tool.id, status.version),
+      queryFn: () => window.runova.tools.checkForUpdate(tool.id, status.version),
       staleTime: 10 * 60_000,
       meta: { silentLoading: true },
     })),
@@ -716,16 +716,16 @@ export default function DashboardPage(): React.JSX.Element {
   // skeletons, so it doesn't hold the startup splash (or the overlay) open.
   const cliQuery = useQuery({
     queryKey: queryKeys.cliStatus,
-    queryFn: () => window.agentmat.cli.detectAll(),
+    queryFn: () => window.runova.cli.detectAll(),
     meta: { silentLoading: true },
   });
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   });
   const reposQuery = useQuery({
     queryKey: queryKeys.repositories,
-    queryFn: () => window.agentmat.skills.listRepositories(),
+    queryFn: () => window.runova.skills.listRepositories(),
   });
   const ipGeoDeferReady = useIdleAfterMount();
   // Set right before a manual refetch so the lookup skips the main-process cache.
@@ -736,7 +736,7 @@ export default function DashboardPage(): React.JSX.Element {
     queryFn: () => {
       const force = ipGeoForceRef.current;
       ipGeoForceRef.current = false;
-      return window.agentmat.ipGeo.lookup(force);
+      return window.runova.ipGeo.lookup(force);
     },
     staleTime: Infinity,
     retry: false,
@@ -867,13 +867,13 @@ export default function DashboardPage(): React.JSX.Element {
   // the same tokens/plan-limits choice) the Usage page does.
   const usageQuery = useQuery({
     queryKey: queryKeys.usageList,
-    queryFn: () => window.agentmat.usage.list(),
+    queryFn: () => window.runova.usage.list(),
     refetchInterval: 45_000,
     enabled: usageCards.length > 0,
   });
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
     enabled: usageCards.length > 0,
   });
   const usageById = useMemo(() => {
@@ -2078,7 +2078,7 @@ export default function DashboardPage(): React.JSX.Element {
           <DialogFooter>
             <Button
               onClick={() => {
-                void window.agentmat.shell.openExternal('https://speed.cloudflare.com/');
+                void window.runova.shell.openExternal('https://speed.cloudflare.com/');
                 setSpeedTestOpen(false);
               }}
             >

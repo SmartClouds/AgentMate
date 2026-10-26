@@ -162,7 +162,7 @@ describe('RunProposalHost', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
-  it('says why when AgentMate will not add it, and takes the suggestion off the screen', async () => {
+  it('says why when Runova will not add it, and takes the suggestion off the screen', async () => {
     const { user } = renderHost([apollo], {
       ok: false,
       error: 'This project already has that run command.',

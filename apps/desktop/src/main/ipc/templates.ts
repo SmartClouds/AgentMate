@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { PromptTemplate } from '@agentmat/core';
+import type { PromptTemplate } from '@runova/core';
 import { ipcMain } from 'electron';
 import type { SaveTemplateInput } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';

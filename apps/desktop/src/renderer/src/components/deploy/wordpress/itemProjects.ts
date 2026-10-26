@@ -1,5 +1,5 @@
-import type { Project, WpItemRef } from '@agentmat/core';
-import { wpItemKey } from '@agentmat/core';
+import type { Project, WpItemRef } from '@runova/core';
+import { wpItemKey } from '@runova/core';
 
 /**
  * Which projects a site's theme or plugin can go into, and what adding, removing or moving it

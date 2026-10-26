@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import type { DockerObservation } from '@agentmat/core';
+import type { DockerObservation } from '@runova/core';
 import type {
   DockerActionResult,
   DockerContainer,
@@ -55,8 +55,8 @@ interface RawStatsEntry {
   BlockIO?: string;
 }
 
-/** AgentMate's own short-lived security scan containers; never the user's to stop. */
-const SCAN_CONTAINER_PREFIX = 'agentmate-scan-';
+/** Runova's own short-lived security scan containers; never the user's to stop. */
+const SCAN_CONTAINER_PREFIX = 'runova-scan-';
 
 async function run(args: string[], timeoutMs = EXEC_TIMEOUT_MS): Promise<string> {
   const { stdout } = await execFileAsync('docker', args, { timeout: timeoutMs, windowsHide: true });

@@ -141,7 +141,7 @@ describe('RdpCertificateDialog', () => {
       await user.click(screen.getByRole('button', { name: /Get certificate from server/ }));
 
       expect(
-        await screen.findByText(/This is not the certificate AgentMate saved/),
+        await screen.findByText(/This is not the certificate Runova saved/),
       ).toBeInTheDocument();
       expect(screen.getByText(/someone could be intercepting the connection/)).toBeInTheDocument();
       expect(screen.getByText('AA:11:22')).toBeInTheDocument();
@@ -239,9 +239,7 @@ describe('RdpCertificateDialog', () => {
 
       await user.click(screen.getByRole('button', { name: /Get certificate from server/ }));
 
-      expect(
-        await screen.findByText("AgentMate couldn't read the certificate."),
-      ).toBeInTheDocument();
+      expect(await screen.findByText("Runova couldn't read the certificate.")).toBeInTheDocument();
       expect(document.body.textContent).not.toMatch(/Error invoking remote method/);
     });
 

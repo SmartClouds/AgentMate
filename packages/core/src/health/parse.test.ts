@@ -31,7 +31,7 @@ const PASSING = {
     ],
     uptime: [{ componentType: 'system', status: 'pass', observedValue: 3600, observedUnit: 's' }],
   },
-  agentmate: { protocol: 'agentmate-health/1' },
+  runova: { protocol: 'runova-health/1' },
 };
 
 describe('parseHealthResponse', () => {
@@ -76,7 +76,7 @@ describe('parseHealthResponse', () => {
     ]);
   });
 
-  it('reads a failing service with its AgentMate error details', () => {
+  it('reads a failing service with its Runova error details', () => {
     const report = respond(503, {
       status: 'fail',
       checks: {
@@ -85,7 +85,7 @@ describe('parseHealthResponse', () => {
             status: 'fail',
             time: '2026-10-17T10:00:00Z',
             output: 'connect ECONNREFUSED 10.0.0.5:5432',
-            agentmate: {
+            runova: {
               errorCode: 'ECONNREFUSED',
               detail: 'Pool exhausted after 3 retries',
               stack: 'Error: connect ECONNREFUSED\n    at Pool.connect (pool.js:10)',
@@ -104,6 +104,27 @@ describe('parseHealthResponse', () => {
       stack: 'Error: connect ECONNREFUSED\n    at Pool.connect (pool.js:10)',
       hint: 'Is the database container running?',
       since: '2026-10-17T09:58:00Z',
+    });
+  });
+
+  it('reads the error details from an endpoint built before the app was renamed', () => {
+    const report = respond(503, {
+      status: 'fail',
+      agentmate: { protocol: 'agentmate-health/1' }, // legacy-name
+      checks: {
+        queue: [
+          {
+            status: 'fail',
+            output: 'broker down',
+            agentmate: { errorCode: 'E_BROKER', hint: 'Start RabbitMQ' }, // legacy-name
+          },
+        ],
+      },
+    });
+    expect(report.services[0].error).toMatchObject({
+      message: 'broker down',
+      code: 'E_BROKER',
+      hint: 'Start RabbitMQ',
     });
   });
 
@@ -199,7 +220,7 @@ describe('parseHealthResponse', () => {
           {
             status: 'fail',
             output: 'postgres://u:pw1234@db/app refused',
-            agentmate: { detail: 'password=pw1234', stack: 'at token=pw1234', hint: 'pw1234' },
+            runova: { detail: 'password=pw1234', stack: 'at token=pw1234', hint: 'pw1234' },
           },
         ],
       },
@@ -212,7 +233,7 @@ describe('parseHealthResponse', () => {
   });
 
   it('masks a literal secret the caller knows, such as the key it sent', () => {
-    const key = `amh_${'k'.repeat(43)}`;
+    const key = `rnh_${'k'.repeat(43)}`;
     const report = parseHealthResponse({
       httpStatus: 503,
       contentType: 'application/json',
@@ -228,9 +249,7 @@ describe('parseHealthResponse', () => {
     const report = respond(503, {
       status: 'fail',
       checks: {
-        db: [
-          { status: 'fail', output: 'x'.repeat(10_000), agentmate: { stack: 'y'.repeat(50_000) } },
-        ],
+        db: [{ status: 'fail', output: 'x'.repeat(10_000), runova: { stack: 'y'.repeat(50_000) } }],
       },
     });
     const error = report.services[0].error;

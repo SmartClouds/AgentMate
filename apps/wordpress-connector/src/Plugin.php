@@ -3,29 +3,32 @@
  * Wires the plugin into WordPress and builds its services on first use, so ordinary page loads
  * pay for nothing but a few hook registrations.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector;
+namespace Runova\Connector;
 
-use AgentMate\Connector\Admin\AdminPage;
-use AgentMate\Connector\Audit\AuditLog;
-use AgentMate\Connector\Auth\KeyService;
-use AgentMate\Connector\Auth\SiteMove;
-use AgentMate\Connector\Cli\ConnectionsCommand;
-use AgentMate\Connector\Cli\DeploysCommand;
-use AgentMate\Connector\Cli\KeyCommand;
-use AgentMate\Connector\Cli\RescueCommand;
-use AgentMate\Connector\Cli\StatusCommand;
-use AgentMate\Connector\Crypto\SiteKeys;
-use AgentMate\Connector\Deploy\DeployService;
-use AgentMate\Connector\Env\Environment;
-use AgentMate\Connector\Env\WordPressEnvironment;
-use AgentMate\Connector\Http\Dispatcher;
-use AgentMate\Connector\Http\Transport;
-use AgentMate\Connector\Routes\Handlers;
-use AgentMate\Connector\Storage\Storage;
-use AgentMate\Connector\Storage\WpdbStorage;
+use Runova\Connector\Admin\AdminPage;
+use Runova\Connector\Audit\AuditLog;
+use Runova\Connector\Auth\KeyService;
+use Runova\Connector\Auth\SiteMove;
+use Runova\Connector\Cli\ConnectionsCommand;
+use Runova\Connector\Cli\DeploysCommand;
+use Runova\Connector\Cli\KeyCommand;
+use Runova\Connector\Cli\MigrateCommand;
+use Runova\Connector\Cli\RescueCommand;
+use Runova\Connector\Cli\StatusCommand;
+use Runova\Connector\Crypto\SiteKeys;
+use Runova\Connector\Deploy\DeployService;
+use Runova\Connector\Env\Environment;
+use Runova\Connector\Env\WordPressEnvironment;
+use Runova\Connector\Http\Dispatcher;
+use Runova\Connector\Http\Transport;
+use Runova\Connector\Routes\Handlers;
+use Runova\Connector\Storage\Storage;
+use Runova\Connector\Storage\WpdbStorage;
+use Runova\Connector\Update\LayoutMigration;
+use Runova\Connector\Update\WpLayoutHost;
 
 final class Plugin
 {
@@ -54,20 +57,36 @@ final class Plugin
             Activator::maybeUpgrade();
         }
         Transport::register();
+        add_action(LayoutMigration::CRON_HOOK, array(self::class, 'cleanUpLayout'));
         if (is_admin()) {
             AdminPage::register();
         }
         if ($cli) {
-            \WP_CLI::add_command('agentmate key', KeyCommand::class);
-            \WP_CLI::add_command('agentmate connections', ConnectionsCommand::class);
-            \WP_CLI::add_command('agentmate deploys', DeploysCommand::class);
-            \WP_CLI::add_command('agentmate status', StatusCommand::class);
-            // The guard registers `wp agentmate rescue` so it works even with --skip-plugins;
-            // without a guard the plugin does it.
-            if (!defined('AGENTMATE_CONNECTOR_GUARD')) {
-                \WP_CLI::add_command('agentmate rescue', RescueCommand::class);
+            // The old command name keeps the scripts site owners wrote for 1.63 working.
+            foreach (array('runova', Legacy::CLI_COMMAND) as $name) {
+                \WP_CLI::add_command($name . ' key', KeyCommand::class);
+                \WP_CLI::add_command($name . ' connections', ConnectionsCommand::class);
+                \WP_CLI::add_command($name . ' deploys', DeploysCommand::class);
+                \WP_CLI::add_command($name . ' status', StatusCommand::class);
+                \WP_CLI::add_command($name . ' migrate', MigrateCommand::class);
+                // The guard registers `wp runova rescue` so it works even with --skip-plugins;
+                // without a guard the plugin does it.
+                if (!defined('RUNOVA_CONNECTOR_GUARD') && !defined(Legacy::GUARD_CONSTANT)) {
+                    \WP_CLI::add_command($name . ' rescue', RescueCommand::class);
+                }
             }
         }
+    }
+
+    /** WP-Cron, after a move to the Runova layout: the old folder's grace period is over. */
+    public static function cleanUpLayout(): void
+    {
+        LayoutMigration::cleanUp(new WpLayoutHost(), time());
+    }
+
+    public static function layoutMigration(): LayoutMigration
+    {
+        return new LayoutMigration(self::environment(), self::audit(), self::deployService(), new WpLayoutHost());
     }
 
     public static function storage(): Storage
@@ -135,6 +154,6 @@ final class Plugin
     public static function logError(\Throwable $error): void
     {
         // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- the site owner's only window into a failed call.
-        error_log('AgentMate Connector: ' . get_class($error) . ': ' . $error->getMessage() . ' in ' . $error->getFile() . ':' . $error->getLine());
+        error_log('Runova Connector: ' . get_class($error) . ': ' . $error->getMessage() . ' in ' . $error->getFile() . ':' . $error->getLine());
     }
 }

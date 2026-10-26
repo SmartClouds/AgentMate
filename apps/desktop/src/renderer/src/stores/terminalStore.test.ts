@@ -1,6 +1,6 @@
 import type { SshSavedServer } from '@shared/apiTypes';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { type FakeBridge, installAgentmatBridge } from '../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../test/renderer/runovaBridge';
 import {
   defaultNewSession,
   TERMINAL_DEFAULT_HEIGHT,
@@ -26,16 +26,16 @@ function reset(): void {
 const server = { id: 'srv-1', nickname: 'build box' } as SshSavedServer;
 
 beforeEach(() => {
-  bridge = installAgentmatBridge({ platform: 'win32' });
+  bridge = installRunovaBridge({ platform: 'win32' });
   reset();
 });
 
 describe('defaultNewSession', () => {
   it('starts the shell that belongs to the platform, always called a terminal', () => {
     expect(defaultNewSession()).toEqual({ title: 'Terminal', shell: 'powershell.exe' });
-    installAgentmatBridge({ platform: 'darwin' });
+    installRunovaBridge({ platform: 'darwin' });
     expect(defaultNewSession()).toEqual({ title: 'Terminal', shell: 'zsh' });
-    installAgentmatBridge({ platform: 'linux' });
+    installRunovaBridge({ platform: 'linux' });
     expect(defaultNewSession()).toEqual({ title: 'Terminal', shell: 'bash' });
   });
 });
@@ -271,7 +271,7 @@ describe('moveSession', () => {
   it('saves the new order for the next start', () => {
     openThree();
     store().moveSession(2, 0);
-    const saved = JSON.parse(localStorage.getItem('agentmate-terminal-sessions') ?? '{}');
+    const saved = JSON.parse(localStorage.getItem('runova-terminal-sessions') ?? '{}');
     expect(saved.state.sessions.map((session: { id: string }) => session.id)).toEqual([
       'c',
       'a',
@@ -282,7 +282,7 @@ describe('moveSession', () => {
 
 describe('coming back from a saved drawer', () => {
   function seed(state: Record<string, unknown>): void {
-    localStorage.setItem('agentmate-terminal-sessions', JSON.stringify({ state, version: 0 }));
+    localStorage.setItem('runova-terminal-sessions', JSON.stringify({ state, version: 0 }));
   }
 
   async function rehydrate(): Promise<void> {
@@ -328,7 +328,7 @@ describe('coming back from a saved drawer', () => {
 
   it('never saves the command a tab already ran', () => {
     store().openSession({ title: 'Claude Code', initialInput: 'claude\r' });
-    const saved = JSON.parse(localStorage.getItem('agentmate-terminal-sessions') ?? '{}');
+    const saved = JSON.parse(localStorage.getItem('runova-terminal-sessions') ?? '{}');
     // A reconnect must never type it a second time.
     expect(saved.state.sessions[0].initialInput).toBeUndefined();
   });
@@ -342,14 +342,14 @@ describe('coming back from a saved drawer', () => {
       startedAt: 1_700_000_000_000,
     };
     store().openSession({ title: 'Apollo', initialInput: 'pnpm dev\r', run });
-    const raw = localStorage.getItem('agentmate-terminal-sessions') ?? '{}';
+    const raw = localStorage.getItem('runova-terminal-sessions') ?? '{}';
     const saved = JSON.parse(raw);
     expect(saved.state.sessions[0].run).toEqual(run);
     expect(saved.state.sessions[0].initialInput).toBeUndefined();
 
     // Clearing the store writes an empty drawer, so the saved one goes back before reading it.
     reset();
-    localStorage.setItem('agentmate-terminal-sessions', raw);
+    localStorage.setItem('runova-terminal-sessions', raw);
     await useTerminalStore.persist.rehydrate();
     // Still listed in the status bar after a restart, with the time it really started.
     expect(store().sessions[0]).toMatchObject({ run, restored: true });
@@ -358,7 +358,7 @@ describe('coming back from a saved drawer', () => {
   it('never saves an SSH tab, which has no host to reattach to', () => {
     store().openSshSession(server);
     store().openDefaultSession();
-    const saved = JSON.parse(localStorage.getItem('agentmate-terminal-sessions') ?? '{}');
+    const saved = JSON.parse(localStorage.getItem('runova-terminal-sessions') ?? '{}');
     expect(saved.state.sessions).toHaveLength(1);
     expect(saved.state.sessions[0].kind).toBeUndefined();
   });
@@ -366,7 +366,7 @@ describe('coming back from a saved drawer', () => {
   it('never saves a file manager tab, which a restart would only reopen disconnected', () => {
     store().openSession({ title: 'build box', kind: 'sftp', sftpServerId: 'srv-1' });
     store().openDefaultSession();
-    const saved = JSON.parse(localStorage.getItem('agentmate-terminal-sessions') ?? '{}');
+    const saved = JSON.parse(localStorage.getItem('runova-terminal-sessions') ?? '{}');
     expect(saved.state.sessions).toHaveLength(1);
     expect(saved.state.sessions[0].kind).toBeUndefined();
   });
@@ -390,7 +390,7 @@ describe('coming back from a saved drawer', () => {
       initialInput: 'claude --resume abc-12345\r',
       conversationId: 'abc-12345',
     });
-    const raw = localStorage.getItem('agentmate-terminal-sessions') ?? '{}';
+    const raw = localStorage.getItem('runova-terminal-sessions') ?? '{}';
     expect(JSON.parse(raw).state.sessions).toEqual([]);
     expect(raw).not.toContain('--resume');
   });

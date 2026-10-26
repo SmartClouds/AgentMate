@@ -1,10 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { installAgentmatBridge } from '../../../../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../../../../test/renderer/runovaBridge';
 import { EntryNameInput } from './EntryNameInput';
 
 function renderInTree(onTreeContextMenu: (event: React.MouseEvent) => void) {
-  installAgentmatBridge();
+  installRunovaBridge();
   return render(
     // The explorer tree sits around the name box and has a right-click handler of its own.
     <div onContextMenu={onTreeContextMenu}>

@@ -8,8 +8,8 @@ import type {
   RecoveryCodes,
   SignedInUser,
   StepUpResponse,
-} from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import type {
   DeployRestoreInput,
   DeployRestoreProgress,
@@ -59,6 +59,7 @@ import {
   devTcpTransport,
   streamLocalTransport,
 } from './connection/transport';
+import { coreNames, LEGACY_CORE, RUNOVA_CORE } from './coreLayout';
 import { updateCoreLive } from './coreUpdate';
 import { clientCertificate } from './directTls/clientCertificate';
 import { directTlsTransport, PinMismatchError, type TlsConnect } from './directTls/transport';
@@ -155,7 +156,7 @@ function summary(user: SignedInUser): NonNullable<DeployAccess['user']> {
   return { userName: user.userName, roles: user.roles, twoFactorEnabled: user.twoFactorEnabled };
 }
 
-const NO_CORE = 'This build of AgentMate has no server core to install.';
+const NO_CORE = 'This build of Runova has no server core to install.';
 const NOT_INSTALLED = 'The server core is not installed on this server yet.';
 const NOT_ENROLLED = 'This computer is not enrolled on this server core yet.';
 /** What the core says to a step-up with a password that is not the account's. */
@@ -273,6 +274,7 @@ export class DeployService {
         version: installed.version,
         release: installed.release,
         transport: installed.transport,
+        layout: installed.layout ?? 'runova',
         installedAt: this.now(),
         os: installed.os,
         architecture: installed.architecture,
@@ -295,6 +297,8 @@ export class DeployService {
         release: installed.release,
         transport: installed.transport,
         previousVersion: installed.previousVersion,
+        layout: installed.layout ?? 'runova',
+        ...(installed.migrationError ? { migrationError: installed.migrationError } : {}),
         ...(enrollmentError === undefined ? {} : { enrollmentError }),
       };
     });
@@ -690,12 +694,27 @@ export class DeployService {
         }
       });
     }
+    // Moved by another computer, or over SSH: the record follows what the core says.
+    const layout = answer.layout ?? 'legacy';
+    const saved = await this.deps.state.get(serverId);
+    if (saved && (saved.layout ?? 'legacy') !== layout) {
+      await this.deps.state.set(serverId, {
+        ...saved,
+        layout,
+        release:
+          layout === 'runova'
+            ? saved.release.replace(LEGACY_CORE.root, RUNOVA_CORE.root)
+            : saved.release,
+      });
+    }
     return {
       version: answer.version,
       apiVersion: answer.apiVersion,
       startedAtUnixMs: answer.startedAtUnixMs,
       checkedAt: this.now(),
       transport,
+      layout,
+      ...(answer.migrationError ? { migrationError: answer.migrationError } : {}),
     };
   }
 
@@ -787,7 +806,7 @@ export class DeployService {
   /**
    * A core this computer did not install. The preflight (as the login user, no sudo) says whether
    * one runs there and whether sshd allows the tunnel, and the core's health settles the transport,
-   * as after an install. Only root and the agentmate group may open the core's socket, so a login
+   * as after an install. Only root and the runova group may open the core's socket, so a login
    * outside it is told what to ask for instead of meeting a tunnel error.
    */
   private async adoptCore(serverId: string): Promise<DeployCoreRecord> {
@@ -796,7 +815,8 @@ export class DeployService {
     if (!installed) throw new Error('The server core is not installed on this server yet.');
     if (report.sudo !== 'root') {
       const access = await this.withLease(serverId, (lease) => coreGroupAccess(lease.connection));
-      if (access === 'missing') throw new Error(coreGroupProblem(report.loginUser));
+      if (access === 'missing')
+        throw new Error(coreGroupProblem(report.loginUser, coreNames(installed.layout).group));
       // In the group since this login started: a fresh login picks it up.
       if (access === 'new-login') this.deps.pool.reset(serverId);
     }
@@ -818,6 +838,7 @@ export class DeployService {
       version: reached.health.version,
       release: installed.release,
       transport: reached.transport,
+      layout: reached.health.layout ?? installed.layout,
       installedAt: this.now(),
       os: report.os.name,
       architecture: report.architecture.machine,

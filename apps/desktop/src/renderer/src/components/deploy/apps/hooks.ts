@@ -3,7 +3,7 @@ import type {
   JobInfo,
   JobLogLine,
   StackDetails,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { ownedSubscription } from '@/lib/deploy/overview/subscription';
@@ -24,7 +24,7 @@ export interface AppsAccess {
 export function useAppsAccess(serverId: string): AppsAccess {
   const access = useQuery({
     queryKey: queryKeys.deployAccess(serverId),
-    queryFn: () => window.agentmat.deploy.access(serverId),
+    queryFn: () => window.runova.deploy.access(serverId),
     retry: false,
     staleTime: 30_000,
   });
@@ -41,7 +41,7 @@ export function useAppsAccess(serverId: string): AppsAccess {
 export function useStacks(serverId: string, enabled: boolean) {
   return useQuery({
     queryKey: queryKeys.deployAppsList(serverId),
-    queryFn: async () => (await window.agentmat.deployStacks.list(serverId)) ?? [],
+    queryFn: async () => (await window.runova.deployStacks.list(serverId)) ?? [],
     enabled,
     retry: false,
     refetchInterval: 15_000,
@@ -65,7 +65,7 @@ export function stackIsBusy(details: StackDetails | undefined): boolean {
 export function useStack(serverId: string, stackId: string, enabled: boolean, following: boolean) {
   return useQuery({
     queryKey: queryKeys.deployApp(serverId, stackId),
-    queryFn: () => window.agentmat.deployStacks.get({ serverId, stackId }),
+    queryFn: () => window.runova.deployStacks.get({ serverId, stackId }),
     enabled,
     retry: false,
     refetchInterval: (query) =>
@@ -103,9 +103,9 @@ export function useJobLines(serverId: string, jobId: string | null): JobLines {
     setLog({ job: null, lines: [], ended: false, error: null });
     if (!jobId) return;
     return ownedSubscription({
-      listen: window.agentmat.deployJobs.onLog,
-      start: () => window.agentmat.deployJobs.watch({ serverId, jobId }),
-      stop: window.agentmat.deployJobs.unwatch,
+      listen: window.runova.deployJobs.onLog,
+      start: () => window.runova.deployJobs.watch({ serverId, jobId }),
+      stop: window.runova.deployJobs.unwatch,
       onEvent: (event) =>
         setLog((current) => {
           const last = current.lines.at(-1)?.seq ?? 0;

@@ -7,7 +7,7 @@ import {
   type ProviderUsage,
   type UsagePeriod,
   type UsageTokens,
-} from '@agentmat/core';
+} from '@runova/core';
 import { opencodeSessionTable } from '../agents/opencodeStore';
 import { retentionSinceMs } from './logParsers';
 import type { KnownProjects } from './projectDaily';

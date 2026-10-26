@@ -7,13 +7,13 @@ keywords: prompt builder, prompt, generate prompt, build prompt, translate, voic
 route: /prompt-builder
 ---
 
-Prompt Builder helps you write good prompts for AI coding agents such as Claude Code, Codex or Gemini. You describe what you want in plain words (in any language, by typing or by voice), pick the kind of task and which agent will receive it, and AgentMate asks your AI provider to write a structured prompt. You can then copy it, send it to a terminal, save it as a project draft, or schedule it to run later.
+Prompt Builder helps you write good prompts for AI coding agents such as Claude Code, Codex or Gemini. You describe what you want in plain words (in any language, by typing or by voice), pick the kind of task and which agent will receive it, and Runova asks your AI provider to write a structured prompt. You can then copy it, send it to a terminal, save it as a project draft, or schedule it to run later.
 
 Prompt Builder needs an AI provider (OpenAI, Gemini or Ollama) to write prompts, see [AI providers](ai-providers.md). It also has a smaller version, the **Build Prompt** dialog, that works on one project at a time (described below).
 
 ## Where to find it
 
-Click **Prompt Builder** in the sidebar under **Build**, or open the command palette (`Ctrl+K`) and type Prompt Builder. The page header reads "Describe what you want; AgentMate structures it into a professional prompt."
+Click **Prompt Builder** in the sidebar under **Build**, or open the command palette (`Ctrl+K`) and type Prompt Builder. The page header reads "Describe what you want; Runova structures it into a professional prompt."
 
 The page keeps what you were doing. Your request, the chosen type and target, and the generated prompt are still there when you leave and come back, and after you restart the app.
 
@@ -25,7 +25,7 @@ The page has two halves. The left half is where you describe the task, the right
 
 1. In **Your request**, describe what you want, for example "Add a login form with email/password validation". Any language works. You can also click **Dictate** to speak it, see the Voice input section below.
 2. Choose a **Prompt Type**. The options are Frontend, Backend, Full Stack (the default), UI Design, UX Review, Product, API, Database, Testing, Security, Performance, DevOps, Documentation, Refactoring, Bug Fix, Code Review, Architecture, Mobile, Electron, React, Next.js, Node.js, .NET, Flutter, Python, AI Agent and Custom.
-3. Choose a **Target AI**. The list holds every AI CLI AgentMate knows (Claude Code, Gemini, OpenCode, OpenClaude, Codex, Grok, Cursor, Copilot, FreeBuff, Qwen, Aider, Goose, Cline, Continue, Pi and Muse Code). The prompt is shaped for the agent you pick.
+3. Choose a **Target AI**. The list holds every AI CLI Runova knows (Claude Code, Gemini, OpenCode, OpenClaude, Codex, Grok, Cursor, Copilot, FreeBuff, Qwen, Aider, Goose, Cline, Continue, Pi and Muse Code). The prompt is shaped for the agent you pick.
 4. Optionally choose a **Project**. The box starts as "No project". If you choose one, **Target AI** switches to that project's agent. A project is needed to save a draft or a scheduled series.
 5. Leave **Status** on **Draft**, or switch to **Scheduled** (see below).
 6. Click **Generate Prompt**.
@@ -70,7 +70,7 @@ See [Projects](projects.md) and [Scheduled tasks](scheduled-tasks.md) for where 
 
 ## Recommended run
 
-Under the generated prompt, the **Recommended run** panel tells you how heavy the task is and which model and effort level to use, so you do not overspend on a small job. After **Generate Prompt** or **Translate** finishes, AgentMate automatically asks your default AI CLI to read the prompt and size it. This uses a CLI, not your API provider, so one must be installed and signed in (see [AI CLI Manager](cli-manager.md)). Sizing can take a short while and is stopped after 2 minutes. In the Build Prompt dialog this can be switched off, see the dialog section below.
+Under the generated prompt, the **Recommended run** panel tells you how heavy the task is and which model and effort level to use, so you do not overspend on a small job. After **Generate Prompt** or **Translate** finishes, Runova automatically asks your default AI CLI to read the prompt and size it. This uses a CLI, not your API provider, so one must be installed and signed in (see [AI CLI Manager](cli-manager.md)). Sizing can take a short while and is stopped after 2 minutes. In the Build Prompt dialog this can be switched off, see the dialog section below.
 
 When a result is ready the panel shows:
 

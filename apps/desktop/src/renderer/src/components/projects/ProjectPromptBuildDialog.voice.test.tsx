@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { AppSettings, Project } from '@agentmat/core';
+import type { AppSettings, Project } from '@runova/core';
 import { screen, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

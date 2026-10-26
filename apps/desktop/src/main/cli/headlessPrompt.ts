@@ -1,6 +1,6 @@
 import type { ChildProcess } from 'node:child_process';
 import { execFile } from 'node:child_process';
-import type { AppSettings, CliDefinition, SupportedOS } from '@agentmat/core';
+import type { AppSettings, CliDefinition, SupportedOS } from '@runova/core';
 import {
   buildHeadlessCliArgs,
   buildHeadlessImageInput,
@@ -8,7 +8,7 @@ import {
   getCliArgsFor,
   getCliDefinition,
   supportsPromptImages,
-} from '@agentmat/core';
+} from '@runova/core';
 import { resolveExecutable } from '../installMethod';
 import { runCli } from '../packageManagers/execUtils';
 import { refreshShellPath } from '../shellPath';

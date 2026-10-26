@@ -1,4 +1,4 @@
-import { type Project, type WorktreeInfo, worktreeScopeId } from '@agentmat/core';
+import { type Project, type WorktreeInfo, worktreeScopeId } from '@runova/core';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';

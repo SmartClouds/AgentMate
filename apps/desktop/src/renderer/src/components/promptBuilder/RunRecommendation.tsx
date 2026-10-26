@@ -1,4 +1,5 @@
-import type { EffortLevel, RunChoice, RunRecommendation } from '@agentmat/core';
+import * as PopoverPrimitive from '@radix-ui/react-popover';
+import type { EffortLevel, RunChoice, RunRecommendation } from '@runova/core';
 import {
   defaultEffortFor,
   EFFORT_LABELS,
@@ -7,8 +8,7 @@ import {
   relativeCostLevel,
   runChoiceArgs,
   runProfileForTargetAI,
-} from '@agentmat/core';
-import * as PopoverPrimitive from '@radix-ui/react-popover';
+} from '@runova/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CostMeter } from '@/components/cli/CostMeter';
 import { CliLogo } from '@/components/cliLogos';

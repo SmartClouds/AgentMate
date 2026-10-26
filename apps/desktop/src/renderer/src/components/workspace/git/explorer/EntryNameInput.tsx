@@ -1,9 +1,9 @@
-import { splitExtension, validateEntryName } from '@agentmat/core';
+import { splitExtension, validateEntryName } from '@runova/core';
 import { useEffect, useRef, useState } from 'react';
 import { cachedListing } from './actions';
 
 const CASE_INSENSITIVE = (): boolean =>
-  window.agentmat.platform === 'win32' || window.agentmat.platform === 'darwin';
+  window.runova.platform === 'win32' || window.runova.platform === 'darwin';
 
 /**
  * The inline name box for renaming a row or naming a new one. Enter commits, Escape cancels,
@@ -47,7 +47,7 @@ export function EntryNameInput({
 
   const error = ((): string | null => {
     if (!value || value === initial) return null;
-    const problem = validateEntryName(value, window.agentmat.platform, { allowNested });
+    const problem = validateEntryName(value, window.runova.platform, { allowNested });
     if (problem) return problem;
     const first = value.split(/[\\/]/)[0] ?? value;
     const fold = (name: string): string => (CASE_INSENSITIVE() ? name.toLowerCase() : name);

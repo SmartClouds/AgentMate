@@ -11,13 +11,8 @@ function input(overrides: Partial<LegCommandInput> = {}): LegCommandInput {
     planFirst: false,
     afterPlanMode: 'auto',
     hookSettingsPath: 'C:/Users/me/AppData/agent-hooks/claude-relay-settings.json',
-    mcpArgs: [
-      '--mcp-config',
-      'C:/data/relay/mcp.json',
-      '--allowedTools',
-      'mcp__agentmate_relay__*',
-    ],
-    prompt: 'AgentMate Relay: task T001 (Login), session 1. Read docs/tasks/RELAY.md first.',
+    mcpArgs: ['--mcp-config', 'C:/data/relay/mcp.json', '--allowedTools', 'mcp__runova_relay__*'],
+    prompt: 'Runova Relay: task T001 (Login), session 1. Read docs/tasks/RELAY.md first.',
     ...overrides,
   };
 }
@@ -27,7 +22,7 @@ describe('buildLegCommand', () => {
     const { command, promptInCommand } = buildLegCommand(input());
     expect(promptInCommand).toBe(true);
     expect(command).toBe(
-      "claude --settings C:/Users/me/AppData/agent-hooks/claude-relay-settings.json --mcp-config C:/data/relay/mcp.json --allowedTools 'mcp__agentmate_relay__*' --permission-mode auto --model opus --effort high 'AgentMate Relay: task T001 (Login), session 1. Read docs/tasks/RELAY.md first.'",
+      "claude --settings C:/Users/me/AppData/agent-hooks/claude-relay-settings.json --mcp-config C:/data/relay/mcp.json --allowedTools 'mcp__runova_relay__*' --permission-mode auto --model opus --effort high 'Runova Relay: task T001 (Login), session 1. Read docs/tasks/RELAY.md first.'",
     );
   });
 
@@ -71,15 +66,15 @@ describe('buildLegCommand', () => {
         cliId: 'codex-cli',
         choice: { cliId: 'codex-cli', model: null, effort: null, autoSize: false },
         hookSettingsPath: null,
-        mcpArgs: ['-c', 'mcp_servers.agentmate_relay.command="node"'],
+        mcpArgs: ['-c', 'mcp_servers.runova_relay.command="node"'],
         launchDefaults: { model: 'gpt-6-sol' },
       }),
     );
     expect(promptInCommand).toBe(false);
     expect(command).toContain('codex');
     expect(command).toContain('gpt-6-sol');
-    expect(command).toContain('mcp_servers.agentmate_relay.command');
-    expect(command).not.toContain('AgentMate Relay');
+    expect(command).toContain('mcp_servers.runova_relay.command');
+    expect(command).not.toContain('Runova Relay');
   });
 
   it('adds the plan flag of a CLI that has one', () => {

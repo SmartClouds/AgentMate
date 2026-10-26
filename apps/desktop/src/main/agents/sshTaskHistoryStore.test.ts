@@ -39,7 +39,7 @@ describe('loading', () => {
     expect(read).toHaveBeenCalledTimes(1);
   });
 
-  it('marks a task that was still going when AgentMate closed as stopped', async () => {
+  it('marks a task that was still going when Runova closed as stopped', async () => {
     const { history } = setup([
       run('r1', { status: 'running', endedAt: null }),
       run('r2', { status: 'paused', endedAt: null }),
@@ -50,7 +50,7 @@ describe('loading', () => {
       expect(r.endedAt).not.toBeNull();
       expect(r.entries.at(-1)).toMatchObject({
         kind: 'stopped',
-        text: 'AgentMate closed while this was running.',
+        text: 'Runova closed while this was running.',
       });
     }
   });

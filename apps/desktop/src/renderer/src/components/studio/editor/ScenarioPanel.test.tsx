@@ -1,4 +1,4 @@
-import { secondsToFlicks } from '@agentmat/studio';
+import { secondsToFlicks } from '@runova/studio';
 import { screen, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

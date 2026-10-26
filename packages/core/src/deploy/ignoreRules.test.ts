@@ -29,14 +29,14 @@ describe('createIgnoreRules', () => {
   });
 
   it('with no defaults, leaves out only what the user names', () => {
-    const rules = build([{ source: '.agentmateignore', text: 'secret/\n' }], []);
+    const rules = build([{ source: '.runovaignore', text: 'secret/\n' }], []);
     expect(rules.excluded('secret/a')).toBe(true);
     expect(rules.excludedUnlessTracked('secret/a')).toBe(true);
     expect(rules.excludedUnlessTracked('a.log')).toBe(false);
   });
 
   it('lets a user layer put a default back with !', () => {
-    const rules = build([{ source: '.agentmateignore', text: '!keep.tmp\n' }], ['*.tmp']);
+    const rules = build([{ source: '.runovaignore', text: '!keep.tmp\n' }], ['*.tmp']);
     expect(rules.excludedUnlessTracked('keep.tmp')).toBe(false);
     expect(rules.excludedUnlessTracked('sub/keep.tmp')).toBe(false);
     expect(rules.excludedUnlessTracked('other.tmp')).toBe(true);
@@ -74,7 +74,7 @@ describe('default layers read from files', () => {
   const gitignore = { source: '.gitignore', text: 'dist/\n*.map\n/docs/\n', lenient: true };
 
   it('leave things out until tracked, and the user can put them back', () => {
-    const rules = build([{ source: '.agentmateignore', text: '!app.js.map\n' }], ['*.tmp'], {
+    const rules = build([{ source: '.runovaignore', text: '!app.js.map\n' }], ['*.tmp'], {
       defaultLayers: [gitignore],
     });
     expect(rules.excludedUnlessTracked('dist/app.js')).toBe(true);
@@ -169,7 +169,7 @@ describe('default layers written for a folder above the synced one', () => {
   });
 
   it('let the synced folder own layers and the given defaults work as before', () => {
-    const rules = build([{ source: '.agentmateignore', text: '/tests/\n!keep.zip\n' }], ['*.tmp'], {
+    const rules = build([{ source: '.runovaignore', text: '/tests/\n!keep.zip\n' }], ['*.tmp'], {
       defaultLayers: [
         ancestor('*.zip\n'),
         { source: 'foo/.gitignore', text: '/dist/\n', lenient: true },

@@ -2,6 +2,7 @@ import { Duplex } from 'node:stream';
 import type { SshEndpoint } from '../../../ssh/connectConfig';
 import type { ExecOptions, ExecResult, UploadOptions } from '../../../ssh/connection';
 import { TunnelRefusedError } from '../../../ssh/connection';
+import { LEGACY_CORE, RUNOVA_CORE } from '../../coreLayout';
 
 /**
  * A server as a script: it answers the preflight's probes and the installer's root commands the
@@ -20,7 +21,7 @@ export interface ScriptedMachine {
   selinux: 'Enforcing' | null;
   /** Root commands (matched by substring) that should fail, with what they print. */
   failures: Array<{ match: string; stderr: string; exitCode?: number }>;
-  /** The users `agentmate-core admin status` reports. */
+  /** The users `runova-core admin status` reports. */
   coreUsers: Array<{ userName: string; roles: string[] }>;
   /** When set, `admin create-owner` refuses the password with this reason. */
   ownerPasswordRefusal: string | null;
@@ -52,7 +53,7 @@ export function scriptedMachine(overrides: Partial<ScriptedMachine> = {}): Scrip
     failures: [],
     coreUsers: [],
     ownerPasswordRefusal: null,
-    groups: ['deployer', 'agentmate'],
+    groups: ['deployer', 'runova'],
     configuredGroups: null,
     stagedBackup: JSON.stringify({
       coreVersion: '1.52.0',
@@ -120,15 +121,24 @@ export class ScriptedConnection {
       return done(`${(m.configuredGroups ?? m.groups).join(' ')}\n`);
     }
     if (command === 'sudo -k -n true') return done('', m.sudo === 'passwordless' ? 0 : 1);
-    if (command.startsWith('readlink -f /opt/agentmate-core/current')) {
-      return m.installed ? done(`${m.installed.release}\n`) : done('', 1);
+    const link = /^readlink -f (\S+)\/current/.exec(command);
+    if (link) {
+      // The release answers through the current link of the layout it is in (the new one for a
+      // link that points anywhere else).
+      const release = m.installed?.release ?? '';
+      const layout = [RUNOVA_CORE, LEGACY_CORE].find((names) =>
+        release.startsWith(`${names.root}/`),
+      );
+      return m.installed && link[1] === (layout ?? RUNOVA_CORE).root
+        ? done(`${m.installed.release}\n`)
+        : done('', 1);
     }
     if (command.includes('admin version')) {
       return m.installed ? done(JSON.stringify({ version: m.installed.version })) : done('', 127);
     }
     if (command.includes('getenforce')) return done(`${m.selinux ?? 'absent'}\n`);
-    if (command.startsWith('mktemp -d')) return done('/tmp/agentmate.Test123456\n');
-    if (command.startsWith('rm -rf /tmp/agentmate.')) return done();
+    if (command.startsWith('mktemp -d')) return done('/tmp/runova.Test123456\n');
+    if (command.startsWith('rm -rf /tmp/runova.')) return done();
 
     // The login user's own commands against the release: never root's, even on a root login.
     if (command.startsWith('sh -c ') && command.includes('/releases/download/')) {
@@ -164,7 +174,7 @@ export class ScriptedConnection {
     this.rootStdin.push({ command: root, stdin: payload });
     const failure = m.failures.find((candidate) => root.includes(candidate.match));
     if (failure) return done('', failure.exitCode ?? 1, failure.stderr);
-    if (root.startsWith('journalctl')) return done('agentmate-core: Unhandled exception. Boom.\n');
+    if (root.startsWith('journalctl')) return done('runova-core: Unhandled exception. Boom.\n');
     if (root.endsWith(' admin status')) {
       const initialized = m.coreUsers.some((user) => user.roles.includes('owner'));
       const users = m.coreUsers.map((user) => ({ ...user, devices: 0 }));
@@ -190,7 +200,7 @@ export class ScriptedConnection {
   }
 
   async createStagingDirectory(): Promise<string> {
-    return '/tmp/agentmate.Test123456';
+    return '/tmp/runova.Test123456';
   }
 
   async openStream(

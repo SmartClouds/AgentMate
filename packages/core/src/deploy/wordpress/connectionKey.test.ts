@@ -64,7 +64,7 @@ describe('transport security', () => {
 describe('connection keys', () => {
   const key = {
     siteUrl: 'https://a.test',
-    restUrl: 'https://a.test/wp-json/agentmate/v1',
+    restUrl: 'https://a.test/wp-json/runova/v1',
     ajaxUrl: 'https://a.test/wp-admin/admin-ajax.php',
     pairingId: 'pairing-0001',
     pairingSecret: wpBase64UrlEncode(new Uint8Array(32).fill(7)),

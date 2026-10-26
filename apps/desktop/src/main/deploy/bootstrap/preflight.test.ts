@@ -11,6 +11,7 @@ import {
   type FakeSshServer,
   startFakeSshServer,
 } from '../../ssh/testing/fakeSshServer';
+import { LEGACY_CORE } from '../coreLayout';
 import { type PreflightConnection, type PreflightOptions, runPreflight } from './preflight';
 
 /**
@@ -49,7 +50,7 @@ const typical: Machine = {
 };
 
 const RELEASE_URL =
-  'https://github.com/SmartClouds/AgentMate/releases/download/v1.53.0/agentmate-core-1.53.0-linux-x64.tar.gz';
+  'https://github.com/SmartClouds/Runova/releases/download/v1.53.0/runova-core-1.53.0-linux-x64.tar.gz';
 
 function answer(machine: Machine, { command }: ExecRequest): ExecReply {
   if (command === 'cat /etc/os-release') return { stdout: machine.osRelease };
@@ -63,8 +64,12 @@ function answer(machine: Machine, { command }: ExecRequest): ExecReply {
     if (machine.sudo === 'missing') return { exitCode: 127, stderr: 'sudo: command not found\n' };
     return { exitCode: machine.sudo === 'passwordless' ? 0 : 1 };
   }
-  if (command.startsWith('readlink -f /opt/agentmate-core/current')) {
-    return machine.installed ? { stdout: `${machine.installed.release}\n` } : { exitCode: 1 };
+  const link = /^readlink -f (\S+)\/current /.exec(command);
+  if (link) {
+    // Only the layout the release is in has a current link.
+    return machine.installed?.release.startsWith(`${link[1]}/`)
+      ? { stdout: `${machine.installed.release}\n` }
+      : { exitCode: 1 };
   }
   if (command.includes('admin version')) {
     return machine.installed
@@ -134,13 +139,22 @@ describe('runPreflight', () => {
 
   it('notices an existing install and its version', async () => {
     const report = await preflight({
-      installed: { release: '/opt/agentmate-core/releases/1.52.0-abcdef012345', version: '1.52.0' },
+      installed: { release: '/opt/runova-core/releases/1.52.0-abcdef012345', version: '1.52.0' },
     });
 
     expect(report.installed).toEqual({
       version: '1.52.0',
-      release: '/opt/agentmate-core/releases/1.52.0-abcdef012345',
+      release: '/opt/runova-core/releases/1.52.0-abcdef012345',
+      layout: 'runova',
     });
+  });
+
+  it('finds a core on the layout from before the rename, through its old program', async () => {
+    const release = `${LEGACY_CORE.releases}/1.63.0-abcdef012345`;
+    const report = await preflight({ installed: { release, version: '1.63.0' } });
+
+    expect(report.installed).toEqual({ version: '1.63.0', release, layout: 'legacy' });
+    expect(asked).toContain(`${LEGACY_CORE.binaryPath} admin version 2>/dev/null`);
   });
 
   it('is fine with sshd forbidding stream-local forwarding', async () => {
@@ -201,7 +215,7 @@ describe('runPreflight', () => {
         {
           releaseProbe: 'curl',
           installed: {
-            release: '/opt/agentmate-core/releases/1.52.0-abcdef012345',
+            release: '/opt/runova-core/releases/1.52.0-abcdef012345',
             version: '1.52.0',
           },
         },
@@ -309,7 +323,7 @@ describe('runPreflight against a server that stops answering', () => {
     // The release link exists, so the version probe runs, and goes quiet.
     const { connection } = connectionWhere((command) => command.includes('admin version'), {
       ...typical,
-      installed: { release: '/opt/agentmate-core/releases/1.52.0-abcdef012345', version: '1.52.0' },
+      installed: { release: '/opt/runova-core/releases/1.52.0-abcdef012345', version: '1.52.0' },
     });
 
     const report = await runPreflight(connection);

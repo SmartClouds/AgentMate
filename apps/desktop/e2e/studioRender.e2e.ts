@@ -24,7 +24,7 @@ test.afterEach(async () => {
 });
 
 type Bridge = {
-  agentmat: {
+  runova: {
     studio: {
       updateSettings(p: unknown): Promise<unknown>;
       create(input: unknown): Promise<{ id: string; folder: string }>;
@@ -72,7 +72,7 @@ Studio.scene({
 async function renderableVideo(page: Page, library: string): Promise<string> {
   return page.evaluate(
     async ({ library, html }) => {
-      const { studio, studioScenes } = (window as unknown as Bridge).agentmat;
+      const { studio, studioScenes } = (window as unknown as Bridge).runova;
       await studio.updateSettings({ defaultRoot: library });
       const video = await studio.create({
         title: 'Render test',
@@ -120,7 +120,7 @@ async function renderableVideo(page: Page, library: string): Promise<string> {
 }
 
 async function jobs(page: Page) {
-  return page.evaluate(() => (window as unknown as Bridge).agentmat.studioRender.jobs());
+  return page.evaluate(() => (window as unknown as Bridge).runova.studioRender.jobs());
 }
 
 test.skip(!hasFfmpeg, 'ffmpeg is not installed here; Dev Setup (Studio) installs it.');
@@ -129,7 +129,7 @@ test('renders from the dialog, survives being killed mid-render, and resumes to 
   test.setTimeout(240_000);
   const first = await launchApp({});
   opened.push(first);
-  const library = join(first.root, 'Videos', 'AgentMate Studio');
+  const library = join(first.root, 'Videos', 'Runova Studio');
   const videoId = await renderableVideo(first.page, library);
 
   await first.page.evaluate((id) => {

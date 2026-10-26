@@ -6,13 +6,13 @@
  * - time budget: max_execution_time * 0.5, clamped to 5..20 seconds;
  * - fixed caps: 64 MiB per file, 20,000 files per item, 2,000 manifest entries per page.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Info;
+namespace Runova\Connector\Info;
 
-use AgentMate\Connector\Env\Environment;
-use AgentMate\Connector\Protocol;
+use Runova\Connector\Env\Environment;
+use Runova\Connector\Protocol;
 
 final class Limits
 {

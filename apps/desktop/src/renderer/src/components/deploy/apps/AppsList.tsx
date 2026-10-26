@@ -1,4 +1,4 @@
-import type { StackInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { StackInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { Blocks, FileCode, Key, Plus } from '@/components/icons';
 import { CARD_GRID, EmptyState, GLASS_CARD, LoadFailure } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';

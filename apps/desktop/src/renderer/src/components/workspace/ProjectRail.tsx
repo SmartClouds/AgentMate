@@ -1,5 +1,5 @@
-import type { Project } from '@agentmat/core';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
+import type { Project } from '@runova/core';
 import { Command as CommandPrimitive } from 'cmdk';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -93,7 +93,7 @@ function initials(name: string): string {
     .filter(Boolean);
   if (words.length >= 2) return `${words[0][0]}${words[1][0]}`.toUpperCase();
   const word = words[0] ?? '?';
-  // CamelCase names ("AgentMate") read better as their two capitals.
+  // CamelCase names ("Runova") read better as their two capitals.
   const capitals = word.match(/[A-Z]/g);
   if (capitals && capitals.length >= 2) return `${capitals[0]}${capitals[1]}`;
   return word.slice(0, 2).replace(/^./, (c) => c.toUpperCase());

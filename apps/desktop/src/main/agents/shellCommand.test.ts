@@ -14,8 +14,8 @@ import {
 } from './shellCommand';
 
 const ID = 'abc123';
-const START = `\x1b]7750;AgentMate:Start:${ID}\x07`;
-const done = (code: number) => `\x1b]7750;AgentMate:Done:${ID}:${code}\x07`;
+const START = `\x1b]7750;Runova:Start:${ID}\x07`;
+const done = (code: number) => `\x1b]7750;Runova:Done:${ID}:${code}\x07`;
 
 describe('parseModelReply', () => {
   it('reads a RUN reply and drops wrapping backticks', () => {
@@ -128,9 +128,9 @@ describe('shellFamily', () => {
 
 describe('PROMPT_READY', () => {
   it('matches both OSC terminators', () => {
-    expect(PROMPT_READY.test('\x1b]7750;AgentMate:PromptReady:1\x07')).toBe(true);
-    expect(PROMPT_READY.test('\x1b]7750;AgentMate:PromptReady:1\x1b\\')).toBe(true);
-    expect(PROMPT_READY.test(']7750;AgentMate:PromptReady:1')).toBe(false);
+    expect(PROMPT_READY.test('\x1b]7750;Runova:PromptReady:1\x07')).toBe(true);
+    expect(PROMPT_READY.test('\x1b]7750;Runova:PromptReady:1\x1b\\')).toBe(true);
+    expect(PROMPT_READY.test(']7750;Runova:PromptReady:1')).toBe(false);
   });
 });
 
@@ -138,8 +138,8 @@ describe('markedCommandLine', () => {
   it('wraps a POSIX command in invisible start and done markers', () => {
     const marked = markedCommandLine('posix', 'uptime', ID, '\n', true);
     expect(marked.line).toBe(
-      `printf '\\033]7750;AgentMate:Start:${ID}\\007'; uptime; ` +
-        `printf '\\033]7750;AgentMate:Done:${ID}:%s\\007' "$?"\n`,
+      `printf '\\033]7750;Runova:Start:${ID}\\007'; uptime; ` +
+        `printf '\\033]7750;Runova:Done:${ID}:%s\\007' "$?"\n`,
     );
     expect(marked.start).toBe(START);
   });
@@ -151,12 +151,12 @@ describe('markedCommandLine', () => {
 
   it('does not accept a done marker that has not finished arriving', () => {
     const { done: doneRegex } = markedCommandLine('posix', 'false', ID, '\n', true);
-    expect(doneRegex.test(`\x1b]7750;AgentMate:Done:${ID}:1`)).toBe(false);
+    expect(doneRegex.test(`\x1b]7750;Runova:Done:${ID}:1`)).toBe(false);
   });
 
   it('ignores markers from another command', () => {
     const { done: doneRegex } = markedCommandLine('posix', 'false', ID, '\n', true);
-    expect(doneRegex.test('\x1b]7750;AgentMate:Done:other:0\x07')).toBe(false);
+    expect(doneRegex.test('\x1b]7750;Runova:Done:other:0\x07')).toBe(false);
   });
 
   it('drops a trailing semicolon so the line stays valid', () => {
@@ -171,24 +171,24 @@ describe('markedCommandLine', () => {
 
   it('prints the PowerShell markers with Write-Host', () => {
     const marked = markedCommandLine('powershell', 'Get-Date', ID, '\r', true);
-    expect(
-      marked.line.startsWith("Write-Host -NoNewline ([char]27 + ']7750;AgentMate:Start:"),
-    ).toBe(true);
-    expect(marked.line).toContain('; Get-Date; $__agentmateExit = if ($?)');
+    expect(marked.line.startsWith("Write-Host -NoNewline ([char]27 + ']7750;Runova:Start:")).toBe(
+      true,
+    );
+    expect(marked.line).toContain('; Get-Date; $__runovaExit = if ($?)');
     expect(marked.start).toBe(START);
   });
 
   it('falls back to a plain-text marker for cmd, which cannot print ESC', () => {
     const marked = markedCommandLine('cmd', 'dir', ID, '\r', true);
     expect(marked.start).toBeNull();
-    expect(marked.line).toBe(`dir & echo. & call echo __AGENTMATE_DONE_${ID}__:%^errorlevel%\r`);
-    expect(`__AGENTMATE_DONE_${ID}__:9`.match(marked.done)?.[1]).toBe('9');
+    expect(marked.line).toBe(`dir & echo. & call echo __RUNOVA_DONE_${ID}__:%^errorlevel%\r`);
+    expect(`__RUNOVA_DONE_${ID}__:9`.match(marked.done)?.[1]).toBe('9');
   });
 
   it('keeps the plain-text marker when hiding is off', () => {
     const marked = markedCommandLine('posix', 'ls', ID, '\r', false);
     expect(marked.start).toBeNull();
-    expect(marked.line).toBe(`ls; printf '\\n__AGENTMATE_DONE_${ID}__:%s\\n' "$?"\r`);
+    expect(marked.line).toBe(`ls; printf '\\n__RUNOVA_DONE_${ID}__:%s\\n' "$?"\r`);
   });
 });
 
@@ -229,7 +229,7 @@ describe('CommandDisplay', () => {
   const marked = markedCommandLine('posix', 'uptime', ID, '\n', true) as MarkedCommand & {
     start: string;
   };
-  const echo = `printf '\\033]7750;AgentMate:Start:${ID}\\007'; uptime; printf '...'\r\n`;
+  const echo = `printf '\\033]7750;Runova:Start:${ID}\\007'; uptime; printf '...'\r\n`;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -293,7 +293,7 @@ describe('CommandDisplay', () => {
 
   it('never shows a piece of the done marker while waiting for the rest', () => {
     const display = new CommandDisplay(sink, 'uptime', marked, ID);
-    display.push(`${echo}${START}out\r\n\x1b]7750;AgentMate:Do`);
+    display.push(`${echo}${START}out\r\n\x1b]7750;Runova:Do`);
     expect(shown).toBe('uptime\r\nout\r\n');
     display.push(`ne:${ID}:0`);
     expect(shown).toBe('uptime\r\nout\r\n');
@@ -326,9 +326,9 @@ describe('CommandDisplay', () => {
 
   it('flushes whatever it held and hands the pane back on release', () => {
     const display = new CommandDisplay(sink, 'uptime', marked, ID);
-    display.push(`${echo}${START}partial\x1b]7750;AgentMate:Done:`);
+    display.push(`${echo}${START}partial\x1b]7750;Runova:Done:`);
     display.release();
-    expect(shown).toBe('uptime\r\npartial\x1b]7750;AgentMate:Done:');
+    expect(shown).toBe('uptime\r\npartial\x1b]7750;Runova:Done:');
     expect(captured).toEqual([true, false]);
   });
 

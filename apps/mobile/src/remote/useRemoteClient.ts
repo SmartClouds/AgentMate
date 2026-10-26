@@ -7,7 +7,7 @@ import {
   REMOTE_PROTOCOL_VERSION,
   type RemoteControlMessage,
   type RemoteInputEvent,
-} from '@agentmat/protocol';
+} from '@runova/protocol';
 import * as Clipboard from 'expo-clipboard';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
@@ -81,12 +81,12 @@ const STUN_SERVERS = [
 ];
 
 function deviceName(): string {
-  return Platform.OS === 'ios' ? 'AgentMate Mobile (iOS)' : 'AgentMate Mobile (Android)';
+  return Platform.OS === 'ios' ? 'Runova Mobile (iOS)' : 'Runova Mobile (Android)';
 }
 
 /**
- * Controller-role client for AgentMate's remote-control protocol
- * (see @agentmat/protocol and apps/desktop/src/main/remote/manager.ts).
+ * Controller-role client for Runova's remote-control protocol
+ * (see @runova/protocol and apps/desktop/src/main/remote/manager.ts).
  *
  * The control plane (auth, input, clipboard) is a plain WebSocket. The screen
  * streams over WebRTC as a hardware-decoded video track rendered by RTCView,

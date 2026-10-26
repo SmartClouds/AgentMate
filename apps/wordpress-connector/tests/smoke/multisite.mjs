@@ -3,7 +3,7 @@
  * tables on the base prefix, items across the network, and one pair plus deploy.
  * Run with: node scripts/wordpress-connector.mjs smoke (after the single-site checks).
  *
- * AGENTMATE_WPC_MS_PORT picks the port (18991); AGENTMATE_WPC_KEEP=1 leaves the site running.
+ * RUNOVA_WPC_MS_PORT picks the port (18991); RUNOVA_WPC_KEEP=1 leaves the site running.
  */
 import { forms, login } from './admin.mjs';
 import { putOp, SiteClient } from './client.mjs';
@@ -11,7 +11,7 @@ import { startWordPressFixture } from './fixture.mjs';
 import { request } from './http.mjs';
 import { connectorRelease, nextVersion, sendConnectorUpdate, sourceVersion } from './release.mjs';
 
-const port = Number(process.env.AGENTMATE_WPC_MS_PORT || 18991);
+const port = Number(process.env.RUNOVA_WPC_MS_PORT || 18991);
 let failures = 0;
 
 /** This file is a command-line runner; its output is the report. */
@@ -34,11 +34,11 @@ try {
   say('Network activation');
   const networkActive = () =>
     site.wp(['plugin', 'list', '--status=active-network', '--field=name']).split('\n');
-  check(networkActive().includes('agentmate-connector'), 'network-activated');
+  check(networkActive().includes('runova-connector'), 'network-activated');
   site.wp(['site', 'create', '--slug=second', '--title=Second site']);
   const second = `${site.url}/second/`;
-  site.wp(['plugin', 'deactivate', 'agentmate-connector', '--network']);
-  const attempt = site.wp(['plugin', 'activate', 'agentmate-connector', `--url=${second}`], {
+  site.wp(['plugin', 'deactivate', 'runova-connector', '--network']);
+  const attempt = site.wp(['plugin', 'activate', 'runova-connector', `--url=${second}`], {
     allowFail: true,
   });
   const siteActive = site.wp([
@@ -48,26 +48,26 @@ try {
     '--format=json',
     `--url=${second}`,
   ]);
-  check(!siteActive.includes('agentmate-connector'), 'it never becomes active for one site only', {
+  check(!siteActive.includes('runova-connector'), 'it never becomes active for one site only', {
     attempt,
     siteActive,
   });
-  site.wp(['plugin', 'activate', 'agentmate-connector', '--network'], { allowFail: true });
-  check(networkActive().includes('agentmate-connector'), 'network-activated again');
+  site.wp(['plugin', 'activate', 'runova-connector', '--network'], { allowFail: true });
+  check(networkActive().includes('runova-connector'), 'network-activated again');
 
   say('Tables and guard');
   const tables = site
-    .wp(['db', 'query', "SHOW TABLES LIKE '%agentmate%'", '--skip-column-names'])
+    .wp(['db', 'query', "SHOW TABLES LIKE '%agentmate%'", '--skip-column-names']) // legacy-name
     .split('\n');
   check(
-    tables.length === 7 && tables.every((table) => table.trim().startsWith('wp_agentmate_')),
+    tables.length === 7 && tables.every((table) => table.trim().startsWith('wp_agentmate_')), // legacy-name
     'seven tables, all on the base prefix (none per site)',
     tables,
   );
   check(
     site
       .exec(
-        'test -e /var/www/html/wp-content/mu-plugins/00-agentmate-connector-guard.php && echo there || echo gone',
+        'test -e /var/www/html/wp-content/mu-plugins/00-runova-connector-guard.php && echo there || echo gone',
       )
       .trim() === 'there',
     'the guard is installed',
@@ -76,14 +76,14 @@ try {
   say('Network Admin page');
   const superAdmin = await login(site.url, 'admin', 'admin');
   const networkPage = await superAdmin.get(
-    '/wp-admin/network/settings.php?page=agentmate-connector&tab=status',
+    '/wp-admin/network/settings.php?page=runova-connector&tab=status',
   );
   check(
     networkPage.status === 200 && networkPage.text.includes('nav-tab-active'),
     'super admins get it under Network Admin > Settings',
   );
   check(
-    (await superAdmin.get('/wp-admin/tools.php?page=agentmate-connector')).status === 403,
+    (await superAdmin.get('/wp-admin/tools.php?page=runova-connector')).status === 403,
     'there is no per-site copy of the page',
   );
   site.wp([
@@ -97,18 +97,18 @@ try {
   ]);
   const siteAdmin = await login(site.url, 'siteadmin', 'siteadmin');
   check(
-    (await siteAdmin.get('/wp-admin/network/settings.php?page=agentmate-connector')).status === 403,
+    (await siteAdmin.get('/wp-admin/network/settings.php?page=runova-connector')).status === 403,
     'a site administrator without manage_network_options cannot open it',
   );
   const plugins = await siteAdmin.get('/second/wp-admin/plugins.php');
   check(
-    !plugins.text.includes('agentmate-connector/agentmate-connector.php'),
+    !plugins.text.includes('runova-connector/runova-connector.php'),
     'site administrators are not offered the plugin',
   );
-  const networkPath = '/wp-admin/network/settings.php?page=agentmate-connector';
+  const networkPath = '/wp-admin/network/settings.php?page=runova-connector';
   const keysTab = await superAdmin.get(`${networkPath}&tab=keys`);
   const createForm = forms(keysTab.text).find(
-    (form) => form.agentmate_connector_action === 'create_key',
+    (form) => form.runova_connector_action === 'create_key',
   );
   check(
     (await superAdmin.post(networkPath, { ...createForm, _wpnonce: '' })).status === 403,
@@ -136,7 +136,7 @@ try {
   );
   const items = (await client.call('/items/list')).data.items;
   const connector = items.find(
-    (item) => item.kind === 'plugin' && item.slug === 'agentmate-connector',
+    (item) => item.kind === 'plugin' && item.slug === 'runova-connector',
   );
   check(
     connector?.networkActive === true && connector.protected === true,
@@ -148,7 +148,7 @@ try {
     'every installed theme is listed',
   );
   const theme = { kind: 'theme', slug: info.activeTheme.stylesheet };
-  const op = putOp(theme, 'agentmate-network/added.txt', 'network deploy', null);
+  const op = putOp(theme, 'runova-network/added.txt', 'network deploy', null);
   const begin = await client.call('/deploy/begin', {
     label: 'Network smoke',
     items: [theme],
@@ -173,7 +173,7 @@ try {
   const finalize = await client.call('/deploy/finalize', { deployId });
   check(finalize.ok && finalize.data.state === 'done', 'finalize');
   check(
-    site.exec(`cat /var/www/html/wp-content/themes/${theme.slug}/agentmate-network/added.txt`) ===
+    site.exec(`cat /var/www/html/wp-content/themes/${theme.slug}/runova-network/added.txt`) ===
       'network deploy',
     'the file is on the network',
   );
@@ -190,13 +190,13 @@ try {
     );
     const after = await client.call('/site/info');
     check(after.ok && after.data.pluginVersion === next, 'the new version answers', after.data);
-    check(networkActive().includes('agentmate-connector'), 'it is still network-active');
+    check(networkActive().includes('runova-connector'), 'it is still network-active');
     check(
-      !/\.agentmate-connector/.test(site.exec('ls -A /var/www/html/wp-content/plugins')),
+      !/\.runova-connector/.test(site.exec('ls -A /var/www/html/wp-content/plugins')),
       'no staging folder is left beside the plugin',
     );
     for (const url of [site.url, second]) {
-      const home = await request(`${url}?agentmate_smoke=${Date.now()}`, { redirect: 'manual' });
+      const home = await request(`${url}?runova_smoke=${Date.now()}`, { redirect: 'manual' });
       check(home.status === 200, `${url} still answers`, home.status);
     }
   }
@@ -206,18 +206,18 @@ try {
     const content = '/var/www/html/wp-content';
     const fingerprint = () =>
       site.exec(
-        `cd ${content} && find themes plugins mu-plugins -type f -not -path 'plugins/agentmate-connector/*' -not -name '00-agentmate-connector-guard.php' -exec sha256sum {} + | sort`,
+        `cd ${content} && find themes plugins mu-plugins -type f -not -path 'plugins/runova-connector/*' -not -name '00-runova-connector-guard.php' -exec sha256sum {} + | sort`,
       );
     const before = fingerprint();
-    const dataDir = site.wp(['network', 'meta', 'get', '1', 'agentmate_connector_data_dir']);
+    const dataDir = site.wp(['network', 'meta', 'get', '1', 'agentmate_connector_data_dir']); // legacy-name
     check(
-      /^agentmate-connector-[0-9a-f]{12}$/.test(dataDir),
+      /^runova-connector-[0-9a-f]{12}$/.test(dataDir),
       'the data folder name is a network option',
       dataDir,
     );
 
     // A deploy still waiting for confirmation when the plugin is switched off.
-    const pending = putOp(theme, 'agentmate-network/pending.php', '<?php // pending', null);
+    const pending = putOp(theme, 'runova-network/pending.php', '<?php // pending', null);
     const open = await client.call('/deploy/begin', {
       label: 'Pending at deactivation',
       items: [theme],
@@ -241,11 +241,11 @@ try {
     const applied = await client.call('/deploy/commit', { deployId: pendingId });
     check(applied.ok && applied.data.state === 'applied', 'a deploy is pending', applied);
 
-    site.wp(['plugin', 'deactivate', 'agentmate-connector', '--network']);
+    site.wp(['plugin', 'deactivate', 'runova-connector', '--network']);
     const state = site.wp([
       'db',
       'query',
-      `SELECT CONCAT(state, ' ', IFNULL(reason, '')) FROM wp_agentmate_deploys WHERE id = '${pendingId}'`,
+      `SELECT CONCAT(state, ' ', IFNULL(reason, '')) FROM wp_agentmate_deploys WHERE id = '${pendingId}'`, // legacy-name
       '--skip-column-names',
     ]);
     check(
@@ -256,7 +256,7 @@ try {
     check(
       site
         .exec(
-          `test -e ${content}/themes/${theme.slug}/agentmate-network/pending.php && echo there || echo gone`,
+          `test -e ${content}/themes/${theme.slug}/runova-network/pending.php && echo there || echo gone`,
         )
         .trim() === 'gone',
       'its file is gone again',
@@ -264,7 +264,7 @@ try {
     check(
       site
         .exec(
-          `test -e ${content}/mu-plugins/00-agentmate-connector-guard.php && echo there || echo gone`,
+          `test -e ${content}/mu-plugins/00-runova-connector-guard.php && echo there || echo gone`,
         )
         .trim() === 'gone',
       'deactivation removes the guard',
@@ -272,18 +272,15 @@ try {
 
     // `wp plugin delete` only removes files (WP-CLI never runs uninstall.php for it); `uninstall`
     // is what wp-admin's Delete does: uninstall.php, then the files.
-    site.wp(['plugin', 'uninstall', 'agentmate-connector']);
-    const tables = site.wp([
-      'db',
-      'query',
-      "SHOW TABLES LIKE '%agentmate%'",
-      '--skip-column-names',
-    ]);
+    site.wp(['plugin', 'uninstall', 'runova-connector']);
+    // The tables kept the names the plugin gave them before the rename.
+    const showTables = "SHOW TABLES LIKE '%agentmate%'"; // legacy-name
+    const tables = site.wp(['db', 'query', showTables, '--skip-column-names']);
     check(tables === '', 'all seven tables are dropped', tables);
     const networkOptions = site.wp([
       'db',
       'query',
-      "SELECT meta_key FROM wp_sitemeta WHERE meta_key LIKE '%agentmate%'",
+      "SELECT meta_key FROM wp_sitemeta WHERE meta_key LIKE '%runova%' OR meta_key LIKE '%agentmate%'", // legacy-name
       '--skip-column-names',
     ]);
     check(networkOptions === '', 'no network options are left', networkOptions);
@@ -292,7 +289,7 @@ try {
       const left = site.wp([
         'db',
         'query',
-        `SELECT option_name FROM ${table} WHERE option_name LIKE '%agentmate%'`,
+        `SELECT option_name FROM ${table} WHERE option_name LIKE '%runova%' OR option_name LIKE '%agentmate%'`, // legacy-name
         '--skip-column-names',
       ]);
       check(left === '', `no options are left on site ${blog.trim()}`, left);
@@ -302,15 +299,14 @@ try {
       'the data folder is gone',
     );
     check(
-      site
-        .exec(`test -e ${content}/plugins/agentmate-connector && echo there || echo gone`)
-        .trim() === 'gone',
+      site.exec(`test -e ${content}/plugins/runova-connector && echo there || echo gone`).trim() ===
+        'gone',
       'the plugin folder is gone',
     );
     check(fingerprint() === before, 'not one theme, plugin or mu-plugin file changed');
   }
 } finally {
-  if (process.env.AGENTMATE_WPC_KEEP === '1') {
+  if (process.env.RUNOVA_WPC_KEEP === '1') {
     say(`Left running: ${site.url}`);
   } else {
     site.stop();

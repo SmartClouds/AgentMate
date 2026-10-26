@@ -77,7 +77,7 @@ export function RegistryPlanCard({
   async function toggle(next: boolean): Promise<void> {
     if (!stackId) return;
     try {
-      await window.agentmat.deployRegistry.setAppChoice({
+      await window.runova.deployRegistry.setAppChoice({
         serverId: input.serverId,
         stackId,
         sendSignIns: next,

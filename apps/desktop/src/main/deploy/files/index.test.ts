@@ -25,7 +25,7 @@ beforeAll(async () => {
 }, 120_000);
 
 beforeEach(() => {
-  local = realpathSync(tempDir('agentmate-files-wiring-'));
+  local = realpathSync(tempDir('runova-files-wiring-'));
   userData.writeData('projects.json', []);
   userData.writeData('ssh-servers.json', [
     {

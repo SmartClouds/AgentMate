@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { JobInfo } from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+import type { JobInfo } from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { metricsSample, sampleAlert, sampleJob } from '../../../shared/deploy/testing/fakeCoreData';
 import { streamError } from '../../../shared/deploy/testing/fakeStream';
 import { AlertsFeed, JobFeed, MetricsFeed } from './feeds';

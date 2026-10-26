@@ -1,4 +1,4 @@
-import type { ScheduledTask } from '@agentmat/core';
+import type { ScheduledTask } from '@runova/core';
 import { IPC } from '../../shared/ipcChannels';
 import { updateScheduledTask } from '../ipc/scheduledTasks';
 import { broadcastToWindows, sendToWindow } from '../ipc/send';

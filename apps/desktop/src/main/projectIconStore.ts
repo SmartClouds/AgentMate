@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { app } from 'electron';
 import {
   iconExtensionForMime,

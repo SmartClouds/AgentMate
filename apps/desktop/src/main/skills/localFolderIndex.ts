@@ -1,7 +1,7 @@
 import type { Dirent } from 'node:fs';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { basename, extname, join, posix, sep } from 'node:path';
-import type { Skill, SkillRepositoryIndex } from '@agentmat/core';
+import type { Skill, SkillRepositoryIndex } from '@runova/core';
 
 /**
  * Builds a repository index by scanning a folder of skills, for folders that have no
@@ -26,7 +26,7 @@ const IGNORED_DIR_NAMES = new Set([
   '.hg',
   '.idea',
   '.vscode',
-  '.agentmate',
+  '.runova',
   'node_modules',
   '__pycache__',
   '.venv',

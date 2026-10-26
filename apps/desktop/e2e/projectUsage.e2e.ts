@@ -113,7 +113,7 @@ async function openUsage(page: Page, projectId: string): Promise<void> {
 }
 
 test.beforeEach(async () => {
-  configDir = mkdtempSync(join(tmpdir(), 'agentmate-claude-config-'));
+  configDir = mkdtempSync(join(tmpdir(), 'runova-claude-config-'));
   launched = await launchApp({ env: { CLAUDE_CONFIG_DIR: configDir } });
   seedConversations(launched.projectDir);
   const id = await createProject(launched);

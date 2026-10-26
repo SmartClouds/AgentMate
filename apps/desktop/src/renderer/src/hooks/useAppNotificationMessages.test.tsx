@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import type { AppNotification } from '@agentmat/core';
+import type { AppNotification } from '@runova/core';
 import { act, cleanup, render } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -64,7 +64,7 @@ beforeEach(() => {
   useToastHistoryStore.setState({ items: [], open: false });
   for (const fn of Object.values(toastFns)) fn.mockReset();
   Object.assign(window, {
-    agentmat: {
+    runova: {
       settings: { get: vi.fn(async () => savedSettings) },
       shell: { openExternal: vi.fn(async () => undefined) },
       appNotifications: {
@@ -130,8 +130,8 @@ describe('useAppNotificationMessages', () => {
     expect(document.querySelector('[data-testid="location"]')?.textContent).toBe(
       '/pipelines?run=123&repo=acme%2Fdemo',
     );
-    expect(window.agentmat.appNotifications.markRead).toHaveBeenCalledWith('n1');
-    expect(window.agentmat.shell.openExternal).not.toHaveBeenCalled();
+    expect(window.runova.appNotifications.markRead).toHaveBeenCalledWith('n1');
+    expect(window.runova.shell.openExternal).not.toHaveBeenCalled();
   });
 
   describe('when clicking a failure should open the project workspace', () => {
@@ -150,7 +150,7 @@ describe('useAppNotificationMessages', () => {
       expect(document.querySelector('[data-testid="location"]')?.textContent).toBe(
         '/workspace/p1?panel=pipelines',
       );
-      expect(window.agentmat.appNotifications.markRead).toHaveBeenCalledWith('n1');
+      expect(window.runova.appNotifications.markRead).toHaveBeenCalledWith('n1');
       // The row in Recent messages opens the same place.
       expect(useToastHistoryStore.getState().items[0].link).toEqual({
         route: '/workspace/p1?panel=pipelines',
@@ -208,7 +208,7 @@ describe('useAppNotificationMessages', () => {
       // Still a red, tagged row for the right project, only the link is gone.
       expect(items[0]).toMatchObject({ kind: 'error', tag: 'Failed', projectId: 'p1' });
       expect(items[0].link).toBeUndefined();
-      expect(window.agentmat.shell.openExternal).not.toHaveBeenCalled();
+      expect(window.runova.shell.openExternal).not.toHaveBeenCalled();
     });
 
     it('leaves a pass and a server alert linked', async () => {
@@ -229,7 +229,7 @@ describe('useAppNotificationMessages', () => {
     });
 
     it('keeps the link when the setting cannot be read', async () => {
-      window.agentmat.settings.get = vi.fn(async () => {
+      window.runova.settings.get = vi.fn(async () => {
         throw new Error('settings unavailable');
       });
       await mount();
@@ -289,7 +289,7 @@ describe('useAppNotificationMessages', () => {
 
     await act(async () => toastFns.warning.mock.calls[0][1].action?.onClick?.());
     expect(document.querySelector('[data-testid="location"]')?.textContent).toBe('/');
-    expect(window.agentmat.shell.openExternal).not.toHaveBeenCalled();
+    expect(window.runova.shell.openExternal).not.toHaveBeenCalled();
   });
 
   it('sends a non-pipeline link to the browser', async () => {
@@ -305,7 +305,7 @@ describe('useAppNotificationMessages', () => {
 
     expect(toastFns.info).toHaveBeenCalledTimes(1);
     await act(async () => toastFns.info.mock.calls[0][1].action.onClick());
-    expect(window.agentmat.shell.openExternal).toHaveBeenCalledWith(
+    expect(window.runova.shell.openExternal).toHaveBeenCalledWith(
       'https://www.npmjs.com/package/x',
     );
   });

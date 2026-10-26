@@ -16,7 +16,7 @@ import type {
   ScheduledTask,
   SkillRepository,
   WorktreeRecord,
-} from '@agentmat/core';
+} from '@runova/core';
 import {
   blueprintPresetSeed,
   clampDesktopPetClickArea,
@@ -73,7 +73,7 @@ import {
   normalizeWorktreeRecord,
   normalizeWorktreeSettings,
   withBlueprintDefaults,
-} from '@agentmat/core';
+} from '@runova/core';
 import { app } from 'electron';
 import type {
   FavoriteSkillRecord,
@@ -453,7 +453,7 @@ export const store = {
   setProjects: async (projects: Project[]): Promise<void> =>
     writeJsonFile('projects.json', await persistProjectIcons(projects)),
 
-  /** Git worktrees AgentMate made or picked up, so each keeps its workspace between runs. */
+  /** Git worktrees Runova made or picked up, so each keeps its workspace between runs. */
   getWorktrees: async (): Promise<WorktreeRecord[]> => {
     const saved = await readJsonFile<unknown>('worktrees.json', []);
     return Array.isArray(saved)

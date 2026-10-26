@@ -25,7 +25,7 @@ const toast = vi.hoisted(() =>
 );
 vi.mock('sonner', () => ({ toast }));
 
-const STORAGE_PREFIX = 'agentmate:last-good:';
+const STORAGE_PREFIX = 'runova:last-good:';
 
 /** What the fake endpoint returns: a list, plus the "arrived but useless" error field. */
 interface Runs {

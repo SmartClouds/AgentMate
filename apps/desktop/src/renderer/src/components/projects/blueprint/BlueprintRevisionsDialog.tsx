@@ -1,4 +1,4 @@
-import type { BlueprintStepId } from '@agentmat/core';
+import type { BlueprintStepId } from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { MarkdownPreview } from '@/components/editor/MarkdownPreview';
@@ -43,7 +43,7 @@ export function BlueprintRevisionsDialog({
 
   const revisionsQuery = useQuery({
     queryKey: queryKeys.blueprintRevisions(projectId, stepId),
-    queryFn: () => window.agentmat.blueprints.listRevisions(projectId, stepId),
+    queryFn: () => window.runova.blueprints.listRevisions(projectId, stepId),
     enabled: open,
   });
 

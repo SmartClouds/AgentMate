@@ -1,5 +1,5 @@
-import type { PromptType, TargetAI } from '@agentmat/core';
-import { DEFAULT_TARGET_AI, normalizeTargetAI } from '@agentmat/core';
+import type { PromptType, TargetAI } from '@runova/core';
+import { DEFAULT_TARGET_AI, normalizeTargetAI } from '@runova/core';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -41,7 +41,7 @@ export const usePromptBuilderStore = create<PromptBuilderState>()(
       setStatus: (v) => set({ status: v }),
     }),
     {
-      name: 'agentmate-prompt-builder',
+      name: 'runova-prompt-builder',
       merge: (persisted, current) => {
         const saved = persisted as Partial<PromptBuilderState> | undefined;
         const targetAI = saved?.targetAI ? normalizeTargetAI(saved.targetAI) : DEFAULT_TARGET_AI;

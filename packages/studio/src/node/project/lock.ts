@@ -4,10 +4,10 @@ import { z } from 'zod';
 import { writeFileAtomic } from '../fs/atomicWrite.js';
 
 /**
- * One writer per video folder. Two copies of AgentMate (the dev and release builds, or two
+ * One writer per video folder. Two copies of Runova (the dev and release builds, or two
  * machines on a shared drive) can point at the same storage folder, and two writers on one history
  * database is exactly how work gets lost. The lock file says who has the folder open, so the
- * second app can show "Open in another AgentMate" instead of a half-working editor. SQLite's
+ * second app can show "Open in another Runova" instead of a half-working editor. SQLite's
  * exclusive locking mode is the hard backstop behind it.
  */
 

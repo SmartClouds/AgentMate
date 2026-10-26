@@ -1,10 +1,10 @@
 /**
- * Everything Studio's screens take from the rest of AgentMate's renderer, in one place. Studio
+ * Everything Studio's screens take from the rest of Runova's renderer, in one place. Studio
  * code imports app UI from here only (studioBoundary.test.ts holds it to that), so if Studio ever
  * becomes an app of its own, this file is the one that gets reimplemented.
  */
 
-export { getCliDefinition, launchPickLabel } from '@agentmat/core';
+export { getCliDefinition, launchPickLabel } from '@runova/core';
 export { toast } from 'sonner';
 export { type RunSettings, RunSettingsFields } from '@/components/cli/RunSettingsFields';
 export { ErrorBoundary } from '@/components/ErrorBoundary';

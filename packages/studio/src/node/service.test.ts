@@ -32,10 +32,10 @@ async function setup(over: Partial<StudioHost> = {}, base?: string): Promise<Set
   const events: StudioEvent[] = [];
   const host: StudioHost = {
     dataDir: join(root, 'userData', 'studio'),
-    defaultLibraryRoot: join(root, 'Videos', 'AgentMate Studio'),
+    defaultLibraryRoot: join(root, 'Videos', 'Runova Studio'),
     defaultCacheDir: join(root, 'userData', 'studio-cache'),
     appDir: join(root, 'app'),
-    appId: 'AgentMate',
+    appId: 'Runova',
     openDb: openNodeSqlite,
     projects: {
       get: (id) => (id === 'p1' ? { id: 'p1', name: 'Shop App', folderPath: projectFolder } : null),
@@ -118,7 +118,7 @@ describe('settings and storage folders', () => {
     const { service, host, base } = await setup();
     await expect(
       service.updateSettings({ defaultRoot: join(host.appDir as string, 'x') }),
-    ).rejects.toThrow(/AgentMate's own folder/);
+    ).rejects.toThrow(/Runova's own folder/);
     const next = await service.updateSettings({ defaultRoot: join(base, 'Lib'), cacheCapGb: 50 });
     expect(next).toMatchObject({
       defaultRoot: join(base, 'Lib'),
@@ -127,7 +127,7 @@ describe('settings and storage folders', () => {
     });
   });
 
-  it('drops the folders of projects that were removed from AgentMate', async () => {
+  it('drops the folders of projects that were removed from Runova', async () => {
     const { service, base } = await setup();
     await service.setProjectRoot({ projectId: 'p1', path: join(base, 'Media') });
     await service.pruneProjects(new Set());
@@ -263,19 +263,19 @@ describe('editing a video', () => {
   });
 });
 
-describe('two copies of AgentMate', () => {
+describe('two copies of Runova', () => {
   it('lets only one open a video, and says which one has it', async () => {
-    const first = await setup({ appId: 'AgentMate' });
+    const first = await setup({ appId: 'Runova' });
     const video = await newVideo(first.service);
     await openSession(first.service, video.id);
 
-    const second = await setup({ appId: 'AgentMate Dev', pid: 999_999_1 }, await tempDir());
+    const second = await setup({ appId: 'Runova Dev', pid: 999_999_1 }, await tempDir());
     const added = await second.service.addExisting({ folder: video.folder });
     const result = await second.service.open({ videoId: added.id });
     expect(result).toMatchObject({
       state: 'locked',
       stale: false,
-      holder: { appId: 'AgentMate', host: 'laptop' },
+      holder: { appId: 'Runova', host: 'laptop' },
     });
     await expect(second.service.takeOver({ videoId: added.id })).resolves.toMatchObject({
       state: 'locked',
@@ -286,13 +286,13 @@ describe('two copies of AgentMate', () => {
   });
 
   it('takes over a video whose holder stopped answering', async () => {
-    const first = await setup({ appId: 'AgentMate', hostname: 'desktop' });
+    const first = await setup({ appId: 'Runova', hostname: 'desktop' });
     const video = await newVideo(first.service);
     await openSession(first.service, video.id);
     first.service.abandonForTest(video.id);
 
     const later = clock + 120_000;
-    const second = await setup({ appId: 'AgentMate Dev', now: () => later }, await tempDir());
+    const second = await setup({ appId: 'Runova Dev', now: () => later }, await tempDir());
     const added = await second.service.addExisting({ folder: video.folder });
     expect(await second.service.open({ videoId: added.id })).toMatchObject({
       state: 'locked',
@@ -439,11 +439,11 @@ describe('scene network per project', () => {
     expect(view.sceneHosts).toEqual(['cdn.example.com', 'fonts.example.org']);
     expect((await service.setSceneHosts({ projectId: 'p1', hosts: [] })).sceneHosts).toEqual([]);
     await service.setSceneHosts({ projectId: 'p1', hosts: ['cdn.example.com'] });
-    // A project that is gone from AgentMate loses its list along with its folder setting.
+    // A project that is gone from Runova loses its list along with its folder setting.
     await service.pruneProjects(new Set());
     expect((await service.projectStorage({ projectId: 'p1' })).sceneHosts).toEqual([]);
     await expect(service.setSceneHosts({ projectId: 'ghost', hosts: [] })).rejects.toThrow(
-      /not in AgentMate/,
+      /not in Runova/,
     );
   });
 

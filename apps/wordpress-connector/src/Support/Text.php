@@ -3,10 +3,10 @@
  * String helpers that count and trim the way JavaScript does, so rules shared with the desktop
  * give the same answer on both sides.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Support;
+namespace Runova\Connector\Support;
 
 final class Text
 {

@@ -118,7 +118,7 @@ describe('describeOpenSessions', () => {
 
   it('keeps the dialog labels stable', () => {
     // The e2e suite clicks the button by this label.
-    expect(QUIT_CONFIRM_TITLE).toBe('Close AgentMate?');
+    expect(QUIT_CONFIRM_TITLE).toBe('Close Runova?');
     expect(QUIT_CONFIRM_LABEL).toBe('Close app');
   });
 });

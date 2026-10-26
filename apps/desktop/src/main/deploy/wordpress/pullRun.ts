@@ -7,7 +7,7 @@ import {
   type WpPlannedChange,
   wpItemKey,
   wpMirrorPath,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { DeployWordPressPhase } from '../../../shared/deployWordPressTypes';
 import { wordPressError } from '../../../shared/wordpressErrors';
 import type { WpClient } from './client';
@@ -18,7 +18,7 @@ import { readRemoteFiles } from './remote';
 /**
  * Applies a pull plan to the project folder (E19, E21): downloads what changed on the site,
  * deletes what the site deleted, and settles each conflict the way the user chose. Taking the
- * site's copy first saves this computer's copy under `.agentmate/wordpress/conflicts/`, which is
+ * site's copy first saves this computer's copy under `.runova/wordpress/conflicts/`, which is
  * on the hard deny list, so it can never be deployed. Before anything is written, every file it
  * will replace or delete is checked to still be what the plan saw.
  */
@@ -107,7 +107,7 @@ export async function runPull(input: WpPullRunInput): Promise<WpPullRunResult> {
     }
   }
 
-  const conflictRoot = `.agentmate/wordpress/conflicts/${stamp(input.now())}`;
+  const conflictRoot = `.runova/wordpress/conflicts/${stamp(input.now())}`;
   const conflictCopies: string[] = [];
   const keepCopy = async (step: Step) => {
     if (!step.copy || !step.state.local[step.change.path]) return;

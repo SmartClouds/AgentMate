@@ -1,4 +1,4 @@
-import type { AgentHistoryProvider } from '@agentmat/core';
+import type { AgentHistoryProvider } from '@runova/core';
 
 // Where each conversation the history list showed lives on this machine. The list items that
 // reach the renderer carry no path (it is never given one to hand back), so main keeps the

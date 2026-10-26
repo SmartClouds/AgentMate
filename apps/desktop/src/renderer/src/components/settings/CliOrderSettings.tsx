@@ -19,7 +19,7 @@ export function CliOrderSettings(): React.JSX.Element {
   const setCliOrder = useCliStore((s) => s.setCliOrder);
   const status = useQuery({
     queryKey: queryKeys.cliStatus,
-    queryFn: () => window.agentmat.cli.detectAll(),
+    queryFn: () => window.runova.cli.detectAll(),
     staleTime: 5 * 60_000,
     // Same query as Launch defaults. The last observer to mount sets its meta, so both must opt out.
     meta: { silentLoading: true },

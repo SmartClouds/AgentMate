@@ -9,7 +9,7 @@ import {
   type DashboardStatId,
   type DashboardUsageSummaryId,
   DEFAULT_DASHBOARD,
-} from '@agentmat/core';
+} from '@runova/core';
 import { create } from 'zustand';
 
 export { DASHBOARD_CHART_IDS, type DashboardChartId };
@@ -193,7 +193,7 @@ function persist(
     introducedCharts?: string[];
   },
 ): void {
-  void window.agentmat.settings.update({
+  void window.runova.settings.update({
     dashboardLayout: rows,
     ...(extra?.chartCards !== undefined ? { dashboardChartCards: extra.chartCards } : {}),
     ...(extra?.usageCards ? { dashboardUsageCards: extra.usageCards } : {}),
@@ -350,7 +350,7 @@ export const useDashboardLayoutStore = create<DashboardLayoutState>((set, get) =
 }));
 
 export async function initDashboardLayout(): Promise<void> {
-  const settings = await window.agentmat.settings.get();
+  const settings = await window.runova.settings.get();
   let chartCards = (settings.dashboardChartCards ?? [...DASHBOARD_CHART_IDS]).filter(
     (id): id is DashboardChartId => (DASHBOARD_CHART_IDS as readonly string[]).includes(id),
   );

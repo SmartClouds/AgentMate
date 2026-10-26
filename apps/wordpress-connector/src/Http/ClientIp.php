@@ -2,19 +2,22 @@
 /**
  * The address failed-auth limits are counted against. REMOTE_ADDR by default; a site behind a
  * proxy it trusts can hand over the real client address with the
- * `agentmate_connector_client_ip` filter.
+ * `runova_connector_client_ip` filter (or its old name, `agentmate_connector_client_ip`). // legacy-name
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Http;
+namespace Runova\Connector\Http;
+
+use Runova\Connector\Legacy;
 
 final class ClientIp
 {
     public static function get(): string
     {
         $ip = isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) : '';
-        $ip = (string) apply_filters('agentmate_connector_client_ip', $ip);
+        $ip = (string) apply_filters(Legacy::CLIENT_IP_FILTER, $ip);
+        $ip = (string) apply_filters('runova_connector_client_ip', $ip);
         return self::valid($ip);
     }
 

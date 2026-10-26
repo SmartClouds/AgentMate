@@ -1,4 +1,4 @@
-import { type Project, parseScopeId, type WorktreeInfo } from '@agentmat/core';
+import { type Project, parseScopeId, type WorktreeInfo } from '@runova/core';
 import { type UseQueryResult, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { queryKeys } from '@/lib/queryKeys';
@@ -28,10 +28,10 @@ export function useWorktrees(projectId: string | null): UseQueryResult<WorktreeI
     const refresh = (): void => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.worktrees(projectId) });
     };
-    const stopChanged = window.agentmat.worktrees.onChanged((changed) => {
+    const stopChanged = window.runova.worktrees.onChanged((changed) => {
       if (changed === projectId) refresh();
     });
-    const stopRepo = window.agentmat.git.onRepoChanged((changed) => {
+    const stopRepo = window.runova.git.onRepoChanged((changed) => {
       if (parseScopeId(changed).projectId === projectId) refresh();
     });
     const onFocus = (): void => {
@@ -50,7 +50,7 @@ export function useWorktrees(projectId: string | null): UseQueryResult<WorktreeI
 
   return useQuery({
     queryKey: queryKeys.worktrees(projectId ?? ''),
-    queryFn: () => window.agentmat.worktrees.list(projectId ?? ''),
+    queryFn: () => window.runova.worktrees.list(projectId ?? ''),
     enabled: Boolean(projectId),
     staleTime: WORKTREES_STALE_MS,
   });
@@ -67,7 +67,7 @@ export function useWorkspaceProject(scopeId: string | null): {
 } {
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   });
   const scope = scopeId ? parseScopeId(scopeId) : null;
   const worktreesQuery = useWorktrees(scope?.worktreeId ? scope.projectId : null);

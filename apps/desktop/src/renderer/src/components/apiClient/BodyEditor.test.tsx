@@ -1,4 +1,4 @@
-import { type DraftBody, emptyBody } from '@agentmat/core';
+import { type DraftBody, emptyBody } from '@runova/core';
 import { screen } from '@testing-library/react';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';

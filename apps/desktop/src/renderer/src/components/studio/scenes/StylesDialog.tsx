@@ -1,4 +1,4 @@
-import { type Aspect, DESIGN_SIZES, STYLE_PRESETS, styleById } from '@agentmat/studio';
+import { type Aspect, DESIGN_SIZES, STYLE_PRESETS, styleById } from '@runova/studio';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { studioScenesClient } from '../client';

@@ -2,10 +2,10 @@
 /**
  * Storage in plain arrays, with the same semantics as the database adapter. For unit tests.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Storage;
+namespace Runova\Connector\Storage;
 
 final class MemoryStorage implements Storage
 {

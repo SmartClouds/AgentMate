@@ -15,8 +15,8 @@ import type {
   DnsCredentialInfo,
   OriginLockResult,
   OriginLockStatus,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { ADMIN_ROLES, callCore } from '../coreCalls';
 import type { CoreLinks } from '../live/coreLinks';
 import type { CloudflareService } from './service';
@@ -183,7 +183,7 @@ export class CloudflareServerOps {
     return saved.credential;
   }
 
-  /** Takes the token off the server, and deletes it at Cloudflare when AgentMate made it. */
+  /** Takes the token off the server, and deletes it at Cloudflare when Runova made it. */
   async removeDnsToken(input: CloudflareRemoveDnsTokenInput): Promise<void> {
     const known = (await this.dnsTokens(input.serverId)).find((item) => item.zone === input.zone);
     await this.core(input.serverId, (hub) => hub.removeDnsCredential(input.zone));
@@ -214,7 +214,7 @@ export class CloudflareServerOps {
     const groupId = dnsWrite.id;
     const created = await this.deps.cloudflare.useApi(zone.accountId, 'apiTokens', (api) =>
       api.user.tokens.create({
-        name: `AgentMate DNS-01, ${zone.name} on ${serverName}`.slice(0, 120),
+        name: `Runova DNS-01, ${zone.name} on ${serverName}`.slice(0, 120),
         policies: [
           {
             effect: 'allow',

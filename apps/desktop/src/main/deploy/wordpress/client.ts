@@ -5,19 +5,24 @@ import {
   encodeWpFrame,
   encodeWpMultipart,
   formatWpAuthField,
+  isWpLegacyRestUrl,
   WP_AJAX_ACTION,
   WP_BATCH_MAX_BYTES,
   WP_BATCH_MIN_BYTES,
   WP_BATCH_START_BYTES,
+  WP_LEGACY_AJAX_ACTION,
+  WP_LEGACY_PROTOCOL_PREFIX,
+  WP_PROTOCOL_PREFIX,
   WP_ROUTE_PARAM,
   type WpErrorCode,
   type WpLimits,
   type WpResponseBody,
   type WpRoute,
   type WpRouteMap,
+  type WpSigningPrefix,
   wpCanonicalRequest,
   wpCanonicalResponse,
-} from '@agentmat/core';
+} from '@runova/core';
 import {
   encodeWordPressError,
   isWordPressErrorCode,
@@ -36,7 +41,7 @@ import { cleanSiteText } from './siteText';
 import type { WpHttpResponse, WpTransport } from './transport';
 
 /**
- * The signed client for one AgentMate Connector site (E19). Every call is a multipart POST with
+ * The signed client for one Runova Connector site (E19). Every call is a multipart POST with
  * `am_auth` and a gzip bundle, signed with this computer's key for the site (or unsigned for
  * `/hello`). Every reply must be an envelope signed by the site key pinned at pairing, over the
  * route, this request's nonce, the status and the payload hash, so a cached, replayed or
@@ -47,6 +52,10 @@ import type { WpHttpResponse, WpTransport } from './transport';
  * timestamp is stale, backs off on 429, and tries the REST URL, then admin-ajax, until one of
  * them answers with a verified reply; after that it stays with the one that worked. `/rescue/*`
  * calls fall back to rescue.php when the site itself is failing.
+ *
+ * A site connected before the rename has its REST address under the old namespace. Calls to it
+ * go out the way a 1.63 app sends them (old ajax action, old signing prefix), which both the 1.63
+ * plugin and the current one take, until the app saves the new addresses the site reports.
  */
 
 export interface WpEndpoints {
@@ -170,7 +179,7 @@ function defaultSleep(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
-/** `.../wp-json/agentmate/v1` + route, or the `?rest_route=` form plain permalinks give. */
+/** `.../wp-json/runova/v1` + route, or the `?rest_route=` form plain permalinks give. */
 export function wpRestRouteUrl(restUrl: string, route: WpRoute): string {
   const url = new URL(restUrl);
   const restRoute = url.searchParams.get('rest_route');
@@ -182,9 +191,13 @@ export function wpRestRouteUrl(restUrl: string, route: WpRoute): string {
   return url.toString();
 }
 
-export function wpAjaxRouteUrl(ajaxUrl: string, route: WpRoute): string {
+export function wpAjaxRouteUrl(
+  ajaxUrl: string,
+  route: WpRoute,
+  action: string = WP_AJAX_ACTION,
+): string {
   const url = new URL(ajaxUrl);
-  url.searchParams.set('action', WP_AJAX_ACTION);
+  url.searchParams.set('action', action);
   url.searchParams.set(WP_ROUTE_PARAM, route);
   return url.toString();
 }
@@ -210,12 +223,12 @@ function foreignMessage(response: WpHttpResponse): string {
   const status = response.status;
   const server = response.header('server') ?? '';
   if (response.header('cf-mitigated') === 'challenge' || /cloudflare/i.test(server)) {
-    return `Cloudflare answered instead of AgentMate Connector (HTTP ${status}), most likely with a bot check. Add a Cloudflare rule that skips challenges for /wp-json/agentmate/ and /wp-admin/admin-ajax.php.`;
+    return `Cloudflare answered instead of Runova Connector (HTTP ${status}), most likely with a bot check. Add a Cloudflare rule that skips challenges for /wp-json/runova/ and /wp-admin/admin-ajax.php.`;
   }
   if (status === 404) {
-    return 'The site has no AgentMate Connector at that address (HTTP 404). Check that the plugin is installed and active.';
+    return 'The site has no Runova Connector at that address (HTTP 404). Check that the plugin is installed and active.';
   }
-  return `Something other than AgentMate Connector answered (HTTP ${status}). A firewall, a security plugin or the host may be blocking it.`;
+  return `Something other than Runova Connector answered (HTTP ${status}). A firewall, a security plugin or the host may be blocking it.`;
 }
 
 export class WpClient {
@@ -233,6 +246,16 @@ export class WpClient {
 
   get connectionId(): string | null {
     return this.options.connectionId;
+  }
+
+  /** The site was reached at its 1.63 addresses, so calls are signed the 1.63 way. */
+  get legacy(): boolean {
+    return isWpLegacyRestUrl(this.options.endpoints.restUrl);
+  }
+
+  /** What this client signs with, and expects replies to be signed with first. */
+  get signingPrefix(): WpSigningPrefix {
+    return this.legacy ? WP_LEGACY_PROTOCOL_PREFIX : WP_PROTOCOL_PREFIX;
   }
 
   /** The HTTP Basic header for the site, for the desktop's own GET of its home page. */
@@ -299,7 +322,7 @@ export class WpClient {
         kind === 'rest'
           ? wpRestRouteUrl(restUrl, route)
           : kind === 'ajax'
-            ? wpAjaxRouteUrl(ajaxUrl, route)
+            ? wpAjaxRouteUrl(ajaxUrl, route, this.legacy ? WP_LEGACY_AJAX_ACTION : WP_AJAX_ACTION)
             : wpRescueRouteUrl(rescueUrl as string, route),
     }));
   }
@@ -353,6 +376,7 @@ export class WpClient {
             nonce,
             connectionId,
             bodySha256: sha256Hex(bundle),
+            prefix: this.signingPrefix,
           }),
         )
       : null;
@@ -448,35 +472,38 @@ export class WpClient {
       }
       throw new WpRemoteError(
         'badResponseSignature',
-        'The site sent back an unsigned reply, so AgentMate did not trust it.',
+        'The site sent back an unsigned reply, so Runova did not trust it.',
       );
     }
     const bodySha256 = sha256Hex(payload);
-    const canonical = wpCanonicalResponse({
-      route,
-      requestNonce: nonce,
-      connectionId: this.options.connectionId,
-      timestamp: meta.ts,
-      httpStatus: meta.status,
-      bodySha256,
-    });
-    if (!verifyEd25519(this.options.sitePublicKey, canonical, meta.sig)) {
+    // A reply the site could not tie to a verified request (/hello, an early refusal) is signed
+    // the way its address suggests, which may be the other prefix: rescue.php has no namespace.
+    const prefixes: WpSigningPrefix[] = [
+      this.signingPrefix,
+      this.legacy ? WP_PROTOCOL_PREFIX : WP_LEGACY_PROTOCOL_PREFIX,
+    ];
+    const signedWith = (requestNonce: string, connectionId: string | null) =>
+      prefixes.some((prefix) =>
+        verifyEd25519(
+          this.options.sitePublicKey,
+          wpCanonicalResponse({
+            route,
+            requestNonce,
+            connectionId,
+            timestamp: meta.ts,
+            httpStatus: meta.status,
+            bodySha256,
+            prefix,
+          }),
+          meta.sig,
+        ),
+      );
+    if (!signedWith(nonce, this.options.connectionId)) {
       // A body over post_max_size makes PHP drop the whole form before the plugin runs, so its
       // "too large" reply cannot know our nonce or connection and is signed with `-` for both.
       // That one reply is accepted, only as "too large", and nothing in it is read: replaying it
       // can only make the next batch smaller.
-      const withoutRequest = wpCanonicalResponse({
-        route,
-        requestNonce: '-',
-        connectionId: null,
-        timestamp: meta.ts,
-        httpStatus: meta.status,
-        bodySha256,
-      });
-      if (
-        meta.status === 413 &&
-        verifyEd25519(this.options.sitePublicKey, withoutRequest, meta.sig)
-      ) {
+      if (meta.status === 413 && signedWith('-', null)) {
         throw new WpRemoteError('tooLarge', 'The site refused a request this large.', {}, 413);
       }
       throw new WpRemoteError(
@@ -497,7 +524,7 @@ export class WpClient {
     ) {
       throw new WpRemoteError(
         'internal',
-        'The connector sent back a signed reply AgentMate could not read.',
+        'The connector sent back a signed reply Runova could not read.',
         {},
         meta.status,
       );
@@ -508,7 +535,7 @@ export class WpClient {
       if (typeof data !== 'object' || data === null || Array.isArray(data)) {
         throw new WpRemoteError(
           'internal',
-          'The connector sent back a signed reply AgentMate could not read.',
+          'The connector sent back a signed reply Runova could not read.',
           {},
           meta.status,
         );

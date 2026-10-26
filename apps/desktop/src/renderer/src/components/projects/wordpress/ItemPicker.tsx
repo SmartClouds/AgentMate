@@ -1,5 +1,5 @@
-import type { WpItem, WpItemRef } from '@agentmat/core';
-import { wpItemKey } from '@agentmat/core';
+import type { WpItem, WpItemRef } from '@runova/core';
+import { wpItemKey } from '@runova/core';
 import { wordPressErrorCode, wordPressErrorMessage } from '@shared/wordpressErrors';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -75,7 +75,7 @@ export function ItemPicker({
       <p className="rounded-lg bg-foreground/[0.03] px-3 py-6 text-center text-sm text-muted-foreground ring-1 ring-inset ring-foreground/[0.07]">
         {exclude && exclude.size > 0
           ? 'This project already has every theme and plugin the site offers.'
-          : 'The site has no themes or plugins AgentMate can sync.'}
+          : 'The site has no themes or plugins Runova can sync.'}
       </p>
     );
   }

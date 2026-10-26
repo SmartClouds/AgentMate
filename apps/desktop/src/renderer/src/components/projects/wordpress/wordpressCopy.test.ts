@@ -46,7 +46,7 @@ describe('wordpressCopy', () => {
   it('knows agent paths from version control and secrets', () => {
     expect(isAgentPath('.claude/settings.json')).toBe(true);
     expect(isAgentPath('inc/AGENTS.md')).toBe(true);
-    expect(isAgentPath('.agentmate/x')).toBe(true);
+    expect(isAgentPath('.runova/x')).toBe(true);
     expect(isAgentPath('.git/HEAD')).toBe(false);
     expect(isAgentPath('.env')).toBe(false);
     expect(isAgentPath('style.css')).toBe(false);

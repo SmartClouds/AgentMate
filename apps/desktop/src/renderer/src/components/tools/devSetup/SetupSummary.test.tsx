@@ -1,4 +1,4 @@
-import type { SetupSummary as Summary } from '@agentmat/core';
+import type { SetupSummary as Summary } from '@runova/core';
 import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';

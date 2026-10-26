@@ -1,4 +1,4 @@
-import type { AppSettings } from '@agentmat/core';
+import type { AppSettings } from '@runova/core';
 import type { GrammarIssue } from '@shared/grammar';
 import type { EditCommand, SpellcheckEditFlags, SpellcheckMenuPayload } from '@shared/spellcheck';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -129,13 +129,13 @@ export function WritingMenuHost(): React.JSX.Element | null {
 
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
   });
   const grammarSettings = settingsQuery.data?.grammar ?? null;
   const grammarEnabled = grammarSettings?.enabled ?? false;
 
   const { mutate: saveSettings } = useMutation({
-    mutationFn: (patch: Partial<AppSettings>) => window.agentmat.settings.update(patch),
+    mutationFn: (patch: Partial<AppSettings>) => window.runova.settings.update(patch),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.settings });
     },
@@ -147,7 +147,7 @@ export function WritingMenuHost(): React.JSX.Element | null {
     setPosition(null);
   }, []);
 
-  const isMac = window.agentmat.platform === 'darwin';
+  const isMac = window.runova.platform === 'darwin';
   // The OS spellchecker on macOS keeps its own dictionary that Electron cannot
   // write to, so the entry only makes sense elsewhere.
   const canAddToDictionary = !isMac;
@@ -167,7 +167,7 @@ export function WritingMenuHost(): React.JSX.Element | null {
             ? { start: caret, end: field.selectionEnd }
             : null;
         const scope = checkScopeAt(field.value, caret, selection);
-        const result = await window.agentmat.grammar.check({ text: scope.text });
+        const result = await window.runova.grammar.check({ text: scope.text });
         return shiftIssues(result.issues, scope.offset);
       } catch {
         // The reason is surfaced by the field's own writing panel; the menu just
@@ -269,7 +269,7 @@ export function WritingMenuHost(): React.JSX.Element | null {
         tone: 'muted',
         section: 'writing',
         run: () => {
-          void window.agentmat.spellcheck.addToDictionary(menu.word);
+          void window.runova.spellcheck.addToDictionary(menu.word);
           close();
         },
       });
@@ -342,7 +342,7 @@ export function WritingMenuHost(): React.JSX.Element | null {
         },
         run: () => {
           field.focus();
-          void window.agentmat.spellcheck.runEditCommand(edit.command);
+          void window.runova.spellcheck.runEditCommand(edit.command);
           close();
         },
       });
@@ -446,7 +446,7 @@ export function WritingMenuHost(): React.JSX.Element | null {
     };
     document.addEventListener('contextmenu', onContextMenu, true);
 
-    const unsubscribe = window.agentmat.spellcheck.onShowMenu((payload) => {
+    const unsubscribe = window.runova.spellcheck.onShowMenu((payload) => {
       const pending = pendingRef.current;
       pendingRef.current = null;
       if (!pending || !pending.field.isConnected) return;

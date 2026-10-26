@@ -18,7 +18,7 @@ import { type FakeTelegramApi, startFakeTelegramApi } from './fakeTelegramApi';
 
 test.skip(!dotnetAvailable(), 'needs the .NET SDK to build the server core DevHost');
 
-const DEV_PASSWORD = 'agentmate-local-password';
+const DEV_PASSWORD = 'runova-local-password';
 const SECRET = 'AAHe2eQx9v2Lw8YtPz5rNc4mBq7sDf1gHjE';
 const TOKEN = `7700000001:${SECRET}`;
 const CHAT = '-1001234567890';
@@ -65,7 +65,7 @@ function crash(port: number, container: string): Promise<void> {
         port,
         method: 'POST',
         path: '/dev/containers/crash',
-        headers: { host: 'agentmate-core', 'content-type': 'application/json' },
+        headers: { host: 'runova-core', 'content-type': 'application/json' },
       },
       (response) => {
         response.resume();
@@ -102,7 +102,7 @@ test('sets Telegram alerts up, sends a test and a crash loop to the chat, and re
   if (!devHost || !telegram) throw new Error('The DevHost or the fake Telegram did not start');
   launched = await launchApp({
     settings: {},
-    env: { AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port) },
+    env: { RUNOVA_DEPLOY_DEV_CORE: String(devHost.port) },
   });
   const { page } = launched;
   await page.getByRole('link', { name: 'Deploy' }).click();
@@ -141,10 +141,10 @@ test('sets Telegram alerts up, sends a test and a crash loop to the chat, and re
   // A test message reaches the chat, from the bot, named after the server.
   await page.getByRole('button', { name: 'Send test message' }).click();
   await expect(page.getByText(/Telegram took the test message/)).toBeVisible({ timeout: 60_000 });
-  const tested = telegram.messages.find((message) => message.text.includes('AgentMate test'));
+  const tested = telegram.messages.find((message) => message.text.includes('Runova test'));
   expect(tested?.path).toBe(`/bot${TOKEN}/sendMessage`);
   expect(tested?.chatId).toBe(CHAT);
-  expect(tested?.text).toContain('AgentMate test from e2e-box');
+  expect(tested?.text).toContain('Runova test from e2e-box');
 
   // A container that keeps crashing reaches the chat from the core alone.
   for (let round = 0; round < 3; round++) await crash(devHost.port, CRASHING);

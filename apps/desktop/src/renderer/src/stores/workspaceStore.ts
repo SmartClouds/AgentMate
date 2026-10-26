@@ -21,7 +21,7 @@ import {
   type SplitDirection,
   setRatio,
   splitGroup,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { GitDiffSide } from '@shared/apiTypes';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -49,7 +49,7 @@ export interface WorkspaceTerminalTab {
   /**
    * The agent's own id for the conversation running in this tab (Claude Code reports it through
    * hooks). Kept on the tab so the conversation can be picked back up after its shell is gone,
-   * for example when Windows restarted or AgentMate was killed.
+   * for example when Windows restarted or Runova was killed.
    */
   conversationId?: string;
   cliId?: string;
@@ -409,7 +409,7 @@ function endTab(tab: WorkspaceTab | undefined): void {
     return;
   }
   if (tab?.kind !== 'terminal') return;
-  void window.agentmat.terminal.kill(tab.id);
+  void window.runova.terminal.kill(tab.id);
   terminalRuntime.dispose(tab.id);
 }
 
@@ -858,7 +858,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       };
     },
     {
-      name: 'agentmate-workspaces',
+      name: 'runova-workspaces',
       version: 1,
       partialize: (state) => ({
         railProjectIds: state.railProjectIds,

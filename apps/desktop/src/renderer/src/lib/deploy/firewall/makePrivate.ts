@@ -4,12 +4,12 @@ import type {
   ContainerSummary,
   StackDetails,
   StackInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * "Make private" for a container port the exposure view flags (E13). A container from an
- * AgentMate app is redeployed with that service on 127.0.0.1; anything else is shown the change
- * to make where it was started, since AgentMate did not start it and cannot redeploy it.
+ * Runova app is redeployed with that service on 127.0.0.1; anything else is shown the change
+ * to make where it was started, since Runova did not start it and cannot redeploy it.
  */
 
 export type MakePrivateTarget =
@@ -32,7 +32,7 @@ export function findContainer(
 }
 
 /**
- * Whose container it is. A compose project is an AgentMate app only when an app of that name
+ * Whose container it is. A compose project is a Runova app only when an app of that name
  * lists this very container among its services: another compose project can share the name.
  */
 export function classifyContainer(
@@ -55,7 +55,7 @@ export function classifyContainer(
 const portPair = (port: ContainerPortInfo) =>
   `${port.hostPort}${port.hostPortTo ? `-${port.hostPortTo}` : ''}:${port.containerPort}${port.containerPortTo ? `-${port.containerPortTo}` : ''}`;
 
-/** The edit that keeps the port on the server only, for a container AgentMate did not start. */
+/** The edit that keeps the port on the server only, for a container Runova did not start. */
 export function privateChange(target: MakePrivateTarget, port: ContainerPortInfo): string {
   const protocol = port.protocol === 'udp' ? '/udp' : '';
   const binding = `127.0.0.1:${portPair(port)}${protocol}`;

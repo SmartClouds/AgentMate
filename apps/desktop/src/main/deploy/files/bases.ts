@@ -10,7 +10,7 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import type { BaseEntry, BaseMap } from '@agentmat/core';
+import type { BaseEntry, BaseMap } from '@runova/core';
 import { app } from 'electron';
 import { z } from 'zod';
 import { filesError } from '../../../shared/deployFilesErrors';
@@ -52,7 +52,7 @@ export interface FilesBase {
   version: 1;
   target: BaseTarget;
   files: BaseMap;
-  /** Folders AgentMate created on the server, the only ones it may remove again. */
+  /** Folders Runova created on the server, the only ones it may remove again. */
   createdDirs: string[];
 }
 
@@ -61,9 +61,9 @@ export type JournalEvent =
   | { t: 'put'; path: string; entry: BaseEntry }
   /** A file was deleted on the server. */
   | { t: 'del'; path: string }
-  /** AgentMate created a folder on the server. */
+  /** Runova created a folder on the server. */
   | { t: 'dir'; path: string }
-  /** AgentMate removed a folder it had created. */
+  /** Runova removed a folder it had created. */
   | { t: 'rmdir'; path: string }
   /** Deleted here and already gone from the server: it only leaves the base. */
   | { t: 'drop'; path: string };

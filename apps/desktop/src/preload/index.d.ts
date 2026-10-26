@@ -1,7 +1,7 @@
-import type { AgentmatApi } from './index';
+import type { RunovaApi } from './index';
 
 declare global {
   interface Window {
-    agentmat: AgentmatApi;
+    runova: RunovaApi;
   }
 }

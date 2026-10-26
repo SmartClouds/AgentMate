@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { Project, WorktreeInfo } from '@agentmat/core';
+import type { Project, WorktreeInfo } from '@runova/core';
 import type { WorktreeRemovePreflight } from '@shared/apiTypes';
 import { screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

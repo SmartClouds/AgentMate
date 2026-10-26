@@ -4,7 +4,7 @@ import type {
   CertificateInfo,
   JobInfo,
   SiteInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { Spinner } from '@/components/icons';
@@ -47,7 +47,7 @@ export function IssueDialog({
   const [dns01, setDns01] = useState(false);
   const tokens = useQuery({
     queryKey: queryKeys.cloudflareDnsTokens(serverId),
-    queryFn: () => window.agentmat.cloudflareServer.dnsTokens(serverId),
+    queryFn: () => window.runova.cloudflareServer.dnsTokens(serverId),
     enabled: open,
     retry: false,
   });
@@ -69,7 +69,7 @@ export function IssueDialog({
     setBusy(true);
     setProblem(null);
     try {
-      const job = await window.agentmat.deployCerts.issue({
+      const job = await window.runova.deployCerts.issue({
         serverId,
         siteId: site.settings.id,
         acceptTermsOfService: accepted,
@@ -181,7 +181,7 @@ export function UploadDialog({
     setBusy(true);
     setProblems([]);
     try {
-      const result = await window.agentmat.deployCerts.upload({
+      const result = await window.runova.deployCerts.upload({
         serverId,
         siteId: site.settings.id,
         certificatePem,

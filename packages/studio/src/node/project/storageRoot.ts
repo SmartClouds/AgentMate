@@ -143,7 +143,7 @@ async function resolveExisting(
 }
 
 async function defaultProbe(folder: string): Promise<void> {
-  const file = path.join(folder, `.agentmate-probe-${randomBytes(4).toString('hex')}`);
+  const file = path.join(folder, `.runova-probe-${randomBytes(4).toString('hex')}`);
   await writeFile(file, '');
   await unlink(file);
 }
@@ -196,7 +196,7 @@ export async function checkStorageRoot(
     add(
       'app-folder',
       'error',
-      "This is inside AgentMate's own folder, which an update replaces. Pick another folder.",
+      "This is inside Runova's own folder, which an update replaces. Pick another folder.",
     );
   }
 
@@ -243,7 +243,7 @@ export async function checkStorageRoot(
       add(
         'not-writable',
         'error',
-        "AgentMate can't write to this folder. Pick one you have permission to change.",
+        "Runova can't write to this folder. Pick one you have permission to change.",
       );
     }
     try {

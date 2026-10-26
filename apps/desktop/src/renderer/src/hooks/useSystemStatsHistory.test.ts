@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { installAgentmatBridge } from '../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../test/renderer/runovaBridge';
 
 /**
  * The hook polls the OS through the bridge and keeps a rolling window of samples. It also keeps
@@ -34,7 +34,7 @@ beforeEach(() => {
 describe('useSystemStatsHistory', () => {
   it('collects samples from the bridge', async () => {
     const useSystemStatsHistory = await freshHook();
-    installAgentmatBridge({ 'system.sample': countingSampler() });
+    installRunovaBridge({ 'system.sample': countingSampler() });
 
     const { result } = renderHook(() => useSystemStatsHistory({ intervalMs: 5 }));
 
@@ -45,7 +45,7 @@ describe('useSystemStatsHistory', () => {
 
   it('does not sample at all when disabled', async () => {
     const useSystemStatsHistory = await freshHook();
-    const bridge = installAgentmatBridge({ 'system.sample': async () => ({ cpu: 1 }) });
+    const bridge = installRunovaBridge({ 'system.sample': async () => ({ cpu: 1 }) });
 
     const { result } = renderHook(() => useSystemStatsHistory({ enabled: false }));
 
@@ -56,7 +56,7 @@ describe('useSystemStatsHistory', () => {
 
   it('keeps the ring buffer at sixty samples and trims the return to maxSamples', async () => {
     const useSystemStatsHistory = await freshHook();
-    installAgentmatBridge({ 'system.sample': countingSampler() });
+    installRunovaBridge({ 'system.sample': countingSampler() });
 
     const { result, rerender } = renderHook(
       ({ maxSamples }: { maxSamples: number }) =>
@@ -78,7 +78,7 @@ describe('useSystemStatsHistory', () => {
   it('skips a tick the bridge rejects instead of losing the history', async () => {
     const useSystemStatsHistory = await freshHook();
     let n = 0;
-    installAgentmatBridge({
+    installRunovaBridge({
       'system.sample': async () => {
         n += 1;
         if (n === 2) throw new Error('ping failed');
@@ -96,7 +96,7 @@ describe('useSystemStatsHistory', () => {
 
   it('stops sampling once the component unmounts', async () => {
     const useSystemStatsHistory = await freshHook();
-    const bridge = installAgentmatBridge({ 'system.sample': countingSampler() });
+    const bridge = installRunovaBridge({ 'system.sample': countingSampler() });
 
     const { result, unmount } = renderHook(() => useSystemStatsHistory({ intervalMs: 5 }));
     await waitFor(() => expect(result.current.length).toBeGreaterThanOrEqual(2));
@@ -110,7 +110,7 @@ describe('useSystemStatsHistory', () => {
 
   it('seeds a remount from the cached history so the chart does not start blank', async () => {
     const useSystemStatsHistory = await freshHook();
-    installAgentmatBridge({ 'system.sample': countingSampler() });
+    installRunovaBridge({ 'system.sample': countingSampler() });
 
     const first = renderHook(() => useSystemStatsHistory({ intervalMs: 5 }));
     await waitFor(() => expect(first.result.current.length).toBeGreaterThanOrEqual(3));

@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { PullRequestStatus } from '@shared/apiTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
@@ -84,7 +84,7 @@ export function CreatePrForm({
 
   const branches = useQuery({
     queryKey: queryKeys.gitStatus(project.id),
-    queryFn: () => window.agentmat.git.status(project.id),
+    queryFn: () => window.runova.git.status(project.id),
     meta: { silentLoading: true },
   });
   const baseOptions = (branches.data?.branches ?? [])
@@ -94,14 +94,14 @@ export function CreatePrForm({
 
   async function write(): Promise<void> {
     if (writing) {
-      void window.agentmat.pullRequests.cancelAi(writing);
+      void window.runova.pullRequests.cancelAi(writing);
       setWriting(null);
       return;
     }
     const requestId = crypto.randomUUID();
     setWriting(requestId);
     try {
-      const result = await window.agentmat.pullRequests.suggestText(project.id, requestId, base);
+      const result = await window.runova.pullRequests.suggestText(project.id, requestId, base);
       if (result.cancelled) return;
       if (result.ok) {
         if (result.title) setDraftTitle(project.id, result.title);
@@ -118,7 +118,7 @@ export function CreatePrForm({
   async function create(): Promise<void> {
     setCreating(true);
     try {
-      const result = await window.agentmat.git.createPullRequest({
+      const result = await window.runova.git.createPullRequest({
         projectId: project.id,
         title: title.trim(),
         body,
@@ -130,7 +130,7 @@ export function CreatePrForm({
         return;
       }
       if (result.usedFallback && result.url) {
-        void window.agentmat.shell.openExternal(result.url);
+        void window.runova.shell.openExternal(result.url);
         toast.success('Opened the pull request page on GitHub', {
           description: 'Install the GitHub CLI to create pull requests from here.',
         });
@@ -140,7 +140,7 @@ export function CreatePrForm({
           action: url
             ? {
                 label: 'Open on GitHub',
-                onClick: () => void window.agentmat.shell.openExternal(url),
+                onClick: () => void window.runova.shell.openExternal(url),
               }
             : undefined,
         });

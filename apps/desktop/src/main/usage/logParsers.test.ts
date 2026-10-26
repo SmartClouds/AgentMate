@@ -1,6 +1,6 @@
 import { appendFileSync, mkdirSync, statSync, truncateSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { GEMINI_LOG_FALLBACK_MODEL } from '@agentmat/core';
+import { GEMINI_LOG_FALLBACK_MODEL } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { tempDir } from '../../test/main/fixtures';
 import {
@@ -167,7 +167,7 @@ async function scanCopilot(cache: ScanCache = {}, sinceMs = now - 7 * 24 * HOUR_
 }
 
 beforeEach(() => {
-  root = tempDir('agentmate-usage-logs-');
+  root = tempDir('runova-usage-logs-');
   now = Date.UTC(2026, 8, 17, 12, 0, 0);
   vi.useFakeTimers();
   vi.setSystemTime(now);
@@ -691,7 +691,7 @@ describe('Gemini CLI logs', () => {
   it('reads usageMetadata, splitting cached tokens out of the prompt count', async () => {
     // The prompt count already includes the cached ones, so adding both would
     // double-count them in the total.
-    writeGeminiLog('agentmate', 'session-2026-09-17T10-00-a1.jsonl', [
+    writeGeminiLog('runova', 'session-2026-09-17T10-00-a1.jsonl', [
       geminiUsageLine({
         at: now - HOUR_MS,
         model: 'test-model',
@@ -718,7 +718,7 @@ describe('Gemini CLI logs', () => {
   });
 
   it('does not add thoughts tokens to the output count, they are already inside it', async () => {
-    writeGeminiLog('agentmate', 'session-2026-09-17T10-00-a1.jsonl', [
+    writeGeminiLog('runova', 'session-2026-09-17T10-00-a1.jsonl', [
       geminiUsageLine({
         at: now - HOUR_MS,
         model: 'test-model',
@@ -735,7 +735,7 @@ describe('Gemini CLI logs', () => {
   });
 
   it('reads a generic tokens object when there is no usageMetadata', async () => {
-    writeGeminiLog('agentmate', 'session-2026-09-17T10-00-a1.jsonl', [
+    writeGeminiLog('runova', 'session-2026-09-17T10-00-a1.jsonl', [
       `${JSON.stringify({
         timestamp: new Date(now - HOUR_MS).toISOString(),
         model: 'test-model',
@@ -758,7 +758,7 @@ describe('Gemini CLI logs', () => {
   });
 
   it('prices an entry that never named a model at the Gemini fallback', async () => {
-    writeGeminiLog('agentmate', 'session-2026-09-17T10-00-a1.jsonl', [
+    writeGeminiLog('runova', 'session-2026-09-17T10-00-a1.jsonl', [
       geminiUsageLine({ at: now - HOUR_MS, prompt: 10, candidates: 2 }),
     ]);
 
@@ -768,7 +768,7 @@ describe('Gemini CLI logs', () => {
   });
 
   it('reads token-bearing messages inside a batched message list, once each', async () => {
-    writeGeminiLog('agentmate', 'session-2026-09-17T10-00-a1.jsonl', [
+    writeGeminiLog('runova', 'session-2026-09-17T10-00-a1.jsonl', [
       `${JSON.stringify({
         lastUpdated: new Date(now - HOUR_MS).toISOString(),
         $set: {
@@ -804,11 +804,11 @@ describe('Gemini CLI logs', () => {
 
   it('contributes nothing for the files the CLI writes today: prompts, but no token counts', async () => {
     writeGeminiLog(
-      'agentmate',
+      'runova',
       'session-2026-09-17T10-00-a1.jsonl',
       geminiChatToday('a1', now - HOUR_MS),
     );
-    writeProjectRoot('agentmate', 'E:\\work\\shop');
+    writeProjectRoot('runova', 'E:\\work\\shop');
 
     const result = await scanGemini();
 
@@ -817,7 +817,7 @@ describe('Gemini CLI logs', () => {
   });
 
   it('ignores malformed JSON, unusable timestamps and empty usage blocks', async () => {
-    writeGeminiLog('agentmate', 'session-2026-09-17T10-00-a1.jsonl', [
+    writeGeminiLog('runova', 'session-2026-09-17T10-00-a1.jsonl', [
       '{ not json at all\n',
       `${JSON.stringify({ timestamp: 'not-a-date', usageMetadata: { promptTokenCount: 5 } })}\n`,
       geminiUsageLine({ at: now - HOUR_MS }),
@@ -831,10 +831,10 @@ describe('Gemini CLI logs', () => {
   });
 
   it('attributes entries to the folder named by the hash sidecar', async () => {
-    writeGeminiLog('agentmate', 'session-2026-09-17T10-00-a1.jsonl', [
+    writeGeminiLog('runova', 'session-2026-09-17T10-00-a1.jsonl', [
       geminiUsageLine({ at: now - HOUR_MS, model: 'test-model', prompt: 10, candidates: 1 }),
     ]);
-    writeProjectRoot('agentmate', 'E:\\work\\shop');
+    writeProjectRoot('runova', 'E:\\work\\shop');
 
     const result = await scanGemini();
 
@@ -860,7 +860,7 @@ describe('Gemini CLI logs', () => {
   });
 
   it('only parses the bytes appended since the last scan', async () => {
-    const file = writeGeminiLog('agentmate', 'session-2026-09-17T10-00-a1.jsonl', [
+    const file = writeGeminiLog('runova', 'session-2026-09-17T10-00-a1.jsonl', [
       geminiUsageLine({ at: now - 2 * HOUR_MS, model: 'test-model', prompt: 10, id: 'a' }),
     ]);
 

@@ -1,4 +1,4 @@
-import type { EffortLevel } from '@agentmat/core';
+import type { EffortLevel } from '@runova/core';
 import type { IpcMainInvokeEvent } from 'electron';
 import type {
   DeployAssistantContextInput,

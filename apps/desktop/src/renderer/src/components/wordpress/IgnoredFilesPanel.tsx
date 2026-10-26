@@ -1,5 +1,5 @@
-import type { Project } from '@agentmat/core';
-import { WP_IGNORE_ALL, wpItemKey } from '@agentmat/core';
+import type { Project } from '@runova/core';
+import { WP_IGNORE_ALL, wpItemKey } from '@runova/core';
 import { useId, useState } from 'react';
 import { toast } from 'sonner';
 import { File, Filter, Folder, Spinner, X } from '@/components/icons';
@@ -191,7 +191,7 @@ export function IgnoredFilesPanel({
 
       <p className="text-[11px] text-muted-foreground">
         Left out on their own: whatever a .gitignore names, folders that start with .claude or
-        .agentmate, secrets, and build clutter like node_modules.
+        .runova, secrets, and build clutter like node_modules.
       </p>
     </div>
   );

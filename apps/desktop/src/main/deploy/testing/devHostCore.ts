@@ -14,8 +14,8 @@ import { fileURLToPath } from 'node:url';
  */
 
 const REPO = fileURLToPath(new URL('../../../../../../', import.meta.url));
-const PROJECT = join(REPO, 'apps', 'server-core', 'src', 'AgentMate.ServerCore.DevHost');
-const DLL = join(PROJECT, 'bin', 'Debug', 'net10.0', 'AgentMate.ServerCore.DevHost.dll');
+const PROJECT = join(REPO, 'apps', 'server-core', 'src', 'Runova.ServerCore.DevHost');
+const DLL = join(PROJECT, 'bin', 'Debug', 'net10.0', 'Runova.ServerCore.DevHost.dll');
 const READY_TIMEOUT_MS = 60_000;
 
 export interface DevHostCore {
@@ -50,7 +50,7 @@ function freePort(): Promise<number> {
 function healthy(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const call = request(
-      { host: '127.0.0.1', port, path: '/api/v1/health', headers: { host: 'agentmate-core' } },
+      { host: '127.0.0.1', port, path: '/api/v1/health', headers: { host: 'runova-core' } },
       (response) => {
         response.resume();
         resolve(response.statusCode === 200);
@@ -65,10 +65,10 @@ function healthy(port: number): Promise<boolean> {
 export async function startDevHostCore(): Promise<DevHostCore> {
   execFileSync('dotnet', ['build', PROJECT, '--nologo', '-v', 'quiet'], { stdio: 'inherit' });
   const port = await freePort();
-  const data = mkdtempSync(join(tmpdir(), 'agentmate-int-devhost-'));
+  const data = mkdtempSync(join(tmpdir(), 'runova-int-devhost-'));
   // Later arguments win, so this replaces the DevHost's own data folder.
   const child: ChildProcess = spawn('dotnet', [DLL, `--Core:DataDirectory=${data}`], {
-    env: { ...process.env, AGENTMATE_DEV_CORE_PORT: String(port) },
+    env: { ...process.env, RUNOVA_DEV_CORE_PORT: String(port) },
     stdio: 'ignore',
   });
   const stop = () => {

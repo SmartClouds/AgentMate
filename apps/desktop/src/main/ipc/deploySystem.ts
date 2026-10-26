@@ -5,7 +5,7 @@ import type {
   ManagedService,
   MetricsHistoryRequest,
   MetricsResolution,
-} from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployJobWatchInput, DeployMetricsWatchInput } from '../../shared/deployTypes';
 import { IPC } from '../../shared/ipcChannels';
 import type { DeploySubscriptions, SubscriptionOwner } from '../deploy/live/subscriptions';

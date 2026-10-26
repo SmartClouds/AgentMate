@@ -1,4 +1,4 @@
-import { FABLE_WEEK_LABEL, getUsageProvider, type SubscriptionWindowKey } from '@agentmat/core';
+import { FABLE_WEEK_LABEL, getUsageProvider, type SubscriptionWindowKey } from '@runova/core';
 import { IPC } from '../../shared/ipcChannels';
 import { broadcastToWindows } from '../ipc/send';
 import { showOsNotification } from '../notifications/osNotification';

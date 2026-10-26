@@ -12,7 +12,7 @@
  *
  * `official` mirrors skills.sh's own verified-owner list (see SKILLS_SH_VERIFIED_OWNERS): it is
  * true only for skills published under an owner skills.sh marks as verified (e.g. anthropics,
- * vercel-labs, microsoft, firebase, supabase), not a judgement AgentMate makes on its own.
+ * vercel-labs, microsoft, firebase, supabase), not a judgement Runova makes on its own.
  * Everything else is a community skill.
  */
 export interface SkillsShEntry {

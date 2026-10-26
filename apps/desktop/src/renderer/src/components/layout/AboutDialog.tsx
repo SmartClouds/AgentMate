@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Download, ExternalLink, Github, RefreshCw, Spinner } from '@/components/icons';
+import { Download, ExternalLink, Github, Globe, RefreshCw, Spinner } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
@@ -11,12 +11,15 @@ import { PUBLISHER, useUpdateCheck } from './mainNav';
 import { SmartCloudsLogo } from './SmartCloudsLogo';
 
 export const SMARTCLOUDS_URL = 'https://smartclouds.co';
-/** The repository, the same as `homepage` in package.json. */
-export const SOURCE_URL = 'https://github.com/SmartClouds/AgentMate';
+/** Runova's own site, the same as `homepage` in package.json. */
+export const WEBSITE_URL = 'https://runovahq.com';
+/** The repository, the same as `repository` in package.json. */
+export const SOURCE_URL = 'https://github.com/SmartClouds/Runova';
 
 /**
- * About AgentMate: what the app is, the running version, a way to check for updates, a link to
- * the source, and a credit to SmartClouds, who make it. Opened from the sidebar's about card or
+ * About Runova: what the app is and where its name comes from, the running version, a way to
+ * check for updates, links to the website and the source, and a credit to SmartClouds, who make
+ * it. Opened from the sidebar's about card or
  * the top bar's version chip, and mounted once in AppShell.
  */
 export function AboutDialog(): React.JSX.Element {
@@ -65,7 +68,7 @@ function AboutBody(): React.JSX.Element {
     (url: string) =>
     (event: React.MouseEvent<HTMLAnchorElement>): void => {
       event.preventDefault();
-      void window.agentmat.shell.openExternal(url);
+      void window.runova.shell.openExternal(url);
     };
 
   return (
@@ -81,15 +84,12 @@ function AboutBody(): React.JSX.Element {
           aria-hidden
           className="pointer-events-none absolute left-1/2 top-12 h-16 w-16 -translate-x-1/2 rounded-full bg-primary/30 blur-2xl"
         />
-        <AppIcon size={72} alt="AgentMate" className="relative" />
+        <AppIcon size={72} alt="Runova" className="relative" />
 
         <div className="relative mt-4 flex items-center gap-2">
-          {/* It reads as "AgentMate" on screen, and as "About AgentMate" to a screen reader. */}
-          <DialogTitle
-            aria-label="About AgentMate"
-            className="text-xl font-semibold tracking-tight"
-          >
-            AgentMate
+          {/* It reads as "Runova" on screen, and as "About Runova" to a screen reader. */}
+          <DialogTitle aria-label="About Runova" className="text-xl font-semibold tracking-tight">
+            Runova
           </DialogTitle>
           {versionText && (
             <span className={cn(VERSION_CHIP, 'h-5 px-2 text-[11px]')}>{versionText}</span>
@@ -97,20 +97,24 @@ function AboutBody(): React.JSX.Element {
         </div>
 
         {/* The primitive's cn() replaces its own text-sm with the size given here. Only this
-            paragraph is the dialog's description; the license line below is extra. */}
+            paragraph is the dialog's description; the lines below it are extra. */}
         <DialogDescription className="relative mt-4 text-[13px] leading-relaxed text-muted-foreground">
-          AgentMate is an Agentic Development Environment (ADE) for AI coding agents. Run Claude
-          Code, Codex, Cursor, Gemini, Grok, OpenCode or a plain shell side by side in workspace
-          panes. The git panel, diffs, editor, tests and pipelines sit right next to them, so a
-          change goes from prompt to review to commit without leaving the app.
+          Runova is an Agentic Development Environment (ADE) for AI coding agents. Run Claude Code,
+          Codex, Cursor, Gemini, Grok, OpenCode or a plain shell side by side in workspace panes.
+          The git panel, diffs, editor, tests and pipelines sit right next to them, so a change goes
+          from prompt to review to commit without leaving the app.
         </DialogDescription>
+        <p className="relative mt-2 text-[13px] leading-relaxed text-muted-foreground">
+          The name joins two words: a runway, where launches happen, and a nova, a new star. Your
+          ideas take off here.
+        </p>
         <p className="relative mt-2 text-[13px] leading-relaxed text-foreground/80">
           It's free and open source under the MIT license.
         </p>
 
-        {/* The two actions are too wide to share a row at this width. They always stack, and the
-            first has a fixed minimum width, so the shorter "Checking…" label can't let them
-            pop onto one row and move everything while a check runs. */}
+        {/* The update action sits on a row of its own with a fixed minimum width, so the shorter
+            "Checking…" label can't move anything while a check runs. The two links share the
+            row below it. */}
         <div className="relative mt-6 flex flex-col items-center gap-2">
           {updatePending && !busy ? (
             <Button className="min-w-44" onClick={openUpdateDialog}>
@@ -129,20 +133,30 @@ function AboutBody(): React.JSX.Element {
               {busy ? 'Checking…' : 'Check for updates'}
             </Button>
           )}
-          {/* The credit at the foot already links to smartclouds.co, so the second action here
-              is the source code. */}
-          <Button variant="soft" asChild>
-            <a href={SOURCE_URL} onClick={openInBrowser(SOURCE_URL)}>
-              <Github />
-              Source on GitHub
-              <span className="sr-only">, opens in your browser</span>
-              <ExternalLink className="opacity-70" />
-            </a>
-          </Button>
+          {/* The credit at the foot already links to smartclouds.co, so these are Runova's own
+              site and its source code. */}
+          <div className="flex items-center gap-2">
+            <Button variant="soft" asChild>
+              <a href={WEBSITE_URL} onClick={openInBrowser(WEBSITE_URL)}>
+                <Globe />
+                Website
+                <span className="sr-only">, opens in your browser</span>
+                <ExternalLink className="opacity-70" />
+              </a>
+            </Button>
+            <Button variant="soft" asChild>
+              <a href={SOURCE_URL} onClick={openInBrowser(SOURCE_URL)}>
+                <Github />
+                Source on GitHub
+                <span className="sr-only">, opens in your browser</span>
+                <ExternalLink className="opacity-70" />
+              </a>
+            </Button>
+          </div>
         </div>
 
         <p className="relative mt-6 text-xs text-muted-foreground">
-          AgentMate is built and maintained by {PUBLISHER}.
+          Runova is built and maintained by {PUBLISHER}.
         </p>
       </div>
 

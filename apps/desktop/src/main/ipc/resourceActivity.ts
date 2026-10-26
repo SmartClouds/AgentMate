@@ -1,4 +1,4 @@
-import type { ResourceActivitySnapshot, ResourceRef, ResourceStopOutcome } from '@agentmat/core';
+import type { ResourceActivitySnapshot, ResourceRef, ResourceStopOutcome } from '@runova/core';
 import { ipcMain } from 'electron';
 import { IPC } from '../../shared/ipcChannels';
 import { getResourceActivityTracker } from '../resourceActivity/runtime';

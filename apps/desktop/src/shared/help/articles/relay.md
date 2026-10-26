@@ -3,11 +3,11 @@ title: Relay tasks
 category: Build
 order: 15
 summary: Break work into tasks that each fit one AI session, run them one after another in fresh sessions, and carry what each session learned to the next through a handoff file.
-keywords: relay, tasks, task board, board, handoff, baton, context, context budget, 200k, session, split into tasks, split into relay tasks, revise with ai, plan first, auto mode, run relay, schedule, after a task, sdd, kanban, trello, mcp, agentmate_relay, finish_leg
+keywords: relay, tasks, task board, board, handoff, baton, context, context budget, 200k, session, split into tasks, split into relay tasks, revise with ai, plan first, auto mode, run relay, schedule, after a task, sdd, kanban, trello, mcp, runova_relay, finish_leg
 route: /workspace
 ---
 
-Long jobs fill an AI session's context until it starts forgetting. Relay avoids that. The work is broken into small tasks, each sized to finish within one session's context budget (200K tokens by default). AgentMate runs them one after another, each in a fresh session, and every session leaves a handoff file that the next one reads.
+Long jobs fill an AI session's context until it starts forgetting. Relay avoids that. The work is broken into small tasks, each sized to finish within one session's context budget (200K tokens by default). Runova runs them one after another, each in a fresh session, and every session leaves a handoff file that the next one reads.
 
 Think of it as a relay race: each task is a leg, each session a runner, and the handoff is the baton.
 
@@ -47,9 +47,9 @@ Every session updates `docs/tasks/handoffs/T001.md` (for task T001) with five se
 - **continue**: the session ran out of budget. A fresh session starts on the same task and carries on from the Next step.
 - **blocked**: the relay pauses and tells you why.
 
-With Claude Code, AgentMate watches the session's real context use. When it passes 80% of the budget, the session is told to finish its current step, write the handoff and stop, so no session runs past its budget and long tasks still finish. If a session tries to stop without writing its handoff, it is asked to write it first.
+With Claude Code, Runova watches the session's real context use. When it passes 80% of the budget, the session is told to finish its current step, write the handoff and stop, so no session runs past its budget and long tasks still finish. If a session tries to stop without writing its handoff, it is asked to write it first.
 
-AgentMate keeps each task's status in its file. Agents only write handoffs. With **Commit when done** on (the default), each finished task is committed on its own, with only the files it changed.
+Runova keeps each task's status in its file. Agents only write handoffs. With **Commit when done** on (the default), each finished task is committed on its own, with only the files it changed.
 
 ## Plan first
 
@@ -57,9 +57,9 @@ Turn on **Plan first** in Run settings to start each session in plan mode. With 
 
 ## What each agent supports
 
-Claude Code gets everything above. Codex and Copilot talk to AgentMate through the `agentmate_relay` MCP server: they can read their task, check their context and report when they finish. Other agents run tasks too. They plan first and then wait for you, and AgentMate finishes their task from the handoff once their output goes quiet. Run settings shows what the chosen agent can do.
+Claude Code gets everything above. Codex and Copilot talk to Runova through the `runova_relay` MCP server: they can read their task, check their context and report when they finish. Other agents run tasks too. They plan first and then wait for you, and Runova finishes their task from the handoff once their output goes quiet. Run settings shows what the chosen agent can do.
 
-A session can also suggest follow-up tasks over MCP. They wait in AgentMate until you add them to the board or decline them.
+A session can also suggest follow-up tasks over MCP. They wait in Runova until you add them to the board or decline them.
 
 ## If something goes wrong
 

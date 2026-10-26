@@ -1,5 +1,5 @@
 import { coreErrorMessage } from '@shared/coreErrors';
-import type { MetricsSample } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { MetricsSample } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { ChartSimple, Table } from '@/components/icons';
@@ -161,7 +161,7 @@ export function MetricsCard({
   const history = useQuery({
     queryKey: queryKeys.deployMetricsHistory(serverId, range),
     queryFn: () =>
-      window.agentmat.deploySystem.metricsHistory({
+      window.runova.deploySystem.metricsHistory({
         serverId,
         resolution: option.resolution,
         fromUnixMs: Date.now() - option.spanMs,

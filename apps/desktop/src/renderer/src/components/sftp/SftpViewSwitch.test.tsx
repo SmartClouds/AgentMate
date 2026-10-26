@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { resetSftpStore, serverFiles, useSftpStore } from '@/stores/sftpStore';
-import { type FakeBridge, installAgentmatBridge } from '../../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../../test/renderer/runovaBridge';
 import {
   isFilesPageOf,
   previousRoute,
@@ -118,7 +118,7 @@ const where = (): string | null => screen.getByTestId('where').textContent;
 beforeEach(() => {
   resetSftpStore();
   vi.clearAllMocks();
-  bridge = installAgentmatBridge({
+  bridge = installRunovaBridge({
     'sftp.popOut': async () => undefined,
     'sftp.backToMain': async () => undefined,
   });

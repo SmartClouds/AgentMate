@@ -16,6 +16,7 @@ export const SETUP_LABELS: Record<DeploySetupPhase, string> = {
   cleanup: 'Tidy up old files',
   rollback: 'Go back to the previous release',
   health: 'Check that it answers',
+  migrate: 'Move the core to its new name',
   owner: 'Set up your account on the core',
   enroll: 'Enroll this computer',
   'sign-in': 'Sign in',

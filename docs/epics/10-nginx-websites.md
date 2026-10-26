@@ -12,7 +12,7 @@ running nginx.
 
 - [x] T1 Install from the nginx.org stable repo (pinned GPG key) on both families, or adopt an
   existing nginx with the stock default site backed up and disabled.
-- [x] T2 Managed layout: one include wired into `nginx.conf` once, `/etc/nginx/agentmate/current`
+- [x] T2 Managed layout: one include wired into `nginx.conf` once, `/etc/nginx/runova/current`
   symlinked to numbered release directories, default server returning 444, ACME challenge location.
 - [x] T3 Typed site model and deterministic renderer: domains (IDNA), upstream from a stack service
   port picker, websocket upgrade map, proxy cache zone per site (TTL, bypass, purge), gzip,
@@ -76,7 +76,7 @@ E17 review (2026-10-03):
 
 - T1 to T8 and T10 were built in 77b262a (renderer, snippet allowlist, harness) and 07db580
   (install, apply, stream proxies, SELinux, site logs); their boxes are ticked now.
-- AC1 and AC2 are the server core's system tests (`AgentMate.ServerCore.SystemTests`, nginx.org
+- AC1 and AC2 are the server core's system tests (`Runova.ServerCore.SystemTests`, nginx.org
   packages on Debian 13 and Rocky 9). They passed when they were written but had never run in CI:
   no workflow ran that project. The nightly workflow now has a job for it. AC3 and AC4 are unit and
   golden-file tests that run on every push.

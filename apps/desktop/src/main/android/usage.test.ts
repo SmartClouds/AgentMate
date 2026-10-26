@@ -57,7 +57,7 @@ describe('the usage sampler', () => {
 
     await vi.advanceTimersByTimeAsync(100);
 
-    // A background AgentMate must not run a CIM query every few seconds forever.
+    // A background Runova must not run a CIM query every few seconds forever.
     expect(state.samples).toBe(0);
     sampler.dispose();
   });

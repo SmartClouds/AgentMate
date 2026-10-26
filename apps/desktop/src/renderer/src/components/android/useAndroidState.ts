@@ -1,4 +1,4 @@
-import type { AndroidDevice, AndroidSnapshot } from '@agentmat/core';
+import type { AndroidDevice, AndroidSnapshot } from '@runova/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import { queryKeys } from '@/lib/queryKeys';
@@ -46,7 +46,7 @@ export function useAndroidState(enabled: boolean): AndroidState {
 
   const query = useQuery({
     queryKey: queryKeys.androidSnapshot,
-    queryFn: () => window.agentmat.android.refresh(),
+    queryFn: () => window.runova.android.refresh(),
     enabled,
     // A device can be plugged in at any moment, and there is no event for that.
     refetchInterval: enabled ? 4000 : false,
@@ -54,7 +54,7 @@ export function useAndroidState(enabled: boolean): AndroidState {
   });
 
   useEffect(() => {
-    return window.agentmat.android.onEvent((event) => {
+    return window.runova.android.onEvent((event) => {
       if (event.kind === 'emulator') {
         // Patch the one card rather than refetching the world, so a boot stage lands immediately.
         queryClient.setQueryData<AndroidSnapshot>(queryKeys.androidSnapshot, (current) => {
@@ -91,13 +91,13 @@ export function useAndroidState(enabled: boolean): AndroidState {
   useEffect(() => {
     if (!enabled) return;
     const sync = (): void => {
-      void window.agentmat.android.watchUsage(document.visibilityState === 'visible');
+      void window.runova.android.watchUsage(document.visibilityState === 'visible');
     };
     sync();
     document.addEventListener('visibilitychange', sync);
     return () => {
       document.removeEventListener('visibilitychange', sync);
-      void window.agentmat.android.watchUsage(false);
+      void window.runova.android.watchUsage(false);
     };
   }, [enabled]);
 

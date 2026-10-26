@@ -88,7 +88,7 @@ describe('sweepStaleStaging', () => {
     expect(existsSync(dead)).toBe(false);
   });
 
-  it('keeps another running AgentMate, and this one', async () => {
+  it('keeps another running Runova, and this one', async () => {
     const root = tempDir();
     const running = stage(root, 222222);
     const own = stage(root, process.pid);
@@ -125,7 +125,7 @@ describe('putFilesOnClipboard', () => {
 
     const [call] = execState.calls;
     expect(call.file).toBe('powershell.exe');
-    expect(call.env.AGENTMATE_CLIPBOARD_PATHS).toBe(paths.join('|'));
+    expect(call.env.RUNOVA_CLIPBOARD_PATHS).toBe(paths.join('|'));
     const script = call.args.at(-1) ?? '';
     expect(script).toContain('Set-Clipboard -LiteralPath');
     // A file name never reaches the script text.

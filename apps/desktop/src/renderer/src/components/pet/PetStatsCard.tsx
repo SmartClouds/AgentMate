@@ -1,4 +1,4 @@
-import type { DesktopPetCardView } from '@agentmat/core';
+import type { DesktopPetCardView } from '@runova/core';
 import { PET_BOX } from '@shared/pet';
 import { useUsageSummary } from '@/hooks/useUsageSummary';
 import { formatCost, formatTokens } from '@/lib/usageFormat';

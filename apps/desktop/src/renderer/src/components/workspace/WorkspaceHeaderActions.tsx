@@ -3,7 +3,7 @@ import {
   parseRunInputs,
   projectRunCommandTitle,
   runCommandSummary,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Cpu, FolderOpen, Keyboard, Pencil, Play, Run, Tag, Wand2 } from '@/components/icons';

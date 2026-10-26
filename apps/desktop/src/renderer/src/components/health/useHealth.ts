@@ -28,7 +28,7 @@ const QUIET = { silentLoading: true } as const;
 export function useHealthChanges(): void {
   const queryClient = useQueryClient();
   useEffect(() => {
-    return window.agentmat.health.onChanged((event) => {
+    return window.runova.health.onChanged((event) => {
       // `cancelRefetch: false` lets a second listener (the menu badge) join the same fetch.
       void queryClient.invalidateQueries(
         { queryKey: queryKeys.healthList() },
@@ -49,7 +49,7 @@ export function useHealthTargets(projectId?: string) {
   const query = useQuery({
     queryKey: queryKeys.healthList(projectId),
     queryFn: async (): Promise<HealthTargetSummary[]> =>
-      (await window.agentmat.health.list(projectId ? { projectId } : undefined)) ?? [],
+      (await window.runova.health.list(projectId ? { projectId } : undefined)) ?? [],
     meta: QUIET,
   });
   const lastGood = useLastGoodData({
@@ -72,7 +72,7 @@ export function useHealthTarget(targetId: string | null) {
   return useQuery({
     queryKey: queryKeys.healthTarget(targetId ?? ''),
     queryFn: async (): Promise<HealthTargetDetail | null> =>
-      (await window.agentmat.health.get(targetId ?? '')) ?? null,
+      (await window.runova.health.get(targetId ?? '')) ?? null,
     enabled: targetId !== null,
     meta: QUIET,
   });
@@ -105,7 +105,7 @@ export function useHealthActions() {
   /** Not a mutation: the result carries the plaintext secret, which must not be cached. */
   const create = useCallback(
     async (input: HealthTargetInput): Promise<HealthCreateResult> => {
-      const result = await window.agentmat.health.create(input);
+      const result = await window.runova.health.create(input);
       void refreshAll();
       return result;
     },
@@ -115,7 +115,7 @@ export function useHealthActions() {
   /** Not a mutation, for the same reason as `create`. */
   const rotateSecret = useCallback(
     async (targetId: string): Promise<HealthSecretReveal> => {
-      const result = await window.agentmat.health.rotateSecret(targetId);
+      const result = await window.runova.health.rotateSecret(targetId);
       void refreshAll();
       return result;
     },
@@ -124,7 +124,7 @@ export function useHealthActions() {
 
   const update = useMutation({
     mutationFn: ({ targetId, patch }: { targetId: string; patch: Partial<HealthTargetInput> }) =>
-      window.agentmat.health.update(targetId, patch),
+      window.runova.health.update(targetId, patch),
     meta: QUIET,
     onSuccess: () => {
       toast.success('Target saved');
@@ -134,7 +134,7 @@ export function useHealthActions() {
   });
 
   const remove = useMutation({
-    mutationFn: (targetId: string) => window.agentmat.health.remove(targetId),
+    mutationFn: (targetId: string) => window.runova.health.remove(targetId),
     meta: QUIET,
     onSuccess: (_result, targetId) => {
       toast.success('Target removed');
@@ -146,7 +146,7 @@ export function useHealthActions() {
 
   const setPaused = useMutation({
     mutationFn: ({ targetId, paused }: { targetId: string; paused: boolean }) =>
-      window.agentmat.health.setPaused(targetId, paused),
+      window.runova.health.setPaused(targetId, paused),
     meta: QUIET,
     onSuccess: (_result, { paused }) => {
       toast.success(paused ? 'Checks paused' : 'Checks resumed');
@@ -156,7 +156,7 @@ export function useHealthActions() {
   });
 
   const checkNow = useMutation({
-    mutationFn: (targetId: string) => window.agentmat.health.checkNow(targetId),
+    mutationFn: (targetId: string) => window.runova.health.checkNow(targetId),
     meta: QUIET,
     onSuccess: (result, targetId) => {
       if (result) queryClient.setQueryData(queryKeys.healthTarget(targetId), result);
@@ -166,7 +166,7 @@ export function useHealthActions() {
   });
 
   const diagnose = useMutation({
-    mutationFn: (targetId: string) => window.agentmat.health.diagnoseNow(targetId),
+    mutationFn: (targetId: string) => window.runova.health.diagnoseNow(targetId),
     meta: QUIET,
     onSuccess: (_result, targetId) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.healthTarget(targetId) });
@@ -175,7 +175,7 @@ export function useHealthActions() {
   });
 
   const cancelDiagnose = useMutation({
-    mutationFn: (targetId: string) => window.agentmat.health.cancelDiagnose(targetId),
+    mutationFn: (targetId: string) => window.runova.health.cancelDiagnose(targetId),
     meta: QUIET,
     onSuccess: (_result, targetId) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.healthTarget(targetId) });

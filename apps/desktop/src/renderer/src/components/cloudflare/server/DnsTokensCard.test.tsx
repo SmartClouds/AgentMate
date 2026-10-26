@@ -1,5 +1,5 @@
 import { encodeCloudflareError } from '@shared/cloudflareErrors';
-import type { DnsCredentialInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { DnsCredentialInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployServer } from '@shared/deployTypes';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -26,7 +26,7 @@ const SERVER: DeployServer = {
   username: 'deployer',
   core: {
     version: '1.0.0',
-    release: '/opt/agentmate-core/releases/1.0.0',
+    release: '/opt/runova-core/releases/1.0.0',
     transport: 'streamlocal',
     installedAt: 0,
     os: 'Ubuntu 24.04.1 LTS',
@@ -109,7 +109,7 @@ describe('DnsTokensCard', () => {
     });
   });
 
-  it('removes a token after a confirm, deleting the one AgentMate made at Cloudflare', async () => {
+  it('removes a token after a confirm, deleting the one Runova made at Cloudflare', async () => {
     const { user, bridge } = render({
       'cloudflareServer.dnsTokens': async () => [HELD],
       'cloudflareServer.removeDnsToken': async () => undefined,

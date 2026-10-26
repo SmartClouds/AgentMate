@@ -30,7 +30,7 @@ the feature.
 ### The full OS matrix (T1)
 
 - `testing/testServers.ts` has `testServerImages(supported, defaults)`: each system test keeps its
-  defaults on every `[e2e]` push, and `AGENTMATE_TEST_SERVER_IMAGES` (comma separated) runs it on
+  defaults on every `[e2e]` push, and `RUNOVA_TEST_SERVER_IMAGES` (comma separated) runs it on
   the asked-for images it supports instead. Unknown names fail the run, so a typo cannot skip
   everything. `skipWhenNoServers` leaves a skipped test behind when none apply (vitest fails an
   empty suite).
@@ -48,8 +48,8 @@ the feature.
 
 `e2e/deployFullStack.e2e.ts` walks the whole story in one run. Playwright drives the built app
 (the `out-e2e` build) against a systemd test server, booted the way the system tests boot theirs,
-with the core from `pnpm server-core:publish linux-x64`. It is gated on `AGENTMATE_SYSTEM_TESTS=1`
-and Docker for Linux containers, so ordinary e2e runs skip it, and `AGENTMATE_TEST_SERVER_IMAGES`
+with the core from `pnpm server-core:publish linux-x64`. It is gated on `RUNOVA_SYSTEM_TESTS=1`
+and Docker for Linux containers, so ordinary e2e runs skip it, and `RUNOVA_TEST_SERVER_IMAGES`
 picks the server. One serial describe per server, eight tests, no retries (a retry would boot
 and install everything again):
 
@@ -65,7 +65,7 @@ and install everything again):
 5. A registry:2 with htpasswd runs on the server (`testing/privateRegistry.ts`, now shared with
    `registries.int.test.ts`); a sign-in is added under Apps, Registries, and a second revision
    pulls a worker from the private image. The token never shows on screen.
-6. Websites: nginx is set up, a site for `shop.agentmate.test` proxies to the app, and a
+6. Websites: nginx is set up, a site for `shop.runova.test` proxies to the app, and a
    certificate is issued by Pebble over HTTP-01 against the server's own nginx. The list shows
    "SSL, 90 days" and Live, and a curl on the server gets the app's page over HTTPS with a chain
    that verifies against Pebble's root. On Rocky the HTTP preset is applied and kept first, since
@@ -88,7 +88,7 @@ What the run sets up outside the app, before the app sees the server (`e2e/fullS
   runners a test server joined to a second network lost its published SSH port, since its default
   route moved to the new network. The test server trusts Pebble's test CA in its system store,
   reaches the API as `pebble` (a hosts entry; Pebble's certificate names it), and
-  `/etc/agentmate-core/core.json` sets `Core:Acme:ProductionDirectory` to it. challtestsrv is the
+  `/etc/runova-core/core.json` sets `Core:Acme:ProductionDirectory` to it. challtestsrv is the
   test DNS: it maps the domain to the server's address.
 - busybox and registry:2 are loaded from this computer into the server's Docker, since the
   server's way to Docker Hub can be slow.
@@ -103,7 +103,7 @@ Found and fixed on the way:
 
 - HTTP-01 had never worked on a real install. The core runs with `UMask=0077`, and
   `LocalNginxMachine` created missing parent folders under that umask, so `/var/www`,
-  `/var/www/agentmate` and the rest of the ACME webroot came out 0700. nginx's workers (user
+  `/var/www/runova` and the rest of the ACME webroot came out 0700. nginx's workers (user
   `nginx`) could not reach the challenge file, and `try_files` answered Pebble with 404. Every
   folder it creates now gets its mode outright (0755 for parents, whatever the umask), with a test
   that sets umask 0077 (`LocalNginxMachineUmaskTests`, Linux only, run alone since the umask is

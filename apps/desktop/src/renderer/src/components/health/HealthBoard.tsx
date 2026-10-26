@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { ProjectEnvironment } from '@shared/apiTypes';
 import type { HealthTargetSummary } from '@shared/healthTypes';
 import { useQueries, useQuery } from '@tanstack/react-query';
@@ -62,7 +62,7 @@ const STEPS = [
   },
   {
     title: 'Test the connection',
-    body: 'AgentMate checks it on its schedule and tells you when something breaks.',
+    body: 'Runova checks it on its schedule and tells you when something breaks.',
   },
 ];
 
@@ -82,7 +82,7 @@ function FirstRun({
         description={
           <div className="space-y-4 pt-1">
             <p>
-              AgentMate checks a secured endpoint in each environment on its own schedule, and when
+              Runova checks a secured endpoint in each environment on its own schedule, and when
               something fails it shows what broke and asks an agent why.
             </p>
             <ol aria-label="How to start" className="space-y-2.5 text-left">
@@ -203,7 +203,7 @@ export function HealthBoard({ projectId }: { projectId?: string }): React.JSX.El
   const list = useHealthTargets(projectId);
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: async (): Promise<Project[]> => (await window.agentmat.projects.list()) ?? [],
+    queryFn: async (): Promise<Project[]> => (await window.runova.projects.list()) ?? [],
     meta: QUIET,
   });
   const projects = projectsQuery.data ?? [];
@@ -222,7 +222,7 @@ export function HealthBoard({ projectId }: { projectId?: string }): React.JSX.El
     queries: projectIds.map((id) => ({
       queryKey: queryKeys.projectEnvironments(id),
       queryFn: async (): Promise<ProjectEnvironment[]> =>
-        (await window.agentmat.environments.list(id)) ?? [],
+        (await window.runova.environments.list(id)) ?? [],
       meta: QUIET,
     })),
   });

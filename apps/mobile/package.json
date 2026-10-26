@@ -1,10 +1,10 @@
 {
-  "name": "@agentmat/mobile",
+  "name": "@runova/mobile",
   "version": "1.63.0",
   "private": true,
   "main": "index.ts",
   "dependencies": {
-    "@agentmat/protocol": "workspace:*",
+    "@runova/protocol": "workspace:*",
     "@config-plugins/react-native-webrtc": "^15.0.1",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~57.0.11",
@@ -43,7 +43,7 @@
     "testTimeout": 20000,
     "testMatch": ["<rootDir>/src/**/*.test.{ts,tsx}", "<rootDir>/App.test.tsx"],
     "moduleNameMapper": {
-      "^@agentmat/protocol$": "<rootDir>/../../packages/protocol/src/index.ts"
+      "^@runova/protocol$": "<rootDir>/../../packages/protocol/src/index.ts"
     },
     "transformIgnorePatterns": [
       "node_modules/(?!(?:\\.pnpm/[^/]+/node_modules/)?(?:(?:jest-)?react-native|@react-native(?:-community)?|expo(?:nent)?|@expo(?:nent)?/.*|expo-.*|react-native-webrtc|react-native-safe-area-context|@react-native-async-storage/.*))"

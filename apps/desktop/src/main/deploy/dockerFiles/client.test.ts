@@ -5,8 +5,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type {
   FileEntry,
   FileTarget,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { filesErrorCode, filesErrorMessage } from '../../../shared/deployFilesErrors';
 import { toCodedError } from '../../sftp/errors';
 import { describeSftpClientContract, type SftpClientHarness } from '../../sftp/testing/contract';
@@ -72,7 +72,7 @@ let scratch: string;
 
 beforeEach(async () => {
   fixture = await startFakeDockerFiles();
-  scratch = await mkdtemp(join(tmpdir(), 'agentmate-docker-files-'));
+  scratch = await mkdtemp(join(tmpdir(), 'runova-docker-files-'));
 });
 
 afterEach(async () => {

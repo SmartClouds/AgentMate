@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTerminalStore } from '@/stores/terminalStore';
-import { type FakeBridge, installAgentmatBridge } from '../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../test/renderer/runovaBridge';
 import { openCommandTerminal } from './openCommandTerminal';
 
 const toast = vi.hoisted(() => ({ info: vi.fn(), error: vi.fn() }));
@@ -11,7 +11,7 @@ const NODE = { name: 'Node.js', url: 'https://nodejs.org/en/download' };
 let bridge: FakeBridge;
 
 beforeEach(() => {
-  bridge = installAgentmatBridge({ 'cli.checkCommandPrerequisite': async () => null });
+  bridge = installRunovaBridge({ 'cli.checkCommandPrerequisite': async () => null });
   useTerminalStore.setState({ sessions: [], activeSessionId: null, isOpen: false });
 });
 

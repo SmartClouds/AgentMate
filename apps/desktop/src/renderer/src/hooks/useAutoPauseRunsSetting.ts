@@ -14,12 +14,12 @@ export function useAutoPauseRunsSetting(): {
   const queryClient = useQueryClient();
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
     meta: { silentLoading: true },
   });
   const mutation = useMutation({
     mutationFn: (autoPauseRunsWhileAgentWorks: boolean) =>
-      window.agentmat.settings.update({ autoPauseRunsWhileAgentWorks }),
+      window.runova.settings.update({ autoPauseRunsWhileAgentWorks }),
     meta: { silentLoading: true },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.settings }),
     onError: () => toast.error('Could not save that setting.'),

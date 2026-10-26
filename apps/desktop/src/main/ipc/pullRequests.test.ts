@@ -1,4 +1,4 @@
-import type { PullRequestInfo } from '@agentmat/core';
+import type { PullRequestInfo } from '@runova/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   MergePullRequestResult,

@@ -12,7 +12,7 @@ afterEach(async () => {
 
 function options(over: Partial<LockOptions> = {}): LockOptions {
   return {
-    appId: 'AgentMate',
+    appId: 'Runova',
     pid: 100,
     host: 'laptop',
     now: () => 1_000_000,
@@ -36,7 +36,7 @@ describe('acquireVideoLock', () => {
     expect(result.ok).toBe(true);
     const info = JSON.parse(await readFile(join(dir, LOCK_FILE), 'utf8'));
     expect(info).toMatchObject({
-      appId: 'AgentMate',
+      appId: 'Runova',
       pid: 100,
       host: 'laptop',
       heartbeatAt: 1_000_000,
@@ -45,11 +45,11 @@ describe('acquireVideoLock', () => {
 
   it('refuses a folder another live app holds, and says who', async () => {
     const dir = await tempDir();
-    await acquire(dir, { appId: 'AgentMate Dev', pid: 200 });
+    await acquire(dir, { appId: 'Runova Dev', pid: 200 });
     const result = await acquire(dir);
     expect(result).toEqual({
       ok: false,
-      holder: expect.objectContaining({ appId: 'AgentMate Dev', pid: 200, host: 'laptop' }),
+      holder: expect.objectContaining({ appId: 'Runova Dev', pid: 200, host: 'laptop' }),
       stale: false,
     });
   });

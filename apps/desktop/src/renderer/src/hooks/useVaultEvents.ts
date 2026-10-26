@@ -14,7 +14,7 @@ export function useVaultEvents(): void {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const vault = window.agentmat?.vault;
+    const vault = window.runova?.vault;
     if (!vault) return;
 
     const offState = vault.onStateChanged((event) => {

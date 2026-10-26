@@ -369,7 +369,7 @@ describe('the render queue', () => {
     expect(stopped).toMatchObject({
       id: job.id,
       status: 'interrupted',
-      error: 'AgentMate stopped during this render. Resume it to carry on where it was.',
+      error: 'Runova stopped during this render. Resume it to carry on where it was.',
     });
     await second.render.retry(job.id);
     await second.render.idle();

@@ -1,22 +1,28 @@
 #!/usr/bin/env node
 /**
- * Builds and checks the AgentMate Connector WordPress plugin.
+ * Builds and checks the Runova Connector WordPress plugin.
  *
  *   node scripts/wordpress-connector.mjs test [--php 7.4,8.3]   Composer install, then PHPUnit
  *   node scripts/wordpress-connector.mjs lint                   php -l on PHP 7.4, 8.0, 8.3, 8.4
  *   node scripts/wordpress-connector.mjs compat                 PHPCompatibilityWP 7.4- and the
  *                                                               WordPress security and SQL sniffs
- *   node scripts/wordpress-connector.mjs build                  dist/agentmate-connector.zip
+ *   node scripts/wordpress-connector.mjs build                  dist/runova-connector.zip and the
+ *                                                               bridge zip (see below)
  *   node scripts/wordpress-connector.mjs smoke                  the zip on a real WordPress in Docker
  *                                                               (tests/smoke/smoke.mjs)
  *
  * test, lint and compat run in Docker, since PHP is not a local requirement for working on
- * AgentMate. Containers are named agentmate-wpc-* and removed when they exit; Composer's download
- * cache lives in the agentmate-wpc-composer-cache volume.
+ * Runova. Containers are named runova-wpc-* and removed when they exit; Composer's download
+ * cache lives in the runova-wpc-composer-cache volume.
  *
  * build needs plain Node only (no Docker, no node_modules), because release builds run on macOS
  * and Windows. It writes a deterministic zip: fixed entry order, fixed timestamps, text files with
  * LF line endings whatever the checkout did, and only the files the plugin ships.
+ *
+ * The bridge zip (BRIDGE_ZIP) is the same plugin in the folder 1.63 used, with the main file and
+ * guard file from legacy/ under the names a 1.63 connector insists on before it takes an update.
+ * The Runova main file rides along in layout/ for LayoutMigration. Sites in the field update to
+ * it once and then move to runova-connector/ by themselves.
  */
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -58,7 +64,7 @@ function docker(image, name, command, { capture = false } = {}) {
     'run',
     '--rm',
     '--name',
-    `agentmate-wpc-${name}-${process.pid}`,
+    `runova-wpc-${name}-${process.pid}`,
     '--mount',
     `type=bind,source=${repoRoot},target=/repo`,
     '--workdir',
@@ -79,7 +85,7 @@ function docker(image, name, command, { capture = false } = {}) {
 function composerArgs() {
   return [
     '--mount',
-    'type=volume,source=agentmate-wpc-composer-cache,target=/tmp/composer-cache',
+    'type=volume,source=runova-wpc-composer-cache,target=/tmp/composer-cache',
     '--env',
     'COMPOSER_CACHE_DIR=/tmp/composer-cache',
     '--env',
@@ -172,7 +178,7 @@ function compat() {
 
 /** What goes in the zip, from the plugin folder. Tests, Composer files, vendor and notes stay out. */
 const SHIPPED = [
-  'agentmate-connector.php',
+  'runova-connector.php',
   'uninstall.php',
   'readme.txt',
   'rescue.php',
@@ -180,7 +186,12 @@ const SHIPPED = [
   'src',
 ];
 const TEXT = /\.(php|txt|md|css|js|json|xml|html)$/i;
-const ZIP_ROOT = 'agentmate-connector/';
+const ZIP_ROOT = 'runova-connector/';
+/** The bridge package: the old folder and file names, which 1.63 checks. */
+const BRIDGE_ZIP = 'agentmate-connector.zip'; // legacy-name
+const BRIDGE_ROOT = 'agentmate-connector/'; // legacy-name
+const BRIDGE_MAIN = 'agentmate-connector.php'; // legacy-name
+const BRIDGE_GUARD = 'guard/00-agentmate-connector-guard.php'; // legacy-name
 
 /** The version in protocol.ts, the plugin header, the PHP constant and readme.txt must agree. */
 function checkVersion() {
@@ -195,13 +206,13 @@ function checkVersion() {
     /WP_CONNECTOR_VERSION\s*=\s*'([^']+)'/,
     'WP_CONNECTOR_VERSION in protocol.ts',
   );
-  const main = read('apps/wordpress-connector/agentmate-connector.php');
+  const main = read('apps/wordpress-connector/runova-connector.php');
   const found = {
     'plugin header': pick(main, /^ \* Version:\s+(\S+)\s*$/m, 'the Version header'),
-    AGENTMATE_CONNECTOR_VERSION: pick(
+    RUNOVA_CONNECTOR_VERSION: pick(
       main,
-      /define\('AGENTMATE_CONNECTOR_VERSION',\s*'([^']+)'\)/,
-      'AGENTMATE_CONNECTOR_VERSION',
+      /define\('RUNOVA_CONNECTOR_VERSION',\s*'([^']+)'\)/,
+      'RUNOVA_CONNECTOR_VERSION',
     ),
     'readme.txt stable tag': pick(
       read('apps/wordpress-connector/readme.txt'),
@@ -209,9 +220,19 @@ function checkVersion() {
       'the readme stable tag',
     ),
     'guard header': pick(
-      read('apps/wordpress-connector/guard/00-agentmate-connector-guard.php'),
+      read('apps/wordpress-connector/guard/00-runova-connector-guard.php'),
       /^ \* Version:\s+(\S+)\s*$/m,
       'the guard Version header',
+    ),
+    'bridge plugin header': pick(
+      read(`apps/wordpress-connector/legacy/${BRIDGE_MAIN}`),
+      /^ \* Version:\s+(\S+)\s*$/m,
+      'the bridge Version header',
+    ),
+    'bridge version constant': pick(
+      read(`apps/wordpress-connector/legacy/${BRIDGE_MAIN}`),
+      /define\('AGENTMATE_CONNECTOR_VERSION',\s*'([^']+)'\)/, // legacy-name
+      'the bridge version constant',
     ),
   };
   for (const [where, version] of Object.entries(found)) {
@@ -259,14 +280,14 @@ function crc32(bytes) {
 }
 
 /** A zip with UTF-8 names, deflate for files, and every timestamp at 1980-01-01 00:00. */
-function zip(entries) {
+function zip(entries, root = ZIP_ROOT) {
   const DOS_TIME = 0;
   const DOS_DATE = (0 << 9) | (1 << 5) | 1;
   const locals = [];
   const centrals = [];
   let offset = 0;
   for (const entry of entries) {
-    const name = Buffer.from(ZIP_ROOT + entry.path, 'utf8');
+    const name = Buffer.from(root + entry.path, 'utf8');
     let data = Buffer.alloc(0);
     if (!entry.dir) {
       data = readFileSync(entry.absolute);
@@ -317,21 +338,50 @@ function zip(entries) {
   return Buffer.concat([...locals, directory, end]);
 }
 
-function build() {
-  const version = checkVersion();
-  const entries = collect();
+/**
+ * The bridge's entries: everything the Runova zip ships, with the Runova main file moved down to
+ * layout/ and the old main and guard files from legacy/ in their 1.63 places.
+ */
+function bridgeEntries(entries) {
+  const legacy = (path) => ({ dir: false, absolute: join(pluginSource, 'legacy', path) });
+  const out = entries
+    .filter((entry) => entry.path !== 'runova-connector.php')
+    .concat([
+      { ...legacy(BRIDGE_MAIN), path: BRIDGE_MAIN },
+      { ...legacy(BRIDGE_GUARD), path: BRIDGE_GUARD },
+      { path: 'layout/', dir: true },
+      {
+        path: 'layout/runova-connector.php',
+        dir: false,
+        absolute: join(pluginSource, 'runova-connector.php'),
+      },
+    ]);
+  return out.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+}
+
+function writeZip(name, root, entries, version) {
   const files = entries.filter((entry) => !entry.dir).length;
-  if (!entries.some((entry) => entry.path === 'agentmate-connector.php')) {
-    fail('The main plugin file is missing.');
-  }
-  // The top-level folder first, so WordPress unpacks into wp-content/plugins/agentmate-connector.
-  const bytes = zip([{ path: '', dir: true }, ...entries]);
-  const out = join(pluginSource, 'dist', 'agentmate-connector.zip');
+  // The top-level folder first, so WordPress unpacks into wp-content/plugins/<root>.
+  const bytes = zip([{ path: '', dir: true }, ...entries], root);
+  const out = join(pluginSource, 'dist', name);
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, bytes);
   const sha = createHash('sha256').update(bytes).digest('hex');
   console.log(`Built ${out}`);
   console.log(`version ${version}, ${files} files, ${bytes.length} bytes, sha256 ${sha}`);
+}
+
+function build() {
+  const version = checkVersion();
+  const entries = collect();
+  if (!entries.some((entry) => entry.path === 'runova-connector.php')) {
+    fail('The main plugin file is missing.');
+  }
+  for (const path of [BRIDGE_MAIN, BRIDGE_GUARD]) {
+    if (!existsSync(join(pluginSource, 'legacy', path))) fail(`legacy/${path} is missing.`);
+  }
+  writeZip('runova-connector.zip', ZIP_ROOT, entries, version);
+  writeZip(BRIDGE_ZIP, BRIDGE_ROOT, bridgeEntries(entries), version);
 }
 
 const [command, ...rest] = process.argv.slice(2);

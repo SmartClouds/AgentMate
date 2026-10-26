@@ -15,15 +15,15 @@ const MONDAY_FIRST: WeekInfo = { firstDay: 1, weekend: [6, 0] };
 
 /*
  * Per week (Sunday first):
- *   AgentMate  1000 4000 2000    0    0    0  500   tokens, cost 1 4 2 0 0 0 0.5
+ *   Runova  1000 4000 2000    0    0    0  500   tokens, cost 1 4 2 0 0 0 0.5
  *   Galaxy        0 1000    0 3000    0    0    0   tokens, cost 0 1 0 3 0 0 0
  *   Unknown       0    0    0    0    0  800    0   tokens, cost 0 0 0 0 0 0.8
  * Over four weeks each figure is four times that. Monday is the busiest day in both ranges.
  */
-const agentMate = projectRow({
+const runova = projectRow({
   key: 'project:p1',
-  name: 'AgentMate',
-  path: 'E:/AgentMate',
+  name: 'Runova',
+  path: 'E:/Runova',
   tokens: [1000, 4000, 2000, 0, 0, 0, 500],
   costUsd: [1, 4, 2, 0, 0, 0, 0.5],
 });
@@ -40,7 +40,7 @@ const unknown = projectRow({
   tokens: [0, 0, 0, 0, 0, 800, 0],
   costUsd: [0, 0, 0, 0, 0, 0.8, 0],
 });
-const fixtureSplit = splitOf([agentMate, galaxy, unknown]);
+const fixtureSplit = splitOf([runova, galaxy, unknown]);
 
 function renderCard(
   bridge: Record<string, unknown>,
@@ -160,7 +160,7 @@ describe('ProjectWeekdayChart columns', () => {
     renderCard(withData());
     await screen.findByRole('group', { name: 'Usage by weekday' });
 
-    // Monday over four weeks: AgentMate 16000 tokens (bottom), Galaxy 4000 (top).
+    // Monday over four weeks: Runova 16000 tokens (bottom), Galaxy 4000 (top).
     const monday = column(/^Monday/);
     const segments = Array.from(monday.querySelectorAll<HTMLElement>('[data-series]'));
     expect(segments.map((segment) => segment.dataset.series)).toEqual([
@@ -186,7 +186,7 @@ describe('ProjectWeekdayChart columns', () => {
     await screen.findByRole('group', { name: 'Usage by weekday' });
 
     expect(column(/^Monday/).getAttribute('aria-label')).toBe(
-      'Monday. Total 20.0K, average 5.0K per Monday. AgentMate 16.0K, Galaxy 4.0K.',
+      'Monday. Total 20.0K, average 5.0K per Monday. Runova 16.0K, Galaxy 4.0K.',
     );
   });
 
@@ -196,7 +196,7 @@ describe('ProjectWeekdayChart columns', () => {
 
     // Monday in the last 7 days: 4000 + 1000.
     expect(column(/^Monday/).getAttribute('aria-label')).toBe(
-      'Monday (Oct 12). Total 5.0K. AgentMate 4.0K, Galaxy 1.0K.',
+      'Monday (Oct 12). Total 5.0K. Runova 4.0K, Galaxy 1.0K.',
     );
     expect((column(/^Monday/).firstElementChild as HTMLElement).style.height).toBe('62.5%');
   });
@@ -221,21 +221,21 @@ describe('ProjectWeekdayChart columns', () => {
     const twins = [
       projectRow({
         key: 'project:a',
-        name: 'AgentMate',
-        path: 'E:/AgentMate',
+        name: 'Runova',
+        path: 'E:/Runova',
         tokens: [0, 1, 0, 0, 0, 0, 0],
       }),
       projectRow({
         key: 'project:b',
-        name: 'AgentMate',
-        path: 'D:/Old/AgentMate',
+        name: 'Runova',
+        path: 'D:/Old/Runova',
         tokens: [0, 1, 0, 0, 0, 0, 0],
       }),
     ];
     renderCard(withData(splitOf(twins)));
 
-    expect(await screen.findByRole('button', { name: /AgentMate \(E:\)/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /AgentMate \(Old\)/ })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /Runova \(E:\)/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Runova \(Old\)/ })).toBeTruthy();
   });
 });
 
@@ -249,7 +249,7 @@ describe('ProjectWeekdayChart tooltips', () => {
     const [average] = await screen.findAllByText(/Average 5.0K per Monday/);
     const tip = average.closest<HTMLElement>('.min-w-44');
     expect(tip).toHaveTextContent('Monday');
-    expect(tip).toHaveTextContent('AgentMate');
+    expect(tip).toHaveTextContent('Runova');
     expect(tip).toHaveTextContent('16.0K');
     expect(tip).toHaveTextContent('Total');
   });
@@ -297,7 +297,7 @@ describe('ProjectWeekdayChart controls', () => {
     await user.click(screen.getByRole('button', { name: 'Cost' }));
 
     expect(screen.getByRole('button', { name: 'Cost' })).toHaveAttribute('aria-pressed', 'true');
-    expect(legendRow(/AgentMate/)).toHaveTextContent('$');
+    expect(legendRow(/Runova/)).toHaveTextContent('$');
     expect(column(/^Monday/).getAttribute('aria-label')).toContain('Total $20.00');
   });
 
@@ -331,15 +331,15 @@ describe('ProjectWeekdayChart controls', () => {
     await screen.findByRole('group', { name: 'Usage by weekday' });
 
     expect(screen.getByText('Busiest day').parentElement).toHaveTextContent('Monday');
-    expect(screen.getByText('Top project').parentElement).toHaveTextContent('AgentMate');
+    expect(screen.getByText('Top project').parentElement).toHaveTextContent('Runova');
   });
 
   it('shows one project alone when it is soloed, and restores the rest on a second click', async () => {
     const { user } = renderCard(withData());
     await screen.findByRole('group', { name: 'Projects' });
 
-    await user.click(legendRow(/AgentMate/));
-    expect(legendRow(/AgentMate/)).toHaveAttribute('aria-pressed', 'true');
+    await user.click(legendRow(/Runova/));
+    expect(legendRow(/Runova/)).toHaveAttribute('aria-pressed', 'true');
     const shown = Array.from(
       document.querySelectorAll<HTMLElement>('[data-series]'),
       (node) => node.dataset.series,
@@ -347,8 +347,8 @@ describe('ProjectWeekdayChart controls', () => {
     expect(new Set(shown)).toEqual(new Set(['project:p1']));
     expect(screen.getByText('Share of total')).toBeTruthy();
 
-    await user.click(legendRow(/AgentMate/));
-    expect(legendRow(/AgentMate/)).toHaveAttribute('aria-pressed', 'false');
+    await user.click(legendRow(/Runova/));
+    expect(legendRow(/Runova/)).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByText('Top project')).toBeTruthy();
   });
 
@@ -359,7 +359,7 @@ describe('ProjectWeekdayChart controls', () => {
       tokens: [1, 1, 1, 1, 1, 1, 1],
     });
     archive.tokens = archive.tokens.map((_, i) => (i === 0 ? 700 : 0));
-    const { user } = renderCard(withData(splitOf([agentMate, archive])));
+    const { user } = renderCard(withData(splitOf([runova, archive])));
 
     await user.click(await screen.findByRole('button', { name: /Archive/ }));
     expect(legendRow(/Archive/)).toHaveAttribute('aria-pressed', 'true');
@@ -368,7 +368,7 @@ describe('ProjectWeekdayChart controls', () => {
 
     expect(screen.queryByRole('button', { name: /Archive/ })).toBeNull();
     expect(screen.getByText('Top project')).toBeTruthy();
-    expect(legendRow(/AgentMate/)).toHaveAttribute('aria-pressed', 'false');
+    expect(legendRow(/Runova/)).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('dims the other projects while one is hovered', async () => {
@@ -395,7 +395,7 @@ describe('ProjectWeekdayChart controls', () => {
     expect(within(table).getByRole('caption')).toHaveTextContent(
       'Tokens by project and weekday, last 4 weeks',
     );
-    expect(within(table).getByRole('rowheader', { name: 'AgentMate' })).toBeTruthy();
+    expect(within(table).getByRole('rowheader', { name: 'Runova' })).toBeTruthy();
     expect(within(table).getByRole('rowheader', { name: 'Unknown folder' })).toBeTruthy();
     expect(within(table).getByRole('rowheader', { name: 'All projects' })).toBeTruthy();
     const mondayCell = within(table).getAllByRole('row')[1].querySelectorAll('td')[1];
@@ -427,7 +427,7 @@ describe('ProjectWeekdayChart summary and notes', () => {
   it('notes the models that have no price, and that their cost is a minimum', async () => {
     const partial = projectRow({
       key: 'project:p1',
-      name: 'AgentMate',
+      name: 'Runova',
       tokens: [100, 0, 0, 0, 0, 0, 0],
       costUsd: [0.5, 0, 0, 0, 0, 0, 0],
       unpriced: [50, 0, 0, 0, 0, 0, 0],

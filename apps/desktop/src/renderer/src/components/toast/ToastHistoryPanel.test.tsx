@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -38,7 +38,7 @@ function mount(): void {
 
 beforeEach(() => {
   Object.assign(window, {
-    agentmat: {
+    runova: {
       projects: { list: vi.fn(async () => [PROJECT]) },
       shell: { openExternal: vi.fn(async () => undefined) },
       appNotifications: { markRead: vi.fn(async () => []) },
@@ -89,7 +89,7 @@ describe('ToastHistoryPanel links', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Open: CI failed' }));
 
     expect(screen.getByTestId('location').textContent).toBe('/pipelines?run=1&repo=acme%2Fdemo');
-    expect(window.agentmat.appNotifications.markRead).toHaveBeenCalledWith('n1');
+    expect(window.runova.appNotifications.markRead).toHaveBeenCalledWith('n1');
     expect(useToastHistoryStore.getState().open).toBe(false);
   });
 

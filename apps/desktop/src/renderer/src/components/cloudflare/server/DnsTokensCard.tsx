@@ -31,7 +31,7 @@ function ServerRow({ server, zone }: { server: DeployServer; zone: CloudflareZon
   const key = queryKeys.cloudflareDnsTokens(server.id);
   const tokens = useQuery({
     queryKey: key,
-    queryFn: () => window.agentmat.cloudflareServer.dnsTokens(server.id),
+    queryFn: () => window.runova.cloudflareServer.dnsTokens(server.id),
     retry: false,
   });
   const [busy, setBusy] = useState<'mint' | 'paste' | 'remove' | null>(null);
@@ -65,7 +65,7 @@ function ServerRow({ server, zone }: { server: DeployServer; zone: CloudflareZon
     const confirmed = await confirmDialog({
       title: `Remove the DNS token from ${server.nickname}?`,
       description: made
-        ? 'The server forgets it, and the token AgentMate made is deleted at Cloudflare. Wildcard certificates there stop renewing until it has a token again.'
+        ? 'The server forgets it, and the token Runova made is deleted at Cloudflare. Wildcard certificates there stop renewing until it has a token again.'
         : 'The server forgets it. The token itself stays on Cloudflare; delete it there if nothing else uses it.',
       confirmLabel: 'Remove the token',
       variant: 'destructive',
@@ -74,7 +74,7 @@ function ServerRow({ server, zone }: { server: DeployServer; zone: CloudflareZon
     await run(
       'remove',
       () =>
-        window.agentmat.cloudflareServer.removeDnsToken({
+        window.runova.cloudflareServer.removeDnsToken({
           serverId: server.id,
           zone: zone.name,
           deleteAtCloudflare: made,
@@ -116,7 +116,7 @@ function ServerRow({ server, zone }: { server: DeployServer; zone: CloudflareZon
               void run(
                 'mint',
                 () =>
-                  window.agentmat.cloudflareServer.provisionDnsToken({
+                  window.runova.cloudflareServer.provisionDnsToken({
                     serverId: server.id,
                     zoneId: zone.id,
                     mode: 'mint',
@@ -160,7 +160,7 @@ function ServerRow({ server, zone }: { server: DeployServer; zone: CloudflareZon
             void run(
               'paste',
               () =>
-                window.agentmat.cloudflareServer.provisionDnsToken({
+                window.runova.cloudflareServer.provisionDnsToken({
                   serverId: server.id,
                   zoneId: zone.id,
                   mode: 'paste',
@@ -206,7 +206,7 @@ function ServerRow({ server, zone }: { server: DeployServer; zone: CloudflareZon
 export function DnsTokensCard({ zone }: { zone: CloudflareZone }): React.JSX.Element {
   const servers = useQuery({
     queryKey: queryKeys.deployServers,
-    queryFn: () => window.agentmat.deploy.listServers(),
+    queryFn: () => window.runova.deploy.listServers(),
   });
   const withCore = (servers.data ?? []).filter((server) => server.core);
   return (

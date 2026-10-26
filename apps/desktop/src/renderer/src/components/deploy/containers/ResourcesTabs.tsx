@@ -6,7 +6,7 @@ import type {
   JobInfo,
   NetworkInfo,
   VolumeInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { isImageReference } from '@shared/dockerNames';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -126,7 +126,7 @@ export function ImagesTab({
   const [pulling, setPulling] = useState(false);
   const images = useQuery({
     queryKey: queryKeys.deployImages(serverId),
-    queryFn: () => window.agentmat.deployDocker.listImages(serverId),
+    queryFn: () => window.runova.deployDocker.listImages(serverId),
     retry: false,
   });
   const valid = isImageReference(reference.trim());
@@ -136,9 +136,7 @@ export function ImagesTab({
     if (!valid) return;
     setPulling(true);
     try {
-      onJob(
-        await window.agentmat.deployDocker.pullImage({ serverId, reference: reference.trim() }),
-      );
+      onJob(await window.runova.deployDocker.pullImage({ serverId, reference: reference.trim() }));
       setReference('');
     } catch (error) {
       toast.error(coreErrorMessage(error));
@@ -161,7 +159,7 @@ export function ImagesTab({
     if (!confirmed) return;
     if (
       await attempt(
-        () => window.agentmat.deployDocker.removeImage({ serverId, image: image.id, force: used }),
+        () => window.runova.deployDocker.removeImage({ serverId, image: image.id, force: used }),
         `Removed ${name}.`,
       )
     ) {
@@ -244,7 +242,7 @@ export function VolumesTab({
   const navigate = useNavigate();
   const volumes = useQuery({
     queryKey: queryKeys.deployVolumes(serverId),
-    queryFn: () => window.agentmat.deployDocker.listVolumes(serverId),
+    queryFn: () => window.runova.deployDocker.listVolumes(serverId),
     retry: false,
   });
 
@@ -261,7 +259,7 @@ export function VolumesTab({
     if (
       await attempt(
         () =>
-          window.agentmat.deployDocker.removeVolume({
+          window.runova.deployDocker.removeVolume({
             serverId,
             volume: volume.name,
             force: false,
@@ -333,7 +331,7 @@ export function NetworksTab({
   const queryClient = useQueryClient();
   const networks = useQuery({
     queryKey: queryKeys.deployNetworks(serverId),
-    queryFn: () => window.agentmat.deployDocker.listNetworks(serverId),
+    queryFn: () => window.runova.deployDocker.listNetworks(serverId),
     retry: false,
   });
 
@@ -347,7 +345,7 @@ export function NetworksTab({
     if (!confirmed) return;
     if (
       await attempt(
-        () => window.agentmat.deployDocker.removeNetwork(serverId, network.name),
+        () => window.runova.deployDocker.removeNetwork(serverId, network.name),
         `Removed ${network.name}.`,
       )
     ) {
@@ -441,7 +439,7 @@ export function DiskUsageTab({
   const [pruning, setPruning] = useState<DockerPruneTarget | null>(null);
   const usage = useQuery({
     queryKey: queryKeys.deployDiskUsage(serverId),
-    queryFn: () => window.agentmat.deployDocker.diskUsage(serverId),
+    queryFn: () => window.runova.deployDocker.diskUsage(serverId),
     retry: false,
   });
 
@@ -461,7 +459,7 @@ export function DiskUsageTab({
     if (!confirmed) return;
     setPruning(target);
     try {
-      const result = await window.agentmat.deployDocker.prune({
+      const result = await window.runova.deployDocker.prune({
         serverId,
         target,
         allImages: target === 'images' || target === 'system',

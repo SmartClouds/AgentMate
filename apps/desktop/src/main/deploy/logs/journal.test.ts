@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { JournalBatch } from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { JournalBatch } from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { FakeCore } from '../../../shared/deploy/testing/fakeCore';
 import type { DeployJournalEvent } from '../../../shared/deployAssistantTypes';
 import { IPC } from '../../../shared/ipcChannels';

@@ -3,7 +3,7 @@ import {
   type ProviderUsage,
   type UsageProviderConfig,
   type UsageWindow,
-} from '@agentmat/core';
+} from '@runova/core';
 import { fetchCursorUsage } from './cursor';
 import { connectUsage, errorUsage } from './shared';
 

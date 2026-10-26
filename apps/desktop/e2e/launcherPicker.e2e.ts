@@ -25,7 +25,7 @@ test.afterEach(async () => {
  * app's detection sees them as installed. The log of each is `<dir>/<name>.log`.
  */
 function installFakeClis(names: string[]): string {
-  const dir = mkdtempSync(join(tmpdir(), 'agentmate-fakeclis-'));
+  const dir = mkdtempSync(join(tmpdir(), 'runova-fakeclis-'));
   for (const name of names) {
     const log = join(dir, `${name}.log`);
     if (process.platform === 'win32') {

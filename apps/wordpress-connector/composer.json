@@ -1,6 +1,6 @@
 {
-  "name": "agentmate/wordpress-connector",
-  "description": "AgentMate Connector WordPress plugin. Composer is for development only; the plugin has no runtime dependencies.",
+  "name": "runova/wordpress-connector",
+  "description": "Runova Connector WordPress plugin. Composer is for development only; the plugin has no runtime dependencies.",
   "type": "wordpress-plugin",
   "license": "GPL-2.0-or-later",
   "require": {
@@ -15,7 +15,7 @@
   },
   "autoload-dev": {
     "psr-4": {
-      "AgentMate\\Connector\\Tests\\": "tests/"
+      "Runova\\Connector\\Tests\\": "tests/"
     }
   },
   "config": {

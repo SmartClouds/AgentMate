@@ -59,7 +59,7 @@ function setup(options: Parameters<typeof fakeTerm>[0] = {}) {
   );
   /** The shell reporting a fresh prompt, the one thing that arms chip mode. */
   const armPrompt = (): void => {
-    fake.handlers.osc?.('AgentMate:PromptReady:1');
+    fake.handlers.osc?.('Runova:PromptReady:1');
   };
   return { ...fake, controller, toPty, armPrompt, screen: () => fake.drawn.join('') };
 }

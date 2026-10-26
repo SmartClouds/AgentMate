@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import type { RemoteTimeSource } from '@agentmat/core';
+import type { RemoteTimeSource } from '@runova/core';
 import { type FilesErrorCode, filesError } from '../../../../shared/deployFilesErrors';
 import type { FileSiteProtocol } from '../../../../shared/deployFilesTypes';
 import type { FilesConnectTarget } from '../types';

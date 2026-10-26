@@ -1,8 +1,8 @@
-import { type CatalogInstall, readCatalogInstall } from '@agentmat/core';
+import { type CatalogInstall, readCatalogInstall } from '@runova/core';
 import type {
   StackDetails,
   StackInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryKeys';
 import { useStack, useStacks } from '../apps/hooks';
@@ -25,7 +25,7 @@ export function shownRevision(stack: StackInfo): number | null {
 function filesQuery(serverId: string, stackId: string, revision: number, enabled: boolean) {
   return {
     queryKey: queryKeys.deployAppFiles(serverId, stackId, revision),
-    queryFn: () => window.agentmat.deployStacks.files({ serverId, stackId, revision }),
+    queryFn: () => window.runova.deployStacks.files({ serverId, stackId, revision }),
     enabled,
     retry: false,
     // A revision's files never change; only a new revision brings new ones.

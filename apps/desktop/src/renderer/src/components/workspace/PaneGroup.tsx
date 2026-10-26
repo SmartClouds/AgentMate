@@ -1,4 +1,4 @@
-import { agentSessionTitle, type PaneGroupNode, type Project } from '@agentmat/core';
+import { agentSessionTitle, type PaneGroupNode, type Project } from '@runova/core';
 import { isImagePath } from '@shared/imageFiles';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { CliLogo } from '@/components/cliLogos';
@@ -67,7 +67,7 @@ const FileTab = lazy(() => import('./FileTab'));
 const BrowserTab = lazy(() => import('./browser/BrowserTab'));
 
 /** Drag payload type for workspace tabs, kept apart from OS file drags. */
-const TAB_MIME = 'application/x-agentmate-tab';
+const TAB_MIME = 'application/x-runova-tab';
 
 interface DraggedTab {
   projectId: string;
@@ -556,7 +556,7 @@ function PaneTab({
                   {autoContinuePendingLine(autoContinuePending)}
                 </p>
                 <ContextMenuItem
-                  onSelect={() => void window.agentmat.agents.cancelAutoContinue(tab.id)}
+                  onSelect={() => void window.runova.agents.cancelAutoContinue(tab.id)}
                 >
                   Cancel scheduled continue
                 </ContextMenuItem>
@@ -584,7 +584,7 @@ function SessionEndedBar({
 }): React.JSX.Element {
   const message =
     exitCode === null
-      ? 'This session ended while AgentMate was closed.'
+      ? 'This session ended while Runova was closed.'
       : `Process exited${exitCode === 0 ? '' : ` with code ${exitCode}`}.`;
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-3 z-10 flex justify-center px-3">
@@ -643,7 +643,7 @@ export function PaneGroup({
   const exitCode = useTerminalSessionStore((s) =>
     activeTab && activeTab.id in s.ended ? s.ended[activeTab.id] : undefined,
   );
-  // An agent tab whose shell did not survive AgentMate closing (a reboot, a crash, or the task
+  // An agent tab whose shell did not survive Runova closing (a reboot, a crash, or the task
   // being killed) picks its conversation back up, rather than leaving a dead tab to restart.
   const resumeTab =
     exitCode === null &&

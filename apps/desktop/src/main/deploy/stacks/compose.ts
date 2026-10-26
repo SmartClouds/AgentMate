@@ -13,7 +13,7 @@ import {
   parseComposeFile,
   renderComposeEnv,
   renderLoopbackOverride,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { ExplorerFileIndex } from '../../../shared/apiTypes';
 import type {
   DeployComposeDiscovery,

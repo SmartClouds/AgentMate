@@ -1,4 +1,4 @@
-import type { Project, PullRequestInfo } from '@agentmat/core';
+import type { Project, PullRequestInfo } from '@runova/core';
 import { useEffect, useRef, useState } from 'react';
 import { MessageSquare, Spinner } from '@/components/icons';
 import { Notice } from '@/components/pageKit';
@@ -48,7 +48,7 @@ export function LocalReviewDialog({
     const requestId = crypto.randomUUID();
     requestRef.current = requestId;
     setPhase({ kind: 'reviewing' });
-    void window.agentmat.pullRequests.localReview(project.id, requestId).then((result) => {
+    void window.runova.pullRequests.localReview(project.id, requestId).then((result) => {
       if (requestRef.current !== requestId || result.cancelled) return;
       requestRef.current = null;
       if (result.ok && result.text) {
@@ -60,7 +60,7 @@ export function LocalReviewDialog({
     });
     return () => {
       if (requestRef.current === requestId) {
-        void window.agentmat.pullRequests.cancelAi(requestId);
+        void window.runova.pullRequests.cancelAi(requestId);
         requestRef.current = null;
       }
     };

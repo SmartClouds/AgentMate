@@ -3,7 +3,7 @@ import {
   type ProviderUsage,
   USAGE_PROVIDER_REGISTRY,
   type UsagePeriod,
-} from '@agentmat/core';
+} from '@runova/core';
 import { waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { renderHookWithProviders } from '../../../test/renderer/renderWithProviders';

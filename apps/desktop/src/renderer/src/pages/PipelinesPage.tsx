@@ -1,4 +1,4 @@
-import type { AppNotification } from '@agentmat/core';
+import type { AppNotification } from '@runova/core';
 import type { GithubActionsActivity, GithubActionsHistoryItem } from '@shared/apiTypes';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LayoutGroup, motion, useReducedMotion } from 'framer-motion';
@@ -177,7 +177,7 @@ function SetupHint({
         <button
           type="button"
           className="cursor-pointer font-medium text-primary underline-offset-2 hover:underline"
-          onClick={() => void window.agentmat.shell.openExternal(GH_INSTALL_URL)}
+          onClick={() => void window.runova.shell.openExternal(GH_INSTALL_URL)}
         >
           GitHub CLI
         </button>{' '}
@@ -478,18 +478,18 @@ export default function PipelinesPage(): React.JSX.Element {
 
   const activityQuery = useQuery({
     queryKey: queryKeys.githubActionsActivity,
-    queryFn: () => window.agentmat.pipelines.dashboardActivity(),
+    queryFn: () => window.runova.pipelines.dashboardActivity(),
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
 
   const notificationsQuery = useQuery({
     queryKey: queryKeys.appNotifications,
-    queryFn: () => window.agentmat.appNotifications.list(),
+    queryFn: () => window.runova.appNotifications.list(),
   });
 
   useEffect(() => {
-    return window.agentmat.appNotifications.onChanged(() => {
+    return window.runova.appNotifications.onChanged(() => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.appNotifications });
       void queryClient.invalidateQueries({ queryKey: queryKeys.appNotificationUnread });
       void queryClient.invalidateQueries({ queryKey: queryKeys.githubActionsActivity });
@@ -523,14 +523,14 @@ export default function PipelinesPage(): React.JSX.Element {
   }, [queryClient, searchParams, setSearchParams]);
 
   const markRead = useMutation({
-    mutationFn: (id: string) => window.agentmat.appNotifications.markRead(id),
+    mutationFn: (id: string) => window.runova.appNotifications.markRead(id),
     onSuccess: (items) => {
       queryClient.setQueryData(queryKeys.appNotifications, items);
       void queryClient.invalidateQueries({ queryKey: queryKeys.appNotificationUnread });
     },
   });
   const markAllRead = useMutation({
-    mutationFn: () => window.agentmat.appNotifications.markAllRead(),
+    mutationFn: () => window.runova.appNotifications.markAllRead(),
     onSuccess: (items) => {
       queryClient.setQueryData(queryKeys.appNotifications, items);
       void queryClient.invalidateQueries({ queryKey: queryKeys.appNotificationUnread });
@@ -691,7 +691,7 @@ export default function PipelinesPage(): React.JSX.Element {
    */
   function focusRun({ runId, repo: runRepo, htmlUrl }: RunnerRunTarget): void {
     if (!runs.some((run) => run.id === runId && run.repo === runRepo)) {
-      if (htmlUrl) void window.agentmat.shell.openExternal(htmlUrl);
+      if (htmlUrl) void window.runova.shell.openExternal(htmlUrl);
       return;
     }
     clearFilters();
@@ -709,7 +709,7 @@ export default function PipelinesPage(): React.JSX.Element {
   function handleOpenRun(item: GithubActionsHistoryItem): void {
     const notificationId = item.htmlUrl ? unreadByUrl.get(item.htmlUrl) : undefined;
     if (notificationId) markRead.mutate(notificationId);
-    if (item.htmlUrl) void window.agentmat.shell.openExternal(item.htmlUrl);
+    if (item.htmlUrl) void window.runova.shell.openExternal(item.htmlUrl);
   }
 
   // The run card's title bar. Refresh is always there: it is how a failed or missing load is

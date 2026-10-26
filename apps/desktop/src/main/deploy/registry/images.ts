@@ -1,4 +1,4 @@
-import { parseComposeFile } from '@agentmat/core';
+import { parseComposeFile } from '@runova/core';
 import { registryOfImage } from '../../../shared/deploy/registries';
 
 /**

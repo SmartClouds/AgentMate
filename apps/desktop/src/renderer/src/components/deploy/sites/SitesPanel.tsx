@@ -2,7 +2,7 @@ import { coreErrorMessage } from '@shared/coreErrors';
 import type {
   JobInfo,
   NginxApplyResult,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployServer } from '@shared/deployTypes';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -54,7 +54,7 @@ function domainsFrom(param: string | null): string[] | null {
 export function SitesPanel({ server }: { server: DeployServer }): React.JSX.Element {
   const access = useQuery({
     queryKey: queryKeys.deployAccess(server.id),
-    queryFn: () => window.agentmat.deploy.access(server.id),
+    queryFn: () => window.runova.deploy.access(server.id),
     retry: false,
     staleTime: 30_000,
   });
@@ -124,7 +124,7 @@ export function SitesPanel({ server }: { server: DeployServer }): React.JSX.Elem
   async function install(): Promise<void> {
     setInstalling(true);
     try {
-      setInstallJob(await window.agentmat.deploySites.install(server.id));
+      setInstallJob(await window.runova.deploySites.install(server.id));
     } catch (error) {
       toast.error(coreErrorMessage(error));
     } finally {
@@ -135,7 +135,7 @@ export function SitesPanel({ server }: { server: DeployServer }): React.JSX.Elem
   async function apply(): Promise<void> {
     setApplying(true);
     try {
-      const result = await window.agentmat.deploySites.applyChanges(server.id);
+      const result = await window.runova.deploySites.applyChanges(server.id);
       setApplied(result);
       if (result.applied) {
         toast.success(

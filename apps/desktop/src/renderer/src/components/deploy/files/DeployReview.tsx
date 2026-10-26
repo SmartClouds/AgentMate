@@ -202,8 +202,8 @@ function FirstDeployCard({
           This folder on the server already has {plural(existing, 'file')}
         </h4>
         <p className="text-xs text-muted-foreground">
-          This is the first deploy of this site, so AgentMate doesn't know which of them came from
-          your folder. Files only on the server are never touched either way.
+          This is the first deploy of this site, so Runova doesn't know which of them came from your
+          folder. Files only on the server are never touched either way.
         </p>
       </div>
       <div

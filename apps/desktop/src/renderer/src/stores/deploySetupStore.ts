@@ -92,7 +92,7 @@ export const useDeploySetupStore = create<DeploySetupState>((set, get) => {
         },
       },
     }));
-    const stop = window.agentmat.deploy.onSetupProgress((event: DeploySetupProgressEvent) => {
+    const stop = window.runova.deploy.onSetupProgress((event: DeploySetupProgressEvent) => {
       if (event.serverId !== serverId) return;
       update(serverId, (run) => ({ events: [...run.events, event.progress] }));
     });
@@ -125,7 +125,7 @@ export const useDeploySetupStore = create<DeploySetupState>((set, get) => {
         'install',
         planned,
         () =>
-          window.agentmat.deploy.install({
+          window.runova.deploy.install({
             serverId,
             sudoPassword,
             ...(account ? { account } : {}),
@@ -140,7 +140,7 @@ export const useDeploySetupStore = create<DeploySetupState>((set, get) => {
         serverId,
         'uninstall',
         ['stop', 'remove'],
-        () => window.agentmat.deploy.uninstall({ serverId, keepData, sudoPassword }),
+        () => window.runova.deploy.uninstall({ serverId, keepData, sudoPassword }),
         { keepData },
       );
       return outcome.ok;
@@ -150,7 +150,7 @@ export const useDeploySetupStore = create<DeploySetupState>((set, get) => {
         serverId,
         'update',
         planned,
-        () => window.agentmat.deploy.updateCore({ serverId, ...proof }),
+        () => window.runova.deploy.updateCore({ serverId, ...proof }),
         {},
         (update): Partial<SetupRun> =>
           update.outcome === 'needs-ssh'

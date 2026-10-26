@@ -1,4 +1,4 @@
-import type { AgentHistorySession } from '@agentmat/core';
+import type { AgentHistorySession } from '@runova/core';
 import { ipcMain } from 'electron';
 import type {
   AgentRunInfoMap,

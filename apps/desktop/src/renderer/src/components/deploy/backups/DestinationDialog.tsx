@@ -6,7 +6,7 @@ import type {
   BackupDestinationTest,
   SaveBackupDestinationRequest,
   TelegramLoginState,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployServer } from '@shared/deployTypes';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -44,7 +44,7 @@ const KINDS = (Object.keys(KIND_LABEL) as BackupDestinationKind[]).map((value) =
   label: KIND_LABEL[value],
 }));
 
-const DEFAULT_FOLDER = 'AgentMate backups';
+const DEFAULT_FOLDER = 'Runova backups';
 const MB = 1024 * 1024;
 
 interface Form {
@@ -191,7 +191,7 @@ export function DestinationDialog({
     setProblem(null);
     setTested(null);
     try {
-      const result = await window.agentmat.deployServerBackups.testDestination({
+      const result = await window.runova.deployServerBackups.testDestination({
         serverId: server.id,
         destination: requestOf(form, destination?.id),
       });
@@ -211,7 +211,7 @@ export function DestinationDialog({
     setProblem(null);
     try {
       const saved = await stepUp.run(() =>
-        window.agentmat.deployServerBackups.saveDestination({
+        window.runova.deployServerBackups.saveDestination({
           serverId: server.id,
           destination: request,
         }),
@@ -253,7 +253,7 @@ export function DestinationDialog({
     setProblem(null);
     try {
       const saved = await stepUp.run(() =>
-        window.agentmat.deployServerBackups.connectCloudDrive({
+        window.runova.deployServerBackups.connectCloudDrive({
           serverId: server.id,
           ...(destination ? { destinationId: destination.id } : {}),
           name: form.name.trim(),
@@ -285,12 +285,12 @@ export function DestinationDialog({
     try {
       const state = await stepUp.run(() =>
         telegram
-          ? window.agentmat.deployServerBackups.continueTelegramLogin({
+          ? window.runova.deployServerBackups.continueTelegramLogin({
               serverId: server.id,
               loginId: telegram.loginId,
               ...(telegram.step === 'code' ? { code: code.trim() } : { password: cloudPassword }),
             })
-          : window.agentmat.deployServerBackups.startTelegramLogin({
+          : window.runova.deployServerBackups.startTelegramLogin({
               serverId: server.id,
               apiId: Number(form.apiId),
               apiHash: form.apiHash.trim(),
@@ -365,7 +365,7 @@ export function DestinationDialog({
 
           {kind === 'folder' &&
             field('path', 'Folder', {
-              placeholder: '/var/backups/agentmate',
+              placeholder: '/var/backups/runova',
               className: 'font-mono',
             })}
 
@@ -521,7 +521,7 @@ export function DestinationDialog({
                     variant="link"
                     className="h-auto p-0 text-xs"
                     onClick={() =>
-                      void window.agentmat.deployServerBackups.cancelCloudSignIn(server.id)
+                      void window.runova.deployServerBackups.cancelCloudSignIn(server.id)
                     }
                   >
                     Cancel the sign-in

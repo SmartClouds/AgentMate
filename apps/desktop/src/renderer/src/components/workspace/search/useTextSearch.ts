@@ -44,7 +44,7 @@ export function useTextSearch(
 
   useEffect(
     () =>
-      window.agentmat.workspaceSearch.onTextResults((batch) => {
+      window.runova.workspaceSearch.onTextResults((batch) => {
         if (batch.requestId !== currentId.current) return;
         // Batches can arrive faster than a frame; typing takes priority over drawing them.
         startTransition(() => {
@@ -64,7 +64,7 @@ export function useTextSearch(
     if (!active) {
       const running = currentId.current;
       currentId.current = null;
-      if (running) void window.agentmat.workspaceSearch.cancel(running);
+      if (running) void window.runova.workspaceSearch.cancel(running);
       setState((current) => (current === IDLE ? current : IDLE));
       return;
     }
@@ -78,7 +78,7 @@ export function useTextSearch(
         running: true,
         summary: null,
       }));
-      window.agentmat.workspaceSearch
+      window.runova.workspaceSearch
         .text(projectId, requestId, { query, matchCase, wholeWord, regex, maxMatches })
         .then(
           (summary) => summary,
@@ -102,7 +102,7 @@ export function useTextSearch(
 
   useEffect(
     () => () => {
-      if (currentId.current) void window.agentmat.workspaceSearch.cancel(currentId.current);
+      if (currentId.current) void window.runova.workspaceSearch.cancel(currentId.current);
       currentId.current = null;
     },
     [],

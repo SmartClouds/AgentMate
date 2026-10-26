@@ -14,26 +14,26 @@
  *
  * One deploy at a time per site (the lock), and one call at a time per site (the mutex).
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Deploy;
+namespace Runova\Connector\Deploy;
 
-use AgentMate\Connector\Audit\AuditLog;
-use AgentMate\Connector\Crypto\Crypto;
-use AgentMate\Connector\Env\Environment;
-use AgentMate\Connector\Files\AtomicWriter;
-use AgentMate\Connector\Files\ItemResolver;
-use AgentMate\Connector\Files\Manifest;
-use AgentMate\Connector\Files\PathPolicy;
-use AgentMate\Connector\Files\Paths;
-use AgentMate\Connector\Http\ApiError;
-use AgentMate\Connector\Info\Limits;
-use AgentMate\Connector\Info\SiteInfo;
-use AgentMate\Connector\Protocol;
-use AgentMate\Connector\Storage\Storage;
-use AgentMate\Connector\Support\Json;
-use AgentMate\Connector\Support\Text;
+use Runova\Connector\Audit\AuditLog;
+use Runova\Connector\Crypto\Crypto;
+use Runova\Connector\Env\Environment;
+use Runova\Connector\Files\AtomicWriter;
+use Runova\Connector\Files\ItemResolver;
+use Runova\Connector\Files\Manifest;
+use Runova\Connector\Files\PathPolicy;
+use Runova\Connector\Files\Paths;
+use Runova\Connector\Http\ApiError;
+use Runova\Connector\Info\Limits;
+use Runova\Connector\Info\SiteInfo;
+use Runova\Connector\Protocol;
+use Runova\Connector\Storage\Storage;
+use Runova\Connector\Support\Json;
+use Runova\Connector\Support\Text;
 
 final class DeployService
 {
@@ -169,7 +169,7 @@ final class DeployService
 
     /**
      * @param mixed $body
-     * @param \AgentMate\Connector\Http\Frame $frame
+     * @param \Runova\Connector\Http\Frame $frame
      * @return array<string, mixed> WpDeployUploadResponse
      */
     public function upload($body, $frame): array

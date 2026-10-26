@@ -1,4 +1,4 @@
-import { estimateStrength, STRENGTH_LABELS, scoreForBits } from '@agentmat/core';
+import { estimateStrength, STRENGTH_LABELS, scoreForBits } from '@runova/core';
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 

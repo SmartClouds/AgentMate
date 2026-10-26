@@ -3,7 +3,7 @@ import type {
   FirewallChangeSetInfo,
   OriginLockState,
   OriginLockStatus,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Clock, Lock, LockOpen, TriangleAlert } from '@/components/icons';
@@ -79,7 +79,7 @@ export function OriginLockCard({
 }): React.JSX.Element {
   const lock = useQuery({
     queryKey: queryKeys.cloudflareOriginLock(serverId),
-    queryFn: () => window.agentmat.cloudflareServer.originLock(serverId),
+    queryFn: () => window.runova.cloudflareServer.originLock(serverId),
     enabled: signedIn,
     retry: false,
     refetchInterval: (query) =>

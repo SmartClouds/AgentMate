@@ -4,12 +4,12 @@ import { mockCamera } from '../../jest.setup';
 import { fakeClient, fakeSavedDevice } from '../remote/__fixtures__/fakeClient';
 import { ConnectScreen } from './ConnectScreen';
 
-const PAIRING_CODE = 'AGENTMATE1:eyJpcCI6IjE5Mi4xNjguMS4xMCJ9';
+const PAIRING_CODE = 'RUNOVA1:eyJpcCI6IjE5Mi4xNjguMS4xMCJ9';
 
 describe('ConnectScreen', () => {
   it('shows the pairing card on a fresh install', async () => {
     await render(<ConnectScreen client={fakeClient()} />);
-    expect(screen.getByText('AgentMate')).toBeTruthy();
+    expect(screen.getByText('Runova')).toBeTruthy();
     expect(screen.getByText('Pair a new computer')).toBeTruthy();
     // Nothing paired yet, so the saved list is not there at all.
     expect(screen.queryByText('My computers')).toBeNull();
@@ -28,7 +28,7 @@ describe('ConnectScreen', () => {
     const client = fakeClient();
     await render(<ConnectScreen client={client} />);
 
-    await fireEvent.changeText(screen.getByPlaceholderText('AGENTMATE1:…'), `  ${PAIRING_CODE}\n`);
+    await fireEvent.changeText(screen.getByPlaceholderText('RUNOVA1:…'), `  ${PAIRING_CODE}\n`);
     await fireEvent.press(screen.getByText('Connect'));
     expect(jest.mocked(client.connect)).toHaveBeenCalledWith(PAIRING_CODE);
   });
@@ -37,7 +37,7 @@ describe('ConnectScreen', () => {
     const client = fakeClient({ status: 'connecting' });
     await render(<ConnectScreen client={client} />);
 
-    await fireEvent.changeText(screen.getByPlaceholderText('AGENTMATE1:…'), PAIRING_CODE);
+    await fireEvent.changeText(screen.getByPlaceholderText('RUNOVA1:…'), PAIRING_CODE);
     await fireEvent.press(screen.getByText('Connecting…'));
     expect(jest.mocked(client.connect)).not.toHaveBeenCalled();
   });

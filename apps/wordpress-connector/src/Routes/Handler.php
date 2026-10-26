@@ -3,10 +3,10 @@
  * One authenticated route. It runs only after the request's signature, nonce, scope and kill
  * switches have all checked out.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Routes;
+namespace Runova\Connector\Routes;
 
 interface Handler
 {

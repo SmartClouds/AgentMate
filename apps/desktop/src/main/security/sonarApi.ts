@@ -1,4 +1,4 @@
-import type { SonarHotspot, SonarIssue } from '@agentmat/core';
+import type { SonarHotspot, SonarIssue } from '@runova/core';
 import type { ScanCancelToken } from './exec';
 
 /**

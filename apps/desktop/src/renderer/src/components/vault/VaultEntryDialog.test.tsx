@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { VaultEntry } from '@agentmat/core';
+import type { VaultEntry } from '@runova/core';
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {

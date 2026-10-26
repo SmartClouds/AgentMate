@@ -17,7 +17,7 @@ import {
   trimScene,
   videoLength,
   visibleRange,
-} from '@agentmat/studio';
+} from '@runova/studio';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { errorMessage } from '../format';
 import { Button, cn, GLASS_CARD, SimpleTooltip, toast } from '../kit';
@@ -47,7 +47,7 @@ const SCENE_H = 44;
 const ROW_H = 40;
 const SNAP_PX = 8;
 
-export const TIMELINE_MEDIA = 'application/x-agentmate-studio-media';
+export const TIMELINE_MEDIA = 'application/x-runova-studio-media';
 
 export interface TimelineProps {
   videoId: string;

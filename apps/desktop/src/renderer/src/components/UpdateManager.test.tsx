@@ -72,7 +72,7 @@ describe('UpdateManager states', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(dialog.textContent).toContain('Update available');
-    expect(dialog.textContent).toContain('AgentMate v2.5.0');
+    expect(dialog.textContent).toContain('Runova v2.5.0');
     expect(dialog.textContent).toContain('90.0 MB');
     expect(dialog.textContent).toContain('Faster terminals and a calmer sidebar.');
     expect(screen.getByRole('button', { name: /Download/ })).toBeTruthy();
@@ -164,7 +164,7 @@ describe('UpdateManager states', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(dialog.textContent).toContain('Update ready to install');
-    expect(dialog.textContent).toContain('AgentMate v2.5.0 is downloaded');
+    expect(dialog.textContent).toContain('Runova v2.5.0 is downloaded');
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('100');
   });
 

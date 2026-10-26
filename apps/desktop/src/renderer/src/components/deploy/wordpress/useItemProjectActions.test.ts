@@ -1,4 +1,4 @@
-import type { Project, WpItemRef } from '@agentmat/core';
+import type { Project, WpItemRef } from '@runova/core';
 import type { DeployWordPressLinkProjectResult } from '@shared/deployWordPressTypes';
 import { act, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';

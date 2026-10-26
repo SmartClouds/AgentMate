@@ -8,6 +8,7 @@ import type {
   ProjectBlueprint,
 } from '../types/index.js';
 import { BLUEPRINT_STEP_IDS, isBlueprintStepId } from '../types/index.js';
+import { relinkLegacyAttachments } from './attachments.js';
 
 export const DEFAULT_BLUEPRINT_DOCS_FOLDER = 'docs';
 
@@ -87,8 +88,8 @@ function normalizeSections(value: unknown, now: string): BlueprintSection[] {
   return BLUEPRINT_STEP_IDS.map((stepId) => {
     const rec = stored.get(stepId);
     if (!rec) return blankSection(stepId, now);
-    const text = typeof rec.text === 'string' ? rec.text : '';
-    const textEn = typeof rec.textEn === 'string' ? rec.textEn : null;
+    const text = typeof rec.text === 'string' ? relinkLegacyAttachments(rec.text) : '';
+    const textEn = typeof rec.textEn === 'string' ? relinkLegacyAttachments(rec.textEn) : null;
     return {
       stepId,
       text,

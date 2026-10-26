@@ -8,7 +8,7 @@ import {
   recipeCommandLine,
   type SetupSummary,
   type UpdatePlan,
-} from '@agentmat/core';
+} from '@runova/core';
 
 /**
  * Every word and every button on a Dev Setup row, worked out from the row's state. It is plain

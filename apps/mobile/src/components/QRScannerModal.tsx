@@ -36,7 +36,7 @@ export function QRScannerModal({
         ) : (
           <View style={styles.permissionBox}>
             <Text style={styles.permissionText}>
-              AgentMate needs camera access to scan the pairing QR code shown on the desktop app.
+              Runova needs camera access to scan the pairing QR code shown on the desktop app.
             </Text>
             <Pressable style={styles.permissionButton} onPress={() => void requestPermission()}>
               <Text style={styles.permissionButtonText}>Enable camera</Text>

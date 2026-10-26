@@ -1,4 +1,4 @@
-import type { SkillAuditFinding, SkillAuditSeverity, SkillAuditVerdict } from '@agentmat/core';
+import type { SkillAuditFinding, SkillAuditSeverity, SkillAuditVerdict } from '@runova/core';
 import {
   countFindingsByCategory,
   countFindingsBySeverity,
@@ -6,7 +6,7 @@ import {
   SKILL_AUDIT_SEVERITIES,
   SKILL_AUDIT_VERDICT_LABEL,
   SKILL_RISK_CATEGORIES,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useMemo } from 'react';
 import { CircleCheck, Shield, Sparkles, TriangleAlert } from '@/components/icons';
 import { Chip } from '@/components/pageKit';

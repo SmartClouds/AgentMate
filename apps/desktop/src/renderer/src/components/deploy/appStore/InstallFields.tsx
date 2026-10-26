@@ -1,4 +1,4 @@
-import type { AnyCatalogTemplate, CatalogSecretSpec } from '@agentmat/core';
+import type { AnyCatalogTemplate, CatalogSecretSpec } from '@runova/core';
 import { useId } from 'react';
 import { toast } from 'sonner';
 import { Copy, Key, RefreshCw } from '@/components/icons';

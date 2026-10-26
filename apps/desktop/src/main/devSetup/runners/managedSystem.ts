@@ -126,7 +126,7 @@ export function createManagedKit(env: ManagedEnvironment, deps: ManagedSystemDep
         url: request.url,
         destPath: request.destPath,
         expectedSize: request.expectedSize,
-        userAgent: 'AgentMate Dev Setup',
+        userAgent: 'Runova Dev Setup',
         onProgress: (progress) => hooks.onProgress(progress.transferred, progress.total),
         onReconnect: (attempt, transferred) => hooks.onReconnect?.(attempt, transferred),
       });

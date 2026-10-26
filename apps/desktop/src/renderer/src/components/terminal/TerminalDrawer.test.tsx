@@ -3,7 +3,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { type TerminalSessionMeta, useTerminalStore } from '@/stores/terminalStore';
-import { installAgentmatBridge } from '../../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../../test/renderer/runovaBridge';
 
 /**
  * The drawer's frame: it is its own rounded island, the same on a page and on the Workspace
@@ -88,7 +88,7 @@ afterEach(() => {
 describe('TerminalDrawer shell', () => {
   it('calls the new-tab buttons Terminal on every platform, never the shell name', () => {
     for (const platform of ['win32', 'darwin', 'linux'] as const) {
-      installAgentmatBridge({ platform });
+      installRunovaBridge({ platform });
       useTerminalStore.setState({ sessions: [], activeSessionId: null });
       const view = renderDrawer();
       // The empty-state button and the tab-strip icon button both open a plain terminal.
@@ -169,7 +169,7 @@ describe('TerminalDrawer shell', () => {
 
   it('treats closing a run tab as stopping the run, and offers its Docker containers', async () => {
     const runningForProject = vi.fn(async () => []);
-    installAgentmatBridge({ 'docker.runningForProject': runningForProject });
+    installRunovaBridge({ 'docker.runningForProject': runningForProject });
     useTerminalStore.setState({
       sessions: [
         { id: 's1', kind: 'local', title: 'PowerShell', cwd: 'E:\\shop' },
@@ -310,7 +310,7 @@ describe('TerminalDrawer file manager tab', () => {
 
   it('closes without ending anything: the SFTP session stays for the page and the window', async () => {
     const runningForProject = vi.fn(async () => []);
-    const bridge = installAgentmatBridge({ 'docker.runningForProject': runningForProject });
+    const bridge = installRunovaBridge({ 'docker.runningForProject': runningForProject });
     useTerminalStore.setState({ sessions: [files], activeSessionId: 'f1' });
     renderDrawer();
 

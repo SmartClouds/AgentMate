@@ -16,7 +16,7 @@ import { validateEnvKey } from '../validation.js';
  */
 
 export const COMPOSE_ENV_HEADER =
-  '# Written by AgentMate from the environment chosen for this app. Changes here are replaced on the next deploy.';
+  '# Written by Runova from the environment chosen for this app. Changes here are replaced on the next deploy.';
 
 export type ComposeEnvResult =
   | { ok: true; text: string; keys: string[] }

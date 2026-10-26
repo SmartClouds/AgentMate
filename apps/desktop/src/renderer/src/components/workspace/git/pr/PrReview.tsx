@@ -3,7 +3,7 @@ import {
   DEFAULT_REVIEW_COMMANDS,
   type Project,
   type PullRequestInfo,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Check, MessageSquare, Robot, Send, Spinner, Wand2 } from '@/components/icons';
@@ -153,7 +153,7 @@ export function PrReview({
 function CommentBox({ onPost }: { onPost: (body: string) => Promise<boolean> }): React.JSX.Element {
   const settings = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
   });
   const commands = settings.data?.reviewCommands ?? [...DEFAULT_REVIEW_COMMANDS];
   const [body, setBody] = useState('');

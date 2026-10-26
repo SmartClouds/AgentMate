@@ -162,7 +162,7 @@ export class RdpProxy {
         sendError(
           {
             code: 'other',
-            message: 'The session sent a request AgentMate did not understand.',
+            message: 'The session sent a request Runova did not understand.',
             detail: (error as Error).message,
           },
           400,
@@ -201,7 +201,7 @@ export class RdpProxy {
         this.hooks.onCertificateMismatch(target, cert);
         this.hooks.onError(target, {
           code: 'certificate-changed',
-          message: `${host} is presenting a different certificate than the one AgentMate saved.`,
+          message: `${host} is presenting a different certificate than the one Runova saved.`,
         });
         try {
           ws.send(buildRdCleanPathError(1, 403));

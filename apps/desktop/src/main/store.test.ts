@@ -8,8 +8,8 @@ import type {
   BlueprintPreset,
   Project,
   ProjectBlueprint,
-} from '@agentmat/core';
-import { createBlankBlueprint, defaultProjectNotifications } from '@agentmat/core';
+} from '@runova/core';
+import { createBlankBlueprint, defaultProjectNotifications } from '@runova/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { StoredProjectEnvironment } from '../shared/apiTypes';
 import { useTempUserData } from '../test/main/ipcHarness';
@@ -756,7 +756,7 @@ describe('the Android SDK settings', () => {
     // Null means "work it out from ANDROID_HOME and the usual install paths".
     expect(settings.androidSdkPath).toBeNull();
     expect(settings.androidEmulatorLaunchFlags).toBe('');
-    // An emulator is a window the user can close themselves, so quitting AgentMate leaves it be.
+    // An emulator is a window the user can close themselves, so quitting Runova leaves it be.
     expect(settings.androidStopEmulatorsOnQuit).toBe(false);
     expect(settings.androidCapturePath).toBeNull();
   });

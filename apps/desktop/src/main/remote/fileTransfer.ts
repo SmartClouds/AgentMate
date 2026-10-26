@@ -322,7 +322,7 @@ export class FileTransferManager {
       const destDir =
         msg.destDir && existsSync(msg.destDir) ? msg.destDir : app.getPath('downloads');
       await mkdir(destDir, { recursive: true });
-      const tmpDir = join(app.getPath('downloads'), '.agentmate-tmp');
+      const tmpDir = join(app.getPath('downloads'), '.runova-tmp');
       await mkdir(tmpDir, { recursive: true });
       const tmpPath = join(tmpDir, `${msg.transferId}.part`);
       const fh = await open(tmpPath, 'w+');

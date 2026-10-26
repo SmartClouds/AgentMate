@@ -1,4 +1,4 @@
-import type { SiteInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { SiteInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { ConfirmDialogHost } from '@/components/ConfirmDialog';
@@ -86,7 +86,7 @@ describe('SiteEditor domains and proxy', () => {
             },
             {
               field: 'sites[shop-example-com].upstream',
-              message: 'Port 5000 is the AgentMate core.',
+              message: 'Port 5000 is the Runova core.',
             },
           ],
         },
@@ -98,7 +98,7 @@ describe('SiteEditor domains and proxy', () => {
     await user.click(screen.getByRole('button', { name: /Save the site/ }));
     expect(await screen.findByText(/already belongs to the site shop/)).toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: /Proxy/ }));
-    expect(screen.getByText('Port 5000 is the AgentMate core.')).toBeInTheDocument();
+    expect(screen.getByText('Port 5000 is the Runova core.')).toBeInTheDocument();
   });
 
   it('switches to an address upstream with its own options', async () => {

@@ -1,4 +1,4 @@
-import { type PullRequestInfo, summarizeChecks } from '@agentmat/core';
+import { type PullRequestInfo, summarizeChecks } from '@runova/core';
 import type { PullRequestStatus } from '@shared/apiTypes';
 import { useQuery } from '@tanstack/react-query';
 import { GitPullRequest } from '@/components/icons';
@@ -27,7 +27,7 @@ export function BranchPrPill({ projectId }: { projectId: string }): React.JSX.El
   const revealPanelSection = useWorkspaceStore((s) => s.revealPanelSection);
   const { data } = useQuery<PullRequestStatus>({
     queryKey: queryKeys.pullRequest(projectId),
-    queryFn: () => window.agentmat.pullRequests.status(projectId),
+    queryFn: () => window.runova.pullRequests.status(projectId),
     enabled: false,
   });
   const pr = data?.pr;

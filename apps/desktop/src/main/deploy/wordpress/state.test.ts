@@ -17,7 +17,7 @@ afterEach(() => {
 });
 
 function temp(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'agentmate-wp-state-'));
+  const dir = mkdtempSync(join(tmpdir(), 'runova-wp-state-'));
   dirs.push(dir);
   return dir;
 }
@@ -29,7 +29,7 @@ export function storedSite(overrides: Partial<StoredWpSite> = {}): StoredWpSite 
     id: '6f1c2a9e-3b7d-4c51-9e0a-2d8f4b6c1a03',
     label: 'Shop',
     siteUrl: 'https://shop.example',
-    restUrl: 'https://shop.example/wp-json/agentmate/v1',
+    restUrl: 'https://shop.example/wp-json/runova/v1',
     ajaxUrl: 'https://shop.example/wp-admin/admin-ajax.php',
     rescueUrl: null,
     siteName: 'Shop',

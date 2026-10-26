@@ -1,7 +1,7 @@
 import type {
   ContainerSummary,
   FileSessionInfo,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { parseDockerFileTargetId } from '../../../shared/fileTargets';
 import type { SftpServerInfo } from '../../sftp/service';
 import type { DockerFilesBackend } from './client';

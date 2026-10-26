@@ -5,7 +5,7 @@ import type {
   StackDetails,
   StackRevisionInfo,
   StackServiceInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useCallback, useRef, useState } from 'react';
@@ -302,7 +302,7 @@ function FilesCard({
   const [open, setOpen] = useState(false);
   const files = useQuery({
     queryKey: queryKeys.deployAppFiles(serverId, stackId, revision),
-    queryFn: () => window.agentmat.deployStacks.files({ serverId, stackId, revision }),
+    queryFn: () => window.runova.deployStacks.files({ serverId, stackId, revision }),
     enabled: open,
     retry: false,
     staleTime: Number.POSITIVE_INFINITY,
@@ -565,7 +565,7 @@ export function AppDetail({
     if (!confirmed) return;
     await run(
       'rollback',
-      () => window.agentmat.deployStacks.rollback({ serverId, stackId, revision: revision.number }),
+      () => window.runova.deployStacks.rollback({ serverId, stackId, revision: revision.number }),
       'timeline',
     );
   }
@@ -584,7 +584,7 @@ export function AppDetail({
     }
     await run(
       item.action,
-      () => window.agentmat.deployStacks.action({ serverId, stackId, action: item.action }),
+      () => window.runova.deployStacks.action({ serverId, stackId, action: item.action }),
       'log',
     );
   }
@@ -604,7 +604,7 @@ export function AppDetail({
     if (!confirmed) return;
     await run(
       removeVolumes ? 'delete-volumes' : 'delete',
-      () => window.agentmat.deployStacks.delete({ serverId, stackId, removeVolumes }),
+      () => window.runova.deployStacks.delete({ serverId, stackId, removeVolumes }),
       'log',
       true,
     );

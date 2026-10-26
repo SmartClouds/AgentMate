@@ -1,4 +1,4 @@
-import type { ErrorBreadcrumb, ErrorException, ErrorFrame, Project } from '@agentmat/core';
+import type { ErrorBreadcrumb, ErrorException, ErrorFrame, Project } from '@runova/core';
 import type { ErrorIssueRef } from '@shared/errorTrackingTypes';
 import { useQueryClient } from '@tanstack/react-query';
 import { useId, useState } from 'react';

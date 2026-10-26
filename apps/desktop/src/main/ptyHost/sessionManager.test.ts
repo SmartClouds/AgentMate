@@ -28,7 +28,7 @@ const ptyLoads = await (async (): Promise<boolean> => {
  * a real shell would make every assertion depend on the developer's dotfiles and prompt.
  */
 const SHIM = `
-const mode = process.env.AGENTMATE_PTY_TEST_MODE;
+const mode = process.env.RUNOVA_PTY_TEST_MODE;
 process.stdout.write('READY\\n');
 if (mode === 'exit7') {
   process.exit(7);
@@ -71,12 +71,12 @@ describe.skipIf(!ptyLoads)('PtySessionManager', async () => {
   /** Env for a session: the real environment plus the preload that makes the fake shell talk. */
   const envFor = (mode: string): Record<string, string> => ({
     ...(process.env as Record<string, string>),
-    AGENTMATE_PTY_TEST_MODE: mode,
+    RUNOVA_PTY_TEST_MODE: mode,
     NODE_OPTIONS: `--require "${shimPath.replace(/\\/g, '/')}"`,
   });
 
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), 'agentmate-pty-'));
+    dir = mkdtempSync(join(tmpdir(), 'runova-pty-'));
     shimPath = join(dir, 'shim.cjs');
     writeFileSync(shimPath, SHIM, 'utf-8');
     changes = 0;

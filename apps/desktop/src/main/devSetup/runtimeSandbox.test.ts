@@ -35,8 +35,8 @@ let sandbox = '';
 
 beforeEach(() => {
   vi.resetModules();
-  realBin = join(tempDir('agentmate-real-'), 'bin');
-  sandbox = tempDir('agentmate-sandbox-');
+  realBin = join(tempDir('runova-real-'), 'bin');
+  sandbox = tempDir('runova-sandbox-');
   writeNode(realBin, '1.0.0');
   writeNode(join(sandbox, 'bin'), '22.12.0');
 
@@ -45,7 +45,7 @@ beforeEach(() => {
     ? [join(process.env.SystemRoot ?? 'C:\\Windows', 'System32')]
     : ['/usr/bin', '/bin'];
   vi.stubEnv(key, [realBin, ...system].join(delimiter));
-  vi.stubEnv('AGENTMATE_DEVSETUP_SANDBOX', sandbox);
+  vi.stubEnv('RUNOVA_DEVSETUP_SANDBOX', sandbox);
 });
 
 afterEach(() => {
@@ -55,7 +55,7 @@ afterEach(() => {
 
 describe('the Dev Setup sandbox, under a test run', () => {
   beforeEach(() => {
-    vi.stubEnv('AGENTMATE_E2E', '1');
+    vi.stubEnv('RUNOVA_E2E', '1');
   });
 
   it("sees the sandbox's tools and not the machine's", async () => {
@@ -98,7 +98,7 @@ describe('the Dev Setup sandbox, outside a test run', () => {
 
 describe('the Dev Setup sandbox home folder', () => {
   it('exists once the service is up, since a process cannot start in a folder that is missing', async () => {
-    vi.stubEnv('AGENTMATE_E2E', '1');
+    vi.stubEnv('RUNOVA_E2E', '1');
     const { existsSync } = await import('node:fs');
     expect(existsSync(join(sandbox, 'home'))).toBe(false);
     const { getDevSetupService } = await import('./runtime');

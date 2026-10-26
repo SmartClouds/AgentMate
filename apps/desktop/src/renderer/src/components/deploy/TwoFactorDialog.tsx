@@ -76,8 +76,8 @@ export function TwoFactorDialog({
 
   const confirmPassword = () =>
     run(async () => {
-      await window.agentmat.deploy.stepUp({ serverId: server.id, password });
-      if (mode === 'on') setSetup(await window.agentmat.deploy.beginTotp(server.id));
+      await window.runova.deploy.stepUp({ serverId: server.id, password });
+      if (mode === 'on') setSetup(await window.runova.deploy.beginTotp(server.id));
       setStep('scan');
     });
 
@@ -85,10 +85,10 @@ export function TwoFactorDialog({
     run(async () => {
       const digits = code.replace(/\s/g, '');
       if (mode === 'on') {
-        setRecovery((await window.agentmat.deploy.confirmTotp(server.id, digits)).codes);
+        setRecovery((await window.runova.deploy.confirmTotp(server.id, digits)).codes);
         setStep('codes');
       } else {
-        await window.agentmat.deploy.disableTotp(server.id, digits);
+        await window.runova.deploy.disableTotp(server.id, digits);
         toast.success('Two-factor is off.');
         onOpenChange(false);
       }

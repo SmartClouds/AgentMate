@@ -1,4 +1,4 @@
-import { buildAgentLaunchCommand, getCliDefinition, shellKindFor } from '@agentmat/core';
+import { buildAgentLaunchCommand, getCliDefinition, shellKindFor } from '@runova/core';
 import { toast } from 'sonner';
 import { useCliStore } from '@/stores/cliStore';
 import { defaultNewSession, useTerminalStore } from '@/stores/terminalStore';
@@ -14,7 +14,7 @@ export function cliLaunchCommand(cliId: string, runArgs: readonly string[] = [])
   const { cliLaunchDefaults } = useCliStore.getState();
   return buildAgentLaunchCommand({
     cliId,
-    shellKind: shellKindFor(defaultNewSession().shell, window.agentmat.platform),
+    shellKind: shellKindFor(defaultNewSession().shell, window.runova.platform),
     launchDefaults: cliLaunchDefaults[cliId],
     runArgs,
   });

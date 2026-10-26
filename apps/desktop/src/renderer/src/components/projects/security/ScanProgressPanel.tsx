@@ -1,5 +1,5 @@
-import type { SecurityScannerId } from '@agentmat/core';
-import { SCAN_PHASE_LABEL, SECURITY_SCANNERS } from '@agentmat/core';
+import type { SecurityScannerId } from '@runova/core';
+import { SCAN_PHASE_LABEL, SECURITY_SCANNERS } from '@runova/core';
 import { useEffect, useState } from 'react';
 import { Check, ChevronDown, StopCircle, TriangleAlert } from '@/components/icons';
 import { Badge } from '@/components/ui/badge';

@@ -34,9 +34,9 @@ async function listWorktrees(
     (id) =>
       (
         window as unknown as {
-          agentmat: { worktrees: { list(id: string): Promise<{ id: string; path: string }[]> } };
+          runova: { worktrees: { list(id: string): Promise<{ id: string; path: string }[]> } };
         }
-      ).agentmat.worktrees.list(id),
+      ).runova.worktrees.list(id),
     projectId,
   );
 }

@@ -26,9 +26,9 @@ async function createProject(page: Page, name: string, folderPath: string): Prom
     async ({ name, folderPath }) => {
       const api = (
         window as unknown as {
-          agentmat: { projects: { create(input: unknown): Promise<{ id: string }> } };
+          runova: { projects: { create(input: unknown): Promise<{ id: string }> } };
         }
-      ).agentmat;
+      ).runova;
       const project = await api.projects.create({
         name,
         folderPath,

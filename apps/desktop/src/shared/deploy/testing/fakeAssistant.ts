@@ -1,10 +1,11 @@
+import { LEGACY_CORE_NAMES } from '../coreLegacyNames';
 import type {
   AssistantModeInfo,
   ExecApprovalNonce,
   ExecOutput,
   ExecRequest,
   JournalLine,
-} from '../protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * The core's exec stream and journal for main-process tests (E09). It keeps the core's rules in
@@ -41,9 +42,13 @@ export function fakeExecMessage(
   deviceId: string,
   sessionId: string,
   command: string,
+  prefix = 'runova-core/exec/v1',
 ): string {
-  return ['agentmate-core/exec/v1', nonceId, nonce, deviceId, sessionId, command].join('\n');
+  return [prefix, nonceId, nonce, deviceId, sessionId, command].join('\n');
 }
+
+/** Like the core, either prefix: an app signs with the old one until it knows the core is new. */
+const EXEC_PREFIXES = ['runova-core/exec/v1', LEGACY_CORE_NAMES.execPrefix];
 
 export class FakeAssistant {
   autoRun = false;
@@ -86,15 +91,18 @@ export class FakeAssistant {
         issued !== undefined &&
         issued.expiresAt > this.now() &&
         this.device !== null &&
-        this.device.verify(
-          fakeExecMessage(
-            approval.nonceId,
-            issued.nonce,
-            this.device.deviceId,
-            this.device.sessionId,
-            command,
+        EXEC_PREFIXES.some((prefix) =>
+          this.device?.verify(
+            fakeExecMessage(
+              approval.nonceId,
+              issued.nonce,
+              this.device.deviceId,
+              this.device.sessionId,
+              command,
+              prefix,
+            ),
+            approval.signature,
           ),
-          approval.signature,
         );
       if (!valid) return this.refuse(command, FAKE_EXEC_APPROVAL_INVALID);
       this.ran.push({ command, fromAssistant: request.fromAssistant, how: 'signed' });

@@ -4,7 +4,7 @@ import {
   HEALTH_INTERVAL_PRESETS,
   type HealthAuthMode,
   type Project,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { HealthSecretReveal, HealthTargetSummary } from '@shared/healthTypes';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
@@ -154,19 +154,19 @@ export function HealthTargetDialog({
 
   const environments = useQuery({
     queryKey: queryKeys.projectEnvironments(draft.projectId),
-    queryFn: async () => (await window.agentmat.environments.list(draft.projectId)) ?? [],
+    queryFn: async () => (await window.runova.environments.list(draft.projectId)) ?? [],
     enabled: open && draft.projectId !== '',
     meta: QUIET,
   });
   const sshServers = useQuery({
     queryKey: queryKeys.sshServers,
-    queryFn: async () => (await window.agentmat.ssh.listServers()) ?? [],
+    queryFn: async () => (await window.runova.ssh.listServers()) ?? [],
     enabled: open,
     meta: QUIET,
   });
   const sites = useQuery({
     queryKey: queryKeys.deployWordPressSites,
-    queryFn: async () => (await window.agentmat.deployWordPress.listSites()) ?? [],
+    queryFn: async () => (await window.runova.deployWordPress.listSites()) ?? [],
     enabled: open,
     retry: false,
     meta: QUIET,
@@ -254,8 +254,8 @@ export function HealthTargetDialog({
                 {editing ? `Edit ${target.name}` : 'Add a health check'}
               </DialogTitle>
               <DialogDescription className="text-xs">
-                AgentMate calls the endpoint on its own schedule and tells you when it stops
-                answering well.
+                Runova calls the endpoint on its own schedule and tells you when it stops answering
+                well.
               </DialogDescription>
             </DialogHeader>
 
@@ -512,7 +512,7 @@ export function HealthTargetDialog({
                         <Input
                           id={id('basic-user')}
                           value={draft.basicUser}
-                          placeholder="agentmate"
+                          placeholder="runova"
                           autoComplete="off"
                           onChange={(event) => set('basicUser', event.target.value)}
                           {...described(id('basic-user'), errors.basicUser, false)}
@@ -520,8 +520,8 @@ export function HealthTargetDialog({
                       </Field>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      AgentMate makes the {draft.authMode === 'basic' ? 'password' : 'key'} for you
-                      and shows it once, right after you add the target.
+                      Runova makes the {draft.authMode === 'basic' ? 'password' : 'key'} for you and
+                      shows it once, right after you add the target.
                     </p>
                   </>
                 )}
@@ -538,7 +538,7 @@ export function HealthTargetDialog({
                 <SwitchRow
                   id={id('insecure')}
                   label="Allow insecure HTTP"
-                  description="Lets AgentMate call a plain http:// address on another machine."
+                  description="Lets Runova call a plain http:// address on another machine."
                   checked={draft.allowInsecure}
                   onCheckedChange={(checked) => set('allowInsecure', checked)}
                 />

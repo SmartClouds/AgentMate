@@ -17,7 +17,7 @@ export interface LegPromptInput {
   /** Direct dependencies only: their handoffs are worth reading, the rest of the chain is not. */
   dependsOn: string[];
   commitPerTask: boolean;
-  /** The AgentMate relay MCP server is available to this session. */
+  /** The Runova relay MCP server is available to this session. */
   mcp: boolean;
   planFirst: boolean;
 }
@@ -50,7 +50,7 @@ export function buildLegPrompt(input: LegPromptInput): string {
     ),
   ];
   const lines = [
-    `AgentMate Relay: task ${task.id} (${commandLineSafe(task.title)}), session ${legNo}.`,
+    `Runova Relay: task ${task.id} (${commandLineSafe(task.title)}), session ${legNo}.`,
     '',
     `Read ${guideRelPath(docsFolder)} first and follow it. Then read:`,
     ...read,
@@ -68,7 +68,7 @@ export function buildLegPrompt(input: LegPromptInput): string {
   }
   lines.push(
     'Work test-first: a failing test for each acceptance criterion, then the code, then a refactor with the tests green.',
-    `This session may use ${formatTokenCount(input.budget)} tokens of context. When you near it, or AgentMate says it is reached, finish the current step, write the handoff with outcome: continue and stop.`,
+    `This session may use ${formatTokenCount(input.budget)} tokens of context. When you near it, or Runova says it is reached, finish the current step, write the handoff with outcome: continue and stop.`,
     `Before you stop, rewrite ${handoff}: all five sections, outcome, tests and leg: ${legNo}.`,
   );
   if (input.commitPerTask) {
@@ -76,8 +76,8 @@ export function buildLegPrompt(input: LegPromptInput): string {
       `When the task is done and its tests pass, commit only the files this task changed (never git add -A), with a message that starts with ${task.id}:.`,
     );
   }
-  if (input.mcp) lines.push('Call the agentmate_relay finish_leg tool as your very last action.');
-  lines.push('Do not edit the task file itself; AgentMate keeps its status.');
+  if (input.mcp) lines.push('Call the runova_relay finish_leg tool as your very last action.');
+  lines.push('Do not edit the task file itself; Runova keeps its status.');
   return lines.join('\n');
 }
 
@@ -125,7 +125,7 @@ export function buildDecomposeRequest(input: DecomposeInput): string {
       : '- none yet';
   return `You are planning work for the project "${input.projectName}". Look at the repository to understand it, but do not change any file.
 
-Break the request below into tasks for AgentMate Relay, which runs them one after another.
+Break the request below into tasks for Runova Relay, which runs them one after another.
 
 ${sizingRules(input.budget)}
 
@@ -262,14 +262,14 @@ export function buildCatchUpRequest(input: CatchUpInput): string {
   const note = input.note?.trim()
     ? `\nWhat the user says about the project:\n"""\n${input.note.trim()}\n"""\n`
     : '';
-  return `You are taking over the project "${input.projectName}", which is already under way, so that AgentMate Relay can finish it. Do not change any file.
+  return `You are taking over the project "${input.projectName}", which is already under way, so that Runova Relay can finish it. Do not change any file.
 
 Work out where the project stands:
 - what it is meant to deliver: read the README and every plan you find, such as the docs in ${input.docsFolder}/, a roadmap, a backlog, epics, a delivery status or TODO notes;
 - what is already built: read the code and its tests, and the git history (git log) if you can run it;
 - what is half done and what is not started.
 
-Then plan the rest as tasks that AgentMate Relay runs one after another.
+Then plan the rest as tasks that Runova Relay runs one after another.
 
 ${sizingRules(input.budget)}
 
@@ -294,15 +294,15 @@ ${CATCH_UP_PROPOSAL_SHAPE}`;
 }
 
 /**
- * The part of a Blueprint prompt that asks for Relay task files in place of a backlog. AgentMate
+ * The part of a Blueprint prompt that asks for Relay task files in place of a backlog. Runova
  * writes the guide into the project before the prompt runs.
  */
 export function blueprintRelaySection(docsFolder: string, budget: number): string {
   const tasks = `${tasksFolderRelPath(docsFolder)}/`;
   const ceiling = formatTokenCount(Math.round(budget * TIGHT_ESTIMATE_SHARE));
-  return `Write the backlog as task files in \`${tasks}\`; there is no separate backlog file. AgentMate runs them one after another, each in a fresh AI coding session that may use at most ${formatTokenCount(budget)} tokens of context, so every task must be small enough to finish within that budget.
+  return `Write the backlog as task files in \`${tasks}\`; there is no separate backlog file. Runova runs them one after another, each in a fresh AI coding session that may use at most ${formatTokenCount(budget)} tokens of context, so every task must be small enough to finish within that budget.
 
-AgentMate has put the format in \`${guideRelPath(docsFolder)}\`. Read it and follow it exactly:
+Runova has put the format in \`${guideRelPath(docsFolder)}\`. Read it and follow it exactly:
 - one file per task, named like \`T001-short-slug.md\`, numbered in delivery order from T001;
 - YAML front matter with \`id\`, \`title\`, \`status: todo\`, \`epic\`, \`order\`, \`depends\`, \`estimate\`, \`budget: ${budget}\` and \`specs\`;
 - the sections Goal, Scope, Acceptance criteria (one checkbox each) and Test plan;

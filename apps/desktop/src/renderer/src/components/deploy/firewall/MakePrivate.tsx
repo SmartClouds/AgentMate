@@ -1,5 +1,5 @@
 import { coreErrorMessage } from '@shared/coreErrors';
-import type { ContainerPortInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { ContainerPortInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -27,7 +27,7 @@ import { useStack } from '../apps/hooks';
 import { CODE_WELL } from '../security/SecurityCard';
 
 /**
- * "Make private" in the exposure view (E13 T5). For a container of an AgentMate app it asks
+ * "Make private" in the exposure view (E13 T5). For a container of a Runova app it asks
  * first, then redeploys the app as a new revision with the service on 127.0.0.1 (the core
  * audits it as a revision made to make it private), and follows the deploy. For anything else it
  * shows the edit to make where the container was started.
@@ -53,15 +53,15 @@ function OutsideDialog({
   const change = privateChange(target, port);
   const where =
     target.kind === 'compose'
-      ? `the compose project ${target.project}, which was not deployed as an app from AgentMate`
-      : 'docker run (or another tool), not by an AgentMate app';
+      ? `the compose project ${target.project}, which was not deployed as an app from Runova`
+      : 'docker run (or another tool), not by a Runova app';
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>{port.containerName} can't be changed from here</DialogTitle>
           <DialogDescription>
-            It was started by {where}, so AgentMate cannot redeploy it. Make this change where it is
+            It was started by {where}, so Runova cannot redeploy it. Make this change where it is
             defined and start it again. It will then answer on 127.0.0.1 only.
           </DialogDescription>
         </DialogHeader>
@@ -73,7 +73,7 @@ function OutsideDialog({
         </pre>
         <p className="text-xs text-muted-foreground">
           To reach it from outside after that, put it on a domain in Websites, or deploy it as an
-          app from its project so AgentMate keeps it private for you.
+          app from its project so Runova keeps it private for you.
         </p>
         <DialogFooter>
           <Button
@@ -169,14 +169,14 @@ export function useMakePrivate(serverId: string) {
     setChecking(port.containerId);
     setProblem(null);
     try {
-      const list = await window.agentmat.deployDocker.listContainers(serverId);
+      const list = await window.runova.deployDocker.listContainers(serverId);
       const container = findContainer(list, port);
       let target = classifyContainer(container, [], null);
       if (container?.composeProject) {
-        const stacks = (await window.agentmat.deployStacks.list(serverId)) ?? [];
+        const stacks = (await window.runova.deployStacks.list(serverId)) ?? [];
         const stack = stacks.find((item) => item.name === container.composeProject);
         const details = stack
-          ? await window.agentmat.deployStacks.get({ serverId, stackId: stack.id })
+          ? await window.runova.deployStacks.get({ serverId, stackId: stack.id })
           : null;
         target = classifyContainer(container, stacks, details);
       }
@@ -194,7 +194,7 @@ export function useMakePrivate(serverId: string) {
       if (!ok) return;
       const base = { stackId: stack.id, stackName: stack.name, service };
       try {
-        const result = await window.agentmat.deployStacks.makePrivate({
+        const result = await window.runova.deployStacks.makePrivate({
           serverId,
           stackId: stack.id,
           services: [service],

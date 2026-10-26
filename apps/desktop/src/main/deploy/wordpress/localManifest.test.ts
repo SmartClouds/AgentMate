@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import type { WpItemRef } from '@agentmat/core';
+import { LEGACY_IGNORE_FILE, type WpItemRef } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { wordPressErrorCode } from '../../../shared/wordpressErrors';
 import {
@@ -25,7 +25,7 @@ const THEME = WP_AGENT_FILES.item as WpItemRef;
 const THEME_ROOT = `wp-content/themes/${THEME.slug}`;
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'agentmate-wp-walk-'));
+  root = mkdtempSync(join(tmpdir(), 'runova-wp-walk-'));
 });
 afterEach(() => {
   rmSync(root, { recursive: true, force: true });
@@ -57,7 +57,7 @@ describe('the shared agent-files fixture', () => {
     // Agent files at the project root are never even looked at.
     put('AGENTS.md');
     put('.claude/settings.json');
-    put('.agentmate/wordpress/conflicts/x/style.css');
+    put('.runova/wordpress/conflicts/x/style.css');
   });
 
   it('sends what is synced, and never anything hard denied or ignored', async () => {
@@ -82,7 +82,7 @@ describe('the shared agent-files fixture', () => {
       expect(reported.get(file.path), file.path).toBe(deniedReason(file.path));
     }
     expect(reported.get('.claude/settings.json')).toBe('agentFiles');
-    expect(reported.get('.agentmate/hooks/notify.sh')).toBe('agentFiles');
+    expect(reported.get('.runova/hooks/notify.sh')).toBe('agentFiles');
     expect(reported.get('AGENTS.md')).toBe('agentFiles');
     expect(reported.get('.mcp.json')).toBe('agentFiles');
     expect(reported.get('.git/HEAD')).toBe('hardDenied');
@@ -123,15 +123,15 @@ describe('the shared agent-files fixture', () => {
 });
 
 describe('ignore layers', () => {
-  it('applies .distignore and both .agentmateignore files, with ! putting things back', async () => {
+  it('applies .distignore and both .runovaignore files, with ! putting things back', async () => {
     put(`${THEME_ROOT}/style.css`);
     put(`${THEME_ROOT}/src/app.ts`);
     put(`${THEME_ROOT}/notes.txt`);
     put(`${THEME_ROOT}/build/keep.js`);
     put(`${THEME_ROOT}/debug.log`);
     put(`${THEME_ROOT}/.distignore`, 'src/\n# comment\n');
-    put('.agentmateignore', 'notes.txt\n!debug.log\n');
-    put(`${THEME_ROOT}/.agentmateignore`, 'build/\n');
+    put('.runovaignore', 'notes.txt\n!debug.log\n');
+    put(`${THEME_ROOT}/.runovaignore`, 'build/\n');
     const walk = await walkLocalItem({ projectRoot: root, item: THEME, isFile: false });
     expect(Object.keys(walk.files).sort()).toEqual(['debug.log', 'style.css']);
     const reasons = Object.fromEntries(walk.leftOut.map((entry) => [entry.path, entry.reason]));
@@ -142,9 +142,28 @@ describe('ignore layers', () => {
       'notes.txt': 'ignored',
       'build/keep.js': 'ignored',
       '.distignore': 'ignored',
-      '.agentmateignore': 'agentFiles',
+      '.runovaignore': 'agentFiles',
     });
     expect(walk.rules.excluded('src/app.ts')).toBe(true);
+  });
+
+  it('reads the ignore file of a project made before the rename, unless a new one is there', async () => {
+    put(`${THEME_ROOT}/style.css`);
+    put(`${THEME_ROOT}/notes.txt`);
+    put(`${THEME_ROOT}/build/keep.js`);
+    put(LEGACY_IGNORE_FILE, 'notes.txt\n');
+    put(`${THEME_ROOT}/${LEGACY_IGNORE_FILE}`, 'build/\n');
+    const old = await walkLocalItem({ projectRoot: root, item: THEME, isFile: false });
+    expect(Object.keys(old.files).sort()).toEqual(['style.css']);
+    expect(old.leftOut.find((entry) => entry.path === LEGACY_IGNORE_FILE)?.reason).toBe(
+      'agentFiles',
+    );
+
+    // The new name wins in each folder where both are.
+    put('.runovaignore', 'build/\n');
+    const both = await walkLocalItem({ projectRoot: root, item: THEME, isFile: false });
+    expect(both.rules.excluded('notes.txt')).toBe(false);
+    expect(both.rules.excluded('build/keep.js')).toBe(true);
   });
 
   it('drops ! lines from a .distignore, which can come from the site', async () => {
@@ -156,28 +175,28 @@ describe('ignore layers', () => {
     expect(walk.files['debug.log']).toBeUndefined();
     expect(walk.files['node_modules/x/index.js']).toBeUndefined();
     expect(walk.rules.excluded('src/a.ts')).toBe(true);
-    // The same line in the user's own .agentmateignore does put it back.
-    put('.agentmateignore', '!debug.log\n');
+    // The same line in the user's own .runovaignore does put it back.
+    put('.runovaignore', '!debug.log\n');
     const own = await walkLocalItem({ projectRoot: root, item: THEME, isFile: false });
     expect(own.files['debug.log']).toBeDefined();
   });
 
   it('says which ignore line it cannot read', async () => {
     put(`${THEME_ROOT}/style.css`);
-    put('.agentmateignore', 'ok\n[z-a]\n');
+    put('.runovaignore', 'ok\n[z-a]\n');
     const error = await walkLocalItem({ projectRoot: root, item: THEME, isFile: false }).catch(
       (caught) => caught,
     );
     expect(wordPressErrorCode(error)).toBe('badRequest');
-    expect(error.message).toContain('Line 2 of .agentmateignore');
+    expect(error.message).toContain('Line 2 of .runovaignore');
   });
 
   it('does not read a linked or oversized ignore file', async () => {
     put(`${THEME_ROOT}/style.css`);
     put(`${THEME_ROOT}/notes.txt`);
     put('outside.txt', 'notes.txt\n');
-    put('.agentmateignore', `${'#'.repeat(300 * 1024)}\nstyle.css\n`);
-    const linked = link(join(root, 'outside.txt'), `${THEME_ROOT}/.agentmateignore`, false);
+    put('.runovaignore', `${'#'.repeat(300 * 1024)}\nstyle.css\n`);
+    const linked = link(join(root, 'outside.txt'), `${THEME_ROOT}/.runovaignore`, false);
     const walk = await walkLocalItem({ projectRoot: root, item: THEME, isFile: false });
     expect(walk.files['style.css']).toBeDefined();
     if (linked) expect(walk.files['notes.txt']).toBeDefined();
@@ -239,11 +258,11 @@ describe('what git ignores', () => {
     expect(tracked.files['vendor/lib.php']).toBeDefined();
   });
 
-  it("lets the user's .agentmateignore put a git-ignored file back, but not a built-in default", async () => {
+  it("lets the user's .runovaignore put a git-ignored file back, but not a built-in default", async () => {
     put(`${FOO_ROOT}/dist/app.js`);
     put(`${FOO_ROOT}/node_modules/x/index.js`);
     put(`${FOO_ROOT}/.gitignore`, 'dist/\n!node_modules/\n');
-    put(`${FOO_ROOT}/.agentmateignore`, '!dist/\n');
+    put(`${FOO_ROOT}/.runovaignore`, '!dist/\n');
     const walk = await walkLocalItem({ projectRoot: root, item: FOO, isFile: false });
     expect(walk.files['dist/app.js']).toBeDefined();
     expect(walk.files['node_modules/x/index.js']).toBeUndefined();
@@ -348,24 +367,24 @@ describe('agent folders by prefix', () => {
   const FOO: WpItemRef = { kind: 'theme', slug: 'foo' };
   const FOO_ROOT = 'wp-content/themes/foo';
 
-  it('never sends a folder or file that starts with .claude or .agentmate', async () => {
+  it('never sends a folder or file that starts with .claude or .runova', async () => {
     put(`${FOO_ROOT}/style.css`);
     put(`${FOO_ROOT}/.claude-plugin/plugin.json`);
-    put(`${FOO_ROOT}/inc/.agentmate-cache/a.json`);
+    put(`${FOO_ROOT}/inc/.runova-cache/a.json`);
     put(`${FOO_ROOT}/.claudeignore`);
     const walk = await walkLocalItem({ projectRoot: root, item: FOO, isFile: false });
     expect(Object.keys(walk.files)).toEqual(['style.css']);
     const reasons = Object.fromEntries(walk.leftOut.map((entry) => [entry.path, entry.reason]));
     expect(reasons).toMatchObject({
       '.claude-plugin/plugin.json': 'agentFiles',
-      'inc/.agentmate-cache/a.json': 'agentFiles',
+      'inc/.runova-cache/a.json': 'agentFiles',
       '.claudeignore': 'agentFiles',
     });
   });
 
   it('classes them as agent files', () => {
     expect(deniedReason('.claude-plugin/plugin.json')).toBe('agentFiles');
-    expect(deniedReason('a/.agentmate.old/x')).toBe('agentFiles');
+    expect(deniedReason('a/.runova.old/x')).toBe('agentFiles');
   });
 });
 
@@ -444,7 +463,7 @@ describe('links, caps and odd names', () => {
       'Style.css': { sha256: 'b'.repeat(64), size: 1 },
     };
     // A case-insensitive disk cannot hold both, so the collision is checked on its own.
-    const { findWpCaseCollisions } = await import('@agentmat/core');
+    const { findWpCaseCollisions } = await import('@runova/core');
     expect(findWpCaseCollisions(Object.keys(files))).toEqual([['style.css', 'Style.css']]);
     if (process.platform === 'linux') {
       put(`${THEME_ROOT}/Style.css`);
@@ -473,7 +492,7 @@ describe('items that are missing or single files', () => {
         .leftOut,
     ).toEqual([{ item: hello, path: 'hello.php', reason: 'tooLarge' }]);
 
-    put('.agentmateignore', 'hello.php\n');
+    put('.runovaignore', 'hello.php\n');
     expect(
       (await walkLocalItem({ projectRoot: root, item: hello, isFile: true })).leftOut[0].reason,
     ).toBe('ignored');

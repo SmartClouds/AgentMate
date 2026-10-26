@@ -4,7 +4,7 @@ import {
   type SubscriptionWindow,
   type SubscriptionWindowKey,
   type UsageResetAlertSettings,
-} from '@agentmat/core';
+} from '@runova/core';
 import { sendTelegramMessage } from '../notifications/telegramApi';
 import { store } from '../store';
 import { getProviderUsage } from './index';

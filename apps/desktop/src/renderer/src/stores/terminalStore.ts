@@ -1,4 +1,4 @@
-import type { RunKind } from '@agentmat/core';
+import type { RunKind } from '@runova/core';
 import type { SshSavedServer } from '@shared/apiTypes';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -103,7 +103,7 @@ type PersistedTerminalState = Pick<
 /** The shell a plain "new tab" starts, per platform. The tab is always called a terminal:
  * naming it after the shell ("New zsh") confused people into thinking zsh itself was the app. */
 export function defaultNewSession(): { title: string; shell?: string } {
-  const platform = window.agentmat.platform;
+  const platform = window.runova.platform;
   if (platform === 'win32') return { title: 'Terminal', shell: 'powershell.exe' };
   if (platform === 'darwin') return { title: 'Terminal', shell: 'zsh' };
   return { title: 'Terminal', shell: 'bash' };
@@ -191,7 +191,7 @@ export const useTerminalStore = create<TerminalState>()(
         // A file manager tab is only a view: the SFTP session it shows lives on in main and in
         // the other views of it (the page, the pop-out), so closing the tab ends nothing.
         if (session?.kind !== 'sftp') {
-          void (session?.kind === 'ssh' ? window.agentmat.ssh : window.agentmat.terminal).kill(id);
+          void (session?.kind === 'ssh' ? window.runova.ssh : window.runova.terminal).kill(id);
         }
         set((state) => withoutSession(state, id));
       },
@@ -208,7 +208,7 @@ export const useTerminalStore = create<TerminalState>()(
         }),
     }),
     {
-      name: 'agentmate-terminal-sessions',
+      name: 'runova-terminal-sessions',
       partialize: (state): PersistedTerminalState => ({
         isOpen: state.isOpen,
         drawerHeight: state.drawerHeight,

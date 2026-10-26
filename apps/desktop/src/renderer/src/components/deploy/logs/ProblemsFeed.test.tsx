@@ -1,4 +1,4 @@
-import type { AlertInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { AlertInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useDeployAssistantStore } from '@/stores/deployAssistantStore';

@@ -1,7 +1,7 @@
-import type { RunAssessment } from '@agentmat/core';
-import { DEFAULT_TARGET_AI } from '@agentmat/core';
+import type { RunAssessment } from '@runova/core';
+import { DEFAULT_TARGET_AI } from '@runova/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { type FakeBridge, installAgentmatBridge } from '../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../test/renderer/runovaBridge';
 import {
   beginPromptTask,
   cancelPromptTask,
@@ -34,7 +34,7 @@ const assessment: RunAssessment = {
 let bridge: FakeBridge;
 
 beforeEach(() => {
-  bridge = installAgentmatBridge();
+  bridge = installRunovaBridge();
   usePromptJobsStore.setState({ tasks: {}, runs: {}, visible: {} });
 });
 
@@ -177,7 +177,7 @@ describe('startRunAssessment', () => {
 
   it('stores the recommendation with the exact text that was sized', async () => {
     // The panel compares that text against the generated prompt to tell when it has moved on.
-    installAgentmatBridge({
+    installRunovaBridge({
       'ai.assessRun': async () => ({ ok: true, assessment, cliName: 'Claude Code' }),
     });
     startRunAssessment('k', { prompt: 'Do a thing', targetAI: DEFAULT_TARGET_AI });
@@ -188,7 +188,7 @@ describe('startRunAssessment', () => {
   });
 
   it('clears an override once a fresh recommendation lands', async () => {
-    installAgentmatBridge({
+    installRunovaBridge({
       'ai.assessRun': async () => ({ ok: true, assessment, cliName: null }),
     });
     state().patchRun('k', { override: { modelId: 'haiku', effort: 'low' } });
@@ -198,21 +198,21 @@ describe('startRunAssessment', () => {
   });
 
   it('reports what went wrong when the CLI could not size it', async () => {
-    installAgentmatBridge({ 'ai.assessRun': async () => ({ ok: false, error: 'no CLI' }) });
+    installRunovaBridge({ 'ai.assessRun': async () => ({ ok: false, error: 'no CLI' }) });
     startRunAssessment('k', { prompt: 'Do a thing', targetAI: DEFAULT_TARGET_AI });
     await vi.waitFor(() => expect(run('k').status).toBe('error'));
     expect(run('k').error).toBe('no CLI');
   });
 
   it('falls back to its own wording when the failure has no message', async () => {
-    installAgentmatBridge({ 'ai.assessRun': async () => ({ ok: false }) });
+    installRunovaBridge({ 'ai.assessRun': async () => ({ ok: false }) });
     startRunAssessment('k', { prompt: 'Do a thing', targetAI: DEFAULT_TARGET_AI });
     await vi.waitFor(() => expect(run('k').status).toBe('error'));
     expect(run('k').error).toBe('The AI CLI could not size this prompt.');
   });
 
   it('reports a rejected request as an error', async () => {
-    installAgentmatBridge({
+    installRunovaBridge({
       'ai.assessRun': async () => {
         throw new Error('the pipe closed');
       },
@@ -223,7 +223,7 @@ describe('startRunAssessment', () => {
   });
 
   it('goes back to idle when the sizing was cancelled', async () => {
-    installAgentmatBridge({ 'ai.assessRun': async () => ({ ok: false, cancelled: true }) });
+    installRunovaBridge({ 'ai.assessRun': async () => ({ ok: false, cancelled: true }) });
     startRunAssessment('k', { prompt: 'Do a thing', targetAI: DEFAULT_TARGET_AI });
     await vi.waitFor(() => expect(run('k').status).toBe('idle'));
     // Any earlier result stays on screen; the panel shows whichever one exists.
@@ -242,7 +242,7 @@ describe('startRunAssessment', () => {
     // Held in an object so the assignment inside the promise is visible to the type checker,
     // which otherwise keeps a plain `let` narrowed to null.
     const pending: { settle: ((value: unknown) => void) | null } = { settle: null };
-    installAgentmatBridge({
+    installRunovaBridge({
       'ai.assessRun': () =>
         new Promise((resolve) => {
           pending.settle = resolve;

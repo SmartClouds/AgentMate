@@ -1,5 +1,5 @@
 import { coreErrorMessage } from '@shared/coreErrors';
-import type { BackupPlanInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { BackupPlanInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployServer } from '@shared/deployTypes';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -41,7 +41,7 @@ export function PlansTab({
   async function runNow(plan: BackupPlanInfo): Promise<void> {
     setProblem(null);
     try {
-      await window.agentmat.deployServerBackups.runPlan({ serverId: server.id, id: plan.id });
+      await window.runova.deployServerBackups.runPlan({ serverId: server.id, id: plan.id });
       toast.success(`${plan.name} is running. The history shows how it goes.`);
       refresh();
     } catch (error) {
@@ -60,7 +60,7 @@ export function PlansTab({
     if (!confirmed) return;
     setProblem(null);
     try {
-      await window.agentmat.deployServerBackups.deletePlan({ serverId: server.id, id: plan.id });
+      await window.runova.deployServerBackups.deletePlan({ serverId: server.id, id: plan.id });
       refresh();
     } catch (error) {
       setProblem(coreErrorMessage(error));

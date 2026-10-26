@@ -1,8 +1,8 @@
 import { WP_PROTOCOL_VERSION, type WpScope } from './protocol.js';
 
 /**
- * The connection key a WordPress admin copies out of wp-admin (or `wp agentmate key create`)
- * and pastes into AgentMate: `amwp1.` then base64url of a JSON object. It carries everything the
+ * The connection key a WordPress admin copies out of wp-admin (or `wp runova key create`)
+ * and pastes into Runova: `amwp1.` then base64url of a JSON object. It carries everything the
  * first contact needs, including the site's whole Ed25519 public key, so even the first reply is
  * checked against a key the admin handed over rather than one the network offered.
  *
@@ -15,7 +15,7 @@ export const WP_KEY_PREFIX = 'amwp1.';
 export interface WpConnectionKey {
   /** home_url(): the site people visit. */
   siteUrl: string;
-  /** rest_url('agentmate/v1'), already in `?rest_route=` form when permalinks are plain. */
+  /** rest_url('runova/v1'), already in `?rest_route=` form when permalinks are plain. */
   restUrl: string;
   /** admin_url('admin-ajax.php'), the fallback when the REST API is blocked. */
   ajaxUrl: string;

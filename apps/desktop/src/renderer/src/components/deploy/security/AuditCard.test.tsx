@@ -1,4 +1,4 @@
-import type { AuditPage } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { AuditPage } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';

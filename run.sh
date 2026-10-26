@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# AgentMate dev launcher for macOS (equivalent of run.bat)
+# Runova dev launcher for macOS (equivalent of run.bat)
 cd "$(dirname "$0")"
 
 if ! command -v pnpm >/dev/null 2>&1; then
@@ -15,10 +15,10 @@ if [ ! -d "node_modules" ]; then
 fi
 
 echo "Verifying Electron binary..."
-pnpm --filter @agentmat/desktop exec install-electron || {
+pnpm --filter @runova/desktop exec install-electron || {
   echo "Failed to download the Electron binary. Check your network connection and try again."
   exit 1
 }
 
-echo "Starting AgentMate..."
+echo "Starting Runova..."
 pnpm dev

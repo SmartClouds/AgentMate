@@ -572,7 +572,7 @@ export function TerminalDrawer({
                 <p className="text-sm font-medium text-zinc-100">Open a terminal</p>
                 <p className="max-w-sm text-xs leading-relaxed text-zinc-400">
                   Run installs, project commands, and CLIs here. Sessions keep running if you hide
-                  this panel or AgentMate restarts to update.
+                  this panel or Runova restarts to update.
                 </p>
               </div>
               <Button onClick={() => void openDefaultSession()}>
@@ -657,7 +657,7 @@ export function TerminalDrawer({
                 ? {
                     kind: 'ssh',
                     queryKey: queryKeys.sshServerAgentHistory(shellServerId),
-                    load: () => window.agentmat.sshAgent.serverHistory(shellServerId),
+                    load: () => window.runova.sshAgent.serverHistory(shellServerId),
                     live: shellLive,
                   }
                 : undefined

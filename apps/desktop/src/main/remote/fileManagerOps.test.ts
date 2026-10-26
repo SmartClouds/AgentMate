@@ -78,7 +78,7 @@ function listingOf(msg: RemoteControlMessage): {
 let root = '';
 
 beforeEach(() => {
-  root = tempDir('agentmate-fm-');
+  root = tempDir('runova-fm-');
   osState.home = join(root, 'home');
   mkdirSync(osState.home, { recursive: true });
 });

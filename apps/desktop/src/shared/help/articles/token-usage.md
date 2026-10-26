@@ -19,9 +19,9 @@ There are three kinds of source, and the **Add a provider** dialog labels each o
 
 | Source | Providers | How it works |
 | --- | --- | --- |
-| **Local logs · automatic** | Claude Code, Codex, GitHub Copilot, OpenCode, Gemini CLI | AgentMate reads the session data these CLIs already keep on your machine (Claude Code under `~/.claude/projects`, Codex under `~/.codex/sessions`, Copilot under `~/.copilot/session-state`, OpenCode in its `opencode.db` session database, Gemini CLI under `~/.gemini/tmp`). No key, no network, and every run counts, whether you started it from AgentMate or another terminal. |
-| **Signed-in app · automatic** | Cursor | Cursor keeps no local token log, so AgentMate reads your usage through the Cursor desktop app's signed-in session. Sign in to the Cursor app and the card connects itself. |
-| **API key** | OpenAI, OpenRouter, z.ai, LiteLLM, DeepSeek, Moonshot | You paste a key and AgentMate asks the provider for spend or balance. These providers usually report credit and cost, not raw token counts, so their cards show cost and a limit bar and may show zero tokens. |
+| **Local logs · automatic** | Claude Code, Codex, GitHub Copilot, OpenCode, Gemini CLI | Runova reads the session data these CLIs already keep on your machine (Claude Code under `~/.claude/projects`, Codex under `~/.codex/sessions`, Copilot under `~/.copilot/session-state`, OpenCode in its `opencode.db` session database, Gemini CLI under `~/.gemini/tmp`). No key, no network, and every run counts, whether you started it from Runova or another terminal. |
+| **Signed-in app · automatic** | Cursor | Cursor keeps no local token log, so Runova reads your usage through the Cursor desktop app's signed-in session. Sign in to the Cursor app and the card connects itself. |
+| **API key** | OpenAI, OpenRouter, z.ai, LiteLLM, DeepSeek, Moonshot | You paste a key and Runova asks the provider for spend or balance. These providers usually report credit and cost, not raw token counts, so their cards show cost and a limit bar and may show zero tokens. |
 
 Another 53 providers are listed as **Soon** (an integration is registered but not wired yet). The dialog title counts 65 providers in total.
 
@@ -92,7 +92,7 @@ For Claude Code on a subscription plan, the card can show your plan's rolling li
 - **Weekly**: the rolling 7-day limit.
 - **Weekly (Fable)**: a separate weekly bucket that only plans above Pro have.
 
-The bars turn red at 90% and above. When AgentMate can read your account, the numbers come from the account itself. When it cannot reach it, it reconstructs the windows from your local logs, marks them with a `~` and the word **estimated**, and the tooltip says why. Under the bars you see tokens used today and the dollar-equivalent cost. If the account bills an API key and has no limits, the card stays on the tokens view.
+The bars turn red at 90% and above. When Runova can read your account, the numbers come from the account itself. When it cannot reach it, it reconstructs the windows from your local logs, marks them with a `~` and the word **estimated**, and the tooltip says why. Under the bars you see tokens used today and the dollar-equivalent cost. If the account bills an API key and has no limits, the card stays on the tokens view.
 
 Costs are estimates calculated from token counts with a built-in model price table, so they are "API-equivalent" figures. They are not an invoice.
 
@@ -102,7 +102,7 @@ Costs are estimates calculated from token counts with a built-in model price tab
 2. Search the list (the box says "Search 65 providers…"). Each row shows the provider, a category badge and its source.
 3. For an API-key provider, paste the key in the box and click **Add**. The row then shows **Added**. Claude Code, Codex, Cursor, GitHub Copilot, OpenCode and Gemini CLI show **Auto** and need nothing. Providers marked **Soon** cannot be added yet.
 
-Keys are stored in AgentMate's settings on your machine. Remove a provider with the X on its card. That stops tracking it and takes its card off the Dashboard.
+Keys are stored in Runova's settings on your machine. Remove a provider with the X on its card. That stops tracking it and takes its card off the Dashboard.
 
 ### Reorder cards
 
@@ -125,7 +125,7 @@ Click the warning triangle on the Claude Code card to open **Usage threshold ale
 3. Choose which windows to watch with the switches (**Session (5h)** by default).
 4. Click **Send a test alert** to check that notifications work.
 
-AgentMate checks about once a minute. When a watched window reaches the threshold you get an operating system notification, or an in-app alert if the system cannot show one. It fires once per window until that window resets or drops back below the threshold. Clicking the notification opens Token Usage and highlights the provider's card with a ring.
+Runova checks about once a minute. When a watched window reaches the threshold you get an operating system notification, or an in-app alert if the system cannot show one. It fires once per window until that window resets or drops back below the threshold. Clicking the notification opens Token Usage and highlights the provider's card with a ring.
 
 ### Reset alert (Telegram)
 
@@ -137,11 +137,11 @@ Click the bell on the Claude Code card to open **Reset alerts**. When a watched 
 4. Optionally type a **Chat/group ID** to send these to a different chat. Leave it empty to reuse the chat from Settings. The bot token always comes from Settings.
 5. Click **Send a test alert** and check Telegram.
 
-If you turn it on without a bot token and chat ID, AgentMate warns you: "Add your Telegram bot token and chat ID in Settings to receive these."
+If you turn it on without a bot token and chat ID, Runova warns you: "Add your Telegram bot token and chat ID in Settings to receive these."
 
 ## Widgets
 
-A widget is a small frosted-glass window showing one provider's usage, floating on your desktop. They are separate from the main AgentMate window.
+A widget is a small frosted-glass window showing one provider's usage, floating on your desktop. They are separate from the main Runova window.
 
 ### Pin a widget to the desktop
 
@@ -170,7 +170,7 @@ The same settings appear in the pin dialog and in the widget itself.
 - Hover a widget to see its buttons. The clock or chart button switches between plan limits and tokens (when the account has limits). The gear opens widget settings, with **Remove from desktop** at the bottom. Click the gear again (**Back to usage**) to return.
 - The period chips inside a widget change its period too.
 - Widgets refresh about once a minute.
-- On Windows and Linux, closing the main AgentMate window closes the widgets too, and they come back the next time you open the app.
+- On Windows and Linux, closing the main Runova window closes the widgets too, and they come back the next time you open the app.
 
 See [Widgets and the desktop pet](widgets-desktop-pet.md) for other desktop widgets.
 
@@ -188,7 +188,7 @@ If a provider's limits cannot be read, its item stays in the bar. It keeps the l
 
 The countdowns and the "Updated" time in the panel refresh every half minute, so they keep moving while you leave the window alone.
 
-- **Claude Code** shows its 5-hour session and weekly limits. AgentMate asks Claude for them, and when Claude answers that it is being asked too often, waits as long as Claude says before it asks again, so a busy moment does not turn into a run of failures. A new sign-in is read straight away. When Claude cannot be reached and there is no earlier reading to show, the item falls back to an estimate worked out from your local session logs. It is marked with a `~` before the percent, and the panel says "Estimated from local logs" with the reason. An estimate is never saved as if it were Claude's own numbers, and the last real reading always wins over it.
+- **Claude Code** shows its 5-hour session and weekly limits. Runova asks Claude for them, and when Claude answers that it is being asked too often, waits as long as Claude says before it asks again, so a busy moment does not turn into a run of failures. A new sign-in is read straight away. When Claude cannot be reached and there is no earlier reading to show, the item falls back to an estimate worked out from your local session logs. It is marked with a `~` before the percent, and the panel says "Estimated from local logs" with the reason. An estimate is never saved as if it were Claude's own numbers, and the last real reading always wins over it.
 - **Codex** reads its limits from its own session logs: a ChatGPT plan has a 5-hour session and a weekly limit, while a free account has a single monthly one. The numbers are as of your last Codex turn, and the panel's "Updated" time is when that turn happened. A limit whose reset time has passed shows 0% until your next turn, and if it was the account's only limit, the Codex item leaves the bar until then.
 - **Cursor** shows how much of the plan's included usage is spent this billing cycle, in total and split into Auto and API, with a countdown to the end of the cycle. An older request-based plan shows its monthly request limit instead.
 

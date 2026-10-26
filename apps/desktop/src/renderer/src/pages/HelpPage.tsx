@@ -77,7 +77,7 @@ function useGuideAvailable(): boolean {
   const ollamaModel = useAskAiStore((s) => s.ollamaModel);
   const { data } = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
   });
   return (['openai', 'gemini', 'ollama'] as const).some((p) =>
     providerReady(p, data, p === provider ? ollamaModel : ''),
@@ -95,7 +95,7 @@ export default function HelpPage(): React.JSX.Element {
   const shownSlug = useRef<string | undefined>(undefined);
   const searchRef = useRef<HelpSearchBoxHandle>(null);
 
-  usePageHeader('Help', 'Guides for every part of AgentMate, with search and a guide you can ask.');
+  usePageHeader('Help', 'Guides for every part of Runova, with search and a guide you can ask.');
 
   // Land on the heading a link points at, or at the top of a newly opened article.
   useEffect(() => {
@@ -191,9 +191,9 @@ function HelpHome({ searchRef, chat, chatOpen, onOpenChat }: ViewProps): React.J
             className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_140%_at_100%_0%,hsl(var(--primary)/0.14),transparent_55%),radial-gradient(90%_120%_at_0%_100%,hsl(var(--primary)/0.05),transparent_60%)]"
           />
           <div className="relative max-w-2xl">
-            <p className={SECTION_HEADING}>AgentMate Help</p>
+            <p className={SECTION_HEADING}>Runova Help</p>
             <h1 className="mt-3 text-[2rem] font-semibold leading-[1.1] tracking-[-0.02em] text-foreground @3xl/help:text-[2.5rem]">
-              Find your way around AgentMate
+              Find your way around Runova
             </h1>
             <p className="mt-3 max-w-xl text-[0.95rem] leading-7 text-muted-foreground">
               {HELP_ARTICLES.length} guides cover every page, button and setting. Search them,

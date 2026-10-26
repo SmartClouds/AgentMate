@@ -591,10 +591,10 @@ export const useSftpStore = create<SftpState>()((set, get) => {
       }
 
       // The saved server tells the gate what to call it, and an unknown one never gets opened.
-      let saved: Awaited<ReturnType<typeof window.agentmat.ssh.listServers>> | null = null;
+      let saved: Awaited<ReturnType<typeof window.runova.ssh.listServers>> | null = null;
       if (!docker) {
         try {
-          saved = await window.agentmat.ssh.listServers();
+          saved = await window.runova.ssh.listServers();
         } catch {
           saved = null;
         }

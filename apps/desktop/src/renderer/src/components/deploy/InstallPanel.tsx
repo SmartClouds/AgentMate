@@ -48,7 +48,7 @@ export function InstallPanel({
 
   const preflightQuery = useQuery({
     queryKey: queryKeys.deployPreflight(server.id),
-    queryFn: () => withHostKeyTrust(server.id, () => window.agentmat.deploy.preflight(server.id)),
+    queryFn: () => withHostKeyTrust(server.id, () => window.runova.deploy.preflight(server.id)),
     // Not while an install runs, but after one failed: "Try again" needs what the check found,
     // even when the page was left and opened again since.
     enabled: installRun?.status !== 'running',
@@ -249,7 +249,7 @@ export function InstallPanel({
       description={
         updating
           ? 'The running core keeps working until the new one is ready. If the new one does not start, the server goes back to the one it has now.'
-          : `A small service that runs on ${server.nickname} so AgentMate can show what happens there and act on it. It only listens on a private socket, so no port is opened: the app reaches it through your SSH login.`
+          : `A small service that runs on ${server.nickname} so Runova can show what happens there and act on it. It only listens on a private socket, so no port is opened: the app reaches it through your SSH login.`
       }
       bodyClassName="space-y-4"
     >

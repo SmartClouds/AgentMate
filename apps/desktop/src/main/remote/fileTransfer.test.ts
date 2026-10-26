@@ -92,7 +92,7 @@ let downloads = '';
 let work = '';
 
 beforeEach(() => {
-  work = tempDir('agentmate-transfer-');
+  work = tempDir('runova-transfer-');
   downloads = join(work, 'Downloads');
   mkdirSync(downloads, { recursive: true });
   // Everything the receiver writes, temp part file included, hangs off this path.
@@ -191,7 +191,7 @@ describe('receiving a file', () => {
     const resume = lastOf(rec.control, 'file-resume');
     expect(resume).toMatchObject({ transferId, missingParts: [0, 1, 2] });
     // The part file is preallocated so parts can be written at their real offsets out of order.
-    const tmpDir = join(downloads, '.agentmate-tmp');
+    const tmpDir = join(downloads, '.runova-tmp');
     expect(readdirSync(tmpDir)).toEqual([`${transferId}.part`]);
     expect(rec.logs[0].level).toBe('info');
     expect(rec.progress[0]).toMatchObject({ direction: 'incoming', total: 40, partsTotal: 3 });
@@ -355,7 +355,7 @@ describe('receiving a file', () => {
 
       expect(done.verified).toBe(false);
       // Not renamed into Downloads: a file that failed its end-to-end check must not look saved.
-      expect(done.savedPath).toBe(join(downloads, '.agentmate-tmp', 'transfer-0001.part'));
+      expect(done.savedPath).toBe(join(downloads, '.runova-tmp', 'transfer-0001.part'));
       expect(existsSync(join(downloads, 'report.bin'))).toBe(false);
       expect(rec.logs.some((entry) => entry.level === 'error')).toBe(true);
       const last = rec.progress[rec.progress.length - 1];
@@ -520,7 +520,7 @@ describe('receiving a file', () => {
 
     // The part already on disk must not be asked for again, that is the whole resume mechanism.
     expect(lastOf(rec.control, 'file-resume').missingParts).toEqual([1]);
-    expect(readdirSync(join(downloads, '.agentmate-tmp'))).toEqual([`${transferId}.part`]);
+    expect(readdirSync(join(downloads, '.runova-tmp'))).toEqual([`${transferId}.part`]);
   });
 });
 
@@ -973,14 +973,14 @@ describe('cleanup', () => {
     const rec = recorder();
     const ws = fakeSocket();
     const { transferId } = await offer(rec, ws, { size: 16, partSize: 16 });
-    const tmpPath = join(downloads, '.agentmate-tmp', `${transferId}.part`);
+    const tmpPath = join(downloads, '.runova-tmp', `${transferId}.part`);
     expect(existsSync(tmpPath)).toBe(true);
 
     rec.manager.handleControl(ws, { t: 'file-cancel', transferId });
     await vi.advanceTimersByTimeAsync(5_000);
     await vi.waitFor(() => expect(existsSync(tmpPath)).toBe(false));
 
-    // Half-received files must not pile up in Downloads/.agentmate-tmp forever.
+    // Half-received files must not pile up in Downloads/.runova-tmp forever.
     expect(rec.manager.listProgress()).toEqual([]);
   });
 
@@ -989,7 +989,7 @@ describe('cleanup', () => {
     const rec = recorder();
     const ws = fakeSocket();
     const { transferId } = await offer(rec, ws, { size: 16, partSize: 16 });
-    const tmpPath = join(downloads, '.agentmate-tmp', `${transferId}.part`);
+    const tmpPath = join(downloads, '.runova-tmp', `${transferId}.part`);
 
     rec.manager.onConnectionLost(ws);
     await vi.advanceTimersByTimeAsync(60_000);
@@ -1003,7 +1003,7 @@ describe('cleanup', () => {
     const rec = recorder();
     const ws = fakeSocket();
     const { transferId } = await offer(rec, ws, { size: 16, partSize: 16 });
-    const tmpPath = join(downloads, '.agentmate-tmp', `${transferId}.part`);
+    const tmpPath = join(downloads, '.runova-tmp', `${transferId}.part`);
     rec.manager.onConnectionLost(ws);
 
     // Five minutes of silence is the point where waiting stops being worth the disk space.

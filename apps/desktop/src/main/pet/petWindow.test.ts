@@ -35,7 +35,7 @@ describe('desktop pet window and the taskbar', () => {
     setPlatform(realPlatform);
   });
 
-  // The pet used to land in the AgentMate taskbar group as a second window, and
+  // The pet used to land in the Runova taskbar group as a second window, and
   // people closed it from there thinking it was a stray copy of the app.
   it('is a tool window on Windows so it never gets a taskbar button', () => {
     const win = openPet();

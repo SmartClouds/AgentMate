@@ -57,7 +57,7 @@ export const AGENT_TOOL_REGISTRY: AgentToolDefinition[] = [
     detectCommand: { command: '9router', args: ['--version'] },
     docker: {
       image: 'decolua/9router:latest',
-      containerName: 'agentmate-9router',
+      containerName: 'runova-9router',
       runArgs: ['-p', '20128:20128', '-v', '${HOME}/.9router:/app/data'],
       dashboardUrl: 'http://localhost:20128',
     },
@@ -75,7 +75,7 @@ export const AGENT_TOOL_REGISTRY: AgentToolDefinition[] = [
     buildSettingsAction: (values) => ({
       kind: 'command',
       command:
-        `docker run -d --name agentmate-9router -p ${values.port}:20128 ` +
+        `docker run -d --name runova-9router -p ${values.port}:20128 ` +
         `-e INITIAL_PASSWORD=${values.initialPassword} -v \${HOME}/.9router:/app/data decolua/9router:latest`,
       cwd: 'none',
     }),
@@ -232,7 +232,7 @@ export const AGENT_TOOL_REGISTRY: AgentToolDefinition[] = [
     repositoryUrl: 'https://github.com/colbymchenry/codegraph',
     installKind: 'shell',
     // The standalone installers bundle their own Node. Neither puts codegraph on this shell's
-    // PATH, but the terminal AgentMate opens already has ~/.local/bin and
+    // PATH, but the terminal Runova opens already has ~/.local/bin and
     // %LOCALAPPDATA%\codegraph\current\bin on it, so the `codegraph install` that wires up the
     // agents can run right after in the same line.
     installCommand: {
@@ -332,7 +332,7 @@ export const AGENT_TOOL_REGISTRY: AgentToolDefinition[] = [
     detectCommand: { command: 'openclaw', args: ['--version'] },
     docker: {
       image: 'ghcr.io/openclaw/openclaw:latest',
-      containerName: 'agentmate-openclaw',
+      containerName: 'runova-openclaw',
       // Config and the auth-profile secrets live in separate dirs inside the image; both have to
       // be bind-mounted or the gateway re-onboards (and loses channel logins) on every recreate.
       runArgs: [
@@ -382,7 +382,7 @@ export const AGENT_TOOL_REGISTRY: AgentToolDefinition[] = [
       return {
         kind: 'command',
         command:
-          `docker run -d --name agentmate-openclaw -p ${values.port}:18789 ` +
+          `docker run -d --name runova-openclaw -p ${values.port}:18789 ` +
           (token ? `-e OPENCLAW_GATEWAY_TOKEN=${token} ` : '') +
           '-v ${HOME}/.openclaw:/home/node/.openclaw ' +
           '-v ${HOME}/.config/openclaw:/home/node/.config/openclaw' +
@@ -426,7 +426,7 @@ export const AGENT_TOOL_REGISTRY: AgentToolDefinition[] = [
     detectCommand: { command: 'hermes', args: ['--version'] },
     docker: {
       image: 'nousresearch/hermes-agent:latest',
-      containerName: 'agentmate-hermes',
+      containerName: 'runova-hermes',
       runArgs: [
         '-p',
         '8642:8642',
@@ -470,7 +470,7 @@ export const AGENT_TOOL_REGISTRY: AgentToolDefinition[] = [
       return {
         kind: 'command',
         command:
-          `docker run -d --name agentmate-hermes --restart unless-stopped ` +
+          `docker run -d --name runova-hermes --restart unless-stopped ` +
           `-p ${values.gatewayPort}:8642 ${dashboard}` +
           '-v ${HOME}/.hermes:/opt/data nousresearch/hermes-agent:latest gateway run',
         cwd: 'none',
@@ -544,18 +544,18 @@ export const AGENT_TOOL_REGISTRY: AgentToolDefinition[] = [
     id: LANGUAGETOOL_TOOL_ID,
     name: 'LanguageTool',
     description:
-      "Grammar, spelling, and style checker behind AgentMate's writing checks. Install it here to run every check offline on this machine instead of sending text to LanguageTool's public API. Needs Java 17 or newer on PATH.",
+      "Grammar, spelling, and style checker behind Runova's writing checks. Install it here to run every check offline on this machine instead of sending text to LanguageTool's public API. Needs Java 17 or newer on PATH.",
     category: 'Writing & Docs',
     tags: ['grammar', 'offline', 'java'],
     author: 'LanguageTool',
     official: true,
     websiteUrl: LANGUAGETOOL_WEBSITE_URL,
     repositoryUrl: LANGUAGETOOL_REPOSITORY_URL,
-    // No install command: it ships as a zip, and AgentMate runs the server out of
+    // No install command: it ships as a zip, and Runova runs the server out of
     // its own tools folder rather than installing anything system-wide. The card
     // has its own download/open-folder buttons instead.
     installKind: 'manual',
-    manualInstallInstructions: `1. Download ${LANGUAGETOOL_DOWNLOAD_URL}\n2. Extract it into AgentMate's tools folder (the "Open tools folder" button opens it).\n3. Turn on "Use local LanguageTool" in Settings > AI > Writing check.`,
+    manualInstallInstructions: `1. Download ${LANGUAGETOOL_DOWNLOAD_URL}\n2. Extract it into Runova's tools folder (the "Open tools folder" button opens it).\n3. Turn on "Use local LanguageTool" in Settings > AI > Writing check.`,
   },
   // --- Security & Code Scanning ---
   // Commands checked against each project's own docs on 2026-10-17. Semgrep has shipped native
@@ -667,7 +667,7 @@ export const AGENT_TOOL_REGISTRY: AgentToolDefinition[] = [
     id: 'bearer',
     name: 'Bearer',
     description:
-      'Data-flow analysis that follows sensitive data (PII, tokens, credentials) through your code and flags where it leaks. Complements pattern scanners rather than repeating them. Bearer ships no Windows build at all (no npm, winget or chocolatey package exists either), so on Windows AgentMate runs it through Docker, with your project mounted read-only. Nothing else to install.',
+      'Data-flow analysis that follows sensitive data (PII, tokens, credentials) through your code and flags where it leaks. Complements pattern scanners rather than repeating them. Bearer ships no Windows build at all (no npm, winget or chocolatey package exists either), so on Windows Runova runs it through Docker, with your project mounted read-only. Nothing else to install.',
     category: SECURITY_TOOL_CATEGORY,
     tags: ['sast', 'privacy', 'data-flow'],
     author: 'Bearer (Cycode)',
@@ -681,7 +681,7 @@ export const AGENT_TOOL_REGISTRY: AgentToolDefinition[] = [
         'curl -sfL https://raw.githubusercontent.com/Bearer/bearer/main/contrib/install.sh | sh -s -- -b "$HOME/.local/bin"',
     },
     manualInstallInstructions:
-      'Bearer publishes macOS and Linux builds only, and there is no npm, winget or chocolatey package for it. On Windows, run it through Docker: press "Pull Docker image" on this card, then scan from a project’s Security tab. AgentMate starts a container per scan with your project mounted read-only and removes it afterwards, so nothing else needs installing.',
+      'Bearer publishes macOS and Linux builds only, and there is no npm, winget or chocolatey package for it. On Windows, run it through Docker: press "Pull Docker image" on this card, then scan from a project’s Security tab. Runova starts a container per scan with your project mounted read-only and removes it afterwards, so nothing else needs installing.',
     updateCommand: {
       darwin: 'brew upgrade bearer/tap/bearer',
       linux:
@@ -727,16 +727,16 @@ export const AGENT_TOOL_REGISTRY: AgentToolDefinition[] = [
     updateCheck: { type: 'github-release', package: 'SonarSource/sonarqube' },
     docker: {
       image: 'sonarqube:community',
-      containerName: 'agentmate-sonarqube',
+      containerName: 'runova-sonarqube',
       runArgs: [
         '-p',
         '9000:9000',
         '-v',
-        'agentmate-sonarqube-data:/opt/sonarqube/data',
+        'runova-sonarqube-data:/opt/sonarqube/data',
         '-v',
-        'agentmate-sonarqube-extensions:/opt/sonarqube/extensions',
+        'runova-sonarqube-extensions:/opt/sonarqube/extensions',
         '-v',
-        'agentmate-sonarqube-logs:/opt/sonarqube/logs',
+        'runova-sonarqube-logs:/opt/sonarqube/logs',
       ],
       dashboardUrl: 'http://localhost:9000',
     },
@@ -753,11 +753,11 @@ export const AGENT_TOOL_REGISTRY: AgentToolDefinition[] = [
     websiteUrl: 'https://codeql.github.com',
     repositoryUrl: 'https://github.com/github/codeql-cli-binaries',
     // Not 'shell': there is no winget, chocolatey or apt package for CodeQL, so on Windows and
-    // Linux there is no command to run. AgentMate downloads the release zip itself instead, and
+    // Linux there is no command to run. Runova downloads the release zip itself instead, and
     // the card renders its own download/remove buttons rather than the generic Install one.
     installKind: 'manual',
     manualInstallInstructions:
-      'Press "Download CodeQL" on this card and AgentMate fetches the official release, checks it against the SHA-256 GitHub publishes beside it, and unpacks it into its own tools folder. Nothing goes on your PATH and nothing needs admin rights.\n\nIf you would rather install it yourself, download the bundle for your platform from https://github.com/github/codeql-cli-binaries/releases/latest, extract it somewhere permanent, and add that folder to your PATH. A codeql already on your PATH is always preferred over the downloaded copy.',
+      'Press "Download CodeQL" on this card and Runova fetches the official release, checks it against the SHA-256 GitHub publishes beside it, and unpacks it into its own tools folder. Nothing goes on your PATH and nothing needs admin rights.\n\nIf you would rather install it yourself, download the bundle for your platform from https://github.com/github/codeql-cli-binaries/releases/latest, extract it somewhere permanent, and add that folder to your PATH. A codeql already on your PATH is always preferred over the downloaded copy.',
     updateCheck: { type: 'github-release', package: 'github/codeql-cli-binaries' },
     detectCommand: { command: 'codeql', args: ['version', '--format=terse'] },
   },
@@ -815,7 +815,7 @@ export const AGENT_TOOL_REGISTRY: AgentToolDefinition[] = [
       kind: 'copy-text',
       content: `STRIX_LLM=${values.model}\nLLM_API_KEY=${values.apiKey}`,
       instructions:
-        'Set these as environment variables, or store them in a project\u2019s Security tab so AgentMate passes them for you.',
+        'Set these as environment variables, or store them in a project\u2019s Security tab so Runova passes them for you.',
     }),
   },
 ];

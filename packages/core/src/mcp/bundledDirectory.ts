@@ -13,7 +13,7 @@ export const BOWORA_MCP_REPOSITORY_ID = 'bowora-directory';
 export const bundledMcpDirectory: McpRepositoryIndex = McpRepositoryIndexSchema.parse({
   name: 'Bowora MCP Directory',
   description:
-    'Curated MCP servers, bundled with AgentMate for offline browsing and one-click install.',
+    'Curated MCP servers, bundled with Runova for offline browsing and one-click install.',
   servers: [
     {
       id: 'jscpd',

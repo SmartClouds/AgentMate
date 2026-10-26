@@ -1,4 +1,4 @@
-import { STUDIO_TTS, type StudioTtsVoice } from '@agentmat/core';
+import { STUDIO_TTS, type StudioTtsVoice } from '@runova/core';
 import { type WordTiming, wordsFromCharacters } from '../../voice/text.js';
 import { isLocalEngine, type TtsEngineId, type VoiceEngineId } from '../../voice/voices.js';
 import { encodeWav, parseWav } from '../../voice/wav.js';
@@ -245,7 +245,7 @@ export async function speak(input: SpeakInput): Promise<SpokenAudio> {
         'Ocp-Apim-Subscription-Key': azure.key,
         'Content-Type': 'application/ssml+xml',
         'X-Microsoft-OutputFormat': 'riff-48khz-16bit-mono-pcm',
-        'User-Agent': 'AgentMate-Studio',
+        'User-Agent': 'Runova-Studio',
       },
       body: ssml,
     },
@@ -269,7 +269,7 @@ export async function cloneElevenLabsVoice(input: {
   const form = new FormData();
   form.append('name', input.name);
   form.append('files', new Blob([new Uint8Array(input.wav)], { type: 'audio/wav' }), 'voice.wav');
-  form.append('description', 'Made from an AgentMate Studio voice profile.');
+  form.append('description', 'Made from a Runova Studio voice profile.');
   const response = await request(
     'elevenlabs',
     { engine: 'elevenlabs', voice: '', text: '', lang: '', keys: {}, fetch: input.fetch },

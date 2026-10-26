@@ -1,4 +1,4 @@
-import { CATALOG_TEMPLATES, findCatalogTemplate } from '@agentmat/core';
+import { CATALOG_TEMPLATES, findCatalogTemplate } from '@runova/core';
 import { coreErrorMessage } from '@shared/coreErrors';
 import type { DeployServer } from '@shared/deployTypes';
 import { useQueryClient } from '@tanstack/react-query';
@@ -95,7 +95,7 @@ export function AppStorePanel({ server }: { server: DeployServer }): React.JSX.E
     const siteId = suggestId(domain);
     let at: ExposeStep['id'] = 'site';
     try {
-      const saved = await window.agentmat.deploySites.save(serverId, {
+      const saved = await window.runova.deploySites.save(serverId, {
         id: siteId,
         domains: [domain],
         upstream: {
@@ -122,7 +122,7 @@ export function AppStorePanel({ server }: { server: DeployServer }): React.JSX.E
       });
       at = 'apply';
       step(stackId, 'apply', { state: 'running' });
-      const applied = await window.agentmat.deploySites.applyChanges(serverId);
+      const applied = await window.runova.deploySites.applyChanges(serverId);
       if (!applied.applied) throw new Error(applied.error ?? 'nginx kept its old configuration.');
       step(stackId, 'apply', { state: 'done' });
       if (!request.draft.certificate) {
@@ -134,7 +134,7 @@ export function AppStorePanel({ server }: { server: DeployServer }): React.JSX.E
       }
       at = 'certificate';
       step(stackId, 'certificate', { state: 'running' });
-      await window.agentmat.deployCerts.issue({
+      await window.runova.deployCerts.issue({
         serverId,
         siteId,
         acceptTermsOfService: true,
@@ -155,7 +155,7 @@ export function AppStorePanel({ server }: { server: DeployServer }): React.JSX.E
     setBusy(true);
     setError(null);
     try {
-      const result = await window.agentmat.deployAppStore.install({
+      const result = await window.runova.deployAppStore.install({
         serverId,
         templateId: request.template.id,
         version: request.draft.version,

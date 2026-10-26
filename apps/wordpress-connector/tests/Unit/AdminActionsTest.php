@@ -2,18 +2,18 @@
 /**
  * wp-admin actions: capability first, then the nonce, then the work.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Unit;
+namespace Runova\Connector\Tests\Unit;
 
-use AgentMate\Connector\Admin\AdminActions;
-use AgentMate\Connector\Audit\AuditLog;
-use AgentMate\Connector\Auth\ConnectionKey;
-use AgentMate\Connector\Auth\KeyService;
-use AgentMate\Connector\Deploy\DeployService;
-use AgentMate\Connector\Tests\Support\DeployTestCase;
-use AgentMate\Connector\Tests\Support\FakeAdminContext;
+use Runova\Connector\Admin\AdminActions;
+use Runova\Connector\Audit\AuditLog;
+use Runova\Connector\Auth\ConnectionKey;
+use Runova\Connector\Auth\KeyService;
+use Runova\Connector\Deploy\DeployService;
+use Runova\Connector\Tests\Support\DeployTestCase;
+use Runova\Connector\Tests\Support\FakeAdminContext;
 
 final class AdminActionsTest extends DeployTestCase
 {

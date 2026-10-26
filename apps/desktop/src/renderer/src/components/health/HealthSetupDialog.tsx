@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { HealthTargetDetail, HealthTargetSummary } from '@shared/healthTypes';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -69,7 +69,7 @@ export function HealthSetupDialog({
 
   const setup = useQuery({
     queryKey: [...queryKeys.healthTarget(target.id), 'setup'],
-    queryFn: () => window.agentmat.health.setupPrompt(target.id),
+    queryFn: () => window.runova.health.setupPrompt(target.id),
     enabled: open,
     staleTime: Number.POSITIVE_INFINITY,
     retry: false,
@@ -103,7 +103,7 @@ export function HealthSetupDialog({
             Give this prompt to your AI agent. It adds a secured health endpoint to{' '}
             {project?.name ?? 'the project'} at{' '}
             <span className="font-mono">{targetHost(target.url)}</span> that answers in the format
-            AgentMate reads. Then set the key's hash on the server and test the connection.
+            Runova reads. Then set the key's hash on the server and test the connection.
           </DialogDescription>
         </DialogHeader>
 

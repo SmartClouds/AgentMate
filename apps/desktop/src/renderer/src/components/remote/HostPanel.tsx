@@ -48,20 +48,20 @@ export function HostPanel(): React.JSX.Element {
 
   async function toggleHosting(): Promise<void> {
     if (hosting) {
-      await window.agentmat.remote.stopHost();
+      await window.runova.remote.stopHost();
     } else {
       if (!ip) {
         toast.error('Pick an IP address to host on.');
         return;
       }
-      await window.agentmat.remote.startHost({ ip, port });
+      await window.runova.remote.startHost({ ip, port });
     }
   }
 
   async function generateCode(): Promise<void> {
     setGenerating(true);
     try {
-      await window.agentmat.remote.generatePairingCode();
+      await window.runova.remote.generatePairingCode();
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -84,7 +84,7 @@ export function HostPanel(): React.JSX.Element {
         <RemoteCardHeader
           icon={Broadcast}
           title="Allow this machine to be controlled"
-          description="Bind a WebSocket server to one of your network addresses, then share a one-time code so another AgentMate can connect and control this device."
+          description="Bind a WebSocket server to one of your network addresses, then share a one-time code so another Runova can connect and control this device."
         />
         <div className={cn('settings-rows', FOOTER_HAIRLINE)}>
           <RemoteRow
@@ -222,13 +222,10 @@ export function HostPanel(): React.JSX.Element {
             actions={
               peers.length > 0 ? (
                 <>
-                  <Button
-                    variant="soft"
-                    onClick={() => void window.agentmat.remote.sendClipboard()}
-                  >
+                  <Button variant="soft" onClick={() => void window.runova.remote.sendClipboard()}>
                     <Send className="h-3.5 w-3.5" /> Send clipboard
                   </Button>
-                  <Button variant="soft" onClick={() => void window.agentmat.remote.sendFile()}>
+                  <Button variant="soft" onClick={() => void window.runova.remote.sendFile()}>
                     <Upload className="h-3.5 w-3.5" /> Send file
                   </Button>
                 </>

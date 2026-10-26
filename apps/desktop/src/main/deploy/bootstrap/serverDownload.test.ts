@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { quoteForShell } from '@agentmat/core';
+import { quoteForShell } from '@runova/core';
 import { describe, expect, it } from 'vitest';
 import { tempDir } from '../../../test/main/fixtures';
 import { CHECKSUM_MISMATCH_EXIT } from './installPlan';
@@ -14,8 +14,8 @@ import { downloadCommand, parseProbe, probeCommand } from './serverDownload';
  * checksum. Neither ever names anything but a release asset of the right shape.
  */
 
-const FILE = 'agentmate-core-1.53.0-linux-x64.tar.gz';
-const URL = `https://github.com/SmartClouds/AgentMate/releases/download/v1.53.0/${FILE}`;
+const FILE = 'runova-core-1.53.0-linux-x64.tar.gz';
+const URL = `https://github.com/SmartClouds/Runova/releases/download/v1.53.0/${FILE}`;
 const BODY = 'tarball bytes';
 const SHA = createHash('sha256').update(BODY).digest('hex');
 
@@ -42,12 +42,12 @@ describe('probeCommand', () => {
   });
 
   it.each([
-    'https://example.com/agentmate-core-1.53.0-linux-x64.tar.gz',
-    'http://github.com/SmartClouds/AgentMate/releases/download/v1.53.0/agentmate-core-1.53.0-linux-x64.tar.gz',
+    'https://example.com/runova-core-1.53.0-linux-x64.tar.gz',
+    'http://github.com/SmartClouds/Runova/releases/download/v1.53.0/runova-core-1.53.0-linux-x64.tar.gz',
     `${URL}; rm -rf /`,
     `${URL}' && echo pwned '`,
-    'https://github.com/SmartClouds/AgentMate/releases/download/v1.53.0/other.tar.gz',
-    'https://github.com/SmartClouds/AgentMate/releases/download/v1.53.0/agentmate-core-1.53.0-windows-x64.tar.gz',
+    'https://github.com/SmartClouds/Runova/releases/download/v1.53.0/other.tar.gz',
+    'https://github.com/SmartClouds/Runova/releases/download/v1.53.0/runova-core-1.53.0-windows-x64.tar.gz',
   ])('refuses an address that is not a server core release: %s', (address) => {
     expect(() => probeCommand(address)).toThrow(/not a server core release address/);
   });
@@ -72,18 +72,18 @@ describe('downloadCommand', () => {
   const input = {
     tool: 'curl',
     url: URL,
-    directory: '/tmp/agentmate.Test123456',
+    directory: '/tmp/runova.Test123456',
     file: FILE,
     sha256: SHA,
   } as const;
 
-  const saved = q(`/tmp/agentmate.Test123456/${FILE}`);
+  const saved = q(`/tmp/runova.Test123456/${FILE}`);
 
   it('saves the release in the staging folder and checks its checksum there', () => {
     const script = scriptOf(downloadCommand(input));
 
     expect(script).toContain(`-o ${saved} ${q(URL)}`);
-    expect(script).toContain(`cd ${q('/tmp/agentmate.Test123456')}`);
+    expect(script).toContain(`cd ${q('/tmp/runova.Test123456')}`);
     expect(script).toContain(`${SHA} ${q(FILE)}`);
     expect(script).toContain('sha256sum -c --status');
     expect(script).toContain(`(exit ${CHECKSUM_MISMATCH_EXIT})`);
@@ -105,9 +105,9 @@ describe('downloadCommand', () => {
   });
 
   it('refuses a file that is not the one the address points at', () => {
-    expect(() =>
-      downloadCommand({ ...input, file: 'agentmate-core-1.0.0-linux-x64.tar.gz' }),
-    ).toThrow(/does not point at/);
+    expect(() => downloadCommand({ ...input, file: 'runova-core-1.0.0-linux-x64.tar.gz' })).toThrow(
+      /does not point at/,
+    );
   });
 
   it('refuses a checksum that is not a SHA-256', () => {

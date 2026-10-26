@@ -57,7 +57,7 @@ export function EnvCredentialDialog({
 
     let cancelled = false;
     setLoading(true);
-    window.agentmat.environments
+    window.runova.environments
       .revealCredential(environment.id, initial.id)
       .then((values) => {
         if (cancelled) return;
@@ -84,7 +84,7 @@ export function EnvCredentialDialog({
     if (!canSubmit) return;
     setSubmitting(true);
     try {
-      await window.agentmat.environments.saveCredential({
+      await window.runova.environments.saveCredential({
         environmentId: environment.id,
         id: initial?.id,
         label: label.trim(),

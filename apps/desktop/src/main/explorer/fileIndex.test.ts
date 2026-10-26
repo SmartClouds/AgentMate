@@ -56,7 +56,7 @@ describe('indexProjectFiles', () => {
   });
 
   it('walks a folder that is not a repository, skipping generated folders', async () => {
-    const dir = tempDir('agentmate-index-');
+    const dir = tempDir('runova-index-');
     writeTree(dir, {
       'app.js': 'x',
       'lib/util.js': 'x',
@@ -71,7 +71,7 @@ describe('indexProjectFiles', () => {
   });
 
   it('reports the folder the paths are relative to, resolved', async () => {
-    const dir = tempDir('agentmate-index-root-');
+    const dir = tempDir('runova-index-root-');
     writeTree(dir, { 'lib/a.txt': 'x' });
 
     const index = await indexProjectFiles(join(dir, 'lib', '..'));

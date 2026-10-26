@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { type FakeBridge, installAgentmatBridge } from '../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../test/renderer/runovaBridge';
 import {
   closeTerminalTab,
   pickRunToStop,
@@ -40,7 +40,7 @@ function outputs() {
 }
 
 beforeEach(() => {
-  bridge = installAgentmatBridge();
+  bridge = installRunovaBridge();
   toast.info.mockClear();
   toast.success.mockClear();
   useRunSessionStore.setState({ outputs: {} });
@@ -210,7 +210,7 @@ describe('Docker containers a stopped run leaves behind', () => {
 
   beforeEach(() => {
     runningForProject = vi.fn(async () => []);
-    bridge = installAgentmatBridge({ 'docker.runningForProject': runningForProject });
+    bridge = installRunovaBridge({ 'docker.runningForProject': runningForProject });
   });
 
   it('looks for the project containers in the folder the run was started in', async () => {

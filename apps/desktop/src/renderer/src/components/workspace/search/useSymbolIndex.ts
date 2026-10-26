@@ -20,11 +20,11 @@ export function useSymbolIndex(projectId: string, enabled: boolean) {
     enabled,
     queryFn: async (): Promise<SymbolIndex> => {
       const held = queryClient.getQueryData<SymbolIndex>(key);
-      const payload = await window.agentmat.workspaceSearch.symbols(projectId, held?.version);
+      const payload = await window.runova.workspaceSearch.symbols(projectId, held?.version);
       if ('unchanged' in payload) {
         if (held) return held;
         // The cache was dropped between asking and answering; ask for the whole thing.
-        const full = await window.agentmat.workspaceSearch.symbols(projectId);
+        const full = await window.runova.workspaceSearch.symbols(projectId);
         if ('unchanged' in full) throw new Error('The symbol index could not be read.');
         return full;
       }

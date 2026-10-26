@@ -1,4 +1,4 @@
-import type { SiteInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { SiteInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { Globe, Pencil, Plus } from '@/components/icons';
 import { Chip, EmptyState, FOOTER_HAIRLINE, GLASS_CARD, TileHeader } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,7 @@ export function SitesCard({
   loading: boolean;
   error: string | null;
   admin: boolean;
-  /** Sites can be added once AgentMate looks after nginx. */
+  /** Sites can be added once Runova looks after nginx. */
   managed: boolean;
   onOpen: (siteId: string, tab: SiteTab) => void;
   onAdd: () => void;

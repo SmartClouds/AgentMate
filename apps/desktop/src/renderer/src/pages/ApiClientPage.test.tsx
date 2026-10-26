@@ -1,4 +1,4 @@
-import { POSTMAN_SCHEMA_V21, type PostmanCollection } from '@agentmat/core';
+import { POSTMAN_SCHEMA_V21, type PostmanCollection } from '@runova/core';
 import type { ApiCollectionSummary, ApiExecutionResult } from '@shared/apiClientTypes';
 import { screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

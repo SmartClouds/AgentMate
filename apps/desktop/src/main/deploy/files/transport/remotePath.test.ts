@@ -29,7 +29,7 @@ describe('remote paths', () => {
   });
 
   it('names a part file next to the target, without a leading dot', () => {
-    expect(partPathFor('/srv/a.css', 'deadbeef')).toBe('/srv/a.css.agentmate-deadbeef.part');
+    expect(partPathFor('/srv/a.css', 'deadbeef')).toBe('/srv/a.css.runova-deadbeef.part');
     const random = partPathFor('/srv/a.css');
     expect(random).toMatch(PART_FILE);
     expect(baseName(random).startsWith('.')).toBe(false);

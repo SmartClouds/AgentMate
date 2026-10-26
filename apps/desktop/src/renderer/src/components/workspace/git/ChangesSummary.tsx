@@ -1,4 +1,4 @@
-import type { GitChangeEntry } from '@agentmat/core';
+import type { GitChangeEntry } from '@runova/core';
 import type { WorkspaceGitState } from '@shared/apiTypes';
 import { ChevronRight } from '@/components/icons';
 import { SimpleTooltip } from '@/components/ui/tooltip';

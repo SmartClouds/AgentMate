@@ -8,7 +8,7 @@ import { useRelayContextStore } from './useRelay';
 
 const PROJECTS = [
   { id: 'p1', name: 'CuraLink' },
-  { id: 'p2', name: 'AgentMate' },
+  { id: 'p2', name: 'Runova' },
 ];
 
 function live() {

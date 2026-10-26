@@ -195,7 +195,7 @@ export function GitBranchHistoryDialog({
 }): React.JSX.Element {
   const historyQuery = useQuery({
     queryKey: queryKeys.gitBranchHistory(projectId, branch ?? ''),
-    queryFn: () => window.agentmat.git.branchHistory(projectId, branch ?? ''),
+    queryFn: () => window.runova.git.branchHistory(projectId, branch ?? ''),
     enabled: open && Boolean(branch),
   });
 

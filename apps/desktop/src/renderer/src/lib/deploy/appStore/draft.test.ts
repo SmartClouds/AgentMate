@@ -1,4 +1,4 @@
-import { findCatalogTemplate } from '@agentmat/core';
+import { findCatalogTemplate } from '@runova/core';
 import { describe, expect, it } from 'vitest';
 import { checkDraft, initialDraft, paramsFromDraft, regenerate, secretsInUse } from './draft';
 

@@ -1,7 +1,7 @@
 import type {
   CertificateInfo,
   SiteInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { describe, expect, it } from 'vitest';
 import { certificateBadge, DAY_MS, daysLeft, relative, renewalText } from './certificates';
 import { blankDraft, draftFromSite, suggestId } from './draft';

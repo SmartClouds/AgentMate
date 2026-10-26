@@ -3,7 +3,7 @@ import {
   getCliDefinition,
   type ProjectDraft,
   type ScheduledTask,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { PromptHistoryEntry } from '@shared/apiTypes';
 import { useEffect, useRef, useState } from 'react';
 import { CliLogo } from '@/components/cliLogos';

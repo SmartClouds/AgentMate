@@ -1,4 +1,4 @@
-import type { Aspect } from '@agentmat/studio';
+import type { Aspect } from '@runova/studio';
 import { useState } from 'react';
 import { Button, ChevronDown, cn, GLASS_CARD, Sparkles } from '../kit';
 import { BriefFields, type BriefValue } from './BriefFields';

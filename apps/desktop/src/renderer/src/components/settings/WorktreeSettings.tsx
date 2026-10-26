@@ -3,7 +3,7 @@ import {
   type Project,
   type ProjectWorktreeSetup,
   type WorktreeSettings,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { FolderOpen, GitBranch } from '@/components/icons';
@@ -83,7 +83,7 @@ export function WorktreeSettingsForm(): React.JSX.Element {
   const globsId = useId();
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
   });
   const saved = settingsQuery.data?.worktrees ?? DEFAULT_WORKTREE_SETTINGS;
   const [globs, setGlobs] = useState(toLines(saved.copyGlobs));
@@ -93,7 +93,7 @@ export function WorktreeSettingsForm(): React.JSX.Element {
   useEffect(() => setGlobs(toLines(saved.copyGlobs)), [settingsQuery.data?.worktrees]);
 
   const mutation = useMutation({
-    mutationFn: (next: WorktreeSettings) => window.agentmat.settings.update({ worktrees: next }),
+    mutationFn: (next: WorktreeSettings) => window.runova.settings.update({ worktrees: next }),
     meta: { silentLoading: true },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.settings }),
   });
@@ -101,7 +101,7 @@ export function WorktreeSettingsForm(): React.JSX.Element {
   useDebouncedSave(fromLines(globs), saved.copyGlobs, (copyGlobs) => save({ copyGlobs }));
 
   async function pickFolder(): Promise<void> {
-    const picked = await window.agentmat.worktrees.pickLocation(saved.baseDir);
+    const picked = await window.runova.worktrees.pickLocation(saved.baseDir);
     if (picked) save({ baseDir: picked });
   }
 
@@ -191,7 +191,7 @@ export function ProjectWorktreeSetupForm({ project }: { project: Project }): Rea
   const globsId = useId();
   const appGlobs = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
   }).data?.worktrees?.copyGlobs;
   const saved = project.worktreeSetup;
   const [command, setCommand] = useState(saved.command);
@@ -199,7 +199,7 @@ export function ProjectWorktreeSetupForm({ project }: { project: Project }): Rea
 
   const mutation = useMutation({
     mutationFn: (next: ProjectWorktreeSetup) =>
-      window.agentmat.projects.update(project.id, { worktreeSetup: next }),
+      window.runova.projects.update(project.id, { worktreeSetup: next }),
     meta: { silentLoading: true },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.projects }),
   });

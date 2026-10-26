@@ -1,4 +1,4 @@
-import type { LinkCandidateProject, RemoteProject } from '@agentmat/core';
+import type { LinkCandidateProject, RemoteProject } from '@runova/core';
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { ConfirmDialogHost } from '@/components/ConfirmDialog';
@@ -22,8 +22,8 @@ const suggest = vi.hoisted(() =>
     remote.filter((one) => one.slug.startsWith(candidate.name.toLowerCase())),
   ),
 );
-vi.mock('@agentmat/core', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@agentmat/core')>()),
+vi.mock('@runova/core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@runova/core')>()),
   suggestRemoteProjects: suggest,
 }));
 

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { type FakeBridge, installAgentmatBridge } from '../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../test/renderer/runovaBridge';
 import {
   applyInitialTheme,
   initTheme,
@@ -44,7 +44,7 @@ beforeEach(() => {
     }),
   });
   document.documentElement.className = '';
-  bridge = installAgentmatBridge({ 'settings.get': async () => ({ theme: 'system' }) });
+  bridge = installRunovaBridge({ 'settings.get': async () => ({ theme: 'system' }) });
   useThemeStore.setState({ theme: 'system' });
 });
 
@@ -120,7 +120,7 @@ describe('setTheme', () => {
 
 describe('initTheme', () => {
   it('paints and stores whatever was saved in settings', async () => {
-    installAgentmatBridge({ 'settings.get': async () => ({ theme: 'vscode-dark' }) });
+    installRunovaBridge({ 'settings.get': async () => ({ theme: 'vscode-dark' }) });
     await initTheme();
     expect(useThemeStore.getState().theme).toBe('vscode-dark');
     expect(classes()).toEqual(['dark', 'theme-vscode-dark']);
@@ -169,7 +169,7 @@ describe('themeFromSearch', () => {
 describe('applyInitialTheme', () => {
   it('paints the saved theme before the settings call has answered', () => {
     // The settings call never answers here, the way it can stall behind a busy startup.
-    installAgentmatBridge({ 'settings.get': () => new Promise(() => undefined) });
+    installRunovaBridge({ 'settings.get': () => new Promise(() => undefined) });
     void initTheme();
     applyInitialTheme('?glass=mica&theme=dark');
     expect(classes()).toEqual(['dark']);
@@ -202,14 +202,14 @@ describe('applyInitialTheme', () => {
 
   it('does not save anything, since the theme came from settings', () => {
     const update = vi.fn();
-    installAgentmatBridge({ 'settings.update': update });
+    installRunovaBridge({ 'settings.update': update });
     applyInitialTheme('?theme=light');
     expect(update).not.toHaveBeenCalled();
   });
 
   it('agrees with initTheme, so settings answering later changes nothing', async () => {
     applyInitialTheme('?theme=vscode-dark');
-    installAgentmatBridge({ 'settings.get': async () => ({ theme: 'vscode-dark' }) });
+    installRunovaBridge({ 'settings.get': async () => ({ theme: 'vscode-dark' }) });
     await initTheme();
     expect(classes()).toEqual(['dark', 'theme-vscode-dark']);
   });

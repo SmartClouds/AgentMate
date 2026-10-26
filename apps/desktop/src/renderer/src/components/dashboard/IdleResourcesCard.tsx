@@ -1,4 +1,4 @@
-import { type ActivityResource, formatIdleDuration } from '@agentmat/core';
+import { type ActivityResource, formatIdleDuration } from '@runova/core';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
@@ -113,7 +113,7 @@ export function IdleResourcesCard({
   const { pendingKeys, stopOne, stopAll } = useStopIdleResources();
 
   const refresh = useMutation({
-    mutationFn: () => window.agentmat.resourceActivity.snapshot({ fresh: true }),
+    mutationFn: () => window.runova.resourceActivity.snapshot({ fresh: true }),
     meta: { silentLoading: true },
     onSuccess: (snapshot) => queryClient.setQueryData(queryKeys.resourceActivity, snapshot),
     onError: () => toast.error('Could not refresh Docker and emulator usage.'),

@@ -8,7 +8,7 @@ import {
   type WpPairResponse,
   wpCanonicalPair,
   wpKeyTransportSecurity,
-} from '@agentmat/core';
+} from '@runova/core';
 import { wordPressError } from '../../../shared/wordpressErrors';
 import { WpClient, type WpEndpointKind, type WpHttpAuth, WpRemoteError } from './client';
 import { generateWpKeyPair, hmacSha256, privateKeyFromPem, type WpKeyPair } from './crypto';
@@ -41,12 +41,12 @@ export function readConnectionKey(text: string, nowSeconds: number): WpConnectio
     case 'version':
       throw wordPressError(
         'keyInvalid',
-        'That key is for another version of AgentMate Connector. Update AgentMate and the plugin so they match.',
+        'That key is for another version of Runova Connector. Update Runova and the plugin so they match.',
       );
     default:
       throw wordPressError(
         'keyInvalid',
-        'That connection key is incomplete or damaged. Copy it again from AgentMate Connector in wp-admin.',
+        'That connection key is incomplete or damaged. Copy it again from Runova Connector in wp-admin.',
       );
   }
 }
@@ -56,7 +56,7 @@ export function checkPlainHttp(security: WpTransportSecurity, allowPlainHttp: bo
   if (security === 'plain-http' && !allowPlainHttp) {
     throw wordPressError(
       'plainHttpRefused',
-      'This site uses plain HTTP, so anyone on the network could read what AgentMate sends and receives. Switch the site to HTTPS, or allow plain HTTP for it.',
+      'This site uses plain HTTP, so anyone on the network could read what Runova sends and receives. Switch the site to HTTPS, or allow plain HTTP for it.',
     );
   }
 }
@@ -64,7 +64,7 @@ export function checkPlainHttp(security: WpTransportSecurity, allowPlainHttp: bo
 /** The name the site lists this computer under: the host name, made safe, 1 to 64 characters. */
 export function wpDeviceName(hostname: string): string {
   const name = cleanSiteText(hostname, 64);
-  return name === '' ? 'AgentMate' : name;
+  return name === '' ? 'Runova' : name;
 }
 
 /**
@@ -154,11 +154,11 @@ export async function pairWithSite(input: WpPairInput): Promise<WpPairResult> {
     throw hello.protocol < WP_PROTOCOL_VERSION
       ? wordPressError(
           'connectorOutdated',
-          'The site runs an older AgentMate Connector. Install the plugin that comes with this version of AgentMate.',
+          'The site runs an older Runova Connector. Install the plugin that comes with this version of Runova.',
         )
       : wordPressError(
           'protocolMismatch',
-          'The site runs a newer AgentMate Connector than this app understands. Update AgentMate.',
+          'The site runs a newer Runova Connector than this app understands. Update Runova.',
         );
   }
   const clockOffset = Number.isSafeInteger(hello.serverTime)
@@ -192,6 +192,7 @@ export async function pairWithSite(input: WpPairInput): Promise<WpPairResult> {
           deviceName,
           timestamp,
           nonce,
+          prefix: pairClient.signingPrefix,
         }),
       ),
     }),
@@ -206,7 +207,7 @@ export async function pairWithSite(input: WpPairInput): Promise<WpPairResult> {
   ) {
     throw wordPressError(
       'internal',
-      'The site answered the pairing with something AgentMate could not use. Update the plugin and try a new key.',
+      'The site answered the pairing with something Runova could not use. Update the plugin and try a new key.',
     );
   }
   return {

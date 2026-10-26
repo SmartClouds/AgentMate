@@ -7,7 +7,7 @@ import {
   widgetAlwaysOnTop,
   widgetBackgroundColor,
   widgetPeriod,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
@@ -42,7 +42,7 @@ export default function WidgetRoute(): React.JSX.Element {
 
   const instanceQuery = useQuery({
     queryKey: ['usage-widget-instance', id],
-    queryFn: () => window.agentmat.usage.getWidget(id),
+    queryFn: () => window.runova.usage.getWidget(id),
   });
 
   const instance = instanceQuery.data ?? null;
@@ -51,14 +51,14 @@ export default function WidgetRoute(): React.JSX.Element {
 
   // Re-read the instance when the main process reports a style/size change.
   useEffect(() => {
-    return window.agentmat.usage.onWidgetUpdated((payload) => {
+    return window.runova.usage.onWidgetUpdated((payload) => {
       if (payload.id === id) void instanceQuery.refetch();
     });
   }, [id, instanceQuery]);
 
   const usageQuery = useQuery({
     queryKey: ['usage-widget-data', providerId],
-    queryFn: () => window.agentmat.usage.get(providerId as string),
+    queryFn: () => window.runova.usage.get(providerId as string),
     enabled: !!providerId && !isAllAgents,
     refetchInterval: 60_000,
   });
@@ -76,7 +76,7 @@ export default function WidgetRoute(): React.JSX.Element {
   const canToggle = !!usage && hasSubscriptionView(usage);
 
   async function patch(next: OpenWidgetOptions): Promise<void> {
-    await window.agentmat.usage.configureWidget(id, next);
+    await window.runova.usage.configureWidget(id, next);
     await instanceQuery.refetch();
   }
 
@@ -144,7 +144,7 @@ export default function WidgetRoute(): React.JSX.Element {
               variant="ghost"
               size="sm"
               className="mt-3 w-full justify-start text-destructive hover:text-destructive"
-              onClick={() => void window.agentmat.usage.closeWidget(id)}
+              onClick={() => void window.runova.usage.closeWidget(id)}
             >
               <Trash2 className="h-3.5 w-3.5" />
               Remove from desktop

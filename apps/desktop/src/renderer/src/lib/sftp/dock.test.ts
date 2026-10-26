@@ -4,7 +4,7 @@ import {
   terminalMaxHeight,
   useTerminalStore,
 } from '@/stores/terminalStore';
-import { type FakeBridge, installAgentmatBridge } from '../../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../../test/renderer/runovaBridge';
 import { closeSftpDock, DOCK_MIN_HEIGHT, dockDrawerHeight, openSftpDock } from './dock';
 
 /** The file manager docked as a terminal drawer tab (E25 F6): one tab per server. */
@@ -22,7 +22,7 @@ function sftpTabs() {
 const innerHeight = window.innerHeight;
 
 beforeEach(() => {
-  bridge = installAgentmatBridge({ platform: 'win32' });
+  bridge = installRunovaBridge({ platform: 'win32' });
   useTerminalStore.setState({
     isOpen: false,
     isMaximized: false,

@@ -4,7 +4,7 @@ import { isTitleBarBlankDoubleClick } from './titleBar';
 function bar(): HTMLDivElement {
   const root = document.createElement('div');
   root.innerHTML = `
-    <span id="name">AgentMate</span>
+    <span id="name">Runova</span>
     <button id="back" disabled><svg id="arrow"></svg></button>
     <button id="search" data-search-anchor=""><span id="placeholder">Search</span></button>
     <a id="link" href="#/">Home</a>`;

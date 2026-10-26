@@ -12,7 +12,7 @@ import { totpCode } from './totp';
 test.skip(!dotnetAvailable(), 'needs the .NET SDK to build the server core DevHost');
 
 /** The DevHost's fixed development owner (see its DevHost.cs); the sign-in dialog says so too. */
-const DEV_PASSWORD = 'agentmate-local-password';
+const DEV_PASSWORD = 'runova-local-password';
 
 let devHost: DevHost | undefined;
 let launched: LaunchedApp | undefined;
@@ -35,7 +35,7 @@ test('shows the DevHost core as online with its version and uptime', async () =>
   if (!devHost) throw new Error('DevHost did not start');
   launched = await launchApp({
     settings: {},
-    env: { AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port) },
+    env: { RUNOVA_DEPLOY_DEV_CORE: String(devHost.port) },
   });
   const { page } = launched;
 
@@ -55,7 +55,7 @@ test("lists the DevHost's user and marks this computer in the Security area", as
   if (!devHost) throw new Error('DevHost did not start');
   launched = await launchApp({
     settings: {},
-    env: { AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port) },
+    env: { RUNOVA_DEPLOY_DEV_CORE: String(devHost.port) },
   });
   const { page } = launched;
   await page.getByRole('link', { name: 'Deploy' }).click();
@@ -101,7 +101,7 @@ test("shows the DevHost's Overview live, lists its updates, and comes back after
   if (!devHost) throw new Error('DevHost did not start');
   launched = await launchApp({
     settings: {},
-    env: { AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port) },
+    env: { RUNOVA_DEPLOY_DEV_CORE: String(devHost.port) },
   });
   const { page } = launched;
   await page.getByRole('link', { name: 'Deploy' }).click();
@@ -166,7 +166,7 @@ test('signs in to the DevHost, turns two-factor on, and asks for a code from the
   if (!devHost) throw new Error('DevHost did not start');
   launched = await launchApp({
     settings: {},
-    env: { AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port) },
+    env: { RUNOVA_DEPLOY_DEV_CORE: String(devHost.port) },
   });
   const { page } = launched;
   await page.getByRole('link', { name: 'Deploy' }).click();

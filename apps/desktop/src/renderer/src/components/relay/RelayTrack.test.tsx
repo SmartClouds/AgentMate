@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { act, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useRelayBoardStore } from '@/stores/relayBoardStore';
@@ -115,7 +115,7 @@ describe('RelayTrack', () => {
       bridge: {
         'relay.board': board({ tasks }),
         'relay.prepareRun': {
-          prompt: 'AgentMate Relay: task T003',
+          prompt: 'Runova Relay: task T003',
           choice: { cliId: 'claude-code', model: 'opus', effort: 'high', autoSize: false },
           planFirst: false,
           legNo: 1,

@@ -62,7 +62,7 @@ function SavedSshServerRow({
     if (!confirmed) return;
     setRemoving(true);
     try {
-      await window.agentmat.ssh.removeServer(server.id);
+      await window.runova.ssh.removeServer(server.id);
       onRemoved();
     } finally {
       setRemoving(false);
@@ -165,7 +165,7 @@ export function SshServersPanel(): React.JSX.Element {
 
   const serversQuery = useQuery({
     queryKey: queryKeys.sshServers,
-    queryFn: () => window.agentmat.ssh.listServers(),
+    queryFn: () => window.runova.ssh.listServers(),
   });
   const servers = serversQuery.data ?? [];
 
@@ -174,7 +174,7 @@ export function SshServersPanel(): React.JSX.Element {
   }
 
   const reorderMutation = useMutation({
-    mutationFn: (orderedIds: string[]) => window.agentmat.ssh.reorderServers(orderedIds),
+    mutationFn: (orderedIds: string[]) => window.runova.ssh.reorderServers(orderedIds),
     onSuccess: (saved) => queryClient.setQueryData(queryKeys.sshServers, saved),
     onError: (error) => {
       toast.error(ipcErrorMessage(error, 'Could not save the new order.'));
@@ -228,7 +228,7 @@ export function SshServersPanel(): React.JSX.Element {
 
   /** Every action reads the server's stored secret, so a locked vault asks for its passkey first. */
   async function withUnlockedVault(server: SshSavedServer, action: ServerAction): Promise<void> {
-    const status = await window.agentmat.ssh.vaultStatus();
+    const status = await window.runova.ssh.vaultStatus();
     if (status.hasPasskey && !status.unlocked) {
       askToUnlock(server, action);
       return;

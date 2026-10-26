@@ -37,7 +37,7 @@ describeRemoteFilesContract('fake slow server', harnessFor({ latencyMs: 1 }));
 describe('createFakeRemote', () => {
   let scratch = '';
   beforeAll(async () => {
-    scratch = await mkdtemp(join(tmpdir(), 'agentmate-fake-remote-'));
+    scratch = await mkdtemp(join(tmpdir(), 'runova-fake-remote-'));
   });
   afterAll(async () => {
     await rm(scratch, { recursive: true, force: true });

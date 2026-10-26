@@ -278,7 +278,7 @@ describe('VaultPage detail', () => {
     fireEvent.click(within(detail).getByRole('button', { name: 'Copy username' }));
     await waitFor(() => expect(mock.api.copy).toHaveBeenCalledWith('gh', 'username'));
     fireEvent.click(within(detail).getByRole('button', { name: 'Open github.com' }));
-    expect(window.agentmat.shell.openExternal).toHaveBeenCalledWith('https://github.com/login');
+    expect(window.runova.shell.openExternal).toHaveBeenCalledWith('https://github.com/login');
     fireEvent.click(within(detail).getByRole('button', { name: 'Remove from favorites' }));
     await waitFor(() => expect(mock.api.patch).toHaveBeenCalledWith('gh', { favorite: false }));
   });

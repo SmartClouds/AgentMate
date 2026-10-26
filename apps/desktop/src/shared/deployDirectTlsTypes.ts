@@ -1,4 +1,4 @@
-import type { DirectTlsStatus } from './deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { DirectTlsStatus } from './deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * Direct TLS (E16) between the main process and the renderer. The pin is a public key hash, not a

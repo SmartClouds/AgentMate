@@ -1,4 +1,4 @@
-import type { CodeqlInstallProgress, CodeqlLocalStatus } from '@agentmat/core';
+import type { CodeqlInstallProgress, CodeqlLocalStatus } from '@runova/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -14,7 +14,7 @@ import { confirmDialog } from '@/stores/confirmStore';
  * Unlike every other tool here, CodeQL has no package manager behind it on Windows or Linux, so
  * there is no shell command to hand the terminal. GitHub ships it as a release zip, and this
  * fetches that zip, checks it against the SHA-256 published beside it, and unpacks it into
- * AgentMate's tools folder. Nothing goes on the system PATH and nothing needs admin rights.
+ * Runova's tools folder. Nothing goes on the system PATH and nothing needs admin rights.
  */
 
 function formatBytes(bytes: number): string {
@@ -40,14 +40,14 @@ export function CodeqlInstallCard(): React.JSX.Element {
 
   const statusQuery = useQuery({
     queryKey: queryKeys.codeqlStatus,
-    queryFn: () => window.agentmat.security.codeqlStatus(),
+    queryFn: () => window.runova.security.codeqlStatus(),
     meta: { silentLoading: true },
   });
 
   // Subscribed for the life of the card rather than only during an install, so navigating away
   // and back rejoins a download that is already running.
   useEffect(() => {
-    return window.agentmat.security.onCodeqlProgress((payload) => {
+    return window.runova.security.onCodeqlProgress((payload) => {
       setProgress(
         payload.phase === 'done' || payload.phase === 'failed' || payload.phase === 'cancelled'
           ? null
@@ -69,7 +69,7 @@ export function CodeqlInstallCard(): React.JSX.Element {
   }, [statusQuery.data, progress]);
 
   const install = useMutation({
-    mutationFn: () => window.agentmat.security.installCodeql(),
+    mutationFn: () => window.runova.security.installCodeql(),
     onSuccess: (status: CodeqlLocalStatus) => {
       queryClient.setQueryData(queryKeys.codeqlStatus, status);
       void queryClient.invalidateQueries({ queryKey: queryKeys.toolsStatus });
@@ -87,7 +87,7 @@ export function CodeqlInstallCard(): React.JSX.Element {
   });
 
   const remove = useMutation({
-    mutationFn: () => window.agentmat.security.removeCodeql(),
+    mutationFn: () => window.runova.security.removeCodeql(),
     onSuccess: (status: CodeqlLocalStatus) => {
       queryClient.setQueryData(queryKeys.codeqlStatus, status);
       void queryClient.invalidateQueries({ queryKey: queryKeys.toolsStatus });
@@ -111,7 +111,7 @@ export function CodeqlInstallCard(): React.JSX.Element {
             size="sm"
             variant="ghost"
             className="gap-1 px-2.5 hover:bg-foreground/[0.06]"
-            onClick={() => void window.agentmat.security.cancelCodeqlInstall()}
+            onClick={() => void window.runova.security.cancelCodeqlInstall()}
           >
             <StopCircle className="h-3.5 w-3.5" /> Cancel
           </Button>
@@ -166,7 +166,7 @@ export function CodeqlInstallCard(): React.JSX.Element {
       <Button
         variant="soft"
         size="sm"
-        onClick={() => void window.agentmat.security.openCodeqlFolder()}
+        onClick={() => void window.runova.security.openCodeqlFolder()}
       >
         <FolderOpen /> Open folder
       </Button>
@@ -180,7 +180,7 @@ export function CodeqlInstallCard(): React.JSX.Element {
               const confirmed = await confirmDialog({
                 title: 'Remove the downloaded CodeQL?',
                 description:
-                  'This deletes the copy in AgentMate’s tools folder. You can download it again at any time.',
+                  'This deletes the copy in Runova’s tools folder. You can download it again at any time.',
                 confirmLabel: 'Remove',
                 variant: 'destructive',
               });

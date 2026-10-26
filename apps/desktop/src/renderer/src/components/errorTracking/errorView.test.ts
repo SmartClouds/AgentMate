@@ -48,7 +48,7 @@ describe('issue param', () => {
 });
 
 describe('groupIssuesByProject', () => {
-  it('groups by AgentMate project in name order, keeping the list order inside', () => {
+  it('groups by Runova project in name order, keeping the list order inside', () => {
     const groups = groupIssuesByProject(
       [
         issue({ id: '1', projectId: 'p1' }),

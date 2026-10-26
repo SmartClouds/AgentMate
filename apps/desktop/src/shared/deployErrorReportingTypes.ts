@@ -2,7 +2,7 @@ import type { ErrorReportingLevel } from './deploy/errorReportingValidation';
 import type {
   ErrorReportingStatus,
   ErrorReportingTestResult,
-} from './deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from './deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * Error reporting (E29): a server core sends its own warnings and errors to a Sentry project as

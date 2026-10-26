@@ -2,22 +2,23 @@
 /**
  * Which paths inside a theme, plugin or mu-plugin may be read or written. Mirrors pathPolicy.ts:
  * the order of the checks is part of the contract, since the shared vectors pin the reason for
- * every case. The hard deny list keeps agent, AgentMate, secret and VCS files off the site no
+ * every case. The hard deny list keeps agent, Runova, secret and VCS files off the site no
  * matter what the client asks for.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Files;
+namespace Runova\Connector\Files;
 
-use AgentMate\Connector\Protocol;
-use AgentMate\Connector\Support\Text;
+use Runova\Connector\Protocol;
+use Runova\Connector\Support\Text;
 
 final class PathPolicy
 {
-    /** Folders that hold agent settings, skills, AgentMate's own files, or version control. */
+    /** Folders that hold agent settings, skills, Runova's own files, or version control. */
     const DENY_DIRS = array(
-        '.agentmate',
+        '.runova',
+        '.agentmate', // legacy-name
         '.claude',
         '.agents',
         '.codex',
@@ -50,7 +51,8 @@ final class PathPolicy
         '.cursorrules',
         '.windsurfrules',
         '.roomodes',
-        '.agentmateignore',
+        '.runovaignore',
+        '.agentmateignore', // legacy-name
         '.env',
         '.envrc',
         // Package manager and network credentials.
@@ -65,7 +67,7 @@ final class PathPolicy
         'desktop.ini',
     );
 
-    const DENY_PREFIXES = array('.aider', '.claude', '.agentmate', '.env.', 'id_rsa', 'id_ed25519', 'id_ecdsa');
+    const DENY_PREFIXES = array('.aider', '.claude', '.runova', '.agentmate', '.env.', 'id_rsa', 'id_ed25519', 'id_ecdsa'); // legacy-name
 
     const DENY_SUFFIXES = array('.pem', '.ppk');
 

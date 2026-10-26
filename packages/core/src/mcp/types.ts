@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-/** How AgentMate connects the client to this server once installed. */
+/** How Runova connects the client to this server once installed. */
 export const McpTransportSchema = z.enum(['stdio', 'sse', 'http']);
 export type McpTransport = z.infer<typeof McpTransportSchema>;
 

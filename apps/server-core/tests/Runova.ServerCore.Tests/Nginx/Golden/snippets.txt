@@ -1,0 +1,89 @@
+==> http.conf <==
+# Managed by Runova. Each apply writes a new release, so change this in the app instead.
+
+# WebSocket requests ask the upstream to switch protocols; other requests close as usual.
+map $http_upgrade $runova_connection_upgrade {
+    default upgrade;
+    "" close;
+}
+
+# Requests for names no site claims get no answer at all, and TLS handshakes for them
+# are refused before any certificate is shown.
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name _;
+    ssl_reject_handshake on;
+    return 444;
+}
+
+include /etc/nginx/runova/releases/1/sites/snippets.conf;
+
+==> sites/snippets.conf <==
+# Site snippets: snippets.test
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name snippets.test;
+    server_tokens off;
+    root /var/www/runova/sites/snippets;
+    access_log /var/log/nginx/runova-snippets.access.log;
+    error_log /var/log/nginx/runova-snippets.error.log;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/runova/acme;
+        default_type text/plain;
+        try_files $uri =404;
+        allow all;
+        auth_basic off;
+    }
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    include /etc/nginx/runova/releases/1/snippets/snippets.server.conf;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        # The visitor's own address replaces any X-Forwarded-For they sent, so it cannot be forged.
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+
+        # nginx drops the server's add_header lines in a location that has its own, so they repeat here.
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+        include /etc/nginx/runova/releases/1/snippets/snippets.location.conf;
+    }
+}
+
+==> snippets/snippets.server.conf <==
+# Answered by nginx itself, so a health check works while the app restarts.
+location = /healthz {
+    access_log off;
+    default_type text/plain;
+    return 200 "healthy";
+}
+
+location /static/ {
+    alias /var/www/runova/sites/snippets/static/;
+    expires 7d;
+}
+
+==> snippets/snippets.location.conf <==
+proxy_set_header X-From-Snippet yes;
+add_header X-Location-Snippet on always;
+
+==> stream.conf <==
+# Managed by Runova. Each apply writes a new release, so change this in the app instead.
+# TCP and UDP ports passed straight through to a service; nginx.conf includes this in its stream block.

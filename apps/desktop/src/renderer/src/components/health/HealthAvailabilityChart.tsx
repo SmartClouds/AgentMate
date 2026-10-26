@@ -1,4 +1,4 @@
-import { type HealthDayBucket, healthDays, mergeHealthDays } from '@agentmat/core';
+import { type HealthDayBucket, healthDays, mergeHealthDays } from '@runova/core';
 import type { HealthTargetSummary } from '@shared/healthTypes';
 import { useState } from 'react';
 import { GLASS_CARD, PillTabs, SECTION_HEADING } from '@/components/pageKit';

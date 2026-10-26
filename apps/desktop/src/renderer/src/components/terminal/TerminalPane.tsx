@@ -48,7 +48,7 @@ export function TerminalPane({ meta, active, onExit }: TerminalPaneProps): React
           })
         : meta.kind === 'ssh' && meta.sshServerId
           ? sshTerminalAdapter(meta.sshServerId)
-          : window.agentmat.terminal;
+          : window.runova.terminal;
     const initialTheme = resolveDrawerTerminalTheme(useThemeStore.getState().theme);
     paneRef.current?.style.setProperty('--terminal-bg', initialTheme.background as string);
     const {
@@ -167,7 +167,7 @@ export function TerminalPane({ meta, active, onExit }: TerminalPaneProps): React
             return;
           }
           // A painted snapshot is not what ConPTY believes is on screen, so have it repaint.
-          if (fromSnapshot && !remote && window.agentmat.platform === 'win32') {
+          if (fromSnapshot && !remote && window.runova.platform === 'win32') {
             resizeSync.repaint();
           } else {
             resizeSync.flush();

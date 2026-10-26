@@ -116,7 +116,7 @@ const row = (menu: Locator, label: string | RegExp): Locator =>
   menu.getByText(label, { exact: typeof label === 'string' }).locator('..');
 
 test.beforeEach(async () => {
-  configDir = mkdtempSync(join(tmpdir(), 'agentmate-claude-config-'));
+  configDir = mkdtempSync(join(tmpdir(), 'runova-claude-config-'));
   launched = await launchApp({ env: { CLAUDE_CONFIG_DIR: configDir } });
   seedConversations(launched.projectDir);
   await openWorkspace(launched);

@@ -17,7 +17,7 @@ const cwdLine = (cwd: string): string => JSON.stringify({ type: 'user', cwd });
 
 describe('encodeClaudeDir', () => {
   it('turns every character that is not a letter or a digit into a dash', () => {
-    expect(encodeClaudeDir('E:\\AgentMate')).toBe('E--AgentMate');
+    expect(encodeClaudeDir('E:\\Runova')).toBe('E--Runova');
     expect(encodeClaudeDir('/home/me/my_app.v2')).toBe('-home-me-my-app-v2');
     expect(encodeClaudeDir('C:\\Users\\Ann Lee\\repo')).toBe('C--Users-Ann-Lee-repo');
   });
@@ -76,31 +76,27 @@ describe('cwdsIn', () => {
 
 describe('launchFolder', () => {
   it('returns the folder itself when a cwd is exactly that folder', () => {
-    expect(launchFolder('E--AgentMate', ['E:\\AgentMate'])).toBe('E:\\AgentMate');
+    expect(launchFolder('E--Runova', ['E:\\Runova'])).toBe('E:\\Runova');
   });
 
   it('recovers the launch folder from a cwd the session moved into', () => {
-    expect(launchFolder('E--AgentMate', ['E:\\AgentMate\\apps\\desktop\\src'])).toBe(
-      'E:\\AgentMate',
-    );
+    expect(launchFolder('E--Runova', ['E:\\Runova\\apps\\desktop\\src'])).toBe('E:\\Runova');
   });
 
   it('does not match a sibling folder that only shares the start of its name', () => {
-    expect(launchFolder('E--AgentMate', ['E:\\AgentMate2'])).toBeNull();
+    expect(launchFolder('E--Runova', ['E:\\Runova2'])).toBeNull();
   });
 
   it('matches the drive letter whatever its case', () => {
-    expect(launchFolder('e--AgentMate', ['E:\\AgentMate\\x'])).toBe('E:\\AgentMate');
+    expect(launchFolder('e--Runova', ['E:\\Runova\\x'])).toBe('E:\\Runova');
   });
 
   it('moves on to a later sample when an earlier one does not fit', () => {
-    expect(launchFolder('E--AgentMate', ['E:\\Other\\deep', 'E:\\AgentMate\\x'])).toBe(
-      'E:\\AgentMate',
-    );
+    expect(launchFolder('E--Runova', ['E:\\Other\\deep', 'E:\\Runova\\x'])).toBe('E:\\Runova');
   });
 
   it('handles a launch at a drive root, whose name ends in dashes', () => {
-    expect(launchFolder('E--', ['E:\\AgentMate\\apps'])).toBe('E:\\');
+    expect(launchFolder('E--', ['E:\\Runova\\apps'])).toBe('E:\\');
     expect(launchFolder('E--', ['E:\\'])).toBe('E:\\');
   });
 
@@ -114,11 +110,11 @@ describe('launchFolder', () => {
   });
 
   it('gives up on a name Claude shortened, so the caller can fall back', () => {
-    expect(launchFolder('E--a-very-long-name-with-a-hash-1f3a', ['E:\\AgentMate'])).toBeNull();
+    expect(launchFolder('E--a-very-long-name-with-a-hash-1f3a', ['E:\\Runova'])).toBeNull();
   });
 
   it('gives up when there are no cwds at all', () => {
-    expect(launchFolder('E--AgentMate', [])).toBeNull();
+    expect(launchFolder('E--Runova', [])).toBeNull();
   });
 });
 

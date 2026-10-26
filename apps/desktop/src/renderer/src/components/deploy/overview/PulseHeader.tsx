@@ -1,4 +1,4 @@
-import type { MetricsSample } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { MetricsSample } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployConnectionState } from '@shared/deployTypes';
 import {
   CircleCheck,

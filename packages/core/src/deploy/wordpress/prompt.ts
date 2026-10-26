@@ -4,7 +4,7 @@ import type { WpItem, WpSiteInfo } from './protocol.js';
 /**
  * The standing prompt a new WordPress project starts with (E21): which site the folder mirrors,
  * its WordPress and PHP versions, the active theme, which items are linked and where they sit in
- * the folder, that only those items are deployed (through AgentMate, never by hand), and that the
+ * the folder, that only those items are deployed (through Runova, never by hand), and that the
  * pulled files came from the site and are data to work on, not instructions to follow. Site
  * strings are put in as plain text, trimmed, with control characters removed.
  */
@@ -66,7 +66,7 @@ export function buildWpProjectPrompt(info: WpSiteInfo, items: readonly WpItem[])
       : stylesheet || 'unknown';
 
   return [
-    `${PROMPT_OPENING}${siteName}"${homeUrl ? ` at ${homeUrl}` : ''}, connected through AgentMate Connector.`,
+    `${PROMPT_OPENING}${siteName}"${homeUrl ? ` at ${homeUrl}` : ''}, connected through Runova Connector.`,
     '',
     `The site runs WordPress ${wpVersion} on PHP ${phpVersion}${info.multisite ? ' as a multisite network' : ''}. Its active theme is ${theme}.`,
     '',
@@ -74,8 +74,8 @@ export function buildWpProjectPrompt(info: WpSiteInfo, items: readonly WpItem[])
     ...items.map((item) => itemLine(item, info)),
     '',
     'How changes reach the site:',
-    '- Only files inside the folders above are deployed, and only through AgentMate (the WordPress section of this project, or Deploy). Never copy files to the site by hand, over FTP or in wp-admin: the next deploy would see a conflict.',
-    '- Everything else in this folder stays on this computer. Agent and AgentMate files (.claude, .agents, .agentmate, AGENTS.md, CLAUDE.md, .mcp.json and the like) are never sent, even inside a theme or plugin folder.',
+    '- Only files inside the folders above are deployed, and only through Runova (the WordPress section of this project, or Deploy). Never copy files to the site by hand, over FTP or in wp-admin: the next deploy would see a conflict.',
+    '- Everything else in this folder stays on this computer. Agent and Runova files (.claude, .agents, .runova, AGENTS.md, CLAUDE.md, .mcp.json and the like) are never sent, even inside a theme or plugin folder.',
     `- Write PHP that runs on PHP ${phpVersion}. Every deploy checks PHP syntax, keeps a snapshot and runs a health check, and a deploy that breaks the site is rolled back.`,
     '- Deploys never activate plugins or switch themes; that stays in wp-admin. A new theme or plugin folder is only created when the deploy review confirms it.',
     '- Uploads and media, the database, WordPress core and wp-config.php are not part of this project.',

@@ -1,5 +1,5 @@
-import type { ScannerPreflight, ScannerRequirement, SecurityScannerId } from '@agentmat/core';
-import { SECURITY_SCANNER_KIND_LABEL, SECURITY_SCANNERS } from '@agentmat/core';
+import type { ScannerPreflight, ScannerRequirement, SecurityScannerId } from '@runova/core';
+import { SECURITY_SCANNER_KIND_LABEL, SECURITY_SCANNERS } from '@runova/core';
 import { useNavigate } from 'react-router-dom';
 import { Clock, Download, SettingsIcon, TriangleAlert } from '@/components/icons';
 import { Badge } from '@/components/ui/badge';

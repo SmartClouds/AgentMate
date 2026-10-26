@@ -7,7 +7,7 @@ keywords: telegram, bot, botfather, chat id, group, notifications, alerts, backu
 route: /deploy
 ---
 
-**Telegram alerts** make a server tell you on Telegram when something on it needs a look: a backup that failed, a container that keeps restarting, a disk that is filling up, a deploy that failed. The server's core sends the messages itself, so they arrive while AgentMate is closed and your computer is off.
+**Telegram alerts** make a server tell you on Telegram when something on it needs a look: a backup that failed, a container that keeps restarting, a disk that is filling up, a deploy that failed. The server's core sends the messages itself, so they arrive while Runova is closed and your computer is off.
 
 Each server has its own setup, in the server's **Notifications** section under Deploy. You choose the bot, the person or group that gets the messages, the name the server goes by in them, and which alerts to send.
 
@@ -26,10 +26,10 @@ You need to be an Owner on the server. Admins can see how it stands and send a t
    - For yourself: open your new bot in Telegram and send it any message.
    - For a group: add the bot to the group and send a message in the group.
    - For a channel: add the bot to the channel as an admin and use the channel's `@name` as the chat ID.
-3. In AgentMate, paste the token into **Bot token** and press **Detect**. The chat that last wrote to the bot fills in **Chat ID**. You can also type it: a number such as `123456789` for a person, `-1001234567890` for a group.
-4. Check **Server name**. It starts every message, so you can tell your servers apart. It is filled in with the name you gave the server in AgentMate; empty means the machine's own name.
+3. In Runova, paste the token into **Bot token** and press **Detect**. The chat that last wrote to the bot fills in **Chat ID**. You can also type it: a number such as `123456789` for a person, `-1001234567890` for a group.
+4. Check **Server name**. It starts every message, so you can tell your servers apart. It is filled in with the name you gave the server in Runova; empty means the machine's own name.
 5. Choose the **Alerts to send**. All of them are on to begin with.
-6. Press **Turn on Telegram alerts**. AgentMate asks for your password again if you have not confirmed it in the last 10 minutes. The core starts sending at once, with no restart.
+6. Press **Turn on Telegram alerts**. Runova asks for your password again if you have not confirmed it in the last 10 minutes. The core starts sending at once, with no restart.
 7. Press **Send test message** to check that the message arrives.
 
 ## What gets sent

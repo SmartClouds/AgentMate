@@ -22,9 +22,9 @@ async function useLibrary(page: Page, folder: string): Promise<void> {
   await page.evaluate(async (defaultRoot) => {
     await (
       window as unknown as {
-        agentmat: { studio: { updateSettings(p: unknown): Promise<unknown> } };
+        runova: { studio: { updateSettings(p: unknown): Promise<unknown> } };
       }
-    ).agentmat.studio.updateSettings({ defaultRoot });
+    ).runova.studio.updateSettings({ defaultRoot });
   }, folder);
 }
 
@@ -32,7 +32,7 @@ test('writes a Persian scenario from a brief, repairs a bad answer, and edits it
   const launched = await launchApp({ claudeScript: FAKE_CLAUDE });
   opened.push(launched);
   const { page, root } = launched;
-  await useLibrary(page, join(root, 'Videos', 'AgentMate Studio'));
+  await useLibrary(page, join(root, 'Videos', 'Runova Studio'));
 
   await page.getByRole('link', { name: 'Studio', exact: true }).click();
   await page.getByRole('button', { name: 'New video' }).first().click();

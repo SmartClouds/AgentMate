@@ -30,7 +30,7 @@ const fake = vi.hoisted(() => {
 
   /**
    * Enough of bash over SSH for the runner: it echoes what is typed (with the space and carriage
-   * return readline adds where a long line wraps), runs the command between AgentMate's markers,
+   * return readline adds where a long line wraps), runs the command between Runova's markers,
    * and hands output back in small uneven chunks the way a network read does.
    */
   class FakeBash {
@@ -87,11 +87,11 @@ const fake = vi.hoisted(() => {
       const wrapped = line.replace(/(.{60})/g, '$1 \r');
       this.emit(`${wrapped}\r\n\x1b[?2004l\r`);
       const hidden = line.match(
-        /^printf '\\033\]7750;AgentMate:Start:(\w+)\\007'; (.*); printf '\\033\]7750;AgentMate:Done:\1:%s\\007' "\$\?"$/,
+        /^printf '\\033\]7750;Runova:Start:(\w+)\\007'; (.*); printf '\\033\]7750;Runova:Done:\1:%s\\007' "\$\?"$/,
       );
-      const plain = line.match(/^(.*); printf '\\n(__AGENTMATE_DONE_\w+__):%s\\n' "\$\?"$/);
+      const plain = line.match(/^(.*); printf '\\n(__RUNOVA_DONE_\w+__):%s\\n' "\$\?"$/);
       const body = hidden?.[2] ?? plain?.[1] ?? line;
-      if (hidden) this.emit(`\x1b]7750;AgentMate:Start:${hidden[1]}\x07`);
+      if (hidden) this.emit(`\x1b]7750;Runova:Start:${hidden[1]}\x07`);
       this.ran.push(body);
       const handler = this.handlers[body];
       const code = handler
@@ -107,7 +107,7 @@ const fake = vi.hoisted(() => {
             this,
           )
         : (this.emit(`bash: ${body.split(' ')[0]}: command not found\r\n`), 127);
-      if (hidden) this.emit(`\x1b]7750;AgentMate:Done:${hidden[1]}:${code}\x07`);
+      if (hidden) this.emit(`\x1b]7750;Runova:Done:${hidden[1]}:${code}\x07`);
       if (plain) this.emit(`\n${plain[2]}:${code}\n`);
       this.prompt();
     }
@@ -216,7 +216,7 @@ vi.mock('../cli/headlessPrompt', () => ({
 vi.mock('../notifications/petNotifier', () => ({ speakOnPet: vi.fn() }));
 vi.mock('../notifications/osNotification', () => ({ showOsNotification: vi.fn(() => true) }));
 vi.mock('../mainWindow', () => ({ getMainWindow: () => null }));
-vi.mock('@agentmat/core', () => ({
+vi.mock('@runova/core', () => ({
   getCliDefinition: vi.fn(),
   runArgsFor: vi.fn(() => []),
 }));
@@ -369,7 +369,7 @@ describe('AI task over SSH', () => {
     expect(last).toContain('$ cat /etc/os-release [exit code 0]\nPRETTY_NAME="Ubuntu 22.04.4 LTS"');
     expect(last).toContain("$ ls /nope [exit code 2]\nls: cannot access '/nope'");
     expect(last).not.toContain('printf');
-    expect(last).not.toContain('AgentMate:');
+    expect(last).not.toContain('Runova:');
   });
 
   it('keeps a command that wraps past the terminal width readable', async () => {
@@ -428,7 +428,7 @@ describe('AI task over SSH', () => {
     expect(text).toContain(`${PROMPT}sudo apt-get update\n[sudo] password for smartvpn:`);
     expect(text).toContain('Reading package lists... Done');
     expect(text).not.toContain(PASSWORD);
-    expect(text).not.toContain('AGENTMATE');
+    expect(text).not.toContain('RUNOVA');
   });
 
   it('tells the AI to use plain sudo and never to ask for a password', async () => {
@@ -598,7 +598,7 @@ describe('AI task in a local terminal', () => {
       },
       '\r',
       standardHandlers,
-      '\x1b]7750;AgentMate:PromptReady:1\x07',
+      '\x1b]7750;Runova:PromptReady:1\x07',
     );
     fake.local.shell = shell;
     shell.prompt();
@@ -621,7 +621,7 @@ describe('AI task in a local terminal', () => {
     );
     await waitForPhase(progress, 'finished');
 
-    expect(shell.written[0]).toMatch(/^printf '\\033\]7750;AgentMate:Start:/);
+    expect(shell.written[0]).toMatch(/^printf '\\033\]7750;Runova:Start:/);
     const text = await screen.text();
     expect(text).toContain(`${PROMPT}cat /etc/os-release\nPRETTY_NAME=`);
     expect(text).not.toContain('printf');
@@ -633,9 +633,7 @@ describe('AI task in a local terminal', () => {
     const progress = startTask('local-2', ['RUN: ls /nope', 'FINISHED: ok'], undefined, 'local');
     await waitForPhase(progress, 'finished');
 
-    expect(shell.written[0]).toMatch(
-      /^ls \/nope; printf '\\n__AGENTMATE_DONE_\w+__:%s\\n' "\$\?"\r$/,
-    );
+    expect(shell.written[0]).toMatch(/^ls \/nope; printf '\\n__RUNOVA_DONE_\w+__:%s\\n' "\$\?"\r$/);
     expect(fake.aiPrompts[1]).toContain('$ ls /nope [exit code 2]');
   });
 

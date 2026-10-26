@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { Project, WorktreeInfo } from '@agentmat/core';
+import type { Project, WorktreeInfo } from '@runova/core';
 import { act, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { renderHookWithProviders } from '../../../test/renderer/renderWithProviders';

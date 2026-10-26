@@ -61,7 +61,7 @@ beforeEach(async () => {
   allowed = true;
   events = [];
   watchers = [];
-  local = realpathSync(tempDir('agentmate-ipc-files-'));
+  local = realpathSync(tempDir('runova-ipc-files-'));
   userData.writeData('projects.json', [
     { id: 'p1', name: 'Shop', folderPath: local, createdAt: '2026-01-01T00:00:00Z' },
   ]);

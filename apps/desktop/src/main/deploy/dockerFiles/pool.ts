@@ -1,4 +1,4 @@
-import type { FileSessionInfo } from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { FileSessionInfo } from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { filesError } from '../../../shared/deployFilesErrors';
 import { isDockerFileTargetId, parseDockerFileTargetId } from '../../../shared/fileTargets';
 import type { ClientLease, SftpPool } from '../../sftp/client';

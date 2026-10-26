@@ -1,4 +1,4 @@
-import { createScene, type EditOp, newId, type Scene, type StudioDocument } from '@agentmat/studio';
+import { createScene, type EditOp, newId, type Scene, type StudioDocument } from '@runova/studio';
 import { useEffect, useId, useState } from 'react';
 import { scriptClass } from '../format';
 import {

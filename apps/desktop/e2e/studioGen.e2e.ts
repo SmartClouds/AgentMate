@@ -25,7 +25,7 @@ type GenJob = {
   stage: string | null;
 };
 type Bridge = {
-  agentmat: {
+  runova: {
     studio: {
       updateSettings(p: unknown): Promise<unknown>;
       create(input: unknown): Promise<{ id: string }>;
@@ -84,7 +84,7 @@ test.afterEach(async () => {
 test.skip(!hasFfmpeg, 'ffmpeg is not installed here; Dev Setup (Studio) installs it.');
 
 const jobs = (page: Page, videoId: string) =>
-  page.evaluate((id) => (window as unknown as Bridge).agentmat.studioGen.jobs(id), videoId);
+  page.evaluate((id) => (window as unknown as Bridge).runova.studioGen.jobs(id), videoId);
 
 test('makes a picture after confirming its price, and finishes a clip after a restart', async () => {
   test.setTimeout(300_000);
@@ -98,14 +98,14 @@ test('makes a picture after confirming its price, and finishes a clip after a re
     launchApp({
       reuseRoot,
       settings: { openaiApiKey: GEN_KEY, geminiApiKey: GEN_KEY },
-      env: { AGENTMATE_STUDIO_TTS_URL: gen?.url ?? '' },
+      env: { RUNOVA_STUDIO_TTS_URL: gen?.url ?? '' },
     });
   const first = await launch();
   opened.push(first);
   const page = first.page;
   const videoId = await page.evaluate(
     async (library) => {
-      const { studio } = (window as unknown as Bridge).agentmat;
+      const { studio } = (window as unknown as Bridge).runova;
       await studio.updateSettings({ defaultRoot: library });
       const video = await studio.create({
         title: 'Made',
@@ -115,7 +115,7 @@ test('makes a picture after confirming its price, and finishes a clip after a re
       });
       return video.id;
     },
-    join(first.root, 'Videos', 'AgentMate Studio'),
+    join(first.root, 'Videos', 'Runova Studio'),
   );
 
   await page.evaluate((id) => {
@@ -178,16 +178,13 @@ test('makes a picture after confirming its price, and finishes a clip after a re
       timeout: 120_000,
     })
     .toBe('done');
-  await second.page.evaluate(
-    (id) => (window as unknown as Bridge).agentmat.studio.open(id),
-    videoId,
-  );
+  await second.page.evaluate((id) => (window as unknown as Bridge).runova.studio.open(id), videoId);
   await expect
     .poll(
       async () =>
         (
           await second.page.evaluate(
-            (id) => (window as unknown as Bridge).agentmat.studioMedia.list(id),
+            (id) => (window as unknown as Bridge).runova.studioMedia.list(id),
             videoId,
           )
         )
@@ -199,7 +196,7 @@ test('makes a picture after confirming its price, and finishes a clip after a re
   const clip = (await jobs(second.page, videoId)).find((j) => j.kind === 'video');
   expect(clip).toMatchObject({ resumed: true, mediaName: 'Generated clip 1.mp4' });
   const files = await second.page.evaluate(
-    (id) => (window as unknown as Bridge).agentmat.studioMedia.list(id),
+    (id) => (window as unknown as Bridge).runova.studioMedia.list(id),
     videoId,
   );
   // The clip came through whole: 8 seconds, as made.

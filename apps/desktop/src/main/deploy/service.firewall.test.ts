@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { SignedInResponse } from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { SignedInResponse } from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { FakeCore } from '../../shared/deploy/testing/fakeCore';
 import type { DeployCoreRecord } from '../../shared/deployTypes';
 import { TunnelRefusedError } from '../ssh/connection';
@@ -16,7 +16,7 @@ import { DeployState } from './state';
 
 const RECORD: DeployCoreRecord = {
   version: '1.53.0',
-  release: '/opt/agentmate-core/releases/1.53.0',
+  release: '/opt/runova-core/releases/1.53.0',
   transport: 'streamlocal',
   installedAt: 1,
   os: 'Ubuntu 24.04.1 LTS',

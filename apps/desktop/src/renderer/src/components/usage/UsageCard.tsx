@@ -7,7 +7,7 @@ import type {
   WidgetMode,
   WidgetPeriod,
   WidgetStyle,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useState } from 'react';
 import { SparklineChart } from '@/components/dashboard/SparklineChart';
 import { ProviderLogo } from '@/components/providerLogos';

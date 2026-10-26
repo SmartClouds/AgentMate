@@ -3,18 +3,18 @@
  * Frame and bundle limits: header size, blob count, gzip bombs, and refusing to open anything
  * before the signature has checked out.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Unit;
+namespace Runova\Connector\Tests\Unit;
 
-use AgentMate\Connector\Http\ApiError;
-use AgentMate\Connector\Http\BundleReader;
-use AgentMate\Connector\Http\Frame;
-use AgentMate\Connector\Http\Gzip;
-use AgentMate\Connector\Http\StringBundle;
-use AgentMate\Connector\Protocol;
-use AgentMate\Connector\Tests\Support\TestCase;
+use Runova\Connector\Http\ApiError;
+use Runova\Connector\Http\BundleReader;
+use Runova\Connector\Http\Frame;
+use Runova\Connector\Http\Gzip;
+use Runova\Connector\Http\StringBundle;
+use Runova\Connector\Protocol;
+use Runova\Connector\Tests\Support\TestCase;
 
 final class FrameLimitsTest extends TestCase
 {
@@ -118,7 +118,7 @@ final class FrameLimitsTest extends TestCase
         $this->assertError('tooLarge', $result, 413);
 
         // The same bomb with a bad signature never gets opened: it fails on the signature.
-        $other = \AgentMate\Connector\Crypto\Crypto::keypairFromSeed(str_repeat("\x05", 32));
+        $other = \Runova\Connector\Crypto\Crypto::keypairFromSeed(str_repeat("\x05", 32));
         $result = $this->call('/site/info', null, array('connectionId' => $connection, 'bundle' => $bomb, 'secretKey' => $other['secret']));
         $this->assertError('badSignature', $result);
     }

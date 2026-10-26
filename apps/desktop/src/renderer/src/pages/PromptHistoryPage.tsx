@@ -113,7 +113,7 @@ function TagEditor({ entry }: { entry: PromptHistoryEntry }): React.JSX.Element 
   const queryClient = useQueryClient();
 
   const setTagsMutation = useMutation({
-    mutationFn: (tags: string[]) => window.agentmat.promptHistory.setTags(entry.id, tags),
+    mutationFn: (tags: string[]) => window.runova.promptHistory.setTags(entry.id, tags),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['prompt-history'] });
     },
@@ -223,7 +223,7 @@ export default function PromptHistoryPage(): React.JSX.Element {
   // projects they came from, so a missing project just means no badge.
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   });
 
   function projectName(projectId: string | null): string | null {
@@ -237,8 +237,8 @@ export default function PromptHistoryPage(): React.JSX.Element {
       : queryKeys.promptHistory,
     queryFn: () =>
       search.trim()
-        ? window.agentmat.promptHistory.search(search.trim())
-        : window.agentmat.promptHistory.list(),
+        ? window.runova.promptHistory.search(search.trim())
+        : window.runova.promptHistory.list(),
   });
 
   useEffect(() => {
@@ -249,7 +249,7 @@ export default function PromptHistoryPage(): React.JSX.Element {
   }, [location.state, historyQuery.data]);
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => window.agentmat.promptHistory.remove(id),
+    mutationFn: (id: string) => window.runova.promptHistory.remove(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['prompt-history'] });
     },

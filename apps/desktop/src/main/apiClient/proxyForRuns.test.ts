@@ -1,4 +1,4 @@
-import { defaultProxySettings, type ProxySettings } from '@agentmat/core';
+import { defaultProxySettings, type ProxySettings } from '@runova/core';
 import { describe, expect, it, vi } from 'vitest';
 import { proxyForRuns } from './proxyForRuns';
 

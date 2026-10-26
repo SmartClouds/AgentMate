@@ -52,7 +52,7 @@ export function useRdpAgentBridge(sessionId: string, targets: RdpAgentTargets): 
   targetsRef.current = targets;
 
   useEffect(() => {
-    return window.agentmat.rdpAgent.onRequest((request: RdpAgentRequest) => {
+    return window.runova.rdpAgent.onRequest((request: RdpAgentRequest) => {
       if (request.sessionId !== sessionId) return;
       void answer(request, targetsRef.current)
         .catch(
@@ -62,7 +62,7 @@ export function useRdpAgentBridge(sessionId: string, targets: RdpAgentTargets): 
             error: error instanceof Error ? error.message : String(error),
           }),
         )
-        .then((response) => window.agentmat.rdpAgent.respond(response));
+        .then((response) => window.runova.rdpAgent.respond(response));
     });
   }, [sessionId]);
 }

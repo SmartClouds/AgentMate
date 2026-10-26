@@ -99,13 +99,13 @@ export interface HostProject {
 export interface StudioHost {
   /** Studio's own settings and registry live here (`<userData>/data/studio`). */
   dataDir: string;
-  /** The default library folder (`<Videos>/AgentMate Studio`). */
+  /** The default library folder (`<Videos>/Runova Studio`). */
   defaultLibraryRoot: string;
   /** Previews, proxies and render chunks (`<userData>/studio-cache`), kept off synced folders. */
   defaultCacheDir: string;
   /** The app's own install folder, which must never hold videos. */
   appDir: string | null;
-  /** Names this copy of AgentMate in a video's lock ("AgentMate" or "AgentMate Dev"). */
+  /** Names this copy of Runova in a video's lock ("Runova" or "Runova Dev"). */
   appId: string;
   openDb: OpenSqlDriver;
   projects: { get(id: string): Promise<HostProject | null> | HostProject | null };
@@ -460,7 +460,7 @@ export function createStudioService(host: StudioHost): StudioService {
 
   async function requireProject(projectId: string): Promise<HostProject> {
     const project = await host.projects.get(projectId);
-    if (!project) throw new Error('That project is not in AgentMate any more.');
+    if (!project) throw new Error('That project is not in Runova any more.');
     return project;
   }
 
@@ -1068,10 +1068,10 @@ export function createStudioService(host: StudioHost): StudioService {
       }
 
       await closeSession(videoId);
-      // Hold the old folder while copying, so no other copy of AgentMate opens it half-way.
+      // Hold the old folder while copying, so no other copy of Runova opens it half-way.
       const locked = await acquireVideoLock(found.folder, lockOptions());
       if (!locked.ok)
-        throw new Error('This video is open in another copy of AgentMate. Close it there first.');
+        throw new Error('This video is open in another copy of Runova. Close it there first.');
       try {
         const target = join(toRoot, basename(found.folder));
         if (await exists(target)) throw new Error(`A folder named ${target} already exists.`);

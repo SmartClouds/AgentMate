@@ -2,19 +2,19 @@
 /**
  * The authentication order, replay protection, kill switches and the signed replies.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Unit;
+namespace Runova\Connector\Tests\Unit;
 
-use AgentMate\Connector\Auth\Canonical;
-use AgentMate\Connector\Crypto\Base64Url;
-use AgentMate\Connector\Crypto\Crypto;
-use AgentMate\Connector\Http\Envelope;
-use AgentMate\Connector\Http\Gzip;
-use AgentMate\Connector\Http\IncomingRequest;
-use AgentMate\Connector\Http\StringBundle;
-use AgentMate\Connector\Tests\Support\TestCase;
+use Runova\Connector\Auth\Canonical;
+use Runova\Connector\Crypto\Base64Url;
+use Runova\Connector\Crypto\Crypto;
+use Runova\Connector\Http\Envelope;
+use Runova\Connector\Http\Gzip;
+use Runova\Connector\Http\IncomingRequest;
+use Runova\Connector\Http\StringBundle;
+use Runova\Connector\Tests\Support\TestCase;
 
 final class AuthTest extends TestCase
 {
@@ -157,12 +157,12 @@ final class AuthTest extends TestCase
         $write = $this->connect('write');
         $read = $this->connect('read');
 
-        $this->env->constants['AGENTMATE_CONNECTOR_DISABLED'] = true;
+        $this->env->constants['RUNOVA_CONNECTOR_DISABLED'] = true;
         $this->assertError('disabled', $this->call('/site/info', null, array('connectionId' => $read)), 503);
         $this->assertError('disabled', $this->call('/hello', null, array('unsigned' => true)), 503);
         $this->env->constants = array();
 
-        $this->env->constants['AGENTMATE_CONNECTOR_READ_ONLY'] = true;
+        $this->env->constants['RUNOVA_CONNECTOR_READ_ONLY'] = true;
         $result = $this->call('/deploy/begin', new \stdClass(), array('connectionId' => $write));
         $this->assertError('readOnly', $result, 403);
         $this->assertTrue($result['body']['error']['details']['byConstant']);

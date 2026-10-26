@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import type { wpCanonicalPair, wpCanonicalRequest, wpCanonicalResponse } from '@agentmat/core';
+import type { wpCanonicalPair, wpCanonicalRequest, wpCanonicalResponse } from '@runova/core';
 
 /**
  * The shared protocol vectors and the agent-files fixture from core, read from source so the

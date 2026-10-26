@@ -1,4 +1,4 @@
-import type { Project, PrReviewThread, PullRequestInfo } from '@agentmat/core';
+import type { Project, PrReviewThread, PullRequestInfo } from '@runova/core';
 import { screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../../../test/renderer/renderWithProviders';

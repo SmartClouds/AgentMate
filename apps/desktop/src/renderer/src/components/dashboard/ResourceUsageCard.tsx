@@ -1,4 +1,4 @@
-import type { ResourceActivitySnapshot, ResourceUsagePoint } from '@agentmat/core';
+import type { ResourceActivitySnapshot, ResourceUsagePoint } from '@runova/core';
 import { type ReactNode, useMemo, useState } from 'react';
 import { SparklineChart } from '@/components/dashboard/SparklineChart';
 import { Docker, X } from '@/components/icons';

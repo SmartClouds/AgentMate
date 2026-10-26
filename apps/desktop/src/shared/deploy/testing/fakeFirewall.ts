@@ -10,7 +10,7 @@ import type {
   FirewallRuleInfo,
   FirewallRuleSpec,
   FirewallStatus,
-} from '../protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * The firewall of a fake core (E13): ufw, on, with SSH, HTTP and HTTPS open, as the DevHost

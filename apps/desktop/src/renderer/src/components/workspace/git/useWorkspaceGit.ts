@@ -1,4 +1,4 @@
-import type { GitChangeEntry, Project } from '@agentmat/core';
+import type { GitChangeEntry, Project } from '@runova/core';
 import type { GitApplyLinesInput, GitDiscardResult, WorkspaceGitState } from '@shared/apiTypes';
 import { isImagePath } from '@shared/imageFiles';
 import { type QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -18,14 +18,14 @@ export function useWorkspaceGitState(projectId: string, watching: boolean) {
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: queryKeys.gitWorkspaceState(projectId),
-    queryFn: () => window.agentmat.git.workspaceState(projectId),
+    queryFn: () => window.runova.git.workspaceState(projectId),
     meta: { silentLoading: true },
     // Pushed updates keep it current; a refetch on its own would only duplicate them.
     staleTime: Number.POSITIVE_INFINITY,
   });
 
   useEffect(() => {
-    return window.agentmat.git.onWorkspaceState((id, state) => {
+    return window.runova.git.onWorkspaceState((id, state) => {
       if (id !== projectId) return;
       queryClient.setQueryData(queryKeys.gitWorkspaceState(projectId), state);
       // Open diffs and the project page's Git tab read the same tree.
@@ -38,9 +38,9 @@ export function useWorkspaceGitState(projectId: string, watching: boolean) {
 
   useEffect(() => {
     if (!watching) return;
-    void window.agentmat.git.watchWorkingTree(projectId);
+    void window.runova.git.watchWorkingTree(projectId);
     return () => {
-      void window.agentmat.git.unwatchWorkingTree(projectId);
+      void window.runova.git.unwatchWorkingTree(projectId);
     };
   }, [projectId, watching]);
 
@@ -64,7 +64,7 @@ export function openChangedFile(
     useWorkspaceStore.getState().openFile(project.id, inProject, { pin: true });
     return;
   }
-  void window.agentmat.shell.openPath(
+  void window.runova.shell.openPath(
     repoFileAbsolutePath(project.folderPath, projectPrefix, repoPath),
   );
 }
@@ -127,7 +127,7 @@ export interface GitActions {
 export function useGitActions(projectId: string): GitActions {
   const queryClient = useQueryClient();
   return useMemo<GitActions>(() => {
-    const git = window.agentmat.git;
+    const git = window.runova.git;
     const resync = (): void => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.gitWorkspaceState(projectId) });
     };

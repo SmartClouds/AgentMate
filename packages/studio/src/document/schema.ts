@@ -229,7 +229,7 @@ export function parseDocument(value: unknown): StudioDocument {
       : undefined;
   if (typeof version !== 'number') throw new Error('This is not a Studio video.');
   if (version > STUDIO_SCHEMA_VERSION) {
-    throw new Error('This video was saved by a newer version of AgentMate. Update to open it.');
+    throw new Error('This video was saved by a newer version of Runova. Update to open it.');
   }
   const result = documentSchema.safeParse(value);
   if (!result.success) {

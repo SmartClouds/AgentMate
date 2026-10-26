@@ -15,7 +15,7 @@ import type { ClientCertificate } from './clientCertificate';
 const HANDSHAKE_TIMEOUT_MS = 10_000;
 
 /** The name sent in SNI; the core has one certificate and ignores it. */
-const SERVER_NAME = 'agentmate-core';
+const SERVER_NAME = 'runova-core';
 
 export interface DirectTlsTarget {
   host: string;
@@ -44,7 +44,7 @@ export class PinMismatchError extends Error {
     super(
       encodeCoreError(
         'tlsPinMismatch',
-        `The certificate at ${endpoint} does not match the one pinned over SSH, so AgentMate stopped instead of connecting another way. Something may be intercepting the connection, or the server core was reinstalled. Check the server, then read the pin again over SSH in the server's Security section, or turn direct TLS off there.`,
+        `The certificate at ${endpoint} does not match the one pinned over SSH, so Runova stopped instead of connecting another way. Something may be intercepting the connection, or the server core was reinstalled. Check the server, then read the pin again over SSH in the server's Security section, or turn direct TLS off there.`,
       ),
     );
     this.name = 'PinMismatchError';

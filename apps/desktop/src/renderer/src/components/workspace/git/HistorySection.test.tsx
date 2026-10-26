@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { AgentHistorySession, Project } from '@agentmat/core';
+import type { AgentHistorySession, Project } from '@runova/core';
 import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';

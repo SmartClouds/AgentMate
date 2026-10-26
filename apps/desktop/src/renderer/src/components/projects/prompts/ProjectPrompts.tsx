@@ -3,7 +3,7 @@ import {
   type ProjectDraft,
   type ScheduledTask,
   targetAIForProject,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { PromptHistoryEntry, ScheduledTaskInput } from '@shared/apiTypes';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -73,21 +73,21 @@ export function ProjectPrompts({ project }: { project: Project }): React.JSX.Ele
 
   const historyQuery = useQuery({
     queryKey: queryKeys.projectPromptHistory(projectId),
-    queryFn: () => window.agentmat.promptHistory.list(projectId),
+    queryFn: () => window.runova.promptHistory.list(projectId),
   });
   const draftsQuery = useQuery({
     queryKey: queryKeys.projectDrafts(projectId),
-    queryFn: () => window.agentmat.projectDrafts.listByProject(projectId),
+    queryFn: () => window.runova.projectDrafts.listByProject(projectId),
   });
   const tasksQuery = useQuery({
     queryKey: queryKeys.scheduledTasks(projectId),
-    queryFn: () => window.agentmat.scheduledTasks.listByProject(projectId),
+    queryFn: () => window.runova.scheduledTasks.listByProject(projectId),
     // Keeps the "in 12m" countdowns honest while the tab sits open.
     refetchInterval: 60_000,
   });
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   });
   const otherProjects = (projectsQuery.data ?? []).filter((p) => p.id !== projectId);
 
@@ -107,13 +107,13 @@ export function ProjectPrompts({ project }: { project: Project }): React.JSX.Ele
 
   // History
   const deleteHistoryMutation = useMutation({
-    mutationFn: (id: string) => window.agentmat.promptHistory.remove(id),
+    mutationFn: (id: string) => window.runova.promptHistory.remove(id),
     onSuccess: refreshHistory,
     onError: () => toast.error('Could not delete this entry.'),
   });
   const moveHistoryMutation = useMutation({
     mutationFn: ({ id, targetProjectId }: { id: string; targetProjectId: string }) =>
-      window.agentmat.promptHistory.setProject(id, targetProjectId),
+      window.runova.promptHistory.setProject(id, targetProjectId),
     onSuccess: (_result, { targetProjectId }) => {
       refreshHistory();
       setMovingEntry(null);
@@ -126,7 +126,7 @@ export function ProjectPrompts({ project }: { project: Project }): React.JSX.Ele
   // Drafts
   const updateDraftMutation = useMutation({
     mutationFn: ({ draft, text }: { draft: ProjectDraft; text: string }) =>
-      window.agentmat.projectDrafts.update(
+      window.runova.projectDrafts.update(
         draft.id,
         // A draft with a generated prompt keeps its original request; one without is just its text.
         draft.content.trim() ? { content: text } : { rawInput: text },
@@ -138,7 +138,7 @@ export function ProjectPrompts({ project }: { project: Project }): React.JSX.Ele
   });
   const draftStatusMutation = useMutation({
     mutationFn: (draft: ProjectDraft) =>
-      window.agentmat.projectDrafts.updateStatus(
+      window.runova.projectDrafts.updateStatus(
         draft.id,
         draft.status === 'implemented' ? 'draft' : 'implemented',
       ),
@@ -149,18 +149,18 @@ export function ProjectPrompts({ project }: { project: Project }): React.JSX.Ele
     onError: () => toast.error('Could not update the draft.'),
   });
   const removeDraftMutation = useMutation({
-    mutationFn: (id: string) => window.agentmat.projectDrafts.remove(id),
+    mutationFn: (id: string) => window.runova.projectDrafts.remove(id),
     onSuccess: refreshDrafts,
   });
 
   // Scheduled
   const taskStatusMutation = useMutation({
     mutationFn: (params: { id: string; status: ScheduledTask['status'] }) =>
-      window.agentmat.scheduledTasks.updateStatus(params.id, params.status),
+      window.runova.scheduledTasks.updateStatus(params.id, params.status),
     onSuccess: refreshTasks,
   });
   const removeTaskMutation = useMutation({
-    mutationFn: (id: string) => window.agentmat.scheduledTasks.remove(id),
+    mutationFn: (id: string) => window.runova.scheduledTasks.remove(id),
     onSuccess: refreshTasks,
   });
 
@@ -186,7 +186,7 @@ export function ProjectPrompts({ project }: { project: Project }): React.JSX.Ele
   const composerMutation = useMutation({
     mutationFn: async ({ state, values }: { state: ComposerState; values: ComposerValues }) => {
       if (state.mode === 'edit') {
-        await window.agentmat.scheduledTasks.update(state.task.id, {
+        await window.runova.scheduledTasks.update(state.task.id, {
           content: values.text,
           runAt: values.runMode === 'auto' ? values.runAt : state.task.runAt,
           runMode: values.runMode,
@@ -200,14 +200,14 @@ export function ProjectPrompts({ project }: { project: Project }): React.JSX.Ele
         return 'Scheduled prompt updated.';
       }
       if (state.mode === 'promote') {
-        await window.agentmat.projectDrafts.promoteToScheduled(
+        await window.runova.projectDrafts.promoteToScheduled(
           state.draft.id,
           scheduleInput(values, state.draft),
         );
         return 'Moved to Scheduled.';
       }
       if (values.kind === 'draft') {
-        await window.agentmat.projectDrafts.create({
+        await window.runova.projectDrafts.create({
           projectId,
           rawInput: values.text,
           promptType: '',
@@ -216,7 +216,7 @@ export function ProjectPrompts({ project }: { project: Project }): React.JSX.Ele
         });
         return 'Draft saved.';
       }
-      await window.agentmat.scheduledTasks.createMany({
+      await window.runova.scheduledTasks.createMany({
         projectId,
         tasks: [scheduleInput(values)],
       });
@@ -256,7 +256,7 @@ export function ProjectPrompts({ project }: { project: Project }): React.JSX.Ele
       toast.error('No CLI available for this prompt. Pick one, or set a default CLI in Settings.');
       return;
     }
-    await window.agentmat.scheduledTasks.markRan(task.id);
+    await window.runova.scheduledTasks.markRan(task.id);
     refreshTasks();
   }
 

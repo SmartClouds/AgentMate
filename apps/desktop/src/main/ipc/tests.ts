@@ -6,7 +6,7 @@ import type {
   TestRunSnapshot,
   TestRunSummary,
   TestTarget,
-} from '@agentmat/core';
+} from '@runova/core';
 import { ipcMain } from 'electron';
 import { IPC } from '../../shared/ipcChannels';
 import { discoverWorkspaceTests } from '../tests/discovery';

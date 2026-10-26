@@ -1,4 +1,4 @@
-import { getCliDefinition, type Project } from '@agentmat/core';
+import { getCliDefinition, type Project } from '@runova/core';
 import { toast } from 'sonner';
 import { type DeliverOptions, deliverToAgent } from '@/lib/workspace/agentSend';
 import { useBrowserStore } from '@/stores/browserStore';

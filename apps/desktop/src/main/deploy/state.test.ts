@@ -12,7 +12,7 @@ import { DeployState, jsonFilePort } from './state';
 
 const RECORD: DeployCoreRecord = {
   version: '1.53.0',
-  release: '/opt/agentmate-core/releases/1.53.0-abababababab',
+  release: '/opt/runova-core/releases/1.53.0-abababababab',
   transport: 'streamlocal',
   installedAt: 1_700_000_000_000,
   os: 'Ubuntu 24.04.1 LTS',

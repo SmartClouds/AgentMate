@@ -1,4 +1,4 @@
-import type { WorktreeStatus } from '@agentmat/core';
+import type { WorktreeStatus } from '@runova/core';
 import type { WorktreeMergeBlocker, WorktreeRemovePreflight } from '@shared/apiTypes';
 
 /** The sentences the worktree UI shows, kept here so they read the same everywhere. */

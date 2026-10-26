@@ -1,0 +1,99 @@
+==> http.conf <==
+# Managed by Runova. Each apply writes a new release, so change this in the app instead.
+
+# WebSocket requests ask the upstream to switch protocols; other requests close as usual.
+map $http_upgrade $runova_connection_upgrade {
+    default upgrade;
+    "" close;
+}
+
+# Requests for names no site claims get no answer at all, and TLS handshakes for them
+# are refused before any certificate is shown.
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name _;
+    ssl_reject_handshake on;
+    return 444;
+}
+
+include /etc/nginx/runova/releases/1/sites/open.conf;
+
+==> sites/open.conf <==
+# Site open: open.test
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name open.test;
+    server_tokens off;
+    root /var/www/runova/sites/open;
+    access_log /var/log/nginx/runova-open.access.log;
+    error_log /var/log/nginx/runova-open.error.log;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/runova/acme;
+        default_type text/plain;
+        try_files $uri =404;
+        allow all;
+        auth_basic off;
+    }
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        # The visitor's own address replaces any X-Forwarded-For they sent, so it cannot be forged.
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+    }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name open.test;
+    server_tokens off;
+    root /var/www/runova/sites/open;
+    access_log /var/log/nginx/runova-open.access.log;
+    error_log /var/log/nginx/runova-open.error.log;
+
+    ssl_certificate /etc/runova-test/tls/sites.crt;
+    ssl_certificate_key /etc/runova-test/tls/sites.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+    ssl_session_cache shared:runova_tls:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        # The visitor's own address replaces any X-Forwarded-For they sent, so it cannot be forged.
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+    }
+}
+
+==> stream.conf <==
+# Managed by Runova. Each apply writes a new release, so change this in the app instead.
+# TCP and UDP ports passed straight through to a service; nginx.conf includes this in its stream block.

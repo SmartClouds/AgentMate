@@ -3,7 +3,7 @@ import type { Aspect } from '../document/schema.js';
 /**
  * Studio's fifteen visual styles. Each one tells the scenario writer and, from E33, the scene
  * generator what the film should look like: a palette, how things move, and what to avoid. They
- * are AgentMate's own descriptions of common motion-design families, written for this app.
+ * are Runova's own descriptions of common motion-design families, written for this app.
  */
 
 export interface StylePreset {

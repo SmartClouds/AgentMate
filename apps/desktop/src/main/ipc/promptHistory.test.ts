@@ -1,4 +1,4 @@
-import type { ActivityEvent } from '@agentmat/core';
+import type { ActivityEvent } from '@runova/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { PromptHistoryEntry } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';

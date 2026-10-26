@@ -1,4 +1,4 @@
-import type { AlertKind } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { AlertKind } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import {
   checkBotToken,
   checkChatId,

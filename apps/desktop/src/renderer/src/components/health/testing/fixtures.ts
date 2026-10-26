@@ -1,4 +1,4 @@
-import type { HealthIncident, HealthReport, HealthSample, Project } from '@agentmat/core';
+import type { HealthIncident, HealthReport, HealthSample, Project } from '@runova/core';
 import type { ProjectEnvironment } from '@shared/apiTypes';
 import type {
   HealthSecretReveal,
@@ -49,7 +49,7 @@ export function target(overrides: Partial<HealthTargetSummary> = {}): HealthTarg
     name: 'API',
     serverLabel: 'web-1',
     serverLink: null,
-    url: 'https://api.example.com/_agentmate/health?probe=1',
+    url: 'https://api.example.com/_runova/health?probe=1',
     intervalSec: 60,
     timeoutSec: 10,
     authMode: 'bearer',
@@ -156,10 +156,10 @@ export function reveal(overrides: Partial<HealthSecretReveal> = {}): HealthSecre
   return {
     targetId: 't1',
     authMode: 'bearer',
-    secret: 'amh_test_secret_value_1234567890',
+    secret: 'rnh_test_secret_value_1234567890',
     sha256: 'a'.repeat(64),
     basicUser: null,
-    hashEnvVar: 'AGENTMATE_HEALTH_TOKEN_SHA256',
+    hashEnvVar: 'RUNOVA_HEALTH_TOKEN_SHA256',
     ...overrides,
   };
 }

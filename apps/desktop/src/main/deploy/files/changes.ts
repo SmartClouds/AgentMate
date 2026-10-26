@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { type LocalFileMap, planFileSync } from '@agentmat/core';
+import { type LocalFileMap, planFileSync } from '@runova/core';
 import { filesError, filesErrorCode, filesErrorMessage } from '../../../shared/deployFilesErrors';
 import type { FilesChangesSnapshot, FilesPendingFile } from '../../../shared/deployFilesTypes';
 import type { HashCache } from '../hashFile';

@@ -4,21 +4,21 @@
  * hard-deny names with NFKC lookalikes, and key renewal when a copy of the site appears elsewhere.
  * (The stored XSS in the admin views is covered by AdminViewsTest.)
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Unit;
+namespace Runova\Connector\Tests\Unit;
 
-use AgentMate\Connector\Audit\AuditLog;
-use AgentMate\Connector\Auth\SiteMove;
-use AgentMate\Connector\Crypto\Base64Url;
-use AgentMate\Connector\Crypto\Crypto;
-use AgentMate\Connector\Crypto\SiteKeys;
-use AgentMate\Connector\Files\PathPolicy;
-use AgentMate\Connector\Http\IncomingRequest;
-use AgentMate\Connector\Storage\MemoryStorage;
-use AgentMate\Connector\Support\Text;
-use AgentMate\Connector\Tests\Support\TestCase;
+use Runova\Connector\Audit\AuditLog;
+use Runova\Connector\Auth\SiteMove;
+use Runova\Connector\Crypto\Base64Url;
+use Runova\Connector\Crypto\Crypto;
+use Runova\Connector\Crypto\SiteKeys;
+use Runova\Connector\Files\PathPolicy;
+use Runova\Connector\Http\IncomingRequest;
+use Runova\Connector\Storage\MemoryStorage;
+use Runova\Connector\Support\Text;
+use Runova\Connector\Tests\Support\TestCase;
 
 final class SecurityFixesTest extends TestCase
 {

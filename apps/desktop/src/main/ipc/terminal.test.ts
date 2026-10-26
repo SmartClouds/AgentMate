@@ -231,8 +231,8 @@ describe('terminal:create', () => {
       projectId: 'project-1',
     });
     expect(payload.env).toMatchObject({
-      AGENTMATE_SESSION_ID: 'tab-1',
-      AGENTMATE_PROJECT_ID: 'project-1',
+      RUNOVA_SESSION_ID: 'tab-1',
+      RUNOVA_PROJECT_ID: 'project-1',
     });
   });
 

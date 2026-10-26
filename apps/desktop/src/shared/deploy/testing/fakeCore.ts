@@ -10,11 +10,13 @@ import type {
   JobLogLine,
   JobLogSource,
   JobState,
+  LayoutMigrationResult,
+  LayoutMigrationStatus,
   MetricsSample,
   ServiceInfo,
   SystemInfo,
   UpdatesInfo,
-} from '../protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../protocol/generated/Runova.ServerCore.Contracts';
 import { FakeAssistant } from './fakeAssistant';
 import { FakeCloudflareCore } from './fakeCloudflareCore';
 import { FakeCoreConnection } from './fakeCoreConnection';
@@ -87,6 +89,10 @@ export class FakeCore {
     outcome: 'switching',
     runningVersion: '1.0.0',
   });
+  /** How many times `migrateLayout` was asked, and how the core answers (a test sets it). */
+  layoutMigrations = 0;
+  answerLayoutMigration: () => LayoutMigrationResult = () => ({ outcome: 'started' });
+  migrationStatus: LayoutMigrationStatus = { layout: 'runova', phase: 'none' };
   system: SystemInfo = sampleSystemInfo();
   services: ServiceInfo[] = sampleServices();
   updates: UpdatesInfo = sampleUpdates();

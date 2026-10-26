@@ -1,4 +1,4 @@
-import type { AndroidSdkStatus } from '@agentmat/core';
+import type { AndroidSdkStatus } from '@runova/core';
 import { screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../test/renderer/renderWithProviders';
@@ -98,7 +98,7 @@ describe('AndroidPage without an SDK', () => {
     });
     // The bridge creates a path's mock on first access, so take a handle before the click.
     // A cancelled picker must leave whatever override the user already had alone.
-    const setSdkPath = window.agentmat.android.setSdkPath;
+    const setSdkPath = window.runova.android.setSdkPath;
 
     await user.click(await screen.findByRole('button', { name: /choose sdk folder/i }));
 
@@ -313,7 +313,7 @@ describe('the resource meters', () => {
 
   it('never asks for sampling when there is no SDK to sample', async () => {
     renderWithProviders(<AndroidPage />, { bridge: { 'android.sdk': NO_SDK } });
-    const watchUsage = window.agentmat.android.watchUsage;
+    const watchUsage = window.runova.android.watchUsage;
 
     await screen.findByText('Android SDK not found');
 

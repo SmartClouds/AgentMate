@@ -1,10 +1,10 @@
-import { validatePort } from '@agentmat/core';
+import { validatePort } from '@runova/core';
 import type {
   SiteSettings,
   SiteSnippets,
   StreamProxySettings,
   UpstreamTarget,
-} from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { object } from './deploy';
 
 /**

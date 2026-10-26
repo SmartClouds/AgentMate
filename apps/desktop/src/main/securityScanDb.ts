@@ -8,7 +8,7 @@ import type {
   SecurityScanStatus,
   SecuritySeverity,
   SecurityVerdict,
-} from '@agentmat/core';
+} from '@runova/core';
 import Database from 'better-sqlite3';
 import { app } from 'electron';
 

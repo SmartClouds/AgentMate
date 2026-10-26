@@ -1,4 +1,4 @@
-import type { ResourceStopResult } from '@agentmat/core';
+import type { ResourceStopResult } from '@runova/core';
 import { describe, expect, it } from 'vitest';
 import { summarizeStop } from './useStopIdleResources';
 

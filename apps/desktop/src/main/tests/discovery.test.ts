@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import type { TestNode } from '@agentmat/core';
+import type { TestNode } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { discoverWorkspaceTests, listWorkspaceFiles } from './discovery';
 
@@ -11,7 +11,7 @@ import { discoverWorkspaceTests, listWorkspaceFiles } from './discovery';
 let root = '';
 
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), 'agentmate-discovery-'));
+  root = await mkdtemp(join(tmpdir(), 'runova-discovery-'));
 });
 
 afterEach(async () => {

@@ -34,7 +34,11 @@ describe('vault backup section', () => {
 
   it('skips a damaged vault file instead of exporting it', async () => {
     const files = new MemoryVaultFiles();
-    files.current = { format: 'agentmate-vault', version: 1, kdf: { N: 2 ** 30 } };
+    files.current = {
+      format: 'agentmate-vault' as const /* legacy-name */,
+      version: 1,
+      kdf: { N: 2 ** 30 },
+    };
     expect(await currentVaultSection(files)).toBeNull();
   });
 

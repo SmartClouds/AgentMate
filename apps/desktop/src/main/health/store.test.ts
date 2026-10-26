@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { healthHoursFromSamples, INITIAL_HEALTH_TRACK } from '@agentmat/core';
+import { healthHoursFromSamples, INITIAL_HEALTH_TRACK } from '@runova/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { HealthTargetInput } from '../../shared/healthTypes';
 import { IPC } from '../../shared/ipcChannels';
@@ -18,7 +18,7 @@ const userData = useTempUserData();
 let health: typeof import('./store');
 let vault: typeof import('../ssh/vault');
 
-const KEY = 'amh_plaintextKeyThatMustNotBeOnDisk_0123456789abcd';
+const KEY = 'rnh_plaintextKeyThatMustNotBeOnDisk_0123456789abcd';
 
 function input(overrides: Partial<HealthTargetInput> = {}): HealthTargetInput {
   return {
@@ -27,7 +27,7 @@ function input(overrides: Partial<HealthTargetInput> = {}): HealthTargetInput {
     name: 'API',
     serverLabel: null,
     serverLink: null,
-    url: 'https://shop.example.com/_agentmate/health',
+    url: 'https://shop.example.com/_runova/health',
     intervalSec: 60,
     timeoutSec: 10,
     authMode: 'bearer',

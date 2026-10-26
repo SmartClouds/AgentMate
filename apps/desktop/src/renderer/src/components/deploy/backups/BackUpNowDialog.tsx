@@ -1,6 +1,6 @@
 import { coreErrorMessage } from '@shared/coreErrors';
 import { backupSize } from '@shared/deploy/backupSchedule';
-import type { BackupRunInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { BackupRunInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployBackupDownload } from '@shared/deployServerBackupsTypes';
 import type { DeployServer } from '@shared/deployTypes';
 import { useEffect, useState } from 'react';
@@ -62,7 +62,7 @@ export function BackUpNowDialog({
 
   useEffect(
     () =>
-      window.agentmat.deployServerBackups.onRunProgress((event) => {
+      window.runova.deployServerBackups.onRunProgress((event) => {
         if (event.serverId !== server.id) return;
         setRun((current) => (current && current.id === event.run.id ? event.run : current));
         if (event.downloadedBytes !== undefined) setDownloaded(event.downloadedBytes);
@@ -78,7 +78,7 @@ export function BackUpNowDialog({
     setProblem(null);
     try {
       const started = await stepUp.run(() =>
-        window.agentmat.deployServerBackups.runNow({
+        window.runova.deployServerBackups.runNow({
           serverId: server.id,
           destinationIds: picked,
           download,
@@ -87,7 +87,7 @@ export function BackUpNowDialog({
       if (!started?.started || !started.run) return;
       setRun(started.run);
       refresh();
-      const watched = await window.agentmat.deployServerBackups.watchRun({
+      const watched = await window.runova.deployServerBackups.watchRun({
         serverId: server.id,
         runId: started.run.id,
       });

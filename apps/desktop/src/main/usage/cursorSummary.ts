@@ -1,4 +1,4 @@
-import type { SubscriptionWindow, UsageWindow } from '@agentmat/core';
+import type { SubscriptionWindow, UsageWindow } from '@runova/core';
 
 // Cursor's usage-based plans (Pro, Pro+, Ultra since mid-2025) meter spend
 // rather than requests, so the old `/api/usage` request counter reads 0 with no

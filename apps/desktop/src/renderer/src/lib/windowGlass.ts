@@ -19,7 +19,7 @@ export function applyWindowGlass(root: HTMLElement, search: string): void {
   if (glass) root.dataset.glass = glass;
 }
 
-/** The part of the preload bridge (`window.agentmat.window`) that reports the window's focus. */
+/** The part of the preload bridge (`window.runova.window`) that reports the window's focus. */
 export interface WindowFocusSource {
   isFocused(): Promise<boolean>;
   onFocusChange(callback: (isFocused: boolean) => void): () => void;

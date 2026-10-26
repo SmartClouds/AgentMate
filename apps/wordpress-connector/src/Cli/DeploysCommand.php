@@ -1,16 +1,16 @@
 <?php
 /**
- * `wp agentmate deploys list`.
+ * `wp runova deploys list`.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Cli;
+namespace Runova\Connector\Cli;
 
-use AgentMate\Connector\Plugin;
+use Runova\Connector\Plugin;
 
 /**
- * Shows the deploys AgentMate made on this site.
+ * Shows the deploys Runova made on this site.
  */
 final class DeploysCommand
 {

@@ -11,7 +11,7 @@ import type {
   OriginLockRequest,
   OriginLockResult,
   OriginLockStatus,
-} from '../protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../protocol/generated/Runova.ServerCore.Contracts';
 import type { FakeFirewall, FakeFirewallCaller } from './fakeFirewall';
 import type { FakeNginx } from './fakeNginx';
 

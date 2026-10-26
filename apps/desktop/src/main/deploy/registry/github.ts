@@ -43,7 +43,7 @@ export async function checkGithubToken(
       headers: {
         Accept: 'application/vnd.github+json',
         Authorization: `Bearer ${token}`,
-        'User-Agent': 'AgentMate',
+        'User-Agent': 'Runova',
         'X-GitHub-Api-Version': '2022-11-28',
       },
       signal: AbortSignal.timeout(TIMEOUT_MS),

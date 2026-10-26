@@ -1,7 +1,7 @@
 import type { LinkCandidateProject, RemoteProject } from './types.js';
 
 /**
- * Which provider projects belong to an AgentMate project, guessed from names. A project called
+ * Which provider projects belong to a Runova project, guessed from names. A project called
  * "Storefront" in a folder `storefront` usually reports to `storefront-web` and `storefront-api`,
  * so the words that only say what kind of app it is (web, api, worker) are left out of the main
  * score and only break ties: with the folder `storefront-api`, that one comes first.

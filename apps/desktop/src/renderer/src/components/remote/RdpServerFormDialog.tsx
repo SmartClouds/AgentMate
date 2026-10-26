@@ -181,7 +181,7 @@ export function RdpServerFormDialog({
   async function handleSubmit(): Promise<void> {
     if (!canSubmit || submitting) return;
     if (secret) {
-      const status = await window.agentmat.ssh.vaultStatus();
+      const status = await window.runova.ssh.vaultStatus();
       if (status.hasPasskey && !status.unlocked) {
         toast.error('Unlock your Servers passkey first (see the lock button above the list).');
         return;
@@ -199,7 +199,7 @@ export function RdpServerFormDialog({
         secret: secret || undefined,
         options,
       };
-      const saved = await window.agentmat.rdp.saveServer(input);
+      const saved = await window.runova.rdp.saveServer(input);
       onOpenChange(false);
       onSaved(saved);
     } catch (error) {

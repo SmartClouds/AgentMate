@@ -70,7 +70,7 @@ function walk(node: Bridge, prefix = ''): { path: string; fn: (...args: unknown[
 describe('the exposed bridge', () => {
   it('is published under the name the renderer reads', () => {
     // Captured at import time: the per-test reset clears the recorded calls afterwards.
-    expect(exposedName).toBe('agentmat');
+    expect(exposedName).toBe('runova');
   });
 
   it('exposes the namespaces the renderer depends on', () => {

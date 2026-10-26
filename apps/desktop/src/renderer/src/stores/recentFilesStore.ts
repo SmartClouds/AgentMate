@@ -1,4 +1,4 @@
-import { isSameOrInside, remapPath } from '@agentmat/core';
+import { isSameOrInside, remapPath } from '@runova/core';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -64,7 +64,7 @@ export const useRecentFilesStore = create<RecentFilesState>()(
         }),
     }),
     {
-      name: 'agentmate-recent-files',
+      name: 'runova-recent-files',
       version: 1,
       partialize: (state) => ({ byProject: state.byProject }),
     },

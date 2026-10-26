@@ -6,7 +6,7 @@ import {
   parseTaskFile,
   type RelayState,
   renderTaskFile,
-} from '@agentmat/core';
+} from '@runova/core';
 import { describe, expect, it, vi } from 'vitest';
 import type { RelayProjectSettings } from '../../shared/relayTypes';
 import { createRelayDriver, type RelayDriverDeps } from './service';

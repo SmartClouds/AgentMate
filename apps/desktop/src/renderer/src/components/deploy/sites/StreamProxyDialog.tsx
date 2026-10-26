@@ -1,10 +1,10 @@
-import { validateIpOrCidr, validatePort } from '@agentmat/core';
+import { validateIpOrCidr, validatePort } from '@runova/core';
 import { coreErrorMessage } from '@shared/coreErrors';
 import type {
   StreamProxyInfo,
   StreamProxyProtocol,
   StreamProxySettings,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useEffect, useId, useState } from 'react';
 import { Save, Spinner } from '@/components/icons';
 import { Button } from '@/components/ui/button';
@@ -119,7 +119,7 @@ export function StreamProxyDialog({
     if (Object.keys(local).length > 0) return;
     setBusy(true);
     try {
-      const result = await window.agentmat.deploySites.saveStream(serverId, settings);
+      const result = await window.runova.deploySites.saveStream(serverId, settings);
       if (result.problems.length > 0) {
         setErrors(
           Object.fromEntries(

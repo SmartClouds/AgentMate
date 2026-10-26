@@ -1,4 +1,4 @@
-import type { RemoteObservation } from '@agentmat/core';
+import type { RemoteObservation } from '@runova/core';
 import type { FilesConflictChoice, FilesPlanChange } from '@shared/deployFilesTypes';
 import { useRef, useState } from 'react';
 import { TriangleAlert } from '@/components/icons';

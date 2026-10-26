@@ -2,7 +2,7 @@ import { createReadStream } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { validateStackName } from '@agentmat/core';
+import { validateStackName } from '@runova/core';
 import { encodeCoreError } from '../../../shared/coreErrors';
 import type {
   JobInfo,
@@ -15,8 +15,8 @@ import type {
   StackRevisionInfo,
   StackRevisionUpload,
   StackSource,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import type {
   DeployAppRevealInput,
   DeployMakePrivateInput,
@@ -333,7 +333,7 @@ export class DeployStacks {
   ): Promise<DeployStackUploadResult> {
     const base = `/api/v1/stacks/${encodeURIComponent(stackId)}/revisions`;
     const folder = prepared.upload.buildContext
-      ? await mkdtemp(join(this.deps.tempRoot?.() ?? tmpdir(), 'agentmate-context-'))
+      ? await mkdtemp(join(this.deps.tempRoot?.() ?? tmpdir(), 'runova-context-'))
       : null;
     try {
       // Packed first: a context that is too large is refused before the server gets anything.

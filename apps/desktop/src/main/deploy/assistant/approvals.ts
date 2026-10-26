@@ -1,8 +1,9 @@
 import type { SecretEnvelope } from '../../../shared/apiTypes';
 import { encodeCoreError } from '../../../shared/coreErrors';
-import type { ExecApproval } from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+import type { ExecApproval } from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { signMessage } from '../auth/deviceKey';
+import { coreNames, layoutOf, RUNOVA_CORE } from '../coreLayout';
 import type { DeployState } from '../state';
 
 /**
@@ -13,19 +14,23 @@ import type { DeployState } from '../state';
  * after they did, cannot run.
  */
 
-/** The text the core verifies (its ExecApprovals.Message), field for field. */
+/**
+ * The text the core verifies (its ExecApprovals.Message), field for field. `prefix` is the
+ * layout's: a core from before the rename only takes the old one.
+ */
 export function execApprovalMessage(
   nonceId: string,
   nonce: string,
   deviceId: string,
   sessionId: string,
   command: string,
+  prefix: string = RUNOVA_CORE.execPrefix,
 ): string {
-  return ['agentmate-core/exec/v1', nonceId, nonce, deviceId, sessionId, command].join('\n');
+  return [prefix, nonceId, nonce, deviceId, sessionId, command].join('\n');
 }
 
 export interface ApprovalSignerDeps {
-  state: Pick<DeployState, 'device'>;
+  state: Pick<DeployState, 'device' | 'get'>;
   unseal: (envelope: SecretEnvelope) => Promise<string>;
 }
 
@@ -45,6 +50,7 @@ export function approvalSigner(
       device.deviceId,
       device.sessionId,
       command,
+      coreNames(layoutOf(await deps.state.get(serverId))).execPrefix,
     );
     return { nonceId: nonce.nonceId, signature: signMessage(privateKey, message) };
   };

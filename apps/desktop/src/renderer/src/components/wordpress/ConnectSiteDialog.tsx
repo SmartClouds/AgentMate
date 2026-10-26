@@ -2,7 +2,7 @@ import {
   parseWpConnectionKey,
   type WpConnectionKeyError,
   wpKeyTransportSecurity,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { DeployWordPressSite } from '@shared/deployWordPressTypes';
 import { wordPressErrorCode } from '@shared/wordpressErrors';
 import { useCallback, useEffect, useId, useState } from 'react';
@@ -29,7 +29,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { WordPressMark } from './WordPressMark';
 
 /**
- * Connects a WordPress site with a key from the AgentMate Connector plugin (E20). Deploy and the
+ * Connects a WordPress site with a key from the Runova Connector plugin (E20). Deploy and the
  * Projects flow both open it.
  *
  * The key is a one-time secret. It lives only in this component's state: it is read here to show
@@ -45,13 +45,13 @@ export interface ConnectSiteDialogProps {
 
 const KEY_HINTS: Record<WpConnectionKeyError, string> = {
   format:
-    "This doesn't look like a connection key. Copy the whole key from Tools > AgentMate Connector in the site's admin; it starts with amwp1.",
+    "This doesn't look like a connection key. Copy the whole key from Tools > Runova Connector in the site's admin; it starts with amwp1.",
   version:
-    'This key is for a different version of the connector. Update the plugin on the site (or update AgentMate), then make a new key.',
+    'This key is for a different version of the connector. Update the plugin on the site (or update Runova), then make a new key.',
   fields: "This key is incomplete or damaged. Copy it again from the site's admin.",
-  url: "The addresses in this key aren't ones AgentMate can use. Check the site's address in Settings > General, then make a new key.",
+  url: "The addresses in this key aren't ones Runova can use. Check the site's address in Settings > General, then make a new key.",
   expired:
-    'This key has expired. Keys work once, for 15 minutes. Make a new one in Tools > AgentMate Connector.',
+    'This key has expired. Keys work once, for 15 minutes. Make a new one in Tools > Runova Connector.',
 };
 
 function minutesLeft(expiresAtSeconds: number, now: number): string {
@@ -126,7 +126,7 @@ export function ConnectSiteDialog({
     setBusy(true);
     setProblem(null);
     try {
-      const site = await window.agentmat.deployWordPress.connect({
+      const site = await window.runova.deployWordPress.connect({
         connectionKey: compact,
         ...(label.trim() ? { label: label.trim() } : {}),
         ...(needsPlainOptIn && allowPlainHttp ? { allowPlainHttp: true } : {}),
@@ -152,7 +152,7 @@ export function ConnectSiteDialog({
             <WordPressMark className="h-5 w-5" /> Connect a WordPress site
           </DialogTitle>
           <DialogDescription>
-            Paste the connection key from Tools &gt; AgentMate Connector in the site's admin. A key
+            Paste the connection key from Tools &gt; Runova Connector in the site's admin. A key
             works once, for 15 minutes.
           </DialogDescription>
         </DialogHeader>
@@ -248,7 +248,7 @@ export function ConnectSiteDialog({
           )}
 
           <div className="space-y-1.5">
-            <Label htmlFor={`${id}-label`}>Name in AgentMate (optional)</Label>
+            <Label htmlFor={`${id}-label`}>Name in Runova (optional)</Label>
             <Input
               id={`${id}-label`}
               value={label}

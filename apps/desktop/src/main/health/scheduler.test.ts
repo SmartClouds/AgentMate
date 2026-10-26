@@ -1,5 +1,5 @@
-import type { HealthProbeState, HealthReport } from '@agentmat/core';
-import { probeFailureReport } from '@agentmat/core';
+import type { HealthProbeState, HealthReport } from '@runova/core';
+import { probeFailureReport } from '@runova/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SecretEnvelope } from '../../shared/apiTypes';
 import { tempDir } from '../../test/main/fixtures';

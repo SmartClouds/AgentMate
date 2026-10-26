@@ -2,11 +2,13 @@
 title: Getting started
 category: Getting started
 order: 10
-summary: What AgentMate is, how the app is laid out, and the first steps to take after installing it, from picking a projects folder to opening your first Workspace.
-keywords: getting started, first steps, setup, install, overview, tour, projects folder, startup page, splash, ai provider, ai cli, claude code, codex, welcome, beginner, sidebar, menu, quick start
+summary: What Runova is, how the app is laid out, and the first steps to take after installing it, from picking a projects folder to opening your first Workspace.
+keywords: getting started, first steps, runova name, formerly agentmate, rename, runway, nova, setup, install, overview, tour, projects folder, startup page, splash, ai provider, ai cli, claude code, codex, welcome, beginner, sidebar, menu, quick start
 ---
 
-AgentMate is a desktop app for working with AI coding agents. It keeps your projects, agent terminals, prompts, git, deployments and servers in one window, so you can start an agent such as Claude Code or Codex in a project, watch what it does, review its changes and ship the result without leaving the app.
+Runova is a desktop app for working with AI coding agents. It keeps your projects, agent terminals, prompts, git, deployments and servers in one window, so you can start an agent such as Claude Code or Codex in a project, watch what it does, review its changes and ship the result without leaving the app.
+
+The name joins a runway, where launches happen, and a nova, a new star: you bring an idea, the agents build it with you, and it takes off from here. Runova used to be called AgentMate. Updating from it moves your settings, projects, saved secrets and servers over on its own, and see [Troubleshooting](troubleshooting.md) if something from before seems to be missing.
 
 This article walks through what is in the app and the handful of things worth doing the first time you open it. Every other area has its own article, linked along the way.
 
@@ -14,7 +16,7 @@ This article walks through what is in the app and the handful of things worth do
 
 You are already here. To come back to this page later, press `F1` to open the in-app Help, or open the command palette (`Ctrl+K`, `Cmd+K` on macOS) and type Help. The Help page has a search box and an **Ask the guide** chat that answers from these articles once an AI provider is set up. See [Help center](help-center.md).
 
-## What AgentMate is made of
+## What Runova is made of
 
 The app is organised around a menu with a few pages at the top and four headed groups below them. By default the menu is a sidebar down the left edge. You can move it to a bar along the top in Settings, General, **Main menu**. Both layouts show the same pages. See [Interface tour](interface-tour.md) for the details.
 
@@ -79,7 +81,7 @@ Leave it empty to use the last location your system dialog remembered.
 
 ### Add an AI provider
 
-An AI provider is what powers Ask AI, Prompt Builder and the Help chat. AgentMate supports OpenAI, Gemini and Ollama (a model running on your own machine).
+An AI provider is what powers Ask AI, Prompt Builder and the Help chat. Runova supports OpenAI, Gemini and Ollama (a model running on your own machine).
 
 1. Open **Settings** and click the **AI** tab.
 2. In the **Providers** card, find OpenAI, Gemini or Ollama.
@@ -88,11 +90,11 @@ An AI provider is what powers Ask AI, Prompt Builder and the Help chat. AgentMat
 
 The badge next to each provider says **Key set** or **No key**. For the full list of providers, models and checks, see [AI providers](ai-providers.md).
 
-Separately, the **Agents** tab of Settings has a **Default CLI** card. That picks which AI CLI AgentMate starts when a feature needs one without asking you.
+Separately, the **Agents** tab of Settings has a **Default CLI** card. That picks which AI CLI Runova starts when a feature needs one without asking you.
 
 ### Install or detect your AI CLIs
 
-AI CLIs are the command line agents themselves, for example Claude Code, Codex and Gemini CLI. AgentMate detects the ones already on your machine.
+AI CLIs are the command line agents themselves, for example Claude Code, Codex and Gemini CLI. Runova detects the ones already on your machine.
 
 1. Click **AI CLI Manager** in the menu, under Agents.
 2. Check which CLIs are detected. If you have some not installed, click **Show all CLIs** to see them.
@@ -102,14 +104,14 @@ The Dashboard also shows how many CLIs are installed and tells you when an insta
 
 ### Add a project
 
-A project is a folder on your computer that AgentMate knows about.
+A project is a folder on your computer that Runova knows about.
 
 1. Click **Projects** in the menu, then **New Project**. From the Dashboard you can click **New Project** too.
 2. On the **Basics** tab, enter a **Name** and choose the **Folder**. These two are required. If you pick the folder with **Browse** and the name is still empty, the name fills in from the folder name.
 3. Optionally set the agent type, tags, an icon and run commands on the other tabs. You can change all of it later.
 4. Click **Create project**, or press `Ctrl+Enter`.
 
-AgentMate reads the folder's git remote if there is one and fills in the **Git repository** field for you. See [Projects](projects.md) for every field.
+Runova reads the folder's git remote if there is one and fills in the **Git repository** field for you. See [Projects](projects.md) for every field.
 
 ### Open the Workspace
 
@@ -123,19 +125,19 @@ See [Workspace](workspace.md), [Terminals and agents](workspace-terminals-agents
 
 ## The startup splash
 
-When you launch AgentMate, a small glass window appears first while the app loads. It shows the AgentMate logo, the tagline "Agentic Development Environment", a progress bar, and a line saying what it is busy with, for example "Loading settings...", "Starting services..." and "Loading your workspace...". In the bottom right corner it shows the maker (SmartClouds), the year and the version (or "Dev build" when you run a development build).
+When you launch Runova, a small glass window appears first while the app loads. It shows the Runova logo, the tagline "Agentic Development Environment", a progress bar, and a line saying what it is busy with, for example "Loading settings...", "Starting services..." and "Loading your workspace...". In the bottom right corner it shows the maker (SmartClouds), the year and the version (or "Dev build" when you run a development build).
 
-The splash goes away on its own as soon as the first page has its data, and the main window appears in its place. If the main window takes unusually long, AgentMate shows it anyway after about 15 seconds so you are not left waiting.
+The splash goes away on its own as soon as the first page has its data, and the main window appears in its place. If the main window takes unusually long, Runova shows it anyway after about 15 seconds so you are not left waiting.
 
 ## The startup page setting
 
-You choose which page AgentMate opens on.
+You choose which page Runova opens on.
 
 1. Open **Settings** and stay on the **General** tab.
 2. Find the **Startup page** row.
 3. Pick **Last opened page**, or any page from the menu, such as Dashboard or Workspace.
 
-**Last opened page** is the default. It brings back the page and project you were on, whether you closed the app, it restarted to install an update, or the computer shut down. If that page belonged to a project you have since deleted, AgentMate opens the Projects or Workspace page instead. On the very first launch, with nothing to restore yet, it opens on the Dashboard.
+**Last opened page** is the default. It brings back the page and project you were on, whether you closed the app, it restarted to install an update, or the computer shut down. If that page belonged to a project you have since deleted, Runova opens the Projects or Workspace page instead. On the very first launch, with nothing to restore yet, it opens on the Dashboard.
 
 ## Tips
 

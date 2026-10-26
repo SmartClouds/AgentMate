@@ -1,5 +1,5 @@
 /**
- * A throwaway WordPress site in Docker with AgentMate Connector installed from the built zip.
+ * A throwaway WordPress site in Docker with Runova Connector installed from the built zip.
  * Reusable from other tests:
  *
  *   import { startWordPressFixture } from '.../apps/wordpress-connector/tests/smoke/fixture.mjs';
@@ -8,11 +8,15 @@
  *   site.wp(['plugin', 'activate', 'hello']);  // WP-CLI (returns stdout; { allowFail: true } to not throw)
  *   site.exec('cat /var/www/html/wp-content/themes/x/style.css');
  *   site.writeFile('/var/www/html/wp-content/mu-plugins/x.php', '<?php ...');
+ *   site.serveDownloads({ 'https://github.com/...zip': '/runova-dist/x.zip' });  // see below
  *   site.stop();
+ *
+ * `slug` and `cli` name the plugin folder and the WP-CLI command when the zip is not the current
+ * plugin (an older release under its old names, say).
  *
  * MariaDB, WordPress (Apache on the same port as the host mapping, so loopback works) and one-off
  * WP-CLI containers share a network. WP_DEBUG logs to wp-content/debug.log, never to the page. The
- * admin user is admin / admin. Everything is named agentmate-wpc-<port>-* and removed by stop(),
+ * admin user is admin / admin. Everything is named runova-wpc-<port>-* and removed by stop(),
  * volumes included. Plain Node only: no packages, no build of the rest of the repo.
  */
 import { spawnSync } from 'node:child_process';
@@ -71,9 +75,9 @@ function sleep(ms) {
   return new Promise((done) => setTimeout(done, ms));
 }
 
-/** Builds dist/agentmate-connector.zip when it is not there yet. */
+/** Builds dist/runova-connector.zip when it is not there yet. */
 export function connectorZip() {
-  const zip = join(pluginRoot, 'dist', 'agentmate-connector.zip');
+  const zip = join(pluginRoot, 'dist', 'runova-connector.zip');
   if (!existsSync(zip)) {
     const result = spawnSync(
       process.execPath,
@@ -88,7 +92,7 @@ export function connectorZip() {
 }
 
 /**
- * @param {{ port?: number, multisite?: boolean, image?: string, cliImage?: string, dbImage?: string, zip?: string }} [options]
+ * @param {{ port?: number, multisite?: boolean, image?: string, cliImage?: string, dbImage?: string, zip?: string, slug?: string, cli?: string }} [options]
  */
 export async function startWordPressFixture(options = {}) {
   const port = options.port ?? 18990;
@@ -96,7 +100,9 @@ export async function startWordPressFixture(options = {}) {
   const cliImage = options.cliImage ?? 'wordpress:cli-php8.3';
   const dbImage = options.dbImage ?? 'mariadb:11';
   const zip = options.zip ?? connectorZip();
-  const name = `agentmate-wpc-${port}`;
+  const slug = options.slug ?? 'runova-connector';
+  const cli = options.cli ?? 'runova';
+  const name = `runova-wpc-${port}`;
   const network = `${name}-net`;
   const url = `http://localhost:${port}`;
   const startScript = readFileSync(
@@ -141,10 +147,10 @@ export async function startWordPressFixture(options = {}) {
       '-p',
       `127.0.0.1:${port}:${port}`,
       '-e',
-      `AGENTMATE_PORT=${port}`,
+      `RUNOVA_PORT=${port}`,
       ...DB_ENV,
       '--mount',
-      `type=bind,source=${dirname(zip)},target=/agentmate-dist,readonly`,
+      `type=bind,source=${dirname(zip)},target=/runova-dist,readonly`,
       image,
       'sh',
       '-c',
@@ -204,7 +210,7 @@ export async function startWordPressFixture(options = {}) {
           'core',
           'install',
           `--url=${url}`,
-          '--title=AgentMate Fixture',
+          '--title=Runova Fixture',
           '--admin_user=admin',
           '--admin_password=admin',
           '--admin_email=admin@example.test',
@@ -226,13 +232,13 @@ export async function startWordPressFixture(options = {}) {
     wp(['config', 'set', 'WP_DEBUG', 'true', '--raw']);
     wp(['config', 'set', 'WP_DEBUG_LOG', 'true', '--raw']);
     wp(['config', 'set', 'WP_DEBUG_DISPLAY', 'false', '--raw']);
-    const zipInContainer = `/agentmate-dist/${zip.split(/[\\/]/).pop()}`;
+    const zipInContainer = `/runova-dist/${zip.split(/[\\/]/).pop()}`;
     if (options.multisite) {
       // A subdirectory network; the connector can only be network-activated.
-      wp(['core', 'multisite-convert', '--title=AgentMate Network']);
+      wp(['core', 'multisite-convert', '--title=Runova Network']);
       writeFile('/var/www/html/.htaccess', MULTISITE_HTACCESS);
       wp(['plugin', 'install', zipInContainer]);
-      wp(['plugin', 'activate', 'agentmate-connector', '--network']);
+      wp(['plugin', 'activate', slug, '--network']);
     } else {
       wp(['plugin', 'install', zipInContainer, '--activate']);
     }
@@ -245,12 +251,39 @@ export async function startWordPressFixture(options = {}) {
       wp,
       exec,
       writeFile,
-      /** A new one-time connection key from `wp agentmate key create`. */
+      /** A new one-time connection key from `wp runova key create`. */
       keyFor(scope, { label, expiresIn } = {}) {
-        const args = ['agentmate', 'key', 'create', `--scope=${scope}`, '--porcelain'];
+        const args = [cli, 'key', 'create', `--scope=${scope}`, '--porcelain'];
         if (label) args.push(`--label=${label}`);
         if (expiresIn) args.push(`--expires-in=${expiresIn}`);
         return wp(args);
+      },
+      /**
+       * Answers the site's own HTTP requests for these addresses with files from the container
+       * (the zip's folder is mounted at /runova-dist), through a pre_http_request mu-plugin, so
+       * the plugin's "download the release itself" path runs without reaching GitHub.
+       */
+      serveDownloads(map) {
+        const entries = Object.entries(map)
+          .map(([address, path]) => `  ${JSON.stringify(address)} => ${JSON.stringify(path)},`)
+          .join('\n');
+        writeFile(
+          '/var/www/html/wp-content/mu-plugins/zz-test-downloads.php',
+          [
+            '<?php',
+            '// Test fixture only: release downloads come from local files.',
+            "add_filter('pre_http_request', function ($pre, $args, $url) {",
+            '  $map = array(',
+            entries,
+            '  );',
+            '  if (!isset($map[$url]) || !is_file($map[$url])) {',
+            '    return $pre;',
+            '  }',
+            "  return array('headers' => array(), 'body' => file_get_contents($map[$url]), 'response' => array('code' => 200, 'message' => 'OK'), 'cookies' => array(), 'filename' => null);",
+            '}, 10, 3);',
+            '',
+          ].join('\n'),
+        );
       },
       stop,
     };

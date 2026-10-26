@@ -9,7 +9,7 @@ import type {
   ImageInfo,
   NetworkInfo,
   VolumeInfo,
-} from '../protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * Docker on a pretend server, as the DevHost seeds it, for tests on either side of IPC: a

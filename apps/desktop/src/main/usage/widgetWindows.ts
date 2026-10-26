@@ -9,7 +9,7 @@ import {
   widgetAlwaysOnTop,
   widgetBackgroundColor,
   widgetPeriod,
-} from '@agentmat/core';
+} from '@runova/core';
 import { BrowserWindow } from 'electron';
 import icon from '../../../resources/icon.ico?asset';
 import { sendToWindow } from '../ipc/send';

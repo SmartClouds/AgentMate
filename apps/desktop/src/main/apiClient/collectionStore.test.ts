@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { isFolder, type PostmanRequestItem } from '@agentmat/core';
+import { isFolder, type PostmanRequestItem } from '@runova/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useTempUserData } from '../../test/main/ipcHarness';
 

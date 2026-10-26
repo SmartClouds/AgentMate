@@ -34,7 +34,7 @@ function tryLink(target: string, path: string, kind: 'junction' | 'file'): boole
 }
 
 const canLinkFiles = (() => {
-  const dir = tempDir('agentmate-walk-probe-');
+  const dir = tempDir('runova-walk-probe-');
   writeFileSync(join(dir, 'a'), 'a');
   const ok = tryLink(join(dir, 'a'), join(dir, 'b'), 'file');
   rmSync(dir, { recursive: true, force: true });
@@ -43,7 +43,7 @@ const canLinkFiles = (() => {
 
 describe('walkLocal', () => {
   it('lists everything below the folder, pre-order and by name, with sizes and times', async () => {
-    const root = tempDir('agentmate-walk-');
+    const root = tempDir('runova-walk-');
     writeTree(root, { 'a.txt': 'aaa', 'css/site.css': 'body{}', 'css/sub/x.css': 'x' });
     mkdirSync(join(root, 'empty'));
     const { items, skippedLinks } = await walkLocal(root, {});
@@ -66,8 +66,8 @@ describe('walkLocal', () => {
   });
 
   it('does not descend into a linked folder, and reports it', async () => {
-    const root = tempDir('agentmate-walk-');
-    const outside = tempDir('agentmate-walk-outside-');
+    const root = tempDir('runova-walk-');
+    const outside = tempDir('runova-walk-outside-');
     writeTree(outside, { 'secret.txt': 'do not send' });
     writeTree(root, { 'keep.txt': 'k' });
     expect(tryLink(outside, join(root, 'linked'), 'junction')).toBe(true);
@@ -77,8 +77,8 @@ describe('walkLocal', () => {
   });
 
   it('reports a broken link', async () => {
-    const root = tempDir('agentmate-walk-');
-    const gone = tempDir('agentmate-walk-gone-');
+    const root = tempDir('runova-walk-');
+    const gone = tempDir('runova-walk-gone-');
     expect(tryLink(gone, join(root, 'dangling'), 'junction')).toBe(true);
     rmSync(gone, { recursive: true, force: true });
     const { items, skippedLinks } = await walkLocal(root, {});
@@ -87,8 +87,8 @@ describe('walkLocal', () => {
   });
 
   it.skipIf(!canLinkFiles)('follows a link to a file', async () => {
-    const root = tempDir('agentmate-walk-');
-    const outside = tempDir('agentmate-walk-outside-');
+    const root = tempDir('runova-walk-');
+    const outside = tempDir('runova-walk-outside-');
     writeTree(outside, { 'real.txt': '12345' });
     tryLink(join(outside, 'real.txt'), join(root, 'alias.txt'), 'file');
     const { items, skippedLinks } = await walkLocal(root, {});
@@ -97,7 +97,7 @@ describe('walkLocal', () => {
   });
 
   it('leaves out a file or folder that vanishes during the walk', async () => {
-    const root = tempDir('agentmate-walk-');
+    const root = tempDir('runova-walk-');
     writeTree(root, { 'a.txt': 'a', 'b.txt': 'b', 'gone/x.txt': 'x' });
     const fs: LocalWalkFs = {
       readdir: (path) => fsPromises.readdir(path),
@@ -123,14 +123,14 @@ describe('walkLocal', () => {
   });
 
   it('throws tooManyFiles past the cap', async () => {
-    const root = tempDir('agentmate-walk-');
+    const root = tempDir('runova-walk-');
     writeTree(root, { 'a.txt': 'a', 'b/c.txt': 'c', 'b/d.txt': 'd' });
     expect((await walkLocal(root, { maxItems: 4 })).items).toHaveLength(4);
     expect(filesErrorCode(await caught(walkLocal(root, { maxItems: 3 })))).toBe('tooManyFiles');
   });
 
   it('stops when aborted', async () => {
-    const root = tempDir('agentmate-walk-');
+    const root = tempDir('runova-walk-');
     writeTree(root, { 'a/1.txt': '1', 'b/2.txt': '2' });
     const before = new AbortController();
     before.abort();
@@ -153,7 +153,7 @@ describe('walkLocal', () => {
   });
 
   it('fails with folderMissing when the folder itself is gone', async () => {
-    const root = join(tempDir('agentmate-walk-'), 'nope');
+    const root = join(tempDir('runova-walk-'), 'nope');
     expect(filesErrorCode(await caught(walkLocal(root, {})))).toBe('folderMissing');
   });
 
@@ -165,7 +165,7 @@ describe('walkLocal', () => {
         throw Object.assign(new Error('EACCES: permission denied'), { code: 'EACCES' });
       },
     };
-    const error = await caught(walkLocal(tempDir('agentmate-walk-'), { fs }));
+    const error = await caught(walkLocal(tempDir('runova-walk-'), { fs }));
     expect((error as { code?: string }).code).toBe('EACCES');
   });
 });

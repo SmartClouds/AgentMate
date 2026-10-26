@@ -1,4 +1,4 @@
-import { defaultGrammarSettings, type GrammarSettings } from '@agentmat/core';
+import { defaultGrammarSettings, type GrammarSettings } from '@runova/core';
 import type { GrammarIssue } from '@shared/grammar';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -52,7 +52,7 @@ export function useGrammarCheck({
 }: UseGrammarCheckOptions): GrammarCheckState {
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
   });
   const settings = settingsQuery.data?.grammar ?? defaultGrammarSettings();
 
@@ -79,7 +79,7 @@ export function useGrammarCheck({
     }
     setChecking(true);
     try {
-      const result = await window.agentmat.grammar.check({ text });
+      const result = await window.runova.grammar.check({ text });
       if (requestId !== requestIdRef.current) return [];
       const found = result.issues.filter((issue) => !dismissedRef.current.has(issueKey(issue)));
       setIssues(found);

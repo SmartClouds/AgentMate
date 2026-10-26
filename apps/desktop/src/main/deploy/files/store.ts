@@ -356,7 +356,7 @@ async function realOrSelf(path: string): Promise<string> {
 
 /**
  * The deploy folder by its real path. It must exist and be a folder, and it cannot be a whole
- * drive, the home folder itself, or anywhere near AgentMate's own data, so a deploy can never send
+ * drive, the home folder itself, or anywhere near Runova's own data, so a deploy can never send
  * a whole disk or the app's sealed stores.
  */
 async function cleanLocalFolder(value: unknown): Promise<string> {
@@ -388,7 +388,7 @@ async function cleanLocalFolder(value: unknown): Promise<string> {
     isInside(resolved, userData) ||
     isInside(userData, resolved)
   ) {
-    throw invalid("The deploy folder cannot be inside AgentMate's own data folder.");
+    throw invalid("The deploy folder cannot be inside Runova's own data folder.");
   }
   return resolved;
 }

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const execFileSync = vi.fn();
 vi.mock('node:child_process', () => ({ execFileSync }));
 
-// The exact stderr from an Intel AgentMate running `git init` on an Apple Silicon Mac.
+// The exact stderr from an Intel Runova running `git init` on an Apple Silicon Mac.
 const XCRUN_ERROR =
   "xcrun: error: unable to load libxcrun (dlopen(/Library/Developer/CommandLineTools/usr/lib/libxcrun.dylib, 0x0005): tried: '/Library/Developer/CommandLineTools/usr/lib/libxcrun.dylib' (fat file, but missing compatible architecture (have 'arm64,arm64e', need 'x86_64')), '/System/Volumes/Preboot/Cryptexes/Rosetta/Library/Developer/CommandLineTools/usr/lib/libxcrun.dylib' (no such file)).";
 

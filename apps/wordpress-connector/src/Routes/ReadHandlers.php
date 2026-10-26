@@ -3,22 +3,22 @@
  * The read routes: /site/info, /items/list, /items/manifest, /files/read, /audit/list and
  * /connection/revoke (a key may always revoke itself, so revoke counts as read).
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Routes;
+namespace Runova\Connector\Routes;
 
-use AgentMate\Connector\Audit\AuditLog;
-use AgentMate\Connector\Deploy\DeployService;
-use AgentMate\Connector\Env\Environment;
-use AgentMate\Connector\Files\FileReader;
-use AgentMate\Connector\Files\ItemResolver;
-use AgentMate\Connector\Files\Manifest;
-use AgentMate\Connector\Http\ApiError;
-use AgentMate\Connector\Info\Items;
-use AgentMate\Connector\Info\Limits;
-use AgentMate\Connector\Info\SiteInfo;
-use AgentMate\Connector\Storage\Storage;
+use Runova\Connector\Audit\AuditLog;
+use Runova\Connector\Deploy\DeployService;
+use Runova\Connector\Env\Environment;
+use Runova\Connector\Files\FileReader;
+use Runova\Connector\Files\ItemResolver;
+use Runova\Connector\Files\Manifest;
+use Runova\Connector\Http\ApiError;
+use Runova\Connector\Info\Items;
+use Runova\Connector\Info\Limits;
+use Runova\Connector\Info\SiteInfo;
+use Runova\Connector\Storage\Storage;
 
 final class ReadHandlers implements Handler
 {

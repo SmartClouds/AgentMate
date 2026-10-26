@@ -1,5 +1,5 @@
-import type { PaneDirection, Project, SplitDirection, WorktreeInfo } from '@agentmat/core';
-import { findGroup, findNeighborGroup, type PaneRect, parseScopeId } from '@agentmat/core';
+import type { PaneDirection, Project, SplitDirection, WorktreeInfo } from '@runova/core';
+import { findGroup, findNeighborGroup, type PaneRect, parseScopeId } from '@runova/core';
 import { create } from 'zustand';
 import { emitBrowserShortcut } from '@/lib/browser/browserSync';
 import { queryKeys } from '@/lib/queryKeys';
@@ -41,10 +41,10 @@ export const usePromptDialogStore = create<PromptDialogState>((set) => ({
 }));
 
 /** Window event the focused diff tab listens for; `detail` is `'next'` or `'previous'`. */
-export const DIFF_CHANGE_EVENT = 'agentmate:diff-change';
+export const DIFF_CHANGE_EVENT = 'runova:diff-change';
 
 /** Window event the header's Run button listens for, so a shortcut presses it. */
-export const RUN_PROJECT_EVENT = 'agentmate:run-project';
+export const RUN_PROJECT_EVENT = 'runova:run-project';
 
 export function isWorkspacePath(pathname: string): boolean {
   return pathname === '/workspace' || pathname.startsWith('/workspace/');
@@ -102,7 +102,7 @@ export const workspaceCommands = {
     const groupId = current.workspace.focusedGroupId;
     const statuses = await queryClient.ensureQueryData({
       queryKey: queryKeys.cliStatus,
-      queryFn: () => window.agentmat.cli.detectAll(),
+      queryFn: () => window.runova.cli.detectAll(),
     });
     const { installed } = sortAgentChoices(
       statuses,

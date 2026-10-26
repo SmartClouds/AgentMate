@@ -10,7 +10,7 @@ export function useRunFailure(run: GithubActionsRunErrorInput, enabled: boolean)
   return useQuery({
     queryKey: queryKeys.runFailure(run.repo, run.runId),
     queryFn: async () => {
-      const result = await window.agentmat.pipelines.runError(run);
+      const result = await window.runova.pipelines.runError(run);
       if (!result.ok) throw new Error(result.error);
       return result.text;
     },

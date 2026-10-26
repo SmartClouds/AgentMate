@@ -1,11 +1,12 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import type { HealthResponse } from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { HealthResponse } from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { sshErrorCode } from '../../../shared/sshErrors';
 import { tempDir } from '../../../test/main/fixtures';
 import { TunnelRefusedError } from '../../ssh/connection';
 import type { CoreTransportKind } from '../connection/transport';
+import { LEGACY_CORE, RUNOVA_CORE } from '../coreLayout';
 import { type InstallerDeps, type InstallProgress, installCore, uninstallCore } from './installer';
 import { CHECKSUM_MISMATCH_EXIT, releaseDirectory } from './installPlan';
 import type { CoreRelease, ReleaseSource } from './releaseSource';
@@ -23,8 +24,8 @@ import {
  */
 
 const SHA = 'ab'.repeat(32);
-const STAGING = '/tmp/agentmate.Test123456';
-const PREVIOUS = '/opt/agentmate-core/releases/1.52.0-cdcdcdcdcdcd';
+const STAGING = '/tmp/runova.Test123456';
+const PREVIOUS = '/opt/runova-core/releases/1.52.0-cdcdcdcdcdcd';
 
 /**
  * A source like the packaged build's, whose servers may fetch the release themselves (`remote`),
@@ -34,9 +35,9 @@ function releaseSource(
   version = '1.53.0',
   { remote = false, releaseError }: { remote?: boolean; releaseError?: Error } = {},
 ) {
-  const localPath = join(tempDir(), `agentmate-core-${version}-linux-x64.tar.gz`);
+  const localPath = join(tempDir(), `runova-core-${version}-linux-x64.tar.gz`);
   writeFileSync(localPath, 'tarball bytes');
-  const file = (rid: string) => `agentmate-core-${version}-${rid}.tar.gz`;
+  const file = (rid: string) => `runova-core-${version}-${rid}.tar.gz`;
   const release = vi.fn(async (rid: CoreRelease['rid']): Promise<CoreRelease> => {
     if (releaseError) throw releaseError;
     return { version, rid, file: file(rid), sha256: SHA, localPath };
@@ -51,7 +52,7 @@ function releaseSource(
             file: file(rid),
             sha256: SHA,
             size: 1024,
-            url: `https://github.com/SmartClouds/AgentMate/releases/download/v${version}/${file(rid)}`,
+            url: `https://github.com/SmartClouds/Runova/releases/download/v${version}/${file(rid)}`,
           }),
         }
       : {}),
@@ -82,11 +83,16 @@ function setup(machine: Partial<ScriptedMachine> = {}, options: SetupOptions = {
       if (options.reachableBy && !options.reachableBy.includes(_transport)) {
         throw new TunnelRefusedError('Could not open a tunnel: open failed', 2);
       }
+      const migrated = server.rootCommands.some((command) => command.endsWith(' migrate-layout'));
       return {
         status: 'ok',
         version: options.healthVersion ?? '1.53.0',
         apiVersion: 1,
         startedAtUnixMs: 1,
+        layout:
+          (server.machine.installed?.release.startsWith(LEGACY_CORE.root) ?? false) && !migrated
+            ? 'legacy'
+            : 'runova',
       };
     },
   );
@@ -111,6 +117,49 @@ function setup(machine: Partial<ScriptedMachine> = {}, options: SetupOptions = {
 const ran = (server: ScriptedConnection, fragment: string): boolean =>
   server.rootCommands.some((command) => command.includes(fragment));
 
+describe('installCore on a server from before the rename', () => {
+  const OLD = `${LEGACY_CORE.releases}/1.52.0-cdcdcdcdcdcd`;
+
+  it('upgrades the core in its old layout, then has it move to the new one', async () => {
+    const { server, install } = setup({ installed: { release: OLD, version: '1.52.0' } });
+
+    const result = await install('deployer-pw');
+
+    expect(result.layout).toBe('runova');
+    expect(result.migrationError).toBeUndefined();
+    expect(result.release).toBe(releaseDirectory('1.53.0', SHA, 'runova'));
+    expect(ran(server, `${LEGACY_CORE.releases}/1.53.0-`)).toBe(true);
+    expect(
+      ran(
+        server,
+        `install -m 0644 -o root -g root ${LEGACY_CORE.releases}/1.53.0-${SHA.slice(0, 12)}/${LEGACY_CORE.unitFile} ${LEGACY_CORE.unitPath}`,
+      ),
+    ).toBe(true);
+    expect(ran(server, `systemctl restart ${LEGACY_CORE.unit}`)).toBe(true);
+    expect(server.rootCommands.at(-1)).toBe(
+      `${LEGACY_CORE.current}/${RUNOVA_CORE.binary} migrate-layout`,
+    );
+  });
+
+  it('keeps a working install when the move is put back', async () => {
+    const { install, progress } = setup({
+      installed: { release: OLD, version: '1.52.0' },
+      failures: [
+        { match: 'migrate-layout', stderr: 'Moving the state folder failed: busy', exitCode: 1 },
+      ],
+    });
+
+    const result = await install('deployer-pw');
+
+    expect(result.layout).toBe('legacy');
+    expect(result.release).toBe(releaseDirectory('1.53.0', SHA, 'legacy'));
+    expect(result.migrationError).toContain('busy');
+    expect(
+      progress.find((event) => event.phase === 'migrate' && event.status === 'done')?.detail,
+    ).toContain('old layout');
+  });
+});
+
 describe('installCore', () => {
   it('installs on a non-root login and proves the core answers', async () => {
     const { server, connect, health, install } = setup();
@@ -122,17 +171,18 @@ describe('installCore', () => {
       release: releaseDirectory('1.53.0', SHA),
       transport: 'streamlocal',
       previousVersion: null,
+      layout: 'runova',
       os: 'Ubuntu 24.04.1 LTS',
       architecture: 'x86_64',
     });
     expect(server.uploads).toEqual([
-      { path: `${STAGING}/agentmate-core-1.53.0-linux-x64.tar.gz`, bytes: 13, mode: 0o600 },
+      { path: `${STAGING}/runova-core-1.53.0-linux-x64.tar.gz`, bytes: 13, mode: 0o600 },
     ]);
     const order = [
       'sha256sum -c',
       'groupadd',
       'tar -xzf',
-      'agentmate-core.service /etc/systemd',
+      'runova-core.service /etc/systemd',
       'current.new',
       'systemctl restart',
       'for release in *',
@@ -215,9 +265,7 @@ describe('installCore', () => {
   it('goes back to the previous release when the new one will not start', async () => {
     const { server, install } = setup({
       installed: { release: PREVIOUS, version: '1.52.0' },
-      failures: [
-        { match: 'enable agentmate-core', stderr: 'Job for agentmate-core.service failed' },
-      ],
+      failures: [{ match: 'enable runova-core', stderr: 'Job for runova-core.service failed' }],
     });
 
     await expect(install('deployer-pw')).rejects.toThrow(/did not start.*back to 1\.52\.0/s);
@@ -230,7 +278,7 @@ describe('installCore', () => {
     const { progress, install } = setup({
       installed: { release: PREVIOUS, version: '1.52.0' },
       failures: [
-        { match: 'enable agentmate-core', stderr: 'failed' },
+        { match: 'enable runova-core', stderr: 'failed' },
         { match: `ln -sfn ${PREVIOUS}`, stderr: 'ln: Read-only file system' },
       ],
     });
@@ -242,7 +290,7 @@ describe('installCore', () => {
   });
 
   it('shows what the core logged when a first install will not start', async () => {
-    const { install } = setup({ failures: [{ match: 'enable agentmate-core', stderr: 'failed' }] });
+    const { install } = setup({ failures: [{ match: 'enable runova-core', stderr: 'failed' }] });
 
     await expect(install('deployer-pw')).rejects.toThrow(/Unhandled exception\. Boom\./);
   });
@@ -250,7 +298,7 @@ describe('installCore', () => {
   it('does not try to go back to the release it just reinstalled', async () => {
     const { server, install } = setup({
       installed: { release: releaseDirectory('1.53.0', SHA), version: '1.53.0' },
-      failures: [{ match: 'enable agentmate-core', stderr: 'failed' }],
+      failures: [{ match: 'enable runova-core', stderr: 'failed' }],
     });
 
     const failure = await install('deployer-pw').catch((error: Error) => error);
@@ -262,13 +310,13 @@ describe('installCore', () => {
 
   it('ignores a current link that points outside the releases folder', async () => {
     const { server, install } = setup({
-      installed: { release: '/usr/local/agentmate', version: '0.9.0' },
+      installed: { release: '/usr/local/runova', version: '0.9.0' },
     });
 
     const result = await install('deployer-pw');
 
     expect(result.previousVersion).toBe('0.9.0');
-    expect(ran(server, '/usr/local/agentmate')).toBe(false);
+    expect(ran(server, '/usr/local/runova')).toBe(false);
   });
 
   it('goes back to the previous release when the new one does not answer', async () => {
@@ -401,9 +449,9 @@ describe('installCore, when the server can fetch the core itself', () => {
     expect(server.downloads).toHaveLength(1);
     expect(server.downloads[0]).toContain('curl');
     expect(server.downloads[0]).toContain(
-      `https://github.com/SmartClouds/AgentMate/releases/download/v1.53.0/agentmate-core-1.53.0-linux-x64.tar.gz`,
+      `https://github.com/SmartClouds/Runova/releases/download/v1.53.0/runova-core-1.53.0-linux-x64.tar.gz`,
     );
-    expect(server.downloads[0]).toContain(`${STAGING}/agentmate-core-1.53.0-linux-x64.tar.gz`);
+    expect(server.downloads[0]).toContain(`${STAGING}/runova-core-1.53.0-linux-x64.tar.gz`);
     expect(doneIn(progress)).toEqual([
       'preflight',
       'fetch',
@@ -427,7 +475,7 @@ describe('installCore, when the server can fetch the core itself', () => {
     await install('deployer-pw');
 
     const verify = server.rootCommands.find((command) => command.includes('sha256sum -c'));
-    expect(verify).toContain(`cp -- ${STAGING}/agentmate-core-1.53.0-linux-x64.tar.gz `);
+    expect(verify).toContain(`cp -- ${STAGING}/runova-core-1.53.0-linux-x64.tar.gz `);
     expect(verify).toContain(SHA);
   });
 
@@ -509,7 +557,7 @@ describe('installCore, when the server can fetch the core itself', () => {
     expect(result.version).toBe('1.53.0');
     expect(server.downloads).toHaveLength(1);
     expect(server.uploads).toEqual([
-      { path: `${STAGING}/agentmate-core-1.53.0-linux-x64.tar.gz`, bytes: 13, mode: 0o600 },
+      { path: `${STAGING}/runova-core-1.53.0-linux-x64.tar.gz`, bytes: 13, mode: 0o600 },
     ]);
     expect(release).toHaveBeenCalledTimes(1);
     const fetched = progress.find((event) => event.phase === 'fetch' && event.status === 'done');
@@ -621,7 +669,7 @@ describe('installCore, when the server can fetch the core itself', () => {
       {
         serverDownload: 'curl',
         installed: { release: PREVIOUS, version: '1.52.0' },
-        failures: [{ match: 'enable agentmate-core', stderr: 'failed' }],
+        failures: [{ match: 'enable runova-core', stderr: 'failed' }],
       },
       { remote: true },
     );
@@ -659,21 +707,21 @@ describe('uninstallCore', () => {
 
     await uninstall(true);
 
-    expect(ran(server, 'systemctl disable --now agentmate-core')).toBe(true);
-    expect(ran(server, 'rm -rf /opt/agentmate-core')).toBe(true);
-    expect(ran(server, '/var/lib/agentmate-core')).toBe(false);
+    expect(ran(server, 'systemctl disable --now runova-core')).toBe(true);
+    expect(ran(server, 'rm -rf /opt/runova-core')).toBe(true);
+    expect(ran(server, '/var/lib/runova-core')).toBe(false);
     expect(progress.filter((event) => event.status === 'done').map((event) => event.phase)).toEqual(
       ['stop', 'remove'],
     );
   });
 
-  it('removes the data and the agentmate group when asked', async () => {
+  it('removes the data and the runova group when asked', async () => {
     const { server, uninstall } = uninstallSetup();
 
     await uninstall(false);
 
-    expect(ran(server, 'rm -rf /var/lib/agentmate-core /etc/agentmate-core')).toBe(true);
-    expect(ran(server, 'groupdel agentmate')).toBe(true);
+    expect(ran(server, 'rm -rf /var/lib/runova-core /etc/runova-core')).toBe(true);
+    expect(ran(server, 'groupdel runova')).toBe(true);
   });
 
   it('needs root the same way an install does', async () => {
@@ -687,7 +735,7 @@ describe('uninstallCore', () => {
 
   it('stops at a step that fails and says why', async () => {
     const { progress, uninstall } = uninstallSetup({
-      failures: [{ match: 'rm -rf /opt/agentmate-core', stderr: 'rm: Device or resource busy' }],
+      failures: [{ match: 'rm -rf /opt/runova-core', stderr: 'rm: Device or resource busy' }],
     });
 
     await expect(uninstall(true)).rejects.toThrow(/Device or resource busy/);

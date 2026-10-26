@@ -5,7 +5,7 @@ import {
   type EnvironmentKind,
   isEnvFileName,
   MAX_ENV_FILE_BYTES,
-} from '@agentmat/core';
+} from '@runova/core';
 import type {
   SecretEnvelope,
   StoredEnvCredential,

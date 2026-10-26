@@ -16,10 +16,10 @@ const credit = document.getElementById('credit');
 if (credit) credit.textContent = view.credit;
 
 const status = document.getElementById('status');
-window.agentmat.splash.onStatus((text) => {
+window.runova.splash.onStatus((text) => {
   if (status) status.textContent = text;
 });
-window.agentmat.splash.onClose(() => {
+window.runova.splash.onClose(() => {
   document.body.classList.add('closing');
 });
 

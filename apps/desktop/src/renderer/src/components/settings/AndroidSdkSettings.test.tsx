@@ -1,4 +1,4 @@
-import type { AndroidSdkStatus, AppSettings } from '@agentmat/core';
+import type { AndroidSdkStatus, AppSettings } from '@runova/core';
 import { screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';

@@ -25,8 +25,8 @@ export function useGitRepoWatch(projectId: string, isRepo: boolean): void {
 
     // Folders that aren't a repo yet have no `.git` to watch. Once one is initialized the
     // status query flips and this effect runs again.
-    if (isRepo) void window.agentmat.git.watchRepo(projectId);
-    const stopListening = window.agentmat.git.onRepoChanged((changedProjectId) => {
+    if (isRepo) void window.runova.git.watchRepo(projectId);
+    const stopListening = window.runova.git.onRepoChanged((changedProjectId) => {
       if (changedProjectId === projectId) refresh();
     });
 
@@ -42,7 +42,7 @@ export function useGitRepoWatch(projectId: string, isRepo: boolean): void {
     return () => {
       stopListening();
       window.removeEventListener('focus', handleFocus);
-      if (isRepo) void window.agentmat.git.unwatchRepo(projectId);
+      if (isRepo) void window.runova.git.unwatchRepo(projectId);
     };
   }, [projectId, isRepo, queryClient]);
 }

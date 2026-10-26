@@ -1,4 +1,4 @@
-import { worktreeScopeId } from '@agentmat/core';
+import { worktreeScopeId } from '@runova/core';
 import { describe, expect, it } from 'vitest';
 import { useTempUserData } from '../../test/main/ipcHarness';
 

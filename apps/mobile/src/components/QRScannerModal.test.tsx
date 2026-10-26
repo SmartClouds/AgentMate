@@ -32,7 +32,7 @@ describe('QRScannerModal', () => {
     expect(screen.queryByTestId('camera-view')).toBeNull();
     expect(
       screen.getByText(
-        'AgentMate needs camera access to scan the pairing QR code shown on the desktop app.',
+        'Runova needs camera access to scan the pairing QR code shown on the desktop app.',
       ),
     ).toBeTruthy();
 
@@ -55,9 +55,9 @@ describe('QRScannerModal', () => {
     expect(mockCamera.lastProps?.barcodeScannerSettings).toEqual({ barcodeTypes: ['qr'] });
 
     await act(async () => {
-      scanHandler()({ data: 'AGENTMATE1:payload' });
+      scanHandler()({ data: 'RUNOVA1:payload' });
     });
-    expect(onScanned).toHaveBeenCalledWith('AGENTMATE1:payload');
+    expect(onScanned).toHaveBeenCalledWith('RUNOVA1:payload');
   });
 
   it('ignores every frame after the first hit', async () => {
@@ -67,9 +67,9 @@ describe('QRScannerModal', () => {
     await render(<QRScannerModal visible onClose={jest.fn()} onScanned={onScanned} />);
 
     await act(async () => {
-      scanHandler()({ data: 'AGENTMATE1:payload' });
-      scanHandler()({ data: 'AGENTMATE1:payload' });
-      scanHandler()({ data: 'AGENTMATE1:other' });
+      scanHandler()({ data: 'RUNOVA1:payload' });
+      scanHandler()({ data: 'RUNOVA1:payload' });
+      scanHandler()({ data: 'RUNOVA1:other' });
     });
     expect(onScanned).toHaveBeenCalledTimes(1);
   });

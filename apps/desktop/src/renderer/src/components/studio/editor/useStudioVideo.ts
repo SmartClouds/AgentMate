@@ -6,7 +6,7 @@ import type {
   StudioDocument,
   VideoStatusView,
   VideoSummary,
-} from '@agentmat/studio';
+} from '@runova/studio';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { studioClient } from '../client';
@@ -85,7 +85,7 @@ export function useStudioVideo(videoId: string): StudioVideo {
     setView({ state: 'loading' });
     void open(false);
     return () => {
-      // Closing writes the document and frees the folder for another copy of AgentMate.
+      // Closing writes the document and frees the folder for another copy of Runova.
       void studioClient()
         .close(videoId)
         .catch(() => undefined);

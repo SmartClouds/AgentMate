@@ -1,9 +1,9 @@
-import type { ComposePortBinding, ComposeRisk } from '@agentmat/core';
+import type { ComposePortBinding, ComposeRisk } from '@runova/core';
 import type {
   StackAction,
   StackInfo,
   StackRevisionInfo,
-} from './deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from './deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * The Apps of a Deploy server (E07): compose stacks built from a project's compose file and an

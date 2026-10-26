@@ -15,7 +15,7 @@ import { type DevHost, dotnetAvailable, startDevHost } from './devHost';
 
 test.skip(!dotnetAvailable(), 'needs the .NET SDK to build the server core DevHost');
 
-const DEV_PASSWORD = 'agentmate-local-password';
+const DEV_PASSWORD = 'runova-local-password';
 const SECRET = 'violet harbor lantern pebble';
 
 let devHost: DevHost | undefined;
@@ -63,7 +63,7 @@ test('sets up backups, keeps 2 of 3 on each destination, and downloads one encry
   if (!devHost) throw new Error('The DevHost did not start');
   launched = await launchApp({
     settings: {},
-    env: { AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port) },
+    env: { RUNOVA_DEPLOY_DEV_CORE: String(devHost.port) },
   });
   const { page, app, root } = launched;
   const download = join(root, 'devhost.ambackup');

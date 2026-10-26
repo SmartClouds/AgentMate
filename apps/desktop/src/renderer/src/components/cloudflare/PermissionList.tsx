@@ -27,7 +27,7 @@ function StateChip({ state }: { state: CloudflarePermissionState }): React.JSX.E
 }
 
 /**
- * The permissions AgentMate asks for, as the token page names them, with what each one is for.
+ * The permissions Runova asks for, as the token page names them, with what each one is for.
  * Given a check, each row also says (in words, with an icon) whether the token has it.
  */
 export function PermissionList({

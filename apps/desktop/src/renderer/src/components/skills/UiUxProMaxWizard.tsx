@@ -1,4 +1,4 @@
-import type { UiProInstallMethod } from '@agentmat/core';
+import type { UiProInstallMethod } from '@runova/core';
 import {
   buildUiProCommandPlan,
   UI_UX_PRO_MAX_AI_TARGETS,
@@ -7,7 +7,7 @@ import {
   UI_UX_PRO_MAX_PLUGIN_COMMANDS,
   UI_UX_PRO_MAX_PYTHON_URL,
   UI_UX_PRO_MAX_SKILL_NAME,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { UiProToolProbe } from '@shared/apiTypes';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
@@ -199,13 +199,13 @@ export function UiUxProMaxWizard({
 
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
     enabled: open,
   });
 
   const prerequisitesQuery = useQuery({
     queryKey: queryKeys.uiProPrerequisites,
-    queryFn: () => window.agentmat.skills.checkUiProPrerequisites(),
+    queryFn: () => window.runova.skills.checkUiProPrerequisites(),
     enabled: open,
     staleTime: 60_000,
   });
@@ -278,7 +278,7 @@ export function UiUxProMaxWizard({
           cwd: target.cwd,
           projectId: target.id ?? undefined,
         });
-        await window.agentmat.skills.recordUiProInstall({
+        await window.runova.skills.recordUiProInstall({
           projectId: target.id,
           agents: selectedAgents,
           method,
@@ -543,9 +543,7 @@ export function UiUxProMaxWizard({
                               : 'Needed for the global CLI install.'
                           }
                           fixLabel="Get Node.js"
-                          onFix={() =>
-                            void window.agentmat.shell.openExternal('https://nodejs.org/')
-                          }
+                          onFix={() => void window.runova.shell.openExternal('https://nodejs.org/')}
                         />
                       )}
                       <ProbeRow
@@ -554,7 +552,7 @@ export function UiUxProMaxWizard({
                         hint="The skill's search and design-system scripts run on Python 3. Standard library only, nothing extra to install."
                         fixLabel="Get Python"
                         onFix={() =>
-                          void window.agentmat.shell.openExternal(UI_UX_PRO_MAX_PYTHON_URL)
+                          void window.runova.shell.openExternal(UI_UX_PRO_MAX_PYTHON_URL)
                         }
                       />
                       {method === 'npm-global' && prerequisites.uipro.found && (
@@ -576,9 +574,9 @@ export function UiUxProMaxWizard({
                     commands={UI_UX_PRO_MAX_PLUGIN_COMMANDS}
                   />
                   <p className="text-xs text-muted-foreground">
-                    These are Claude Code slash commands, not shell commands, so AgentMate cannot
-                    run them for you. Copy them into a Claude Code session. If the install fails
-                    with "Zip file contains a symbolic link", go back and use the npm CLI instead.
+                    These are Claude Code slash commands, not shell commands, so Runova cannot run
+                    them for you. Copy them into a Claude Code session. If the install fails with
+                    "Zip file contains a symbolic link", go back and use the npm CLI instead.
                   </p>
                 </>
               ) : (

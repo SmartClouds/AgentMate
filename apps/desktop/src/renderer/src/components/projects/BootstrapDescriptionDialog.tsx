@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { GrammarTextarea } from '@/components/grammar/GrammarTextarea';
@@ -73,7 +73,7 @@ export function BootstrapDescriptionDialog({
 
     setTranslating(true);
     try {
-      const result = await window.agentmat.translate.text({ text: trimmed, targetLang: 'en' });
+      const result = await window.runova.translate.text({ text: trimmed, targetLang: 'en' });
       const translated = result.trim();
       if (!translated) throw new Error('The translation came back empty.');
       setEnglish(translated);
@@ -106,7 +106,7 @@ export function BootstrapDescriptionDialog({
           <DialogTitle>Describe {project.name}</DialogTitle>
           <DialogDescription>
             {step === 'input'
-              ? 'This description fills the Overview sections of the files AgentMate is about to create. Persian is translated to English first. Leave it empty to scaffold the default template files.'
+              ? 'This description fills the Overview sections of the files Runova is about to create. Persian is translated to English first. Leave it empty to scaffold the default template files.'
               : 'Review the English translation before it goes into the generated files. Edit it here if the wording needs fixing.'}
           </DialogDescription>
         </DialogHeader>

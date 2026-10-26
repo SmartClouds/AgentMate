@@ -5,7 +5,7 @@ import {
   type TestDiscovery,
   type TestProject,
   type TestRunSummary,
-} from '@agentmat/core';
+} from '@runova/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -75,8 +75,8 @@ const summary: TestRunSummary = {
 beforeEach(() => {
   drawn.rows = 0;
   useTestsStore.setState({ runs: {} });
-  window.agentmat = {
-    ...window.agentmat,
+  window.runova = {
+    ...window.runova,
     tests: {
       discover: vi.fn(async () => discovery),
       run: vi.fn(),
@@ -85,7 +85,7 @@ beforeEach(() => {
       command: vi.fn(),
       onRunEvent: vi.fn(() => () => undefined),
     },
-  } as typeof window.agentmat;
+  } as typeof window.runova;
 });
 
 afterEach(() => {

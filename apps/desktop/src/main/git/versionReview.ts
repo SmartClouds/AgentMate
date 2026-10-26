@@ -10,7 +10,7 @@ import {
   lineHunksMatch,
   parseLineHunks,
   splitLinesKeepEnds,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { VersionFileChange, WriteVersionHunksInput } from '../../shared/apiTypes';
 import { gitEnv } from './plumbing';
 

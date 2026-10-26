@@ -88,8 +88,8 @@ jobs:
       - name: Git identity for fixtures
         run: |
           echo "GIT_CONFIG_GLOBAL=$RUNNER_TEMP/gitconfig" >> "$GITHUB_ENV"
-          git config --file "$RUNNER_TEMP/gitconfig" user.name "AgentMate CI"
-          git config --file "$RUNNER_TEMP/gitconfig" user.email "ci@agentmate.invalid"
+          git config --file "$RUNNER_TEMP/gitconfig" user.name "Runova CI"
+          git config --file "$RUNNER_TEMP/gitconfig" user.email "ci@runova.invalid"
           git config --file "$RUNNER_TEMP/gitconfig" init.defaultBranch main
           mkdir -p "$RUNNER_TEMP/home"
 
@@ -99,7 +99,7 @@ jobs:
       - name: Core, protocol and studio
         env:
           HOME: ${{ runner.temp }}/home
-        run: pnpm --filter @agentmat/core --filter @agentmat/protocol --filter @agentmat/studio test:coverage
+        run: pnpm --filter @runova/core --filter @runova/protocol --filter @runova/studio test:coverage
 
       - name: Coverage summary
         if: ${{ !cancelled() }}
@@ -154,12 +154,12 @@ jobs:
       - name: Git identity for fixtures
         run: |
           echo "GIT_CONFIG_GLOBAL=$RUNNER_TEMP/gitconfig" >> "$GITHUB_ENV"
-          git config --file "$RUNNER_TEMP/gitconfig" user.name "AgentMate CI"
-          git config --file "$RUNNER_TEMP/gitconfig" user.email "ci@agentmate.invalid"
+          git config --file "$RUNNER_TEMP/gitconfig" user.name "Runova CI"
+          git config --file "$RUNNER_TEMP/gitconfig" user.email "ci@runova.invalid"
           git config --file "$RUNNER_TEMP/gitconfig" init.defaultBranch main
           mkdir -p "$RUNNER_TEMP/home"
 
-      # The desktop tests import @agentmat/core and @agentmat/protocol from their build output.
+      # The desktop tests import @runova/core and @runova/protocol from their build output.
       - name: Build workspace packages
         run: pnpm build:packages
 
@@ -242,7 +242,7 @@ jobs:
             apps/desktop/coverage
             apps/desktop/test-results
 
-  # The AgentMate Connector WordPress plugin (apps/wordpress-connector, E19). PHP runs in Docker
+  # The Runova Connector WordPress plugin (apps/wordpress-connector, E19). PHP runs in Docker
   # containers, the same way as on a developer's machine: PHPUnit (including the shared protocol
   # vectors), `php -l` on PHP 7.4, 8.0, 8.3 and 8.4, the PHP 7.4+ compatibility and WordPress
   # security sniffs, and the zip build with its version check.
@@ -314,8 +314,19 @@ jobs:
 
       - name: Sync engine against the connector
         env:
-          AGENTMATE_SYSTEM_TESTS: "1"
-        run: pnpm --filter @agentmat/desktop exec vitest run src/main/deploy/wordpress/wordpress.int.test.ts
+          RUNOVA_SYSTEM_TESTS: "1"
+        run: pnpm --filter @runova/desktop exec vitest run src/main/deploy/wordpress/wordpress.int.test.ts
+
+      # A site running the released 1.63 connector, from before the rename to Runova, takes the
+      # bridge through its own updater and moves to the new plugin folder, single site and
+      # multisite. It needs both zips this commit builds.
+      - name: Build the connector zips
+        run: node scripts/wordpress-connector.mjs build
+
+      - name: Move a connector from before the rename
+        env:
+          RUNOVA_SYSTEM_TESTS: "1"
+        run: pnpm --filter @runova/desktop exec vitest run src/main/deploy/wordpress/connectorMigration.int.test.ts
 
   # The .NET server core (apps/server-core). Its global.json pins the SDK feature band and the
   # Microsoft.Testing.Platform runner, so every dotnet command runs from that folder. System tests
@@ -354,19 +365,19 @@ jobs:
       # this step through NuGet audit.
       - name: Restore
         working-directory: apps/server-core
-        run: dotnet restore AgentMate.ServerCore.slnx --locked-mode
+        run: dotnet restore Runova.ServerCore.slnx --locked-mode
 
       - name: Format
         working-directory: apps/server-core
-        run: dotnet format AgentMate.ServerCore.slnx --verify-no-changes --no-restore
+        run: dotnet format Runova.ServerCore.slnx --verify-no-changes --no-restore
 
       - name: Build
         working-directory: apps/server-core
-        run: dotnet build AgentMate.ServerCore.slnx --no-restore --configuration Release
+        run: dotnet build Runova.ServerCore.slnx --no-restore --configuration Release
 
       - name: Unit and integration tests
         working-directory: apps/server-core
-        run: dotnet test --project tests/AgentMate.ServerCore.Tests --no-build --configuration Release
+        run: dotnet test --project tests/Runova.ServerCore.Tests --no-build --configuration Release
 
       # The desktop's TypeScript contracts are generated from the C# ones. Regenerating must not
       # change anything, or someone changed a contract without committing the new TypeScript.
@@ -445,7 +456,7 @@ jobs:
       - name: Build the test servers
         run: |
           for image in ubuntu-24.04 rocky-9 ubuntu-24.04-ufw rocky-9-firewalld; do
-            docker build -q -t "agentmate-test-server:$image" "apps/server-core/test-servers/$image"
+            docker build -q -t "runova-test-server:$image" "apps/server-core/test-servers/$image"
           done
 
       # One vitest run, two files at a time. Every test server is its own container with a unique
@@ -464,14 +475,27 @@ jobs:
       #   unapproved command refused, a signed one run once and its replay refused, the journal.
       - name: System tests on test servers
         env:
-          AGENTMATE_SYSTEM_TESTS: "1"
+          RUNOVA_SYSTEM_TESTS: "1"
         run: >-
-          pnpm --filter @agentmat/desktop exec vitest run --maxWorkers=2
+          pnpm --filter @runova/desktop exec vitest run --maxWorkers=2
           src/main/deploy/deploy.int.test.ts
           src/main/deploy/firewall.int.test.ts
           src/main/deploy/registries.int.test.ts
           src/main/deploy/directTls.int.test.ts
           src/main/deploy/deployExec.int.test.ts
+
+      # A server set up by the released 1.63 core, from before the rename to Runova, upgraded over
+      # SSH and moved to the Runova layout on Ubuntu and Rocky, a forced failed cutover rolled back
+      # first. The core under test has to count as newer than 1.63, so it is published again.
+      - name: Publish the linux-x64 release as 1.64.0
+        env:
+          SERVER_CORE_VERSION: "1.64.0"
+        run: node scripts/server-core.mjs publish linux-x64
+
+      - name: Move a server from before the rename
+        env:
+          RUNOVA_SYSTEM_TESTS: "1"
+        run: pnpm --filter @runova/desktop exec vitest run src/main/deploy/layoutMigration.int.test.ts
 
   mobile:
     name: Mobile
@@ -500,7 +524,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Jest
-        run: pnpm --filter @agentmat/mobile test:ci
+        run: pnpm --filter @runova/mobile test:ci
 
       - name: Coverage summary
         if: ${{ !cancelled() }}
@@ -621,7 +645,7 @@ jobs:
         shell: bash
         run: |
           for attempt in 1 2 3; do
-            pnpm --filter @agentmat/desktop exec install-electron && exit 0
+            pnpm --filter @runova/desktop exec install-electron && exit 0
             echo "attempt $attempt failed, retrying in 15s"
             sleep 15
           done
@@ -632,7 +656,7 @@ jobs:
 
       # better-sqlite3 has to match Electron's ABI to load inside the app.
       - name: Rebuild native modules for Electron
-        run: pnpm --filter @agentmat/desktop rebuild:native
+        run: pnpm --filter @runova/desktop rebuild:native
 
       # In a global config of this job's own, so the runs on the Mac mini, a machine people also
       # use, leave its user's real git identity alone. The app under test inherits this env.
@@ -640,8 +664,8 @@ jobs:
         shell: bash
         run: |
           echo "GIT_CONFIG_GLOBAL=$RUNNER_TEMP/gitconfig" >> "$GITHUB_ENV"
-          git config --file "$RUNNER_TEMP/gitconfig" user.name "AgentMate CI"
-          git config --file "$RUNNER_TEMP/gitconfig" user.email "ci@agentmate.invalid"
+          git config --file "$RUNNER_TEMP/gitconfig" user.name "Runova CI"
+          git config --file "$RUNNER_TEMP/gitconfig" user.email "ci@runova.invalid"
 
       # The Deploy spec builds and starts the server core's DevHost, so it runs on every OS.
       - name: Setup .NET
@@ -661,12 +685,12 @@ jobs:
         # Hosted runners have no usable Chromium sandbox even after the sysctl above, so the
         # launcher drops it here rather than having Electron refuse to start.
         env:
-          AGENTMATE_E2E_NO_SANDBOX: "1"
-        run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" pnpm --filter @agentmat/desktop test:e2e --shard=${{ matrix.shard }}/3
+          RUNOVA_E2E_NO_SANDBOX: "1"
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" pnpm --filter @runova/desktop test:e2e --shard=${{ matrix.shard }}/3
 
       - name: Playwright
         if: runner.os != 'Linux'
-        run: pnpm --filter @agentmat/desktop test:e2e --shard=${{ matrix.shard }}/3
+        run: pnpm --filter @runova/desktop test:e2e --shard=${{ matrix.shard }}/3
 
       - name: Upload report and traces
         if: ${{ !cancelled() }}

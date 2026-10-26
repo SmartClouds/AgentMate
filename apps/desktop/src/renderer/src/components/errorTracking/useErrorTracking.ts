@@ -1,4 +1,4 @@
-import type { ErrorIssueStatus } from '@agentmat/core';
+import type { ErrorIssueStatus } from '@runova/core';
 import type {
   ErrorConnectionSummary,
   ErrorIssueDetail,
@@ -58,7 +58,7 @@ const ISSUES_PREFIX = ['error-tracking', 'issues'] as const;
 export function useErrorTrackingChanges(): void {
   const queryClient = useQueryClient();
   useEffect(() => {
-    return window.agentmat.errorTracking.onChanged((event) => {
+    return window.runova.errorTracking.onChanged((event) => {
       const reason = event?.reason;
       // A status change only touches issues; connections and links can change any list.
       const queryKey = reason === 'issues' ? ISSUES_PREFIX : queryKeys.errorTracking;
@@ -77,7 +77,7 @@ export function useErrorConnections() {
   return useQuery({
     queryKey: queryKeys.errorConnections,
     queryFn: async (): Promise<ErrorConnectionSummary[]> =>
-      (await window.agentmat.errorTracking.listConnections()) ?? [],
+      (await window.runova.errorTracking.listConnections()) ?? [],
     meta: QUIET,
   });
 }
@@ -86,7 +86,7 @@ export function useErrorLinks(projectId?: string, enabled = true) {
   return useQuery({
     queryKey: queryKeys.errorLinks(projectId),
     queryFn: async (): Promise<ErrorProjectLink[]> =>
-      (await window.agentmat.errorTracking.listLinks(projectId ? { projectId } : undefined)) ?? [],
+      (await window.runova.errorTracking.listLinks(projectId ? { projectId } : undefined)) ?? [],
     enabled,
     meta: QUIET,
   });
@@ -96,8 +96,7 @@ export function useErrorEnvironments(projectId: string | undefined, enabled: boo
   return useQuery({
     queryKey: queryKeys.errorEnvironments(projectId),
     queryFn: async (): Promise<string[]> =>
-      (await window.agentmat.errorTracking.environments(projectId ? { projectId } : undefined)) ??
-      [],
+      (await window.runova.errorTracking.environments(projectId ? { projectId } : undefined)) ?? [],
     enabled,
     staleTime: 5 * 60_000,
     meta: QUIET,
@@ -110,7 +109,7 @@ export function useRemoteProjects(connectionIds: readonly string[], enabled = tr
     queries: connectionIds.map((id) => ({
       queryKey: queryKeys.errorRemoteProjects(id),
       queryFn: async (): Promise<RemoteProject[]> =>
-        (await window.agentmat.errorTracking.remoteProjects(id)) ?? [],
+        (await window.runova.errorTracking.remoteProjects(id)) ?? [],
       enabled,
       staleTime: 5 * 60_000,
       meta: QUIET,
@@ -147,7 +146,7 @@ export function useErrorIssues(
       const request: ErrorIssueQuery = { ...filter, cursor: pageParam };
       if (forceRef.current) request.refresh = true;
       return (
-        (await window.agentmat.errorTracking.listIssues(request)) ?? {
+        (await window.runova.errorTracking.listIssues(request)) ?? {
           issues: [],
           nextCursor: null,
           failures: [],
@@ -212,7 +211,7 @@ export function useErrorIssue(ref: ErrorIssueRef | null) {
   return useQuery({
     queryKey: queryKeys.errorIssue(ref?.connectionId ?? '', ref?.issueId ?? ''),
     queryFn: async (): Promise<ErrorIssueDetail | null> =>
-      ref ? ((await window.agentmat.errorTracking.getIssue(ref)) ?? null) : null,
+      ref ? ((await window.runova.errorTracking.getIssue(ref)) ?? null) : null,
     enabled: ref !== null,
     meta: QUIET,
   });
@@ -224,7 +223,7 @@ export function errorFixPromptKey(ref: ErrorIssueRef) {
 }
 
 async function readPrompt(ref: ErrorIssueRef): Promise<ErrorIssuePrompt | null> {
-  return (await window.agentmat.errorTracking.fixPrompt(ref)) ?? null;
+  return (await window.runova.errorTracking.fixPrompt(ref)) ?? null;
 }
 
 export function useErrorFixPrompt(ref: ErrorIssueRef, enabled: boolean) {
@@ -298,7 +297,7 @@ export function useIssueStatusChange() {
       }
 
       try {
-        await window.agentmat.errorTracking.setIssueStatus({ ...ref, status, ignoreMinutes });
+        await window.runova.errorTracking.setIssueStatus({ ...ref, status, ignoreMinutes });
         toast.success(DONE[status], {
           description: issue.shortId,
           action:

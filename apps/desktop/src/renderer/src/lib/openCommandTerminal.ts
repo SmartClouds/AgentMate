@@ -25,7 +25,7 @@ export async function openCommandTerminal(options: {
 
   let prerequisite: CommandPrerequisite | null = null;
   try {
-    prerequisite = await window.agentmat.cli.checkCommandPrerequisite(command);
+    prerequisite = await window.runova.cli.checkCommandPrerequisite(command);
   } catch {
     // Not knowing is not a reason to stop. The terminal shows the real error if there is one.
   }
@@ -36,7 +36,7 @@ export async function openCommandTerminal(options: {
       description: `Install ${needed}, then try again.`,
       action: {
         label: `Get ${needed}`,
-        onClick: () => void window.agentmat.shell.openExternal(url),
+        onClick: () => void window.runova.shell.openExternal(url),
       },
     });
     return false;

@@ -1,4 +1,4 @@
-import { cleanBranchSuggestion, type WorktreeInfo } from '@agentmat/core';
+import { cleanBranchSuggestion, type WorktreeInfo } from '@runova/core';
 import { dialog, ipcMain } from 'electron';
 import type {
   CreateWorktreeInput,

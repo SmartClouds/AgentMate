@@ -7,7 +7,7 @@ import {
   nextTaskId,
   parsePlanProposal,
   runArgsFor,
-} from '@agentmat/core';
+} from '@runova/core';
 import type {
   RelayCatchUpInput,
   RelayDecomposeInput,

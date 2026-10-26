@@ -61,7 +61,7 @@ export function DnsRecordsCard({ zone }: { zone: CloudflareZone }): React.JSX.El
   const recordsKey = queryKeys.cloudflareRecords(zone.id);
   const records = useQuery({
     queryKey: recordsKey,
-    queryFn: () => window.agentmat.cloudflare.listRecords(zone.id),
+    queryFn: () => window.runova.cloudflare.listRecords(zone.id),
   });
   const loadError = useCloudflareError(records.error);
   // undefined: no editor open; null: adding a record; a record: editing it.
@@ -72,7 +72,7 @@ export function DnsRecordsCard({ zone }: { zone: CloudflareZone }): React.JSX.El
   async function setProxy(record: CloudflareDnsRecord, proxied: boolean): Promise<void> {
     setChanging(record.id);
     try {
-      await window.agentmat.cloudflare.updateRecord(zone.id, record.id, withProxy(record, proxied));
+      await window.runova.cloudflare.updateRecord(zone.id, record.id, withProxy(record, proxied));
       toast.success(`${record.name} is ${proxied ? 'proxied' : 'DNS only'} now.`);
       await queryClient.invalidateQueries({ queryKey: recordsKey });
     } catch (error) {
@@ -92,7 +92,7 @@ export function DnsRecordsCard({ zone }: { zone: CloudflareZone }): React.JSX.El
     });
     if (!confirmed) return;
     try {
-      await window.agentmat.cloudflare.deleteRecord(zone.id, record.id);
+      await window.runova.cloudflare.deleteRecord(zone.id, record.id);
       toast.success(`Deleted ${what}.`);
       await queryClient.invalidateQueries({ queryKey: recordsKey });
     } catch (error) {

@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { encodeWav } from '@agentmat/studio';
+import { encodeWav } from '@runova/studio';
 import { describe, expect, it } from 'vitest';
 import { findLocalVoiceTools, wavToWhisperSamples } from './localTools';
 

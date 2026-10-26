@@ -25,14 +25,14 @@ export function LogsPanel({ server }: { server: DeployServer }): React.JSX.Eleme
   const [tab, setTab] = useState<'problems' | 'logs'>('problems');
   const containers = useQuery({
     queryKey: queryKeys.deployContainers(server.id),
-    queryFn: () => window.agentmat.deployDocker.listContainers(server.id),
+    queryFn: () => window.runova.deployDocker.listContainers(server.id),
     enabled: tab === 'logs',
     retry: false,
     meta: { silentLoading: true },
   });
   const sites = useQuery({
     queryKey: queryKeys.deploySites(server.id),
-    queryFn: async () => (await window.agentmat.deploySites.list(server.id)) ?? [],
+    queryFn: async () => (await window.runova.deploySites.list(server.id)) ?? [],
     enabled: tab === 'logs',
     retry: false,
     meta: { silentLoading: true },

@@ -13,7 +13,7 @@ import { useRemoteStore } from '@/stores/remoteStore';
 
 type RemoteTab = 'host' | 'connect' | 'ssh' | 'rdp';
 
-const TAB_STORAGE_KEY = 'agentmate.remote.tab';
+const TAB_STORAGE_KEY = 'runova.remote.tab';
 const REMOTE_TABS: readonly RemoteTab[] = ['host', 'connect', 'ssh', 'rdp'];
 
 function readStoredTab(): RemoteTab {
@@ -46,7 +46,7 @@ export default function RemotePage(): React.JSX.Element {
   const connection = useRemoteStore((s) => s.state?.connection);
   const [activeTab, setActiveTab] = useState<RemoteTab>(readStoredTab);
 
-  usePageHeader('Remote', 'Control another AgentMate over your local network, over WebSockets.');
+  usePageHeader('Remote', 'Control another Runova over your local network, over WebSockets.');
 
   const connected = connection?.status === 'connected';
   const connecting = connection?.status === 'connecting';

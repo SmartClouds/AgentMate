@@ -60,7 +60,7 @@ export function PetMenu({
 
       <button type="button" className="pet-menu-item" onClick={onOpenApp}>
         <ExternalLink className="h-3.5 w-3.5" />
-        <span>{failedRun ? 'Open the failed run' : 'Open AgentMate'}</span>
+        <span>{failedRun ? 'Open the failed run' : 'Open Runova'}</span>
       </button>
 
       <button type="button" className="pet-menu-item" onClick={onToggleMove}>

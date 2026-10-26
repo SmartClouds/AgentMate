@@ -47,7 +47,7 @@ export function describeRemoteFilesContract(
     let counter = 0;
 
     beforeAll(async () => {
-      scratch = await mkdtemp(join(tmpdir(), 'agentmate-remote-contract-'));
+      scratch = await mkdtemp(join(tmpdir(), 'runova-remote-contract-'));
     });
     afterAll(async () => {
       await rm(scratch, { recursive: true, force: true });

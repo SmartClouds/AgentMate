@@ -30,7 +30,7 @@ self.MonacoEnvironment = {
 /** Monaco themes that sit on the app's own surfaces instead of VS Code's grey. VS Code
  * Dark deliberately has no entry here: its --background token is chosen to match VS
  * Code's real editor.background, so Monaco's stock 'vs-dark' is already seamless. */
-monaco.editor.defineTheme('agentmate-dark', {
+monaco.editor.defineTheme('runova-dark', {
   base: 'vs-dark',
   inherit: true,
   rules: [],
@@ -53,7 +53,7 @@ monaco.editor.defineTheme('agentmate-dark', {
     'scrollbarSlider.activeBackground': '#00e57240',
   },
 });
-monaco.editor.defineTheme('agentmate-light', {
+monaco.editor.defineTheme('runova-light', {
   base: 'vs',
   inherit: true,
   rules: [],
@@ -67,7 +67,7 @@ monaco.editor.defineTheme('agentmate-light', {
     'diffEditor.unchangedRegionBackground': '#f0f0f0',
   },
 });
-monaco.editor.defineTheme('agentmate-vs2026', {
+monaco.editor.defineTheme('runova-vs2026', {
   base: 'vs-dark',
   inherit: true,
   rules: [],

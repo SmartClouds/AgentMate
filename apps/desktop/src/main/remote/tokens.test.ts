@@ -17,7 +17,7 @@ import { type PairedDevice, TokenStore } from './tokens';
 const userData = { dir: '' };
 
 beforeEach(() => {
-  userData.dir = tempDir('agentmate-tokens-');
+  userData.dir = tempDir('runova-tokens-');
   setElectronPath('userData', userData.dir);
 });
 

@@ -26,7 +26,7 @@ expectChannelsCovered(IPC.workspaceSearch, [IPC.workspaceSearch.onTextResults]);
 const PLAIN = { matchCase: false, wholeWord: false, regex: false };
 
 beforeEach(async () => {
-  project.dir = writeTree(tempDir('agentmate-wsearch-'), {
+  project.dir = writeTree(tempDir('runova-wsearch-'), {
     'src/store.ts': 'export class UserStore {\n  load() {\n    return needle;\n  }\n}\n',
     'README.md': 'needle in the readme\n',
   });

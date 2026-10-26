@@ -1,4 +1,4 @@
-import type { Project, ProjectRunCommand } from '@agentmat/core';
+import type { Project, ProjectRunCommand } from '@runova/core';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';

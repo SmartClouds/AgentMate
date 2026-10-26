@@ -68,7 +68,7 @@ const ADVICE: Record<RdpFailureCode, { title: string; hints: string[] }> = {
   'tls-failed': {
     title: "Couldn't set up a secure connection",
     hints: [
-      "The server's security settings may not match what AgentMate supports. Try again in a moment.",
+      "The server's security settings may not match what Runova supports. Try again in a moment.",
       'If the server was just reinstalled, restart Remote Desktop Services on it.',
     ],
   },

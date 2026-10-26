@@ -1,4 +1,4 @@
-import { hostOf, type VaultEntrySummary, type VaultFieldRef } from '@agentmat/core';
+import { hostOf, type VaultEntrySummary, type VaultFieldRef } from '@runova/core';
 import { vaultErrorMessage } from '@shared/vaultErrors';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -118,7 +118,7 @@ export function VaultDetailPane({
       return;
     }
     try {
-      const value = await window.agentmat.vault.reveal(entry.id, ref);
+      const value = await window.runova.vault.reveal(entry.id, ref);
       setRevealed((current) => ({ ...current, [key]: value }));
       clearTimeout(timers.current.get(key));
       timers.current.set(
@@ -243,7 +243,7 @@ export function VaultDetailPane({
           actions={
             <IconAction
               label={`Open ${host}`}
-              onClick={() => void window.agentmat.shell.openExternal(url)}
+              onClick={() => void window.runova.shell.openExternal(url)}
             >
               <ExternalLink className="h-3.5 w-3.5" />
             </IconAction>

@@ -1,6 +1,6 @@
 import { access } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createStudioService, type StudioService } from '@agentmat/studio/node';
+import { createStudioService, type StudioService } from '@runova/studio/node';
 import { createDesktopStudioHost, liveProjectIds } from './host';
 
 /**

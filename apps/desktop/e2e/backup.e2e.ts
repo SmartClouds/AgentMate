@@ -34,7 +34,7 @@ interface Envelope {
 }
 
 interface ProjectsApi {
-  agentmat: {
+  runova: {
     projects: {
       delete(id: string): Promise<void>;
       list(): Promise<{ id: string; name: string }[]>;
@@ -44,7 +44,7 @@ interface ProjectsApi {
 
 function projectNames(page: Page): Promise<string[]> {
   return page.evaluate(async () => {
-    const projects = await (window as unknown as ProjectsApi).agentmat.projects.list();
+    const projects = await (window as unknown as ProjectsApi).runova.projects.list();
     return projects.map((project) => project.name);
   });
 }
@@ -76,7 +76,7 @@ test('a backup is written, and restores a project that was deleted after it', as
   launched = await launchApp({ settings: { theme: 'dark' } });
   const current = launched;
   const { page, app, root } = current;
-  const backupPath = join(root, 'agentmate-backup.json');
+  const backupPath = join(root, 'runova-backup.json');
   const projectId = await createProject(current);
 
   await app.evaluate(({ dialog }, path) => {
@@ -99,7 +99,7 @@ test('a backup is written, and restores a project that was deleted after it', as
   expect(envelope.data.projectEnvironments).toBeUndefined();
 
   await page.evaluate(
-    (id) => (window as unknown as ProjectsApi).agentmat.projects.delete(id),
+    (id) => (window as unknown as ProjectsApi).runova.projects.delete(id),
     projectId,
   );
   await expect.poll(() => projectNames(page)).toEqual([]);
@@ -110,7 +110,7 @@ test('a backup is written, and restores a project that was deleted after it', as
   // The project is back, with the id it had, read from the file rather than from a cache.
   await expect.poll(() => projectNames(page), { timeout: 60_000 }).toEqual(['e2e project']);
   const restored = await page.evaluate(() =>
-    (window as unknown as ProjectsApi).agentmat.projects.list(),
+    (window as unknown as ProjectsApi).runova.projects.list(),
   );
   expect(restored[0].id).toBe(projectId);
 });
@@ -180,7 +180,7 @@ test('a file that is not a backup is reported instead of restoring anything', as
   await openBackupSettings(page);
   await restoreFromBackup(page);
   // The envelope check reports the version it could not read, rather than a generic message.
-  await expect(page.getByText(/unsupported format|not a valid AgentMate backup/)).toBeVisible({
+  await expect(page.getByText(/unsupported format|not a valid Runova backup/)).toBeVisible({
     timeout: 60_000,
   });
   await expect(page.getByRole('dialog', { name: 'Backup restored' })).toHaveCount(0);

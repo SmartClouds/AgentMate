@@ -1,4 +1,4 @@
-import type { Project, WorktreeInfo } from '@agentmat/core';
+import type { Project, WorktreeInfo } from '@runova/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -92,7 +92,7 @@ export function useWorktreeCommands(): WorktreeCommands {
           () => toast.error('Could not copy the path'),
         ),
       prune: (projectId) =>
-        void window.agentmat.worktrees.prune(projectId).then((result) => {
+        void window.runova.worktrees.prune(projectId).then((result) => {
           refresh(projectId);
           if (result.ok) toast.success(result.message);
           else toast.error('Could not clean up', { description: result.message });

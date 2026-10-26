@@ -2,7 +2,7 @@ import { coreErrorMessage } from '@shared/coreErrors';
 import type {
   FirewallChange,
   FirewallChangeSetInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Lock, Spinner, TriangleAlert } from '@/components/icons';
@@ -64,7 +64,7 @@ export function ApplyDialog({
 
   const preview = useQuery({
     queryKey: ['deploy', 'firewall', serverId, 'preview', changes],
-    queryFn: () => window.agentmat.deployFirewall.preview({ serverId, changes }),
+    queryFn: () => window.runova.deployFirewall.preview({ serverId, changes }),
     enabled: open && changes.length > 0,
     retry: false,
     gcTime: 0,
@@ -80,7 +80,7 @@ export function ApplyDialog({
     try {
       const change = await stepUp.run(
         (proof) =>
-          window.agentmat.deployFirewall.applyChanges({
+          window.runova.deployFirewall.applyChanges({
             serverId,
             changes,
             ...(blocked ? { overrideConfirmation: phrase.trim() } : {}),

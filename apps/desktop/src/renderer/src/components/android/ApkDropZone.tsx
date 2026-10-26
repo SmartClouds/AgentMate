@@ -1,4 +1,4 @@
-import type { AndroidDevice } from '@agentmat/core';
+import type { AndroidDevice } from '@runova/core';
 import { useCallback, useState } from 'react';
 import { Upload } from '@/components/icons';
 import { cn } from '@/lib/utils';
@@ -23,7 +23,7 @@ function apkPathsFrom(event: React.DragEvent): { paths: string[]; rejected: numb
       rejected += 1;
       continue;
     }
-    const path = window.agentmat.shell.pathForFile(file);
+    const path = window.runova.shell.pathForFile(file);
     if (path) paths.push(path);
   }
   return { paths, rejected };

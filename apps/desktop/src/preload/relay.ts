@@ -1,4 +1,4 @@
-import type { RelayProposal, RelayTaskStatus } from '@agentmat/core';
+import type { RelayProposal, RelayTaskStatus } from '@runova/core';
 import { ipcRenderer } from 'electron';
 import { IPC } from '../shared/ipcChannels';
 import type {

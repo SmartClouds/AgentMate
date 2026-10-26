@@ -3,7 +3,7 @@ import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Every place AgentMate starts an AI CLI has to use the settings the user gave that CLI, and only
+ * Every place Runova starts an AI CLI has to use the settings the user gave that CLI, and only
  * the ones meant for that kind of launch. The two never mix:
  *
  *   - buildAgentLaunchCommand(): terminal tabs and "open in terminal" (lib/workspace/launch.ts,

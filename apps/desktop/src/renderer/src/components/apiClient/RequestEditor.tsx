@@ -1,4 +1,4 @@
-import type { KeyValueRow } from '@agentmat/core';
+import type { KeyValueRow } from '@runova/core';
 import { SECTION_HEADING } from '@/components/pageKit';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';

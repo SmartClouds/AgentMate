@@ -74,7 +74,7 @@ The popup is a smaller dialog with the same chat in a fixed-height message area.
 
 ## Where your conversation is stored
 
-The thread, the provider tab and the models you picked are saved on your computer and are still there after you restart AgentMate. Clearing the history removes the messages but keeps your provider and model choices.
+The thread, the provider tab and the models you picked are saved on your computer and are still there after you restart Runova. Clearing the history removes the messages but keeps your provider and model choices.
 
 ## Tips
 

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { AppNotification, AppSettings, Project } from '@agentmat/core';
+import type { AppNotification, AppSettings, Project } from '@runova/core';
 import type { GithubWorkflowRunInfo } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';
 import type { PetPipelineMessage, PetPipelineRunRef } from '../../shared/pet';

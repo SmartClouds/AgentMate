@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useCliStore } from '@/stores/cliStore';
 import { useTerminalStore } from '@/stores/terminalStore';
-import { type FakeBridge, installAgentmatBridge } from '../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../test/renderer/runovaBridge';
 import { resolveRunCliId, runPromptInTerminal } from './runScheduledPrompt';
 
 /**
@@ -13,7 +13,7 @@ import { resolveRunCliId, runPromptInTerminal } from './runScheduledPrompt';
 let bridge: FakeBridge;
 
 beforeEach(() => {
-  bridge = installAgentmatBridge({
+  bridge = installRunovaBridge({
     platform: 'win32',
     'fs.writeScratchFile': async () => 'C:\\tmp\\scheduled-task-t1.md',
   });

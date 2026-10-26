@@ -1,8 +1,8 @@
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { FirewallChange } from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+import type { FirewallChange } from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { SshConnectionPool } from '../ssh/pool';
 import { CoreSessions } from './auth/coreSessions';
 import { localArtifactSource } from './bootstrap/releaseSource';
@@ -27,7 +27,7 @@ import {
  * test checks the live IPv4 and IPv6 rulesets after a change (AC3), that a change cutting SSH off
  * is refused (AC2), that a confirmation only counts over a new SSH connection, and that a change
  * nobody confirms is undone by its systemd timer while the core is killed (AC1). Needs
- * AGENTMATE_SYSTEM_TESTS=1, Docker, and `pnpm server-core:publish linux-x64`.
+ * RUNOVA_SYSTEM_TESTS=1, Docker, and `pnpm server-core:publish linux-x64`.
  */
 
 const enabled = systemTestsEnabled();
@@ -198,18 +198,18 @@ async function unconfirmedChangeRevertsWithTheCoreKilled(
   expect(openIn()).toEqual({ v4: true, v6: true });
   await before.stop();
 
-  server.run('systemctl kill -s KILL agentmate-core; systemctl stop agentmate-core');
-  expect(server.run('systemctl is-active agentmate-core || true')).not.toBe('active');
-  expect(server.run('systemctl list-timers --all --no-legend')).toContain('agentmate-fwrevert');
+  server.run('systemctl kill -s KILL runova-core; systemctl stop runova-core');
+  expect(server.run('systemctl is-active runova-core || true')).not.toBe('active');
+  expect(server.run('systemctl list-timers --all --no-legend')).toContain('runova-fwrevert');
 
   // ufw reloads the IPv4 tables before the IPv6 ones, so a check can land between the two.
   await waitFor('the timer to put the old rules back', () => {
     const { v4, v6 } = openIn();
     return !v4 && !v6;
   });
-  expect(server.run('systemctl is-active agentmate-core || true')).not.toBe('active');
+  expect(server.run('systemctl is-active runova-core || true')).not.toBe('active');
 
-  server.run('systemctl start agentmate-core');
+  server.run('systemctl start runova-core');
   const after = await core.connect(newPool(server));
   await waitFor('the core to record the rollback', async () => {
     const [latest] = await after.hub.listFirewallChangeSets({ limit: 1 });
@@ -219,7 +219,7 @@ async function unconfirmedChangeRevertsWithTheCoreKilled(
   expect(latest?.rolledBackBy).toBe('timer');
   const alerts = await after.hub.listAlerts({ includeResolved: false });
   expect(alerts.map((alert) => alert.kind)).toContain('firewallRolledBack');
-  expect(server.run('systemctl list-timers --all --no-legend')).not.toContain('agentmate-fwrevert');
+  expect(server.run('systemctl list-timers --all --no-legend')).not.toContain('runova-fwrevert');
   await after.stop();
 }
 
@@ -262,7 +262,7 @@ describe.skipIf(!enabled)('the firewall on real servers', () => {
       expect(steps.at(-1)).toBe('confirm:confirming:done');
       expect(server.run('iptables-save')).toMatch(/--dport 9090 -j ACCEPT/);
       expect(server.run('systemctl list-timers --all --no-legend')).not.toContain(
-        'agentmate-fwrevert',
+        'runova-fwrevert',
       );
       service.links.closeAll();
     },
@@ -332,7 +332,7 @@ describe.skipIf(!enabled)('the firewall on real servers', () => {
       const confirmed = await second.hub.confirmFirewallChanges(change.id);
       expect(confirmed.state).toBe('confirmed');
       expect(server.run('systemctl list-timers --all --no-legend')).not.toContain(
-        'agentmate-fwrevert',
+        'runova-fwrevert',
       );
       await first.stop();
       await second.stop();

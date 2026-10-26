@@ -1,11 +1,11 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { SkillRepository, SkillRepositoryIndex } from '@agentmat/core';
+import type { SkillRepository, SkillRepositoryIndex } from '@runova/core';
 import {
   SKILLS_SH_PSEUDO_REPOSITORY_ID,
   UI_UX_PRO_MAX_PSEUDO_REPOSITORY_ID,
   UI_UX_PRO_MAX_SKILL_ID,
-} from '@agentmat/core';
+} from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   AddUsedSkillResult,
@@ -179,7 +179,7 @@ function skillIndex(overrides: Partial<SkillRepositoryIndex> = {}): SkillReposit
         description: 'Formats things',
         category: 'dev',
         tags: [],
-        author: 'AgentMate',
+        author: 'Runova',
         version: '1.0.0',
         popularity: 0,
         dependencies: [],
@@ -193,7 +193,7 @@ function skillIndex(overrides: Partial<SkillRepositoryIndex> = {}): SkillReposit
 
 /** A local repository folder with a manifest and the skill file it points at. */
 function localRepoFolder(body = '# Formatter\n\nFormats your code.\n'): string {
-  const dir = tempDir('agentmate-skills-repo-');
+  const dir = tempDir('runova-skills-repo-');
   writeFileSync(join(dir, 'repository.json'), JSON.stringify(skillIndex()), 'utf-8');
   mkdirSync(join(dir, 'formatter'), { recursive: true });
   writeFileSync(join(dir, 'formatter', 'SKILL.md'), body, 'utf-8');
@@ -222,7 +222,7 @@ beforeEach(async () => {
   routes.length = 0;
   paths.home = homeDir();
 
-  project.dir = tempDir('agentmate-skills-project-');
+  project.dir = tempDir('runova-skills-project-');
   // A project that already has a .claude folder, which is where installs should land.
   mkdirSync(join(project.dir, '.claude'), { recursive: true });
   userData.writeData('projects.json', [
@@ -272,7 +272,7 @@ describe('skill repositories', () => {
 
   it('finds skills in a folder with no manifest at all', async () => {
     // The common case: a folder of `<name>/SKILL.md` directories nobody wrote a manifest for.
-    const dir = tempDir('agentmate-skills-bare-');
+    const dir = tempDir('runova-skills-bare-');
     mkdirSync(join(dir, 'reviewer'), { recursive: true });
     writeFileSync(join(dir, 'reviewer', 'SKILL.md'), '# Reviewer\n', 'utf-8');
 
@@ -288,7 +288,7 @@ describe('skill repositories', () => {
   });
 
   it('refuses a folder with no skills in it, and one that is not there', async () => {
-    const empty = tempDir('agentmate-skills-empty-');
+    const empty = tempDir('runova-skills-empty-');
     await expect(
       invoke(IPC.skills.addRepository, { name: 'x', sourceType: 'local-folder', source: empty }),
     ).rejects.toThrow('No skills found');
@@ -373,7 +373,7 @@ describe('skill repositories', () => {
   });
 
   it('opens the folder picker on the typed path, then on the projects root', async () => {
-    const folder = tempDir('agentmate-skills-pick-');
+    const folder = tempDir('runova-skills-pick-');
     queueDialog('showOpenDialog', { canceled: false, filePaths: [folder] });
     expect(await invoke<string | null>(IPC.skills.pickLocalRepository, ` ${folder} `)).toBe(folder);
     expect(electronState.dialogCalls.at(-1)?.args[0]).toMatchObject({ defaultPath: folder });
@@ -852,7 +852,7 @@ describe('adding a used skill to another project', () => {
   beforeEach(() => {
     // A second project to copy into. It has a .codex folder rather than a .claude one, so the
     // copy has to follow the target's own agent dir instead of mirroring the source's.
-    other.dir = tempDir('agentmate-skills-other-');
+    other.dir = tempDir('runova-skills-other-');
     mkdirSync(join(other.dir, '.codex'), { recursive: true });
     userData.writeData('projects.json', [
       {
@@ -902,7 +902,7 @@ describe('adding a used skill to another project', () => {
     expect(readFileSync(join(copied, 'scripts', 'run.sh'), 'utf-8')).toBe('echo hi\n');
     expect(existsSync(join(other.dir, '.claude'))).toBe(false);
 
-    // The copy is an unmanaged folder, so AgentMate keeps no install record for it.
+    // The copy is an unmanaged folder, so Runova keeps no install record for it.
     expect(await invoke<InstalledSkillRecord[]>(IPC.skills.listInstalled, OTHER_ID)).toEqual([]);
     const after = await invoke<UsedSkillInspection>(IPC.skills.inspectUsedSkill, {
       skill: 'formatter',
@@ -1068,7 +1068,7 @@ describe('the security audit', () => {
   });
 
   it('scans a loose folder nothing was installed from', async () => {
-    const folder = tempDir('agentmate-skills-loose-');
+    const folder = tempDir('runova-skills-loose-');
     writeFileSync(join(folder, 'SKILL.md'), DANGEROUS, 'utf-8');
 
     const result = await invoke<RunSkillAuditResult>(IPC.skills.runAudit, {
@@ -1134,7 +1134,7 @@ describe('the security audit', () => {
   });
 
   it('keeps a history that can be listed, read, removed and cleared', async () => {
-    const folder = tempDir('agentmate-skills-history-');
+    const folder = tempDir('runova-skills-history-');
     writeFileSync(join(folder, 'SKILL.md'), DANGEROUS, 'utf-8');
     const first = await invoke<RunSkillAuditResult>(IPC.skills.runAudit, {
       target: { kind: 'folder', path: folder },
@@ -1166,7 +1166,7 @@ describe('the security audit', () => {
 
 describe('finding something to audit', () => {
   it('lists the skills sitting in a project agent dir, whoever put them there', async () => {
-    // A cloned repository arrives with these already in place and no record in AgentMate.
+    // A cloned repository arrives with these already in place and no record in Runova.
     const skills = join(project.dir, '.claude', 'skills');
     mkdirSync(join(skills, 'cloned'), { recursive: true });
     writeFileSync(join(skills, 'cloned', 'SKILL.md'), '# Cloned\n', 'utf-8');
@@ -1201,7 +1201,7 @@ describe('finding something to audit', () => {
   });
 
   it('describes a folder, a single file, and a path that is not there', async () => {
-    const folder = tempDir('agentmate-skills-preview-');
+    const folder = tempDir('runova-skills-preview-');
     mkdirSync(join(folder, 'one'), { recursive: true });
     writeFileSync(join(folder, 'one', 'SKILL.md'), '# One\n', 'utf-8');
 

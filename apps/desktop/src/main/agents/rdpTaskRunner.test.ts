@@ -230,7 +230,7 @@ describe('AI task on a Remote Desktop session', () => {
     await waitForPhase(progress, 'finished');
 
     expect(fileSeen).toBe('frame-1');
-    expect(cwdSeen).toMatch(/agentmate-rdp-/);
+    expect(cwdSeen).toMatch(/runova-rdp-/);
     expect(fake.aiPrompts[0]?.startsWith('Do not use any tools')).toBe(true);
     expect(getRdpTaskHistory(sessionId)[0]?.aiLabel).toBe('Codex CLI');
     // The run folder goes away with the run.

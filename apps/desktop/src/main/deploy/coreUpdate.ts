@@ -4,9 +4,11 @@ import { coreErrorCode, encodeCoreError } from '../../shared/coreErrors';
 import type {
   CoreUpdateRequest,
   CoreUpdateResult,
-} from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+  LayoutMigrationResult,
+} from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import type {
+  DeployCoreLayout,
   DeployCoreRecord,
   DeployCoreUpdateResult,
   DeployHealth,
@@ -18,6 +20,7 @@ import { releaseDirectory } from './bootstrap/installPlan';
 import { releaseRidFor } from './bootstrap/osSupport';
 import type { ReleaseSource } from './bootstrap/releaseSource';
 import { type CoreHttpClient, CoreHttpError } from './connection/coreHttp';
+import { isOlderCore, LEGACY_CORE, layoutOf, RUNOVA_CORE } from './coreLayout';
 import { explainCoreRefusal } from './system';
 
 /**
@@ -30,6 +33,13 @@ import { explainCoreRefusal } from './system';
  * 3. The core switches to the release a few seconds later from a transient unit and restarts. That
  *    unit goes back to the release before when the new one does not stay up, so this side waits
  *    for the core to answer again and says which release it came back on.
+ *
+ * 4. A server still on the layout from before the rename is then moved to the Runova one by the
+ *    new core (`MigrateLayout`), and this side waits for it to come back under its new name. A
+ *    move that fails is put back by the core and reported, but the update still counts.
+ *
+ * A core from before the rename (1.63 or older) only takes the tarball under its old name, and
+ * reads the upload's headers under their old names, so those go to it.
  *
  * A core that cannot do this (older than this feature, or not installed by the app) ends in
  * `needs-ssh`, and the Deploy page offers the SSH installer instead. Updating takes an Owner with a
@@ -45,6 +55,8 @@ const COMEBACK_TIMEOUT_MS = 180_000;
 const POLL_MS = 2_000;
 /** The switch keeps the new core only if it is still up five seconds after it started. */
 const SETTLE_MS = 8_000;
+/** A migration stops the core, moves its folders and watches the new one for ten seconds. */
+const MIGRATION_TIMEOUT_MS = 300_000;
 const UPLOAD_STALL_MS = 60_000;
 const OLDER_CORE = 'This server runs an older core that cannot update itself.';
 const OWNERS_ONLY = 'Only an Owner of this server can update its core.';
@@ -55,6 +67,7 @@ const TITLES = {
   upload: 'Upload it over the core connection',
   switch: 'Switch to the new release',
   health: 'Check that it answers',
+  migrate: 'Move the core to its new name',
 } as const satisfies Partial<Record<DeploySetupPhase, string>>;
 
 type Phase = keyof typeof TITLES;
@@ -111,6 +124,8 @@ async function run(
   const rid = releaseRidFor(record.architecture);
   if (!rid) throw new NeedsSsh(`There is no server core build for ${record.architecture}.`);
   const before = await deps.health(serverId);
+  // Only a core from before the rename needs the old tarball name and header names.
+  const oldCore = layoutOf(record) === 'legacy' && isOlderCore(before.version);
   const remote = deps.releases.remote?.(rid) ?? null;
   const proof =
     input.password || input.totpCode
@@ -123,12 +138,13 @@ async function run(
   let target: { version: string; sha256: string } | null = null;
   let via: 'server-download' | 'upload' = 'upload';
   if (remote) {
+    const legacy = oldCore ? remote.legacy : undefined;
     const request: CoreUpdateRequest = {
       version: remote.version,
-      file: remote.file,
+      file: legacy?.file ?? remote.file,
       sha256: remote.sha256,
       size: remote.size,
-      downloadUrl: remote.url,
+      downloadUrl: legacy?.url ?? remote.url,
     };
     report(deps, 'fetch', { status: 'running' });
     const answer = await callHub(deps, serverId, proof, (hub) => hub.updateCore(request));
@@ -142,7 +158,7 @@ async function run(
     } else {
       report(deps, 'fetch', {
         status: 'failed',
-        detail: `${answer.problem ?? 'The server could not download it.'} AgentMate sends it instead.`,
+        detail: `${answer.problem ?? 'The server could not download it.'} Runova sends it instead.`,
       });
     }
   } else if (proof) {
@@ -151,7 +167,7 @@ async function run(
   }
 
   if (!target) {
-    target = await upload(deps, serverId, rid);
+    target = await upload(deps, serverId, rid, oldCore);
   }
 
   report(deps, 'switch', {
@@ -167,20 +183,107 @@ async function run(
   }
   report(deps, 'switch', { status: 'done' });
   report(deps, 'health', { status: 'done' });
-  await deps.saveRecord(serverId, {
-    ...record,
-    version: target.version,
-    release: releaseDirectory(target.version, target.sha256),
-    installedAt: now(),
-  });
+  let layout: DeployCoreLayout = back.layout ?? 'legacy';
+  const save = (to: DeployCoreLayout) =>
+    deps.saveRecord(serverId, {
+      ...record,
+      version: target.version,
+      release: releaseDirectory(target.version, target.sha256, to),
+      layout: to,
+      installedAt: now(),
+    });
+  await save(layout);
   deps.resetLink(serverId);
-  return { outcome: 'updated', version: target.version, previousVersion: before.version, via };
+
+  let migrationError: string | undefined;
+  if (layout === 'legacy' && !isOlderCore(target.version)) {
+    const moved = await migrateLive(deps, serverId, proof, back, sleep, now);
+    if (moved.layout === 'runova') {
+      layout = 'runova';
+      await save(layout);
+    }
+    migrationError = moved.error;
+  }
+  return {
+    outcome: 'updated',
+    version: target.version,
+    previousVersion: before.version,
+    via,
+    layout,
+    ...(migrationError ? { migrationError } : {}),
+  };
+}
+
+/**
+ * Asks the core to move the server to the Runova layout, then waits for it to come back from a
+ * new start: under its new name when it worked, on the old layout with the reason when the core
+ * put everything back. Never throws for a migration that did not happen: the update stands.
+ */
+async function migrateLive(
+  deps: CoreUpdateDeps,
+  serverId: string,
+  proof: { password?: string; totpCode?: string } | null,
+  before: DeployHealth,
+  sleep: (ms: number) => Promise<void>,
+  now: () => number,
+): Promise<{ layout: DeployCoreLayout; error?: string }> {
+  report(deps, 'migrate', { status: 'running', detail: 'The core restarts under its new name.' });
+  const fail = (error: string) => {
+    report(deps, 'migrate', {
+      status: 'failed',
+      detail: `The server stays on its old layout: ${error}`,
+    });
+    return { layout: 'legacy' as const, error };
+  };
+  let answer: LayoutMigrationResult;
+  try {
+    // The step-up from the update is still good; a fresh one only when the core asks for it.
+    answer = await callHub(deps, serverId, null, (hub) => hub.migrateLayout()).catch(
+      (error: unknown) => {
+        if (proof?.password && coreErrorCode(error) === 'stepUpRequired') {
+          return callHub(deps, serverId, proof, (hub) => hub.migrateLayout());
+        }
+        throw error;
+      },
+    );
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : String(error));
+  }
+  if (answer.outcome === 'alreadyMigrated') {
+    report(deps, 'migrate', { status: 'done' });
+    return { layout: 'runova' };
+  }
+  if (answer.outcome !== 'started') return fail(answer.problem ?? 'The core would not start it.');
+
+  deps.resetLink(serverId);
+  const deadline = now() + MIGRATION_TIMEOUT_MS;
+  while (now() < deadline) {
+    await sleep(POLL_MS);
+    let health: DeployHealth;
+    try {
+      health = await deps.health(serverId);
+    } catch {
+      // Down while it moves.
+      continue;
+    }
+    if (health.startedAtUnixMs === before.startedAtUnixMs) continue;
+    deps.resetLink(serverId);
+    if (health.layout === 'runova') {
+      report(deps, 'migrate', { status: 'done' });
+      return { layout: 'runova' };
+    }
+    return fail(health.migrationError ?? 'The core came back on its old layout.');
+  }
+  return fail(
+    'The core did not answer within 5 minutes of the move. Check again from the Overview in a moment.',
+  );
 }
 
 async function upload(
   deps: CoreUpdateDeps,
   serverId: string,
   rid: NonNullable<ReturnType<typeof releaseRidFor>>,
+  oldCore: boolean,
 ): Promise<{ version: string; sha256: string }> {
   report(deps, 'download', { status: 'running' });
   const release = await deps.releases.release(rid).catch((error: unknown) => {
@@ -198,10 +301,14 @@ async function upload(
         contentType: 'application/gzip',
         contentLength: size,
         stallTimeoutMs: UPLOAD_STALL_MS,
+        // Both names: a core from before the rename reads only the old ones (and the old file name).
         headers: {
-          'x-agentmate-core-version': release.version,
-          'x-agentmate-core-file': release.file,
-          'x-agentmate-core-sha256': release.sha256,
+          [RUNOVA_CORE.versionHeader]: release.version,
+          [RUNOVA_CORE.fileHeader]: release.file,
+          [RUNOVA_CORE.sha256Header]: release.sha256,
+          [LEGACY_CORE.versionHeader]: release.version,
+          [LEGACY_CORE.fileHeader]: (oldCore ? release.legacyFile : undefined) ?? release.file,
+          [LEGACY_CORE.sha256Header]: release.sha256,
         },
         onProgress: (sent) => {
           const percent = Math.floor((sent / size) * 100);

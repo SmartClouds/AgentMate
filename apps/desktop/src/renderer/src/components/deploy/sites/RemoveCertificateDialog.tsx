@@ -1,4 +1,4 @@
-import type { CertificateInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { CertificateInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useEffect, useId, useState } from 'react';
 import { Spinner, Trash2, TriangleAlert } from '@/components/icons';
 import { Button } from '@/components/ui/button';

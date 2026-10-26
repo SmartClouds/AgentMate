@@ -1,4 +1,4 @@
-import { getCliDefinition, type Project } from '@agentmat/core';
+import { getCliDefinition, type Project } from '@runova/core';
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
@@ -210,7 +210,7 @@ function BrowserTabBody({
         onPick={picker.start}
         onViewport={(viewport) => setBrowserViewport(project.id, tab.id, viewport)}
         onDevTools={() => browserRuntime.openDevTools(tab.id)}
-        onOpenExternal={() => void window.agentmat.shell.openExternal(pageUrl)}
+        onOpenExternal={() => void window.runova.shell.openExternal(pageUrl)}
         onCopyUrl={() => {
           void navigator.clipboard.writeText(pageUrl);
           toast.success('Address copied');

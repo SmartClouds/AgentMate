@@ -1,4 +1,4 @@
-import { findGroupOfTab } from '@agentmat/core';
+import { findGroupOfTab } from '@runova/core';
 import type { GuestShortcut } from '@shared/browserGuest';
 import { useBrowserStore } from '@/stores/browserStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -45,7 +45,7 @@ export function startBrowserSync(): () => void {
     useBrowserStore.getState().rememberUrl(projectId, page.url);
   });
 
-  const offPopup = window.agentmat.browser.onOpenInNewTab(({ webContentsId, url }) => {
+  const offPopup = window.runova.browser.onOpenInNewTab(({ webContentsId, url }) => {
     const opener = browserRuntime.tabForWebContents(webContentsId);
     const projectId = opener ? workspaceOf(opener) : null;
     if (!opener || !projectId) return;
@@ -55,7 +55,7 @@ export function startBrowserSync(): () => void {
     state.openBrowser(projectId, { url, groupId });
   });
 
-  const offShortcut = window.agentmat.browser.onGuestShortcut(({ webContentsId, shortcut }) => {
+  const offShortcut = window.runova.browser.onGuestShortcut(({ webContentsId, shortcut }) => {
     const tabId = browserRuntime.tabForWebContents(webContentsId);
     if (tabId) emitBrowserShortcut(tabId, shortcut);
   });

@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
-import type { AppSettings, Project, RunAssessment } from '@agentmat/core';
+import type { AppSettings, Project, RunAssessment } from '@runova/core';
 import {
   recommendationFromAssessment,
   runProfileForTargetAI,
   targetAIForProject,
-} from '@agentmat/core';
+} from '@runova/core';
 import { screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';

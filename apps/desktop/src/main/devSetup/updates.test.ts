@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import type { DevDetection, DevSetupEnvironment } from '@agentmat/core';
+import type { DevDetection, DevSetupEnvironment } from '@runova/core';
 import { describe, expect, it, vi } from 'vitest';
 import type { ProbeResult } from './probe';
 import { createUpdateChecker, type UpdateCheckerDeps } from './updates';

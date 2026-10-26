@@ -95,6 +95,7 @@ function setup(roles: string[] = ['admin']) {
     roles: () => roles,
     approve: approvalSigner({
       state: {
+        get: async () => null,
         device: async () => ({
           deviceId: DEVICE,
           userName: 'maria',

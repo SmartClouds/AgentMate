@@ -71,7 +71,7 @@ describe.runIf(compose)('Compose reads a rendered .env back exactly', () => {
     const result = renderComposeEnv(entries);
     if (!result.ok) throw new Error(result.reason);
 
-    const folder = mkdtempSync(join(tmpdir(), 'agentmate-e07-env-'));
+    const folder = mkdtempSync(join(tmpdir(), 'runova-e07-env-'));
     folders.push(folder);
     writeFileSync(join(folder, '.env'), result.text);
     const environment = entries.map(({ key }) => `      I_${key}: "\${${key}}"`).join('\n');

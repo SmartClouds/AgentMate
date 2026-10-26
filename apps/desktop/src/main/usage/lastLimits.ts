@@ -1,4 +1,4 @@
-import type { LastKnownLimits, ProviderUsage, SubscriptionWindow } from '@agentmat/core';
+import type { LastKnownLimits, ProviderUsage, SubscriptionWindow } from '@runova/core';
 
 // The plan limits a provider last reported, kept in the main process so a failed read can still
 // hand them back. A failure must not take a provider's limits off the status bar, but stale numbers

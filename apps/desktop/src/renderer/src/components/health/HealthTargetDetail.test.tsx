@@ -227,7 +227,7 @@ describe('HealthTargetDetail', () => {
   });
 
   it('rotates the key only after a confirmation, then shows the new one once', async () => {
-    const rotate = vi.fn(async () => reveal({ secret: 'amh_rotated_key' }));
+    const rotate = vi.fn(async () => reveal({ secret: 'rnh_rotated_key' }));
     const { user } = renderPanel({ 'health.rotateSecret': rotate });
     const view = await panel();
 
@@ -251,7 +251,7 @@ describe('HealthTargetDetail', () => {
     await waitFor(() =>
       expect(screen.queryByRole('heading', { name: 'Save this key now' })).toBeNull(),
     );
-    expect(document.body).not.toHaveTextContent('amh_rotated_key');
+    expect(document.body).not.toHaveTextContent('rnh_rotated_key');
   });
 
   it('deletes after a confirmation and closes', async () => {

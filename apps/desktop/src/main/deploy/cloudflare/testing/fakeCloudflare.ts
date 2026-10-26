@@ -25,7 +25,7 @@ export interface FakeToken {
   zoneIds?: string[];
 }
 
-/** Everything AgentMate's token template asks for. */
+/** Everything Runova's token template asks for. */
 export const ALL_GRANTS: Record<CloudflarePermissionId, Access> = {
   zone: 'read',
   dns: 'edit',

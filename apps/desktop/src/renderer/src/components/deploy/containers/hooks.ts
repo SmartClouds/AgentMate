@@ -1,5 +1,5 @@
 import { coreErrorMessage } from '@shared/coreErrors';
-import type { ContainerLogLine } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { ContainerLogLine } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { appendLines } from '@/lib/deploy/containers/logs';
@@ -45,9 +45,9 @@ export function useContainerStats(serverId: string, enabled: boolean): LiveStats
   useEffect(() => {
     if (!enabled) return;
     return ownedSubscription({
-      listen: window.agentmat.deployDocker.onStats,
-      start: () => window.agentmat.deployDocker.watchStats(serverId),
-      stop: window.agentmat.deployDocker.unwatchStats,
+      listen: window.runova.deployDocker.onStats,
+      start: () => window.runova.deployDocker.watchStats(serverId),
+      stop: window.runova.deployDocker.unwatchStats,
       onEvent: (event) => {
         if (event.error) {
           setError(event.error);
@@ -95,9 +95,9 @@ export function useDockerEvents(serverId: string, enabled: boolean): void {
       }
     };
     const stop = ownedSubscription({
-      listen: window.agentmat.deployDocker.onEvents,
-      start: () => window.agentmat.deployDocker.watchEvents(serverId),
-      stop: window.agentmat.deployDocker.unwatchEvents,
+      listen: window.runova.deployDocker.onEvents,
+      start: () => window.runova.deployDocker.watchEvents(serverId),
+      stop: window.runova.deployDocker.unwatchEvents,
       onEvent: (event) => {
         for (const item of event.events) {
           if (item.type === 'container') touched.add(item.actorId);
@@ -144,9 +144,9 @@ export function useContainerLog(
     // Not ready until the first lines (or the end) arrive; a quiet log still settles shortly.
     const quiet = setTimeout(() => setLog((current) => ({ ...current, ready: true })), 1_500);
     const stop = ownedSubscription({
-      listen: window.agentmat.deployDocker.onLogs,
-      start: () => window.agentmat.deployDocker.watchLogs({ serverId, containerId, follow, tail }),
-      stop: window.agentmat.deployDocker.unwatchLogs,
+      listen: window.runova.deployDocker.onLogs,
+      start: () => window.runova.deployDocker.watchLogs({ serverId, containerId, follow, tail }),
+      stop: window.runova.deployDocker.unwatchLogs,
       onEvent: (event) =>
         setLog((current) => ({
           lines: appendLines(current.lines, event.lines),

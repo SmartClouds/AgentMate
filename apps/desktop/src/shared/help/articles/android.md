@@ -13,11 +13,11 @@ It uses the Android SDK you already have, for example the one installed by Andro
 
 ## Where to find it
 
-Click **Android** in the sidebar under **Ship**, or open the command palette and type Android. The status bar at the bottom also has an Android entry (see below). To change which SDK folder AgentMate uses, go to **Settings**, the **General** tab, and the **Android SDK** card.
+Click **Android** in the sidebar under **Ship**, or open the command palette and type Android. The status bar at the bottom also has an Android entry (see below). To change which SDK folder Runova uses, go to **Settings**, the **General** tab, and the **Android SDK** card.
 
 ## If the SDK is not found
 
-When AgentMate cannot find an Android SDK, the page shows "Android SDK not found". It checks the `ANDROID_HOME` and `ANDROID_SDK_ROOT` environment variables and the usual install folders for your operating system. A list titled **Where AgentMate looked** shows every path it tried, with a green check next to the one it used and a gray cross next to the ones that did not work.
+When Runova cannot find an Android SDK, the page shows "Android SDK not found". It checks the `ANDROID_HOME` and `ANDROID_SDK_ROOT` environment variables and the usual install folders for your operating system. A list titled **Where Runova looked** shows every path it tried, with a green check next to the one it used and a gray cross next to the ones that did not work.
 
 An SDK folder has at least one of `platform-tools`, `emulator` or `cmdline-tools` in it. Android Studio installs one for you.
 
@@ -85,7 +85,7 @@ A running emulator or a ready phone has these icon buttons on its card:
 | **Open shell** | Opens a terminal tab named `adb shell` for that device with the adb command already typed. |
 | **Install APK** | Opens a file picker so you can choose one or more `.apk` files to install. |
 
-Screenshots and recordings are saved in an `AgentMate/Android` folder inside your Pictures and Videos folders.
+Screenshots and recordings are saved in a `Runova/Android` folder inside your Pictures and Videos folders.
 
 ### Drag and drop an APK
 
@@ -116,7 +116,7 @@ When no system images are installed, the **System image** area offers to downloa
 2. Tick **I accept the Android SDK licence terms**. **Read** opens the terms.
 3. Click **Download and install**. A progress bar shows the download.
 
-If AgentMate cannot get the list of images, it shows the SDK's own error and a **Try again** button.
+If Runova cannot get the list of images, it shows the SDK's own error and a **Try again** button.
 
 ## Edit a virtual device
 
@@ -165,11 +165,11 @@ In **Settings**, **General** tab, the **Android SDK** card has:
 
 - The SDK folder that is in use, where it came from (set here, `ANDROID_HOME`, `ANDROID_SDK_ROOT` or the usual install folder) and the platform-tools version.
 - **Browse** to pick a different SDK folder, and **Clear** (shown only when you set a folder) to go back to automatic detection.
-- **Stop emulators when AgentMate quits.** Off by default, because an emulator is a window you can close yourself and takes a while to boot again.
+- **Stop emulators when Runova quits.** Off by default, because an emulator is a window you can close yourself and takes a while to boot again.
 
 ## Tips
 
-- Emulators that nothing has used for a while show up on the Dashboard's **Idle Docker and Emulators** card, which can stop them for you. It only looks while an adb server is already running, so it never starts one, and its clock starts when AgentMate first sees an emulator. See [Dashboard](dashboard.md#idle-docker-and-emulators).
+- Emulators that nothing has used for a while show up on the Dashboard's **Idle Docker and Emulators** card, which can stop them for you. It only looks while an adb server is already running, so it never starts one, and its clock starts when Runova first sees an emulator. See [Dashboard](dashboard.md#idle-docker-and-emulators).
 - An agent can use the same `adb` from the [Workspace](workspace-terminals-agents.md) terminal. **Open shell** is a quick way to get one.
 - If emulators will not start, check the Partial SDK banner first. A missing `emulator` package is the usual cause.
 

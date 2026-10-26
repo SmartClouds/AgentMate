@@ -96,7 +96,7 @@ let root = '';
 beforeEach(() => {
   cliState.calls = [];
   cliState.answers = new Map();
-  root = tempDir('agentmate-node-adapter-');
+  root = tempDir('runova-node-adapter-');
 });
 
 afterEach(() => {
@@ -249,7 +249,7 @@ describe('listPackages with npm', () => {
   });
 
   it('returns an empty ok section for a folder with no manifest', async () => {
-    const empty = tempDir('agentmate-node-empty-');
+    const empty = tempDir('runova-node-empty-');
 
     const section = await nodeAdapter.listPackages(empty);
 

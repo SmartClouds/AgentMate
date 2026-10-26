@@ -2,7 +2,7 @@ import { coreErrorMessage } from '@shared/coreErrors';
 import type {
   NginxProblemInfo,
   SiteInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployServer } from '@shared/deployTypes';
 import { lazy, Suspense, useState } from 'react';
 import { toast } from 'sonner';
@@ -115,7 +115,7 @@ export function SiteEditor({
     }
     setSaving(true);
     try {
-      const result = await window.agentmat.deploySites.save(server.id, settings);
+      const result = await window.runova.deploySites.save(server.id, settings);
       setSaveProblems(result.problems);
       if (result.problems.length > 0 || !result.site) {
         const firstProblem = problemsFor(result.problems, 'site', settings.id)[0];
@@ -143,7 +143,7 @@ export function SiteEditor({
     });
     if (!confirmed) return;
     try {
-      await window.agentmat.deploySites.remove(server.id, site.settings.id);
+      await window.runova.deploySites.remove(server.id, site.settings.id);
       toast.success(`${title} deleted. Apply to take it offline.`);
       onChanged();
       onClose();

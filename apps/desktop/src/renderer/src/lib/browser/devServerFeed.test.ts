@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useDevServerStore } from '@/stores/devServerStore';
-import { type FakeBridge, installAgentmatBridge } from '../../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../../test/renderer/runovaBridge';
 import { startDevServerFeed } from './devServerFeed';
 
 let bridge: FakeBridge;
 
 beforeEach(() => {
-  bridge = installAgentmatBridge();
+  bridge = installRunovaBridge();
   useDevServerStore.getState().reset();
 });
 

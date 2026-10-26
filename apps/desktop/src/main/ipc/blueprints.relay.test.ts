@@ -1,4 +1,4 @@
-import type { ProjectBlueprint } from '@agentmat/core';
+import type { ProjectBlueprint } from '@runova/core';
 import { describe, expect, it } from 'vitest';
 import { IPC } from '../../shared/ipcChannels';
 import { invoke, loadIpc, useTempUserData } from '../../test/main/ipcHarness';

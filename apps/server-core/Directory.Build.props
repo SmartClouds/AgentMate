@@ -32,8 +32,8 @@
     <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1900;NU1901;NU1902</WarningsNotAsErrors>
 
     <Version Condition="'$(Version)' == ''">1.63.0</Version>
-    <Product>AgentMate Server Core</Product>
-    <Company>AgentMate</Company>
-    <Copyright>AgentMate</Copyright>
+    <Product>Runova Server Core</Product>
+    <Company>Runova</Company>
+    <Copyright>Runova</Copyright>
   </PropertyGroup>
 </Project>

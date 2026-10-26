@@ -66,7 +66,7 @@ export function RemoteFolderBrowser({
 
   const folder = useQuery({
     queryKey: queryKeys.deployFilesBrowse(target, path),
-    queryFn: () => window.agentmat.deployFiles.browseRemote({ siteId, site, path }),
+    queryFn: () => window.runova.deployFiles.browseRemote({ siteId, site, path }),
     enabled: open,
     retry: false,
     gcTime: 0,

@@ -44,7 +44,7 @@ Each open project is a tile. A tile shows the project's icon, or its initials wh
 - Click a tile to switch to that project. The tile for the project on screen has a ring and a marker bar on its left edge.
 - Hover a tile to see the project name, its folder, how many terminals are open and how many are working, and whether something is waiting on you.
 - Drag a tile up or down to reorder the rail. A line shows where it will land.
-- Click the small **x** that appears on a tile when you hover it, or right-click the tile and choose **Close workspace**, to close the project's workspace. If terminals are still running, AgentMate asks **Close the {project} workspace?** and says how many terminals will be stopped. Confirm with **Close workspace**.
+- Click the small **x** that appears on a tile when you hover it, or right-click the tile and choose **Close workspace**, to close the project's workspace. If terminals are still running, Runova asks **Close the {project} workspace?** and says how many terminals will be stopped. Confirm with **Close workspace**.
 - Right-click a tile for **New worktree…** and, when the project has worktrees, **Hide worktrees** or **Show worktrees**. See [Worktrees](worktrees.md).
 
 ### Open another project
@@ -73,7 +73,7 @@ When there is more than one pane, each pane has a **Zoom pane** button. It makes
 
 ### Close a pane
 
-Click **Close pane** (the **x** at the right of the tab strip, shown when there is more than one pane). It closes every tab in the pane. If agents or commands in it are busy, AgentMate asks **Close this pane?** first.
+Click **Close pane** (the **x** at the right of the tab strip, shown when there is more than one pane). It closes every tab in the pane. If agents or commands in it are busy, Runova asks **Close this pane?** first.
 
 ### Drag tabs between panes
 
@@ -83,7 +83,7 @@ Drag a tab by its title.
 - Drop it on the left, right, top or bottom edge of a pane's body to split that pane and put the tab in the new half. A dashed outline previews the result.
 - Drop it in the middle of a pane's body to move it into that pane.
 
-Your pane layout is saved, so it comes back the next time you open AgentMate.
+Your pane layout is saved, so it comes back the next time you open Runova.
 
 ## Tabs
 
@@ -148,7 +148,7 @@ To open a dev server in a pane instead, start it in a terminal tab. See [Browser
 
 ### Pause
 
-While one of the project's runs is going, a pause button appears next to Run. It freezes the run so it uses no CPU, and the same button, now a play button, resumes it. It acts on all of the project's runs at once. `F6` does the same for the newest run. See [Pause a run](projects.md#pause-a-run), including how to have AgentMate pause runs for you while an agent works in the same folder.
+While one of the project's runs is going, a pause button appears next to Run. It freezes the run so it uses no CPU, and the same button, now a play button, resumes it. It acts on all of the project's runs at once. `F6` does the same for the newest run. See [Pause a run](projects.md#pause-a-run), including how to have Runova pause runs for you while an agent works in the same folder.
 
 ### Tag a version
 
@@ -166,12 +166,12 @@ The chip icon (**Running CLIs**) opens a dialog listing every terminal in the ap
 - Search by name, project, CLI, folder or process. The filter button limits the list by source (**Workspace**, **Terminal drawer**, **SSH**, **Detached**), by kind (agent or shell) and by state (running or ended).
 - **Sort by** CPU, Memory, Age, Name or Project. Click the same sort again to flip its direction.
 - Each row has buttons to show details, **Open** the terminal, **Restart** (workspace tabs only), and **End session** (or **Close tab** for one that already ended).
-- Tick rows and click **End selected** to stop several at once. AgentMate always asks before it ends something that is still running.
+- Tick rows and click **End selected** to stop several at once. Runova always asks before it ends something that is still running.
 - SSH rows show **Remote, no stats**, because those shells run on the server.
 
 ## Attention badges
 
-AgentMate marks agents that need you, so you can work in another tab or page and still notice.
+Runova marks agents that need you, so you can work in another tab or page and still notice.
 
 - On a tab: a spinning ring means the agent is working, a pulsing amber dot means it needs your input (the tab also turns amber), and a solid green dot means it finished and you have not looked yet.
 - On a project tile in the rail: the most urgent state among that project's tabs. Waiting on you comes first, then finished, then working.
@@ -179,17 +179,17 @@ AgentMate marks agents that need you, so you can work in another tab or page and
 - In the status bar: counts of agents by state, with a list you can click to jump to a tab.
 - As a system notification when you are looking at another page or app (see the **Workspace notifications** setting in [Settings](settings.md#workspace-notifications)). Clicking it brings that tab forward.
 
-The green dot goes away once you look at the finished tab with AgentMate in front. More on statuses in [Terminals and agents](workspace-terminals-agents.md#agent-status).
+The green dot goes away once you look at the finished tab with Runova in front. More on statuses in [Terminals and agents](workspace-terminals-agents.md#agent-status).
 
 ## Keep terminals running
 
-In **Settings**, on the **General** tab, **Keep terminals running** is on by default. With it on, closing AgentMate does not end your terminal sessions. They carry on in the background and come back with their output the next time you open the app. Restarting to install an update always keeps them.
+In **Settings**, on the **General** tab, **Keep terminals running** is on by default. With it on, closing Runova does not end your terminal sessions. They carry on in the background and come back with their output the next time you open the app. Restarting to install an update always keeps them.
 
 Turn it off if you want quitting the app to end every terminal.
 
-When you close the app while agent CLI sessions are open, AgentMate asks **Close AgentMate?** and tells you whether they will keep running or be stopped. Click **Close app** to continue.
+When you close the app while agent CLI sessions are open, Runova asks **Close Runova?** and tells you whether they will keep running or be stopped. Click **Close app** to continue.
 
-If a shell is gone when you come back (after a reboot, for example), its tab says **This session ended while AgentMate was closed.** with **Restart** and **Close** buttons. Claude Code and Codex agent tabs that had a conversation pick it back up on their own. See [Settings](settings.md#keep-terminals-running).
+If a shell is gone when you come back (after a reboot, for example), its tab says **This session ended while Runova was closed.** with **Restart** and **Close** buttons. Claude Code and Codex agent tabs that had a conversation pick it back up on their own. See [Settings](settings.md#keep-terminals-running).
 
 ## Workspace terminal background
 

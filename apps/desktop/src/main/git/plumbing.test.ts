@@ -276,15 +276,15 @@ describe.skipIf(!git)('against a real repository', () => {
 
 describe.skipIf(!git)('the environment git() runs with', () => {
   afterEach(() => {
-    delete process.env.AGENTMATE_GIT_ENV_PROBE;
+    delete process.env.RUNOVA_GIT_ENV_PROBE;
   });
 
   it('is read at call time, so a PATH or proxy set after startup reaches git', async () => {
     const repo = initGitRepo();
     // An alias that prints a variable, run by the git child itself.
-    const probe = ['-c', 'alias.probe=!echo "$AGENTMATE_GIT_ENV_PROBE"', 'probe'];
+    const probe = ['-c', 'alias.probe=!echo "$RUNOVA_GIT_ENV_PROBE"', 'probe'];
 
-    process.env.AGENTMATE_GIT_ENV_PROBE = 'set-after-import';
+    process.env.RUNOVA_GIT_ENV_PROBE = 'set-after-import';
 
     expect((await runGit(repo.dir, probe)).trim()).toBe('set-after-import');
   });

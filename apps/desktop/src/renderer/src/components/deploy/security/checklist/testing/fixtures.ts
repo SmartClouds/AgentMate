@@ -3,7 +3,7 @@ import type {
   SecurityChecklist,
   SshHardeningChangeInfo,
   SshHardeningPreview,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /** A checklist as the core sends one for a fresh VPS, for the Security center's tests. */
 
@@ -68,7 +68,7 @@ export const CHECKLIST: SecurityChecklist = {
     keyboardInteractiveLogin: false,
     keyLogin: true,
     rootLogin: 'yes',
-    managedByAgentMate: false,
+    managedByRunova: false,
   },
   coreVersion: '1.53.0',
   checkedAtUnixMs: Date.now(),
@@ -76,10 +76,10 @@ export const CHECKLIST: SecurityChecklist = {
 
 export const PREVIEW: SshHardeningPreview = {
   summary: 'SSH password login off',
-  path: '/etc/ssh/sshd_config.d/00-agentmate.conf',
-  content: '# Written by AgentMate\nPasswordAuthentication no\nKbdInteractiveAuthentication no\n',
+  path: '/etc/ssh/sshd_config.d/00-runova.conf',
+  content: '# Written by Runova\nPasswordAuthentication no\nKbdInteractiveAuthentication no\n',
   commands: [
-    'write /etc/ssh/sshd_config.d/00-agentmate.conf',
+    'write /etc/ssh/sshd_config.d/00-runova.conf',
     'sshd -t',
     'sshd -T',
     'systemctl reload ssh',

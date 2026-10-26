@@ -3,7 +3,7 @@ import type {
   ExposureFirewall,
   ExposureInventory,
   ExposureScope,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { Globe, Lock, NetworkIcon, Server, TriangleAlert } from '@/components/icons';
 import { Chip, FOOTER_HAIRLINE, SECTION_HEADING } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import { MakePrivateNotice, type MakePrivateOutcome } from './MakePrivate';
 /**
  * What can be reached on the server: every listening socket and every port Docker publishes,
  * public or not, and what the firewall makes of it. A container published on all addresses
- * goes around the host firewall, so it is called out, with "make private": an AgentMate app is
+ * goes around the host firewall, so it is called out, with "make private": a Runova app is
  * redeployed with the service on 127.0.0.1, anything else is shown the change to make.
  */
 

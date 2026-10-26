@@ -59,7 +59,7 @@ describe('summarizeHealth', () => {
 
 describe('targetHost', () => {
   it('shows the host only, never the path or query', () => {
-    expect(targetHost('https://api.example.com:8443/_agentmate/health?token=x')).toBe(
+    expect(targetHost('https://api.example.com:8443/_runova/health?token=x')).toBe(
       'api.example.com:8443',
     );
   });

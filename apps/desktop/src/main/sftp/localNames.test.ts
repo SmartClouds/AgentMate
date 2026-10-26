@@ -65,7 +65,7 @@ describe('safeLocalName on POSIX', () => {
 });
 
 describe('assertContained', () => {
-  const root = resolve('/tmp/agentmate-downloads');
+  const root = resolve('/tmp/runova-downloads');
 
   it('answers the resolved path of something inside the folder', () => {
     expect(assertContained(join(root, 'site', 'a.txt'), root)).toBe(join(root, 'site', 'a.txt'));

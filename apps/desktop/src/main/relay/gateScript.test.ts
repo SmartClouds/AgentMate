@@ -8,7 +8,7 @@ import { GATE_PLAN_LIMIT, relayGateScriptSource } from './gateScript';
 
 /**
  * The gate script runs inside Claude Code as a hook, so it is run here the same way: a node
- * process given the hook's JSON on stdin, against a small server standing in for AgentMate.
+ * process given the hook's JSON on stdin, against a small server standing in for Runova.
  */
 
 const TOKEN = 'gate-token';
@@ -56,7 +56,7 @@ function runHook(
 ): Promise<{ stdout: string; code: number | null }> {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [script], {
-      env: { ...process.env, AGENTMATE_SESSION_ID: sessionId },
+      env: { ...process.env, RUNOVA_SESSION_ID: sessionId },
     });
     let stdout = '';
     child.stdout.on('data', (chunk: Buffer) => {
@@ -184,7 +184,7 @@ describe('relay gate hook', () => {
     expect(received[0]).toMatchObject({ event: 'Stop', stopHookActive: false });
   });
 
-  it('exits quietly when AgentMate answers nothing, garbage or is gone', async () => {
+  it('exits quietly when Runova answers nothing, garbage or is gone', async () => {
     expect(await runHook({ hook_event_name: 'Stop' })).toEqual({ stdout: '', code: 0 });
     reply = { status: 200, body: '{not json' };
     expect(await runHook({ hook_event_name: 'Stop' })).toEqual({ stdout: '', code: 0 });
@@ -194,7 +194,7 @@ describe('relay gate hook', () => {
     expect(await runHook({ hook_event_name: 'Stop' })).toEqual({ stdout: '', code: 0 });
   });
 
-  it('does nothing outside a tab AgentMate started', async () => {
+  it('does nothing outside a tab Runova started', async () => {
     const result = await runHook({ hook_event_name: 'Stop' }, '../../etc');
     expect(result).toEqual({ stdout: '', code: 0 });
     expect(received).toEqual([]);

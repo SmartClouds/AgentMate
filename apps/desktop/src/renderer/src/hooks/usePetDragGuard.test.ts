@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { installAgentmatBridge } from '../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../test/renderer/runovaBridge';
 import { usePetDragGuard } from './usePetDragGuard';
 
 /**
@@ -21,13 +21,13 @@ afterEach(() => {
 
 describe('usePetDragGuard', () => {
   it('does nothing until a drag actually starts', () => {
-    const bridge = installAgentmatBridge();
+    const bridge = installRunovaBridge();
     renderHook(() => usePetDragGuard());
     expect(() => bridge.$fn('pet.setDragGuard')).toThrow();
   });
 
   it('parks the companion for the length of a drag', () => {
-    const bridge = installAgentmatBridge();
+    const bridge = installRunovaBridge();
     renderHook(() => usePetDragGuard());
 
     fire('dragstart');
@@ -39,7 +39,7 @@ describe('usePetDragGuard', () => {
   });
 
   it('releases on a drop as well, since a dropped drag never fires dragend everywhere', () => {
-    const bridge = installAgentmatBridge();
+    const bridge = installRunovaBridge();
     renderHook(() => usePetDragGuard());
 
     fire('dragstart');
@@ -49,7 +49,7 @@ describe('usePetDragGuard', () => {
 
   // Nested drag sources fire dragstart more than once; the overlay should be parked once.
   it('holds once for a run of dragstart events', () => {
-    const bridge = installAgentmatBridge();
+    const bridge = installRunovaBridge();
     renderHook(() => usePetDragGuard());
 
     fire('dragstart');
@@ -60,7 +60,7 @@ describe('usePetDragGuard', () => {
 
   it('lets go on its own when a drag never ends', () => {
     vi.useFakeTimers();
-    const bridge = installAgentmatBridge();
+    const bridge = installRunovaBridge();
     renderHook(() => usePetDragGuard());
 
     fire('dragstart');
@@ -76,7 +76,7 @@ describe('usePetDragGuard', () => {
   });
 
   it('releases and stops listening when the component unmounts mid-drag', () => {
-    const bridge = installAgentmatBridge();
+    const bridge = installRunovaBridge();
     const { unmount } = renderHook(() => usePetDragGuard());
 
     fire('dragstart');

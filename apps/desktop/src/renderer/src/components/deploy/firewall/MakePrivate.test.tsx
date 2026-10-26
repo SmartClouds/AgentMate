@@ -2,7 +2,7 @@ import type {
   ContainerList,
   ContainerSummary,
   StackDetails,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
@@ -17,8 +17,8 @@ import { SERVER, signedIn } from '../security/testing/fixtures';
 import { EXPOSURE, PRESETS, status } from './testing/fixtures';
 
 /**
- * "Make private" from the exposure view: an AgentMate app is redeployed after a confirmation and
- * followed until the new revision is live; a container AgentMate did not start gets the edit to
+ * "Make private" from the exposure view: a Runova app is redeployed after a confirmation and
+ * followed until the new revision is live; a container Runova did not start gets the edit to
  * make instead; refusals and failures are said where the button is.
  */
 
@@ -89,7 +89,7 @@ async function clickMakePrivate(user: ReturnType<typeof renderPanel>['user']) {
 }
 
 describe('Make private', () => {
-  it('redeploys an AgentMate app with the service on loopback after asking', async () => {
+  it('redeploys a Runova app with the service on loopback after asking', async () => {
     let live = false;
     const { user, bridge } = renderPanel({
       'deployStacks.get': async () =>
@@ -133,7 +133,7 @@ describe('Make private', () => {
     expect(makePrivate).not.toHaveBeenCalled();
   });
 
-  it('shows the compose change for a project AgentMate did not deploy, even one with an app name', async () => {
+  it('shows the compose change for a project Runova did not deploy, even one with an app name', async () => {
     const makePrivate = vi.fn();
     const { user } = renderPanel({
       'deployStacks.get': async () => owning(['someone-else']),

@@ -18,7 +18,7 @@ export const NEW_SHELL_NOTICE =
 const DEFAULT_SIZE = { cols: 80, rows: 24 };
 
 /**
- * A console in a container (E06 T6), behind the same shape as `window.agentmat.terminal` so
+ * A console in a container (E06 T6), behind the same shape as `window.runova.terminal` so
  * `TerminalPane` can render it like any other session. The pane knows the session by its own id
  * while the main process names the console by a subscription id that comes back from the open
  * call, so this keeps the mapping, and holds on to output that arrives before that answer.
@@ -29,7 +29,7 @@ export function containerConsoleAdapter(
   containerId: string,
   run: { command?: string[]; user?: string } = {},
 ) {
-  const deploy = window.agentmat.deployDocker;
+  const deploy = window.runova.deployDocker;
   let paneId: string | null = null;
   let consoleId: string | null = null;
   const early: DeployConsoleEvent[] = [];

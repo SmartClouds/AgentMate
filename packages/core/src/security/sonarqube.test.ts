@@ -14,7 +14,7 @@ function issue(overrides: Partial<SonarIssue> = {}): SonarIssue {
     key: 'AZ-1',
     rule: 'javasecurity:S3649',
     severity: 'MAJOR',
-    component: 'agentmate:src/db/query.ts',
+    component: 'runova:src/db/query.ts',
     line: 31,
     message: 'Change this code to not construct SQL queries directly from user-controlled data.',
     type: 'VULNERABILITY',
@@ -24,7 +24,7 @@ function issue(overrides: Partial<SonarIssue> = {}): SonarIssue {
 
 describe('sonarComponentToFile', () => {
   it('drops the project key prefix', () => {
-    expect(sonarComponentToFile('agentmate:src/db/query.ts')).toBe('src/db/query.ts');
+    expect(sonarComponentToFile('runova:src/db/query.ts')).toBe('src/db/query.ts');
   });
 
   it('keeps a component that has no prefix', () => {
@@ -39,8 +39,8 @@ describe('sonarComponentToFile', () => {
     expect(sonarComponentToFile(undefined)).toBeNull();
     expect(sonarComponentToFile('')).toBeNull();
     // A project-level issue has no path after the key.
-    expect(sonarComponentToFile('agentmate:')).toBeNull();
-    expect(sonarComponentToFile('agentmate:   ')).toBeNull();
+    expect(sonarComponentToFile('runova:')).toBeNull();
+    expect(sonarComponentToFile('runova:   ')).toBeNull();
   });
 });
 
@@ -200,7 +200,7 @@ describe('parseSonarIssues hotspots', () => {
     return {
       key: 'AY-9',
       ruleKey: 'typescript:S2245',
-      component: 'agentmate:src/rand.ts',
+      component: 'runova:src/rand.ts',
       line: 4,
       message: 'Make sure that using this pseudorandom number generator is safe here.',
       vulnerabilityProbability: 'HIGH',

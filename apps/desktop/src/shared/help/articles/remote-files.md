@@ -2,14 +2,14 @@
 title: Remote files
 category: Connect
 order: 30
-summary: Browse another computer running AgentMate, and upload, download, rename, delete and create folders on it, without opening a control session.
+summary: Browse another computer running Runova, and upload, download, rename, delete and create folders on it, without opening a control session.
 keywords: remote files, file manager, file transfer, upload, download, browse files, files only, transfer, folders, rename, delete, resume, hash, verified
 route: /remote-files
 ---
 
-The Remote files page is a file manager for another computer that runs AgentMate. After you connect to it, you can browse its drives and folders, create folders, rename and delete items, upload a file from your computer into any folder, and download a file from it. Transfers are split into parts, checked with a hash, and resume if the connection drops.
+The Remote files page is a file manager for another computer that runs Runova. After you connect to it, you can browse its drives and folders, create folders, rename and delete items, upload a file from your computer into any folder, and download a file from it. Transfers are split into parts, checked with a hash, and resume if the connection drops.
 
-This page works over the same connection as AgentMate's remote control (see [Remote](remote.md)). It is for another AgentMate on your network. For a server you reach over SSH, use [SSH files (SFTP)](ssh-files.md) instead, which opens a saved SSH server in a two-pane file manager. To deploy a site to an SSH, SFTP or FTP server, use [FTP and SFTP sites](deploy-ftp-sftp.md) in Deploy.
+This page works over the same connection as Runova's remote control (see [Remote](remote.md)). It is for another Runova on your network. For a server you reach over SSH, use [SSH files (SFTP)](ssh-files.md) instead, which opens a saved SSH server in a two-pane file manager. To deploy a site to an SSH, SFTP or FTP server, use [FTP and SFTP sites](deploy-ftp-sftp.md) in Deploy.
 
 ## Where to find it
 
@@ -19,7 +19,7 @@ You do not open this page from the sidebar. It opens when you connect for files 
 2. On the other computer, open **Remote**, **Host**, start hosting and generate a pairing code.
 3. Either paste the code and click **Connect (files only)**, or, for a computer you have connected to before, click **Browse files** on its row under **Saved servers**.
 
-AgentMate then opens Remote files. If you are already connected with files only, the Connect tab has an **Open file manager** button.
+Runova then opens Remote files. If you are already connected with files only, the Connect tab has an **Open file manager** button.
 
 If you open `/remote-files` without a connection, the page says "Not connected. Go to Remote, Connect and use "Browse files" on a saved server, or connect with a pairing code first."
 

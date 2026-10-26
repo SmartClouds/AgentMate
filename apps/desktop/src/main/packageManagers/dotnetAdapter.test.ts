@@ -116,7 +116,7 @@ let root = '';
 beforeEach(() => {
   cliState.calls = [];
   cliState.handler = () => ({});
-  root = tempDir('agentmate-dotnet-adapter-');
+  root = tempDir('runova-dotnet-adapter-');
 });
 
 afterEach(() => {
@@ -222,7 +222,7 @@ describe('listPackages CLI usage', () => {
   });
 
   it('returns an empty ok section when there is no project to scan', async () => {
-    const empty = tempDir('agentmate-dotnet-empty-');
+    const empty = tempDir('runova-dotnet-empty-');
 
     const section = await dotnetAdapter.listPackages(empty);
 

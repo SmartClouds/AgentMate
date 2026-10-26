@@ -113,15 +113,15 @@ describe('extendedPosixPath', () => {
 describe('parseShellPathOutput', () => {
   it('takes the PATH from between the markers, ignoring what rc files print around it', () => {
     const stdout =
-      'Last login: Fri\nWelcome back!\n__AGENTMATE_PATH__/a/bin:/b/bin__AGENTMATE_PATH__bye\n';
+      'Last login: Fri\nWelcome back!\n__RUNOVA_PATH__/a/bin:/b/bin__RUNOVA_PATH__bye\n';
 
     expect(parseShellPathOutput(stdout)).toBe('/a/bin:/b/bin');
   });
 
   it('answers null when the shell stopped before printing the PATH', () => {
     expect(parseShellPathOutput('')).toBeNull();
-    expect(parseShellPathOutput('__AGENTMATE_PATH__/a/bin')).toBeNull();
-    expect(parseShellPathOutput('__AGENTMATE_PATH____AGENTMATE_PATH__')).toBeNull();
+    expect(parseShellPathOutput('__RUNOVA_PATH__/a/bin')).toBeNull();
+    expect(parseShellPathOutput('__RUNOVA_PATH____RUNOVA_PATH__')).toBeNull();
   });
 });
 
@@ -129,7 +129,7 @@ describe.skipIf(process.platform === 'win32')('readLoginShellPath with a real sh
   it('reads the PATH an interactive shell sets up in its rc file', async () => {
     // `sh -i` reads the file named by $ENV, the closest POSIX sh has to .zshrc, which is where
     // Claude Code's installer adds ~/.local/bin.
-    const home = tempDir('agentmate-shell-home-');
+    const home = tempDir('runova-shell-home-');
     const rc = join(home, '.shrc');
     writeFileSync(rc, `echo "hello from rc"\nPATH="$PATH:${home}/.local/bin"\n`);
 

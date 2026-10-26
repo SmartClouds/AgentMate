@@ -72,7 +72,7 @@ interface SetupOptions extends FakeRemoteOptions {
 
 function setup(options: SetupOptions = {}) {
   const { wrap, runner: runnerOverrides, now: clock, ...fakeOptions } = options;
-  const local = tempDir('agentmate-run-');
+  const local = tempDir('runova-run-');
   const fake = createFakeRemote(fakeOptions);
   fake.setDir(ROOT);
   const current = { site: site({ localFolder: local, protocol: fakeOptions.protocol ?? 'sftp' }) };
@@ -253,7 +253,7 @@ describe('run: a deploy', () => {
 
   it('clears the part files a stopped upload left in the folders it read', async () => {
     const t = setup();
-    t.fake.setFile(`${ROOT}/index.html.agentmate-0123abcd.part`, 'half');
+    t.fake.setFile(`${ROOT}/index.html.runova-0123abcd.part`, 'half');
     t.write({ 'index.html': 'whole' });
 
     await t.deploy();
@@ -267,9 +267,9 @@ describe('run: a deploy', () => {
     const t = setup();
     t.write({ 'a.txt': 'a', 'b.txt': 'b' });
     await t.deploy();
-    t.fake.setFile(`${ROOT}/a.txt.agentmate-0123abcd.old`, 'older a');
+    t.fake.setFile(`${ROOT}/a.txt.runova-0123abcd.old`, 'older a');
     t.fake.delete(`${ROOT}/b.txt`);
-    t.fake.setFile(`${ROOT}/b.txt.agentmate-4567cdef.old`, 'b');
+    t.fake.setFile(`${ROOT}/b.txt.runova-4567cdef.old`, 'b');
     t.write({ 'c.txt': 'c' });
 
     const { result } = await t.deploy();

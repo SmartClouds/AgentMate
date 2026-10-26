@@ -1,7 +1,7 @@
 import type {
   FirewallPreset,
   FirewallRuleInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { Check, Plus, Sparkles } from '@/components/icons';
 import { Chip } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';

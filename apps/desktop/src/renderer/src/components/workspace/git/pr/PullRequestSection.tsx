@@ -1,4 +1,4 @@
-import type { Project, PullRequestInfo } from '@agentmat/core';
+import type { Project, PullRequestInfo } from '@runova/core';
 import type { PullRequestStatus } from '@shared/apiTypes';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';

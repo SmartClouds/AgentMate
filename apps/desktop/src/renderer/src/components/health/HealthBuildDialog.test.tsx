@@ -53,8 +53,8 @@ describe('HealthBuildDialog', () => {
     const { user } = renderDialog();
     const dialog = await screen.findByRole('dialog', { name: 'Build the endpoint with AI' });
     expect(prompt()).toContain('Add a healthcheck endpoint to Storefront');
-    expect(prompt()).toContain('AGENTMATE_HEALTH_TOKEN_SHA256');
-    expect(prompt()).toContain('`/_agentmate/health`');
+    expect(prompt()).toContain('RUNOVA_HEALTH_TOKEN_SHA256');
+    expect(prompt()).toContain('`/_runova/health`');
 
     await user.click(within(dialog).getByRole('combobox', { name: 'Environment' }));
     await user.click(await screen.findByRole('option', { name: 'Staging' }));
@@ -62,15 +62,15 @@ describe('HealthBuildDialog', () => {
     expect(prompt()).toContain('on the Staging environment, server web-2');
 
     await user.click(within(dialog).getByRole('button', { name: 'HTTP Basic' }));
-    expect(prompt()).toContain('AGENTMATE_HEALTH_PASSWORD_SHA256');
-    expect(prompt()).toContain('AGENTMATE_HEALTH_USER');
+    expect(prompt()).toContain('RUNOVA_HEALTH_PASSWORD_SHA256');
+    expect(prompt()).toContain('RUNOVA_HEALTH_USER');
 
     await user.clear(within(dialog).getByLabelText('Path'));
-    await user.type(within(dialog).getByLabelText('Path'), '/status/agentmate');
-    expect(prompt()).toContain('`/status/agentmate`');
+    await user.type(within(dialog).getByLabelText('Path'), '/status/runova');
+    expect(prompt()).toContain('`/status/runova`');
 
     // The prompt names variables only. A key is made when a target is added, never here.
-    expect(prompt()).not.toMatch(/amh_[A-Za-z0-9_-]{10,}/);
+    expect(prompt()).not.toMatch(/rnh_[A-Za-z0-9_-]{10,}/);
   });
 
   it('sends the prompt to the project agent by name and opens the workspace', async () => {
@@ -81,7 +81,7 @@ describe('HealthBuildDialog', () => {
       expect.objectContaining({ id: 'p1' }),
       expect.objectContaining({
         cliId: 'claude-code',
-        prompt: expect.stringContaining('AgentMate Health Protocol'),
+        prompt: expect.stringContaining('Runova Health Protocol'),
       }),
     );
     expect(navigate).toHaveBeenCalledWith('/workspace/p1');
@@ -96,7 +96,7 @@ describe('HealthBuildDialog', () => {
     await user.click(screen.getByRole('tab', { name: 'Protocol' }));
     await user.click(screen.getByRole('button', { name: 'Copy protocol' }));
     const spec = await navigator.clipboard.readText();
-    expect(spec).toContain('AgentMate Health Protocol');
+    expect(spec).toContain('Runova Health Protocol');
     expect(spec).not.toContain('Add a healthcheck endpoint');
   });
 

@@ -8,7 +8,7 @@ import {
   type EffortLevel,
   type LaunchDefaultPart,
   launchDefaultParts,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 import { EffortPicker } from '@/components/cli/RunSettingsFields';
@@ -29,14 +29,14 @@ interface LaunchableCli {
 
 /**
  * Model, effort, and permission mode each agent opens with in a terminal. One row per CLI that
- * has launch flags AgentMate knows about. Anything left on "Not set" adds no flag.
+ * has launch flags Runova knows about. Anything left on "Not set" adds no flag.
  */
 export function CliLaunchDefaultsSettings(): React.JSX.Element {
   const cliOrder = useCliStore((s) => s.cliOrder);
   const defaults = useCliStore((s) => s.cliLaunchDefaults);
   const status = useQuery({
     queryKey: queryKeys.cliStatus,
-    queryFn: () => window.agentmat.cli.detectAll(),
+    queryFn: () => window.runova.cli.detectAll(),
     staleTime: 5 * 60_000,
     // A full sweep can run for tens of seconds, and this list is usable without it. Without the
     // flag it joins the cold start and blanks the page for as long as the sweep takes.

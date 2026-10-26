@@ -1,4 +1,4 @@
-import { getUsageProvider, type ProviderUsage } from '@agentmat/core';
+import { getUsageProvider, type ProviderUsage } from '@runova/core';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { queryKeys } from '@/lib/queryKeys';
@@ -14,7 +14,7 @@ export function useRefreshProviderUsage(providerId: string) {
   const name = getUsageProvider(providerId)?.name ?? providerId;
 
   return useMutation({
-    mutationFn: (): Promise<ProviderUsage> => window.agentmat.usage.refreshProvider(providerId),
+    mutationFn: (): Promise<ProviderUsage> => window.runova.usage.refreshProvider(providerId),
     meta: { silentLoading: true },
     onSuccess: async (usage) => {
       // A list poll that started before the refresh would otherwise land after it and undo it.

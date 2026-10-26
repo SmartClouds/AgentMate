@@ -9,10 +9,10 @@
  * expires_at, attempts, burned, used_at, created_by.
  * Audit row: id, at, event, connection_id, connection_label, ip, detail.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Storage;
+namespace Runova\Connector\Storage;
 
 interface Storage
 {

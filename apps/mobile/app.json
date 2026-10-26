@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "AgentMate",
-    "slug": "agentmate-remote",
-    "scheme": "agentmate",
+    "name": "Runova",
+    "slug": "runova-remote",
+    "scheme": "runova",
     "version": "1.63.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
@@ -10,23 +10,22 @@
     "backgroundColor": "#0a0a0a",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.agentmate.remote",
+      "bundleIdentifier": "com.runova.remote",
       "infoPlist": {
-        "NSCameraUsageDescription": "AgentMate uses the camera to scan a pairing QR code shown on the AgentMate desktop app.",
-        "NSLocalNetworkUsageDescription": "AgentMate connects to the AgentMate desktop app over your local Wi-Fi network to stream and control its screen.",
+        "NSCameraUsageDescription": "Runova uses the camera to scan a pairing QR code shown on the Runova desktop app.",
+        "NSLocalNetworkUsageDescription": "Runova connects to the Runova desktop app over your local Wi-Fi network to stream and control its screen.",
         "NSAppTransportSecurity": {
           "NSAllowsLocalNetworking": true
         }
       }
     },
     "android": {
-      "package": "com.agentmate.remote",
+      "package": "com.runova.remote",
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#0a0a0a",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundImage": "./assets/android-icon-background.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -47,7 +46,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "AgentMate uses the camera to scan a pairing QR code shown on the AgentMate desktop app."
+          "cameraPermission": "Runova uses the camera to scan a pairing QR code shown on the Runova desktop app."
         }
       ],
       "@config-plugins/react-native-webrtc"

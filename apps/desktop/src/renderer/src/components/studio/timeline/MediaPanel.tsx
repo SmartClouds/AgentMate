@@ -4,7 +4,7 @@ import {
   type ImportResult,
   type MediaView,
   mediaUrl,
-} from '@agentmat/studio';
+} from '@runova/studio';
 import { useState } from 'react';
 import { pathForFile, studioMediaClient } from '../client';
 import { errorMessage } from '../format';

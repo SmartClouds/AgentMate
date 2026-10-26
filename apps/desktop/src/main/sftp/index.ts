@@ -77,7 +77,7 @@ export function registerSftpIpc(deps: {
     send: (ownerId, channel, payload) =>
       sendToContents(webContents.fromId(ownerId), channel, payload),
     keepAwake: (busy) => keepAwake.setBusy('sftp', busy),
-    tempDir: () => join(app.getPath('temp'), 'agentmate-sftp'),
+    tempDir: () => join(app.getPath('temp'), 'runova-sftp'),
     localBrowse,
   });
   registerSftpHandlers({

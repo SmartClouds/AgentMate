@@ -7,7 +7,7 @@ import { TOKEN_ID } from './testing/recorded';
 import { checkToken, permissionsFromPolicies } from './tokenCheck';
 
 /**
- * T1 and AC1: a token is checked against the permissions AgentMate asks for without changing
+ * T1 and AC1: a token is checked against the permissions Runova asks for without changing
  * anything on the account, and a missing permission comes back as exactly what to add.
  */
 

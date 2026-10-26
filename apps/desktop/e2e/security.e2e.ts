@@ -14,7 +14,7 @@ import { type DevHost, dotnetAvailable, startDevHost } from './devHost';
 
 test.skip(!dotnetAvailable(), 'needs the .NET SDK to build the server core DevHost');
 
-const DEV_PASSWORD = 'agentmate-local-password';
+const DEV_PASSWORD = 'runova-local-password';
 const PASSPHRASE = 'orange tractor bicycle lamp';
 
 let devHost: DevHost | undefined;
@@ -41,7 +41,7 @@ async function openSecurity(): Promise<{ page: Page; app: LaunchedApp['app'] }> 
   if (!devHost) throw new Error('DevHost did not start');
   launched = await launchApp({
     settings: {},
-    env: { AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port) },
+    env: { RUNOVA_DEPLOY_DEV_CORE: String(devHost.port) },
   });
   const { page } = launched;
   await page.getByRole('link', { name: 'Deploy' }).click();
@@ -116,7 +116,7 @@ test('scores the server, previews the SSH fix and keeps it over a new connection
 
 test('saves an encrypted backup where the dialog says', async () => {
   test.setTimeout(180_000);
-  folder = mkdtempSync(join(tmpdir(), 'agentmate-e2e-backup-'));
+  folder = mkdtempSync(join(tmpdir(), 'runova-e2e-backup-'));
   const path = join(folder, 'devhost.ambackup');
   const { page, app } = await openSecurity();
   await app.evaluate(({ dialog }, target) => {
@@ -144,6 +144,6 @@ test('saves an encrypted backup where the dialog says', async () => {
   expect(existsSync(path)).toBe(true);
   const bytes = readFileSync(path);
   expect(bytes.subarray(0, 8).toString('latin1')).toBe('AMBACKUP');
-  expect(bytes.includes(Buffer.from('agentmate-local-password'))).toBe(false);
+  expect(bytes.includes(Buffer.from('runova-local-password'))).toBe(false);
   expect(existsSync(`${path}.partial`)).toBe(false);
 });

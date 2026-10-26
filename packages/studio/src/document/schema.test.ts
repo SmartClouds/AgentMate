@@ -75,7 +75,7 @@ describe('parseDocument', () => {
 
   it('refuses a document from a newer Studio rather than dropping what it cannot read', () => {
     expect(() => parseDocument({ ...doc(), schemaVersion: STUDIO_SCHEMA_VERSION + 1 })).toThrow(
-      /newer version of AgentMate/,
+      /newer version of Runova/,
     );
   });
 

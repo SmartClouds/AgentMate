@@ -2,7 +2,7 @@ import { type ChildProcess, execFile, spawn } from 'node:child_process';
 import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { type GrammarSettings, LANGUAGETOOL_SERVER_JAR } from '@agentmat/core';
+import { type GrammarSettings, LANGUAGETOOL_SERVER_JAR } from '@runova/core';
 import { app } from 'electron';
 import type { GrammarLocalStatus, GrammarServerState } from '../../shared/grammar';
 import { IPC } from '../../shared/ipcChannels';
@@ -11,7 +11,7 @@ import { broadcastToWindows } from '../ipc/send';
 const execFileAsync = promisify(execFile);
 
 /**
- * Where the user drops tools AgentMate runs but doesn't install: today only the
+ * Where the user drops tools Runova runs but doesn't install: today only the
  * LanguageTool distribution. Under userData so it survives app updates and is
  * never inside the read-only asar.
  */

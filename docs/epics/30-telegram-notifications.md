@@ -16,7 +16,7 @@ whether or not the app is open.
 - **The core owns it.** It has to keep sending with the app closed. The bot token, chat, server name,
   alert kinds, the resolved-note switch and on/off are kept by the core in
   `telegram-notifications.json` in its state folder (root only, written atomically). The token is
-  sealed with Data Protection (`AgentMate.Notifications.Telegram.Token.v1`) and never returned.
+  sealed with Data Protection (`Runova.Notifications.Telegram.Token.v1`) and never returned.
 - **Alerts are the source.** `TelegramNotifier` (a hosted service) subscribes to `AlertCenter` and
   runs each change through `TelegramPolicy`: a message when an alert opens, when it gets worse
   (a higher severity), and, if asked, when it resolves after a message about it went out. Repeats,

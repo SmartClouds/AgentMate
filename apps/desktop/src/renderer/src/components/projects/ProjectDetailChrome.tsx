@@ -1,5 +1,5 @@
-import type { Project } from '@agentmat/core';
-import { AGENT_TYPE_CLI_ID, AGENT_TYPE_LABELS, configuredRunCommands } from '@agentmat/core';
+import type { Project } from '@runova/core';
+import { AGENT_TYPE_CLI_ID, AGENT_TYPE_LABELS, configuredRunCommands } from '@runova/core';
 import { LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { CliLogo } from '@/components/cliLogos';
@@ -505,7 +505,7 @@ function LinkChip({
     <SimpleTooltip label={`Open ${href}`}>
       <button
         type="button"
-        onClick={() => void window.agentmat.shell.openExternal(href)}
+        onClick={() => void window.runova.shell.openExternal(href)}
         className={cn(META_PILL, 'max-w-[min(100%,18rem)]')}
       >
         <Icon className="h-3.5 w-3.5 shrink-0" />

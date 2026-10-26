@@ -4,7 +4,7 @@
  * functions behave like WordPress's: esc_html and esc_attr do NOT double-encode existing
  * entities, which is exactly what made JavaScript inside attributes unsafe.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
 // phpcs:ignoreFile

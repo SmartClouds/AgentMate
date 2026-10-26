@@ -16,7 +16,7 @@ import type {
   RelayTaskStatus,
   RelayTestResult,
   RelayTrigger,
-} from '@agentmat/core';
+} from '@runova/core';
 
 /**
  * Relay (E26): the contract between main, the preload and the renderer. Task and handoff files live

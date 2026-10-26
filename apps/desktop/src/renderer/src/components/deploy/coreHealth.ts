@@ -13,7 +13,7 @@ export const HEALTH_INTERVAL_MS = 30_000;
 export function useCoreHealth(server: DeployServer): UseQueryResult<DeployHealth> {
   return useQuery({
     queryKey: queryKeys.deployHealth(server.id),
-    queryFn: () => window.agentmat.deploy.health(server.id),
+    queryFn: () => window.runova.deploy.health(server.id),
     enabled: server.core !== null,
     refetchInterval: HEALTH_INTERVAL_MS,
     retry: false,

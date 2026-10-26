@@ -11,7 +11,7 @@ import {
   parseNumstatZ,
   parseStatusV2,
   withNumstat,
-} from '@agentmat/core';
+} from '@runova/core';
 import { shell } from 'electron';
 import type {
   GitApplyLinesInput,

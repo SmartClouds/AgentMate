@@ -1,5 +1,5 @@
-import type { Project, WpItemRef } from '@agentmat/core';
-import { wpItemKey, wpItemRoot } from '@agentmat/core';
+import type { Project, WpItemRef } from '@runova/core';
+import { wpItemKey, wpItemRoot } from '@runova/core';
 import type { DeployWordPressSite } from '@shared/deployWordPressTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
@@ -87,14 +87,14 @@ export function LinkWordPressDialog({
 
   const sitesQuery = useQuery({
     queryKey: queryKeys.deployWordPressSites,
-    queryFn: () => window.agentmat.deployWordPress.listSites(),
+    queryFn: () => window.runova.deployWordPress.listSites(),
     enabled: open,
     meta: SILENT,
   });
   const site = sitesQuery.data?.find((candidate) => candidate.id === siteId) ?? null;
   const itemsQuery = useQuery({
     queryKey: queryKeys.deployWordPressItems(siteId ?? ''),
-    queryFn: () => window.agentmat.deployWordPress.listItems(siteId as string),
+    queryFn: () => window.runova.deployWordPress.listItems(siteId as string),
     enabled: open && siteId !== null && step !== 'site',
     meta: SILENT,
   });

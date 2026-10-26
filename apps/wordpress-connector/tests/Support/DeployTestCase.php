@@ -2,10 +2,10 @@
 /**
  * Helpers for deploy tests: a small site, and begin/upload/commit as the desktop sends them.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Support;
+namespace Runova\Connector\Tests\Support;
 
 abstract class DeployTestCase extends TestCase
 {
@@ -25,7 +25,7 @@ abstract class DeployTestCase extends TestCase
         $env->put('themes/child/style.css', '/* child */');
         $env->put('plugins/akismet/akismet.php', '<?php // akismet');
         $env->put('plugins/hello.php', '<?php // hello');
-        $env->put('plugins/agentmate-connector/agentmate-connector.php', '<?php // us');
+        $env->put('plugins/runova-connector/runova-connector.php', '<?php // us');
         $env->activePlugins = array('akismet/akismet.php');
     }
 

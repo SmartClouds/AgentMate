@@ -5,7 +5,7 @@ import {
   type PaneNode,
   type PaneSplitNode,
   type Project,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { type ProjectWorkspace, useWorkspaceStore } from '@/stores/workspaceStore';

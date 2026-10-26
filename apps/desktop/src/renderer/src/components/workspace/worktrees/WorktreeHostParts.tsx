@@ -1,4 +1,4 @@
-import { type Project, parseScopeId } from '@agentmat/core';
+import { type Project, parseScopeId } from '@runova/core';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
@@ -61,7 +61,7 @@ export function WorktreeWorkspaceGuards(): React.JSX.Element {
   );
 }
 
-/** Where a worktree's panes would be, when its folder was deleted outside AgentMate. */
+/** Where a worktree's panes would be, when its folder was deleted outside Runova. */
 export function WorktreeMissingNotice({
   project,
 }: {
@@ -81,7 +81,7 @@ export function WorktreeMissingNotice({
           {project.folderPath}
         </p>
         <p className="mt-3 text-sm text-muted-foreground">
-          It was deleted or moved outside AgentMate.
+          It was deleted or moved outside Runova.
           {worktree?.branch ? ` Its branch ${worktree.branch} is still in the repository.` : ''}{' '}
           Remove it to tidy up git, or go back to {project.name}.
         </p>

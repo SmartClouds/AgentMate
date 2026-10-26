@@ -6,8 +6,8 @@ import type {
   SecurityFinding,
   SecurityScanRecord,
   SecuritySeverity,
-} from '@agentmat/core';
-import { DEFAULT_SCAN_OPTIONS } from '@agentmat/core';
+} from '@runova/core';
+import { DEFAULT_SCAN_OPTIONS } from '@runova/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useTempUserData } from '../test/main/ipcHarness';
 

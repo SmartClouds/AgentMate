@@ -501,21 +501,20 @@ describe('jest stream', () => {
     const { results, parser } = stream(
       'jest',
       `noise
-@@agentmate-jest ${JSON.stringify(entry)}
+@@runova-jest ${JSON.stringify(entry)}
 more noise`,
     );
     expect(results.map((r) => [r.path.join(' > '), r.status])).toEqual([
       ['math > adds', 'passed'],
       ['math > breaks', 'failed'],
     ]);
-    expect(parser.display?.('@@agentmate-jest {}')).toBeNull();
+    expect(parser.display?.('@@runova-jest {}')).toBeNull();
     expect(parser.display?.('PASS src/a.test.ts')).toBe('PASS src/a.test.ts');
   });
 });
 
 describe('playwright stream', () => {
-  const line = (entry: Record<string, unknown>) =>
-    `@@agentmate-playwright ${JSON.stringify(entry)}`;
+  const line = (entry: Record<string, unknown>) => `@@runova-playwright ${JSON.stringify(entry)}`;
 
   it('reports each test as it ends, with its file, line and failure', () => {
     const { results } = stream(
@@ -574,7 +573,7 @@ describe('playwright stream', () => {
       }),
     );
     expect(results.map((result) => result.status)).toEqual(['passed']);
-    expect(parser.display?.('@@agentmate-playwright {}')).toBeNull();
+    expect(parser.display?.('@@runova-playwright {}')).toBeNull();
     expect(parser.display?.('  ok 1 e2e/a.e2e.ts:3:1 › known break')).toBe(
       '  ok 1 e2e/a.e2e.ts:3:1 › known break',
     );

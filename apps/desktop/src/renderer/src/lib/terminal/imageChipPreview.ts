@@ -79,7 +79,7 @@ const previewCache = new Map<string, Promise<string | null>>();
 function loadPreview(path: string): Promise<string | null> {
   let pending = previewCache.get(path);
   if (!pending) {
-    pending = window.agentmat.terminalClipboard.previewImage(path).catch(() => null);
+    pending = window.runova.terminalClipboard.previewImage(path).catch(() => null);
     previewCache.set(path, pending);
     // Only the last few hovered images stay in memory.
     if (previewCache.size > 20) previewCache.delete(previewCache.keys().next().value as string);

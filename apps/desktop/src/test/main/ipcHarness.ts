@@ -34,7 +34,7 @@ export function useTempUserData(options: { home?: boolean } = {}): UserDataConte
   const state = { dir: '' };
 
   beforeEach(() => {
-    state.dir = mkdtempSync(join(tmpdir(), 'agentmate-userdata-'));
+    state.dir = mkdtempSync(join(tmpdir(), 'runova-userdata-'));
     mkdirSync(join(state.dir, 'data'), { recursive: true });
     setElectronPath('userData', state.dir);
     if (options.home !== false) {

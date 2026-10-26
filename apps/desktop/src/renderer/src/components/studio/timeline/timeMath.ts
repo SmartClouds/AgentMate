@@ -1,4 +1,4 @@
-import { FLICKS_PER_SECOND } from '@agentmat/studio';
+import { FLICKS_PER_SECOND } from '@runova/studio';
 
 /** Pixels on the timeline and flicks in the video, at a zoom given in pixels per second. */
 

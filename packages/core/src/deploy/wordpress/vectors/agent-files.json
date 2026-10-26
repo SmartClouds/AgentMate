@@ -1,6 +1,6 @@
 {
   "description": "A theme folder as an agent leaves it. Paths are relative to the item root. 'synced' files travel both ways; 'hardDenied' ones never leave this computer and the plugin refuses them (pathRejected); 'ignoredUntracked' ones stay here unless the site already has them. Shared by the desktop walker tests, the plugin tests and the review dialog tests.",
-  "item": { "kind": "theme", "slug": "agentmate-fixture" },
+  "item": { "kind": "theme", "slug": "runova-fixture" },
   "files": [
     { "path": "style.css", "expect": "synced" },
     { "path": "functions.php", "expect": "synced" },
@@ -12,8 +12,8 @@
     { "path": ".claude/settings.json", "expect": "hardDenied" },
     { "path": ".claude/settings.local.json", "expect": "hardDenied" },
     { "path": ".claude/skills/x/SKILL.md", "expect": "hardDenied" },
-    { "path": ".agentmate/hooks/notify.sh", "expect": "hardDenied" },
-    { "path": ".agentmate/installed-skills.json", "expect": "hardDenied" },
+    { "path": ".runova/hooks/notify.sh", "expect": "hardDenied" },
+    { "path": ".runova/installed-skills.json", "expect": "hardDenied" },
     { "path": ".agents/skills/y/SKILL.md", "expect": "hardDenied" },
     { "path": ".codex/config.toml", "expect": "hardDenied" },
     { "path": ".cursor/rules/r.mdc", "expect": "hardDenied" },

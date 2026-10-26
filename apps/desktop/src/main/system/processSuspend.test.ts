@@ -1,4 +1,4 @@
-import type { ProcessRow } from '@agentmat/core';
+import type { ProcessRow } from '@runova/core';
 import { describe, expect, it, vi } from 'vitest';
 import { createProcessSuspender, type ProcessSuspenderDeps } from './processSuspend';
 
@@ -141,7 +141,7 @@ describe('pausing on Windows', () => {
     const suspender = createProcessSuspender({
       platform: 'win32',
       powershell,
-      helperDir: 'C:\\Users\\me\\AppData\\Roaming\\AgentMate\\bin',
+      helperDir: 'C:\\Users\\me\\AppData\\Roaming\\Runova\\bin',
       fileExists: () => compiled,
     });
     return { suspender, scripts, powershell };
@@ -158,8 +158,8 @@ describe('pausing on Windows', () => {
     expect(scripts[0]).toContain('NtSuspendProcess');
     expect(scripts[1]).toContain('Add-Type -Path');
     expect(scripts[1]).not.toContain('-TypeDefinition');
-    expect(scripts[1]).toContain('[AgentMateProcessTree]::Suspend(100)');
-    expect(scripts[2]).toContain('[AgentMateProcessTree]::Resume(@(200,100))');
+    expect(scripts[1]).toContain('[RunovaProcessTree]::Suspend(100)');
+    expect(scripts[2]).toContain('[RunovaProcessTree]::Resume(@(200,100))');
   });
 
   it('compiles only once when two pauses start together', async () => {
@@ -176,7 +176,7 @@ describe('pausing on Windows', () => {
     await suspender.warm();
 
     expect(scripts[0]).toMatch(
-      /-OutputAssembly 'C:\\Users\\me\\AppData\\Roaming\\AgentMate\\bin\\agentmate-proc-[0-9a-f]{12}\.dll'/,
+      /-OutputAssembly 'C:\\Users\\me\\AppData\\Roaming\\Runova\\bin\\runova-proc-[0-9a-f]{12}\.dll'/,
     );
   });
 

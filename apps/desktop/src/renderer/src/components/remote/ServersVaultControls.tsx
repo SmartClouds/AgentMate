@@ -19,7 +19,7 @@ export function ServersVaultControls({
   const queryClient = useQueryClient();
   const vaultQuery = useQuery({
     queryKey: queryKeys.sshVaultStatus,
-    queryFn: () => window.agentmat.ssh.vaultStatus(),
+    queryFn: () => window.runova.ssh.vaultStatus(),
   });
   const vault = vaultQuery.data ?? { hasPasskey: false, unlocked: false };
 
@@ -32,7 +32,7 @@ export function ServersVaultControls({
       variant: 'destructive',
     });
     if (!confirmed) return;
-    const result = await window.agentmat.ssh.setPasskey(null);
+    const result = await window.runova.ssh.setPasskey(null);
     if (!result.ok) {
       toast.error(result.error ?? 'Could not remove the passkey.');
       return;

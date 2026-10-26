@@ -21,7 +21,7 @@ import { VaultLockedError } from './vaultErrors';
 const PASSKEY = 'a servers passkey';
 
 beforeEach(() => {
-  const dir = tempDir('agentmate-locked-');
+  const dir = tempDir('runova-locked-');
   mkdirSync(join(dir, 'data'), { recursive: true });
   setElectronPath('userData', dir);
   lockVault();

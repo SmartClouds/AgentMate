@@ -608,7 +608,7 @@ export function createStudioRender(deps: StudioRenderDeps): StudioRender {
             Object.assign(j, {
               status: 'interrupted',
               phase: null,
-              error: 'AgentMate stopped during this render. Resume it to carry on where it was.',
+              error: 'Runova stopped during this render. Resume it to carry on where it was.',
             });
         }
       });

@@ -6,8 +6,8 @@ import type {
   EnrollmentCodeInfo,
   SessionInfo,
   UserInfo,
-} from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import type {
   DeployAuditExportFormat,
   DeployAuditExportInput,
@@ -153,7 +153,7 @@ export class DeploySecurity {
     const stamp = new Date(exportedAt).toISOString().slice(0, 10);
     const path = await this.deps.pickExportPath(
       input.format,
-      `agentmate-audit-${fileSafe(server)}-${stamp}.${input.format}`,
+      `runova-audit-${fileSafe(server)}-${stamp}.${input.format}`,
     );
     if (!path) return { saved: false };
 

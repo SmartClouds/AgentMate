@@ -7,9 +7,9 @@ keywords: pipelines, github actions, ci, cd, workflow, runs, build, failed, pass
 route: /pipelines
 ---
 
-Pipelines is one page that lists the recent GitHub Actions runs of every project you have added to AgentMate. You can filter by status or repo, open a run on GitHub, cancel a run that is still going, and copy a failure to paste at an agent. The same page also holds your inbox of unread results, which is why the old `/notifications` address now redirects here.
+Pipelines is one page that lists the recent GitHub Actions runs of every project you have added to Runova. You can filter by status or repo, open a run on GitHub, cancel a run that is still going, and copy a failure to paste at an agent. The same page also holds your inbox of unread results, which is why the old `/notifications` address now redirects here.
 
-AgentMate reads runs through the GitHub CLI (`gh`), so the page only fills up once `gh` is installed and signed in.
+Runova reads runs through the GitHub CLI (`gh`), so the page only fills up once `gh` is installed and signed in.
 
 ## Where to find it
 
@@ -20,7 +20,7 @@ Click **Pipelines** in the sidebar under **Ship**, or open the command palette a
 Pipelines shows a short hint instead of the run list until three things are true.
 
 1. The GitHub CLI is installed. If it is not, the page says "Install the GitHub CLI to see your Actions history here." with a link to cli.github.com.
-2. You are signed in. If not, click the **gh auth login** link in the hint. AgentMate opens a terminal titled "GitHub login" with `gh auth login` already typed. Press `Enter` in that terminal and follow the prompts.
+2. You are signed in. If not, click the **gh auth login** link in the hint. Runova opens a terminal titled "GitHub login" with `gh auth login` already typed. Press `Enter` in that terminal and follow the prompts.
 3. At least one project has a GitHub remote. Otherwise the page says "Add a GitHub remote on a project and its Actions runs show up here."
 
 If GitHub cannot be reached (a network hiccup, DNS or a rate limit), the page says "Could not load runs from GitHub." Hover the text to see the exact error, then click **Try again**.
@@ -33,10 +33,10 @@ If GitHub cannot be reached (a network hiccup, DNS or a rate limit), the page sa
 Each run is a card with a colored stripe on the left (red for failed, green for passed, amber for running or queued, yellow for passed with warnings, gray for the rest).
 
 - **Title and status badge.** The run title (or the workflow name) and a badge: Queued, Running, Passed, Passed with warnings, Failed, Timed out, Cancelled or Skipped.
-- **New badge.** A red **New** badge and a red outline mean AgentMate raised an unread failure notice for that run.
+- **New badge.** A red **New** badge and a red outline mean Runova raised an unread failure notice for that run.
 - **Details line.** The repo, workflow name, branch, run number (for example #42), how long the run took, and how long ago it was updated.
 - **Click the card** to open the run on GitHub in your browser. If the run had an unread notice, clicking it marks that notice as read.
-- **Open project button** (folder icon on the right). Opens the project's Git tab. It only appears for runs that belong to a project in AgentMate.
+- **Open project button** (folder icon on the right). Opens the project's Git tab. It only appears for runs that belong to a project in Runova.
 
 At the bottom, a line such as "Showing 12 of 30 runs across 4 repos" tells you how much the filters are hiding. The list refreshes by itself about once a minute.
 
@@ -61,7 +61,7 @@ Runs that are still queued or running have a **Stop** button.
 
 1. Click **Stop** on the run card.
 2. Confirm **Stop run** in the dialog. Jobs that already finished stay as they are.
-3. AgentMate asks GitHub to cancel the run and shows "Asked GitHub to stop that run." The card updates to Cancelled after a few seconds.
+3. Runova asks GitHub to cancel the run and shows "Asked GitHub to stop that run." The card updates to Cancelled after a few seconds.
 
 ### Copy the failure
 
@@ -69,7 +69,7 @@ Failed runs have a **Copy error** button. It gathers the failure details and the
 
 ### Annotations
 
-When you scroll a finished run into view, AgentMate looks up its annotations (the errors, warnings and notices GitHub attaches to a run). A strip under the card summarizes them, for example "2 errors · 1 warning". Click the strip to expand the list.
+When you scroll a finished run into view, Runova looks up its annotations (the errors, warnings and notices GitHub attaches to a run). A strip under the card summarizes them, for example "2 errors · 1 warning". Click the strip to expand the list.
 
 - Each annotation shows its message, the job name and the file location (path and line range) when there is one.
 - **Copy this annotation** copies a single one.
@@ -85,22 +85,22 @@ If your repos use self-hosted runners, a **Self-hosted runners** panel appears a
 - **Runner tiles** show the runner name, its OS and architecture, the repo or org it belongs to, its custom labels and its state. Busy runners come first, offline ones last.
   - **Busy.** Shows the workflow and job it is running. Click it to jump to that run in the list.
   - **Idle** and **Offline.**
-  - **Live status unknown** (shown as "Last job ... ago"). GitHub only reports live status for organization runners to org admins, so for others AgentMate can only tell when the runner last ran a job.
+  - **Live status unknown** (shown as "Last job ... ago"). GitHub only reports live status for organization runners to org admins, so for others Runova can only tell when the runner last ran a job.
 - **Waiting job alerts.** When jobs are queued for a runner label that no online runner matches, a yellow alert says how many are waiting and for which labels. Click it (**Show job** or **Show oldest**) to jump to the oldest one.
 - **Show all** and **Show fewer.** With more than eight runners the grid shows eight and offers a toggle.
-- **Hide runners** (chevron button). Collapses the panel. AgentMate remembers your choice.
+- **Hide runners** (chevron button). Collapses the panel. Runova remembers your choice.
 
 ### Grant org admin access
 
 For organization runners, the panel can show "Live status for (org) runners needs org admin access." with two buttons.
 
 1. Click **Grant access**. A terminal titled "GitHub org access" opens with `gh auth refresh -h github.com -s admin:org` typed in. Press `Enter` and approve the new scope in your browser. You also need to be an admin of the org.
-2. Back in AgentMate, click **Check again** to ask GitHub for the runner list again.
+2. Back in Runova, click **Check again** to ask GitHub for the runner list again.
 3. Click the X on the hint to hide it for that org.
 
 ## Notifications and the unread badge
 
-AgentMate checks your watched workflows about every 45 seconds while the app is open. When a workflow finishes after you started watching it:
+Runova checks your watched workflows about every 45 seconds while the app is open. When a workflow finishes after you started watching it:
 
 - A failed or timed out run creates an **unread** notice, counts toward the badge on **Pipelines**, and shows up as a toast message.
 - A passed run creates a notice too, but it is saved as already read, so it never raises the badge.
@@ -123,7 +123,7 @@ Other notices land in the same inbox: updates for CLI tools and alerts from Depl
 
 - The GitHub activity card on the [Dashboard](dashboard.md) shows the same runs in a smaller form.
 - To see the jobs and steps of a run, open the **Pipelines** section in a project's Workspace and click a pipeline. See [Pipeline details](workspace-git.md#pipeline-details).
-- If a run you were pointed to is missing, it has dropped off the recent list and AgentMate says so in a toast.
+- If a run you were pointed to is missing, it has dropped off the recent list and Runova says so in a toast.
 - Pull requests, their checks and merging live in the project's Git tab, not on this page. See [Workspace: Git](workspace-git.md).
 
 ## Related

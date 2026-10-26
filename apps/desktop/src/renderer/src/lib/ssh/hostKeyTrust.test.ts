@@ -2,7 +2,7 @@ import { encodeFilesError } from '@shared/deployFilesErrors';
 import { encodeSshError } from '@shared/sshErrors';
 import type { SshHostKeyStatus } from '@shared/sshHostKey';
 import { describe, expect, it, vi } from 'vitest';
-import { installAgentmatBridge } from '../../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../../test/renderer/runovaBridge';
 import { answerHostKeyPrompt, useHostKeyPromptStore } from '../../stores/hostKeyPromptStore';
 import { withHostKeyTrust } from './hostKeyTrust';
 
@@ -43,7 +43,7 @@ describe('withHostKeyTrust', () => {
 
   it('asks, trusts the presented key and tries again when the user agrees', async () => {
     const trust = vi.fn(async () => undefined);
-    installAgentmatBridge({ 'ssh.hostKeyStatus': status, 'ssh.trustHostKey': trust });
+    installRunovaBridge({ 'ssh.hostKeyStatus': status, 'ssh.trustHostKey': trust });
     const attempt = vi
       .fn()
       .mockRejectedValueOnce(hostKeyChanged())
@@ -61,7 +61,7 @@ describe('withHostKeyTrust', () => {
 
   it('does not connect or trust anything when the user declines', async () => {
     const trust = vi.fn(async () => undefined);
-    installAgentmatBridge({ 'ssh.hostKeyStatus': status, 'ssh.trustHostKey': trust });
+    installRunovaBridge({ 'ssh.hostKeyStatus': status, 'ssh.trustHostKey': trust });
     const attempt = vi.fn().mockRejectedValue(hostKeyChanged());
 
     const result = withHostKeyTrust('srv-1', attempt);
@@ -74,7 +74,7 @@ describe('withHostKeyTrust', () => {
   });
 
   it('retries without asking when the key was trusted meanwhile', async () => {
-    installAgentmatBridge({ 'ssh.hostKeyStatus': { ...status, stored: status.presented } });
+    installRunovaBridge({ 'ssh.hostKeyStatus': { ...status, stored: status.presented } });
     const attempt = vi
       .fn()
       .mockRejectedValueOnce(hostKeyChanged())
@@ -85,7 +85,7 @@ describe('withHostKeyTrust', () => {
   });
 
   it('answers an older question with no when a newer one arrives', async () => {
-    installAgentmatBridge({ 'ssh.hostKeyStatus': status });
+    installRunovaBridge({ 'ssh.hostKeyStatus': status });
     const first = withHostKeyTrust('srv-1', vi.fn().mockRejectedValue(hostKeyChanged()));
     await vi.waitFor(() => expect(useHostKeyPromptStore.getState().request).not.toBeNull());
 
@@ -127,7 +127,7 @@ describe('withHostKeyTrust with a source of its own', () => {
   it('asks, trusts through the source and tries again on a files host key error', async () => {
     const keys = source();
     const sshTrust = vi.fn(async () => undefined);
-    installAgentmatBridge({ 'ssh.trustHostKey': sshTrust });
+    installRunovaBridge({ 'ssh.trustHostKey': sshTrust });
     const attempt = vi
       .fn()
       .mockRejectedValueOnce(filesHostKeyChanged())

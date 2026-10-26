@@ -1,4 +1,4 @@
-import { DEFAULT_RELAY_BUDGET } from '@agentmat/core';
+import { DEFAULT_RELAY_BUDGET } from '@runova/core';
 import type { RelayMcpProposal } from '@shared/relayTypes';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -43,14 +43,14 @@ export function RelayProposalHost(): React.JSX.Element | null {
 
   useEffect(() => {
     let active = true;
-    void Promise.resolve(window.agentmat.relay.pendingProposals()).then((list) => {
+    void Promise.resolve(window.runova.relay.pendingProposals()).then((list) => {
       if (!active || !Array.isArray(list)) return;
       setPending((prev) => [
         ...list,
         ...prev.filter((item) => !list.some((p) => p.id === item.id)),
       ]);
     });
-    const unsubscribe = window.agentmat.relay.onProposal((proposal) => {
+    const unsubscribe = window.runova.relay.onProposal((proposal) => {
       if (!active) return;
       setPending((prev) =>
         prev.some((item) => item.id === proposal.id) ? prev : [...prev, proposal],
@@ -70,7 +70,7 @@ export function RelayProposalHost(): React.JSX.Element | null {
     const item = current;
     setBusy(true);
     try {
-      const result = await window.agentmat.relay.decideProposal(item.id, accept);
+      const result = await window.runova.relay.decideProposal(item.id, accept);
       if (accept && result) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.relayBoard(item.projectId) });
         const removed = result.removed.length > 0 ? `, ${result.removed.length} removed` : '';

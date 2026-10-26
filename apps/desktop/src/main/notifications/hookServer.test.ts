@@ -4,7 +4,7 @@ import { type LocalServer, startHttpServer } from '../../test/main/fixtures';
 import { useTempUserData } from '../../test/main/ipcHarness';
 
 /**
- * The hook server is the one port AgentMate opens to the machine it runs on, so the cases that
+ * The hook server is the one port Runova opens to the machine it runs on, so the cases that
  * matter are the ones about trust: the secret it writes next to the port, what happens without
  * it, and which payloads are allowed to move a tab's status or fire a Telegram message.
  *
@@ -125,7 +125,7 @@ describe('startHookServer', () => {
     const file = await startAndRead();
 
     expect(file.port).toBeGreaterThan(0);
-    // The secret is what separates AgentMate's own generated scripts from any other local
+    // The secret is what separates Runova's own generated scripts from any other local
     // process that can reach the port.
     expect(file.token).toMatch(/^[0-9a-f]{48}$/);
   });

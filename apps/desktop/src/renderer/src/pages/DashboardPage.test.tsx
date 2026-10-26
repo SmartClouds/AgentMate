@@ -4,7 +4,7 @@ import {
   type InstalledCli,
   type ProviderUsage,
   type UsagePeriod,
-} from '@agentmat/core';
+} from '@runova/core';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { resolveConfirm, useConfirmStore } from '@/stores/confirmStore';

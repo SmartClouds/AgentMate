@@ -1,4 +1,4 @@
-import type { DevDetection, DevJobState, DevSetupEnvironment } from '@agentmat/core';
+import type { DevDetection, DevJobState, DevSetupEnvironment } from '@runova/core';
 import { act, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHookWithProviders } from '../../../../../test/renderer/renderWithProviders';

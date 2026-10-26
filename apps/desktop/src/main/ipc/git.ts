@@ -1,10 +1,10 @@
-import type { GitChangeEntry, Project } from '@agentmat/core';
+import type { GitChangeEntry, Project } from '@runova/core';
 import {
   browsableRepoUrl,
   buildCommitMessagePrompt,
   normalizeCloneUrl,
   stripRemoteCredentials,
-} from '@agentmat/core';
+} from '@runova/core';
 import { ipcMain } from 'electron';
 import type {
   ApplyVersionInput,

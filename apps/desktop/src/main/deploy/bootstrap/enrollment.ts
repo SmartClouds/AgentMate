@@ -1,8 +1,8 @@
-import { quoteForShell } from '@agentmat/core';
+import { quoteForShell } from '@runova/core';
 import { sshErrorMessage } from '../../../shared/sshErrors';
 import type { RootShell } from '../../ssh/sudo';
 import { createDeviceKey } from '../auth/deviceKey';
-import { CORE_BINARY_PATH } from '../connection/transport';
+import { CORE_PROGRAM } from '../coreProgram';
 import type { InstallProgress } from './installer';
 
 /**
@@ -86,7 +86,7 @@ export async function enrollOverSsh(
     }
   };
   const admin = async (args: string, stdin?: string) => {
-    const result = await shell.run(`${CORE_BINARY_PATH} admin ${args}`, {
+    const result = await shell.run(`${CORE_PROGRAM} admin ${args}`, {
       timeoutMs: STEP_TIMEOUT_MS,
       maxOutputBytes: 64 * 1024,
       ...(stdin === undefined ? {} : { stdin }),

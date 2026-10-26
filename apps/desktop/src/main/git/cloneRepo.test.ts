@@ -23,7 +23,7 @@ const git = hasGit();
 /** A bare repo with one commit on main, standing in for the GitHub remote. */
 function bareRemote(files: Record<string, string> = { 'README.md': '# remote\n' }): string {
   const source = initGitRepo(files);
-  const bare = join(tempDir('agentmate-bare-'), 'remote.git');
+  const bare = join(tempDir('runova-bare-'), 'remote.git');
   source.git('clone', '--bare', source.dir, bare);
   return bare;
 }

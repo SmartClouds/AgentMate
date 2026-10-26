@@ -113,7 +113,7 @@ export interface SftpFileClient {
   ): Promise<FileUploadResult>;
   /**
    * Fetches `remotePath` into `localPath` the same way round: the bytes go to
-   * `<localPath>.agentmate-<8 hex>.part` and only then replace the target, which is left as it
+   * `<localPath>.runova-<8 hex>.part` and only then replace the target, which is left as it
    * was after a failure or a cancel. A file that ends early or grows while it is read fails with
    * `[files:changedOnServer]`.
    */

@@ -1,10 +1,10 @@
-# AgentMate Mobile
+# Runova Mobile
 
-A React Native (Expo) controller app for AgentMate's Remote feature. It connects
-directly to an AgentMate desktop instance that is hosting (Remote → Host tab)
+A React Native (Expo) controller app for Runova's Remote feature. It connects
+directly to a Runova desktop instance that is hosting (Remote → Host tab)
 over your local network, using the same WebSocket protocol the
 desktop app uses to control itself. It's defined once in
-[`@agentmat/protocol`](../../packages/protocol) and shared by both apps.
+[`@runova/protocol`](../../packages/protocol) and shared by both apps.
 
 ## Running it
 
@@ -14,10 +14,10 @@ From the repo root:
 pnpm mobile
 ```
 
-This builds `@agentmat/protocol` and starts the Expo dev server. Scan the
+This builds `@runova/protocol` and starts the Expo dev server. Scan the
 printed QR code with **Expo Go** (iOS/Android) to run the app on your phone,
 no Xcode/Android Studio setup required. Your phone and the computer running
-AgentMate must be on the same Wi-Fi network.
+Runova must be on the same Wi-Fi network.
 
 Alternatively, from this directory: `pnpm start` (or `pnpm android` / `pnpm ios`
 if you have the native toolchains installed).
@@ -27,7 +27,7 @@ if you have the native toolchains installed).
 1. On the desktop, open **Remote → Host**, start hosting, and generate a
    pairing code.
 2. On the phone, tap **Scan QR** and point the camera at the desktop's QR
-   code, or paste the `AGENTMATE1:…` code by hand.
+   code, or paste the `RUNOVA1:…` code by hand.
 3. Once connected, the host's screen streams in as tiles you can tap/drag to
    click and move the cursor, two-finger drag to scroll, and long-press for a
    right click. The bottom bar opens the system keyboard for typing and has

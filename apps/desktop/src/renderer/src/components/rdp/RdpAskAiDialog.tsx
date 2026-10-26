@@ -5,7 +5,7 @@ import {
   type EffortLevel,
   runProfileForTargetAI,
   supportsPromptImages,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { SshAgentMode } from '@shared/apiTypes';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -74,7 +74,7 @@ export function RdpAskAiDialog({
 
   const cliQuery = useQuery({
     queryKey: queryKeys.cliStatus,
-    queryFn: () => window.agentmat.cli.detectAll(),
+    queryFn: () => window.runova.cli.detectAll(),
     meta: { silentLoading: true },
   });
 

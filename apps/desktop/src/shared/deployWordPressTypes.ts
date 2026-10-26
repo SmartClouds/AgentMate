@@ -11,7 +11,7 @@ import type {
   WpRollbackReason,
   WpScope,
   WpSiteInfo,
-} from '@agentmat/core';
+} from '@runova/core';
 
 /**
  * Plain data the WordPress side of Deploy (E19 to E21) passes between the main process and the
@@ -24,7 +24,7 @@ import type {
  * milliseconds, like `Date.now()` and the rest of the app.
  */
 
-/** A WordPress site connected through the AgentMate Connector plugin. */
+/** A WordPress site connected through the Runova Connector plugin. */
 export interface DeployWordPressSite {
   id: string;
   /** The user's name for it; the site's own name until they change it. */
@@ -78,11 +78,11 @@ export interface DeployWordPressSettingsInput {
 export type DeployWordPressSiteInfo = WpSiteInfo & { checkedAt: number };
 
 export type DeployWordPressLeftOutReason =
-  /** Agent settings, skills or AgentMate's own files (the hard deny list's agent entries). */
+  /** Agent settings, skills or Runova's own files (the hard deny list's agent entries). */
   | 'agentFiles'
   /** The rest of the hard deny list: version control, secrets, PHP config, OS clutter. */
   | 'hardDenied'
-  /** An ignore rule (default list, `.distignore`, `.agentmateignore`). */
+  /** An ignore rule (default list, `.distignore`, `.runovaignore`). */
   | 'ignored'
   | 'symlink'
   | 'tooLarge'
@@ -151,7 +151,7 @@ export interface DeployWordPressDeployResult {
 export interface DeployWordPressPullResult {
   downloaded: number;
   deletedLocal: number;
-  /** Project-relative paths of copies kept under `.agentmate/wordpress/conflicts/`. */
+  /** Project-relative paths of copies kept under `.runova/wordpress/conflicts/`. */
   conflictCopies: string[];
   leftOut: DeployWordPressLeftOut[];
 }
@@ -321,6 +321,13 @@ export interface DeployWordPressUpdateConnectorResult {
   source?: 'site' | 'app';
   /** Why the site could not download the release itself, when the app sent the files instead. */
   downloadProblem?: string;
+  /**
+   * A site that ran the connector from its folder from before the rename moved it to
+   * runova-connector/, and the app now calls it at the new addresses.
+   */
+  moved?: boolean;
+  /** Why such a site did not move this time. It keeps working from the old folder. */
+  moveProblem?: string;
 }
 
 /** Re-exported so renderer code can import everything WordPress from one place. */

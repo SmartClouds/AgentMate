@@ -1,4 +1,4 @@
-import { quoteForShell, shellKindFor } from '@agentmat/core';
+import { quoteForShell, shellKindFor } from '@runova/core';
 import type { ChipInput, ChipPasteController } from '@/lib/terminal/chipPasteMode';
 
 /**
@@ -13,14 +13,14 @@ const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp
 async function pathsForFiles(files: File[]): Promise<string[]> {
   const paths: string[] = [];
   for (const file of files) {
-    const onDisk = window.agentmat.shell.pathForFile(file);
+    const onDisk = window.runova.shell.pathForFile(file);
     if (onDisk) {
       paths.push(onDisk);
       continue;
     }
     if (IMAGE_TYPES.has(file.type)) {
       const bytes = new Uint8Array(await file.arrayBuffer());
-      paths.push(await window.agentmat.terminalClipboard.saveImage(bytes, file.type));
+      paths.push(await window.runova.terminalClipboard.saveImage(bytes, file.type));
     }
   }
   return paths;
@@ -33,7 +33,7 @@ function shortLabel(path: string): string {
 /** One chip per path: its own quoted text for the shell, and a short name to remember it by
  * (the chip itself just shows an index; the label is there for whatever needs it later). */
 export function pathsToChips(paths: string[], shell: string | undefined): ChipInput[] {
-  const kind = shellKindFor(shell, window.agentmat.platform);
+  const kind = shellKindFor(shell, window.runova.platform);
   return paths.map((path) => ({
     realText: quoteForShell(path, kind),
     displayLabel: shortLabel(path),
@@ -126,7 +126,7 @@ function pastedJustNow(): boolean {
  * arrived empty and only right-click (which already asked the main process) could see it.
  */
 export async function pasteClipboardIntoTerminal(target: TerminalPasteTarget): Promise<void> {
-  const content = await window.agentmat.terminalClipboard.read().catch(() => null);
+  const content = await window.runova.terminalClipboard.read().catch(() => null);
   if (!content) return;
   markPasted();
   if (content.kind === 'text') {

@@ -1,4 +1,4 @@
-import type { FirewallStatus } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { FirewallStatus } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployFirewallOperation } from '@shared/deployFirewallTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
@@ -20,25 +20,25 @@ export function useFirewallData(serverId: string, enabled: boolean) {
   const status = useQuery({
     ...read,
     queryKey: queryKeys.deployFirewallStatus(serverId),
-    queryFn: () => window.agentmat.deployFirewall.status(serverId),
+    queryFn: () => window.runova.deployFirewall.status(serverId),
     refetchInterval: (query) =>
       (query.state.data as FirewallStatus | undefined)?.pending ? WAITING_POLL_MS : IDLE_POLL_MS,
   });
   const presets = useQuery({
     ...read,
     queryKey: queryKeys.deployFirewallPresets(serverId),
-    queryFn: () => window.agentmat.deployFirewall.presets(serverId),
+    queryFn: () => window.runova.deployFirewall.presets(serverId),
     staleTime: 5 * 60_000,
   });
   const history = useQuery({
     ...read,
     queryKey: queryKeys.deployFirewallHistory(serverId),
-    queryFn: () => window.agentmat.deployFirewall.history({ serverId, limit: 20 }),
+    queryFn: () => window.runova.deployFirewall.history({ serverId, limit: 20 }),
   });
   const exposure = useQuery({
     ...read,
     queryKey: queryKeys.deployFirewallExposure(serverId),
-    queryFn: () => window.agentmat.deployFirewall.exposure(serverId),
+    queryFn: () => window.runova.deployFirewall.exposure(serverId),
     refetchInterval: 2 * 60_000,
   });
 
@@ -64,7 +64,7 @@ export function useFirewallSteps(serverId: string) {
   });
   useEffect(
     () =>
-      window.agentmat.deployFirewall.onProgress((event) => {
+      window.runova.deployFirewall.onProgress((event) => {
         if (event.serverId !== serverId) return;
         setSteps((current) => ({
           ...current,

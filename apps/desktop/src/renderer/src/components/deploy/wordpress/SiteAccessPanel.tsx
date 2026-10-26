@@ -46,7 +46,7 @@ function ConnectionCard({ site }: { site: DeployWordPressSite }): React.JSX.Elem
         <span className="block max-w-2xl">
           {SCOPE_SUMMARY[site.scope]}
           {site.scope === 'read' &&
-            ' To deploy, make a read and write key in Tools > AgentMate Connector and connect the site again.'}
+            ' To deploy, make a read and write key in Tools > Runova Connector and connect the site again.'}
         </span>
       }
     >
@@ -109,11 +109,11 @@ function RenameCard({ site }: { site: DeployWordPressSite }): React.JSX.Element 
     <DeployCard
       icon={<Pencil />}
       title="Name"
-      description="What AgentMate calls this site. The site itself isn't changed."
+      description="What Runova calls this site. The site itself isn't changed."
     >
       <form className="flex flex-wrap items-end gap-2" onSubmit={(event) => void submit(event)}>
         <div className="min-w-[14rem] flex-1 space-y-1.5">
-          <Label htmlFor={`${id}-label`}>Name in AgentMate</Label>
+          <Label htmlFor={`${id}-label`}>Name in Runova</Label>
           <Input
             id={`${id}-label`}
             value={draft}
@@ -144,7 +144,7 @@ function PlainHttpCard({ site }: { site: DeployWordPressSite }): React.JSX.Eleme
       toast.success(
         allowPlainHttp
           ? 'Plain HTTP is allowed for this site.'
-          : "Plain HTTP is off. AgentMate won't reach this site until it has HTTPS or you allow it again.",
+          : "Plain HTTP is off. Runova won't reach this site until it has HTTPS or you allow it again.",
       );
     } catch (error) {
       toast.error(wpProblem(error));
@@ -168,7 +168,7 @@ function PlainHttpCard({ site }: { site: DeployWordPressSite }): React.JSX.Eleme
       </div>
       {!site.allowPlainHttp && (
         <p className="text-xs text-muted-foreground">
-          Off, so AgentMate won't talk to this site until you allow it.
+          Off, so Runova won't talk to this site until you allow it.
         </p>
       )}
     </PlainHttpNotice>
@@ -295,7 +295,7 @@ function DisconnectDialog({
     setBusy(true);
     setProblem(null);
     try {
-      await window.agentmat.deployWordPress.disconnect({ siteId: site.id, revokeOnSite });
+      await window.runova.deployWordPress.disconnect({ siteId: site.id, revokeOnSite });
       queryClient.setQueryData<DeployWordPressSite[]>(queryKeys.deployWordPressSites, (sites) =>
         sites?.filter((one) => one.id !== site.id),
       );
@@ -324,7 +324,7 @@ function DisconnectDialog({
         <DialogHeader>
           <DialogTitle>Disconnect {site.label}?</DialogTitle>
           <DialogDescription>
-            AgentMate forgets this site and its key on this computer. Nothing on the site changes.
+            Runova forgets this site and its key on this computer. Nothing on the site changes.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -348,7 +348,7 @@ function DisconnectDialog({
               <span className="block">Also revoke this computer's key on the site</span>
               <span className="block text-xs font-normal text-muted-foreground">
                 Recommended. The site stops accepting this computer's requests. If the site can't be
-                reached, AgentMate still forgets it here; revoke the connection in wp-admin later.
+                reached, Runova still forgets it here; revoke the connection in wp-admin later.
               </span>
             </Label>
           </div>

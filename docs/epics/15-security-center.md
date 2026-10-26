@@ -52,7 +52,7 @@ users, devices, audit, core updates and backups.
   the code and the password to `POST /api/v1/auth/enroll` over the tunnel, seals the private
   half like an SSH enrollment and signs in. On a server whose core another computer installed,
   the app first reads the preflight as the login user and settles the transport with a health
-  check. The core's socket is open to root and the agentmate group only, so a login outside the
+  check. The core's socket is open to root and the runova group only, so a login outside the
   group is told the `usermod` an admin has to run; one added since it logged in gets a fresh
   login. The join offer shows on the install panel when a core already runs there.
 - **T2, audit.** `AuditQuery` gained actor (user name or id), result, time range and action
@@ -84,14 +84,14 @@ users, devices, audit, core updates and backups.
   links to Overview. Automatic updates and certificate renewal say what they will do in a
   confirmation and reuse `SetAutomaticSecurityUpdates` and `RenewCertificate`. Core version opens
   the install panel in update mode. Two-factor opens the existing dialog for the signed-in Owner.
-  SSH (Owner, step-up): the core writes its own `/etc/ssh/sshd_config.d/00-agentmate.conf` (sshd
+  SSH (Owner, step-up): the core writes its own `/etc/ssh/sshd_config.d/00-runova.conf` (sshd
   takes the first value, and every supported distribution includes that folder at the top). Two
   guards must agree: the app refuses when the saved server logs in with a password, and the core
   reads sshd's journal (`journalctl -o json -t sshd -t sshd-session -t sshd-auth`, the syslog files
   as a fallback) for the "Accepted ..." line of the very connection the call came over (found
   through the socket peer, as the firewall does) and refuses anything but `publickey`, before
   anything is written. The preview and the apply go over a brand-new SSH connection opened with the
-  key alone. Order: save the old drop-in, arm a transient systemd timer (`agentmate-core
+  key alone. Order: save the old drop-in, arm a transient systemd timer (`runova-core
   ssh-revert`), write, `sshd -t`, `sshd -T` to see the settings really take, then `systemctl reload
   ssh|sshd`; any failure puts the old file back at once. Keeping the change needs another new
   connection that signed in with a key after the change. Root login is only ever restricted to
@@ -107,12 +107,12 @@ users, devices, audit, core updates and backups.
   when this build has a newer core, and its menu has "Update the core" next to "Update or reinstall
   over SSH". The update goes through the core (hub `UpdateCore`, Owner with a step-up): the core
   downloads the GitHub release asset named by the app, refuses anything that is not the manifest's
-  size and SHA-256, unpacks it under `/opt/agentmate-core/releases` and schedules the switch from a
-  transient unit (`agentmate-coreupdate-*`) three seconds later. That unit swaps the symlink,
+  size and SHA-256, unpacks it under `/opt/runova-core/releases` and schedules the switch from a
+  transient unit (`runova-coreupdate-*`) three seconds later. That unit swaps the symlink,
   restarts, and goes back to the previous release when the new one is not active five seconds
   after its start. A failed download is an outcome, and the app then uploads the tarball over
   `PUT /api/v1/core/update` on the same connection. Older cores (no hub method or route) and cores
-  not run from `/opt/agentmate-core/current` answer in a way the app turns into `needs-ssh`, and the
+  not run from `/opt/runova-core/current` answer in a way the app turns into `needs-ssh`, and the
   page hands over to the SSH installer. Code: `Updates/CoreUpdater.cs`,
   `Updates/CoreInstallation.cs`, `apps/desktop/src/main/deploy/coreUpdate.ts`,
   `components/deploy/CoreUpdatePanel.tsx`. Not yet tried against a real server.
@@ -132,7 +132,7 @@ users, devices, audit, core updates and backups.
   backup beside the running core, refusing a newer schema; it ends every session in the copy
   (devices stay), closes firewall change sets it was waiting on and starts the copy's audit trail
   with `admin.restore`. Only then does the app stop the core, swap the state folder (the old one is
-  kept, root only, at `/var/lib/agentmate-core-restore/previous`), start it and check its health,
+  kept, root only, at `/var/lib/runova-core-restore/previous`), start it and check its health,
   going back to the old state if any of that fails. Then it enrolls this computer as the backup's
   Owner the user named and signs in. The restore takes typed confirmation of the server name.
   `restore-stage` first refuses while a firewall or SSH change on the target server waits to be
@@ -153,7 +153,7 @@ users, devices, audit, core updates and backups.
   restore and its plan, the service, the IPC group and the streamed download; RTL for the
   checklist, its SSH dialog and banner, backups and restore, and the firewall fix.
   `security.e2e.ts` scores the DevHost, applies and keeps the SSH fix after a step-up, and saves an
-  encrypted backup. `security.int.test.ts` (AGENTMATE_SYSTEM_TESTS=1, Ubuntu 24.04): over a password
+  encrypted backup. `security.int.test.ts` (RUNOVA_SYSTEM_TESTS=1, Ubuntu 24.04): over a password
   login password login stays on and nothing is written (both guards); over a proven key login it
   goes off, a password is then turned away while the key still gets in, and a change nobody keeps
   is reverted by its timer. A backup made on one server restores onto another, which then signs in

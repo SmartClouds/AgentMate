@@ -65,7 +65,7 @@ export function makeRecord(overrides: Partial<SecurityScanRecord> = {}): Securit
   return {
     id: 'scan-1',
     projectId: 'project-1',
-    projectName: 'AgentMate',
+    projectName: 'Runova',
     status: 'complete',
     verdict: 'caution',
     score: 82,

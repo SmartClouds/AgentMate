@@ -1,4 +1,4 @@
-import type { RecipeView, RunSettingsInput, StartScenarioInput } from '@agentmat/studio';
+import type { RecipeView, RunSettingsInput, StartScenarioInput } from '@runova/studio';
 import { useCallback, useState } from 'react';
 import { create } from 'zustand';
 import { getCliDefinition, launchPickLabel, type RunSettings } from '../kit';

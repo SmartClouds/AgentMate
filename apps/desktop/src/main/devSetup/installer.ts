@@ -23,7 +23,7 @@ import {
   meetsMinimum,
   normalizeDevSetupStacks,
   selectRecipe,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { CancelToken } from '../process/spawnStreaming';
 import type { RunHooks, RunResult } from './runners/packageManagerRunner';
 
@@ -293,7 +293,7 @@ export function createDevSetupInstaller(deps: InstallerDeps): DevSetupInstaller 
         message =
           after.state === 'found'
             ? `${name} is still version ${after.version ?? 'unknown'}. It needs ${item.minVersion ?? 'a newer version'} or newer.`
-            : `The installer finished but ${name} was not found. Open a new terminal or restart AgentMate.`;
+            : `The installer finished but ${name} was not found. Open a new terminal or restart Runova.`;
       }
     }
     dispatch({

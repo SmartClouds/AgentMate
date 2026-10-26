@@ -51,10 +51,10 @@ async function setup(replies: Reply[], over: Partial<StudioHost> = {}) {
   let clock = 1_700_000_000_000;
   const host: StudioHost = {
     dataDir: join(root, 'userData', 'studio'),
-    defaultLibraryRoot: join(root, 'Videos', 'AgentMate Studio'),
+    defaultLibraryRoot: join(root, 'Videos', 'Runova Studio'),
     defaultCacheDir: join(root, 'cache'),
     appDir: join(root, 'app'),
-    appId: 'AgentMate',
+    appId: 'Runova',
     openDb: openNodeSqlite,
     projects: { get: () => null },
     notify: (event) => events.push(event),

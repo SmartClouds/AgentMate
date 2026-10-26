@@ -2,12 +2,12 @@
 title: Keyboard shortcuts
 category: Settings
 order: 30
-summary: Every default shortcut in AgentMate, how to rebind or reset them in Settings, and the fixed keys for the terminal, editor, browser tab, API Client and other places.
+summary: Every default shortcut in Runova, how to rebind or reset them in Settings, and the fixed keys for the terminal, editor, browser tab, API Client and other places.
 keywords: keyboard, shortcut, hotkey, keybinding, key, ctrl, cmd, alt, shift, rebind, remap, reset, terminal, workspace, command palette, f1, help, split pane, vault, commit
 route: /settings?tab=shortcuts
 ---
 
-AgentMate has a list of shortcuts you can change (the app, Workspace, prompt builder, changes panel and Vault) and a smaller set of fixed keys that work the way they do in other tools, such as `Ctrl+S` to save. This article lists both. On macOS, `Ctrl` in the tables below is `Cmd`, `Alt` is `Option` and `Shift` is `Shift`. AgentMate treats `Ctrl` and `Cmd` as the same key, so one binding works on every system.
+Runova has a list of shortcuts you can change (the app, Workspace, prompt builder, changes panel and Vault) and a smaller set of fixed keys that work the way they do in other tools, such as `Ctrl+S` to save. This article lists both. On macOS, `Ctrl` in the tables below is `Cmd`, `Alt` is `Option` and `Shift` is `Shift`. Runova treats `Ctrl` and `Cmd` as the same key, so one binding works on every system.
 
 ## Where to find it
 
@@ -38,7 +38,7 @@ Only the commands you changed are remembered. Commands you never touched follow 
 - **Scopes.** App-wide shortcuts work anywhere. **Workspace** shortcuts only work on the Workspace page and beat the app-wide ones there. **Prompt builder** shortcuts only work while the prompt builder is open. **Changes panel** shortcuts only work while you type a commit message. **Vault** shortcuts only work on the Vault page while it is unlocked.
 - **Dialogs win.** A dialog that binds the same combination takes it while it is open.
 - **Number rows.** **Open agent 1 to 9** and **Go to tab 1 to 9** are stored as one binding for the whole row of number keys. Press any number key with the modifiers you want, and the card shows it as "`Ctrl+1...9`". Holding the same modifiers with 1 to 9 picks the item.
-- **Inside a terminal.** While a terminal has focus, the app-wide and Workspace shortcuts go to AgentMate instead of the shell, with one exception: the diff keys (`F7`, `Shift+F7`) go to the program in the terminal.
+- **Inside a terminal.** While a terminal has focus, the app-wide and Workspace shortcuts go to Runova instead of the shell, with one exception: the diff keys (`F7`, `Shift+F7`) go to the program in the terminal.
 
 ## App-wide
 

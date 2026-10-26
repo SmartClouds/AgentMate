@@ -7,7 +7,7 @@ keywords: projects, project, new project, folder, pin, archive, tags, icon, run 
 route: /projects
 ---
 
-A project in AgentMate is a folder on your computer that you work on with AI agents. The Projects page lists them all so you can search, pin, reorder and open them. Each project then has its own page with everything about it in one place: a standing prompt for agents, a Blueprint that turns an idea into a plan, drafts and scheduled prompts, git tools, token usage and cost, security scans, dependency updates, Docker containers, scaffolding files for your agent, skills, MCP servers, notification hooks and saved environment files.
+A project in Runova is a folder on your computer that you work on with AI agents. The Projects page lists them all so you can search, pin, reorder and open them. Each project then has its own page with everything about it in one place: a standing prompt for agents, a Blueprint that turns an idea into a plan, drafts and scheduled prompts, git tools, token usage and cost, security scans, dependency updates, Docker containers, scaffolding files for your agent, skills, MCP servers, notification hooks and saved environment files.
 
 ## Where to find it
 
@@ -22,7 +22,7 @@ The page header reads "Projects", with the line "Open a workspace, pin favorites
 - The search box at the top ("Search projects…") matches names, descriptions, folder paths and tags. Press `/` anywhere on the page to jump to it, and `Esc` to clear it. A count such as "5 projects", or "2 of 5" while filtering, sits beside it.
 - When your projects use more than one agent type, a row of chips filters by agent: **All agents** plus one chip per type that exists, such as Claude Code or Codex.
 - The **Archived** button (with a count) appears once you have archived something. It switches the page to the archived projects. Click it again to go back. Search and the agent filter work on whichever set is on screen.
-- The two buttons beside it switch between **Grid view** and **List view**. AgentMate remembers the choice.
+- The two buttons beside it switch between **Grid view** and **List view**. Runova remembers the choice.
 
 ### Pinned, all and archived
 
@@ -61,7 +61,7 @@ Until the name and folder are filled in, the button is disabled and the footer s
 | --- | --- |
 | **Name** | The project's name. |
 | **Folder** | Where the project lives. Paste a path or click **Browse**. Terminals and agents start in this folder. Picking a folder fills in the name from the folder name if the name is empty. |
-| **Git repository** | Where the code is hosted. Paste a GitHub link (`github.com/owner/repo`) to clone it into the folder on Create: the dialog says "Will clone into …". The folder must be empty (an existing repo is kept as-is). A private repo needs the GitHub CLI signed in (`gh auth login`), and AgentMate uses that sign-in for the clone and for later fetches and pulls. A failed clone still creates the project with the link, and the error tells you why. Use **Clone from GitHub** on the project's Git tab to try again, see [Git](#git). An **Open** button opens the link. Fetch and pull afterwards from the project's Git tab. |
+| **Git repository** | Where the code is hosted. Paste a GitHub link (`github.com/owner/repo`) to clone it into the folder on Create: the dialog says "Will clone into …". The folder must be empty (an existing repo is kept as-is). A private repo needs the GitHub CLI signed in (`gh auth login`), and Runova uses that sign-in for the clone and for later fetches and pulls. A failed clone still creates the project with the link, and the error tells you why. Use **Clone from GitHub** on the project's Git tab to try again, see [Git](#git). An **Open** button opens the link. Fetch and pull afterwards from the project's Git tab. |
 | **Tags** | Press `Enter` or comma to add a tag. Backspace in the empty box removes the last one. Tags are used by search and filtering. |
 | **Description** | One line about what the project is. |
 
@@ -70,11 +70,11 @@ Until the name and folder are filled in, the button is disabled and the footer s
 - **Icon**: click the tile to choose an image, or drop an image on it. **Choose image** and **Remove** buttons do the same. PNG or SVG looks best. Large images are scaled down for you. With no image, the project shows a folder glyph.
 - **Tile color**: the square behind the icon. Pick a swatch, the theme default, or the pencil swatch for any other color with its opacity.
 - **Glyph color**: the color of the folder mark. It only appears while there is no image.
-- **Website**: the project's site. When you leave the field and there is no icon yet, AgentMate fetches the site's favicon as the icon. **Use favicon** does it on demand and tells you if none was found.
+- **Website**: the project's site. When you leave the field and there is no icon yet, Runova fetches the site's favicon as the icon. **Use favicon** does it on demand and tells you if none was found.
 
 ### Agent tab
 
-- **Agent type**: how AgentMate talks to this project's assistant. The choices are Claude Code, Gemini, OpenCode, Codex, Cursor and Generic. The type decides which files Bootstrap creates and which CLI the agent badge opens.
+- **Agent type**: how Runova talks to this project's assistant. The choices are Claude Code, Gemini, OpenCode, Codex, Cursor and Generic. The type decides which files Bootstrap creates and which CLI the agent badge opens.
 - **AI CLI**: which CLI runs helper tasks such as tag suggestions and version bumps. **App default (from Settings)** follows Settings, Agents, **Default CLI**.
 - **Run commands**: see below.
 - **Notes**: free text for anything worth remembering, such as where credentials live.
@@ -85,7 +85,7 @@ Run commands are what the **Run** button executes in the project folder. The lis
 
 The order matters. **Run** lists the commands top to bottom, and a project with one command runs it straight away. Drag a row by its grip to reorder, or focus the grip and use the arrow keys.
 
-When you click **Run**, AgentMate opens a terminal in the project folder, types the command and runs it, and shows a message such as `Running "dev".` The status bar then shows the run with its port, CPU and memory, and `Shift+F5` stops the run in the drawer (or the newest run). If the project still has Docker containers running when you stop, AgentMate asks whether to stop them too, see [Docker](docker.md#when-you-stop-a-run). See [Interface tour](interface-tour.md).
+When you click **Run**, Runova opens a terminal in the project folder, types the command and runs it, and shows a message such as `Running "dev".` The status bar then shows the run with its port, CPU and memory, and `Shift+F5` stops the run in the drawer (or the newest run). If the project still has Docker containers running when you stop, Runova asks whether to stop them too, see [Docker](docker.md#when-you-stop-a-run). See [Interface tour](interface-tour.md).
 
 ### Create a run command with AI
 
@@ -93,7 +93,7 @@ If you are not sure what to run, let an AI agent work it out. Click **Create wit
 
 The dialog asks **What should it run?** and starts with a plain request you can change. Click an example to use it, such as running the mobile app on the Android emulator, starting the dev server, or creating a `.bat` file that runs the project together with a run command that calls it. Click **Start**, or press `Ctrl+Enter` (`Cmd+Enter` on a Mac).
 
-AgentMate opens Claude Code in a new tab in the project's Workspace and types your request into it, with the details the agent needs. Press Enter in the tab to send it. The agent reads the project, may write a script, and suggests one command. The suggestion comes back to AgentMate as **Add "name" to project?** with the command exactly as written:
+Runova opens Claude Code in a new tab in the project's Workspace and types your request into it, with the details the agent needs. Press Enter in the tab to send it. The agent reads the project, may write a script, and suggests one command. The suggestion comes back to Runova as **Add "name" to project?** with the command exactly as written:
 
 - **Add command** saves it to the project's run commands.
 - **Add and run** saves it and starts it right away.
@@ -105,7 +105,7 @@ This needs [Claude Code](cli-manager.md) to be installed. For this one session t
 
 ### Commands that ask for a value
 
-A command can leave a value open until you run it. Write a name in double braces where the value goes, for example `npm run dev -- --port {{port}}`. When you click **Run**, AgentMate opens a short form with one field per name, shows the command exactly as it will run, and starts it in the project folder once you press Enter or **Run**.
+A command can leave a value open until you run it. Write a name in double braces where the value goes, for example `npm run dev -- --port {{port}}`. When you click **Run**, Runova opens a short form with one field per name, shows the command exactly as it will run, and starts it in the project folder once you press Enter or **Run**.
 
 - `{{port}}` is required. The run waits until the field has a value.
 - `{{port=3000}}` is required, and the field starts with 3000.
@@ -133,10 +133,10 @@ A run whose command has finished (only its shell is left) has nothing to pause.
 
 #### Pause while an agent works
 
-Turn on **Pause runs while an agent works** at the bottom of the status bar's run panel, and AgentMate does it for you. While an AI agent is working in the same folder as a run (or in a folder above or below it), the run is paused. A few seconds after the agent stops working, the run resumes by itself. The wait is there because agents go quiet for a moment between steps. It is off by default.
+Turn on **Pause runs while an agent works** at the bottom of the status bar's run panel, and Runova does it for you. While an AI agent is working in the same folder as a run (or in a folder above or below it), the run is paused. A few seconds after the agent stops working, the run resumes by itself. The wait is there because agents go quiet for a moment between steps. It is off by default.
 
 - A banner on the run's terminal says **Paused while an agent works in this folder.**
-- If you click **Resume** while the agent is still working, AgentMate leaves that run alone until the agent is done.
+- If you click **Resume** while the agent is still working, Runova leaves that run alone until the agent is done.
 - A run you paused yourself is never resumed for you.
 - Turning the switch off resumes the runs it paused.
 
@@ -153,7 +153,7 @@ The page has a header, a section list on the left (a tab bar on narrow windows) 
 - **Open workspace** opens this project in the [Workspace](workspace.md).
 - **Prompt** opens the standing prompt editor. See [Overview](#overview).
 - **Task board** opens the project's [Relay](relay.md) tasks as a board you can run from.
-- The **More project actions** menu has **Edit project**, **Set a run command** and **Create run command with AI** (when there is none), **Open folder**, **Open terminal**, **Archive project** or **Restore project**, and **Remove project**. Removing asks first and only removes the project from AgentMate: your files on disk are kept.
+- The **More project actions** menu has **Edit project**, **Set a run command** and **Create run command with AI** (when there is none), **Open folder**, **Open terminal**, **Archive project** or **Restore project**, and **Remove project**. Removing asks first and only removes the project from Runova: your files on disk are kept.
 
 ### Sections
 
@@ -171,7 +171,7 @@ The Overview section has the project's standing prompt and its notes.
 
 ### Blueprint
 
-Blueprint turns an idea into a plan. You describe the project in six steps, then AgentMate writes a ready-to-use prompt that tells an agent to act as a Product Manager and produce the planning documents for it. It is a section of the page, not a dialog, because you will come back to it over days.
+Blueprint turns an idea into a plan. You describe the project in six steps, then Runova writes a ready-to-use prompt that tells an agent to act as a Product Manager and produce the planning documents for it. It is a section of the page, not a dialog, because you will come back to it over days.
 
 The step rail across the top has **Idea** (what you are building), **Architecture** (structure and stack), **Backend** (services and data), **Frontend** (UI and client), **CI/CD** (build and release), **Quality** (testing and standards) and **Review** (write the prompt). Every step can be opened in any order and a tick marks the ones with text. Buttons at the bottom, named after the previous and next step, move along. Steps save on their own when you click away.
 
@@ -180,7 +180,7 @@ The step rail across the top has **Idea** (what you are building), **Architectur
 1. Open a step. A Markdown editor with live preview opens, with a hint in the box about what to cover.
 2. Write in plain Markdown. Persian is fine, and the generated prompt comes out in English either way.
 3. Use the preset chips above the editor to add ready-made snippets. Clicking a chip appends its text. If a step has no presets, a link takes you to Settings. You can edit presets under Settings, General, **Blueprint presets**.
-4. Click **Attach files**, or paste or drop onto the editor, to add images, video or other files. They land where the caret is, up to 25 MB each. Under the editor, each file can be inserted again (**Insert**), opened outside AgentMate, renamed (click its name) or deleted. A file that is not used in the text is marked "not in the text".
+4. Click **Attach files**, or paste or drop onto the editor, to add images, video or other files. They land where the caret is, up to 25 MB each. Under the editor, each file can be inserted again (**Insert**), opened outside Runova, renamed (click its name) or deleted. A file that is not used in the text is marked "not in the text".
 5. Leave **Include this in** ticked (the box names the project's agent file, such as AGENTS.md or CLAUDE.md) to copy this step into that file in the project. Ticked steps go into one managed block, so repeating it never duplicates anything.
 6. Click **History** to see every saved version of the step and **Restore this version** to bring one back. A restore is saved as a new version, so nothing is lost.
 
@@ -207,7 +207,7 @@ The Prompts section keeps every prompt for the project in one place. Three views
 
 Click **New prompt** to write one (or **New draft** or **Schedule a prompt** from an empty view). **Prompt Builder** opens the Prompt Builder page. In the **New prompt** dialog, **Save as** is **Draft** (still writing it) or **Scheduled** (ready to run). A scheduled prompt also has:
 
-- **Run**: **Manually** (when you press Run) or **Automatically** (at a set time, using **Run at**). Automatic runs open a new terminal tab in the project folder. AgentMate has to be running at that time, otherwise the prompt is marked **Missed**. Give a missed prompt a new time to put it back in the queue.
+- **Run**: **Manually** (when you press Run) or **Automatically** (at a set time, using **Run at**). Automatic runs open a new terminal tab in the project folder. Runova has to be running at that time, otherwise the prompt is marked **Missed**. Give a missed prompt a new time to put it back in the queue.
 - The CLI, model and effort to run it with.
 
 Each entry has icons: **Copy prompt**, **Delete**, and depending on its kind **Move to another project**, **Edit**, **Schedule it** (for a draft), **Mark implemented** and **Reopen draft**, **Run now** or **Run again**, and **Cancel**. History entries can show the original input you typed with **Show original input**, and a draft can be edited in place (`Ctrl+Enter` saves). See also [Scheduled tasks](scheduled-tasks.md).
@@ -218,7 +218,7 @@ The Git section is a full set of everyday git tools for the project's folder. Se
 
 If the folder is not a repository, the section says so and offers **Initialize repository** or **Clone from GitHub…**. If the project has a GitHub address saved but nothing was cloned yet (for example the clone on Create failed), the section says "This project's GitHub repository isn't on this computer yet" and the first button is **Clone** followed by the repository name, with **Initialize a new repository** next to it.
 
-**Clone from GitHub…** asks for the **Repository address** (`https://github.com/owner/repo`) and clones it into the project's folder. If the folder already has files, AgentMate asks before it connects them to the repository, and your files are left as they are, so differences show up as changes. A private repository needs the GitHub CLI signed in (`gh auth login`). If git cannot start the GitHub CLI, the message says "Make sure gh is installed and on your PATH", so check that `gh` runs in a terminal and try again.
+**Clone from GitHub…** asks for the **Repository address** (`https://github.com/owner/repo`) and clones it into the project's folder. If the folder already has files, Runova asks before it connects them to the repository, and your files are left as they are, so differences show up as changes. A private repository needs the GitHub CLI signed in (`gh auth login`). If git cannot start the GitHub CLI, the message says "Make sure gh is installed and on your PATH", so check that `gh` runs in a terminal and try again.
 
 **Initialize repository** starts a new repository instead. The setup wizard walks through two steps:
 
@@ -327,7 +327,7 @@ The section previews **Files it will create** and **Folders it will create**, ba
 - Cursor: `AGENTS.md`, `.cursor/rules/project-conventions.mdc` and commands.
 - Generic: `AGENTS.md`.
 
-Every type also gets an `.agentmate` folder with `PROJECT_CONTEXT.md`, `ROADMAP.md` and `TASKS.md`.
+Every type also gets a `.runova` folder with `PROJECT_CONTEXT.md`, `ROADMAP.md` and `TASKS.md`.
 
 1. Open **Bootstrap** and review the preview.
 2. Click **Bootstrap Project**.
@@ -339,37 +339,37 @@ Below the plan, **Browse and edit project files** is a small file browser for th
 
 ### Skills
 
-The Skills section lists skills installed into this project, with their version and the result of any safety check. Each row has a **Check** button (scan the skill for unsafe instructions), **Update** when a newer version exists, and **Remove**. **Check all** checks them all, and the **Deep review with an agent CLI** switch adds a second opinion from an installed CLI (slower, and it can only make a verdict stricter). Skills that came with the repository rather than through AgentMate are listed under **Also in this project** and can be checked too. **Browse marketplace** opens the Skills page for this project. See [Skills](skills.md).
+The Skills section lists skills installed into this project, with their version and the result of any safety check. Each row has a **Check** button (scan the skill for unsafe instructions), **Update** when a newer version exists, and **Remove**. **Check all** checks them all, and the **Deep review with an agent CLI** switch adds a second opinion from an installed CLI (slower, and it can only make a verdict stricter). Skills that came with the repository rather than through Runova are listed under **Also in this project** and can be checked too. **Browse marketplace** opens the Skills page for this project. See [Skills](skills.md).
 
 ### MCP
 
 The MCP section lists MCP servers installed into this project with a **Remove** button for each. **Browse marketplace** opens the MCP Servers page for this project. See [MCP Servers](mcp-servers.md).
 
-The switch at the top, **Let agents suggest run commands**, lets an agent in this project propose a run command for you. Turning it on adds an `agentmate` server to the project's `.mcp.json` and writes a small script into `.agentmate`. The first time the agent uses it in the project, Claude Code asks you to approve that server and to allow its tools. When the agent proposes a command, AgentMate shows it in a dialog with the command exactly as written. **Add command** saves it to the project's run commands, **Add and run** saves it and starts it, and **Discard** drops it. Nothing runs until you press **Run** or **Add and run**. This switch is for agents you start yourself. **Create with AI** under [Run commands](#run-commands) sets this up for you and needs no switch. Turning the switch off removes the entry and the script, and drops any proposals still waiting.
+The switch at the top, **Let agents suggest run commands**, lets an agent in this project propose a run command for you. Turning it on adds a `runova` server to the project's `.mcp.json` and writes a small script into `.runova`. The first time the agent uses it in the project, Claude Code asks you to approve that server and to allow its tools. When the agent proposes a command, Runova shows it in a dialog with the command exactly as written. **Add command** saves it to the project's run commands, **Add and run** saves it and starts it, and **Discard** drops it. Nothing runs until you press **Run** or **Add and run**. This switch is for agents you start yourself. **Create with AI** under [Run commands](#run-commands) sets this up for you and needs no switch. Turning the switch off removes the entry and the script, and drops any proposals still waiting.
 
 ### Hooks
 
 Hooks send a notification when an agent in this project finishes or needs you. There are three independent cards: **Completion** (a Telegram message when the agent finishes), **Confirmation** (a Telegram message when it needs your confirmation, and your reply is forwarded to the project's open terminal) and **Desktop companion** (the desktop pet speaks the message).
 
-For each card, turn the switch on, choose the **Installed agent**, edit the message (use `{{project}}` for the project name), and click **Save**. **Send test** (or **Preview on pet**) tries it. With Claude Code the hook is wired into `.claude/settings.json` automatically. For other agents AgentMate generates a script at `.agentmate/hooks/notify-<kind>.cjs` that you wire into the agent yourself. The Telegram cards need a bot set up in Settings, **Notifications**. The pet card needs the desktop companion turned on. See [Notifications and Telegram](notifications-telegram.md) and [Widgets and desktop pet](widgets-desktop-pet.md).
+For each card, turn the switch on, choose the **Installed agent**, edit the message (use `{{project}}` for the project name), and click **Save**. **Send test** (or **Preview on pet**) tries it. With Claude Code the hook is wired into `.claude/settings.json` automatically. For other agents Runova generates a script at `.runova/hooks/notify-<kind>.cjs` that you wire into the agent yourself. The Telegram cards need a bot set up in Settings, **Notifications**. The pet card needs the desktop companion turned on. See [Notifications and Telegram](notifications-telegram.md) and [Widgets and desktop pet](widgets-desktop-pet.md).
 
-**Other hooks** lists hooks found in the project's `.claude/settings.json` and `settings.local.json` that AgentMate did not create. Edit one (**Matcher** and the JSON body) or delete it.
+**Other hooks** lists hooks found in the project's `.claude/settings.json` and `settings.local.json` that Runova did not create. Edit one (**Matcher** and the JSON body) or delete it.
 
 ### Environments
 
 The Environments section keeps this project's env files and logins for each stage in one place, stored encrypted on this computer and included in a password-protected backup.
 
 - **Add environment** creates a stage: Development, Test, Staging, Production, or **Custom...** with a name such as QA or Demo.
-- **Import from folder** copies the `.env` files in the project root into AgentMate. It guesses each file's stage, lets you choose the target environment, skips files over 1 MB and never changes the files in the folder.
+- **Import from folder** copies the `.env` files in the project root into Runova. It guesses each file's stage, lets you choose the target environment, skips files over 1 MB and never changes the files in the folder.
 - Select an environment from the list. Its **Env files** card has **Add file** (paste or type the contents) and icons to edit, copy the contents, write it back to the project folder and delete it. Writing a file to the folder asks before replacing one that exists, and warns if the file is not in `.gitignore`.
 - Its **Credentials** card has **Add credential** (a label, username, URL or host, password, token or key, and notes) with icons to open the URL, copy the password, edit and delete.
 - **Protect with a passkey** encrypts saved passwords and environment secrets with a passkey instead of only the OS keychain. When set, **Unlock vault** is needed before using them, and you can change or remove the passkey.
 
-Deleting an environment removes its saved files and credentials from AgentMate only.
+Deleting an environment removes its saved files and credentials from Runova only.
 
 ### Config
 
-The Config section edits `.agentmate/config.json` in the project folder in a JSON editor. Click **Save** to write it. It refuses invalid JSON.
+The Config section edits `.runova/config.json` in the project folder in a JSON editor. Click **Save** to write it. It refuses invalid JSON.
 
 ## Tag a version
 
@@ -378,7 +378,7 @@ Tagging a version creates a git tag (for example `v1.4.0`) on the current commit
 1. Click **Tag a version**. The dialog shows the **Latest** tag and the **Next** one, and how many commits came since.
 2. Choose a version. **Patch** (fixes only), **Minor** (new features) and **Major** (breaking changes) fill in the next number. Or click **Suggest with AI**, which reads the commits since the latest tag with your CLI and proposes a version and tag message. You can also type a **Version** yourself.
    - To cut a pre-release, pick **Beta** or **Preview** above the bump buttons (the default is **Stable**). The version becomes `1.4.0-beta.1`, and the number goes up from the pre-release tags already there (`-beta.2`, `-beta.3`). After a pre-release, **Patch** and **Minor** land on the release it was heading for (`1.4.0`) instead of skipping past it. Switch back to **Stable** to drop the suffix.
-3. The **Prefix** (default `v`) names the tag series. If the repository uses several prefixes, **Prefixes in use** switches between them. AgentMate remembers the prefix per project.
+3. The **Prefix** (default `v`) names the tag series. If the repository uses several prefixes, **Prefixes in use** switches between them. Runova remembers the prefix per project.
 4. Add a **Tag message (optional)**.
 5. Optionally click **Update version in files**, described below.
 6. Click **Create & push tag** (or **Create tag** when there is no remote).

@@ -14,7 +14,7 @@ const SFTP_WORDS: Partial<Record<FilesErrorCode, string>> = {
   vaultLocked: 'Your saved servers are locked with a passkey. Unlock them, then try again.',
   tooManyFiles: 'That selection holds more than 100,000 files and folders. Pick fewer at a time.',
   localChanged: 'The file changed on this computer while it was being sent. Try again.',
-  siteUnknown: "AgentMate doesn't know this server anymore. It may have been removed.",
+  siteUnknown: "Runova doesn't know this server anymore. It may have been removed.",
   exists: 'Something with that name is already there.',
 };
 

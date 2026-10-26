@@ -46,7 +46,7 @@ function writeToneWav(path: string): void {
 }
 
 type Bridge = {
-  agentmat: {
+  runova: {
     studio: {
       updateSettings(p: unknown): Promise<unknown>;
       create(input: unknown): Promise<{ id: string }>;
@@ -73,7 +73,7 @@ test('points to Dev Setup for local voices, and makes a voice profile with conse
   );
   writeToneWav(tone);
   const app = await launchApp({
-    env: { AGENTMATE_STUDIO_TTS_URL: tts.url, AGENTMATE_STUDIO_TRANSCRIPT: SAID },
+    env: { RUNOVA_STUDIO_TTS_URL: tts.url, RUNOVA_STUDIO_TRANSCRIPT: SAID },
     args: [
       '--use-fake-ui-for-media-stream',
       '--use-fake-device-for-media-stream',
@@ -86,7 +86,7 @@ test('points to Dev Setup for local voices, and makes a voice profile with conse
   try {
     const videoId = await page.evaluate(
       async ({ library, key }) => {
-        const { studio, studioAudio } = (window as unknown as Bridge).agentmat;
+        const { studio, studioAudio } = (window as unknown as Bridge).runova;
         await studio.updateSettings({ defaultRoot: library });
         await studioAudio.setKey({ engine: 'elevenlabs', key });
         const video = await studio.create({
@@ -125,7 +125,7 @@ test('points to Dev Setup for local voices, and makes a voice profile with conse
         });
         return video.id;
       },
-      { library: join(app.root, 'Videos', 'AgentMate Studio'), key: TTS_KEY },
+      { library: join(app.root, 'Videos', 'Runova Studio'), key: TTS_KEY },
     );
 
     // Piper is not installed: the panel says so and leads to Dev Setup's Studio tools.

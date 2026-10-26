@@ -18,12 +18,12 @@ RUN curl -fsSL --retry 5 --retry-all-errors https://nginx.org/keys/nginx_signing
  && dnf -y --setopt=install_weak_deps=False install nginx \
  && dnf clean all \
  && rm /etc/nginx/conf.d/default.conf \
- && mkdir -p /etc/nginx/agentmate/releases/0 /var/www/agentmate/acme /var/www/agentmate/sites \
- && touch /etc/nginx/agentmate/releases/0/http.conf /etc/nginx/agentmate/releases/0/stream.conf \
- && ln -s releases/0 /etc/nginx/agentmate/current \
- && sed -i 's|^\( *\)include /etc/nginx/conf.d/\*\.conf;|&\n\1include /etc/nginx/agentmate/current/http.conf;|' /etc/nginx/nginx.conf \
- && printf '\nstream {\n    include /etc/nginx/agentmate/current/stream.conf;\n}\n' >> /etc/nginx/nginx.conf \
- && grep -q 'agentmate/current/http.conf' /etc/nginx/nginx.conf \
+ && mkdir -p /etc/nginx/runova/releases/0 /var/www/runova/acme /var/www/runova/sites \
+ && touch /etc/nginx/runova/releases/0/http.conf /etc/nginx/runova/releases/0/stream.conf \
+ && ln -s releases/0 /etc/nginx/runova/current \
+ && sed -i 's|^\( *\)include /etc/nginx/conf.d/\*\.conf;|&\n\1include /etc/nginx/runova/current/http.conf;|' /etc/nginx/nginx.conf \
+ && printf '\nstream {\n    include /etc/nginx/runova/current/stream.conf;\n}\n' >> /etc/nginx/nginx.conf \
+ && grep -q 'runova/current/http.conf' /etc/nginx/nginx.conf \
  && nginx -t
 STOPSIGNAL SIGQUIT
 CMD ["nginx", "-g", "daemon off;"]

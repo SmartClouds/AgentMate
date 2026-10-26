@@ -4,7 +4,7 @@ import { coreErrorCode } from '../../shared/coreErrors';
 import type {
   ChallengeResponse,
   SignedInResponse,
-} from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { FakeCore } from '../../shared/deploy/testing/fakeCore';
 import type { DeployConnection, DeployCoreRecord } from '../../shared/deployTypes';
 import { TunnelRefusedError } from '../ssh/connection';
@@ -23,7 +23,7 @@ import { DeployState } from './state';
 const MINUTE = 60_000;
 const RECORD: DeployCoreRecord = {
   version: '1.53.0',
-  release: '/opt/agentmate-core/releases/1.53.0',
+  release: '/opt/runova-core/releases/1.53.0',
   transport: 'streamlocal',
   installedAt: 1,
   os: 'Ubuntu 24.04.1 LTS',
@@ -243,7 +243,7 @@ describe('DeployService lasting connections', () => {
     expect(paths[0]).toBe('/dev/enroll');
     expect(service.connection(DEV_SERVER_ID).state).toBe('needs-sign-in');
 
-    await service.signIn({ serverId: DEV_SERVER_ID, password: 'agentmate-local-password' });
+    await service.signIn({ serverId: DEV_SERVER_ID, password: 'runova-local-password' });
     await service.links.call(DEV_SERVER_ID, (hub) => hub.ping());
 
     expect(opened.at(-1)?.kind).toBe('dev-tcp');

@@ -28,11 +28,11 @@ import {
  * The second is short: FTPS against ProFTPD, whose self-signed certificate is trusted in Test
  * connection before one file deploys.
  *
- * Needs AGENTMATE_SYSTEM_TESTS=1 and Docker for Linux containers. The containers are named
- * agentmate-e2e-ssh-* and agentmate-e2e-ftp-* and removed in afterAll.
+ * Needs RUNOVA_SYSTEM_TESTS=1 and Docker for Linux containers. The containers are named
+ * runova-e2e-ssh-* and runova-e2e-ftp-* and removed in afterAll.
  */
 
-test.skip(!systemTestsEnabled(), 'needs AGENTMATE_SYSTEM_TESTS=1 and Docker for Linux containers');
+test.skip(!systemTestsEnabled(), 'needs RUNOVA_SYSTEM_TESTS=1 and Docker for Linux containers');
 
 const MINUTE = 60_000;
 /** A test, a plan or a deploy over a container on a machine that is often busy. */
@@ -144,7 +144,7 @@ test.describe('An SFTP site from Deploy and from a project', () => {
     await createProject(launched);
     // A project made through IPC is not in the cached list yet.
     await launched.page.reload();
-    await launched.page.waitForFunction(() => Boolean((window as { agentmat?: unknown }).agentmat));
+    await launched.page.waitForFunction(() => Boolean((window as { runova?: unknown }).runova));
   });
 
   test.afterAll(async () => {
@@ -532,7 +532,7 @@ test.describe('An FTPS site with a self-signed certificate', () => {
     const certificate = dialog.getByRole('group', { name: 'Certificate' });
     const fingerprint = (ftp.certFingerprint256.toUpperCase().match(/.{2}/g) ?? []).join(':');
     await expect(certificate).toContainText(fingerprint);
-    await expect(certificate).toContainText('agentmate-e2e-ftp');
+    await expect(certificate).toContainText('runova-e2e-ftp');
 
     await dialog.getByRole('button', { name: 'Trust this certificate' }).click();
     await expect(testPassed(dialog)).toBeVisible({ timeout: SERVER_TIMEOUT });

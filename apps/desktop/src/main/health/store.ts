@@ -11,7 +11,7 @@ import {
   INITIAL_HEALTH_TRACK,
   normalizeHealthInterval,
   normalizeHealthTimeout,
-} from '@agentmat/core';
+} from '@runova/core';
 import { app } from 'electron';
 import { z } from 'zod';
 import type { SecretEnvelope } from '../../shared/apiTypes';
@@ -292,7 +292,7 @@ function cleanUrl(value: string): string {
   }
   if (url.username || url.password) {
     throw new Error(
-      'Leave the username or password out of the URL. Pick HTTP Basic instead, and AgentMate sends them in a header.',
+      'Leave the username or password out of the URL. Pick HTTP Basic instead, and Runova sends them in a header.',
     );
   }
   return text;

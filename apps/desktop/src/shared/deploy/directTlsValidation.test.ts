@@ -10,7 +10,7 @@ import {
 import type {
   FirewallRuleInfo,
   FirewallStatus,
-} from './protocol/generated/AgentMate.ServerCore.Contracts';
+} from './protocol/generated/Runova.ServerCore.Contracts';
 
 function rule(id: string, extra: Partial<FirewallRuleInfo> = {}): FirewallRuleInfo {
   return {

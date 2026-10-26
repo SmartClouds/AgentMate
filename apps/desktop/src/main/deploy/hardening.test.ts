@@ -5,8 +5,8 @@ import type {
   SecurityChecklist,
   SshHardeningChangeInfo,
   SshHardeningPreview,
-} from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import type { DeploySshProgressEvent } from '../../shared/deployHardeningTypes';
 import { DeployHardening, PASSWORD_LOGIN_REFUSAL } from './hardening';
 
@@ -27,7 +27,7 @@ const CHANGE: SshHardeningChangeInfo = {
 
 const PREVIEW: SshHardeningPreview = {
   summary: 'SSH password login off',
-  path: '/etc/ssh/sshd_config.d/00-agentmate.conf',
+  path: '/etc/ssh/sshd_config.d/00-runova.conf',
   content: 'PasswordAuthentication no\n',
   commands: ['sshd -t'],
   proof: { keyLoginProven: true, explanation: 'signed in with a key' },

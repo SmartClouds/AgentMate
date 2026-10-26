@@ -1,4 +1,4 @@
-import type { AlertKind } from './protocol/generated/AgentMate.ServerCore.Contracts';
+import type { AlertKind } from './protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * Checks for the Telegram notifications form (as the user types) and its IPC handler (E30). They

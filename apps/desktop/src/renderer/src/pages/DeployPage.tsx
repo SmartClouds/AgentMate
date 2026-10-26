@@ -1,4 +1,4 @@
-import type { AppSettings } from '@agentmat/core';
+import type { AppSettings } from '@runova/core';
 import type { DeployServer } from '@shared/deployTypes';
 import { sshErrorMessage } from '@shared/sshErrors';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -263,12 +263,12 @@ export default function DeployPage(): React.JSX.Element {
 
   const serversQuery = useQuery({
     queryKey: queryKeys.deployServers,
-    queryFn: () => window.agentmat.deploy.listServers(),
+    queryFn: () => window.runova.deploy.listServers(),
   });
   // Every saved server can be deployed to, but the page lists only the ones the user chose.
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
     meta: { silentLoading: true },
   });
   const chosenIds = settingsQuery.data?.deployServerIds ?? NO_SERVERS;
@@ -279,7 +279,7 @@ export default function DeployPage(): React.JSX.Element {
   );
   const [chooseOpen, setChooseOpen] = useState(false);
   const saveChoice = useMutation({
-    mutationFn: (ids: string[]) => window.agentmat.settings.update({ deployServerIds: ids }),
+    mutationFn: (ids: string[]) => window.runova.settings.update({ deployServerIds: ids }),
     meta: { silentLoading: true },
     onError: (error) => {
       toast.error(`Could not save the list of servers: ${sshErrorMessage(error)}`);
@@ -296,7 +296,7 @@ export default function DeployPage(): React.JSX.Element {
   }
   const vaultQuery = useQuery({
     queryKey: queryKeys.sshVaultStatus,
-    queryFn: () => window.agentmat.ssh.vaultStatus(),
+    queryFn: () => window.runova.ssh.vaultStatus(),
   });
   const sitesQuery = useWordPressSites();
   const updateSiteList = useSiteListUpdate();
@@ -445,7 +445,7 @@ export default function DeployPage(): React.JSX.Element {
           title={noneSaved ? 'No servers yet' : 'No servers chosen yet'}
           description={
             noneSaved
-              ? 'Deploy works with the servers you save in Remote, with WordPress sites that run the AgentMate Connector plugin, and with any host that offers FTP or SFTP. Add a server in Remote, or connect a site.'
+              ? 'Deploy works with the servers you save in Remote, with WordPress sites that run the Runova Connector plugin, and with any host that offers FTP or SFTP. Add a server in Remote, or connect a site.'
               : `Deploy lists only the servers you choose. You have ${saved.length} saved server${saved.length === 1 ? '' : 's'}. Pick the ones to deploy to, or connect a site.`
           }
           action={

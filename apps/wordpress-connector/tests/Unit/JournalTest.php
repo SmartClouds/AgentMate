@@ -2,14 +2,14 @@
 /**
  * The apply journal: time-budgeted, resumable, and snapshot-before-apply.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Unit;
+namespace Runova\Connector\Tests\Unit;
 
-use AgentMate\Connector\Audit\AuditLog;
-use AgentMate\Connector\Deploy\DeployService;
-use AgentMate\Connector\Tests\Support\DeployTestCase;
+use Runova\Connector\Audit\AuditLog;
+use Runova\Connector\Deploy\DeployService;
+use Runova\Connector\Tests\Support\DeployTestCase;
 
 final class JournalTest extends DeployTestCase
 {

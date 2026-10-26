@@ -1,4 +1,4 @@
-import type { AgentHistorySession } from '@agentmat/core';
+import type { AgentHistorySession } from '@runova/core';
 import { describe, expect, it } from 'vitest';
 import {
   backgroundCount,
@@ -208,14 +208,14 @@ describe('displayPath', () => {
 
 describe('PROVIDER_LABEL', () => {
   it('names every history provider', async () => {
-    const { AGENT_HISTORY_PROVIDERS } = await import('@agentmat/core');
+    const { AGENT_HISTORY_PROVIDERS } = await import('@runova/core');
     expect(Object.keys(PROVIDER_LABEL).sort()).toEqual([...AGENT_HISTORY_PROVIDERS].sort());
     expect(PROVIDER_LABEL['claude-code']).toBe('Claude');
     expect(PROVIDER_LABEL.codex).toBe('Codex');
   });
 
   it('filters each provider independently', async () => {
-    const { AGENT_HISTORY_PROVIDERS } = await import('@agentmat/core');
+    const { AGENT_HISTORY_PROVIDERS } = await import('@runova/core');
     for (const provider of AGENT_HISTORY_PROVIDERS) {
       const sessions = [session({ id: `${provider}-1`, provider })];
       expect(filterSessions(sessions, { ...all, provider }).map((s) => s.id)).toEqual([

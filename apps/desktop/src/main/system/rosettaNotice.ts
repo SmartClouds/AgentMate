@@ -17,7 +17,7 @@ export async function showRosettaNotice(win: BrowserWindow | null): Promise<void
   const options = {
     type: 'warning' as const,
     title: 'Install the Apple Silicon version',
-    message: 'This is the Intel version of AgentMate',
+    message: 'This is the Intel version of Runova',
     detail:
       'Your Mac has an Apple Silicon chip, so macOS runs this version through Rosetta. ' +
       'Git, the built-in terminals and other developer tools fail under it with ' +

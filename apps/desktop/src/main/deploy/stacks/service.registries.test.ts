@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { DeployStacks } from './service';
 
 const SERVER = 'srv';

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { useRunSessionStore } from '@/stores/runSessionStore';
 import { type TerminalSessionMeta, useTerminalStore } from '@/stores/terminalStore';
-import { type FakeBridge, installAgentmatBridge } from '../../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../../test/renderer/runovaBridge';
 import { startRunSessionFeed } from './runSessionFeed';
 
 /**
@@ -25,7 +25,7 @@ function start(): () => void {
 }
 
 beforeEach(() => {
-  bridge = installAgentmatBridge();
+  bridge = installRunovaBridge();
   useRunSessionStore.setState({ outputs: {} });
   sessions([
     { id: 'dev', title: 'Apollo', run: RUN as TerminalSessionMeta['run'] },

@@ -1,4 +1,4 @@
-import type { Project, WpItem, WpItemRef } from '@agentmat/core';
+import type { Project, WpItem, WpItemRef } from '@runova/core';
 import type { DeployWordPressSite } from '@shared/deployWordPressTypes';
 import { screen, waitFor, within } from '@testing-library/react';
 import { useLocation } from 'react-router-dom';
@@ -109,8 +109,8 @@ const ITEMS = [
   wpItem({ kind: 'plugin', slug: 'oven', name: 'Oven <b>Tools</b>', active: true }),
   wpItem({
     kind: 'plugin',
-    slug: 'agentmate-connector',
-    name: 'AgentMate Connector',
+    slug: 'runova-connector',
+    name: 'Runova Connector',
     protected: true,
     writable: false,
   }),
@@ -191,7 +191,7 @@ describe('SiteItemsPanel', () => {
     // Site strings are text, never markup.
     const plugins = screen.getByRole('list', { name: 'Plugins' });
     expect(within(plugins).getByText('Oven <b>Tools</b>')).toBeTruthy();
-    expect(within(plugins).getByText(/the AgentMate Connector itself/)).toBeTruthy();
+    expect(within(plugins).getByText(/the Runova Connector itself/)).toBeTruthy();
     expect(screen.getByRole('list', { name: 'Must-use plugins' })).toBeTruthy();
   });
 

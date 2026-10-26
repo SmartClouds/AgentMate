@@ -1,4 +1,4 @@
-import type { DevStackId } from '@agentmat/core';
+import type { DevStackId } from '@runova/core';
 import { Clapperboard, Code, Docker, Package, Smartphone } from '@/components/icons';
 
 /** One icon per stack, shared by the chips and the checklist headings so they match. */

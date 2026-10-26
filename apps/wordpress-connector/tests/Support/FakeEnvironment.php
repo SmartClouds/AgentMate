@@ -2,12 +2,12 @@
 /**
  * An Environment over a temporary wp-content folder, with every WordPress answer settable.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Support;
+namespace Runova\Connector\Tests\Support;
 
-use AgentMate\Connector\Env\Environment;
+use Runova\Connector\Env\Environment;
 
 final class FakeEnvironment implements Environment
 {
@@ -72,7 +72,7 @@ final class FakeEnvironment implements Environment
                 mkdir($this->content . '/' . $folder, 0777, true);
             }
         }
-        $this->dataDir = $this->content . '/agentmate-connector-0123456789ab';
+        $this->dataDir = $this->content . '/runova-connector-0123456789ab';
         if (!is_dir($this->dataDir)) {
             mkdir($this->dataDir, 0777, true);
         }
@@ -98,6 +98,14 @@ final class FakeEnvironment implements Environment
         return $this->pluginVersion;
     }
 
+    /** @var string */
+    public $layout = 'runova';
+
+    public function layout(): string
+    {
+        return $this->layout;
+    }
+
     public function siteName(): string
     {
         return 'Test Site';
@@ -115,7 +123,7 @@ final class FakeEnvironment implements Environment
 
     public function restUrl(): string
     {
-        return 'https://example.test/wp-json/agentmate/v1';
+        return 'https://example.test/wp-json/runova/v1';
     }
 
     public function ajaxUrl(): string
@@ -199,14 +207,17 @@ final class FakeEnvironment implements Environment
         return $this->networkActivePlugins;
     }
 
+    /** @var string the plugin folder; the 1.63 one for a site in the bridge layout */
+    public $connectorSlug = 'runova-connector';
+
     public function connectorSlug(): string
     {
-        return 'agentmate-connector';
+        return $this->connectorSlug;
     }
 
     public function guardSlug(): string
     {
-        return '00-agentmate-connector-guard.php';
+        return '00-runova-connector-guard.php';
     }
 
     public function dataDir(): string

@@ -1,4 +1,4 @@
-import type { TestResult, TestRunEvent, TestRunSummary } from '@agentmat/core';
+import type { TestResult, TestRunEvent, TestRunSummary } from '@runova/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   applyRunEvent,

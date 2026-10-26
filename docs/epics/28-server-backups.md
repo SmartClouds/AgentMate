@@ -39,11 +39,11 @@ own records of the server.
 - **Volumes are copied live.** Nothing is stopped while a backup runs. A database that is busy at
   that moment may restore inconsistent, and the screens say so.
 - **Destinations** implement one contract (test, upload, list, open, delete). A backup lands as
-  `agentmate-<server>-<yyyyMMdd-HHmmss>-<id>.ambackup` (or numbered `.partNNN` parts) with a
+  `runova-<server>-<yyyyMMdd-HHmmss>-<id>.ambackup` (or numbered `.partNNN` parts) with a
   plaintext manifest beside it that holds no secret. Telegram takes parts of 2000 MiB, or 4000 MiB
   on a Premium account. Retention only ever deletes backups whose manifest names the plan, and only
   after an upload succeeded.
-- **Google Drive and OneDrive** use the user's own OAuth client (no AgentMate registration), signed in
+- **Google Drive and OneDrive** use the user's own OAuth client (no Runova registration), signed in
   from the app over a loopback redirect with PKCE. The core keeps the refresh token sealed with
   Data Protection. **Telegram** uses the user's own account over MTProto (WTelegramClient), with
   their own `api_id` and `api_hash`; the session is sealed with Data Protection.
@@ -102,7 +102,7 @@ own records of the server.
   a folder, a Telegram account signed in with its code (a wrong code first), a destination that
   refuses everything, a plan keeping 2 run three times (2 left on each working destination, the
   refusing one retrying without holding the others up), and a backup downloaded here encrypted.
-- `apps/desktop/src/main/deploy/serverBackups/serverBackups.int.test.ts` (AGENTMATE_SYSTEM_TESTS=1)
+- `apps/desktop/src/main/deploy/serverBackups/serverBackups.int.test.ts` (RUNOVA_SYSTEM_TESTS=1)
   uses the published core on two systemd test servers, each on a Docker network in the
   documentation range so the core sees a public address. The first runs a compose stack and a
   container of its own with data in volumes; a plan keeping 2 runs three times into a folder; the

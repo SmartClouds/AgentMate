@@ -1,9 +1,9 @@
-import { buildContainerLogsPrompt, type Project } from '@agentmat/core';
+import { buildContainerLogsPrompt, type Project } from '@runova/core';
 import { coreErrorMessage } from '@shared/coreErrors';
 import type {
   ContainerEnvVariable,
   ContainerSummary,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { FolderKanban } from '@/components/icons';
@@ -54,19 +54,19 @@ export function SendLogsDialog({
 
   const projects = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
     enabled: open,
   });
   const details = useQuery({
     queryKey: queryKeys.deployContainer(serverId, container?.id ?? ''),
-    queryFn: () => window.agentmat.deployDocker.inspect(serverId, container?.id ?? ''),
+    queryFn: () => window.runova.deployDocker.inspect(serverId, container?.id ?? ''),
     enabled: open,
     retry: false,
   });
   const tail = useQuery({
     queryKey: [...queryKeys.deployContainer(serverId, container?.id ?? ''), 'tail', TAIL],
     queryFn: () =>
-      window.agentmat.deployDocker.logTail({
+      window.runova.deployDocker.logTail({
         serverId,
         containerId: container?.id ?? '',
         tail: TAIL,

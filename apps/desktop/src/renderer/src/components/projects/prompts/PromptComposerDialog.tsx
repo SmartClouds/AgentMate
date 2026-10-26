@@ -1,4 +1,4 @@
-import type { ScheduledTaskRunMode } from '@agentmat/core';
+import type { ScheduledTaskRunMode } from '@runova/core';
 import { useState } from 'react';
 import { type RunSettings, RunSettingsFields } from '@/components/cli/RunSettingsFields';
 import { CalendarDays, FileText, Play, Save } from '@/components/icons';
@@ -200,8 +200,8 @@ export function PromptComposerDialog({
                     ) : null}
                   </div>
                   <p className="text-[11px] leading-relaxed text-muted-foreground">
-                    Opens in a new terminal tab in this project's folder. AgentMate has to be
-                    running at that time; if it isn't, the prompt is marked missed.
+                    Opens in a new terminal tab in this project's folder. Runova has to be running
+                    at that time; if it isn't, the prompt is marked missed.
                   </p>
                 </div>
               ) : null}

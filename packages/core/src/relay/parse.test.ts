@@ -140,10 +140,8 @@ describe('setTaskStatus', () => {
   });
 
   it('keeps a trailing comment on the status line', () => {
-    const text = '---\nid: T001\nstatus: todo # set by AgentMate\n---\n';
-    expect(setTaskStatus(text, 'done')).toBe(
-      '---\nid: T001\nstatus: done # set by AgentMate\n---\n',
-    );
+    const text = '---\nid: T001\nstatus: todo # set by Runova\n---\n';
+    expect(setTaskStatus(text, 'done')).toBe('---\nid: T001\nstatus: done # set by Runova\n---\n');
   });
 
   it('adds a status line after the title when there is none', () => {

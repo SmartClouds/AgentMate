@@ -1,4 +1,4 @@
-import { type Project, parseScopeId, type WorktreeInfo } from '@agentmat/core';
+import { type Project, parseScopeId, type WorktreeInfo } from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { CircleCheck, GitBranch, GitMerge, GitPullRequest, Trash2 } from '@/components/icons';
 import { GLASS_CARD } from '@/components/pageKit';
@@ -119,7 +119,7 @@ export function WorktreeFinishSlot({ project }: { project: Project }): React.JSX
   const worktrees = useWorktrees(worktreeId ? projectId : null).data;
   const projects = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   }).data;
   const parent = projects?.find((p) => p.id === projectId);
   const worktree = worktrees?.find((w) => w.id === worktreeId);

@@ -68,7 +68,7 @@ interface HostPeer {
 }
 
 /**
- * Orchestrates the whole remote-control feature for one AgentMate instance.
+ * Orchestrates the whole remote-control feature for one Runova instance.
  *
  * A single machine can simultaneously *host* (let others control it) and act as
  * a *controller* (drive another machine). Both roles ride WebSockets that live
@@ -804,7 +804,7 @@ class RemoteManager {
         }
         void this.rememberServer(msg.deviceToken);
         if (this.client) this.files.resumeAfterReconnect(this.client);
-        sessionWindow.setTitle(`AgentMate Remote - ${msg.deviceName}`);
+        sessionWindow.setTitle(`Runova Remote - ${msg.deviceName}`);
         this.emitState();
         break;
       }

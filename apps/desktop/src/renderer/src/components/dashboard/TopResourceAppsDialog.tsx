@@ -158,7 +158,7 @@ export function TopResourceAppsDialog({
   const [killingPid, setKillingPid] = useState<number | null>(null);
   const query = useQuery({
     queryKey: queryKeys.topResourceApps(resource),
-    queryFn: () => window.agentmat.system.topApps(resource),
+    queryFn: () => window.runova.system.topApps(resource),
     enabled: open,
     refetchInterval: open ? 2000 : false,
     meta: { silentLoading: true },
@@ -198,7 +198,7 @@ export function TopResourceAppsDialog({
     if (!confirmed) return;
     setKillingPid(app.pid);
     try {
-      const result = await window.agentmat.system.killProcess(app.pid);
+      const result = await window.runova.system.killProcess(app.pid);
       if (!result.ok) {
         toast.error(result.error ?? `Could not end ${app.name}.`);
         return;

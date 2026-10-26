@@ -1,4 +1,4 @@
-import { DEFAULT_RELAY_BUDGET, type RelayProposal } from '@agentmat/core';
+import { DEFAULT_RELAY_BUDGET, type RelayProposal } from '@runova/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { toast } from 'sonner';
@@ -157,12 +157,12 @@ export function ReviseWithAiDialog({
 
   const boardQuery = useQuery({
     queryKey: queryKeys.relayBoard(projectId),
-    queryFn: () => window.agentmat.relay.board(projectId),
+    queryFn: () => window.runova.relay.board(projectId),
     enabled: open,
   });
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
     enabled: open,
   });
   const project = projectsQuery.data?.find((entry) => entry.id === projectId) ?? null;
@@ -190,8 +190,8 @@ export function ReviseWithAiDialog({
     const fields = { projectId, note: note.trim() || undefined, budget, ...planner.input };
     await run.start((requestId) =>
       catchingUp
-        ? window.agentmat.relay.catchUp({ requestId, recordDone, ...fields })
-        : window.agentmat.relay.revise({ requestId, ...fields }),
+        ? window.runova.relay.catchUp({ requestId, recordDone, ...fields })
+        : window.runova.relay.revise({ requestId, ...fields }),
     );
   }
 
@@ -199,7 +199,7 @@ export function ReviseWithAiDialog({
     if (!proposal || applying) return;
     setApplying(true);
     try {
-      const result = await window.agentmat.relay.applyProposal(projectId, proposal);
+      const result = await window.runova.relay.applyProposal(projectId, proposal);
       void queryClient.invalidateQueries({ queryKey: queryKeys.relayBoard(projectId) });
       const removed = result.removed.length > 0 ? `, ${result.removed.length} removed` : '';
       toast.success('Board updated', {

@@ -156,7 +156,7 @@ export function probeHostKey(
     client.connect({
       host,
       port,
-      username: 'agentmate-host-key-probe',
+      username: 'runova-host-key-probe',
       readyTimeout: timeoutMs,
       hostHash: 'sha256',
       hostVerifier: (fingerprint: string): boolean => {

@@ -46,15 +46,15 @@ if not exist "node_modules" (
     )
 )
 
-echo Building @agentmat/protocol...
-call pnpm --filter @agentmat/protocol build
+echo Building @runova/protocol...
+call pnpm --filter @runova/protocol build
 if errorlevel 1 (
-    echo Failed to build @agentmat/protocol.
+    echo Failed to build @runova/protocol.
     pause
     exit /b 1
 )
 
-echo Building and installing the AgentMate Mobile debug APK on your device...
+echo Building and installing the Runova Mobile debug APK on your device...
 cd apps\mobile
 if exist "android" (
     echo Refreshing the generated Android project so config plugins are applied...

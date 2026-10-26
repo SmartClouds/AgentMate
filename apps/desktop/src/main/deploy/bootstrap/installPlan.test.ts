@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { LEGACY_CORE, RUNOVA_CORE } from '../coreLayout';
 import {
   CHECKSUM_MISMATCH_EXIT,
   CORE_ROOT,
   type InstallPlanInput,
   installSteps,
+  migrateStep,
   releaseDirectory,
   rollbackSteps,
   uninstallSteps,
@@ -21,8 +23,8 @@ function input(overrides: Partial<InstallPlanInput> = {}): InstallPlanInput {
   return {
     version: '1.53.0',
     sha256: SHA,
-    file: 'agentmate-core-1.53.0-linux-x64.tar.gz',
-    stagingFile: '/tmp/agentmate.Ab12Cd34/agentmate-core-1.53.0-linux-x64.tar.gz',
+    file: 'runova-core-1.53.0-linux-x64.tar.gz',
+    stagingFile: '/tmp/runova.Ab12Cd34/runova-core-1.53.0-linux-x64.tar.gz',
     loginUser: 'deployer',
     rootLogin: false,
     selinux: false,
@@ -72,17 +74,17 @@ describe('installSteps', () => {
   it('never unpacks the download from a folder the login user can write to', () => {
     const extract = installSteps(input()).find((step) => step.id === 'extract')?.command ?? '';
 
-    expect(extract).toContain(`${CORE_ROOT}/incoming/agentmate-core-1.53.0-linux-x64.tar.gz`);
+    expect(extract).toContain(`${CORE_ROOT}/incoming/runova-core-1.53.0-linux-x64.tar.gz`);
     expect(extract).not.toContain('/tmp/');
     expect(extract).toContain('--no-same-owner');
     expect(extract).toContain('chown -R root:root');
   });
 
-  it('adds a non-root login to the agentmate group so it can reach the socket', () => {
+  it('adds a non-root login to the runova group so it can reach the socket', () => {
     const group = installSteps(input()).find((step) => step.id === 'group')?.command ?? '';
 
-    expect(group).toContain('groupadd --system agentmate');
-    expect(group).toContain('usermod -aG agentmate deployer');
+    expect(group).toContain('groupadd --system runova');
+    expect(group).toContain('usermod -aG runova deployer');
   });
 
   it('leaves group membership alone for a root login', () => {
@@ -91,7 +93,7 @@ describe('installSteps', () => {
 
   it('quotes a login name it did not choose', () => {
     expect(commands(installSteps(input({ loginUser: "o'brien" })))).toContain(
-      `usermod -aG agentmate 'o'\\''brien'`,
+      `usermod -aG runova 'o'\\''brien'`,
     );
   });
 
@@ -112,7 +114,7 @@ describe('installSteps', () => {
       `ln -sfn ${release} ${CORE_ROOT}/current.new && mv -Tf ${CORE_ROOT}/current.new ${CORE_ROOT}/current`,
     );
     expect(steps.find((step) => step.id === 'start')?.command).toContain(
-      'systemctl restart agentmate-core',
+      'systemctl restart runova-core',
     );
   });
 
@@ -142,6 +144,53 @@ describe('installSteps', () => {
   });
 });
 
+describe('installSteps on the layout from before the rename', () => {
+  const legacy = installSteps(input({ layout: 'legacy' }));
+
+  it('upgrades in place under the old names, which every tarball carries', () => {
+    const all = commands(legacy);
+    expect(all).toContain(`install -d -m 0755 ${LEGACY_CORE.releases}`);
+    expect(all).toContain(
+      `test -f ${LEGACY_CORE.releases}/1.53.0-${SHA.slice(0, 12)}.new/${LEGACY_CORE.binary}`,
+    );
+    expect(all).toContain(`${LEGACY_CORE.unitFile} ${LEGACY_CORE.unitPath}`);
+    expect(all).toContain(`systemctl restart ${LEGACY_CORE.unit}`);
+    expect(all).toContain(`usermod -aG ${LEGACY_CORE.group} deployer`);
+    expect(all).not.toContain(RUNOVA_CORE.root);
+  });
+
+  it('then has the new core move the server', () => {
+    expect(migrateStep().command).toBe(
+      `${LEGACY_CORE.current}/${RUNOVA_CORE.binary} migrate-layout`,
+    );
+  });
+
+  it('rolls back within the layout the previous release is in', () => {
+    const previous = `${LEGACY_CORE.releases}/1.52.0-cdcdcdcdcdcd`;
+    const [step] = rollbackSteps(previous);
+    expect(step?.command).toContain(`systemctl restart ${LEGACY_CORE.unit}`);
+    expect(step?.command).toContain(
+      `mv -Tf ${LEGACY_CORE.root}/current.new ${LEGACY_CORE.current}`,
+    );
+  });
+
+  it('names releases in the layout they belong to', () => {
+    expect(releaseDirectory('1.53.0', SHA, 'legacy')).toBe(
+      `${LEGACY_CORE.releases}/1.53.0-${SHA.slice(0, 12)}`,
+    );
+  });
+
+  it('removes the links a migration left behind with a migrated core', () => {
+    const [, remove] = uninstallSteps({ keepData: false, layout: 'runova' });
+    expect(remove?.command).toContain(`rm -rf ${LEGACY_CORE.root}`);
+    expect(remove?.command).toContain(
+      `{ ! test -L ${LEGACY_CORE.dataDirectory} || rm -f ${LEGACY_CORE.dataDirectory}; }`,
+    );
+    const [stop] = uninstallSteps({ keepData: true, layout: 'legacy' });
+    expect(stop?.command).toContain(`systemctl disable --now ${LEGACY_CORE.unit}`);
+  });
+});
+
 describe('rollbackSteps', () => {
   it('points current back at the previous release and restarts it', () => {
     const previous = `${CORE_ROOT}/releases/1.52.0-cdcdcdcdcdcd`;
@@ -151,10 +200,8 @@ describe('rollbackSteps', () => {
       .join('\n');
 
     expect(rollback).toContain(`ln -sfn ${previous} ${CORE_ROOT}/current.new`);
-    expect(rollback).toContain(
-      `install -m 0644 -o root -g root ${previous}/agentmate-core.service`,
-    );
-    expect(rollback).toContain('systemctl restart agentmate-core');
+    expect(rollback).toContain(`install -m 0644 -o root -g root ${previous}/runova-core.service`);
+    expect(rollback).toContain('systemctl restart runova-core');
   });
 
   it('refuses a previous release outside the releases folder', () => {
@@ -171,11 +218,11 @@ describe('uninstallSteps', () => {
       .map((step) => step.command)
       .join('\n');
 
-    expect(kept).toContain('systemctl disable --now agentmate-core');
+    expect(kept).toContain('systemctl disable --now runova-core');
     expect(kept).toContain(`rm -rf ${CORE_ROOT}`);
-    expect(kept).not.toContain('/var/lib/agentmate-core');
-    expect(removed).toContain('rm -rf /var/lib/agentmate-core /etc/agentmate-core');
-    expect(removed).toContain('groupdel agentmate');
+    expect(kept).not.toContain('/var/lib/runova-core');
+    expect(removed).toContain('rm -rf /var/lib/runova-core /etc/runova-core');
+    expect(removed).toContain('groupdel runova');
     expect(kept).not.toContain('groupdel');
   });
 });

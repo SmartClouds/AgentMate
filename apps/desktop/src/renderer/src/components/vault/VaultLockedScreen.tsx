@@ -64,7 +64,7 @@ export function VaultLockedScreen({ status }: { status: VaultStatus }): React.JS
     setBusy(true);
     setError(null);
     try {
-      const result = await window.agentmat.vault.unlock(password);
+      const result = await window.runova.vault.unlock(password);
       if (result.ok) {
         setPassword('');
         await queryClient.invalidateQueries({ queryKey: queryKeys.vaultStatus });

@@ -1,4 +1,4 @@
-import type { Codec, Quality, RenderJobView, RenderStatus, Resolution } from '@agentmat/studio';
+import type { Codec, Quality, RenderJobView, RenderStatus, Resolution } from '@runova/studio';
 import type { ChipTone } from '../kit';
 
 /** How the render dialog and the render list name each setting. */

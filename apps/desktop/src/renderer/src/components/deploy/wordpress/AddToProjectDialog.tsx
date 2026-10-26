@@ -1,5 +1,5 @@
-import type { Project, WpItem } from '@agentmat/core';
-import { wpItemRoot } from '@agentmat/core';
+import type { Project, WpItem } from '@runova/core';
+import { wpItemRoot } from '@runova/core';
 import type {
   DeployWordPressOperationKind,
   DeployWordPressSite,
@@ -337,7 +337,7 @@ export function AddToProjectDialog({
 
   const changesQuery = useQuery({
     queryKey: queryKeys.projectWordPressChanges(from?.id ?? ''),
-    queryFn: () => window.agentmat.deployWordPress.localChanges(from?.id as string),
+    queryFn: () => window.runova.deployWordPress.localChanges(from?.id as string),
     enabled: open && moving,
     meta: SILENT,
   });

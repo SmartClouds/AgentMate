@@ -1,4 +1,4 @@
-import type { ProxySettings } from '@agentmat/core';
+import type { ProxySettings } from '@runova/core';
 import { ipcMain } from 'electron';
 import type { ProxyStatus, ProxyTestResult } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';

@@ -50,6 +50,7 @@ export * from './git/statusV2.js';
 export * from './git/worktrees.js';
 export * from './grammar/languagetool.js';
 export * from './health/index.js';
+export * from './legacyNames.js';
 export * from './mcp/bundledDirectory.js';
 export * from './mcp/types.js';
 export * from './models/catalog.js';

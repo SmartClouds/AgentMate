@@ -43,7 +43,7 @@ const WINDOWS_SCRIPT = [
   '$drive = $env:SystemDrive',
   '$disk = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID=\'$drive\'"',
   '[pscustomobject]@{',
-  '  probe = "agentmate-runner"',
+  '  probe = "runova-runner"',
   '  cpu = ($cpu | Measure-Object LoadPercentage -Average).Average',
   '  cores = ($cpu | Measure-Object NumberOfLogicalProcessors -Sum).Sum',
   '  memTotalKb = $os.TotalVisibleMemorySize',
@@ -222,7 +222,7 @@ export function parseWindowsProbe(stdout: string, at = Date.now()): RunnerMachin
   const line = stdout
     .split(/\r?\n/)
     .map((text) => text.trim())
-    .find((text) => text.startsWith('{') && text.includes('agentmate-runner'));
+    .find((text) => text.startsWith('{') && text.includes('runova-runner'));
   if (!line) return null;
   let data: WindowsProbeJson;
   try {

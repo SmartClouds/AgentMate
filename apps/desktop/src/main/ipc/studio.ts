@@ -6,8 +6,8 @@ import {
   studioInputs,
   studioMediaInputs,
   studioRenderInputs,
-} from '@agentmat/studio';
-import { IMPORT_EXTENSIONS } from '@agentmat/studio/node';
+} from '@runova/studio';
+import { IMPORT_EXTENSIONS } from '@runova/studio/node';
 import { BrowserWindow, dialog, type IpcMainInvokeEvent, ipcMain, shell } from 'electron';
 import { z } from 'zod';
 import { IPC } from '../../shared/ipcChannels';

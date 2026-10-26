@@ -1,4 +1,4 @@
-import type { HealthIncident, HealthLatencyPoint } from '@agentmat/core';
+import type { HealthIncident, HealthLatencyPoint } from '@runova/core';
 import {
   type ChartBand,
   type ChartSeries,

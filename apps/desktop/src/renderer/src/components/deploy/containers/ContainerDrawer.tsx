@@ -3,7 +3,7 @@ import type {
   ContainerDetails,
   ContainerEnvVariable,
   ContainerSummary,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -252,7 +252,7 @@ export function ContainerDrawer({
   const id = container?.id ?? '';
   const details = useQuery({
     queryKey: queryKeys.deployContainer(serverId, id),
-    queryFn: () => window.agentmat.deployDocker.inspect(serverId, id),
+    queryFn: () => window.runova.deployDocker.inspect(serverId, id),
     enabled: container !== null,
     retry: false,
   });

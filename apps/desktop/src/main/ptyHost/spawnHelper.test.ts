@@ -20,7 +20,7 @@ function fakeTree(helpers: Record<string, 'ok' | 'broken'>): {
   env: SpawnHelperEnv;
   repaired: string[];
 } {
-  const dir = tempDir('agentmate-spawn-helper-');
+  const dir = tempDir('runova-spawn-helper-');
   const existing = new Set(Object.keys(helpers));
   const broken = new Set(
     Object.entries(helpers)
@@ -120,7 +120,7 @@ describe('ensureSpawnHelper', () => {
   });
 
   it('looks beside the archive when node-pty resolved inside it', () => {
-    const dir = tempDir('agentmate-spawn-helper-');
+    const dir = tempDir('runova-spawn-helper-');
     const unpacked = join(dir, 'app.asar.unpacked', 'node-pty');
     const helper = join('prebuilds', 'darwin-arm64', 'spawn-helper');
     const env: SpawnHelperEnv = {
@@ -139,7 +139,7 @@ describe('ensureSpawnHelper', () => {
 
   // Mode bits do not exist on Windows; the repair itself only runs on POSIX.
   it.skipIf(process.platform === 'win32')('repairs a real helper on disk', () => {
-    const dir = tempDir('agentmate-spawn-helper-');
+    const dir = tempDir('runova-spawn-helper-');
     const helperDir = join(dir, 'prebuilds', 'darwin-arm64');
     mkdirSync(helperDir, { recursive: true });
     const helper = join(helperDir, 'spawn-helper');
@@ -154,7 +154,7 @@ describe('ensureSpawnHelper', () => {
   });
 
   it.skipIf(process.platform === 'win32')('leaves a real healthy helper alone', () => {
-    const dir = tempDir('agentmate-spawn-helper-');
+    const dir = tempDir('runova-spawn-helper-');
     const helperDir = join(dir, 'prebuilds', 'darwin-arm64');
     mkdirSync(helperDir, { recursive: true });
     const helper = join(helperDir, 'spawn-helper');

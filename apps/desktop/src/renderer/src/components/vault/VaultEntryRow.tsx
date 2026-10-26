@@ -1,4 +1,4 @@
-import type { VaultEntrySummary } from '@agentmat/core';
+import type { VaultEntrySummary } from '@runova/core';
 import { motion } from 'framer-motion';
 import { Copy, Key, Star } from '@/components/icons';
 import { Button } from '@/components/ui/button';

@@ -1,23 +1,23 @@
 /**
  * Project health checks (E22). A project's app or site exposes one secured endpoint per
- * environment and server that answers in the AgentMate Health Protocol, and AgentMate polls it.
+ * environment and server that answers in the Runova Health Protocol, and Runova polls it.
  * These are the shapes both sides of the app share.
  */
 
-/** The protocol id a compliant endpoint puts in `agentmate.protocol`. */
-export const HEALTH_PROTOCOL = 'agentmate-health/1';
+/** The protocol id a compliant endpoint puts in `runova.protocol`. */
+export const HEALTH_PROTOCOL = 'runova-health/1';
 
 /** The media type a compliant endpoint answers with (from the IETF health check draft). */
 export const HEALTH_MEDIA_TYPE = 'application/health+json';
 
 /** The path the setup prompt suggests when the user does not pick one. */
-export const HEALTH_DEFAULT_PATH = '/_agentmate/health';
+export const HEALTH_DEFAULT_PATH = '/_runova/health';
 
 /** What a check or the whole endpoint reports about itself. */
 export type HealthCheckStatus = 'pass' | 'warn' | 'fail';
 
 /**
- * What AgentMate makes of one probe. The first three come from the endpoint itself; the rest
+ * What Runova makes of one probe. The first three come from the endpoint itself; the rest
  * describe a probe that never got a usable report back.
  */
 export type HealthProbeState =
@@ -74,7 +74,7 @@ export interface HealthReport {
   /** The endpoint's own top-level `output`, when it failed as a whole. */
   output: string | null;
   services: HealthServiceResult[];
-  /** What went wrong from AgentMate's side, in a sentence, when the probe got no good report. */
+  /** What went wrong from Runova's side, in a sentence, when the probe got no good report. */
   problem: string | null;
   /** The response body, pretty printed when it was JSON, redacted and trimmed. */
   raw: string | null;

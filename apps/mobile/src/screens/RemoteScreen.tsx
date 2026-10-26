@@ -1,4 +1,4 @@
-import { formatBytes } from '@agentmat/protocol';
+import { formatBytes } from '@runova/protocol';
 import { useState } from 'react';
 import { Pressable, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

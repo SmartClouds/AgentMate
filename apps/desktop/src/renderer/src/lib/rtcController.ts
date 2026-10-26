@@ -3,6 +3,8 @@ import {
   DC_CURSOR,
   DC_INPUT,
   decodeCursorState,
+  LEGACY_DC_CURSOR,
+  LEGACY_DC_INPUT,
   type RemoteCursorState,
   type RemoteInputEvent,
   type RemoteRtcMessage,
@@ -69,7 +71,7 @@ function setState(patch: Partial<ControllerRtcState>): void {
 export function initRtcController(): void {
   if (initialized) return;
   initialized = true;
-  window.agentmat.remote.onClientRtcSignal((message) => {
+  window.runova.remote.onClientRtcSignal((message) => {
     void handleSignal(message).catch(() => fallbackToTiles('negotiation error'));
   });
 }
@@ -78,7 +80,7 @@ export function initRtcController(): void {
 export function requestRemoteVideo(): void {
   if (pc || state.mode === 'webrtc') return;
   setState({ mode: 'negotiating' });
-  window.agentmat.remote.clientRtcSignal({ t: 'rtc-request' });
+  window.runova.remote.clientRtcSignal({ t: 'rtc-request' });
   fallbackTimer = window.setTimeout(() => {
     fallbackTimer = null;
     if (!state.stream) fallbackToTiles('timed out');
@@ -105,7 +107,7 @@ export function sendControllerInput(event: RemoteInputEvent): void {
       // fall through to the socket
     }
   }
-  window.agentmat.remote.sendInput(event);
+  window.runova.remote.sendInput(event);
 }
 
 export function isInputChannelOpen(): boolean {
@@ -140,7 +142,7 @@ function closePeer(): void {
 function fallbackToTiles(reason: string): void {
   closePeer();
   setState({ mode: 'tiles', stream: null, cursor: null });
-  window.agentmat.remote.clientRtcSignal({ t: 'rtc-cancel' });
+  window.runova.remote.clientRtcSignal({ t: 'rtc-cancel' });
   // biome-ignore lint/suspicious/noConsole: transport downgrade is worth surfacing
   console.warn(`[remote] video stream unavailable (${reason}); using tile fallback.`);
 }
@@ -186,9 +188,10 @@ async function acceptOffer(sdp: string): Promise<void> {
     if (pc !== connection) return;
     const channel = event.channel;
     channel.binaryType = 'arraybuffer';
-    if (channel.label === DC_INPUT) {
+    // A host from before the app was renamed opens them under the old labels.
+    if (channel.label === DC_INPUT || channel.label === LEGACY_DC_INPUT) {
       inputChannel = channel;
-    } else if (channel.label === DC_CURSOR) {
+    } else if (channel.label === DC_CURSOR || channel.label === LEGACY_DC_CURSOR) {
       channel.onmessage = (message) => {
         if (pc !== connection) return;
         const data = message.data;
@@ -201,7 +204,7 @@ async function acceptOffer(sdp: string): Promise<void> {
 
   connection.onicecandidate = (event) => {
     if (!event.candidate || pc !== connection) return;
-    window.agentmat.remote.clientRtcSignal({
+    window.runova.remote.clientRtcSignal({
       t: 'rtc-ice',
       candidate: event.candidate.candidate,
       sdpMid: event.candidate.sdpMid,
@@ -226,7 +229,7 @@ async function acceptOffer(sdp: string): Promise<void> {
   pendingIce = [];
   const answer = await connection.createAnswer();
   await connection.setLocalDescription(answer);
-  window.agentmat.remote.clientRtcSignal({ t: 'rtc-answer', sdp: answer.sdp ?? '' });
+  window.runova.remote.clientRtcSignal({ t: 'rtc-answer', sdp: answer.sdp ?? '' });
 }
 
 function startStatsSampling(connection: RTCPeerConnection): void {

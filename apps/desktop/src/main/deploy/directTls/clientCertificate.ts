@@ -99,7 +99,7 @@ export function clientCertificate(
   const publicKeyInfo = createPublicKey(privateKey).export({ format: 'der', type: 'spki' });
   const algorithm = sequence(objectIdentifier(OID.ecdsaWithSha256));
   const name = sequence(
-    set(sequence(objectIdentifier(OID.commonName), tlv(0x0c, Buffer.from('agentmate-device')))),
+    set(sequence(objectIdentifier(OID.commonName), tlv(0x0c, Buffer.from('runova-device')))),
   );
   const serial = Buffer.from(serialBytes);
   serial.writeUInt8(serial.readUInt8(0) & 0x7f, 0);

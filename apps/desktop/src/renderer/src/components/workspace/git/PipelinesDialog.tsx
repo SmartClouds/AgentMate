@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { ExternalLink, Github, RefreshCw } from '@/components/icons';
@@ -220,7 +220,7 @@ export function PipelinesDialog({
                   size="icon-sm"
                   aria-label="Open Actions on GitHub"
                   onClick={() =>
-                    void window.agentmat.shell.openExternal(`https://github.com/${repo}/actions`)
+                    void window.runova.shell.openExternal(`https://github.com/${repo}/actions`)
                   }
                 >
                   <ExternalLink className="h-3.5 w-3.5" />

@@ -1,4 +1,4 @@
-import type { PostmanCollection } from '@agentmat/core';
+import type { PostmanCollection } from '@runova/core';
 import type {
   ApiResponseData,
   ApiSentRequest,

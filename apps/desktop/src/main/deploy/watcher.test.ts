@@ -1,4 +1,4 @@
-import type { AppNotification } from '@agentmat/core';
+import type { AppNotification } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeCore } from '../../shared/deploy/testing/fakeCore';
 import { CoreLinks } from './live/coreLinks';

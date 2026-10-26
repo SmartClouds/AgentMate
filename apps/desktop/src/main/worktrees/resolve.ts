@@ -1,4 +1,4 @@
-import { type Project, parseScopeId, type WorktreeRecord } from '@agentmat/core';
+import { type Project, parseScopeId, type WorktreeRecord } from '@runova/core';
 import { store } from '../store';
 
 /**
@@ -26,7 +26,7 @@ export async function findProjectScope(id: string): Promise<ScopedProject | null
   return { ...project, id, folderPath: worktree.path, parentId: project.id, worktree };
 }
 
-/** Every worktree folder AgentMate knows about, so the file system guard lets them through. */
+/** Every worktree folder Runova knows about, so the file system guard lets them through. */
 export async function knownWorktreePaths(): Promise<string[]> {
   return (await store.getWorktrees()).map((w) => w.path);
 }

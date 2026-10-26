@@ -27,7 +27,7 @@ test.afterEach(async () => {
 });
 
 type Bridge = {
-  agentmat: {
+  runova: {
     studio: {
       updateSettings(p: unknown): Promise<unknown>;
       create(input: unknown): Promise<{ id: string }>;
@@ -97,7 +97,7 @@ function makeMedia(dir: string) {
 async function sceneVideo(page: Page, library: string, narration = ''): Promise<string> {
   return page.evaluate(
     async ({ library, html, narration, flicks }) => {
-      const { studio, studioScenes } = (window as unknown as Bridge).agentmat;
+      const { studio, studioScenes } = (window as unknown as Bridge).runova;
       await studio.updateSettings({ defaultRoot: library });
       const video = await studio.create({
         title: 'Timeline test',
@@ -155,10 +155,10 @@ test('lays media and a Persian caption over the scenes, edits them, and renders 
   const app = await launchApp({});
   opened.push(app);
   const media = makeMedia(join(app.root, 'media'));
-  const videoId = await sceneVideo(app.page, join(app.root, 'Videos', 'AgentMate Studio'));
+  const videoId = await sceneVideo(app.page, join(app.root, 'Videos', 'Runova Studio'));
   const imported = await app.page.evaluate(
     ({ videoId, paths }) =>
-      (window as unknown as Bridge).agentmat.studioMedia.importFiles(videoId, paths),
+      (window as unknown as Bridge).runova.studioMedia.importFiles(videoId, paths),
     { videoId, paths: [media.clip, media.song] },
   );
   expect(imported.imported.map((m) => m.name)).toEqual(['beach.mp4', 'song.wav']);
@@ -205,7 +205,7 @@ test('lays media and a Persian caption over the scenes, edits them, and renders 
 
   // Everything is saved: reopening the video brings the clips back.
   const saved = await page.evaluate(async (id) => {
-    const result = await (window as unknown as Bridge).agentmat.studio.open(id);
+    const result = await (window as unknown as Bridge).runova.studio.open(id);
     return result.session.document.timeline.clips.length;
   }, videoId);
   expect(saved).toBe(4);
@@ -221,7 +221,7 @@ test('lays media and a Persian caption over the scenes, edits them, and renders 
       async () =>
         (
           await page.evaluate(
-            (id) => (window as unknown as Bridge).agentmat.studioRender.jobs(id),
+            (id) => (window as unknown as Bridge).runova.studioRender.jobs(id),
             videoId,
           )
         )[0]?.status,
@@ -231,7 +231,7 @@ test('lays media and a Persian caption over the scenes, edits them, and renders 
     )
     .toBe('done');
   const [job] = await page.evaluate(
-    (id) => (window as unknown as Bridge).agentmat.studioRender.jobs(id),
+    (id) => (window as unknown as Bridge).runova.studioRender.jobs(id),
     videoId,
   );
   const output = job?.output as string;
@@ -310,10 +310,10 @@ test('a 500-clip timeline draws only the clips in view and stays quick to scroll
   const app = await launchApp({});
   opened.push(app);
   const page = app.page;
-  const videoId = await sceneVideo(page, join(app.root, 'Videos', 'AgentMate Studio'));
+  const videoId = await sceneVideo(page, join(app.root, 'Videos', 'Runova Studio'));
   await page.evaluate(
     async ({ id, flicks }) => {
-      const { studio } = (window as unknown as Bridge).agentmat;
+      const { studio } = (window as unknown as Bridge).runova;
       const session = await studio.open(id);
       await studio.applyEdits({
         videoId: id,

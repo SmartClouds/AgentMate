@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import type { SecretEnvelope } from '../../shared/apiTypes';
-import type { AlertSeverity } from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { AlertSeverity } from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployDirectTlsPin } from '../../shared/deployDirectTlsTypes';
 import type { DeployCoreRecord, DeployTransport } from '../../shared/deployTypes';
 import type { SealedSecretStore } from '../ssh/vault';

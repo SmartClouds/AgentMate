@@ -104,7 +104,7 @@ export const useBrowserStore = create<BrowserState>()(
         }),
     }),
     {
-      name: 'agentmate-browser',
+      name: 'runova-browser',
       version: 1,
       partialize: (state) => ({ recentUrls: state.recentUrls }),
     },

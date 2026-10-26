@@ -4,7 +4,7 @@ import type {
   WpRollbackReason,
   WpScope,
   WpUnixSeconds,
-} from '@agentmat/core';
+} from '@runova/core';
 import type {
   DeployWordPressPhase,
   DeployWordPressProgressEvent,
@@ -29,7 +29,7 @@ export type WpProblemContext = 'connect' | 'site';
 
 const PROBLEMS: Record<WordPressErrorCode, string> = {
   badRequest:
-    "The site didn't understand the request. Update the AgentMate Connector plugin on the site, then try again.",
+    "The site didn't understand the request. Update the Runova Connector plugin on the site, then try again.",
   unauthorized:
     "The site didn't accept this computer's signature. Disconnect the site and connect it again with a new key.",
   badSignature:
@@ -40,16 +40,16 @@ const PROBLEMS: Record<WordPressErrorCode, string> = {
   unknownConnection:
     'The site no longer knows this computer. It may have been removed in wp-admin. Disconnect it here and connect again with a new key.',
   revoked:
-    "This computer's access was revoked on the site. Make a new key in Tools > AgentMate Connector and connect again.",
+    "This computer's access was revoked on the site. Make a new key in Tools > Runova Connector and connect again.",
   readOnly: 'Read-only key. You can pull files from this site but not deploy to it.',
   fileModsDisabled:
     'File changes are switched off on this site (DISALLOW_FILE_MODS in wp-config.php), so nothing can be deployed. Pulling still works.',
   notDirect:
     'WordPress can\'t write files directly on this host (its filesystem method isn\'t "direct"), so nothing can be deployed. Pulling still works.',
   disabled:
-    'The connector is switched off on this site (AGENTMATE_CONNECTOR_DISABLED in wp-config.php).',
+    'The connector is switched off on this site (RUNOVA_CONNECTOR_DISABLED in wp-config.php).',
   pathRejected:
-    'The site refused a file path. Only theme, plugin and mu-plugin files are ever written, and agent or AgentMate files never are.',
+    'The site refused a file path. Only theme, plugin and mu-plugin files are ever written, and agent or Runova files never are.',
   itemUnknown: "The site doesn't have that theme or plugin anymore.",
   itemProtected: "That's the connector itself, which is never pulled or deployed.",
   deployUnknown: "The site doesn't know that deploy anymore. Its snapshot may have been cleared.",
@@ -63,9 +63,9 @@ const PROBLEMS: Record<WordPressErrorCode, string> = {
   rateLimited:
     'Too many failed attempts came from this network, so the site locked it out for 15 minutes. Try again later.',
   pairingInvalid:
-    "The site didn't accept this key. It may have been used already or deleted. Make a new key in Tools > AgentMate Connector.",
+    "The site didn't accept this key. It may have been used already or deleted. Make a new key in Tools > Runova Connector.",
   pairingExpired:
-    'This key has expired. Keys work once, for 15 minutes. Make a new one in Tools > AgentMate Connector.',
+    'This key has expired. Keys work once, for 15 minutes. Make a new one in Tools > Runova Connector.',
   protocolMismatch:
     'The connector on the site and this app speak different versions. Update whichever one is older.',
   updateRefused:
@@ -74,15 +74,15 @@ const PROBLEMS: Record<WordPressErrorCode, string> = {
   vaultLocked:
     "Your saved servers are locked with a passkey, and this site's key with them. Unlock them, then try again.",
   foreignResponse:
-    'Something other than the connector answered: a firewall, a CDN challenge or a host error page. Allow requests to /wp-json/agentmate/v1 and admin-ajax.php through the firewall (on Cloudflare, a rule that skips the challenge for them), then try again.',
+    'Something other than the connector answered: a firewall, a CDN challenge or a host error page. Allow requests to /wp-json/runova/v1 and admin-ajax.php through the firewall (on Cloudflare, a rule that skips the challenge for them), then try again.',
   badResponseSignature:
     "A reply claimed to come from the connector, but its signature didn't check out, so it was ignored. Something between you and the site may be changing replies.",
   siteKeyMismatch:
     "The site's identity doesn't match the key. If the connector was reinstalled, make a new key. If not, something may be pretending to be your site, so don't connect.",
   redirected:
-    "The site answered with a redirect, and AgentMate never follows redirects on signed calls. Make the key again from the site's final address (https, with or without www).",
+    "The site answered with a redirect, and Runova never follows redirects on signed calls. Make the key again from the site's final address (https, with or without www).",
   plainHttpRefused:
-    'This site uses plain HTTP, which AgentMate refuses unless you allow it for this site. Without HTTPS, anyone on the network can read the files. Allow it under Access.',
+    'This site uses plain HTTP, which Runova refuses unless you allow it for this site. Without HTTPS, anyone on the network can read the files. Allow it under Access.',
   tlsUntrusted:
     "This computer doesn't trust the site's HTTPS certificate (self-signed, expired, or made out to another name). Fix the certificate on the host or trust it in your system.",
   httpAuthRequired:
@@ -91,9 +91,9 @@ const PROBLEMS: Record<WordPressErrorCode, string> = {
   timeout: 'The site took too long to answer. Try again in a moment.',
   cancelled: 'Cancelled.',
   keyInvalid:
-    "This isn't a connection key AgentMate can read. Copy the whole key again from Tools > AgentMate Connector; it starts with amwp1.",
+    "This isn't a connection key Runova can read. Copy the whole key again from Tools > Runova Connector; it starts with amwp1.",
   keyExpired:
-    'This key has expired. Keys work once, for 15 minutes. Make a new one in Tools > AgentMate Connector.',
+    'This key has expired. Keys work once, for 15 minutes. Make a new one in Tools > Runova Connector.',
   connectorOutdated:
     'The connector on this site is older than this app needs. Download the latest plugin and upload it in wp-admin.',
   bodyTooLarge:
@@ -103,7 +103,7 @@ const PROBLEMS: Record<WordPressErrorCode, string> = {
   planExpired: 'The review expired after 15 minutes. Review the changes again.',
   operationBusy: 'Another pull or deploy for this site is still running.',
   folderNotEmpty: "The project's theme or plugin folders already hold files.",
-  siteUnknown: "AgentMate doesn't know this site anymore. It may have been disconnected.",
+  siteUnknown: "Runova doesn't know this site anymore. It may have been disconnected.",
   projectNotLinked: "This project isn't linked to a WordPress site.",
 };
 
@@ -114,7 +114,7 @@ const CONNECT_PROBLEMS: Partial<Record<WordPressErrorCode, string>> = {
   httpAuthRequired:
     'The site asks for an HTTP sign-in, as staging sites often do. Turn on "HTTP sign-in" below and add its user name and password.',
   plainHttpRefused:
-    'This site uses plain HTTP, which AgentMate refuses unless you allow it below. Without HTTPS, anyone on the network can read the files.',
+    'This site uses plain HTTP, which Runova refuses unless you allow it below. Without HTTPS, anyone on the network can read the files.',
 };
 
 /**
@@ -216,7 +216,7 @@ export const ROLLBACK_REASON: Record<WpRollbackReason, string> = {
     'The site stopped working properly after the deploy, so it put the old files back on its own.',
   fatalError: 'A changed file caused a PHP fatal error, so the site put the old files back.',
   notConfirmed:
-    "AgentMate didn't confirm the deploy in time (the connection may have dropped), so the site put the old files back on its own.",
+    "Runova didn't confirm the deploy in time (the connection may have dropped), so the site put the old files back on its own.",
   interrupted: 'The deploy was interrupted partway, so the site put the old files back.',
 };
 
@@ -308,7 +308,7 @@ export function fileChangesStatus(
   if (info.readOnlyByConstant) {
     return {
       allowed: false,
-      text: 'Off. AGENTMATE_CONNECTOR_READ_ONLY is set in wp-config.php, so the connector only reads. Pulling still works.',
+      text: 'Off. RUNOVA_CONNECTOR_READ_ONLY is set in wp-config.php, so the connector only reads. Pulling still works.',
     };
   }
   if (info.filesystemMethod !== 'direct') {

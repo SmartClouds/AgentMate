@@ -2,14 +2,14 @@
 title: Remote
 category: Connect
 order: 10
-summary: Control another AgentMate over your network, connect to servers over SSH, open Windows Remote Desktop sessions, and pair the AgentMate mobile app.
+summary: Control another Runova over your network, connect to servers over SSH, open Windows Remote Desktop sessions, and pair the Runova mobile app.
 keywords: remote, ssh, remote control, host, pairing code, qr code, mobile, phone, companion app, servers, saved servers, host key, passkey, lan, rdp, connect, sudo, su, saved password, enter saved password
 route: /remote
 ---
 
-The Remote page is where you reach other computers. It has four tabs: **Host** (let another AgentMate or the mobile app control this computer), **Connect** (control another AgentMate), **SSH** (saved servers you open in a terminal tab) and **Remote Desktop** (saved Windows machines you open in their own window).
+The Remote page is where you reach other computers. It has four tabs: **Host** (let another Runova or the mobile app control this computer), **Connect** (control another Runova), **SSH** (saved servers you open in a terminal tab) and **Remote Desktop** (saved Windows machines you open in their own window).
 
-Two sets of tools live here. The first is a remote control that works between AgentMate installs on the same network, and from the AgentMate mobile app. The second is a saved server list for SSH and Remote Desktop.
+Two sets of tools live here. The first is a remote control that works between Runova installs on the same network, and from the Runova mobile app. The second is a saved server list for SSH and Remote Desktop.
 
 ## Where to find it
 
@@ -35,8 +35,8 @@ Use the **Host** tab on the computer you want to be controlled. The card **Allow
 
 Once hosting, a **Pairing code** card appears.
 
-1. Click **Generate pairing code**. A QR code and a text code (starting with `AGENTMATE1:`) appear.
-2. Give the code to the other device: scan the QR with the AgentMate mobile app, or copy the text with **Copy code** and paste it on the other computer.
+1. Click **Generate pairing code**. A QR code and a text code (starting with `RUNOVA1:`) appear.
+2. Give the code to the other device: scan the QR with the Runova mobile app, or copy the text with **Copy code** and paste it on the other computer.
 3. Click **New code** whenever you need a fresh one.
 
 Each code works once and expires after 5 minutes. Generating a new code cancels the old one. A device that paired successfully is remembered by the host, so it can reconnect later without a new code. Stopping and starting hosting does not forget paired devices.
@@ -49,9 +49,9 @@ The **Connected controllers** card lists each device that is connected, with its
 - **Send file.** Opens a file picker and sends the file to the connected device.
 - A quality badge next to the Start/Stop button (Excellent, Good, Fair or Poor) with the current speed and round trip time in milliseconds.
 
-While someone is connected, AgentMate keeps the host's display from going to sleep.
+While someone is connected, Runova keeps the host's display from going to sleep.
 
-## Connect: control another AgentMate
+## Connect: control another Runova
 
 Use the **Connect** tab on the computer you are sitting at.
 
@@ -133,20 +133,20 @@ By default, saved passwords and key passphrases are protected by your operating 
 
 ### Host key prompts
 
-The first time you connect to a server, AgentMate saves its host key fingerprint. If the key later changes, AgentMate stops and shows a dialog titled "(name)'s identity changed" with the **Trusted before** and **Presented now** fingerprints. A changed key is normal after a reinstall, but it can also mean someone is intercepting the connection. Compare it with your hosting provider (on the server, `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` prints the fingerprint). Then choose:
+The first time you connect to a server, Runova saves its host key fingerprint. If the key later changes, Runova stops and shows a dialog titled "(name)'s identity changed" with the **Trusted before** and **Presented now** fingerprints. A changed key is normal after a reinstall, but it can also mean someone is intercepting the connection. Compare it with your hosting provider (on the server, `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` prints the fingerprint). Then choose:
 
 - **Don't connect** (the default, safe choice).
 - **Trust the new key** to save it and connect.
 
 ### Saved password at sudo and su prompts
 
-When a server signs in with a saved password and the shell then asks for a password, such as a `sudo` or `su` prompt, an **Enter saved password** button appears at the bottom right of the terminal. Click it and AgentMate types the saved password and presses `Enter` for you, then hands the keyboard back to the terminal. The password stays inside AgentMate and is never shown on screen. If it cannot be read, a message tells you to type it in the terminal yourself.
+When a server signs in with a saved password and the shell then asks for a password, such as a `sudo` or `su` prompt, an **Enter saved password** button appears at the bottom right of the terminal. Click it and Runova types the saved password and presses `Enter` for you, then hands the keyboard back to the terminal. The password stays inside Runova and is never shown on screen. If it cannot be read, a message tells you to type it in the terminal yourself.
 
 The button only shows while the prompt is waiting, and it comes back at the next prompt. It does not appear for servers that sign in with a private key, and not while an AI task is running in that tab, since the AI answers its own prompts.
 
 ### AI history on a server
 
-The clock button opens a sheet named after the server. It lists the conversations every supported agent CLI has stored on that machine, grouped by folder and day. Search them, filter by tool, show or hide background runs, and click one to resume it in a new SSH tab (AgentMate changes into that folder and runs the tool's resume command). The server is asked only when you open the sheet or click **Refresh**. If a tool is not installed on the server, a warning chip says so.
+The clock button opens a sheet named after the server. It lists the conversations every supported agent CLI has stored on that machine, grouped by folder and day. Search them, filter by tool, show or hide background runs, and click one to resume it in a new SSH tab (Runova changes into that folder and runs the tool's resume command). The server is asked only when you open the sheet or click **Refresh**. If a tool is not installed on the server, a warning chip says so.
 
 ### Ask AI in an SSH terminal
 
@@ -191,21 +191,21 @@ The robot dialog lists the last few tasks on this server (or in this terminal, f
 
 In **History**, an ended task has a box for what to do next. Sending it continues the task in the same terminal, the way it ran. **Run again** and **More options** open the robot dialog on it, so you can change how it runs first. A continued task starts with a link back to the task it continued. From a server's history sheet, these open the robot dialog in an SSH tab on that server, using one already open when there is one.
 
-Tasks run on a saved server are kept after AgentMate closes, up to 50 per server. Tasks in a local terminal are kept until AgentMate closes. The trash button next to **Ask AI tasks** in a server's history sheet clears its finished tasks, and removing the server clears them too.
+Tasks run on a saved server are kept after Runova closes, up to 50 per server. Tasks in a local terminal are kept until Runova closes. The trash button next to **Ask AI tasks** in a server's history sheet clears its finished tasks, and removing the server clears them too.
 
 ## Remote Desktop: saved Windows servers
 
 The **Remote Desktop** tab keeps saved Windows servers and PCs. **Connect** opens the session in its own window. Adding a server, the session window, file copying and Ask AI are covered in [Remote Desktop](remote-desktop.md).
 
-## The AgentMate mobile app
+## The Runova mobile app
 
-AgentMate has a companion app for iPhone and Android that works as a remote control for a computer running AgentMate. It is controller only: you control your computer from the phone. You cannot host from the phone, and sending files is not available on mobile yet.
+Runova has a companion app for iPhone and Android that works as a remote control for a computer running Runova. It is controller only: you control your computer from the phone. You cannot host from the phone, and sending files is not available on mobile yet.
 
 ### Pair your phone
 
 1. Your phone and the computer must be on the same Wi-Fi network.
 2. On the computer, open **Remote**, **Host**, start hosting and click **Generate pairing code**.
-3. On the phone, open the app. Tap **Scan QR** and point the camera at the code, or paste the `AGENTMATE1:...` code into the box under **Pair a new computer** and tap **Connect**.
+3. On the phone, open the app. Tap **Scan QR** and point the camera at the code, or paste the `RUNOVA1:...` code into the box under **Pair a new computer** and tap **Connect**.
 4. You only pair once. The computer is saved under **My computers** on the phone. Tap it to reconnect later. Tap the pencil next to it to rename it (**Save**) or remove it (**Forget**).
 
 ### Using the phone as a remote
@@ -221,7 +221,7 @@ Once connected, the computer's screen fills the phone.
 
 - Remote control is for computers you own or are allowed to control. Only the person at the host can create a pairing code, and only for 5 minutes.
 - If a connection feels slow, check the quality badge. Fair or Poor usually means a weak Wi-Fi link.
-- A computer you paired once stays paired after you restart AgentMate, so you do not need a new code each time.
+- A computer you paired once stays paired after you restart Runova, so you do not need a new code each time.
 
 ## Related
 

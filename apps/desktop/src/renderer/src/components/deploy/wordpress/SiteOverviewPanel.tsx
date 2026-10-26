@@ -1,4 +1,4 @@
-import { WP_CONNECTOR_VERSION, WP_PROTOCOL_VERSION } from '@agentmat/core';
+import { WP_CONNECTOR_VERSION, WP_PROTOCOL_VERSION } from '@runova/core';
 import type { DeployWordPressSite, DeployWordPressSiteInfo } from '@shared/deployWordPressTypes';
 import { wordPressErrorCode } from '@shared/wordpressErrors';
 import {
@@ -123,7 +123,7 @@ function NewerConnector({
   if (info.selfUpdate === true) {
     why =
       site.scope === 'read'
-        ? "This connection is read-only, so it can't update the connector from here. Make a read and write key in Tools > AgentMate Connector, or upload the new one in wp-admin."
+        ? "This connection is read-only, so it can't update the connector from here. Make a read and write key in Tools > Runova Connector, or upload the new one in wp-admin."
         : "File changes are switched off on this site (see File changes below), so the connector can't be updated from here. Upload the new one in wp-admin when it suits you.";
   } else if (info.selfUpdate === false) {
     why =
@@ -160,7 +160,7 @@ function ConnectorUpdateNotice({
         {result.source === 'site' && ' The site downloaded it from GitHub itself.'}
         {result.downloadProblem && (
           <>
-            {" The site couldn't download it itself, so AgentMate sent the files. "}
+            {" The site couldn't download it itself, so Runova sent the files. "}
             <span className="text-muted-foreground">{result.downloadProblem}</span>
           </>
         )}
@@ -190,7 +190,7 @@ function ConnectorNotice({ info }: { info: DeployWordPressSiteInfo }): React.JSX
     return (
       <div className="flex flex-col gap-2">
         <Notice role="alert" tone="warning" icon={TriangleAlert}>
-          The connector on this site ({info.pluginVersion}) is older than this version of AgentMate
+          The connector on this site ({info.pluginVersion}) is older than this version of Runova
           expects, so pulls and deploys may fail. Download the latest plugin below and upload it in
           the site's admin. Uploading it over the old one keeps the connection.
         </Notice>
@@ -201,8 +201,8 @@ function ConnectorNotice({ info }: { info: DeployWordPressSiteInfo }): React.JSX
   if (info.protocol > WP_PROTOCOL_VERSION) {
     return (
       <Notice role="alert" tone="warning" icon={TriangleAlert}>
-        The connector on this site is newer than this version of AgentMate. Update AgentMate so the
-        two speak the same language.
+        The connector on this site is newer than this version of Runova. Update Runova so the two
+        speak the same language.
       </Notice>
     );
   }
@@ -314,7 +314,7 @@ export function SiteOverviewPanel({ site }: { site: DeployWordPressSite }): Reac
         <DeployCard
           icon={<Plug />}
           title="Connector"
-          description="The AgentMate Connector plugin on the site."
+          description="The Runova Connector plugin on the site."
         >
           {loading ? (
             <CardSkeleton rows={4} />
@@ -355,7 +355,7 @@ export function SiteOverviewPanel({ site }: { site: DeployWordPressSite }): Reac
                 ) : info.loopback === 'failed' ? (
                   <Status tone="bad">
                     The site can't reach itself (loopback requests fail), so it can't check a deploy
-                    from the inside. AgentMate still checks the home page from here.
+                    from the inside. Runova still checks the home page from here.
                   </Status>
                 ) : (
                   <Status tone="neutral">Not checked yet.</Status>

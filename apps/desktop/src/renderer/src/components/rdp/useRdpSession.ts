@@ -123,12 +123,12 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
   }, []);
 
   useEffect(() => {
-    const offCertificate = window.agentmat.rdp.onCertificatePrompt((prompt) => {
+    const offCertificate = window.runova.rdp.onCertificatePrompt((prompt) => {
       if (prompt.sessionId !== sessionId) return;
       lastCertificateRef.current = prompt;
       setCertificate(prompt);
     });
-    const offProxyError = window.agentmat.rdp.onProxyError((payload) => {
+    const offProxyError = window.runova.rdp.onProxyError((payload) => {
       if (payload.sessionId === sessionId) proxyFailureRef.current = payload;
     });
     return () => {
@@ -145,7 +145,7 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
   const syncClipboardFiles = useCallback(async () => {
     const provider = providerRef.current;
     if (!provider || !connectedRef.current) return;
-    const result = await window.agentmat.rdp.readClipboardFiles(
+    const result = await window.runova.rdp.readClipboardFiles(
       sessionId,
       clipboardSignatureRef.current,
     );
@@ -175,7 +175,7 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
             ? null
             : new File(
                 [
-                  (await window.agentmat.rdp.readClipboardFile(
+                  (await window.runova.rdp.readClipboardFile(
                     sessionId,
                     result.signature,
                     index,
@@ -249,7 +249,7 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
         if (superseded()) return failed;
         const file = files[index];
         try {
-          await window.agentmat.rdp.prepareDownloadEntry(downloadId, index, {
+          await window.runova.rdp.prepareDownloadEntry(downloadId, index, {
             name: file.name,
             path: file.path,
             isDirectory: file.isDirectory === true,
@@ -275,13 +275,13 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
             const chunk = new Uint8Array(
               await blob.slice(offset, offset + WRITE_CHUNK_BYTES).arrayBuffer(),
             );
-            await window.agentmat.rdp.writeDownloadChunk(downloadId, index, chunk);
+            await window.runova.rdp.writeDownloadChunk(downloadId, index, chunk);
           }
-          await window.agentmat.rdp.finishDownloadFile(downloadId, index, true);
+          await window.runova.rdp.finishDownloadFile(downloadId, index, true);
           upsertTransfer(key, { state: 'done', transferred: blob.size, total: blob.size });
         } catch (error) {
           failed++;
-          await window.agentmat.rdp
+          await window.runova.rdp
             .finishDownloadFile(downloadId, index, false)
             .catch(() => undefined);
           upsertTransfer(key, {
@@ -312,7 +312,7 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
       const run = async (): Promise<void> => {
         if (superseded()) return;
         const totalBytes = files.reduce((sum, file) => sum + (file.isDirectory ? 0 : file.size), 0);
-        const start = await window.agentmat.rdp.beginStaging(sessionId, totalBytes);
+        const start = await window.runova.rdp.beginStaging(sessionId, totalBytes);
         if (superseded()) return;
         if (!start.ok) {
           setRemoteClipboard('idle');
@@ -336,7 +336,7 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
           return;
         }
 
-        const result = await window.agentmat.rdp.finishStaging(sessionId, start.downloadId);
+        const result = await window.runova.rdp.finishStaging(sessionId, start.downloadId);
         if (superseded()) return;
         if (!result.ok) {
           setRemoteClipboard('idle');
@@ -364,7 +364,7 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
     const provider = providerRef.current;
     const files = remoteFiles;
     if (!provider || files.length === 0) return;
-    const target = await window.agentmat.rdp.beginDownload(sessionId);
+    const target = await window.runova.rdp.beginDownload(sessionId);
     if (!target) return;
 
     const failed = await downloadInto(provider, target.downloadId, files);
@@ -377,7 +377,7 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
           : `Saved to ${target.folder}.`,
       action: {
         label: 'Open folder',
-        run: () => void window.agentmat.rdp.openDownloadFolder(target.downloadId),
+        run: () => void window.runova.rdp.openDownloadFolder(target.downloadId),
       },
     });
   }, [remoteFiles, sessionId, downloadInto]);
@@ -400,7 +400,7 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
 
     void (async () => {
       try {
-        const ticket = await window.agentmat.rdp.getTicket(sessionId);
+        const ticket = await window.runova.rdp.getTicket(sessionId);
         if (cancelled) return;
         setNickname(ticket.nickname);
         setOptions(ticket.options);
@@ -498,7 +498,7 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
           .withDestination(ticket.destination)
           .withProxyAddress(ticket.proxyUrl)
           // The proxy authorizes by the one-time token in its URL; this field is unused there.
-          .withAuthToken('agentmate')
+          .withAuthToken('runova')
           .withDesktopSize({ width: initial.width, height: initial.height })
           .withExtension(enableCredssp(ticket.options.nla));
         if (fitWindow) builder.withExtension(displayControl(true));
@@ -618,7 +618,7 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
     },
     respondCertificate: async (trust: boolean) => {
       setCertificate(null);
-      await window.agentmat.rdp.respondCertificate(sessionId, trust);
+      await window.runova.rdp.respondCertificate(sessionId, trust);
       if (trust) setAttempt((n) => n + 1);
     },
     setScale: (next: RdpScale) => {

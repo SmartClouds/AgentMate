@@ -5,9 +5,9 @@ Milestone: standalone (Ship). Depends on: none.
 ## Goal
 
 Show whether the apps and sites behind each project work, on every environment and server they
-run on. Each target is a private endpoint in the user's app that answers in the AgentMate Health
+run on. Each target is a private endpoint in the user's app that answers in the Runova Health
 Protocol (built on the IETF `application/health+json` draft): every service it depends on, its
-status, and the full error of the ones that fail. AgentMate polls each target on its own interval,
+status, and the full error of the ones that fail. Runova polls each target on its own interval,
 opens an incident when a failure repeats, runs a read-only AI diagnosis, and hands the failure to
 the project's agent to fix. A setup prompt carries the whole protocol, including its security
 rules, so the user's AI can build a compatible endpoint into any stack.
@@ -60,7 +60,7 @@ rules, so the user's AI can build a compatible endpoint into any stack.
 ## Implementation notes
 
 - The protocol keeps the draft's field names so existing health libraries fit, and adds an
-  `agentmate` object per failing check for error detail and one at the top for the protocol id.
+  `runova` object per failing check for error detail and one at the top for the protocol id.
 - A pass with a failing check reads as warn, and a pass on a 5xx reads as fail, so an endpoint
   cannot hide a problem by mistake.
 - The feature is called Monitoring in the app (menu, page, project tab, route `/monitoring`). The

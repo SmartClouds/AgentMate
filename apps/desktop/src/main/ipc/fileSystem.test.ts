@@ -24,7 +24,7 @@ const project = { dir: '' };
 expectChannelsCovered(IPC.fs);
 
 beforeEach(async () => {
-  project.dir = tempDir('agentmate-fs-project-');
+  project.dir = tempDir('runova-fs-project-');
   writeTree(project.dir, {
     'README.md': '# demo\n',
     'src/index.ts': 'export const a = 1;\n',
@@ -46,7 +46,7 @@ describe('fs:readFile', () => {
 
   it('refuses a path outside every allowed root', async () => {
     // A sibling temp folder: it exists and is readable, so only the guard stops this.
-    const outside = writeTree(tempDir('agentmate-fs-outside-'), { 'secret.txt': 'do not read' });
+    const outside = writeTree(tempDir('runova-fs-outside-'), { 'secret.txt': 'do not read' });
     await expect(invoke(IPC.fs.readFile, join(outside, 'secret.txt'))).rejects.toThrow(
       'outside of the allowed directories',
     );
@@ -60,9 +60,9 @@ describe('fs:readFile', () => {
     );
   });
 
-  it('reads inside a worktree folder AgentMate knows about', async () => {
+  it('reads inside a worktree folder Runova knows about', async () => {
     // Worktrees live next to the repository, outside the project folder, by default.
-    const worktree = writeTree(tempDir('agentmate-fs-worktree-'), { 'notes.md': 'in the tree' });
+    const worktree = writeTree(tempDir('runova-fs-worktree-'), { 'notes.md': 'in the tree' });
     userData.writeData('worktrees.json', [
       {
         id: 'wt-1',
@@ -108,7 +108,7 @@ describe('fs:readImage', () => {
   });
 
   it('refuses an image outside every allowed root', async () => {
-    const outside = tempDir('agentmate-fs-outside-image-');
+    const outside = tempDir('runova-fs-outside-image-');
     writeFileSync(join(outside, 'secret.png'), Buffer.from([0]));
     await expect(invoke(IPC.fs.readImage, join(outside, 'secret.png'))).rejects.toThrow(
       'outside of the allowed directories',
@@ -124,7 +124,7 @@ describe('fs:writeFile', () => {
   });
 
   it('refuses to write outside the allowed roots even though the parent exists', async () => {
-    const outside = tempDir('agentmate-fs-outside-write-');
+    const outside = tempDir('runova-fs-outside-write-');
     await expect(invoke(IPC.fs.writeFile, join(outside, 'planted.txt'), 'x')).rejects.toThrow(
       'outside of the allowed directories',
     );
@@ -132,7 +132,7 @@ describe('fs:writeFile', () => {
 
   it('stops a write aimed at a file that does not exist yet outside the roots', async () => {
     // The guard resolves the nearest existing ancestor, so a brand new path is still checked.
-    const outside = tempDir('agentmate-fs-outside-new-');
+    const outside = tempDir('runova-fs-outside-new-');
     await expect(invoke(IPC.fs.writeFile, join(outside, 'a', 'b', 'c.txt'), 'x')).rejects.toThrow(
       'outside of the allowed directories',
     );
@@ -148,7 +148,7 @@ describe('fs:listDirectory', () => {
   });
 
   it('refuses a directory outside the allowed roots', async () => {
-    const outside = tempDir('agentmate-fs-outside-list-');
+    const outside = tempDir('runova-fs-outside-list-');
     await expect(invoke(IPC.fs.listDirectory, outside)).rejects.toThrow(
       'outside of the allowed directories',
     );
@@ -175,7 +175,7 @@ describe('fs:writeScratchFile', () => {
 
 describe('fs:saveFileAs', () => {
   it('writes to the path the save dialog returned', async () => {
-    const target = join(tempDir('agentmate-fs-save-'), 'export.json');
+    const target = join(tempDir('runova-fs-save-'), 'export.json');
     queueDialog('showSaveDialog', { canceled: false, filePath: target });
     expect(await invoke<string | null>(IPC.fs.saveFileAs, 'export.json', '{"a":1}')).toBe(target);
     expect(readFileSync(target, 'utf-8')).toBe('{"a":1}');

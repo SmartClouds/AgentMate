@@ -26,7 +26,7 @@ function rank(run: RelayRunView): number {
 function useLiveRelays(): RelayRunView[] {
   const projects = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   });
   const [runs, setRuns] = useState<Record<string, RelayRunView>>({});
 
@@ -37,7 +37,7 @@ function useLiveRelays(): RelayRunView[] {
     void Promise.all(
       ids.split('|').map((id) =>
         Promise.resolve()
-          .then(() => window.agentmat.relay.runs(id))
+          .then(() => window.runova.relay.runs(id))
           .catch((): RelayRunView[] => []),
       ),
     ).then((lists) => {
@@ -55,7 +55,7 @@ function useLiveRelays(): RelayRunView[] {
 
   useEffect(
     () =>
-      window.agentmat.relay.onRun((run) =>
+      window.runova.relay.onRun((run) =>
         setRuns((current) => {
           const { [run.id]: _old, ...rest } = current;
           return isLive(run) ? { ...rest, [run.id]: run } : rest;

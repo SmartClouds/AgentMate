@@ -29,7 +29,7 @@ export function newerCore(
 export function useCoreRelease() {
   return useQuery({
     queryKey: queryKeys.deployCoreRelease,
-    queryFn: () => window.agentmat.deploy.coreRelease(),
+    queryFn: () => window.runova.deploy.coreRelease(),
     staleTime: Number.POSITIVE_INFINITY,
     meta: { silentLoading: true },
   });

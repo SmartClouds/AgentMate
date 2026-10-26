@@ -1,7 +1,7 @@
 import type {
   ContainerList,
   SiteInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, Download, RefreshCw, Robot } from '@/components/icons';
 import { SearchPill } from '@/components/pageKit';

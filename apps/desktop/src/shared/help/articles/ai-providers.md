@@ -6,7 +6,7 @@ summary: Add an OpenAI key, a Gemini key or a local Ollama server in Settings so
 keywords: openai, gemini, ollama, api key, provider, model, chatgpt, google ai studio, local model, llm, context length, num_ctx, keep alive, test connection, prompt builder provider, ask ai, base url
 ---
 
-AI providers are the three services AgentMate can call directly for a quick answer: OpenAI, Gemini and Ollama. You give AgentMate an API key (OpenAI, Gemini) or the address of a server (Ollama), pick a default model, and the features that need a model use it. Nothing here needs an AI CLI to be installed. Without a provider, Ask AI, Prompt Builder and the Help page's **Ask the guide** chat have nothing to talk to.
+AI providers are the three services Runova can call directly for a quick answer: OpenAI, Gemini and Ollama. You give Runova an API key (OpenAI, Gemini) or the address of a server (Ollama), pick a default model, and the features that need a model use it. Nothing here needs an AI CLI to be installed. Without a provider, Ask AI, Prompt Builder and the Help page's **Ask the guide** chat have nothing to talk to.
 
 ## Where to find it
 
@@ -56,7 +56,7 @@ Ollama runs models on your own computer (or on a server you control), so there i
 
 ### If Ollama is not reachable
 
-You will see "Could not reach Ollama at <address>. Is it running?" Start Ollama, check the address, and click **Test connection** again. Local models can be slow to load and answer on a CPU, so Ollama requests are allowed up to 10 minutes before AgentMate gives up. OpenAI and Gemini requests are stopped after 3 minutes with no answer.
+You will see "Could not reach Ollama at <address>. Is it running?" Start Ollama, check the address, and click **Test connection** again. Local models can be slow to load and answer on a CPU, so Ollama requests are allowed up to 10 minutes before Runova gives up. OpenAI and Gemini requests are stopped after 3 minutes with no answer.
 
 ## Choose which provider Prompt Builder uses
 
@@ -81,7 +81,7 @@ Translation, voice input and the writing check do not use these providers. They 
 
 ## How this differs from AI CLIs
 
-AI CLIs (Claude Code, Codex, Gemini CLI and the others) are separate programs that AgentMate launches in a terminal. They read and edit your files, run commands and use their own login or subscription. You manage them in [AI CLI Manager](cli-manager.md).
+AI CLIs (Claude Code, Codex, Gemini CLI and the others) are separate programs that Runova launches in a terminal. They read and edit your files, run commands and use their own login or subscription. You manage them in [AI CLI Manager](cli-manager.md).
 
 AI providers are plain model calls with an API key or a local server. They answer a question or write some text and do nothing else: no file access, no commands. They are billed to your API account (OpenAI, Gemini) or run free on your hardware (Ollama).
 
@@ -95,7 +95,7 @@ If a feature says it needs a CLI, install and sign in to one in [AI CLI Manager]
 
 ## Privacy and proxies
 
-Your keys are saved in AgentMate's settings on this computer. OpenAI and Gemini requests go straight from AgentMate to those services, so the text you send is subject to their terms. Ollama requests go only to the server address you entered. If you are behind a proxy, the AI providers follow the proxy settings under **Settings**, **Network**.
+Your keys are saved in Runova's settings on this computer. OpenAI and Gemini requests go straight from Runova to those services, so the text you send is subject to their terms. Ollama requests go only to the server address you entered. If you are behind a proxy, the AI providers follow the proxy settings under **Settings**, **Network**.
 
 ## Tips
 

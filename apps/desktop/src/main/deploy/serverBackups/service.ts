@@ -17,8 +17,8 @@ import type {
   ServerRestoreStatus,
   StoredBackupInfo,
   TelegramLoginState,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import type { DeployBackupFile } from '../../../shared/deployHardeningTypes';
 import type {
   DeployBackupDestinationInput,
@@ -36,8 +36,10 @@ import type {
   DeployTelegramContinueInput,
   DeployTelegramStartInput,
 } from '../../../shared/deployServerBackupsTypes';
+import { BACKUP_EXTENSION } from '../backups';
 import type { CoreHttpClient } from '../connection/coreHttp';
 import { type CoreCallDeps, callCore } from '../coreCalls';
+import { LEGACY_CORE, RUNOVA_CORE } from '../coreLayout';
 import { type LoopbackSignInRequest, signInWithLoopback } from './oauth';
 
 /**
@@ -61,7 +63,10 @@ const SIGN_IN_KEPT_MS = 10 * 60_000;
 const MIN_SECRET = 12;
 const MAX_SECRET = 1024;
 /** Where the core keeps a fetched backup for `admin restore-stage`, root only. */
-export const FETCH_FOLDER = '/var/lib/agentmate-core/backups/';
+export const FETCH_FOLDER = `${RUNOVA_CORE.dataDirectory}/backups/`;
+
+/** The same folder on a server still on the layout from before the rename. */
+export const FETCH_FOLDERS = [FETCH_FOLDER, `${LEGACY_CORE.dataDirectory}/backups/`];
 
 export interface ServerBackupsDeps extends CoreCallDeps {
   /** A REST call with this computer's session (DeployService.withCoreHttp). */
@@ -545,7 +550,7 @@ export class ServerBackups {
 
   private async suggestedName(serverId: string): Promise<string> {
     const date = new Date(this.now()).toISOString().slice(0, 16).replace(/[:T]/g, '-');
-    return `agentmate-${fileSafe(await this.deps.serverName(serverId))}-${date}.ambackup`;
+    return `runova-${fileSafe(await this.deps.serverName(serverId))}-${date}.${BACKUP_EXTENSION}`;
   }
 
   private async call<T>(

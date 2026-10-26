@@ -182,7 +182,7 @@ function rollupByProject(stats: SkillUsageStat[]): ProjectRollup[] {
 /**
  * The Usage tab: which skills the agents on this machine actually invoke, and how often. The
  * counts come from the local session transcripts, so they cover every run of the CLI, not only
- * the ones started from AgentMate.
+ * the ones started from Runova.
  */
 export function SkillUsageTab({
   report,
@@ -243,8 +243,8 @@ export function SkillUsageTab({
       <div className={cn(GLASS_CARD, 'flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3')}>
         <p className="min-w-64 max-w-2xl flex-1 text-sm text-muted-foreground">
           Counted from the Claude Code session transcripts on this machine, so every skill an agent
-          invoked is here, whether the session was started from AgentMate or a terminal. Nothing
-          leaves your computer.
+          invoked is here, whether the session was started from Runova or a terminal. Nothing leaves
+          your computer.
         </p>
         <div className="flex items-center gap-2">
           {report && (

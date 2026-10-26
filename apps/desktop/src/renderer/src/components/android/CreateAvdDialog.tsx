@@ -3,7 +3,7 @@ import {
   describeSystemImage,
   isValidAvdName,
   type SystemImage,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -90,13 +90,13 @@ export function CreateAvdDialog({
 
   const imagesQuery = useQuery({
     queryKey: queryKeys.androidSystemImages,
-    queryFn: () => window.agentmat.android.listSystemImages(),
+    queryFn: () => window.runova.android.listSystemImages(),
     enabled: open && canCreate,
     meta: { silentLoading: true },
   });
   const profilesQuery = useQuery({
     queryKey: queryKeys.androidDeviceProfiles,
-    queryFn: () => window.agentmat.android.listDeviceProfiles(),
+    queryFn: () => window.runova.android.listDeviceProfiles(),
     enabled: open && canCreate,
     meta: { silentLoading: true },
   });
@@ -119,7 +119,7 @@ export function CreateAvdDialog({
 
   const create = useMutation({
     mutationFn: () =>
-      window.agentmat.android.createAvd({ name: id, systemImageId: imageId, device: profile }),
+      window.runova.android.createAvd({ name: id, systemImageId: imageId, device: profile }),
     onSuccess: (result) => {
       if (!result.ok) {
         toast.error(result.message ?? 'Could not create that virtual device.');
@@ -232,7 +232,7 @@ export function CreateAvdDialog({
               {create.isPending ? 'Creating' : 'Create'}
             </Button>
           ) : (
-            <Button onClick={() => void window.agentmat.shell.openExternal(CMDLINE_TOOLS_URL)}>
+            <Button onClick={() => void window.runova.shell.openExternal(CMDLINE_TOOLS_URL)}>
               <ExternalLink className="h-3.5 w-3.5" />
               How to install
             </Button>

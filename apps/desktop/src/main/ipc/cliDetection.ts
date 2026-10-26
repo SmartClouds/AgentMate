@@ -1,16 +1,11 @@
 import { type ChildProcess, execFile } from 'node:child_process';
-import type {
-  CliDefinition,
-  CliUpdateCheckResult,
-  InstalledCli,
-  SupportedOS,
-} from '@agentmat/core';
+import type { CliDefinition, CliUpdateCheckResult, InstalledCli, SupportedOS } from '@runova/core';
 import {
   CLI_REGISTRY,
   getCliDefinition,
   getInstallCommandForCurrentOS,
   getUpdateCommandForCurrentOS,
-} from '@agentmat/core';
+} from '@runova/core';
 import { ipcMain } from 'electron';
 import type { CommandPrerequisite } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';

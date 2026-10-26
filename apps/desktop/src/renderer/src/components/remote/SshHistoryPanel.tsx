@@ -1,5 +1,5 @@
-import type { AgentHistorySession } from '@agentmat/core';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
+import type { AgentHistorySession } from '@runova/core';
 import type { SshAgentHistoryRun, SshSavedServer } from '@shared/apiTypes';
 import { sshErrorCode, sshErrorMessage } from '@shared/sshErrors';
 import { useQuery } from '@tanstack/react-query';
@@ -178,7 +178,7 @@ function HistorySheet({
 
   const history = useQuery({
     queryKey: queryKeys.sshConversations(server.id),
-    queryFn: () => withHostKeyTrust(server.id, () => window.agentmat.ssh.conversations(server.id)),
+    queryFn: () => withHostKeyTrust(server.id, () => window.runova.ssh.conversations(server.id)),
     enabled: open,
     staleTime: 60_000,
     retry: false,
@@ -190,7 +190,7 @@ function HistorySheet({
   // Ask AI tasks are kept by this app, so reading them is cheap and never waits on the server.
   const askAi = useQuery({
     queryKey: queryKeys.sshServerAgentHistory(server.id),
-    queryFn: () => window.agentmat.sshAgent.serverHistory(server.id),
+    queryFn: () => window.runova.sshAgent.serverHistory(server.id),
     enabled: open,
     meta: { silentLoading: true },
   });
@@ -276,7 +276,7 @@ function HistorySheet({
     });
     if (!agreed) return;
     try {
-      await window.agentmat.sshAgent.clearServerHistory(server.id);
+      await window.runova.sshAgent.clearServerHistory(server.id);
       void refetchAskAi();
     } catch {
       toast.error('Could not clear the AI task history.');
@@ -389,7 +389,7 @@ function HistorySheet({
                 {missingClis.map((p) => (
                   <SimpleTooltip
                     key={p}
-                    label={`AgentMate couldn't find the ${CLI_COMMAND[p]} command in a login shell on this server. Resume may fail if it isn't installed.`}
+                    label={`Runova couldn't find the ${CLI_COMMAND[p]} command in a login shell on this server. Resume may fail if it isn't installed.`}
                   >
                     {/* Focusable so the explanation is reachable from the keyboard too. */}
                     <span
@@ -481,7 +481,7 @@ function HistorySheet({
           source={{
             kind: 'ssh',
             queryKey: queryKeys.sshServerAgentHistory(server.id),
-            load: () => window.agentmat.sshAgent.serverHistory(server.id),
+            load: () => window.runova.sshAgent.serverHistory(server.id),
             live: openRunLive,
           }}
         />

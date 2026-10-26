@@ -1,4 +1,4 @@
-import type { AuditEventInfo } from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { AuditEventInfo } from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployAuditFilter } from '../../shared/deploySecurityTypes';
 
 /**

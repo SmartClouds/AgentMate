@@ -1,4 +1,4 @@
-import type { AndroidSdkStatus } from '@agentmat/core';
+import type { AndroidSdkStatus } from '@runova/core';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { queryKeys } from '@/lib/queryKeys';
@@ -170,7 +170,7 @@ describe('the Android status bar entry', () => {
       'android.sdk': FULL_SDK,
       'android.refresh': snapshot([emulator('Pixel_7_API_34', 'emulator-5554')]),
     });
-    const watchUsage = window.agentmat.android.watchUsage;
+    const watchUsage = window.runova.android.watchUsage;
 
     await screen.findByText('1 running');
     // The bar is always on screen, so it must not keep a process sampler running behind it.

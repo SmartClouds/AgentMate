@@ -1,5 +1,5 @@
-import type { Project, ProjectWordPressItemKind, WpItem, WpItemRef } from '@agentmat/core';
-import { wpItemKey } from '@agentmat/core';
+import type { Project, ProjectWordPressItemKind, WpItem, WpItemRef } from '@runova/core';
+import { wpItemKey } from '@runova/core';
 import type { DeployWordPressSite } from '@shared/deployWordPressTypes';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';

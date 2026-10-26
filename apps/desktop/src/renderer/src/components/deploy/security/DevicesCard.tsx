@@ -1,5 +1,5 @@
 import { coreErrorMessage } from '@shared/coreErrors';
-import type { DeviceInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { DeviceInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployServer } from '@shared/deployTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -27,7 +27,7 @@ export function DevicesCard({
   const queryClient = useQueryClient();
   const devices = useQuery({
     queryKey: queryKeys.deployDevices(server.id),
-    queryFn: () => window.agentmat.deploySecurity.listDevices(server.id),
+    queryFn: () => window.runova.deploySecurity.listDevices(server.id),
     retry: false,
   });
 
@@ -42,7 +42,7 @@ export function DevicesCard({
     });
     if (!confirmed) return;
     try {
-      await window.agentmat.deploySecurity.revokeDevice(server.id, device.id);
+      await window.runova.deploySecurity.revokeDevice(server.id, device.id);
       toast.success(device.current ? 'This computer is revoked.' : `${device.name} is revoked.`);
     } catch (error) {
       toast.error(coreErrorMessage(error));

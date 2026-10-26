@@ -2,12 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type { BlueprintAttachment, ProjectBlueprint } from '@agentmat/core';
-import {
-  BLUEPRINT_FILE_HOST,
-  BLUEPRINT_FILE_SCHEME,
-  blueprintFileNameFromUrl,
-} from '@agentmat/core';
+import type { BlueprintAttachment, ProjectBlueprint } from '@runova/core';
+import { BLUEPRINT_FILE_HOST, BLUEPRINT_FILE_SCHEME, blueprintFileNameFromUrl } from '@runova/core';
 import { app, net, protocol } from 'electron';
 import type { BackupAttachmentBlob } from '../shared/apiTypes';
 
@@ -122,7 +118,7 @@ const MB = 1024 * 1024;
 
 function assertAcceptable(mime: string, size: number): void {
   if (!ALLOWED_MIME.has(mime)) {
-    throw new Error(`AgentMate can't attach ${mime || 'that kind of'} files.`);
+    throw new Error(`Runova can't attach ${mime || 'that kind of'} files.`);
   }
   if (size > MAX_ATTACHMENT_BYTES) {
     throw new Error(
@@ -163,14 +159,14 @@ export async function writeAttachmentFromDataUrl(
 export async function writeAttachmentFromPath(filePath: string): Promise<BlueprintAttachment> {
   const mime = MIME_BY_EXTENSION[extname(filePath).toLowerCase()];
   if (!mime) {
-    throw new Error(`AgentMate can't attach ${extname(filePath) || 'that kind of'} files.`);
+    throw new Error(`Runova can't attach ${extname(filePath) || 'that kind of'} files.`);
   }
   const bytes = await readFile(filePath);
   return writeBytes(basename(filePath), { mime, bytes });
 }
 
 /**
- * Serves `agentmate-file://blueprint/<name>` off disk. Registered once, after
+ * Serves `runova-file://blueprint/<name>` off disk. Registered once, after
  * the app is ready.
  *
  * `net.fetch` over a file URL is what handles range requests, so seeking in an

@@ -1,4 +1,4 @@
-import type { BlueprintPreset, BlueprintStepId } from '@agentmat/core';
+import type { BlueprintPreset, BlueprintStepId } from '@runova/core';
 import { useNavigate } from 'react-router-dom';
 import { Check, Plus } from '@/components/icons';
 import { Button } from '@/components/ui/button';

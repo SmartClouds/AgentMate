@@ -7,7 +7,7 @@ import { type DockerignoreMatcher, parseDockerignore } from './dockerignore.js';
  * Two kinds of layers meet here:
  * - the defaults each feature passes in: files that never belong on a server unless the server
  *   already has them (build output, editor folders, logs made on this computer);
- * - the user's own layers (an `.agentmateignore`, a site's own patterns), which leave things out
+ * - the user's own layers (a `.runovaignore`, a site's own patterns), which leave things out
  *   both ways and can put a default back with a `!` line.
  *
  * Every path is relative to the synced folder's root, with `/` separators.
@@ -34,7 +34,7 @@ function toDockerignoreLine(raw: string, negations: boolean): string {
 }
 
 export interface IgnoreLayer {
-  /** Where the text came from, for error messages: `default`, `.distignore`, `.agentmateignore`. */
+  /** Where the text came from, for error messages: `default`, `.distignore`, `.runovaignore`. */
   source: string;
   text: string;
   /**

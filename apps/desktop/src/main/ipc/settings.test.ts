@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { type AppSettings, buildAgentLaunchCommand } from '@agentmat/core';
+import { type AppSettings, buildAgentLaunchCommand } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IPC } from '../../shared/ipcChannels';
 
@@ -65,7 +65,7 @@ function claudeCommand(settings: AppSettings): string | null {
 }
 
 beforeEach(async () => {
-  userData.dir = await mkdtemp(join(tmpdir(), 'agentmate-settings-'));
+  userData.dir = await mkdtemp(join(tmpdir(), 'runova-settings-'));
   handlers.clear();
   nativeTheme.themeSource = 'system';
   vi.resetModules();

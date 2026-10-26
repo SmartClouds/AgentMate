@@ -1,4 +1,4 @@
-import { baseName, getCliDefinition, type Project, splitExtension } from '@agentmat/core';
+import { baseName, getCliDefinition, type Project, splitExtension } from '@runova/core';
 import {
   ContextMenuContent,
   ContextMenuItem,
@@ -125,7 +125,7 @@ export function ExplorerMenu({
           <Item label="Open to the Side" onSelect={() => openToSide(project, path)} />
           <Item
             label="Open With Default App"
-            onSelect={() => void window.agentmat.shell.openPath(path)}
+            onSelect={() => void window.runova.shell.openPath(path)}
           />
         </>
       ) : null}

@@ -1,4 +1,4 @@
-import type { VideoSummary } from '@agentmat/studio';
+import type { VideoSummary } from '@runova/studio';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { studioClient } from '../client';

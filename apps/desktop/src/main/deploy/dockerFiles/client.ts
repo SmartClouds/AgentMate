@@ -2,11 +2,12 @@ import { createHash, randomBytes } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { type FileHandle, lstat, open, rename, rm, stat, utimes } from 'node:fs/promises';
 import { pipeline, Readable, Transform, Writable } from 'node:stream';
+import { LEGACY_CORE_NAMES } from '../../../shared/deploy/coreLegacyNames';
 import type {
   FileEntry,
   FileSessionInfo,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { encodeFilesError, filesError } from '../../../shared/deployFilesErrors';
 import type { SftpCapabilities } from '../../../shared/sftpTypes';
 import type {
@@ -41,7 +42,7 @@ import { joinRemote } from '../files/transport/remotePath';
  * has ended (`sessionGone`, `targetGone`) or a lost connection closes the client, and it then
  * rejects like a closed SSH connection, so the service's lease opens a new session.
  *
- * Downloads go to `<target>.agentmate-<8 hex>.part`, are synced and given the remote mtime, and
+ * Downloads go to `<target>.runova-<8 hex>.part`, are synced and given the remote mtime, and
  * only then take the target's place. Uploads are atomic on the core when it has a shell there
  * (`atomic` says so). The bytes are hashed on the way, and the last chunk is only sent once the
  * hash is known to be right, so a file that changed under an upload with `expectedSha256` cuts
@@ -482,7 +483,7 @@ export class DockerFileClient implements SftpFileClient {
     if (signal?.aborted) throw cancelled();
     if (this.closed) throw this.closedError(false);
 
-    const part = `${localPath}.agentmate-${randomBytes(4).toString('hex')}.part`;
+    const part = `${localPath}.runova-${randomBytes(4).toString('hex')}.part`;
     let handle: FileHandle | null = await open(part, 'wx');
     const file = handle;
     let total = -1;
@@ -500,7 +501,10 @@ export class DockerFileClient implements SftpFileClient {
             onResponse: (_status, headers) => {
               const length = Number(headers['content-length']);
               if (Number.isFinite(length) && length >= 0) total = length;
-              const mtime = Number(headers['x-agentmate-mtime-ms']);
+              // A core from before the rename sends the old header name.
+              const mtime = Number(
+                headers['x-runova-mtime-ms'] ?? headers[LEGACY_CORE_NAMES.mtimeHeader],
+              );
               if (Number.isFinite(mtime) && mtime > 0) mtimeMs = wholeSeconds(mtime);
             },
           }),

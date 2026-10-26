@@ -7,7 +7,7 @@ keywords: help, docs, documentation, manual, guide, search, ask, question, chat,
 route: /help
 ---
 
-The Help page holds a guide for every part of AgentMate. You can search it, browse it by the same groups the menu uses, or ask the guide a question in plain words and get an answer drawn from these articles, with links to the exact sections it used.
+The Help page holds a guide for every part of Runova. You can search it, browse it by the same groups the menu uses, or ask the guide a question in plain words and get an answer drawn from these articles, with links to the exact sections it used.
 
 ## Where to find it
 
@@ -56,7 +56,7 @@ Links inside an article open other articles in the Help page. At the bottom, **P
 
 ## Ask the guide
 
-The guide is a chat that answers questions about using AgentMate. It only answers from these help articles, so it tells you where things are and which buttons to press, and it says so when the help does not cover something instead of guessing.
+The guide is a chat that answers questions about using Runova. It only answers from these help articles, so it tells you where things are and which buttons to press, and it says so when the help does not cover something instead of guessing.
 
 ### What the guide needs
 
@@ -92,7 +92,7 @@ For each question the guide looks up the most relevant sections two ways at once
 - **By keywords**, using a full-text index that also matches word forms (so "splitting" finds "split").
 - **By meaning**, using embeddings from your provider, so a question phrased differently from the article still finds it. By default OpenAI uses `text-embedding-3-small`, Gemini uses `gemini-embedding-001`, and Ollama uses the `nomic-embed-text` model. You can pick another model for each provider in **Settings** > **AI** > **Help search**, which indexes the help again with it. See [Choose the search model](#choose-the-search-model).
 
-The two result lists are merged, and the best few sections are sent to the chat model with your question. The index is a SQLite database in AgentMate's data folder (`help-index.db`), searched with the sqlite-vec extension.
+The two result lists are merged, and the best few sections are sent to the chat model with your question. The index is a SQLite database in Runova's data folder (`help-index.db`), searched with the sqlite-vec extension.
 
 > [!NOTE]
 > With Ollama, the meaning search needs an embedding model on your server, `nomic-embed-text` unless you chose another one. If it is not installed, the guide still answers from the keyword search and adds a note under the answer. Run `ollama pull` with the model name (for example `ollama pull nomic-embed-text`) to turn on the meaning search.
@@ -103,7 +103,7 @@ The **Help search** card in **Settings** > **AI** has one row each for **OpenAI*
 
 1. Open **Settings** > **AI** and find the **Help search** card.
 2. In the row for your provider, open the model list and pick a model.
-3. The choice is saved at once and AgentMate starts indexing the help with the new model. Watch the progress bar until it is full.
+3. The choice is saved at once and Runova starts indexing the help with the new model. Watch the progress bar until it is full.
 
 What the model list shows:
 

@@ -38,7 +38,7 @@ import type {
   VoiceEngineView,
   VoiceProfileView,
   VoiceView,
-} from '@agentmat/studio';
+} from '@runova/studio';
 import { ipcRenderer } from 'electron';
 import { IPC } from '../shared/ipcChannels';
 

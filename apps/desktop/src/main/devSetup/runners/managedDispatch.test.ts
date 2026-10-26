@@ -1,4 +1,4 @@
-import type { DevRecipe } from '@agentmat/core';
+import type { DevRecipe } from '@runova/core';
 import { describe, expect, it, vi } from 'vitest';
 import { type ManagedRunners, runManagedRecipe } from './managedDispatch';
 import type { RunHooks, RunResult } from './packageManagerRunner';

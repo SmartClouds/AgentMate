@@ -3,7 +3,7 @@ import { join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * AgentMate ships no Chinese content, and Studio is where it could slip in: style presets and
+ * Runova ships no Chinese content, and Studio is where it could slip in: style presets and
  * reference scenes, provider voice lists, prompts, help text. This scans every Studio source and
  * asset for Han characters and Chinese language tags.
  */

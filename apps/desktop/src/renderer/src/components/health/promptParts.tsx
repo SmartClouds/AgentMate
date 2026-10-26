@@ -1,4 +1,4 @@
-import { getCliDefinition, type Project } from '@agentmat/core';
+import { getCliDefinition, type Project } from '@runova/core';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Copy } from '@/components/icons';
@@ -10,7 +10,7 @@ import { launchPromptTab, projectCliId } from '@/lib/workspace/launch';
 
 /**
  * The prompt pane and the hand-off to the project's agent, shared by the dialogs that give an
- * agent the AgentMate Health Protocol to build an endpoint from.
+ * agent the Runova Health Protocol to build an endpoint from.
  */
 
 export function copyText(text: string, what: string): void {

@@ -42,7 +42,7 @@ export function usePlannerRun(): PlannerRun {
   // A dialog that closes mid-run stops the planner, so nothing keeps reading the repository.
   useEffect(
     () => () => {
-      if (live.current) void window.agentmat.relay.cancelPlanner(live.current);
+      if (live.current) void window.runova.relay.cancelPlanner(live.current);
       live.current = null;
     },
     [],
@@ -68,7 +68,7 @@ export function usePlannerRun(): PlannerRun {
   function cancel(): void {
     const requestId = live.current;
     live.current = null;
-    if (requestId) void window.agentmat.relay.cancelPlanner(requestId);
+    if (requestId) void window.runova.relay.cancelPlanner(requestId);
     setState({ status: 'idle' });
   }
 

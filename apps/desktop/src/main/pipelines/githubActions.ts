@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import type { Project, ProjectGithubAction } from '@agentmat/core';
-import { normalizeProjectGithubActions } from '@agentmat/core';
+import type { Project, ProjectGithubAction } from '@runova/core';
+import { normalizeProjectGithubActions } from '@runova/core';
 import type {
   GithubActionsActivity,
   GithubActionsDayCount,
@@ -210,7 +210,7 @@ export interface ProjectGithubRepo {
 }
 
 /**
- * The GitHub repos behind AgentMate projects, each listed once under the first project that
+ * The GitHub repos behind Runova projects, each listed once under the first project that
  * uses it, and at most `MAX_REPOS` of them.
  */
 export async function listProjectGithubRepos(): Promise<ProjectGithubRepo[]> {
@@ -234,7 +234,7 @@ export async function listProjectGithubRepos(): Promise<ProjectGithubRepo[]> {
   return repos;
 }
 
-/** Recent Actions runs across AgentMate projects, for the dashboard chart and the Pipelines page. */
+/** Recent Actions runs across Runova projects, for the dashboard chart and the Pipelines page. */
 export async function fetchDashboardActionsActivity(): Promise<GithubActionsActivity> {
   if (!(await isGhCliAvailable())) {
     return emptyActivity({

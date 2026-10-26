@@ -26,7 +26,7 @@ import type {
  * - Times come back in whole seconds, as SFTP version 3 has them.
  * - A dropped connection fails new calls with `The SSH connection to <host> is closed.` and calls
  *   in flight with `... closed.`, like `SshConnection`.
- * - Uploads and downloads go through a `.agentmate-<8 hex>.part` beside the target, take its
+ * - Uploads and downloads go through a `.runova-<8 hex>.part` beside the target, take its
  *   name only at the end, and honour their abort signal with `[files:cancelled]`. An upload cut
  *   off by a dropped connection leaves its `.part` on the server, as a real one does.
  *
@@ -203,7 +203,7 @@ function sha256(bytes: Buffer): string {
 }
 
 function partSuffix(): string {
-  return `.agentmate-${randomBytes(4).toString('hex')}.part`;
+  return `.runova-${randomBytes(4).toString('hex')}.part`;
 }
 
 /** Lets other work run, without a timer. */

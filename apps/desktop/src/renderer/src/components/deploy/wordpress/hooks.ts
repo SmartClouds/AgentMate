@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type {
   DeployWordPressProgressEvent,
   DeployWordPressSettingsInput,
@@ -29,7 +29,7 @@ const AUDIT_FILTER = { limit: AUDIT_PAGE_SIZE } as const;
 export function useWordPressSites() {
   return useQuery({
     queryKey: queryKeys.deployWordPressSites,
-    queryFn: async () => (await window.agentmat.deployWordPress.listSites()) ?? [],
+    queryFn: async () => (await window.runova.deployWordPress.listSites()) ?? [],
   });
 }
 
@@ -37,7 +37,7 @@ export function useSiteInfo(siteId: string) {
   return useQuery({
     queryKey: queryKeys.deployWordPressSiteInfo(siteId),
     queryFn: async () => {
-      const info = await window.agentmat.deployWordPress.siteInfo(siteId);
+      const info = await window.runova.deployWordPress.siteInfo(siteId);
       if (!info) throw new Error('The site sent nothing back.');
       return info;
     },
@@ -48,7 +48,7 @@ export function useSiteInfo(siteId: string) {
 export function useSiteItems(siteId: string) {
   return useQuery({
     queryKey: queryKeys.deployWordPressItems(siteId),
-    queryFn: async () => (await window.agentmat.deployWordPress.listItems(siteId)) ?? [],
+    queryFn: async () => (await window.runova.deployWordPress.listItems(siteId)) ?? [],
     staleTime: SITE_STALE_MS,
   });
 }
@@ -56,7 +56,7 @@ export function useSiteItems(siteId: string) {
 export function useSiteHistory(siteId: string) {
   return useQuery({
     queryKey: queryKeys.deployWordPressHistory(siteId),
-    queryFn: async () => (await window.agentmat.deployWordPress.history(siteId)) ?? [],
+    queryFn: async () => (await window.runova.deployWordPress.history(siteId)) ?? [],
     staleTime: SITE_STALE_MS,
   });
 }
@@ -66,7 +66,7 @@ export function useSiteAudit(siteId: string) {
   return useInfiniteQuery({
     queryKey: queryKeys.deployWordPressAudit(siteId, AUDIT_FILTER),
     queryFn: async ({ pageParam }) =>
-      (await window.agentmat.deployWordPress.audit({
+      (await window.runova.deployWordPress.audit({
         siteId,
         limit: AUDIT_PAGE_SIZE,
         ...(pageParam === undefined ? {} : { before: pageParam }),
@@ -80,7 +80,7 @@ export function useSiteAudit(siteId: string) {
 export function useProjects() {
   return useQuery({
     queryKey: queryKeys.projects,
-    queryFn: async (): Promise<Project[]> => (await window.agentmat.projects.list()) ?? [],
+    queryFn: async (): Promise<Project[]> => (await window.runova.projects.list()) ?? [],
   });
 }
 
@@ -113,7 +113,7 @@ export function useSiteSettings(siteId: string) {
   const update = useSiteListUpdate();
   return useCallback(
     async (patch: Omit<DeployWordPressSettingsInput, 'siteId'>) => {
-      const site = await window.agentmat.deployWordPress.updateSettings({ siteId, ...patch });
+      const site = await window.runova.deployWordPress.updateSettings({ siteId, ...patch });
       update(site);
       void queryClient.invalidateQueries({ queryKey: queryKeys.deployWordPressSite(siteId) });
       return site;
@@ -130,20 +130,20 @@ export function useOperationProgress(
   useEffect(() => {
     setEvent(null);
     if (!operationId) return undefined;
-    return window.agentmat.deployWordPress.onProgress((next) => {
+    return window.runova.deployWordPress.onProgress((next) => {
       if (next.operationId === operationId) setEvent(next);
     });
   }, [operationId]);
   return event;
 }
 
-/** Asks where to save the bundled AgentMate Connector zip and says where it went. */
+/** Asks where to save the bundled Runova Connector zip and says where it went. */
 export function useSaveConnectorZip(): { save: () => Promise<void>; saving: boolean } {
   const [saving, setSaving] = useState(false);
   const save = useCallback(async () => {
     setSaving(true);
     try {
-      const result = await window.agentmat.deployWordPress.saveConnectorZip();
+      const result = await window.runova.deployWordPress.saveConnectorZip();
       if (result?.saved) toast.success(`Saved the plugin to ${result.path}.`);
     } catch (error) {
       toast.error(wpProblem(error));
@@ -183,7 +183,7 @@ export function useUpdateConnector(siteId: string): ConnectorUpdate {
     setResult(null);
     setProblem(null);
     try {
-      setResult(await window.agentmat.deployWordPress.updateConnector(siteId));
+      setResult(await window.runova.deployWordPress.updateConnector(siteId));
     } catch (error) {
       setProblem(wpProblem(error));
     } finally {

@@ -3,13 +3,15 @@
  * Turns a `{kind, slug}` from a request into a folder or file on disk, refusing anything that is
  * not plainly inside its root: unknown items, symlinked items, and the connector's own files.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Files;
+namespace Runova\Connector\Files;
 
-use AgentMate\Connector\Env\Environment;
-use AgentMate\Connector\Http\ApiError;
+use Runova\Connector\Env\Environment;
+use Runova\Connector\Http\ApiError;
+use Runova\Connector\Layout;
+use Runova\Connector\Legacy;
 
 final class ItemResolver
 {
@@ -57,7 +59,7 @@ final class ItemResolver
             throw new ApiError('itemUnknown', 'The site has no such item.', array('kind' => $kind, 'slug' => $slug));
         }
         if ($this->isProtected($kind, $slug, $real)) {
-            throw new ApiError('itemProtected', 'That item belongs to AgentMate Connector itself and is never synced.', array('kind' => $kind, 'slug' => $slug));
+            throw new ApiError('itemProtected', 'That item belongs to Runova Connector itself and is never synced.', array('kind' => $kind, 'slug' => $slug));
         }
         return array('kind' => $kind, 'slug' => $slug, 'path' => $path, 'real' => $real, 'isFile' => $isFile);
     }
@@ -69,6 +71,13 @@ final class ItemResolver
             return true;
         }
         if ($kind === 'mu-plugin' && strcasecmp($slug, $this->env->guardSlug()) === 0) {
+            return true;
+        }
+        // The copy in the other layout and its guard, while a site moves between the two.
+        if ($kind === 'plugin' && (strcasecmp($slug, Legacy::SLUG) === 0 || strcasecmp($slug, Layout::SLUG) === 0)) {
+            return true;
+        }
+        if ($kind === 'mu-plugin' && strcasecmp($slug, Legacy::GUARD_FILE) === 0) {
             return true;
         }
         if ($real === null) {

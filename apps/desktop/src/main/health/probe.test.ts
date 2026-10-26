@@ -10,7 +10,7 @@ import { type HealthProbeTarget, type HealthTransport, probeHealthTarget } from 
  */
 
 const NOW = 1_760_000_000_000;
-const KEY = 'amh_k3yThatMustNeverLeakAnywhere0123456789abcdefg';
+const KEY = 'rnh_k3yThatMustNeverLeakAnywhere0123456789abcdefg';
 const servers: LocalServer[] = [];
 const nodeFetch: HealthTransport = (url, init) => fetch(url, init);
 
@@ -23,7 +23,7 @@ async function server(
 ): Promise<LocalServer & { target: HealthProbeTarget }> {
   const started = await startHttpServer(handler);
   servers.push(started);
-  return { ...started, target: target(`${started.url}/_agentmate/health`) };
+  return { ...started, target: target(`${started.url}/_runova/health`) };
 }
 
 function target(url: string, overrides: Partial<HealthProbeTarget> = {}): HealthProbeTarget {
@@ -69,17 +69,17 @@ describe('probeHealthTarget against a compliant endpoint', () => {
     expect(site.requests).toHaveLength(1);
     const [request] = site.requests;
     expect(request.method).toBe('GET');
-    expect(request.url).toBe('/_agentmate/health');
+    expect(request.url).toBe('/_runova/health');
     expect(request.headers.authorization).toBe(`Bearer ${KEY}`);
     expect(request.headers.accept).toBe('application/health+json');
-    expect(request.headers['user-agent']).toBe('AgentMate-Health/1');
+    expect(request.headers['user-agent']).toBe('Runova-Health/1');
     expect(request.headers['cache-control']).toBe('no-cache');
   });
 
   it('sends HTTP Basic credentials for a Basic target', async () => {
     const site = await server((_req, res) => json(res, passing));
-    await probe({ ...site.target, authMode: 'basic', basicUser: 'agentmate' }, nodeFetch, 'pw-1');
-    const expected = Buffer.from('agentmate:pw-1', 'utf-8').toString('base64');
+    await probe({ ...site.target, authMode: 'basic', basicUser: 'runova' }, nodeFetch, 'pw-1');
+    const expected = Buffer.from('runova:pw-1', 'utf-8').toString('base64');
     expect(site.requests[0].headers.authorization).toBe(`Basic ${expected}`);
   });
 
@@ -103,7 +103,7 @@ describe('probeHealthTarget against a compliant endpoint', () => {
           status: 'fail',
           checks: {
             'redis:ping': [
-              { status: 'fail', output: 'connect ECONNREFUSED', agentmate: { errorCode: 'X' } },
+              { status: 'fail', output: 'connect ECONNREFUSED', runova: { errorCode: 'X' } },
             ],
           },
         },
@@ -118,7 +118,7 @@ describe('probeHealthTarget against a compliant endpoint', () => {
 
   it('reports unauthorized on a 401', async () => {
     const site = await server((_req, res) => {
-      res.writeHead(401, { 'www-authenticate': 'Bearer realm="agentmate-health"' });
+      res.writeHead(401, { 'www-authenticate': 'Bearer realm="runova-health"' });
       res.end();
     });
     const report = await probe(site.target);

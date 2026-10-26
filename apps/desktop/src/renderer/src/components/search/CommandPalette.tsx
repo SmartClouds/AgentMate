@@ -1,5 +1,5 @@
-import { parseScopeId } from '@agentmat/core';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { parseScopeId } from '@runova/core';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { Command as CommandPrimitive } from 'cmdk';
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
@@ -64,23 +64,23 @@ export function CommandPalette(): React.JSX.Element {
 
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
     enabled: open,
   });
   const historyQuery = useQuery({
     queryKey: queryKeys.promptHistory,
-    queryFn: () => window.agentmat.promptHistory.list(),
+    queryFn: () => window.runova.promptHistory.list(),
     enabled: open,
   });
   const reposQuery = useQuery({
     queryKey: queryKeys.repositories,
-    queryFn: () => window.agentmat.skills.listRepositories(),
+    queryFn: () => window.runova.skills.listRepositories(),
     enabled: open,
   });
   const repoIndexQueries = useQueries({
     queries: (reposQuery.data ?? []).map((repo) => ({
       queryKey: queryKeys.repositoryIndex(repo.id),
-      queryFn: () => window.agentmat.skills.getRepositoryIndex(repo.id),
+      queryFn: () => window.runova.skills.getRepositoryIndex(repo.id),
       enabled: open,
     })),
   });
@@ -100,7 +100,7 @@ export function CommandPalette(): React.JSX.Element {
   const worktreeQueries = useQueries({
     queries: railProjectIds.map((id) => ({
       queryKey: queryKeys.worktrees(id),
-      queryFn: () => window.agentmat.worktrees.list(id),
+      queryFn: () => window.runova.worktrees.list(id),
       enabled: open,
       staleTime: 15_000,
     })),
@@ -170,7 +170,7 @@ export function CommandPalette(): React.JSX.Element {
               'left-1/2 top-12 w-full max-w-xl -translate-x-1/2 data-[state=open]:zoom-in-95',
           )}
         >
-          <DialogPrimitive.Title className="sr-only">Search AgentMate</DialogPrimitive.Title>
+          <DialogPrimitive.Title className="sr-only">Search Runova</DialogPrimitive.Title>
           <DialogPrimitive.Description className="sr-only">
             Search projects, prompt history, and skills.
           </DialogPrimitive.Description>

@@ -10,14 +10,14 @@ import type {
   SecurityScanOptions,
   SecurityScanProgress,
   SecurityScanRecord,
-} from '@agentmat/core';
+} from '@runova/core';
 import {
   maskKnownSecrets,
   redactSecretFindings,
   SECURITY_SCANNERS,
   scoreSecurityFindings,
   sortSecurityFindings,
-} from '@agentmat/core';
+} from '@runova/core';
 import { app } from 'electron';
 import type { ActiveScan } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';
@@ -118,7 +118,7 @@ function removeContainers(state: RunState): void {
 export function sweepOrphanScanContainers(): void {
   execFile(
     'docker',
-    ['ps', '-aq', '--filter', 'name=agentmate-scan-'],
+    ['ps', '-aq', '--filter', 'name=runova-scan-'],
     { windowsHide: true },
     (error, stdout) => {
       if (error) return;

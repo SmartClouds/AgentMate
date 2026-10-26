@@ -1,4 +1,4 @@
-import type { ChecklistRow } from '@agentmat/core';
+import type { ChecklistRow } from '@runova/core';
 import {
   CircleCheck,
   CircleInfo,

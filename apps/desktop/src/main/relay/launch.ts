@@ -13,7 +13,7 @@ import {
   relayPlanArgs,
   type ShellKind,
   shellKindFor,
-} from '@agentmat/core';
+} from '@runova/core';
 import { clipboard } from 'electron';
 import type { RelayLegTabEvent } from '../../shared/relayTypes';
 import { claudeRelaySettingsPath } from '../agents/claudeHooks';
@@ -118,7 +118,7 @@ export interface LegLaunchResult {
 export async function launchRelayLeg(request: LegLaunchRequest): Promise<LegLaunchResult> {
   const { relay, choice, taskId } = request;
   const cli = getCliDefinition(choice.cliId);
-  if (!cli) throw new Error(`AgentMate does not know the CLI "${choice.cliId}".`);
+  if (!cli) throw new Error(`Runova does not know the CLI "${choice.cliId}".`);
   const project = await findProjectScope(relay.projectId);
   if (!project) throw new Error('That project no longer exists.');
 

@@ -330,7 +330,7 @@ export function createGenJobs(deps: GenJobsDeps) {
             status: 'interrupted',
             stage: null,
             error:
-              'AgentMate closed before the provider answered. It may still have billed for it; generate again if you want it.',
+              'Runova closed before the provider answered. It may still have billed for it; generate again if you want it.',
             endedAt: deps.now(),
           });
           continue;

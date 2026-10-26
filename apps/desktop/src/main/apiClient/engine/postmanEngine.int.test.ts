@@ -1,5 +1,5 @@
 import { createServer, type Server } from 'node:net';
-import { POSTMAN_SCHEMA_V21, type PostmanRequestItem } from '@agentmat/core';
+import { POSTMAN_SCHEMA_V21, type PostmanRequestItem } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { json, type LocalServer, startHttpServer } from '../../../test/main/fixtures';
 import { postmanEngine } from './postmanEngine';

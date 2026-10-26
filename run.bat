@@ -21,14 +21,14 @@ if not exist "node_modules" (
 )
 
 echo Verifying Electron binary...
-call pnpm --filter @agentmat/desktop exec install-electron
+call pnpm --filter @runova/desktop exec install-electron
 if errorlevel 1 (
     echo Failed to download the Electron binary. Check your network connection and try again.
     pause
     exit /b 1
 )
 
-echo Starting AgentMate...
+echo Starting Runova...
 call pnpm dev
 
 pause

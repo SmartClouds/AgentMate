@@ -1,4 +1,4 @@
-import { flicksToSeconds, secondsToFlicks } from '@agentmat/studio';
+import { flicksToSeconds, secondsToFlicks } from '@runova/studio';
 
 /** A service error in plain words, without Electron's "Error invoking remote method" prefix. */
 export function errorMessage(error: unknown): string {

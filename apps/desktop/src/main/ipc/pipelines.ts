@@ -1,5 +1,5 @@
-import type { ProjectGithubAction } from '@agentmat/core';
-import { normalizeProjectGithubActions } from '@agentmat/core';
+import type { ProjectGithubAction } from '@runova/core';
+import { normalizeProjectGithubActions } from '@runova/core';
 import { ipcMain } from 'electron';
 import type {
   GithubActionsActivity,

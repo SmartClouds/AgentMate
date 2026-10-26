@@ -4,7 +4,7 @@ import {
   type HealthSample,
   localDayStart,
   localHourStart,
-} from '@agentmat/core';
+} from '@runova/core';
 import { describe, expect, it } from 'vitest';
 import { emptyHealthResult, type HealthResultRecord, type StoredHealthTarget } from './store';
 import { toHealthDetail, toHealthSummary } from './summary';

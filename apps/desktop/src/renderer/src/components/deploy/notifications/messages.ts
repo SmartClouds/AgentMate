@@ -1,4 +1,4 @@
-import type { AlertKind } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { AlertKind } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { TELEGRAM_ALERT_KINDS } from '@shared/deploy/telegramValidation';
 import type { DeployTelegramStatus } from '@shared/deployTelegramTypes';
 import type { ChipTone } from '@/components/pageKit';

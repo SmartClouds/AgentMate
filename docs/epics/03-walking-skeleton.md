@@ -19,14 +19,14 @@ service, Unix socket, tunnel and REST.
 - [x] T4 Preflight over SSH: os-release (supported matrix), architecture, systemd, free disk,
   sudo mode (root, passwordless, password), `AllowStreamLocalForwarding`/`AllowTcpForwarding` via
   `sshd -T`, existing install detection.
-- [x] T5 Installer: create group `agentmate`, add the SSH user to it, place the verified binary under
-  `/opt/agentmate-core/releases/<version>`, `current` symlink, directories with modes, systemd unit
+- [x] T5 Installer: create group `runova`, add the SSH user to it, place the verified binary under
+  `/opt/runova-core/releases/<version>`, `current` symlink, directories with modes, systemd unit
   with the hardening options, `restorecon` on SELinux systems, start, wait for health. After the
   group change the pooled SSH connection is reset because membership only applies to new logins.
 - [x] T6 Binary source: packaged builds download the release asset for their own version and check
   it against the embedded `server-core-manifest.json` hash before anything runs; dev builds upload a
   local `dotnet publish` through SFTP.
-- [x] T7 `agentmate-core bridge`: stdio to the Unix socket, used when stream-local forwarding is
+- [x] T7 `runova-core bridge`: stdio to the Unix socket, used when stream-local forwarding is
   disabled.
 - [x] T8 Transport: one socket-shim Duplex (adds the no-op socket methods `ws` and `http` expect)
   behind a custom `http.Agent#createConnection`; a small REST client over `node:http` typed with
@@ -39,7 +39,7 @@ service, Unix socket, tunnel and REST.
 - [x] T12 CD: `build-server-core` job (linux-x64 and linux-arm64 self-contained single-file,
   ReadyToRun, tar.gz and `.sha256`, `server-core-manifest.json`), desktop builds embed the manifest,
   the release job attaches the assets.
-- [x] T13 DevHost (`apps/server-core/src/AgentMate.ServerCore.DevHost`) with fake platform state and
+- [x] T13 DevHost (`apps/server-core/src/Runova.ServerCore.DevHost`) with fake platform state and
   a dev-only loopback transport that packaged builds refuse, so e2e runs on Windows and macOS.
 - [x] T14 Fixtures: systemd plus sshd test-server images in `apps/server-core/test-servers/`
   (ubuntu-24.04, debian-13, rocky-9), a root login and a non-root user whose sudo asks for a
@@ -86,7 +86,7 @@ service, Unix socket, tunnel and REST.
 - **T6, sources.** Packaged builds read `server-core-manifest.json` from their resources and
   download the matching asset from the release for their own version (at most five reconnects).
   Development builds use `pnpm server-core:publish <rid>` output, found by walking up from the app
-  path, so `electron-vite dev` and a build folder both work. `AGENTMATE_SERVER_CORE_ARTIFACTS`
+  path, so `electron-vite dev` and a build folder both work. `RUNOVA_SERVER_CORE_ARTIFACTS`
   overrides the folder.
 - **T6, the server downloads it instead.** The release is public, so a packaged build's source
   also names the asset's address (`remote`), and the preflight tries it from the server (a HEAD
@@ -102,14 +102,14 @@ service, Unix socket, tunnel and REST.
   have no address and always upload. `serverDownload.ts` holds the commands; the real-shell test
   there runs them with a stand-in curl and wget, and the same commands were run once against the
   v1.60.0 release on GitHub with its published checksum.
-- **T9.** Removing the core with its data also deletes the `agentmate` group.
+- **T9.** Removing the core with its data also deletes the `runova` group.
 - **T13.** The DevHost serves the real core (health for now) on loopback; fake platform, Docker and
   nginx state arrive with the epics that need them. The app lists it only when not packaged and
-  `AGENTMATE_DEPLOY_DEV_CORE` names its port; it cannot be installed on or removed.
+  `RUNOVA_DEPLOY_DEV_CORE` names its port; it cannot be installed on or removed.
 - **SSH exec fix.** A command that finishes at once can have its exit status parsed in the same
   burst as the exec reply, before the listener exists; the status was then lost (an install step
   would have read as failed). The exit status is now also taken from `close`.
-- **Evidence.** `deploy.int.test.ts` (with `AGENTMATE_SYSTEM_TESTS=1`) installs on fresh Ubuntu
+- **Evidence.** `deploy.int.test.ts` (with `RUNOVA_SYSTEM_TESTS=1`) installs on fresh Ubuntu
   24.04 and Rocky 9 servers as root and as a password-sudo user, refuses a tampered download,
   rolls back a release that will not start, and connects through the bridge. `deploy.e2e.ts`
   shows the DevHost online on every OS. The whole flow was also driven by hand in a built app in

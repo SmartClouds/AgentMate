@@ -150,10 +150,10 @@ describe('openRootShell', () => {
     const { connection, ran } = await connectAs({ uid: 1000, sudo: 'passwordless' });
     const shell = await openRootShell(connection, null);
 
-    await shell.run("install -m 0755 /tmp/x '/opt/agentmate core'", { stdin: 'payload' });
+    await shell.run("install -m 0755 /tmp/x '/opt/runova core'", { stdin: 'payload' });
 
     expect(ran.at(-1)?.command).toBe(
-      `sudo -n -- sh -c 'install -m 0755 /tmp/x '\\''/opt/agentmate core'\\'''`,
+      `sudo -n -- sh -c 'install -m 0755 /tmp/x '\\''/opt/runova core'\\'''`,
     );
     expect(ran.at(-1)?.stdin.toString()).toBe('payload');
   });
@@ -163,7 +163,7 @@ describe('openRootShell', () => {
     const shell = await openRootShell(connection, SUDO_PASSWORD);
     const payload = Buffer.from([0x00, 0xff, 0x0a, 0x41]);
 
-    await shell.run('agentmate-core admin create-owner --password-stdin', { stdin: payload });
+    await shell.run('runova-core admin create-owner --password-stdin', { stdin: payload });
 
     expect(ran.at(-1)?.stdin.equals(payload)).toBe(true);
     for (const request of server.execRequests) {

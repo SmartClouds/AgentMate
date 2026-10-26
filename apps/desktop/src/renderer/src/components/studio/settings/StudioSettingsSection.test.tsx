@@ -87,14 +87,14 @@ describe('StudioSettingsSection', () => {
   it('reports a change the service refused', async () => {
     const { user } = renderSection({
       'studio.updateSettings': async () => {
-        throw new Error("AgentMate can't write to this folder.");
+        throw new Error("Runova can't write to this folder.");
       },
     });
     await user.click(
       await screen.findByRole('switch', { name: /Use the graphics card to encode/ }),
     );
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith("AgentMate can't write to this folder."),
+      expect(toast.error).toHaveBeenCalledWith("Runova can't write to this folder."),
     );
   });
 });

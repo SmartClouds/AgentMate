@@ -9,7 +9,7 @@ import {
   type RenderEstimateView,
   type RenderSettings,
   type StudioDocument,
-} from '@agentmat/studio';
+} from '@runova/studio';
 import { type UseQueryResult, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { studioClient, studioRenderClient } from '../client';

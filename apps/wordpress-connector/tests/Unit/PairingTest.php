@@ -3,18 +3,18 @@
  * Connection keys and /pair: success, single use, expiry, burning after five wrong proofs, the
  * secret being forgotten, and the request signature checked against the key in the body.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Unit;
+namespace Runova\Connector\Tests\Unit;
 
-use AgentMate\Connector\Audit\AuditLog;
-use AgentMate\Connector\Auth\Canonical;
-use AgentMate\Connector\Auth\ConnectionKey;
-use AgentMate\Connector\Auth\KeyService;
-use AgentMate\Connector\Crypto\Base64Url;
-use AgentMate\Connector\Crypto\Crypto;
-use AgentMate\Connector\Tests\Support\TestCase;
+use Runova\Connector\Audit\AuditLog;
+use Runova\Connector\Auth\Canonical;
+use Runova\Connector\Auth\ConnectionKey;
+use Runova\Connector\Auth\KeyService;
+use Runova\Connector\Crypto\Base64Url;
+use Runova\Connector\Crypto\Crypto;
+use Runova\Connector\Tests\Support\TestCase;
 
 final class PairingTest extends TestCase
 {
@@ -65,7 +65,7 @@ final class PairingTest extends TestCase
     {
         $key = $this->newKey('write', '  Staging  ', 30);
         $this->assertSame('https://example.test', $key['siteUrl']);
-        $this->assertSame('https://example.test/wp-json/agentmate/v1', $key['restUrl']);
+        $this->assertSame('https://example.test/wp-json/runova/v1', $key['restUrl']);
         $this->assertSame('https://example.test/wp-admin/admin-ajax.php', $key['ajaxUrl']);
         $this->assertSame(self::vectors()['keys']['site']['publicKey'], $key['sitePublicKey']);
         $this->assertSame('write', $key['scope']);
@@ -195,7 +195,7 @@ final class PairingTest extends TestCase
     public function testDisabledSiteDoesNotUseUpTheKey(): void
     {
         $key = $this->newKey();
-        $this->env->constants['AGENTMATE_CONNECTOR_DISABLED'] = true;
+        $this->env->constants['RUNOVA_CONNECTOR_DISABLED'] = true;
         $this->assertError('disabled', $this->pair($key));
         $this->env->constants = array();
         $this->assertOk($this->pair($key));

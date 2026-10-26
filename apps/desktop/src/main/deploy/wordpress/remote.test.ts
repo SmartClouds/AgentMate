@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { WP_BATCH_MAX_BYTES, WP_BATCH_MIN_BYTES, type WpItemRef } from '@agentmat/core';
+import { WP_BATCH_MAX_BYTES, WP_BATCH_MIN_BYTES, type WpItemRef } from '@runova/core';
 import { describe, expect, it } from 'vitest';
 import { wordPressErrorCode } from '../../../shared/wordpressErrors';
 import { type WpClient, WpRemoteError } from './client';
@@ -316,7 +316,7 @@ describe('readRemoteFiles', () => {
     );
   });
 
-  it('notes a file the site no longer has, and refuses one larger than AgentMate syncs', async () => {
+  it('notes a file the site no longer has, and refuses one larger than Runova syncs', async () => {
     const gone = stub((body) => {
       const file = (body.files as { path: string }[])[0];
       return {

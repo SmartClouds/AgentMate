@@ -3,7 +3,7 @@ import {
   ENVIRONMENT_KINDS,
   type EnvironmentKind,
   type Project,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { EnvCredentialSummary, EnvFileSummary, ProjectEnvironment } from '@shared/apiTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -119,7 +119,7 @@ export function EnvironmentsTab({ project }: { project: Project }): React.JSX.El
 
   const environmentsQuery = useQuery({
     queryKey: queryKeys.projectEnvironments(project.id),
-    queryFn: () => window.agentmat.environments.list(project.id),
+    queryFn: () => window.runova.environments.list(project.id),
   });
   const environments = environmentsQuery.data ?? [];
   const selected = environments.find((e) => e.id === selectedId) ?? environments[0];
@@ -130,7 +130,7 @@ export function EnvironmentsTab({ project }: { project: Project }): React.JSX.El
 
   /** Runs `action` now, or after the user unlocks the vault when a passkey is set and locked. */
   async function withVault(action: () => void): Promise<void> {
-    const status = await window.agentmat.ssh.vaultStatus();
+    const status = await window.runova.ssh.vaultStatus();
     if (status.hasPasskey && !status.unlocked) {
       setAfterUnlock(() => action);
       setUnlockMode('unlock');
@@ -157,13 +157,13 @@ export function EnvironmentsTab({ project }: { project: Project }): React.JSX.El
   async function removeEnvironment(environment: ProjectEnvironment): Promise<void> {
     const confirmed = await confirmDialog({
       title: `Delete "${environment.name}"?`,
-      description: `Its ${environment.files.length} env file(s) and ${environment.credentials.length} credential(s) are deleted from AgentMate. Files in the project folder are not touched.`,
+      description: `Its ${environment.files.length} env file(s) and ${environment.credentials.length} credential(s) are deleted from Runova. Files in the project folder are not touched.`,
       confirmLabel: 'Delete',
       variant: 'destructive',
     });
     if (!confirmed) return;
     await run(async () => {
-      await window.agentmat.environments.remove(environment.id);
+      await window.runova.environments.remove(environment.id);
       setSelectedId(null);
       refresh();
     }, 'Could not delete the environment.');
@@ -172,13 +172,13 @@ export function EnvironmentsTab({ project }: { project: Project }): React.JSX.El
   async function removeFile(environment: ProjectEnvironment, file: EnvFileSummary): Promise<void> {
     const confirmed = await confirmDialog({
       title: `Delete ${file.fileName} from ${environment.name}?`,
-      description: 'The copy saved in AgentMate is deleted. The project folder is not touched.',
+      description: 'The copy saved in Runova is deleted. The project folder is not touched.',
       confirmLabel: 'Delete',
       variant: 'destructive',
     });
     if (!confirmed) return;
     await run(async () => {
-      await window.agentmat.environments.removeFile(environment.id, file.id);
+      await window.runova.environments.removeFile(environment.id, file.id);
       refresh();
     }, 'Could not delete the file.');
   }
@@ -195,7 +195,7 @@ export function EnvironmentsTab({ project }: { project: Project }): React.JSX.El
     });
     if (!confirmed) return;
     await run(async () => {
-      await window.agentmat.environments.removeCredential(environment.id, credential.id);
+      await window.runova.environments.removeCredential(environment.id, credential.id);
       refresh();
     }, 'Could not delete the credential.');
   }
@@ -203,7 +203,7 @@ export function EnvironmentsTab({ project }: { project: Project }): React.JSX.El
   function copyFile(environment: ProjectEnvironment, file: EnvFileSummary): void {
     void withVault(() =>
       run(async () => {
-        await window.agentmat.environments.copyFile(environment.id, file.id);
+        await window.runova.environments.copyFile(environment.id, file.id);
         toast.success(`${file.fileName} copied to the clipboard.`);
       }, 'Could not copy that file.'),
     );
@@ -212,7 +212,7 @@ export function EnvironmentsTab({ project }: { project: Project }): React.JSX.El
   function copySecret(environment: ProjectEnvironment, credential: EnvCredentialSummary): void {
     void withVault(() =>
       run(async () => {
-        await window.agentmat.environments.copyCredentialSecret(environment.id, credential.id);
+        await window.runova.environments.copyCredentialSecret(environment.id, credential.id);
         toast.success('Password copied to the clipboard.');
       }, 'Could not copy the password.'),
     );
@@ -221,11 +221,7 @@ export function EnvironmentsTab({ project }: { project: Project }): React.JSX.El
   function writeToFolder(environment: ProjectEnvironment, file: EnvFileSummary): void {
     void withVault(() =>
       run(async () => {
-        let result = await window.agentmat.environments.writeToFolder(
-          environment.id,
-          file.id,
-          false,
-        );
+        let result = await window.runova.environments.writeToFolder(environment.id, file.id, false);
         if (result.status === 'exists') {
           const confirmed = await confirmDialog({
             title: `Replace ${file.fileName} in the project folder?`,
@@ -234,7 +230,7 @@ export function EnvironmentsTab({ project }: { project: Project }): React.JSX.El
             variant: 'destructive',
           });
           if (!confirmed) return;
-          result = await window.agentmat.environments.writeToFolder(environment.id, file.id, true);
+          result = await window.runova.environments.writeToFolder(environment.id, file.id, true);
         }
         toast.success(`Wrote ${file.fileName} to the project folder.`);
         if (result.notIgnored) {
@@ -453,7 +449,7 @@ export function EnvironmentsTab({ project }: { project: Project }): React.JSX.El
                         {credential.url && /^https?:\/\//i.test(credential.url) && (
                           <IconAction
                             label="Open the URL"
-                            onClick={() => void window.agentmat.shell.openExternal(credential.url)}
+                            onClick={() => void window.runova.shell.openExternal(credential.url)}
                           >
                             <Link className="h-3.5 w-3.5" />
                           </IconAction>

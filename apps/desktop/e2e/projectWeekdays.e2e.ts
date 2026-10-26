@@ -95,8 +95,8 @@ function seedTranscripts(projectFolder: string, sideFolder: string): void {
 }
 
 test('the card splits the scanned usage by project and by weekday', async () => {
-  home = mkdtempSync(join(tmpdir(), 'agentmate-e2e-home-'));
-  configDir = mkdtempSync(join(tmpdir(), 'agentmate-e2e-claude-'));
+  home = mkdtempSync(join(tmpdir(), 'runova-e2e-home-'));
+  configDir = mkdtempSync(join(tmpdir(), 'runova-e2e-claude-'));
   launched = await launchApp({
     env: {
       CLAUDE_CONFIG_DIR: configDir,

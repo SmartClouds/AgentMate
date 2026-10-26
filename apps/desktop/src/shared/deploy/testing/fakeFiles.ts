@@ -4,7 +4,7 @@ import type {
   FileListing,
   FileSessionInfo,
   FileTarget,
-} from '../protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../protocol/generated/Runova.ServerCore.Contracts';
 import type { FakeDocker } from './fakeDocker';
 
 /**

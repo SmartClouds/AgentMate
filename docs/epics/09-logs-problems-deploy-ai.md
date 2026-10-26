@@ -49,7 +49,7 @@ Server core:
   following, no writing, no killing). From the assistant it also needs the session's "auto-run
   diagnostics" mode. Anything else needs an `ExecApproval`: a single-use nonce from
   `NewExecApproval` (two minutes, bound to the session and device) signed by the enrolled P-256
-  device key over `agentmate-core/exec/v1`, the nonce id, the nonce, the device, the session and
+  device key over `runova-core/exec/v1`, the nonce id, the nonce, the device, the session and
   the exact command. The nonce is spent before anything is checked.
 - An allowlisted command runs from its own words; an approved one through `/bin/sh -c`. Both run in
   a collected transient unit (`systemd-run --collect --wait --pipe`, `SystemdExecRunner`), so a
@@ -110,7 +110,7 @@ Acceptance criteria:
 4. `AssistantRedactionTests` seed a stack's .env and containers outside it with secrets: command
    output, the journal and the audit trail carry none; the prompt test checks names only.
 
-System test: `apps/desktop/src/main/deploy/deployExec.int.test.ts` (AGENTMATE_SYSTEM_TESTS=1, the
+System test: `apps/desktop/src/main/deploy/deployExec.int.test.ts` (RUNOVA_SYSTEM_TESTS=1, the
 published core on the Ubuntu 24.04 systemd test server, CI step "Exec and journal on test
 servers") runs `df -h` through the real `systemd-run` with its output and exit codes, refuses an
 unapproved `touch` with no file left behind, runs a signed command once and refuses its replayed

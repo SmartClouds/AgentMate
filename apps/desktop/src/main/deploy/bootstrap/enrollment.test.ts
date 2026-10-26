@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { openRootShell } from '../../ssh/sudo';
+import { CORE_PROGRAM } from '../coreProgram';
 import { enrollOverSsh } from './enrollment';
 import type { InstallProgress } from './installer';
 import {
@@ -62,7 +63,7 @@ describe('enrollOverSsh', () => {
     }
     const passwordReaders = server.rootStdin.filter(({ stdin }) => stdin.includes(PASSWORD));
     expect(passwordReaders.map(({ command }) => command)).toEqual([
-      '/opt/agentmate-core/current/agentmate-core admin create-owner --username maria --password-stdin',
+      `${CORE_PROGRAM} admin create-owner --username maria --password-stdin`,
     ]);
     const keyReaders = server.rootStdin.filter(({ stdin }) => stdin.includes(publicKey));
     expect(keyReaders).toHaveLength(1);

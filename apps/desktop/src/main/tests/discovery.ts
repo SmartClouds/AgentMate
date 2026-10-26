@@ -8,12 +8,12 @@ import {
   manifestPathsToRead,
   type TestDiscovery,
   testFilesFor,
-} from '@agentmat/core';
+} from '@runova/core';
 
 /**
  * Reads a workspace for the Tests panel: which files exist, which manifests say what frameworks
  * are in use, and what the test files declare. Everything past listing and reading files is the
- * pure logic in @agentmat/core.
+ * pure logic in @runova/core.
  */
 
 const IGNORED = new Set(IGNORED_TEST_DIRS);

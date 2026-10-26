@@ -255,7 +255,7 @@ async function execute() {
       process.stdout.write('  Read(README.md)\r\n');
       return runHooks('PostToolUse', { tool_name: 'Read', tool_input: { file_path: 'README.md' } });
     };
-    // AgentMate measures the transcript when the prompt is submitted and every 5 seconds while the
+    // Runova measures the transcript when the prompt is submitted and every 5 seconds while the
     // session works. Jumping straight to the leg's size raced the first of those on a fast Mac,
     // and a leg already past the guard at its first reading has the guard turned off, so it never
     // handed off. A real session grows slowly, so this one works at its starting size past one
@@ -356,7 +356,7 @@ function start() {
     taskId,
     legNo,
     mode,
-    session: process.env.AGENTMATE_SESSION_ID ?? null,
+    session: process.env.RUNOVA_SESSION_ID ?? null,
   });
   process.stdout.write('Fake Claude Code 9.9.9\r\n');
   if (process.stdin.isTTY) process.stdin.setRawMode?.(true);

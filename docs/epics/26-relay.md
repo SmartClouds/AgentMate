@@ -57,7 +57,7 @@ switch the session to auto mode once the plan is ready.
   - the Blueprint prompt writing `tasks/` instead of a backlog when Relay is on.
 - [x] T6 Main store, task files, watcher, planner and IPC.
 - [x] T7 Relay hooks settings, the gate route, armed files and the context meter.
-- [x] T8 The `agentmate_relay` MCP bridge:
+- [x] T8 The `runova_relay` MCP bridge:
   - `current_leg`, `context_status`, `finish_leg`, `list_tasks`, `get_task`, `propose_tasks`;
   - Claude, Codex and Copilot launch flags;
   - proposals held for approval.

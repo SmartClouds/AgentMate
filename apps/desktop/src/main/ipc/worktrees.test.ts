@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
-import type { WorktreeInfo } from '@agentmat/core';
+import type { WorktreeInfo } from '@runova/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   CreateWorktreeResult,
@@ -53,7 +53,7 @@ async function create(branch: string, extra: Partial<{ base: string; path: strin
     branch,
     mode: 'new',
     base: extra.base ?? 'main',
-    path: extra.path ?? join(tempDir('agentmate-wt-'), 'tree'),
+    path: extra.path ?? join(tempDir('runova-wt-'), 'tree'),
   });
   if (!result.ok) throw new Error(result.error);
   return result.worktree;
@@ -113,7 +113,7 @@ describe.runIf(hasGit())('worktree handlers', () => {
     });
 
     it('uses the base folder from Settings', async () => {
-      const base = tempDir('agentmate-base-');
+      const base = tempDir('runova-base-');
       userData.writeData('settings.json', { worktrees: { baseDir: base } });
       expect(await invoke(IPC.worktrees.suggestPath, PROJECT_ID, 'x')).toBe(
         join(base, basename(repo.dir), 'x'),
@@ -191,7 +191,7 @@ describe.runIf(hasGit())('worktree handlers', () => {
       expect(result.ok).toBe(false);
     });
 
-    it('picks up worktrees made outside AgentMate', async () => {
+    it('picks up worktrees made outside Runova', async () => {
       const path = join(tempDir(), 'outside');
       repo.git('worktree', 'add', '-b', 'cli-made', path);
       const [listed] = await invoke<WorktreeInfo[]>(IPC.worktrees.list, PROJECT_ID);

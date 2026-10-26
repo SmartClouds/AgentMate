@@ -176,7 +176,7 @@ export function ProjectUsageTab({ projectId }: { projectId: string }): React.JSX
 
   const usage = useQuery({
     queryKey: queryKeys.projectUsage(projectId, days),
-    queryFn: () => window.agentmat.agents.projectUsage(projectId, days),
+    queryFn: () => window.runova.agents.projectUsage(projectId, days),
     staleTime: 30_000,
     meta: { silentLoading: true },
   });

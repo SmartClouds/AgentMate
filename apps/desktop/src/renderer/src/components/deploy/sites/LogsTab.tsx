@@ -1,4 +1,4 @@
-import type { SiteLogKind } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { SiteLogKind } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useEffect, useId, useRef, useState } from 'react';
 import { CircleCheck, RefreshCw, Spinner, TriangleAlert } from '@/components/icons';
 import { PillTabs, SECTION_WELL } from '@/components/pageKit';

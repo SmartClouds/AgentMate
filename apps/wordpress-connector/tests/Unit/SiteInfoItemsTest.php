@@ -2,13 +2,13 @@
 /**
  * /site/info, /items/list and the limits they report.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Unit;
+namespace Runova\Connector\Tests\Unit;
 
-use AgentMate\Connector\Info\Limits;
-use AgentMate\Connector\Tests\Support\TestCase;
+use Runova\Connector\Info\Limits;
+use Runova\Connector\Tests\Support\TestCase;
 
 final class SiteInfoItemsTest extends TestCase
 {
@@ -21,13 +21,13 @@ final class SiteInfoItemsTest extends TestCase
     public function testSiteInfoShape(): void
     {
         $connection = $this->connect('write', array('label' => 'Office', 'expires_at' => $this->env->now + 3600));
-        $this->env->put('mu-plugins/00-agentmate-connector-guard.php', '<?php');
+        $this->env->put('mu-plugins/00-runova-connector-guard.php', '<?php');
         $this->storage->kvSet('loopback', 'ok', null);
         $data = $this->assertOk($this->call('/site/info', null, array('connectionId' => $connection)));
         $this->assertSame(array(
             'siteName', 'homeUrl', 'siteUrl', 'wpVersion', 'phpVersion', 'pluginVersion', 'protocol', 'multisite',
             'activeTheme', 'https', 'serverTime', 'fileModsDisabled', 'fileEditDisabled', 'filesystemMethod',
-            'readOnlyByConstant', 'selfUpdate', 'updateDownload', 'sodium', 'limits', 'guard', 'loopback', 'connection', 'pendingDeploy',
+            'readOnlyByConstant', 'selfUpdate', 'updateDownload', 'sodium', 'limits', 'guard', 'loopback', 'connection', 'pendingDeploy', 'layout', 'endpoints',
         ), array_keys($data));
         // The fake site has no connector folder to replace.
         $this->assertFalse($data['selfUpdate']);
@@ -80,7 +80,7 @@ final class SiteInfoItemsTest extends TestCase
     public function testItemsList(): void
     {
         $env = $this->env;
-        foreach (array('themes/twentytwentyfive/style.css', 'themes/child/style.css', 'themes/bad name/style.css', 'plugins/akismet/akismet.php', 'plugins/akismet/other.php', 'plugins/hello.php', 'plugins/agentmate-connector/agentmate-connector.php', 'mu-plugins/loader.php', 'mu-plugins/00-agentmate-connector-guard.php', 'mu-plugins/folder/inner.php') as $path) {
+        foreach (array('themes/twentytwentyfive/style.css', 'themes/child/style.css', 'themes/bad name/style.css', 'plugins/akismet/akismet.php', 'plugins/akismet/other.php', 'plugins/hello.php', 'plugins/runova-connector/runova-connector.php', 'mu-plugins/loader.php', 'mu-plugins/00-runova-connector-guard.php', 'mu-plugins/folder/inner.php') as $path) {
             $env->put($path, '<?php');
         }
         $env->themes = array(
@@ -93,12 +93,12 @@ final class SiteInfoItemsTest extends TestCase
             'akismet/other.php' => array('Name' => 'Other', 'Version' => '1'),
             'akismet/akismet.php' => array('Name' => 'Akismet', 'Version' => '5.3'),
             'hello.php' => array('Name' => 'Hello Dolly', 'Version' => '1.7'),
-            'agentmate-connector/agentmate-connector.php' => array('Name' => 'AgentMate Connector', 'Version' => '1.0.0'),
+            'runova-connector/runova-connector.php' => array('Name' => 'Runova Connector', 'Version' => '1.0.0'),
         );
         $env->activePlugins = array('akismet/akismet.php');
         $env->muPlugins = array(
             'loader.php' => array('Name' => 'Loader', 'Version' => ''),
-            '00-agentmate-connector-guard.php' => array('Name' => 'Guard', 'Version' => ''),
+            '00-runova-connector-guard.php' => array('Name' => 'Guard', 'Version' => ''),
         );
 
         $items = $this->assertOk($this->call('/items/list', null, array('connectionId' => $this->connect())))['items'];
@@ -108,8 +108,8 @@ final class SiteInfoItemsTest extends TestCase
         }
         $this->assertSame(array(
             'theme:child', 'theme:twentytwentyfive',
-            'plugin:agentmate-connector', 'plugin:akismet', 'plugin:hello.php',
-            'mu-plugin:00-agentmate-connector-guard.php', 'mu-plugin:folder', 'mu-plugin:loader.php',
+            'plugin:akismet', 'plugin:hello.php', 'plugin:runova-connector',
+            'mu-plugin:00-runova-connector-guard.php', 'mu-plugin:folder', 'mu-plugin:loader.php',
         ), array_keys($byKey));
 
         $this->assertSame(array(
@@ -122,9 +122,9 @@ final class SiteInfoItemsTest extends TestCase
         $this->assertTrue($byKey['plugin:akismet']['active']);
         $this->assertTrue($byKey['plugin:hello.php']['isFile']);
         $this->assertFalse($byKey['plugin:hello.php']['active']);
-        $this->assertTrue($byKey['plugin:agentmate-connector']['protected']);
-        $this->assertFalse($byKey['plugin:agentmate-connector']['writable']);
-        $this->assertTrue($byKey['mu-plugin:00-agentmate-connector-guard.php']['protected']);
+        $this->assertTrue($byKey['plugin:runova-connector']['protected']);
+        $this->assertFalse($byKey['plugin:runova-connector']['writable']);
+        $this->assertTrue($byKey['mu-plugin:00-runova-connector-guard.php']['protected']);
         $this->assertTrue($byKey['mu-plugin:loader.php']['active']);
         $this->assertTrue($byKey['mu-plugin:loader.php']['isFile']);
         $this->assertFalse($byKey['mu-plugin:folder']['isFile']);
@@ -138,7 +138,7 @@ final class SiteInfoItemsTest extends TestCase
         $connection = $this->connect();
         foreach (array('readOnly', 'fileMods', 'method') as $switch) {
             if ($switch === 'readOnly') {
-                $this->env->constants['AGENTMATE_CONNECTOR_READ_ONLY'] = true;
+                $this->env->constants['RUNOVA_CONNECTOR_READ_ONLY'] = true;
             } elseif ($switch === 'fileMods') {
                 $this->env->fileModsAllowed = false;
             } else {

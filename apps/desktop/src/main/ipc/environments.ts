@@ -12,7 +12,7 @@ import {
   MAX_ENV_FILE_BYTES,
   type Project,
   parseDotenv,
-} from '@agentmat/core';
+} from '@runova/core';
 import { clipboard, ipcMain } from 'electron';
 import type {
   EnvCredentialSecrets,

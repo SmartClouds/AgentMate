@@ -1,4 +1,4 @@
-import * as pkg from '@agentmat/protocol';
+import * as pkg from '@runova/protocol';
 import { describe, expect, it } from 'vitest';
 import * as shared from './remoteProtocol';
 

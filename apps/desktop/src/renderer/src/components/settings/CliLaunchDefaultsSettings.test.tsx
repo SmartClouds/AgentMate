@@ -43,7 +43,7 @@ async function openClaudeRow(): Promise<HTMLElement> {
 beforeEach(() => {
   settingsUpdate.mockClear();
   Object.assign(window, {
-    agentmat: {
+    runova: {
       platform: 'win32',
       settings: { update: settingsUpdate },
       cli: {
@@ -108,7 +108,7 @@ describe('CliLaunchDefaultsSettings', () => {
 
   describe('Grok and Cursor', () => {
     async function openRow(name: RegExp): Promise<HTMLElement> {
-      window.agentmat.cli.detectAll = () =>
+      window.runova.cli.detectAll = () =>
         Promise.resolve(
           ['claude-code', 'grok-cli', 'cursor-cli'].map((id) => ({
             id,
@@ -185,7 +185,7 @@ describe('CliLaunchDefaultsSettings', () => {
   it('never holds the full-page loading overlay while the CLI sweep runs', async () => {
     // A sweep that takes tens of seconds, as it does on a machine with few CLIs installed.
     // Both sections of the Agents tab share the query, and the last one to mount sets its meta.
-    window.agentmat.cli.detectAll = () => new Promise(() => undefined);
+    window.runova.cli.detectAll = () => new Promise(() => undefined);
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>

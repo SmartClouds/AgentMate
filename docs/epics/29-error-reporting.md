@@ -18,7 +18,7 @@ from the user's own projects with an API token; the two share nothing but the pr
 
 - **The core owns it.** It has to keep reporting with the app closed. The DSN, environment, server
   name, level and on/off are kept by the core in `error-reporting.json` in its state folder (root only,
-  written atomically). The DSN is sealed with Data Protection (`AgentMate.ErrorReporting.Dsn.v1`), so
+  written atomically). The DSN is sealed with Data Protection (`Runova.ErrorReporting.Dsn.v1`), so
   a copy of the file alone holds no key. The app keeps nothing.
 - **No Sentry SDK.** Sentry takes OTLP logs directly at
   `/api/<project id>/integration/otlp/v1/logs`, signed with `x-sentry-auth: sentry sentry_key=<key>`.

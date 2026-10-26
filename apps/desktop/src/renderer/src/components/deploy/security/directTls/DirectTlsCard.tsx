@@ -3,7 +3,7 @@ import { closePortChanges, openPortChanges } from '@shared/deploy/directTlsValid
 import type {
   FirewallChange,
   FirewallStatus,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployDirectTlsInfo } from '@shared/deployDirectTlsTypes';
 import type { DeployServer } from '@shared/deployTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -41,7 +41,7 @@ export function DirectTlsCard({
   const queryClient = useQueryClient();
   const info = useQuery({
     queryKey: queryKeys.deployDirectTls(serverId),
-    queryFn: () => window.agentmat.deployDirectTls.status(serverId),
+    queryFn: () => window.runova.deployDirectTls.status(serverId),
     retry: false,
   });
   const connection = useDeployConnection(serverId);
@@ -59,7 +59,7 @@ export function DirectTlsCard({
     changesFor: (firewall: FirewallStatus) => FirewallChange[],
   ): Promise<void> {
     try {
-      const firewall = await window.agentmat.deployFirewall.status(serverId);
+      const firewall = await window.runova.deployFirewall.status(serverId);
       const changes = changesFor(firewall);
       if (changes.length > 0) setReview(changes);
     } catch (error) {
@@ -71,7 +71,7 @@ export function DirectTlsCard({
     setBusy('save');
     try {
       const next = await stepUp.run(
-        (proof) => window.agentmat.deployDirectTls.enable({ serverId, port, sources, ...proof }),
+        (proof) => window.runova.deployDirectTls.enable({ serverId, port, sources, ...proof }),
         'open the direct TLS port',
       );
       if (!next) return;
@@ -105,7 +105,7 @@ export function DirectTlsCard({
     if (!confirmed) return;
     setBusy('off');
     try {
-      settled(await window.agentmat.deployDirectTls.disable(serverId));
+      settled(await window.runova.deployDirectTls.disable(serverId));
       toast.success('Direct TLS is off.');
       await offerFirewall((firewall) => closePortChanges(firewall, current.port, current.sources));
     } catch (error) {
@@ -127,7 +127,7 @@ export function DirectTlsCard({
     if (!confirmed) return;
     setBusy('pin');
     try {
-      settled(await window.agentmat.deployDirectTls.acceptPin(serverId));
+      settled(await window.runova.deployDirectTls.acceptPin(serverId));
       toast.success('The new pin is in place.');
     } catch (error) {
       toast.error(coreErrorMessage(error));

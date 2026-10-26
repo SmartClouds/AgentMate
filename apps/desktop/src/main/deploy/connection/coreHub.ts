@@ -7,8 +7,8 @@ import {
 } from '@microsoft/signalr';
 import WebSocket, { type ClientOptions } from 'ws';
 import { getHubProxyFactory } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client';
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
-import { CORE_HOST } from './coreHttp';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
+import { coreHostFor } from './coreHttp';
 import type { CoreTransport } from './transport';
 
 /**
@@ -81,7 +81,10 @@ export function createCoreHubConnection(
     logMessageContent: false,
   };
 
-  const builder = new HubConnectionBuilder().withUrl(`http://${CORE_HOST}/hubs/core`, options);
+  const builder = new HubConnectionBuilder().withUrl(
+    `http://${coreHostFor(transport)}/hubs/core`,
+    options,
+  );
   if (hubOptions.reconnect !== false) builder.withAutomaticReconnect(RECONNECT_DELAYS_MS);
   return builder.configureLogging(logger).build();
 }

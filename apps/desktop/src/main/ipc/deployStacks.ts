@@ -1,5 +1,5 @@
 import type { IpcMainInvokeEvent } from 'electron';
-import type { StackAction } from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { StackAction } from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type {
   DeployStackCreateInput,
   DeployStackPreviewInput,

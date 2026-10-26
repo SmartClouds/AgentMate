@@ -1,4 +1,4 @@
-import { DEFAULT_RELAY_BUDGET, type RelayProposal, taskIdFromFileName } from '@agentmat/core';
+import { DEFAULT_RELAY_BUDGET, type RelayProposal, taskIdFromFileName } from '@runova/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -84,7 +84,7 @@ export function SplitIntoTasksDialog({
 
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
     enabled: open,
   });
   const targetId = projectId ?? pickedProjectId;
@@ -114,7 +114,7 @@ export function SplitIntoTasksDialog({
     if (!canPlan) return;
     setProposal(null);
     await run.start((requestId) =>
-      window.agentmat.relay.decompose({
+      window.runova.relay.decompose({
         requestId,
         projectId: targetId,
         request: text.trim(),
@@ -130,10 +130,10 @@ export function SplitIntoTasksDialog({
     try {
       const before = await queryClient.fetchQuery({
         queryKey: queryKeys.relayBoard(targetId),
-        queryFn: () => window.agentmat.relay.board(targetId),
+        queryFn: () => window.runova.relay.board(targetId),
       });
       const existing = new Set(before.tasks.map((task) => task.id));
-      const result = await window.agentmat.relay.applyProposal(targetId, proposal);
+      const result = await window.runova.relay.applyProposal(targetId, proposal);
       const ids = result.written
         .map((file) => taskIdFromFileName(file))
         .filter((id): id is string => id !== null && !existing.has(id));
@@ -142,7 +142,7 @@ export function SplitIntoTasksDialog({
       const trigger = triggerFor(start, targetId);
       let started = false;
       if (trigger && ids.length > 0) {
-        const outcome = await window.agentmat.relay.start({
+        const outcome = await window.runova.relay.start({
           projectId: targetId,
           only: ids,
           trigger,

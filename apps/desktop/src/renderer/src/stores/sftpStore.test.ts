@@ -10,7 +10,7 @@ import type {
 import { encodeSshError } from '@shared/sshErrors';
 import { waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { type FakeBridge, installAgentmatBridge } from '../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../test/renderer/runovaBridge';
 import { parentPath } from '../lib/sftp/paths';
 import { hasRunningTransfers, resetSftpStore, serverFiles, useSftpStore } from './sftpStore';
 
@@ -97,7 +97,7 @@ const EMPTY_QUEUE: SftpQueueSnapshot = {
 let bridge: FakeBridge;
 
 function install(overrides: Record<string, unknown> = {}): FakeBridge {
-  bridge = installAgentmatBridge({
+  bridge = installRunovaBridge({
     'ssh.listServers': [SERVER],
     'sftp.open': SESSION,
     'sftp.queue': EMPTY_QUEUE,

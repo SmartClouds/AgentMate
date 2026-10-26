@@ -1,4 +1,4 @@
-"""OmniVoice for AgentMate Studio: a small sidecar that keeps the model loaded and answers JSON lines.
+"""OmniVoice for Runova Studio: a small sidecar that keeps the model loaded and answers JSON lines.
 
 Our own code, calling only OmniVoice's public API (OmniVoice.from_pretrained and generate). Started
 by Studio as `python -X utf8 omnivoice_server.py <model folder>` (user site off). It prints one line,

@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import type { RunPauseReason } from '@agentmat/core';
+import type { RunPauseReason } from '@runova/core';
 import type { TerminalPauseChange, TerminalPauseResult } from '../../shared/apiTypes';
 import type { ProcessSuspender } from './processSuspend';
 

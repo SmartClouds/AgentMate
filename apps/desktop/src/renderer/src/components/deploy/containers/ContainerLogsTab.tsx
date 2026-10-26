@@ -1,4 +1,4 @@
-import type { ContainerSummary } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { ContainerSummary } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, RefreshCw, Wand2 } from '@/components/icons';
 import { SearchPill } from '@/components/pageKit';

@@ -1,5 +1,5 @@
-import type { AppNotification, PipelineFailureOpen } from '@agentmat/core';
-import { isPipelineFailureOpen } from '@agentmat/core';
+import type { AppNotification, PipelineFailureOpen } from '@runova/core';
+import { isPipelineFailureOpen } from '@runova/core';
 import { workspacePipelinesRoute } from '@shared/pet';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -32,7 +32,7 @@ export function appRoute(item: AppNotification): string | null {
  */
 async function failureClickTarget(): Promise<PipelineFailureOpen> {
   try {
-    const settings = await window.agentmat.settings.get();
+    const settings = await window.runova.settings.get();
     return isPipelineFailureOpen(settings.pipelineFailureOpen)
       ? settings.pipelineFailureOpen
       : 'pipelines';
@@ -66,7 +66,7 @@ export function useAppNotificationMessages(): void {
     let chain: Promise<void> = Promise.resolve();
 
     async function sync(): Promise<void> {
-      const items = await window.agentmat.appNotifications.list();
+      const items = await window.runova.appNotifications.list();
       if (disposed) return;
       const fresh = items.filter((item) => !seen.has(item.id));
       for (const item of items) seen.add(item.id);
@@ -110,7 +110,7 @@ export function useAppNotificationMessages(): void {
       chain = chain.then(sync).catch(() => undefined);
     };
     run();
-    const stop = window.agentmat.appNotifications.onChanged(run);
+    const stop = window.runova.appNotifications.onChanged(run);
     return () => {
       disposed = true;
       stop();

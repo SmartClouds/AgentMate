@@ -216,7 +216,7 @@ export function SkillFavoritesTab({
                             variant="ghost"
                             size="icon-sm"
                             aria-label={`Open ${favorite.name} on skills.sh`}
-                            onClick={() => void window.agentmat.shell.openExternal(favorite.url!)}
+                            onClick={() => void window.runova.shell.openExternal(favorite.url!)}
                           >
                             <ExternalLink className="h-3.5 w-3.5" />
                           </Button>

@@ -13,7 +13,7 @@ const target: FilesConnectTarget = {
   remoteRoot: '/srv/site',
   login: { kind: 'saved', sshServerId: 'server-1' },
 };
-const PROBE = '/srv/site/agentmate-probe-0badf00d.txt';
+const PROBE = '/srv/site/runova-probe-0badf00d.txt';
 const options = { now: () => 1234, randomHex: () => '0badf00d' };
 
 function server(flags: FakeRemoteOptions = {}) {
@@ -232,7 +232,7 @@ describe('testConnection', () => {
     expect(result.ok).toBe(true);
     expect(result.steps.find((step) => step.step === 'cleanup')).toMatchObject({
       status: 'warning',
-      message: expect.stringContaining('agentmate-probe-0badf00d.txt'),
+      message: expect.stringContaining('runova-probe-0badf00d.txt'),
     });
   });
 

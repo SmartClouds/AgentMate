@@ -2,17 +2,17 @@
 /**
  * The pieces under the deploy: syntax check, atomic writes, staging and the health verdict.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Unit;
+namespace Runova\Connector\Tests\Unit;
 
-use AgentMate\Connector\Deploy\DeployService;
-use AgentMate\Connector\Deploy\Staging;
-use AgentMate\Connector\Deploy\SyntaxCheck;
-use AgentMate\Connector\Files\AtomicWriter;
-use AgentMate\Connector\Storage\MemoryStorage;
-use AgentMate\Connector\Tests\Support\TestCase;
+use Runova\Connector\Deploy\DeployService;
+use Runova\Connector\Deploy\Staging;
+use Runova\Connector\Deploy\SyntaxCheck;
+use Runova\Connector\Files\AtomicWriter;
+use Runova\Connector\Storage\MemoryStorage;
+use Runova\Connector\Tests\Support\TestCase;
 
 final class DeployPartsTest extends TestCase
 {
@@ -64,7 +64,7 @@ final class DeployPartsTest extends TestCase
 
     public function testStagingIsContentAddressedAndProtected(): void
     {
-        $data = $this->tempDir() . '/agentmate-connector-0123456789ab';
+        $data = $this->tempDir() . '/runova-connector-0123456789ab';
         $staging = new Staging($data);
         $sha = $staging->storeBytes('hello');
         $this->assertSame(hash('sha256', 'hello'), $sha);

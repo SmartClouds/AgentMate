@@ -1,5 +1,5 @@
-import type { AgentType, WpItemRef } from '@agentmat/core';
-import { AGENT_TYPES, wpItemKey } from '@agentmat/core';
+import type { AgentType, WpItemRef } from '@runova/core';
+import { AGENT_TYPES, wpItemKey } from '@runova/core';
 import type { DeployWordPressSite } from '@shared/deployWordPressTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useRef, useState } from 'react';
@@ -40,7 +40,7 @@ type Step = 'site' | 'items' | 'details' | 'run';
 const SILENT = { silentLoading: true } as const;
 
 export const FOLDER_NOTE =
-  "The folder keeps the site's layout, like wp-content/themes/your-theme. Only the items you pick are ever pulled or deployed. Agent settings and AgentMate's own files in this folder stay on this computer.";
+  "The folder keeps the site's layout, like wp-content/themes/your-theme. Only the items you pick are ever pulled or deployed. Agent settings and Runova's own files in this folder stay on this computer.";
 
 const STEP_TITLE: Record<Step, string> = {
   site: 'Which site?',
@@ -50,7 +50,7 @@ const STEP_TITLE: Record<Step, string> = {
 };
 
 const STEP_DESCRIPTION: Record<Step, string> = {
-  site: 'Pick a WordPress site connected through the AgentMate Connector plugin.',
+  site: 'Pick a WordPress site connected through the Runova Connector plugin.',
   items: 'Only what you tick is pulled into the project, and only that is ever deployed back.',
   details: 'Where the project lives on this computer and which agent works on it.',
   run: 'You can close this window; the pull keeps going.',
@@ -100,20 +100,20 @@ export function NewWordPressProjectDialog({
 
   const sitesQuery = useQuery({
     queryKey: queryKeys.deployWordPressSites,
-    queryFn: () => window.agentmat.deployWordPress.listSites(),
+    queryFn: () => window.runova.deployWordPress.listSites(),
     enabled: open,
     meta: SILENT,
   });
   const site = sitesQuery.data?.find((candidate) => candidate.id === siteId) ?? null;
   const itemsQuery = useQuery({
     queryKey: queryKeys.deployWordPressItems(siteId ?? ''),
-    queryFn: () => window.agentmat.deployWordPress.listItems(siteId as string),
+    queryFn: () => window.runova.deployWordPress.listItems(siteId as string),
     enabled: open && siteId !== null && step !== 'site',
     meta: SILENT,
   });
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
     enabled: open,
   });
 
@@ -181,7 +181,7 @@ export function NewWordPressProjectDialog({
       : '';
 
   async function pickFolder(): Promise<void> {
-    const picked = await window.agentmat.projects.pickFolder();
+    const picked = await window.runova.projects.pickFolder();
     if (!picked) return;
     setFolder(picked);
     setFolderTouched(true);

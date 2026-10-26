@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { type FakeBridge, installAgentmatBridge } from '../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../test/renderer/runovaBridge';
 
 /**
  * A routing test, not a page test. Every path the router knows has to land on its own page with
@@ -87,7 +87,7 @@ const { default: App } = await import('./App');
  * to answer those or the boot rejects in the background.
  */
 function installBootBridge(): FakeBridge {
-  return installAgentmatBridge({
+  return installRunovaBridge({
     'settings.get': async () => ({
       theme: 'dark',
       defaultCliId: null,

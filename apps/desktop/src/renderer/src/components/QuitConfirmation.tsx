@@ -13,13 +13,13 @@ import { confirmDialog } from '@/stores/confirmStore';
 export function QuitConfirmation(): null {
   useEffect(
     () =>
-      window.agentmat.app.onConfirmQuit((summary) => {
+      window.runova.app.onConfirmQuit((summary) => {
         void confirmDialog({
           title: QUIT_CONFIRM_TITLE,
           description: describeOpenSessions(summary),
           confirmLabel: QUIT_CONFIRM_LABEL,
           variant: 'destructive',
-        }).then((confirmed) => window.agentmat.app.answerQuit(confirmed));
+        }).then((confirmed) => window.runova.app.answerQuit(confirmed));
       }),
     [],
   );

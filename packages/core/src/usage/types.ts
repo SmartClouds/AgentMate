@@ -4,7 +4,7 @@ import { CLAUDE_WEEKLY_METERED_MODEL } from '../models/catalog.js';
 // provider catalog, the normalized usage snapshot every data source returns, and
 // the desktop-widget instances the user pins to their screen.
 
-/** How AgentMate obtains usage data for a provider. */
+/** How Runova obtains usage data for a provider. */
 export type UsageDataSource =
   | 'local-log' // parse local CLI logs on disk (no credentials): Claude Code, Codex
   | 'local-session' // reuse the vendor app's own signed-in session on disk: Cursor
@@ -181,7 +181,7 @@ export interface LastKnownLimits {
  * are index-aligned with `ProjectDaily.endDay`: the last entry is that day, the first the oldest.
  */
 export interface ProjectDailyUsage {
-  /** `project:<id>` for a registered AgentMate project, `folder:<path>` for any other folder. */
+  /** `project:<id>` for a registered Runova project, `folder:<path>` for any other folder. */
   key: string;
   name: string;
   /** The folder the sessions ran in, when there is one. */

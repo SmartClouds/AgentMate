@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { DEFAULT_PASSWORD_OPTIONS } from '@agentmat/core';
+import { DEFAULT_PASSWORD_OPTIONS } from '@runova/core';
 import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useVaultStore } from '@/stores/vaultStore';

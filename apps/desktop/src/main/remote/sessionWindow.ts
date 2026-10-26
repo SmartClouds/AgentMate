@@ -10,7 +10,7 @@ import { titleBarFrameOptions } from '../windowChrome';
  * The active remote-control session gets its own real, resizable/maximizable/
  * fullscreenable BrowserWindow (unlike the small fixed-size usage widgets in
  * `usage/widgetWindows.ts`) so the operator can resize it, drag it to another
- * monitor, or full-screen it independently of the main AgentMate window. Only
+ * monitor, or full-screen it independently of the main Runova window. Only
  * one controller connection exists at a time (`RemoteManager.connection` is
  * singular), so this manages a single window rather than a map.
  */

@@ -1,4 +1,4 @@
-import type { RunDockerStopMode } from '@agentmat/core';
+import type { RunDockerStopMode } from '@runova/core';
 import type { DockerContainer } from '@shared/apiTypes';
 import { toast } from 'sonner';
 import { queryKeys } from '@/lib/queryKeys';
@@ -20,7 +20,7 @@ function containerCount(count: number): string {
 
 async function readMode(): Promise<RunDockerStopMode> {
   try {
-    const settings = await window.agentmat.settings.get();
+    const settings = await window.runova.settings.get();
     return settings?.stopDockerWithRun ?? 'ask';
   } catch {
     // Asking is the safe default: it never stops anything on its own.
@@ -37,7 +37,7 @@ async function stopContainers(ids: string[]): Promise<void> {
   try {
     const results = await Promise.all(
       fresh.map((id) =>
-        window.agentmat.docker.stop(id).catch(() => ({ ok: false as const, error: undefined })),
+        window.runova.docker.stop(id).catch(() => ({ ok: false as const, error: undefined })),
       ),
     );
     const failed = results.filter((result) => !result?.ok).length;
@@ -58,7 +58,7 @@ async function stopContainers(ids: string[]): Promise<void> {
 
 async function remember(mode: RunDockerStopMode): Promise<void> {
   try {
-    await window.agentmat.settings.update({ stopDockerWithRun: mode });
+    await window.runova.settings.update({ stopDockerWithRun: mode });
     await queryClient.invalidateQueries({ queryKey: queryKeys.settings });
   } catch {
     // Not being able to save the preference only means being asked again next time.
@@ -81,7 +81,7 @@ export async function offerStopContainers(runs: StoppedRun[]): Promise<void> {
   if (mode === 'keep') return;
 
   const lookups = await Promise.allSettled(
-    folders.map((folder) => window.agentmat.docker.runningForProject(folder)),
+    folders.map((folder) => window.runova.docker.runningForProject(folder)),
   );
   const projects: string[] = [];
   const containers = new Map<string, DockerContainer>();

@@ -48,7 +48,7 @@ for (const vector of [true, false]) {
     }
 
     beforeEach(() => {
-      dir = mkdtempSync(join(tmpdir(), 'agentmate-help-'));
+      dir = mkdtempSync(join(tmpdir(), 'runova-help-'));
       index = open();
     });
 

@@ -187,14 +187,14 @@ export function CommitBox({
 
   async function generate(): Promise<void> {
     if (generating) {
-      void window.agentmat.git.cancelSuggestCommitMessage(generating);
+      void window.runova.git.cancelSuggestCommitMessage(generating);
       setGenerating(null);
       return;
     }
     const requestId = crypto.randomUUID();
     setGenerating(requestId);
     try {
-      const result = await window.agentmat.git.suggestCommitMessage(
+      const result = await window.runova.git.suggestCommitMessage(
         projectId,
         requestId,
         stagedCount > 0 ? 'staged' : 'all',

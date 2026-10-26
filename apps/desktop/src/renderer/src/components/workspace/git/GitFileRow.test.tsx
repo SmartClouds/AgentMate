@@ -1,14 +1,11 @@
 // @vitest-environment jsdom
-import type { GitChangeEntry, Project } from '@agentmat/core';
+import type { GitChangeEntry, Project } from '@runova/core';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useExplorerStore } from '@/stores/explorerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
-import {
-  type FakeBridge,
-  installAgentmatBridge,
-} from '../../../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../../../test/renderer/runovaBridge';
 import { GitFileRow } from './GitFileRow';
 
 const project = { id: 'p1', name: 'App', folderPath: 'E:\\work\\app' } as Project;
@@ -43,7 +40,7 @@ function openMenu(): void {
 }
 
 beforeEach(() => {
-  bridge = installAgentmatBridge({ platform: 'win32' });
+  bridge = installRunovaBridge({ platform: 'win32' });
   useExplorerStore.setState({ projects: {} });
   useWorkspaceStore.getState().setGitPanel({ activeSection: 'sourceControl' });
 });

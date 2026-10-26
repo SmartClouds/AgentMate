@@ -51,12 +51,12 @@ After you generate a prompt in the **Build Prompt** dialog, open the menu next t
 
 ## How automatic tasks run
 
-AgentMate checks for due tasks every 30 seconds while it is open. When an automatic task's time arrives it opens a new terminal tab in the project's folder, starts the CLI with the prompt and presses `Enter`. A message says "Scheduled prompt started in" the CLI name, and the task moves to **Ran**.
+Runova checks for due tasks every 30 seconds while it is open. When an automatic task's time arrives it opens a new terminal tab in the project's folder, starts the CLI with the prompt and presses `Enter`. A message says "Scheduled prompt started in" the CLI name, and the task moves to **Ran**.
 
 The CLI is picked in this order: the task's own CLI, then your **Default CLI** from Settings, then the CLI that belongs to the task's target AI. If none of them can run it you see "A scheduled prompt was due, but no CLI is set up to run it." Model and effort are only used with the CLI they were picked for.
 
 > [!WARNING]
-> AgentMate has to be running at the scheduled time. A task more than 2 minutes late (the app was closed, or the computer was asleep) is not started, because opening a CLI hours late would be a surprise. It is marked **Missed** instead.
+> Runova has to be running at the scheduled time. A task more than 2 minutes late (the app was closed, or the computer was asleep) is not started, because opening a CLI hours late would be a surprise. It is marked **Missed** instead.
 
 ## Manage scheduled tasks
 
@@ -74,7 +74,7 @@ A **Missed** task shows "was due" with the original time and a **Run now** butto
 
 ## Telegram messages
 
-If you set up a Telegram bot in **Settings**, **Notifications**, **Telegram bot** and fill in **Scheduled tasks chat/group ID**, AgentMate posts a message there for every new scheduled task. It shows the project, target AI, CLI, when it runs and its status, followed by the prompt. As the task changes (completed, cancelled, missed, moved to a new time) the same message is edited, so the chat keeps one up to date card per task instead of a stream of messages.
+If you set up a Telegram bot in **Settings**, **Notifications**, **Telegram bot** and fill in **Scheduled tasks chat/group ID**, Runova posts a message there for every new scheduled task. It shows the project, target AI, CLI, when it runs and its status, followed by the prompt. As the task changes (completed, cancelled, missed, moved to a new time) the same message is edited, so the chat keeps one up to date card per task instead of a stream of messages.
 
 If the bot token or the scheduled tasks chat ID is missing, the task is still created and no message is sent. See [Notifications and Telegram](notifications-telegram.md).
 
@@ -82,7 +82,7 @@ If the bot token or the scheduled tasks chat ID is missing, the task is still cr
 
 - Pick **Manually** for a prompt you want ready but not running by itself. It waits in **Up next** until you click **Run now**.
 - To run something overnight, make sure the computer will not sleep. The **Keep computer awake** control in the status bar at the bottom of the window has an **On** mode that keeps it awake continuously. The default **Agent** mode only holds it awake while an agent or command is already running.
-- If a task keeps showing **Missed**, AgentMate was probably closed at that time. Reschedule it with **Edit**.
+- If a task keeps showing **Missed**, Runova was probably closed at that time. Reschedule it with **Edit**.
 
 ## Related
 

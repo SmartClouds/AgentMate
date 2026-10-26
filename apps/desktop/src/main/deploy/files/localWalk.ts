@@ -8,10 +8,11 @@ import {
   findWpCaseCollisions,
   type IgnoreLayer,
   type IgnoreRules,
+  LEGACY_IGNORE_FILE,
   type LocalFileMap,
   syncPathFolder,
   validateSyncPath,
-} from '@agentmat/core';
+} from '@runova/core';
 import { filesError } from '../../../shared/deployFilesErrors';
 import type { FilesLeftOut, FilesLeftOutReason } from '../../../shared/deployFilesTypes';
 import { type HashCache, hashFile } from '../hashFile';
@@ -19,9 +20,9 @@ import { type HashCache, hashFile } from '../hashFile';
 /**
  * What an FTP or SFTP site's deploy folder holds on this computer (E23), in the shape the planner
  * reads. The rules are those of the WordPress walker (localManifest.ts), for a whole folder:
- * - the hard deny list (validateSyncPath) leaves agent settings, AgentMate's files, version
+ * - the hard deny list (validateSyncPath) leaves agent settings, Runova's files, version
  *   control and secrets out, whatever any ignore file says; `php.ini` and `.user.ini` may go;
- * - the ignore layers (the folder's `.agentmateignore`, then the site's own patterns) leave out
+ * - the ignore layers (the folder's `.runovaignore`, then the site's own patterns) leave out
  *   what the user said, both ways;
  * - the default list leaves out build output and editor folders, unless the last deploy already
  *   sent the file;
@@ -104,15 +105,27 @@ async function isFolder(path: string): Promise<boolean> {
   return info?.isDirectory() ?? false;
 }
 
-/** The site's ignore layers, in order: the folder's .agentmateignore, then the site's patterns. */
+/**
+ * The folder's own ignore file. One written before the app was renamed has the old name and still
+ * counts; when both are there, `.runovaignore` is the one read.
+ */
+async function readOwnIgnoreFile(root: string): Promise<{ name: string; text: string } | null> {
+  for (const name of ['.runovaignore', LEGACY_IGNORE_FILE]) {
+    const path = join(root, name);
+    const info = await lstat(path).catch(() => null);
+    if (!info) continue;
+    // A linked or oversized ignore file is not read: rules come only from files in the folder.
+    if (!info.isFile() || info.size > MAX_IGNORE_FILE_BYTES) return null;
+    return { name, text: await readFile(path, 'utf-8') };
+  }
+  return null;
+}
+
+/** The site's ignore layers, in order: the folder's .runovaignore, then the site's patterns. */
 async function siteIgnoreRules(root: string, patterns: readonly string[]): Promise<IgnoreRules> {
-  const path = join(root, '.agentmateignore');
-  const info = await lstat(path).catch(() => null);
-  // A linked or oversized ignore file is not read: rules come only from files in the folder.
-  const own =
-    info?.isFile() && info.size <= MAX_IGNORE_FILE_BYTES ? await readFile(path, 'utf-8') : null;
+  const own = await readOwnIgnoreFile(root);
   const layers: IgnoreLayer[] = [
-    ...(own === null ? [] : [{ source: '.agentmateignore', text: own, negations: true }]),
+    ...(own === null ? [] : [{ source: own.name, text: own.text, negations: true }]),
     { source: 'site settings', text: patterns.join('\n'), negations: true },
   ];
   const compiled = createFileSiteIgnoreRules(layers);
@@ -233,7 +246,7 @@ export async function walkSiteFolder(options: FilesWalkOptions): Promise<FilesLo
       if (count > maxFiles) {
         throw filesError(
           'tooManyFiles',
-          `The deploy folder holds more than ${maxFiles} files, more than AgentMate sends for one site. Leave folders the server does not need out with .agentmateignore or the site's ignore patterns.`,
+          `The deploy folder holds more than ${maxFiles} files, more than Runova sends for one site. Leave folders the server does not need out with .runovaignore or the site's ignore patterns.`,
         );
       }
       options.signal?.throwIfAborted();

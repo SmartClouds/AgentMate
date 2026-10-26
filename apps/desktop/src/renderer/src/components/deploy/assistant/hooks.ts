@@ -1,5 +1,5 @@
 import { coreErrorCode } from '@shared/coreErrors';
-import type { AssistantModeInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { AssistantModeInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { queryKeys } from '@/lib/queryKeys';
@@ -14,8 +14,8 @@ import { useDeployAssistantStore } from '@/stores/deployAssistantStore';
 export function useDeployAssistantEvents(): void {
   useEffect(() => {
     const { progress, output } = useDeployAssistantStore.getState();
-    const offProgress = window.agentmat.deployAssistant.onProgress((event) => progress(event));
-    const offOutput = window.agentmat.deployAssistant.onOutput((event) => output(event));
+    const offProgress = window.runova.deployAssistant.onProgress((event) => progress(event));
+    const offOutput = window.runova.deployAssistant.onOutput((event) => output(event));
     return () => {
       offProgress();
       offOutput();
@@ -34,7 +34,7 @@ export interface AssistantModeQuery {
 export function useAssistantMode(serverId: string, enabled: boolean): AssistantModeQuery {
   const query = useQuery({
     queryKey: queryKeys.deployAssistantMode(serverId),
-    queryFn: () => window.agentmat.deployAssistant.getMode(serverId),
+    queryFn: () => window.runova.deployAssistant.getMode(serverId),
     enabled,
     retry: false,
     meta: { silentLoading: true },

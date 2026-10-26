@@ -2,15 +2,15 @@
 /**
  * /items/manifest: order, paging with a cursor, skip reasons, the hash cache and item checks.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Unit;
+namespace Runova\Connector\Tests\Unit;
 
-use AgentMate\Connector\Files\ItemResolver;
-use AgentMate\Connector\Files\Manifest;
-use AgentMate\Connector\Files\Paths;
-use AgentMate\Connector\Tests\Support\TestCase;
+use Runova\Connector\Files\ItemResolver;
+use Runova\Connector\Files\Manifest;
+use Runova\Connector\Files\Paths;
+use Runova\Connector\Tests\Support\TestCase;
 
 final class ManifestTest extends TestCase
 {
@@ -196,13 +196,13 @@ final class ManifestTest extends TestCase
     public function testItemChecks(): void
     {
         $connection = $this->connect();
-        $this->env->put('plugins/agentmate-connector/agentmate-connector.php', '<?php');
-        $this->env->put('mu-plugins/00-agentmate-connector-guard.php', '<?php');
+        $this->env->put('plugins/runova-connector/runova-connector.php', '<?php');
+        $this->env->put('mu-plugins/00-runova-connector-guard.php', '<?php');
         $this->env->put('plugins/real/real.php', '<?php');
         symlink($this->env->content . '/plugins/real', $this->env->content . '/plugins/linked');
         $cases = array(
-            array(array('kind' => 'plugin', 'slug' => 'agentmate-connector'), 'itemProtected'),
-            array(array('kind' => 'mu-plugin', 'slug' => '00-agentmate-connector-guard.php'), 'itemProtected'),
+            array(array('kind' => 'plugin', 'slug' => 'runova-connector'), 'itemProtected'),
+            array(array('kind' => 'mu-plugin', 'slug' => '00-runova-connector-guard.php'), 'itemProtected'),
             array(array('kind' => 'plugin', 'slug' => 'missing'), 'itemUnknown'),
             array(array('kind' => 'theme', 'slug' => '..'), 'pathRejected'),
             array(array('kind' => 'theme', 'slug' => 'a b'), 'badRequest'),

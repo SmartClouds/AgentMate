@@ -1,4 +1,4 @@
-import type { FirewallChange } from './deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { FirewallChange } from './deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * The Firewall section's IPC shapes (E13). A change set is previewed, applied over the server's

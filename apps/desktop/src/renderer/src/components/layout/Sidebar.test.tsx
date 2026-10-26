@@ -206,18 +206,18 @@ describe('Sidebar version and updates', () => {
   it('shows the running version', async () => {
     renderSidebar('/', { 'app.getVersion': async () => '2.4.1' });
 
-    expect(await screen.findByRole('button', { name: /AgentMate v2\.4\.1/ })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /Runova v2\.4\.1/ })).toBeTruthy();
   });
 
-  it('shows the AgentMate icon, the maker and the version chip on the about card', async () => {
+  it('shows the Runova icon, the maker and the version chip on the about card', async () => {
     renderSidebar('/', { 'app.getVersion': async () => '2.4.1' });
 
-    const card = await screen.findByRole('button', { name: /AgentMate v2\.4\.1/ });
-    expect(card).toHaveAccessibleName('AgentMate v2.4.1, by SmartClouds, about');
+    const card = await screen.findByRole('button', { name: /Runova v2\.4\.1/ });
+    expect(card).toHaveAccessibleName('Runova v2.4.1, by SmartClouds, about');
     expect(card).toHaveAttribute('aria-haspopup', 'dialog');
     expect(within(card).getByText('by SmartClouds')).toBeInTheDocument();
     expect(within(card).getByText('v2.4.1')).toBeInTheDocument();
-    // The name beside it already says AgentMate, so the icon itself stays silent.
+    // The name beside it already says Runova, so the icon itself stays silent.
     const icon = card.querySelector('img');
     expect(icon).toHaveAttribute('alt', '');
     expect(icon?.getAttribute('src')).toContain('app-icon');
@@ -229,9 +229,9 @@ describe('Sidebar version and updates', () => {
   it('opens About when the card is clicked, without starting an update check', async () => {
     const { user, bridge } = renderSidebar('/', { 'app.getVersion': async () => '2.4.1' });
 
-    await user.click(await screen.findByRole('button', { name: /AgentMate v2\.4\.1/ }));
+    await user.click(await screen.findByRole('button', { name: /Runova v2\.4\.1/ }));
 
-    expect(await screen.findByRole('dialog', { name: 'About AgentMate' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'About Runova' })).toBeInTheDocument();
     expect(() => bridge.$fn('app.checkForUpdates')).toThrow(/not been touched/);
   });
 
@@ -241,8 +241,8 @@ describe('Sidebar version and updates', () => {
       'app.checkForUpdates': async () => ({ state: 'not-available' }),
     });
 
-    await user.click(await screen.findByRole('button', { name: /AgentMate v2\.4\.1/ }));
-    const about = await screen.findByRole('dialog', { name: 'About AgentMate' });
+    await user.click(await screen.findByRole('button', { name: /Runova v2\.4\.1/ }));
+    const about = await screen.findByRole('dialog', { name: 'About Runova' });
     await user.click(within(about).getByRole('button', { name: 'Check for updates' }));
 
     expect(bridge.$fn('app.checkForUpdates')).toHaveBeenCalledTimes(1);
@@ -253,19 +253,19 @@ describe('Sidebar version and updates', () => {
 
   it('shows a check in progress in place of the version', async () => {
     renderSidebar('/', { 'app.getVersion': async () => '2.4.1' });
-    const card = await screen.findByRole('button', { name: /AgentMate v2\.4\.1/ });
+    const card = await screen.findByRole('button', { name: /Runova v2\.4\.1/ });
 
     act(() => useUpdateStore.setState({ status: { state: 'checking' } }));
 
     expect(within(card).getByText('Checking…')).toBeInTheDocument();
     expect(within(card).queryByText('v2.4.1')).toBeNull();
-    expect(card).toHaveAccessibleName(/AgentMate v2\.4\.1, by SmartClouds, checking for updates/);
+    expect(card).toHaveAccessibleName(/Runova v2\.4\.1, by SmartClouds, checking for updates/);
     expect(card).toHaveAttribute('aria-busy', 'true');
   });
 
   it('flags a waiting update on the card', async () => {
     renderSidebar('/', { 'app.getVersion': async () => '2.4.1' });
-    const card = await screen.findByRole('button', { name: /AgentMate v2\.4\.1/ });
+    const card = await screen.findByRole('button', { name: /Runova v2\.4\.1/ });
     expect(card).not.toHaveAccessibleName(/update available/);
 
     act(() =>
@@ -277,30 +277,30 @@ describe('Sidebar version and updates', () => {
       }),
     );
 
-    expect(card).toHaveAccessibleName('AgentMate v2.4.1, by SmartClouds, update available, about');
+    expect(card).toHaveAccessibleName('Runova v2.4.1, by SmartClouds, update available, about');
   });
 
-  it('shrinks to the AgentMate icon on the icon rail, still opening About', async () => {
+  it('shrinks to the Runova icon on the icon rail, still opening About', async () => {
     const { user } = renderSidebar('/', { 'app.getVersion': async () => '2.4.1' });
     act(() => useUiStore.setState({ sidebarMode: 'collapsed' }));
 
-    const icon = await screen.findByRole('button', { name: /AgentMate v2\.4\.1, by SmartClouds/ });
+    const icon = await screen.findByRole('button', { name: /Runova v2\.4\.1, by SmartClouds/ });
     // The words go with the labels; only the icon is left on the rail.
     expect(screen.queryByText('by SmartClouds')).toBeNull();
     expect(screen.queryByText('v2.4.1')).toBeNull();
     expect(icon.querySelector('img')?.getAttribute('src')).toContain('app-icon');
 
     await user.hover(icon);
-    expect((await screen.findAllByText('About AgentMate')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('About Runova')).length).toBeGreaterThan(0);
 
     await user.click(icon);
-    expect(await screen.findByRole('dialog', { name: 'About AgentMate' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'About Runova' })).toBeInTheDocument();
   });
 
   it('keeps the update dot on the rail when an update is waiting', async () => {
     renderSidebar('/', { 'app.getVersion': async () => '2.4.1' });
     act(() => useUiStore.setState({ sidebarMode: 'collapsed' }));
-    const icon = await screen.findByRole('button', { name: /AgentMate v2\.4\.1/ });
+    const icon = await screen.findByRole('button', { name: /Runova v2\.4\.1/ });
     const quiet = icon.childElementCount;
 
     act(() =>

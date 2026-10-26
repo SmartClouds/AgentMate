@@ -7,7 +7,7 @@ import {
   healthNextDelayMs,
   nextHealthTrack,
   probeFailureReport,
-} from '@agentmat/core';
+} from '@runova/core';
 import { net } from 'electron';
 import type { SecretEnvelope } from '../../shared/apiTypes';
 import { decryptSecret, isLockedEnvelope, onVaultUnlocked } from '../ssh/vault';
@@ -289,7 +289,7 @@ export function createHealthScheduler(deps: HealthSchedulerDeps) {
 export type HealthScheduler = ReturnType<typeof createHealthScheduler>;
 
 function tickMs(): number {
-  const override = Number(process.env.AGENTMATE_HEALTH_TICK_MS);
+  const override = Number(process.env.RUNOVA_HEALTH_TICK_MS);
   return Number.isFinite(override) && override >= 50 ? override : DEFAULT_TICK_MS;
 }
 

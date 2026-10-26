@@ -61,7 +61,7 @@ export function useStepUp(server: DeployServer): StepUp {
     if (cached) return cached;
     let found: Known = { until: 0, twoFactor: false };
     try {
-      const account = await window.agentmat.deploy.account(serverId);
+      const account = await window.runova.deploy.account(serverId);
       found = { until: account.stepUpUntilUnixMs ?? 0, twoFactor: account.twoFactorEnabled };
     } catch {
       // Asking for the password is the safe answer to not knowing.
@@ -173,7 +173,7 @@ function StepUpDialog({
     setBusy(true);
     setProblem(null);
     try {
-      const confirmed = await window.agentmat.deploy.stepUp({
+      const confirmed = await window.runova.deploy.stepUp({
         serverId: server.id,
         ...(useCode ? { totpCode: answer } : { password: answer }),
       });

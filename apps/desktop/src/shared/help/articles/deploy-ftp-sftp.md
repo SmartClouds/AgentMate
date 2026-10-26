@@ -3,13 +3,13 @@ title: FTP and SFTP sites
 category: Deploy
 order: 85
 summary: Send a folder on this computer to a host over SFTP, FTPS or FTP. You see what changed since the last deploy, and nothing changed on the server is overwritten or deleted without your say.
-keywords: ftp, sftp, ftps, upload, sync, deploy folder, static site, shared hosting, cpanel, public_html, conflicts, deploy on save, host key, certificate, self-signed, ignore, .agentmateignore, ignore lines, left out, first deploy, retry failed, history, project deploy tab
+keywords: ftp, sftp, ftps, upload, sync, deploy folder, static site, shared hosting, cpanel, public_html, conflicts, deploy on save, host key, certificate, self-signed, ignore, .runovaignore, ignore lines, left out, first deploy, retry failed, history, project deploy tab
 route: /deploy
 ---
 
-An FTP or SFTP site in Deploy is three things: a folder on this computer (the deploy folder), a login to a server, and a folder on that server. AgentMate watches the deploy folder and keeps a list of what was added, modified or deleted since the last deploy. When you click Deploy, it first checks the server folder, then sends only what changed. A file someone changed on the server is never overwritten without you choosing to, and a file is only deleted on the server if an earlier deploy put it there.
+An FTP or SFTP site in Deploy is three things: a folder on this computer (the deploy folder), a login to a server, and a folder on that server. Runova watches the deploy folder and keeps a list of what was added, modified or deleted since the last deploy. When you click Deploy, it first checks the server folder, then sends only what changed. A file someone changed on the server is never overwritten without you choosing to, and a file is only deleted on the server if an earlier deploy put it there.
 
-It works with any host that offers SFTP, FTPS or plain FTP: shared hosting, a VPS, or a static site host. The server does not need the AgentMate server core, and nothing is installed on it.
+It works with any host that offers SFTP, FTPS or plain FTP: shared hosting, a VPS, or a static site host. The server does not need the Runova server core, and nothing is installed on it.
 
 ## Where to find it
 
@@ -39,7 +39,7 @@ The **Add an FTP or SFTP site** dialog says "A folder on this computer, sent to 
 | **FTP** | "Plain FTP. Not encrypted: your password and every file cross the network as readable text." Default port 21. |
 
 > [!WARNING]
-> Plain FTP sends your password and every file as readable text. When you save an FTP site, AgentMate asks "Save a site that uses plain FTP?" and you have to click **Use plain FTP**. Pick FTPS or SFTP if your host offers either.
+> Plain FTP sends your password and every file as readable text. When you save an FTP site, Runova asks "Save a site that uses plain FTP?" and you have to click **Use plain FTP**. Pick FTPS or SFTP if your host offers either.
 
 ### Saved server or your own login
 
@@ -86,7 +86,7 @@ If you change the host, login or folders after a test, the dialog says "The deta
 
 #### First connection to an SFTP server
 
-The first time AgentMate meets an SFTP server, the test stops with **First connection to this server** and shows the host key's **Fingerprint**. Compare it with the one your host shows (in its control panel, or with `ssh-keygen -lf` on the server). If they match, click **Trust this key**. The test runs again, and from then on a server that shows a different key is refused.
+The first time Runova meets an SFTP server, the test stops with **First connection to this server** and shows the host key's **Fingerprint**. Compare it with the one your host shows (in its control panel, or with `ssh-keygen -lf` on the server). If they match, click **Trust this key**. The test runs again, and from then on a server that shows a different key is refused.
 
 If the key is different from the one you trusted, the card says **The server's host key changed** and shows **Trusted before** and **Presented now**. That is expected after the server was rebuilt or moved. If neither happened, do not trust it and ask your host. For a saved server, the key belongs to Remote, so trusting it here trusts it there too (see [Host key prompts](remote.md#host-key-prompts)).
 
@@ -110,7 +110,7 @@ On shared hosts the certificate is often made out to the host's own name, not yo
 
 ## The Changes list
 
-**Changes** opens with a card that says what is waiting, such as "12 changes, 3.40 MB since the last deploy", and the **Deploy 12 changes (3.40 MB)** button. While AgentMate is still reading the folder, a **Checking the folder** chip shows. With nothing waiting, the card says **Everything is deployed** and when that was.
+**Changes** opens with a card that says what is waiting, such as "12 changes, 3.40 MB since the last deploy", and the **Deploy 12 changes (3.40 MB)** button. While Runova is still reading the folder, a **Checking the folder** chip shows. With nothing waiting, the card says **Everything is deployed** and when that was.
 
 Below is the list of changed files, grouped by folder (files at the top level are under **Top folder**). Each row has a chip (**Added**, **Modified** or **Deleted**, and a deleted file is struck through), the path and the size. Click a folder's arrow to fold it. Long lists show 500 rows at a time with a **Show (n) more** button.
 
@@ -129,8 +129,8 @@ Every file starts ticked. Untick a file, or a whole folder with the box on its f
 | Reason | What it means |
 | --- | --- |
 | **Never sent** | "Secrets, keys and version control folders never leave this computer, whatever the ignore lines say." |
-| **Agent files** | "Agent settings, skills and AgentMate files stay on this computer." |
-| **Ignored** | "Left out by an ignore line: the defaults, the folder's .agentmateignore or this site's own." |
+| **Agent files** | "Agent settings, skills and Runova files stay on this computer." |
+| **Ignored** | "Left out by an ignore line: the defaults, the folder's .runovaignore or this site's own." |
 | **Link** | "Links are not followed, so a link cannot send files from outside the deploy folder." |
 | **Too large** | "Files this large are not sent." The limit is 2 GB a file. |
 | **Odd name** | "The name is not valid text, so it would arrive broken on the server." |
@@ -142,7 +142,7 @@ Every file starts ticked. Untick a file, or a whole folder with the box on its f
 These names are refused anywhere in the folder, in any letter case:
 
 - Version control and CI: `.git`, `.svn`, `.hg`, `.github`, `.worktrees`.
-- Agent and AgentMate files (shown as **Agent files**): `.agentmate`, `.claude`, `.agents`, `.codex`, `.cursor`, `.windsurf`, `.continue`, `.factory`, `.gemini`, `.opencode`, `.roo`, `.kiro`, `.amazonq`, `.junie`, `.clinerules`, anything starting with `.aider`, and the files `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`, `GEMINI.md`, `.mcp.json`, `opencode.json`, `.cursorrules`, `.windsurfrules`, `.roomodes` and `.agentmateignore` itself.
+- Agent and Runova files (shown as **Agent files**): `.runova`, `.claude`, `.agents`, `.codex`, `.cursor`, `.windsurf`, `.continue`, `.factory`, `.gemini`, `.opencode`, `.roo`, `.kiro`, `.amazonq`, `.junie`, `.clinerules`, anything starting with `.aider`, and the files `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`, `GEMINI.md`, `.mcp.json`, `opencode.json`, `.cursorrules`, `.windsurfrules`, `.roomodes` and `.runovaignore` itself.
 - Secrets and keys: `.env`, `.env.*` (like `.env.local`), `.envrc`, `.npmrc`, `auth.json`, `.netrc`, `.git-credentials`, anything starting with `id_rsa`, `id_ed25519` or `id_ecdsa`, and anything ending in `.pem` or `.ppk`.
 - System clutter: `.DS_Store`, `Thumbs.db`, `desktop.ini`.
 
@@ -156,7 +156,7 @@ To change what is left out, see [Ignore lines](#ignore-lines).
 
 ## Deploy
 
-Click **Deploy (n) changes**. The button says **Checking the server...** while AgentMate lists the server folders the deploy touches and compares each file with what the last deploy left there. If nothing needs a choice, the deploy starts right away. Otherwise a **Checked the server** card opens above the list: "A few things need a look before anything is sent." Click **Continue** when you are done, or **Back** to leave it.
+Click **Deploy (n) changes**. The button says **Checking the server...** while Runova lists the server folders the deploy touches and compares each file with what the last deploy left there. If nothing needs a choice, the deploy starts right away. Otherwise a **Checked the server** card opens above the list: "A few things need a look before anything is sent." Click **Continue** when you are done, or **Back** to leave it.
 
 ### Conflicts
 
@@ -175,7 +175,7 @@ When the server gives no usable file times, a conflict row adds "Judged by size,
 
 ### First deploy over existing files
 
-On a site's first deploy into a folder that already has files, the card says "This folder on the server already has (n) files". AgentMate does not know which of them came from your folder, so it asks:
+On a site's first deploy into a folder that already has files, the card says "This folder on the server already has (n) files". Runova does not know which of them came from your folder, so it asks:
 
 - **Skip files with the same size** (recommended): files with the same size as here count as already deployed. Only the others are uploaded.
 - **Overwrite all**: "Every file is uploaded, replacing the server's copy. Slower, but nothing is guessed."
@@ -195,7 +195,7 @@ When a deploy would delete more than 20 files, 5 or more files that are over a q
 
 ### Confirm deletes
 
-If the deploy deletes anything, AgentMate asks "Delete (n) files from the server?" and lists them. Each one was deleted in the deploy folder, was sent by an earlier deploy, and has not changed on the server since. Click **Delete and deploy**, or cancel to go back to the review and untick the deletes.
+If the deploy deletes anything, Runova asks "Delete (n) files from the server?" and lists them. Each one was deleted in the deploy folder, was sent by an earlier deploy, and has not changed on the server since. Click **Delete and deploy**, or cancel to go back to the review and untick the deletes.
 
 ### Progress and cancel
 
@@ -220,14 +220,14 @@ If the deploy could not start because the review is out of date (it expired afte
 ## What is never deleted or overwritten
 
 - A file is deleted on the server only if an earlier deploy uploaded it and it is unchanged there. A file that is only on the server is never touched.
-- A folder is removed only if AgentMate created it, and only when it is empty.
+- A folder is removed only if Runova created it, and only when it is empty.
 - A change made on the server is never overwritten without you choosing **Overwrite** (or **Delete**) for that file.
 - Removing a site, or forgetting what was deployed, changes nothing on the server.
 - Files the server changed that you did not change here are left as they are.
 
 ## Deploy on save
 
-With **Deploy on save** on, the site's header shows a **Deploy on save** chip. Once the deploy folder has been quiet for the quiet time, AgentMate checks the server and deploys what changed, one run at a time. If you save again during a run, it waits for quiet and runs again. The progress card says "Deploy on save is sending your changes.", and History marks those runs **Deploy on save**.
+With **Deploy on save** on, the site's header shows a **Deploy on save** chip. Once the deploy folder has been quiet for the quiet time, Runova checks the server and deploys what changed, one run at a time. If you save again during a run, it waits for quiet and runs again. The progress card says "Deploy on save is sending your changes.", and History marks those runs **Deploy on save**.
 
 It never decides for you. It stops, marks the site **Needs review**, and sends a notification when:
 
@@ -258,15 +258,15 @@ A yellow note on the site's page (and on the project's Deploy tab) says why it s
 
 Type files to leave out of this site, one pattern a line, as in a `.gitignore`. Start a line with `!` to bring a file back, for example one the defaults leave out. Each line is checked as you type, and a mistake shows as "Line (n): (reason)". Click **Save** to keep them.
 
-You can also put a `.agentmateignore` file in the deploy folder, with the same format. It applies first, then the site's own lines. The `.agentmateignore` file itself is never sent. Neither one can bring back a file on the never-sent list.
+You can also put a `.runovaignore` file in the deploy folder, with the same format. It applies first, then the site's own lines. The `.runovaignore` file itself is never sent. Neither one can bring back a file on the never-sent list.
 
 ### Forget what was deployed
 
-This is for a server folder that was changed or emptied outside AgentMate. AgentMate forgets which files earlier deploys sent. The next deploy is treated as a first one: it compares the server folder by size and asks how to handle what is there. Nothing on the server changes when you click **Forget**.
+This is for a server folder that was changed or emptied outside Runova. Runova forgets which files earlier deploys sent. The next deploy is treated as a first one: it compares the server folder by size and asks how to handle what is there. Nothing on the server changes when you click **Forget**.
 
 ### Remove site
 
-**Remove site** asks you to confirm, then removes the site from AgentMate with its deploy history, and with its login when the site has a login of its own (a server saved in Remote stays there). Files on the server are not touched, and neither is the deploy folder.
+**Remove site** asks you to confirm, then removes the site from Runova with its deploy history, and with its login when the site has a login of its own (a server saved in Remote stays there). Files on the server are not touched, and neither is the deploy folder.
 
 ## The project's Deploy tab
 
@@ -286,7 +286,7 @@ If you protect your saved servers with a passkey (see [The servers passkey](remo
 
 ## Troubleshooting
 
-When something fails, AgentMate says what it means and what to try. For a refused request, a bad field, a certificate name or a write that was not allowed, you may see the server's own words instead.
+When something fails, Runova says what it means and what to try. For a refused request, a bad field, a certificate name or a write that was not allowed, you may see the server's own words instead.
 
 | Message | What to do |
 | --- | --- |
@@ -308,7 +308,7 @@ When something fails, AgentMate says what it means and what to try. For a refuse
 | "The deploy folder has too many files to track." | The limit is 50,000 files. Click **Edit the ignore lines** and leave out build caches and dependencies. |
 | "The review expired after 10 minutes." | Click **Check the server again**. |
 | "Another deploy or test of this site is still running." | Wait for it to finish. |
-| "AgentMate doesn't know this site anymore." | It may have been removed. Pick another site in the rail. |
+| "Runova doesn't know this site anymore." | It may have been removed. Pick another site in the rail. |
 | "One of the attached projects no longer exists." | Open **Edit** and check the attached projects. |
 | "Some of the details are not valid." | Check the highlighted fields. |
 | "Nothing left to send: the server already has what is ticked." | Everything ticked is already on the server. |

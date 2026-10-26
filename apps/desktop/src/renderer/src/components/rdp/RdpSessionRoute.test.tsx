@@ -177,7 +177,7 @@ describe('RdpSessionRoute when the connection fails', () => {
       kind: 'failed',
       ...describeProxyFailure({
         code: 'certificate-changed',
-        message: '176.9.22.106 is presenting a different certificate than the one AgentMate saved.',
+        message: '176.9.22.106 is presenting a different certificate than the one Runova saved.',
       }),
     };
     const { user } = renderRoute();

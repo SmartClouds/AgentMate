@@ -55,21 +55,21 @@ vi.mock('node:child_process', () => {
 const PS_OUTPUT = [
   JSON.stringify({
     ID: 'a1b2c3d4e5f60718293a4b5c6d7e8f901a2b3c4d5e6f708192a3b4c5d6e7f801',
-    Names: 'agentmate-db-1',
+    Names: 'runova-db-1',
     Image: 'postgres:16-alpine',
     State: 'running',
     Status: 'Up 2 hours',
     Labels:
-      'com.docker.compose.project=agentmate,com.docker.compose.service=db,com.docker.compose.project.working_dir=/home/me/projects/agentmate',
+      'com.docker.compose.project=runova,com.docker.compose.service=db,com.docker.compose.project.working_dir=/home/me/projects/runova',
   }),
   JSON.stringify({
     ID: 'ff00112233445566778899aabbccddeeff00112233445566778899aabbccddee',
-    Names: 'agentmate-cache-1',
+    Names: 'runova-cache-1',
     Image: 'redis:7',
     State: 'exited',
     Status: 'Exited (0) 3 days ago',
     Labels:
-      'com.docker.compose.project=agentmate,com.docker.compose.project.working_dir=/home/me/projects/agentmate',
+      'com.docker.compose.project=runova,com.docker.compose.project.working_dir=/home/me/projects/runova',
   }),
   JSON.stringify({
     ID: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
@@ -135,11 +135,11 @@ describe('listContainers', () => {
     expect(containers).toHaveLength(3);
     expect(containers[0]).toEqual({
       id: 'a1b2c3d4e5f60718293a4b5c6d7e8f901a2b3c4d5e6f708192a3b4c5d6e7f801',
-      name: 'agentmate-db-1',
+      name: 'runova-db-1',
       image: 'postgres:16-alpine',
       state: 'running',
       status: 'Up 2 hours',
-      composeProject: 'agentmate',
+      composeProject: 'runova',
       cpuPercent: 0.42,
       // MiB and GiB are binary units, so 38.32MiB is not 38.32 million bytes.
       memUsedBytes: 38.32 * 1024 ** 2,
@@ -159,7 +159,7 @@ describe('listContainers', () => {
   it('leaves usage null for a container docker stats did not report', async () => {
     const containers = await listContainers();
 
-    const cache = containers.find((one) => one.name === 'agentmate-cache-1');
+    const cache = containers.find((one) => one.name === 'runova-cache-1');
     // A stopped container has no stats line at all, which is not an error.
     expect(cache?.cpuPercent).toBeNull();
     expect(cache?.memUsedBytes).toBeNull();
@@ -170,7 +170,7 @@ describe('listContainers', () => {
   it('reads the compose project out of the flat label blob', async () => {
     const containers = await listContainers();
 
-    expect(containers[1].composeProject).toBe('agentmate');
+    expect(containers[1].composeProject).toBe('runova');
     // A label value may itself contain commas and an equals sign, so a plain split is not enough.
     expect(containers[2].composeProject).toBeNull();
   });
@@ -258,15 +258,15 @@ describe('listContainersForProject', () => {
   });
 
   it('returns only the containers compose started in that exact folder', async () => {
-    const containers = await listContainersForProject('/home/me/projects/agentmate');
+    const containers = await listContainersForProject('/home/me/projects/runova');
 
-    expect(containers.map((one) => one.name)).toEqual(['agentmate-db-1', 'agentmate-cache-1']);
+    expect(containers.map((one) => one.name)).toEqual(['runova-db-1', 'runova-cache-1']);
   });
 
   it.each([
-    '/home/me/projects/agentmate/',
-    '\\home\\me\\projects\\agentmate',
-    '/HOME/ME/Projects/AgentMate',
+    '/home/me/projects/runova/',
+    '\\home\\me\\projects\\runova',
+    '/HOME/ME/Projects/Runova',
   ])('matches %s despite separator, case and trailing slash differences', async (folder) => {
     const containers = await listContainersForProject(folder);
 
@@ -275,7 +275,7 @@ describe('listContainersForProject', () => {
   });
 
   it('excludes a container with no compose working dir label', async () => {
-    const containers = await listContainersForProject('/home/me/projects/agentmate');
+    const containers = await listContainersForProject('/home/me/projects/runova');
 
     // A plain `docker run` container has no reliable link to a folder.
     expect(containers.some((one) => one.name === 'lonely-nginx')).toBe(false);
@@ -293,7 +293,7 @@ describe('listRunningContainersForProject', () => {
   });
 
   it('asks docker for running containers only, without sampling stats', async () => {
-    await listRunningContainersForProject('/home/me/projects/agentmate');
+    await listRunningContainersForProject('/home/me/projects/runova');
 
     // `docker stats` waits for a usage sample, which would hold the stop prompt back for seconds.
     expect(argsFor('stats')).toBeUndefined();
@@ -310,20 +310,20 @@ describe('listRunningContainersForProject', () => {
   });
 
   it('gives up sooner than the regular listing, so a hung daemon cannot linger', async () => {
-    await listRunningContainersForProject('/home/me/projects/agentmate');
+    await listRunningContainersForProject('/home/me/projects/runova');
 
     expect(execState.calls[0].options.timeout).toBe(4_000);
   });
 
   it('returns only running containers that compose started in that folder', async () => {
-    const containers = await listRunningContainersForProject('/home/me/projects/agentmate');
+    const containers = await listRunningContainersForProject('/home/me/projects/runova');
 
     // The exited cache container shares the folder but is not using anything; nginx has no folder.
-    expect(containers.map((one) => one.name)).toEqual(['agentmate-db-1']);
+    expect(containers.map((one) => one.name)).toEqual(['runova-db-1']);
   });
 
   it('leaves usage null because it never asked for stats', async () => {
-    const [db] = await listRunningContainersForProject('/home/me/projects/agentmate');
+    const [db] = await listRunningContainersForProject('/home/me/projects/runova');
 
     expect(db.state).toBe('running');
     expect(db.status).toBe('Up 2 hours');
@@ -332,9 +332,9 @@ describe('listRunningContainersForProject', () => {
   });
 
   it.each([
-    '/home/me/projects/agentmate/',
-    '\\home\\me\\projects\\agentmate',
-    '/HOME/ME/Projects/AgentMate',
+    '/home/me/projects/runova/',
+    '\\home\\me\\projects\\runova',
+    '/HOME/ME/Projects/Runova',
   ])('matches %s despite separator, case and trailing slash differences', async (folder) => {
     await expect(listRunningContainersForProject(folder)).resolves.toHaveLength(1);
   });
@@ -351,17 +351,13 @@ describe('listRunningContainersForProject', () => {
     execState.byCommand.set('ps', { error });
 
     // A project that does not use Docker must never see a prompt or an error about it.
-    await expect(listRunningContainersForProject('/home/me/projects/agentmate')).resolves.toEqual(
-      [],
-    );
+    await expect(listRunningContainersForProject('/home/me/projects/runova')).resolves.toEqual([]);
   });
 
   it('returns nothing when docker prints something that is not json', async () => {
     execState.byCommand.set('ps', { stdout: 'not json at all' });
 
-    await expect(listRunningContainersForProject('/home/me/projects/agentmate')).resolves.toEqual(
-      [],
-    );
+    await expect(listRunningContainersForProject('/home/me/projects/runova')).resolves.toEqual([]);
   });
 });
 
@@ -590,9 +586,9 @@ describe('sampleDockerActivity', () => {
     });
   });
 
-  it('leaves out the security scan containers AgentMate starts itself', async () => {
+  it('leaves out the security scan containers Runova starts itself', async () => {
     execState.byCommand.set('ps', {
-      stdout: [psLine('1'.repeat(64), 'agentmate-scan-ab12-sonar'), psLine(DB_ID, 'db')].join('\n'),
+      stdout: [psLine('1'.repeat(64), 'runova-scan-ab12-sonar'), psLine(DB_ID, 'db')].join('\n'),
     });
 
     const sample = await sampleDockerActivity();

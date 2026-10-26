@@ -2,15 +2,15 @@
 /**
  * 30 failed requests in 10 minutes lock an address out for 15 minutes, with unsigned 429s.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Unit;
+namespace Runova\Connector\Tests\Unit;
 
-use AgentMate\Connector\Auth\RateLimiter;
-use AgentMate\Connector\Crypto\Crypto;
-use AgentMate\Connector\Storage\MemoryStorage;
-use AgentMate\Connector\Tests\Support\TestCase;
+use Runova\Connector\Auth\RateLimiter;
+use Runova\Connector\Crypto\Crypto;
+use Runova\Connector\Storage\MemoryStorage;
+use Runova\Connector\Tests\Support\TestCase;
 
 final class RateLimitTest extends TestCase
 {

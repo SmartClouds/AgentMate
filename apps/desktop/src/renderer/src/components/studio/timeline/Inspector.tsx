@@ -6,7 +6,7 @@ import {
   secondsToFlicks,
   type TimelineEdit,
   updateClip,
-} from '@agentmat/studio';
+} from '@runova/studio';
 import { useEffect, useState } from 'react';
 import { errorMessage, scriptClass } from '../format';
 import { Button, cn, GLASS_CARD, Input, Label, Textarea, Trash2, toast } from '../kit';

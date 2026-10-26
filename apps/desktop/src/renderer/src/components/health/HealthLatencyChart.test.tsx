@@ -1,4 +1,4 @@
-import type { HealthLatencyPoint } from '@agentmat/core';
+import type { HealthLatencyPoint } from '@runova/core';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';

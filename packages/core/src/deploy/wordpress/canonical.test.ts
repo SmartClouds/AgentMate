@@ -24,7 +24,7 @@ describe('canonical strings', () => {
         connectionId: null,
         bodySha256: hash,
       }),
-    ).toBe(`agentmate-wp/v1\n/hello\n1\n${nonce}\n-\n${hash}`);
+    ).toBe(`runova-wp/v1\n/hello\n1\n${nonce}\n-\n${hash}`);
   });
 
   it('refuses fields that could smuggle another line in', () => {

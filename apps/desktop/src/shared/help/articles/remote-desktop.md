@@ -35,13 +35,13 @@ Each row shows the account, the computer (and port if it is not 3389), the resol
 | **Open as** | How the session window opens. **Window** is a smaller window you can move and resize, **Maximized** fills the screen but keeps the Windows taskbar visible, and **Full screen** covers the whole screen. |
 | **Share clipboard** | Copy text and images here and paste them on the server, and the other way around. |
 | **Copy files** | Copy files here and paste them on the server with `Ctrl+V`, and save files copied on the server. It needs clipboard sharing turned on. |
-| **Network Level Authentication** | Signs in before the session starts. Windows Server requires it unless an admin turned it off. If AgentMate and the server cannot agree on security, try switching this. |
+| **Network Level Authentication** | Signs in before the session starts. Windows Server requires it unless an admin turned it off. If Runova and the server cannot agree on security, try switching this. |
 
 The defaults are: fit the window, windowed, clipboard on, file copy on, Network Level Authentication on.
 
 ## Connect
 
-Click **Connect** on a server row. A new window opens and shows "Connecting to (name)..." while it signs in. If you set an optional servers passkey (see [Remote](remote.md#the-servers-passkey)) and it is locked, AgentMate asks you to unlock it first, then connects.
+Click **Connect** on a server row. A new window opens and shows "Connecting to (name)..." while it signs in. If you set an optional servers passkey (see [Remote](remote.md#the-servers-passkey)) and it is locked, Runova asks you to unlock it first, then connects.
 
 ### If the connection fails
 
@@ -52,7 +52,7 @@ The window shows what went wrong in plain words, a short list under **What you c
 - "Sign-in failed". Edit the server and check the username, password and domain.
 - "This account can't sign in". On the server, add the account to the Remote Desktop Users group.
 - "Security settings don't match". Edit the server and switch **Network Level Authentication** under **Display and sharing**.
-- "Couldn't set up a secure connection". The server's TLS settings may not match what AgentMate supports. If the server was just reinstalled, restart Remote Desktop Services on it.
+- "Couldn't set up a secure connection". The server's TLS settings may not match what Runova supports. If the server was just reinstalled, restart Remote Desktop Services on it.
 - "The server's certificate can't be used". See below.
 - "Couldn't connect through the proxy". A proxy is on in Settings > Network and it could not be reached, turned down the username and password, or would not open the connection. Many HTTP proxies only allow port 443, and Remote Desktop uses 3389, so a SOCKS5 proxy is usually the better fit. To connect to a server without the proxy, add its address to **Skip the proxy for**.
 
@@ -62,11 +62,11 @@ If the session ends later, the window says "Disconnected" with the reason and th
 
 #### The server's certificate can't be used
 
-Windows makes its own certificate for Remote Desktop, and by default it only allows an older kind of encryption (RSA key exchange). AgentMate tries the normal, stronger encryption first. If the certificate refuses it, AgentMate connects again with the older kind. You see this message only when the server turns that down as well. On the server, turn the RSA cipher suites back on in its TLS settings, or give Remote Desktop a certificate that allows digital signatures.
+Windows makes its own certificate for Remote Desktop, and by default it only allows an older kind of encryption (RSA key exchange). Runova tries the normal, stronger encryption first. If the certificate refuses it, Runova connects again with the older kind. You see this message only when the server turns that down as well. On the server, turn the RSA cipher suites back on in its TLS settings, or give Remote Desktop a certificate that allows digital signatures.
 
 ### Certificate changed
 
-The first time you connect, AgentMate remembers the server's certificate. If it changes, AgentMate refuses and shows "The server's certificate changed" with who it was issued to and by, its expiry, and the saved and current fingerprints. A change is normal after reinstalling the server or renewing its certificate. If neither happened, someone could be intercepting the connection. Choose **Don't connect** or **Trust and connect**.
+The first time you connect, Runova remembers the server's certificate. If it changes, Runova refuses and shows "The server's certificate changed" with who it was issued to and by, its expiry, and the saved and current fingerprints. A change is normal after reinstalling the server or renewing its certificate. If neither happened, someone could be intercepting the connection. Choose **Don't connect** or **Trust and connect**.
 
 If you choose **Don't connect**, the failed screen has a **Review certificate** button that brings the question back.
 
@@ -107,7 +107,7 @@ Once connected, the status badge is followed by four small signal bars and the c
 | 2 | Fair | 300 ms or less |
 | 1 | Poor | more than 300 ms |
 
-Point at the readout for the exact figure and the speeds. Until you type or click and the server answers, the tooltip says "Connection quality: measuring" and the bars are grey. A remote desktop only sends something when the screen changes, so AgentMate times how long the server takes to react to your keys and clicks instead of pinging it, and uses the middle of the recent samples. The speeds are averaged over a couple of seconds, and they are hidden when the window is narrow. In full screen the top bar is hidden, so the readout is too.
+Point at the readout for the exact figure and the speeds. Until you type or click and the server answers, the tooltip says "Connection quality: measuring" and the bars are grey. A remote desktop only sends something when the screen changes, so Runova times how long the server takes to react to your keys and clicks instead of pinging it, and uses the middle of the recent samples. The speeds are averaged over a couple of seconds, and they are hidden when the window is narrow. In full screen the top bar is hidden, so the readout is too.
 
 ### Full screen
 
@@ -133,14 +133,14 @@ Choose one of these:
 2. Copy files on your computer, then press `Ctrl+V` in a folder on the server.
 3. Drag files into the session window, then press `Ctrl+V` in a folder on the server.
 
-A note at the top says "Ready on the server. Press Ctrl+V in a folder there to paste it." If the files you copied add up to too much for the clipboard, AgentMate tells you and asks you to drag them into the window instead.
+A note at the top says "Ready on the server. Press Ctrl+V in a folder there to paste it." If the files you copied add up to too much for the clipboard, Runova tells you and asks you to drag them into the window instead.
 
 ### Get files from the server
 
 On Windows, files you copy on the server land on your clipboard:
 
 1. On the server, select files and copy them (`Ctrl+C`).
-2. Wait a moment while AgentMate brings them over. The tooltip on **Save files** says when they are on your clipboard.
+2. Wait a moment while Runova brings them over. The tooltip on **Save files** says when they are on your clipboard.
 3. Press `Ctrl+V` in a folder on your computer.
 
 Copies of up to 256 MB are brought over this way. For anything bigger a note says so, and on macOS and Linux nothing is placed on the clipboard. In both cases use the **Save files** button instead:
@@ -149,7 +149,7 @@ Copies of up to 256 MB are brought over this way. For anything bigger a note say
 2. In the session window, the **Save files** button shows how many are waiting. Click it.
 3. Pick a folder. The files are saved there, and a note says "Saved to (folder)" with an **Open folder** button. If some failed, it says how many.
 
-The files brought over for the clipboard are kept in a temporary folder, so a paste still works after the session window is closed. They are deleted the next time AgentMate starts.
+The files brought over for the clipboard are kept in a temporary folder, so a paste still works after the session window is closed. They are deleted the next time Runova starts.
 
 ## Ask AI on the remote desktop
 
@@ -181,7 +181,7 @@ The **Ask AI** button starts an AI that looks at the remote screen and works the
 
 ### History
 
-The **History** button on the status row opens a list of every task the AI ran in this session, with each action, how it went and what you answered. You can copy a transcript. History is kept until AgentMate closes, for up to 20 tasks per session.
+The **History** button on the status row opens a list of every task the AI ran in this session, with each action, how it went and what you answered. You can copy a transcript. History is kept until Runova closes, for up to 20 tasks per session.
 
 ## Tips
 

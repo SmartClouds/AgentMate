@@ -14,10 +14,10 @@ export function startDevServerFeed(): () => void {
   users += 1;
   if (!stopFeed) {
     const { noteOutput, forget } = useDevServerStore.getState();
-    const offData = window.agentmat.terminal.onData(({ sessionId, data }) =>
+    const offData = window.runova.terminal.onData(({ sessionId, data }) =>
       noteOutput(sessionId, data),
     );
-    const offExit = window.agentmat.terminal.onExit(({ sessionId }) => forget(sessionId));
+    const offExit = window.runova.terminal.onExit(({ sessionId }) => forget(sessionId));
     stopFeed = () => {
       offData();
       offExit();

@@ -3,10 +3,10 @@
  * The plugin's tables, in the form dbDelta() wants. They use the base prefix, so on multisite
  * there is one set for the whole network, like the themes and plugins they guard.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector;
+namespace Runova\Connector;
 
 final class Schema
 {
@@ -16,7 +16,8 @@ final class Schema
 
     public static function table(string $basePrefix, string $name): string
     {
-        return $basePrefix . 'agentmate_' . $name;
+        // The names from before the rename: renaming a table needs rights many hosts do not grant.
+        return $basePrefix . Legacy::TABLE_PREFIX . $name;
     }
 
     /**

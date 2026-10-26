@@ -43,12 +43,12 @@ and every generation is recorded so the same method can be used again.
   changes as a run goes; DELETE is refused. Runs left running by a crash read as interrupted on the
   next open.
 - **Runs outlive the editor.** One run per video at a time. Leaving the editor does not stop it:
-  the video stays open until the run ends, then closes. Quitting AgentMate, moving or removing the
+  the video stays open until the run ends, then closes. Quitting Runova, moving or removing the
   video stops it, recorded as interrupted, with Try again.
 - **Recipes.** A saved setup (the brief, style, language, format, length, and the CLI, model and
   effort of the scenario stage) in `recipes.json` beside Studio's settings. New video can start from
   one.
-- **The fifteen styles** (`packages/studio/src/styles/presets.ts`) are AgentMate's own descriptions
+- **The fifteen styles** (`packages/studio/src/styles/presets.ts`) are Runova's own descriptions
   of common motion-design families: palette, motion, fonts with an Arabic-script stack, do and
   avoid, suited formats. E32 puts them in the scenario request; E33 adds their reference scenes.
 

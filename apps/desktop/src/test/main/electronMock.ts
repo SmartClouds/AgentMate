@@ -79,7 +79,7 @@ function freshState(): ElectronState {
     paths: new Map(),
     isPackaged: false,
     version: '0.0.0-test',
-    name: 'AgentMate Test',
+    name: 'Runova Test',
     locale: 'en-US',
     handlers: new Map(),
     listeners: new Map(),
@@ -111,7 +111,7 @@ function freshState(): ElectronState {
  * each other's reach. Sharing one object through the global keeps every copy looking at the same
  * handlers, dialog answers and paths.
  */
-const STATE_KEY = '__agentmateElectronMockState';
+const STATE_KEY = '__runovaElectronMockState';
 const globalWithState = globalThis as typeof globalThis & { [STATE_KEY]?: ElectronState };
 
 export const electronState: ElectronState = (globalWithState[STATE_KEY] ??= freshState());
@@ -119,7 +119,7 @@ export const electronState: ElectronState = (globalWithState[STATE_KEY] ??= fres
 /** The throwaway folder every unset `app.getPath` name resolves under. Created on first use. */
 export function electronTempRoot(): string {
   if (!electronState.tempRoot) {
-    electronState.tempRoot = mkdtempSync(join(tmpdir(), 'agentmate-electron-'));
+    electronState.tempRoot = mkdtempSync(join(tmpdir(), 'runova-electron-'));
   }
   return electronState.tempRoot;
 }

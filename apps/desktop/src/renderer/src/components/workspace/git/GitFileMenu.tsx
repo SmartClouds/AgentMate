@@ -1,4 +1,4 @@
-import type { GitChangeEntry, Project } from '@agentmat/core';
+import type { GitChangeEntry, Project } from '@runova/core';
 import type { GitDiffSide } from '@shared/apiTypes';
 import {
   ContextMenuContent,
@@ -71,7 +71,7 @@ export function GitFileMenu({
       <Item
         label="Open With Default App"
         disabled={deleted}
-        onSelect={() => void window.agentmat.shell.openPath(absolute)}
+        onSelect={() => void window.runova.shell.openPath(absolute)}
       />
       <ContextMenuSeparator />
       <Item

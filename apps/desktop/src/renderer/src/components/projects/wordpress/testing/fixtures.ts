@@ -1,4 +1,4 @@
-import type { Project, WpItem, WpPlannedChange } from '@agentmat/core';
+import type { Project, WpItem, WpPlannedChange } from '@runova/core';
 import type { DeployWordPressPlan, DeployWordPressSite } from '@shared/deployWordPressTypes';
 
 /** Sample data for the WordPress project tests (E21). */
@@ -46,8 +46,8 @@ export const SITE_ITEMS: WpItem[] = [
   }),
   wpItem({
     kind: 'plugin',
-    slug: 'agentmate-connector',
-    name: 'AgentMate Connector',
+    slug: 'runova-connector',
+    name: 'Runova Connector',
     protected: true,
   }),
   wpItem({ kind: 'mu-plugin', slug: 'tweaks.php', name: 'Tweaks', isFile: true }),

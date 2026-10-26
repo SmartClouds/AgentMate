@@ -1,5 +1,5 @@
-import type { OpenWidgetOptions, WidgetPeriod, WidgetSize, WidgetStyle } from '@agentmat/core';
-import { clampWidgetBlurPercent, widgetBackgroundColor } from '@agentmat/core';
+import type { OpenWidgetOptions, WidgetPeriod, WidgetSize, WidgetStyle } from '@runova/core';
+import { clampWidgetBlurPercent, widgetBackgroundColor } from '@runova/core';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { SimpleTooltip } from '@/components/ui/tooltip';

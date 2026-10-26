@@ -1,4 +1,4 @@
-import { CLI_REGISTRY, type InstalledCli } from '@agentmat/core';
+import { CLI_REGISTRY, type InstalledCli } from '@runova/core';
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useTerminalStore } from '@/stores/terminalStore';

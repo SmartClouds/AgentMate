@@ -132,7 +132,7 @@ export async function startScreenCapture(): Promise<void> {
   capturing = true;
   surface = provider.getSurface();
   if (surface?.width) {
-    window.agentmat.remote.setScreenInfo({ width: surface.width, height: surface.height });
+    window.runova.remote.setScreenInfo({ width: surface.width, height: surface.height });
   }
   if (tilesEnabled) await ensureTilePipeline();
 }
@@ -357,5 +357,5 @@ async function encodeAndSend(
   const encoded = encodeScreenTile({ frameId, x: tx, y: ty, w: tw, h: th, jpeg });
   // encodeScreenTile returns a freshly-allocated, tightly-packed Uint8Array, so
   // its backing buffer is exactly the bytes to hand to IPC.
-  window.agentmat.remote.hostTile(encoded.buffer as ArrayBuffer);
+  window.runova.remote.hostTile(encoded.buffer as ArrayBuffer);
 }

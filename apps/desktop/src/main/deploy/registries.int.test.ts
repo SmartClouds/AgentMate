@@ -1,14 +1,14 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Project } from '@agentmat/core';
 import type { HubConnection, IStreamResult } from '@microsoft/signalr';
+import type { Project } from '@runova/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import type {
   JobInfo,
   JobStreamItem,
-} from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { tempDir } from '../../test/main/fixtures';
 import { SshConnectionPool } from '../ssh/pool';
 import { CoreSessions } from './auth/coreSessions';
@@ -44,7 +44,7 @@ import {
  * through the same DeployStacks the app uses, with the pulling user's token sent per deploy.
  * After a deploy that succeeded and after one that failed, the whole filesystem (and the core's
  * journal) is searched for the token and for the base64 form docker writes: neither is there.
- * Needs AGENTMATE_SYSTEM_TESTS=1, Docker, network access from the test server for Docker's
+ * Needs RUNOVA_SYSTEM_TESTS=1, Docker, network access from the test server for Docker's
  * packages, and `pnpm server-core:publish linux-x64`.
  */
 
@@ -207,7 +207,7 @@ function tokenTraces(server: TestServer): string {
   );
   const journal = onServer(
     server,
-    'journalctl -u agentmate-core --no-pager -o cat | grep -cF -f /dev/stdin || true',
+    'journalctl -u runova-core --no-pager -o cat | grep -cF -f /dev/stdin || true',
     `${TOKEN}\n${base64}\n`,
   );
   return [files, journal === '0' ? '' : `journal lines: ${journal}`].filter(Boolean).join('\n');
@@ -238,7 +238,7 @@ describe.skipIf(!enabled)('Private registries through the server core on a real 
         }
         expect(docker.final?.state, docker.log.slice(-40).join('\n')).toBe('succeeded');
         // The sign-in folder lives in the core's runtime directory, which must be a tmpfs.
-        expect(onServer(server, 'findmnt -T /run/agentmate-core -no FSTYPE')).toBe('tmpfs');
+        expect(onServer(server, 'findmnt -T /run/runova-core -no FSTYPE')).toBe('tmpfs');
 
         // A registry:2 with htpasswd, and the image pushed by the other user from a throwaway config.
         loadImage(server.name, 'busybox:1.37');
@@ -254,7 +254,7 @@ describe.skipIf(!enabled)('Private registries through the server core on a real 
         onServer(server, 'rm -f /var/tmp/token-canary');
         expect(tokenTraces(server)).toBe('');
 
-        const folder = tempDir('agentmate-registry-system-');
+        const folder = tempDir('runova-registry-system-');
         const write = (text: string) => {
           mkdirSync(dirname(join(folder, 'compose.yaml')), { recursive: true });
           writeFileSync(join(folder, 'compose.yaml'), text);
@@ -296,9 +296,9 @@ describe.skipIf(!enabled)('Private registries through the server core on a real 
         expect(deployed.log.join('\n')).toContain(`Signing in to ${REGISTRY} as ${PULLER}`);
         expect(deployed.log.join('\n')).not.toContain(TOKEN);
         expect(onServer(server, `docker image inspect -f '{{.Id}}' ${IMAGE}`)).toMatch(/^sha256:/);
-        expect(
-          onServer(server, 'ls -A /run/agentmate-core/registry-auth 2>/dev/null || true'),
-        ).toBe('');
+        expect(onServer(server, 'ls -A /run/runova-core/registry-auth 2>/dev/null || true')).toBe(
+          '',
+        );
         expect(tokenTraces(server)).toBe('');
 
         // A deploy that fails after signing in (the tag does not exist) leaves nothing either.
@@ -318,9 +318,9 @@ describe.skipIf(!enabled)('Private registries through the server core on a real 
         expect(failed.final?.state, failed.log.slice(-60).join('\n')).toBe('failed');
         expect(failed.log.join('\n')).toContain(`Signing in to ${REGISTRY}`);
         expect(failed.log.join('\n')).not.toContain(TOKEN);
-        expect(
-          onServer(server, 'ls -A /run/agentmate-core/registry-auth 2>/dev/null || true'),
-        ).toBe('');
+        expect(onServer(server, 'ls -A /run/runova-core/registry-auth 2>/dev/null || true')).toBe(
+          '',
+        );
         expect(tokenTraces(server)).toBe('');
       },
       TEST_TIMEOUT_MS,

@@ -43,12 +43,12 @@ import { totpCode } from './totp';
  *    approves, and the problem leaves the feed.
  *
  * Ubuntu 24.04 with ufw and Rocky 9 with firewalld (the distro images plus their firewall), since
- * step 7 needs a firewall. Needs AGENTMATE_SYSTEM_TESTS=1, Docker for Linux containers, network
+ * step 7 needs a firewall. Needs RUNOVA_SYSTEM_TESTS=1, Docker for Linux containers, network
  * access from the test server (Docker's and nginx's packages) and `pnpm server-core:publish
  * linux-x64`. The nightly workflow runs it; ordinary e2e runs skip it.
  */
 
-test.skip(!systemTestsEnabled(), 'needs AGENTMATE_SYSTEM_TESTS=1 and Docker for Linux containers');
+test.skip(!systemTestsEnabled(), 'needs RUNOVA_SYSTEM_TESTS=1 and Docker for Linux containers');
 
 const IMAGES = testServerImages(
   ['ubuntu-24.04-ufw', 'rocky-9-firewalld'],
@@ -86,7 +86,7 @@ async function throughTheWizard(page: Page): Promise<void> {
 
 if (IMAGES.length === 0) {
   test('runs on none of the test servers asked for', () => {
-    test.skip(true, 'AGENTMATE_TEST_SERVER_IMAGES names no full-stack server');
+    test.skip(true, 'RUNOVA_TEST_SERVER_IMAGES names no full-stack server');
   });
 }
 
@@ -120,7 +120,7 @@ for (const image of IMAGES) {
           ollamaModel: 'e2e-script',
           ollamaBaseUrl: ollama.url,
         },
-        env: { AGENTMATE_SERVER_CORE_ARTIFACTS: ARTIFACTS },
+        env: { RUNOVA_SERVER_CORE_ARTIFACTS: ARTIFACTS },
       });
     });
 
@@ -178,7 +178,7 @@ for (const image of IMAGES) {
 
       await expect(rail.getByText(/^Online, core /)).toBeVisible({ timeout: 10 * MINUTE });
       await expect(app.getByText(/Signed in as/)).toBeVisible({ timeout: 60_000 });
-      expect(server().sh('systemctl is-active agentmate-core')).toBe('active');
+      expect(server().sh('systemctl is-active runova-core')).toBe('active');
     });
 
     test('2. turns two-factor on with a generated code and asks for one at sign-in', async () => {
@@ -248,14 +248,14 @@ for (const image of IMAGES) {
         async ({ id, greeting }) => {
           const api = (
             window as unknown as {
-              agentmat: {
+              runova: {
                 environments: {
                   save(input: unknown): Promise<{ id: string }>;
                   saveFile(input: unknown): Promise<unknown>;
                 };
               };
             }
-          ).agentmat.environments;
+          ).runova.environments;
           const environment = await api.save({
             projectId: id,
             name: 'Production',
@@ -362,15 +362,15 @@ for (const image of IMAGES) {
       }
 
       await openSection(app, 'Websites');
-      const setUp = app.getByRole('button', { name: /Set up nginx for AgentMate|Install nginx/ });
-      await expect(setUp.or(app.getByText('Managed by AgentMate'))).toBeVisible({
+      const setUp = app.getByRole('button', { name: /Set up nginx for Runova|Install nginx/ });
+      await expect(setUp.or(app.getByText('Managed by Runova'))).toBeVisible({
         timeout: 60_000,
       });
       if (await setUp.isVisible()) {
         await setUp.click();
         expect(await finishJob(app, 15 * MINUTE)).toMatch(/Done/);
       }
-      await expect(app.getByText('Managed by AgentMate')).toBeVisible({ timeout: 60_000 });
+      await expect(app.getByText('Managed by Runova')).toBeVisible({ timeout: 60_000 });
 
       // The site sends its domain to the app's web service on this server.
       await app.getByRole('button', { name: /Add a site/ }).click();

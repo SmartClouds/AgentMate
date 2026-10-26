@@ -52,7 +52,7 @@ async function newEnvironment(name = 'Production'): Promise<ProjectEnvironment> 
 }
 
 beforeEach(async () => {
-  project.dir = tempDir('agentmate-env-project-');
+  project.dir = tempDir('runova-env-project-');
   userData.writeData('projects.json', [
     { id: PROJECT_ID, name: 'Demo', folderPath: project.dir, createdAt: '2026-01-01T00:00:00Z' },
   ]);
@@ -530,7 +530,7 @@ describe('when secure storage cannot be used', () => {
     const salt = randomBytes(16).toString('base64');
     const key = await deriveKey('a passkey nobody typed', salt);
     const verifier = Buffer.from(
-      JSON.stringify(encryptWithKey('agentmate-ssh-vault', key)),
+      JSON.stringify(encryptWithKey('agentmate-ssh-vault', key) /* legacy-name */),
       'utf-8',
     ).toString('base64');
     await store.setSshVault({ salt, verifier });

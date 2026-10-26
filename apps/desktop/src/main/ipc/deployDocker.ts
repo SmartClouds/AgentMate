@@ -1,5 +1,5 @@
 import type { IpcMainInvokeEvent } from 'electron';
-import type { DockerPruneTarget } from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { DockerPruneTarget } from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type {
   DeployConsoleOpenInput,
   DeployContainerAction,

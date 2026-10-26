@@ -1,8 +1,8 @@
-import { findGroupOfTab } from '@agentmat/core';
+import { findGroupOfTab } from '@runova/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useBrowserStore } from '@/stores/browserStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
-import { type FakeBridge, installAgentmatBridge } from '../../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../../test/renderer/runovaBridge';
 import type { BrowserPage } from './browserRuntime';
 
 /**
@@ -36,7 +36,7 @@ function workspace() {
 }
 
 beforeEach(() => {
-  bridge = installAgentmatBridge();
+  bridge = installRunovaBridge();
   pageListeners.length = 0;
   for (const key of Object.keys(byWebContents)) delete byWebContents[Number(key)];
   useBrowserStore.setState({ annotations: {}, recentUrls: {} });

@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
-import type { TestDiscovery, TestRunEvent } from '@agentmat/core';
+import type { TestDiscovery, TestRunEvent } from '@runova/core';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../toolPaths', () => ({
@@ -29,7 +29,7 @@ const savedPath = process.env.PATH;
 const pathKey = Object.keys(process.env).find((key) => key.toLowerCase() === 'path') ?? 'PATH';
 
 beforeAll(async () => {
-  binDir = await mkdtemp(join(tmpdir(), 'agentmate-fake-bin-'));
+  binDir = await mkdtemp(join(tmpdir(), 'runova-fake-bin-'));
   await write(join(binDir, 'fake-go.js'), FAKE_GO);
   await shim(join(binDir, 'go'), join(binDir, 'fake-go.js'));
   process.env[pathKey] = `${binDir}${delimiter}${savedPath ?? ''}`;
@@ -41,7 +41,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), 'agentmate runs & '));
+  root = await mkdtemp(join(tmpdir(), 'runova runs & '));
   argsLog = join(root, 'args.log');
   pidFile = join(root, 'grandchild.pid');
   process.env.FAKE_ARGS_LOG = argsLog;

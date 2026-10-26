@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCliStore } from '@/stores/cliStore';
 import { useTerminalStore } from '@/stores/terminalStore';
-import { installAgentmatBridge } from '../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../test/renderer/runovaBridge';
 import { openCliInTerminal } from './openCli';
 
 /**
@@ -16,7 +16,7 @@ vi.mock('sonner', () => ({
 
 beforeEach(() => {
   errors.messages = [];
-  installAgentmatBridge({ platform: 'win32' });
+  installRunovaBridge({ platform: 'win32' });
   useCliStore.setState({ cliArgs: {}, cliLaunchDefaults: {} });
   useTerminalStore.setState({ sessions: [], activeSessionId: null, isOpen: false });
 });

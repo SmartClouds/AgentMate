@@ -123,7 +123,7 @@ describe('remove and clear', () => {
 describe('coming back from a saved history', () => {
   it('restores the rows but not the panel', async () => {
     localStorage.setItem(
-      'agentmate-toast-history',
+      'runova-toast-history',
       JSON.stringify({
         state: {
           items: [
@@ -150,7 +150,7 @@ describe('coming back from a saved history', () => {
 
   it('saves the rows as they come in', () => {
     state().add({ kind: 'info', title: 'A', description: '' });
-    const saved = JSON.parse(localStorage.getItem('agentmate-toast-history') ?? '{}');
+    const saved = JSON.parse(localStorage.getItem('runova-toast-history') ?? '{}');
     expect(saved.state.items[0].title).toBe('A');
     expect(saved.state.open).toBeUndefined();
   });

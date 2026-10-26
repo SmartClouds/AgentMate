@@ -135,7 +135,7 @@ describe('browserUserAgent', () => {
   it('removes the Electron and app tokens so sites see a plain Chrome', () => {
     expect(
       browserUserAgent(
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) agentmate-desktop/1.51.0 Chrome/140.0.0.0 Electron/43.3.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) runova-desktop/1.51.0 Chrome/140.0.0.0 Electron/43.3.0 Safari/537.36',
       ),
     ).toBe(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',

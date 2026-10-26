@@ -1,4 +1,4 @@
-import type { EditResponse, GenerationView, StudioEvent } from '@agentmat/studio';
+import type { EditResponse, GenerationView, StudioEvent } from '@runova/studio';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';

@@ -135,7 +135,7 @@ describe.skipIf(!docker)('FTP transport against real servers', () => {
       expect(error.certificate).toMatchObject({
         fingerprint256: live.certFingerprint256,
         reason: 'selfSigned',
-        names: ['localhost', 'agentmate-e2e-ftp', '127.0.0.1'],
+        names: ['localhost', 'runova-e2e-ftp', '127.0.0.1'],
       });
       expect(await readCertificate(target('ftps', (s) => s.ftpsPort))).toMatchObject({
         fingerprint256: live.certFingerprint256,

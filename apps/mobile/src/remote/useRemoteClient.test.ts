@@ -1,12 +1,12 @@
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   BIN_FILE_CHUNK,
   encodePairingCode,
   encodeScreenTile,
   REMOTE_PROTOCOL_VERSION,
   type RemoteControlMessage,
-} from '@agentmat/protocol';
-import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+} from '@runova/protocol';
 import { act, renderHook } from '@testing-library/react-native';
 import * as Clipboard from 'expo-clipboard';
 import {
@@ -19,7 +19,7 @@ import type { SavedDevice } from './savedDevices';
 import { RemoteTransportMode } from './transport';
 import { useRemoteClient } from './useRemoteClient';
 
-const STORAGE_KEY = 'agentmate.savedDevices.v1';
+const STORAGE_KEY = 'runova.savedDevices.v1';
 
 const PAIRING_CODE = encodePairingCode({
   ip: '192.168.1.10',
@@ -178,7 +178,7 @@ describe('useRemoteClient', () => {
         role: 'controller',
         protocolVersion: REMOTE_PROTOCOL_VERSION,
       });
-      expect(sentOfType(ws, 'hello').deviceName).toMatch(/^AgentMate Mobile \((iOS|Android)\)$/);
+      expect(sentOfType(ws, 'hello').deviceName).toMatch(/^Runova Mobile \((iOS|Android)\)$/);
       expect(sentOfType(ws, 'auth').token).toBe('pair-token');
     });
 

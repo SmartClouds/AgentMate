@@ -1,5 +1,5 @@
-import type { SecurityFinding, SecuritySeverity } from '@agentmat/core';
-import { buildFindingText, getSecurityScanner, SECURITY_SEVERITY_LABEL } from '@agentmat/core';
+import type { SecurityFinding, SecuritySeverity } from '@runova/core';
+import { buildFindingText, getSecurityScanner, SECURITY_SEVERITY_LABEL } from '@runova/core';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Check, ChevronDown, Copy, ExternalLink, EyeOff } from '@/components/icons';
@@ -157,7 +157,7 @@ export function FindingRow({ finding }: { finding: SecurityFinding }): React.JSX
                 size="sm"
                 className="h-6 gap-1 px-1.5"
                 onClick={() =>
-                  finding.helpUri && void window.agentmat.shell.openExternal(finding.helpUri)
+                  finding.helpUri && void window.runova.shell.openExternal(finding.helpUri)
                 }
               >
                 <ExternalLink className="h-3 w-3" /> Reference

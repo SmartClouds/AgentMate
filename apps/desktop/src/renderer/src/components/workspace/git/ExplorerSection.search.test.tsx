@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useExplorerStore } from '@/stores/explorerStore';
-import { installAgentmatBridge } from '../../../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../../../test/renderer/runovaBridge';
 import { ExplorerSection } from './ExplorerSection';
 
 /** The search box's place in the explorer: how it opens, and what it does to the tree. */
@@ -29,7 +29,7 @@ function findKey(): void {
 
 beforeEach(() => {
   useExplorerStore.setState({ projects: {} });
-  installAgentmatBridge({
+  installRunovaBridge({
     'fs.listDirectory': [
       { name: 'src', path: 'E:\\work\\app\\src', isDirectory: true },
       { name: 'README.md', path: 'E:\\work\\app\\README.md', isDirectory: false },

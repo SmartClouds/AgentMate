@@ -182,13 +182,13 @@ importers:
 
   apps/desktop:
     dependencies:
-      '@agentmat/core':
+      '@runova/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@agentmat/protocol':
+      '@runova/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
-      '@agentmat/studio':
+      '@runova/studio':
         specifier: workspace:*
         version: link:../../packages/studio
       '@devolutions/iron-remote-desktop':
@@ -475,7 +475,7 @@ importers:
 
   apps/mobile:
     dependencies:
-      '@agentmat/protocol':
+      '@runova/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
       '@config-plugins/react-native-webrtc':
@@ -573,7 +573,7 @@ importers:
 
   packages/studio:
     dependencies:
-      '@agentmat/core':
+      '@runova/core':
         specifier: workspace:*
         version: link:../core
       zod:

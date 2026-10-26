@@ -1,4 +1,4 @@
-import { cleanTerminalTitle } from '@agentmat/core';
+import { cleanTerminalTitle } from '@runova/core';
 import type { FitAddon } from '@xterm/addon-fit';
 import type { Terminal } from '@xterm/xterm';
 import { create } from 'zustand';
@@ -117,7 +117,7 @@ function pasteAtOnce(entry: Entry, text: string): void {
     .join('')
     .split(PASTE_END)
     .join('');
-  void window.agentmat.terminal.write(entry.spec.id, PASTE_START + body + PASTE_END);
+  void window.runova.terminal.write(entry.spec.id, PASTE_START + body + PASTE_END);
 }
 
 /**
@@ -210,7 +210,7 @@ function ensureSubscribed(): void {
       if (entry.mounted) entry.resize.schedule();
     }
   });
-  window.agentmat.terminal.onData(({ sessionId, data }) => {
+  window.runova.terminal.onData(({ sessionId, data }) => {
     const entry = entries.get(sessionId);
     if (!entry) return;
     // A spinner in the window title (Codex animates one while it works) is not the CLI
@@ -222,7 +222,7 @@ function ensureSubscribed(): void {
     if (entry.ready) entry.term.write(data);
     else entry.pending.push(data);
   });
-  window.agentmat.terminal.onExit(({ sessionId, exitCode }) => {
+  window.runova.terminal.onExit(({ sessionId, exitCode }) => {
     const entry = entries.get(sessionId);
     if (entry && !entry.ready) {
       entry.exitCode = exitCode;
@@ -277,7 +277,7 @@ function createEntry(spec: RuntimeSessionSpec): Entry {
     fit,
     canFit: () => entry.opened && hasSize(entry),
     resizePty: (cols, rows) => {
-      if (entry.ready) void window.agentmat.terminal.resize(spec.id, cols, rows);
+      if (entry.ready) void window.runova.terminal.resize(spec.id, cols, rows);
     },
   });
   const entry: Entry = {
@@ -329,7 +329,7 @@ function start(entry: Entry): void {
   startedOnce.add(spec.id);
   if (hasSize(entry)) entry.fit.fit();
 
-  void window.agentmat.terminal
+  void window.runova.terminal
     .create({
       sessionId: spec.id,
       attachOnly: reconnectOnly,
@@ -357,7 +357,7 @@ function start(entry: Entry): void {
           return;
         }
         // A painted snapshot is not what ConPTY believes is on screen, so have it repaint.
-        if (fromSnapshot && window.agentmat.platform === 'win32') entry.resize.repaint();
+        if (fromSnapshot && window.runova.platform === 'win32') entry.resize.repaint();
         else entry.resize.flush();
         // Layout can still be settling (a split just opened, a panel animating), so check
         // the size once more after it has, and tell the shell if it moved.

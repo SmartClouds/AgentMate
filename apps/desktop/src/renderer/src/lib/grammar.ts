@@ -1,4 +1,4 @@
-import { GRAMMAR_ISSUE_KIND_LABELS, type GrammarIssueKind } from '@agentmat/core';
+import { GRAMMAR_ISSUE_KIND_LABELS, type GrammarIssueKind } from '@runova/core';
 import type { GrammarIssue } from '@shared/grammar';
 
 export type TextField = HTMLTextAreaElement | HTMLInputElement;

@@ -3,8 +3,8 @@ import { act, screen } from '@testing-library/react';
 import { toast } from 'sonner';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type SshAgentSessionState, useSshAgentStore } from '@/stores/sshAgentStore';
-import type { FakeBridge } from '../../../../test/renderer/agentmatBridge';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
+import type { FakeBridge } from '../../../../test/renderer/runovaBridge';
 import { SshAgentStatusBar } from './SshAgentStatusBar';
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));

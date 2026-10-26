@@ -16,7 +16,7 @@ import { wordPressError } from '../../../shared/wordpressErrors';
 const BAD_SEGMENT = /[\u0000-\u001f\u007f\\:]/;
 
 function rejected(path: string, why: string): Error {
-  return wordPressError('pathRejected', `AgentMate will not write ${path}: ${why}.`);
+  return wordPressError('pathRejected', `Runova will not write ${path}: ${why}.`);
 }
 
 function segmentsOf(path: string): string[] {
@@ -81,7 +81,7 @@ export class WpLocalWriter {
     if (existing && !existing.isFile()) {
       throw rejected(path, existing.isSymbolicLink() ? 'it is a link' : 'a folder is in the way');
     }
-    const temporary = join(folder, `.${name}.${randomBytes(6).toString('hex')}.agentmate-tmp`);
+    const temporary = join(folder, `.${name}.${randomBytes(6).toString('hex')}.runova-tmp`);
     try {
       await writeFile(temporary, bytes, { flag: 'wx' });
       await rename(temporary, target);

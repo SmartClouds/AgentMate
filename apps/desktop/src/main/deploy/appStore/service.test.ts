@@ -1,4 +1,4 @@
-import { findCatalogTemplate, generateCatalogSecrets, renderCatalogApp } from '@agentmat/core';
+import { findCatalogTemplate, generateCatalogSecrets, renderCatalogApp } from '@runova/core';
 import { describe, expect, it, vi } from 'vitest';
 import type {
   JobInfo,
@@ -6,7 +6,7 @@ import type {
   StackInfo,
   StackRevisionInfo,
   StackRevisionUpload,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { type AppStoreStacks, DeployAppStore } from './service';
 
 /**

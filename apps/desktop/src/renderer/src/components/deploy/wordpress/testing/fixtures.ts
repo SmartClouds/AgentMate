@@ -6,7 +6,7 @@ import {
   type WpDeployRecord,
   type WpItem,
   wpBase64UrlEncode,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { DeployWordPressSite, DeployWordPressSiteInfo } from '@shared/deployWordPressTypes';
 
 /** Test data for WordPress sites in Deploy. Times the site sends are Unix seconds. */
@@ -141,7 +141,7 @@ export function wpProject(overrides: Partial<Project> = {}): Project {
 export function wpKey(overrides: Partial<WpConnectionKey> = {}): string {
   return formatWpConnectionKey({
     siteUrl: 'https://bakery.example',
-    restUrl: 'https://bakery.example/wp-json/agentmate/v1',
+    restUrl: 'https://bakery.example/wp-json/runova/v1',
     ajaxUrl: 'https://bakery.example/wp-admin/admin-ajax.php',
     pairingId: 'pair-0001abcd',
     pairingSecret: wpBase64UrlEncode(new Uint8Array(32).fill(7)),

@@ -1,5 +1,5 @@
 import { ipcRenderer } from 'electron';
-import type { AssistantModeInfo } from '../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { AssistantModeInfo } from '../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type {
   DeployAssistantModeInput,
   DeployAssistantOutputEvent,

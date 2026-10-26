@@ -4,7 +4,7 @@ import type {
   DevJobState,
   DevSetupEnvironment,
   DevUpdateCheck,
-} from '@agentmat/core';
+} from '@runova/core';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTerminalStore } from '@/stores/terminalStore';

@@ -1,11 +1,11 @@
-import type { EffortLevel } from '@agentmat/core';
+import type { EffortLevel } from '@runova/core';
 import type { SshAgentHistoryRun, SshAgentProgress } from './apiTypes';
 import type {
   AssistantMode,
   AssistantModeInfo,
   ExecLine,
   JournalLine,
-} from './deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from './deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * The Deploy AI and the logs center (E09), between the renderer and the main process. The AI

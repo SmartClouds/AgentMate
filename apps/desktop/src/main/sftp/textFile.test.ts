@@ -121,7 +121,7 @@ describe('writeText', () => {
     const fake = server();
     const client = fake.connect();
     const upload = vi.spyOn(client, 'uploadFile');
-    const temp = tempDir('agentmate-edit-');
+    const temp = tempDir('runova-edit-');
     const entry = await writeText(
       client,
       { path: '/srv/site/index.html', content: '<h1>bye</h1>\n', bom: false, base, force: false },
@@ -161,7 +161,7 @@ describe('writeText', () => {
         base: { size: 4, mtimeMs: MTIME },
         force: false,
       },
-      tempDir('agentmate-edit-'),
+      tempDir('runova-edit-'),
     );
     expect(fake.read('/srv/a.txt')).toEqual(Buffer.concat([BOM, Buffer.from('y')]));
   });
@@ -198,7 +198,7 @@ describe('writeText', () => {
   it('removes the temp file when the save fails', async () => {
     const fake = server();
     fake.failNext('uploadFile', SFTP_STATUS.permissionDenied);
-    const temp = tempDir('agentmate-edit-');
+    const temp = tempDir('runova-edit-');
     const error = await caught(
       writeText(
         fake.connect(),

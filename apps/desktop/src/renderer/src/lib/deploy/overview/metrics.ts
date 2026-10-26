@@ -1,7 +1,7 @@
 import type {
   MetricsResolution,
   MetricsSample,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { formatBytes } from '@/lib/format';
 
 /**

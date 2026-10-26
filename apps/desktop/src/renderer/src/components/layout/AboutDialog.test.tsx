@@ -5,7 +5,7 @@ import { useUpdateStore } from '@/stores/updateStore';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
 
 /**
- * About AgentMate is where the version, the update check, the source link and the SmartClouds
+ * About Runova is where the version, the update check, the source link and the SmartClouds
  * credit live now that the about card and the version chip open it. What matters: it says what
  * the app is, that it's open source and who makes it, which version is running, the update check
  * behaves the same as it did from the card, and links open in the browser rather than inside the
@@ -23,7 +23,7 @@ const toast = vi.hoisted(() =>
 );
 vi.mock('sonner', () => ({ toast, Toaster: () => null }));
 
-const { AboutDialog, SMARTCLOUDS_URL, SOURCE_URL } = await import('./AboutDialog');
+const { AboutDialog, SMARTCLOUDS_URL, SOURCE_URL, WEBSITE_URL } = await import('./AboutDialog');
 
 const AVAILABLE = {
   state: 'available',
@@ -38,20 +38,20 @@ function renderAbout(bridge: Record<string, unknown> = {}) {
   });
 }
 
-const dialog = (): Promise<HTMLElement> => screen.findByRole('dialog', { name: 'About AgentMate' });
+const dialog = (): Promise<HTMLElement> => screen.findByRole('dialog', { name: 'About Runova' });
 
 describe('AboutDialog contents', () => {
   it('shows the app icon, the version, what the app is and who makes it', async () => {
     renderAbout();
     const about = await dialog();
 
-    const icon = within(about).getByRole('img', { name: 'AgentMate' });
+    const icon = within(about).getByRole('img', { name: 'Runova' });
     expect(icon.getAttribute('src')).toContain('app-icon');
     expect(icon).toHaveAttribute('sizes', '72px');
     expect(await within(about).findByText('v2.4.1')).toBeInTheDocument();
     // The description is about the app itself, not the company.
     expect(about).toHaveAccessibleDescription(
-      /^AgentMate is an Agentic Development Environment \(ADE\) for AI coding agents\./,
+      /^Runova is an Agentic Development Environment \(ADE\) for AI coding agents\./,
     );
     expect(about).toHaveAccessibleDescription(
       /Claude Code, Codex, Cursor, Gemini, Grok, OpenCode or a plain shell/,
@@ -59,7 +59,7 @@ describe('AboutDialog contents', () => {
     expect(about).toHaveAccessibleDescription(/from prompt to review to commit/);
     expect(about).not.toHaveAccessibleDescription(/SmartClouds/);
     expect(
-      within(about).getByText('AgentMate is built and maintained by SmartClouds.'),
+      within(about).getByText('Runova is built and maintained by SmartClouds.'),
     ).toBeInTheDocument();
     expect(within(about).getByText(`© ${new Date().getFullYear()}`)).toBeInTheDocument();
   });
@@ -189,7 +189,7 @@ describe('AboutDialog links', () => {
   it('opens the source on GitHub in the browser, not in the app window', async () => {
     const { bridge } = renderAbout();
     const link = within(await dialog()).getByRole('link', { name: /^Source on GitHub/ });
-    expect(link).toHaveAttribute('href', 'https://github.com/SmartClouds/AgentMate');
+    expect(link).toHaveAttribute('href', 'https://github.com/SmartClouds/Runova');
 
     const click = createEvent.click(link);
     fireEvent(link, click);
@@ -197,8 +197,26 @@ describe('AboutDialog links', () => {
     expect(click.defaultPrevented).toBe(true);
     expect(bridge.$fn('shell.openExternal')).toHaveBeenCalledWith(SOURCE_URL);
     expect(bridge.$fn('shell.openExternal')).toHaveBeenCalledTimes(1);
-    expect(SOURCE_URL).toBe('https://github.com/SmartClouds/AgentMate');
+    expect(SOURCE_URL).toBe('https://github.com/SmartClouds/Runova');
     expect(SMARTCLOUDS_URL).toBe('https://smartclouds.co');
+  });
+
+  it("opens Runova's website in the browser", async () => {
+    const { bridge } = renderAbout();
+    const link = within(await dialog()).getByRole('link', { name: /^Website/ });
+    expect(link).toHaveAttribute('href', 'https://runovahq.com');
+    expect(link).toHaveAccessibleName('Website, opens in your browser');
+
+    const click = createEvent.click(link);
+    fireEvent(link, click);
+
+    expect(click.defaultPrevented).toBe(true);
+    expect(bridge.$fn('shell.openExternal')).toHaveBeenCalledWith(WEBSITE_URL);
+  });
+
+  it('tells where the name comes from', async () => {
+    renderAbout();
+    expect(await dialog()).toHaveTextContent(/a runway, where launches happen, and a nova/);
   });
 
   it('says the links leave the app', async () => {

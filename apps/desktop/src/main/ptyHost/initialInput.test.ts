@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CANONICAL_LINE_LIMIT, needsPrompt, sendInitialInput } from './initialInput';
 
-const MARKER = '\x1b]7750;AgentMate:PromptReady:1\x07';
+const MARKER = '\x1b]7750;Runova:PromptReady:1\x07';
 const TIMING = { settleMs: 100, fallbackMs: 10_000 };
 const LONG = `claude '${'x'.repeat(CANONICAL_LINE_LIMIT)}'\r`;
 

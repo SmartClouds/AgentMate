@@ -1,5 +1,5 @@
 import { encodeCoreError } from '@shared/coreErrors';
-import type { DirectTlsStatus } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { DirectTlsStatus } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployDirectTlsInfo } from '@shared/deployDirectTlsTypes';
 import { screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -166,7 +166,7 @@ describe('DirectTlsCard', () => {
               protocol: 'tcp',
               port: 9443,
               source: '10.0.0.0/8',
-              comment: 'AgentMate direct TLS',
+              comment: 'Runova direct TLS',
             },
           },
         ],
@@ -184,7 +184,7 @@ describe('DirectTlsCard', () => {
       editable: true,
       outgoing: false,
       port: 7443,
-      comment: 'AgentMate direct TLS',
+      comment: 'Runova direct TLS',
     };
     const { user, bridge } = renderCard({
       'deployDirectTls.status': async () => info({ enabled: true, listening: true }),
@@ -305,7 +305,7 @@ describe('DirectTlsCard', () => {
       editable: true,
       outgoing: false,
       port: 7443,
-      comment: 'AgentMate direct TLS',
+      comment: 'Runova direct TLS',
     };
     const { user, bridge } = renderCard({
       'deployDirectTls.status': async () => info({ enabled: true, listening: true }),
@@ -332,7 +332,7 @@ describe('DirectTlsCard', () => {
               action: 'allow',
               protocol: 'tcp',
               port: 8443,
-              comment: 'AgentMate direct TLS',
+              comment: 'Runova direct TLS',
             },
           },
         ],

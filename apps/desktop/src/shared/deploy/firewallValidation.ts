@@ -1,16 +1,16 @@
-import { validateIpOrCidr, validatePort, validatePortRange } from '@agentmat/core';
+import { validateIpOrCidr, validatePort, validatePortRange } from '@runova/core';
 import type {
   FirewallAction,
   FirewallChange,
   FirewallPolicy,
   FirewallProtocol,
   FirewallRuleSpec,
-} from './protocol/generated/AgentMate.ServerCore.Contracts';
+} from './protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * Checks for firewall rules, shared by the rule form (as the user types) and the IPC handlers
  * (before the core hears of it). Ports and sources go through the Deploy validators in
- * `@agentmat/core`, so a source is a canonical address or network. The core checks again.
+ * `@runova/core`, so a source is a canonical address or network. The core checks again.
  */
 
 export type RuleCheck<T> = { ok: true; value: T } | { ok: false; reason: string };

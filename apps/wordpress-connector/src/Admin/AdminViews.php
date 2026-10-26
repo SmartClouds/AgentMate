@@ -2,12 +2,12 @@
 /**
  * The HTML of the admin tabs. Everything printed is escaped where it is printed.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Admin;
+namespace Runova\Connector\Admin;
 
-use AgentMate\Connector\Protocol;
+use Runova\Connector\Protocol;
 
 final class AdminViews
 {
@@ -17,16 +17,16 @@ final class AdminViews
     public static function open(string $active, array $urls): void
     {
         $labels = array(
-            'keys' => __('Keys', 'agentmate-connector'),
-            'connections' => __('Connections', 'agentmate-connector'),
-            'deploys' => __('Deploys', 'agentmate-connector'),
-            'audit' => __('Audit log', 'agentmate-connector'),
-            'status' => __('Status', 'agentmate-connector'),
+            'keys' => __('Keys', 'runova-connector'),
+            'connections' => __('Connections', 'runova-connector'),
+            'deploys' => __('Deploys', 'runova-connector'),
+            'audit' => __('Audit log', 'runova-connector'),
+            'status' => __('Status', 'runova-connector'),
         );
         ?>
         <div class="wrap">
-            <h1><?php echo esc_html__('AgentMate Connector', 'agentmate-connector'); ?></h1>
-            <nav class="nav-tab-wrapper" aria-label="<?php echo esc_attr__('AgentMate Connector sections', 'agentmate-connector'); ?>">
+            <h1><?php echo esc_html__('Runova Connector', 'runova-connector'); ?></h1>
+            <nav class="nav-tab-wrapper" aria-label="<?php echo esc_attr__('Runova Connector sections', 'runova-connector'); ?>">
                 <?php foreach ($labels as $tab => $label) : ?>
                     <a href="<?php echo esc_url($urls[$tab]); ?>" class="nav-tab<?php echo $tab === $active ? ' nav-tab-active' : ''; ?>"<?php echo $tab === $active ? ' aria-current="page"' : ''; ?>><?php echo esc_html($label); ?></a>
                 <?php endforeach; ?>
@@ -45,6 +45,26 @@ final class AdminViews
         echo '<div class="notice ' . esc_attr($class) . '"><p>' . esc_html($text) . '</p></div>';
     }
 
+    /**
+     * Shown while the connector still runs from its 1.63 folder. The Runova app moves it on its
+     * own; this is for a site the app cannot reach.
+     */
+    public static function moveBox(bool $canChangeCode): void
+    {
+        ?>
+        <div class="notice notice-info">
+            <p><?php echo esc_html__('AgentMate is now Runova. This connector still runs from its old folder, and moves to its own the next time the Runova app connects. You can also move it now.', 'runova-connector'); // legacy-name ?></p>
+            <?php if ($canChangeCode) : ?>
+                <form method="post">
+                    <?php wp_nonce_field(AdminActions::nonceAction(AdminActions::MIGRATE)); ?>
+                    <input type="hidden" name="runova_connector_action" value="<?php echo esc_attr(AdminActions::MIGRATE); ?>">
+                    <p><button type="submit" class="button"><?php echo esc_html__('Move to its own folder', 'runova-connector'); ?></button></p>
+                </form>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+
     private static function when(?int $timestamp, string $none): string
     {
         if ($timestamp === null) {
@@ -61,7 +81,7 @@ final class AdminViews
      */
     private static function confirmAttribute(string $question): string
     {
-        return ' data-agentmate-confirm="' . esc_attr($question) . '"';
+        return ' data-runova-confirm="' . esc_attr($question) . '"';
     }
 
     /**
@@ -71,96 +91,96 @@ final class AdminViews
     {
         $minutes = (int) (Protocol::PAIRING_TTL_SECONDS / 60);
         ?>
-        <p><?php echo esc_html__('Connect this site to the AgentMate app to pull its theme and plugin files into a project, and to deploy changes back. Each connection starts with a one-time key made here.', 'agentmate-connector'); ?></p>
+        <p><?php echo esc_html__('Connect this site to the Runova app to pull its theme and plugin files into a project, and to deploy changes back. Each connection starts with a one-time key made here.', 'runova-connector'); ?></p>
 
         <?php if ($error !== null) : ?>
             <div class="notice notice-error"><p><?php echo esc_html($error); ?></p></div>
         <?php endif; ?>
 
         <?php if ($created !== null) : ?>
-            <div class="notice notice-success agentmate-key-box">
-                <p><strong><?php echo esc_html__('Copy this key now. It is shown only once.', 'agentmate-connector'); ?></strong></p>
-                <textarea id="agentmate-connector-key" class="large-text code" rows="4" readonly autocomplete="off" spellcheck="false"><?php echo esc_textarea($created['key']); ?></textarea>
+            <div class="notice notice-success runova-key-box">
+                <p><strong><?php echo esc_html__('Copy this key now. It is shown only once.', 'runova-connector'); ?></strong></p>
+                <textarea id="runova-connector-key" class="large-text code" rows="4" readonly autocomplete="off" spellcheck="false"><?php echo esc_textarea($created['key']); ?></textarea>
                 <p>
-                    <button type="button" class="button button-primary" id="agentmate-connector-copy" data-copied="<?php echo esc_attr__('Copied.', 'agentmate-connector'); ?>"><?php echo esc_html__('Copy key', 'agentmate-connector'); ?></button>
-                    <span id="agentmate-connector-copied" aria-live="polite"></span>
+                    <button type="button" class="button button-primary" id="runova-connector-copy" data-copied="<?php echo esc_attr__('Copied.', 'runova-connector'); ?>"><?php echo esc_html__('Copy key', 'runova-connector'); ?></button>
+                    <span id="runova-connector-copied" aria-live="polite"></span>
                 </p>
-                <p id="agentmate-connector-countdown" data-seconds="<?php echo esc_attr((string) Protocol::PAIRING_TTL_SECONDS); ?>" data-left="<?php echo esc_attr__('It works once. Time left to paste it into AgentMate:', 'agentmate-connector'); ?>" data-expired="<?php echo esc_attr__('This key has expired. Create a new one.', 'agentmate-connector'); ?>">
+                <p id="runova-connector-countdown" data-seconds="<?php echo esc_attr((string) Protocol::PAIRING_TTL_SECONDS); ?>" data-left="<?php echo esc_attr__('It works once. Time left to paste it into Runova:', 'runova-connector'); ?>" data-expired="<?php echo esc_attr__('This key has expired. Create a new one.', 'runova-connector'); ?>">
                     <?php
                     /* translators: %d: minutes */
-                    echo esc_html(sprintf(__('It works once, for the next %d minutes. In AgentMate, open Deploy, choose Connect a WordPress site, and paste it.', 'agentmate-connector'), $minutes));
+                    echo esc_html(sprintf(__('It works once, for the next %d minutes. In Runova, open Deploy, choose Connect a WordPress site, and paste it.', 'runova-connector'), $minutes));
                     ?>
                 </p>
                 <?php if ($created['scope'] === 'write') : ?>
-                    <p><strong><?php echo esc_html__('This is a write key. It lets AgentMate change code on this site.', 'agentmate-connector'); ?></strong></p>
+                    <p><strong><?php echo esc_html__('This is a write key. It lets Runova change code on this site.', 'runova-connector'); ?></strong></p>
                 <?php endif; ?>
             </div>
         <?php endif; ?>
 
-        <h2><?php echo esc_html__('Create a connection key', 'agentmate-connector'); ?></h2>
+        <h2><?php echo esc_html__('Create a connection key', 'runova-connector'); ?></h2>
         <form method="post">
             <?php wp_nonce_field(AdminActions::nonceAction(AdminActions::CREATE_KEY)); ?>
-            <input type="hidden" name="agentmate_connector_action" value="<?php echo esc_attr(AdminActions::CREATE_KEY); ?>">
+            <input type="hidden" name="runova_connector_action" value="<?php echo esc_attr(AdminActions::CREATE_KEY); ?>">
             <table class="form-table" role="presentation">
                 <tr>
-                    <th scope="row"><?php echo esc_html__('Access', 'agentmate-connector'); ?></th>
+                    <th scope="row"><?php echo esc_html__('Access', 'runova-connector'); ?></th>
                     <td>
                         <fieldset>
-                            <label><input type="radio" name="scope" value="read" checked> <?php echo esc_html__('Read only: AgentMate can list and download theme and plugin files.', 'agentmate-connector'); ?></label><br>
-                            <label><input type="radio" name="scope" value="write" <?php disabled(!$canWrite); ?>> <?php echo esc_html__('Read and write: AgentMate can also deploy changes to theme and plugin files.', 'agentmate-connector'); ?></label>
+                            <label><input type="radio" name="scope" value="read" checked> <?php echo esc_html__('Read only: Runova can list and download theme and plugin files.', 'runova-connector'); ?></label><br>
+                            <label><input type="radio" name="scope" value="write" <?php disabled(!$canWrite); ?>> <?php echo esc_html__('Read and write: Runova can also deploy changes to theme and plugin files.', 'runova-connector'); ?></label>
                             <?php if (!$canWrite) : ?>
-                                <p class="description"><?php echo esc_html__('Write keys need the rights to install plugins and themes.', 'agentmate-connector'); ?></p>
+                                <p class="description"><?php echo esc_html__('Write keys need the rights to install plugins and themes.', 'runova-connector'); ?></p>
                             <?php else : ?>
-                                <p class="description"><?php echo esc_html__('A write key lets AgentMate change code on this site. Only make one for a computer you trust.', 'agentmate-connector'); ?></p>
+                                <p class="description"><?php echo esc_html__('A write key lets Runova change code on this site. Only make one for a computer you trust.', 'runova-connector'); ?></p>
                             <?php endif; ?>
                         </fieldset>
                     </td>
                 </tr>
                 <tr>
-                    <th scope="row"><label for="agentmate-connector-label"><?php echo esc_html__('Label', 'agentmate-connector'); ?></label></th>
+                    <th scope="row"><label for="runova-connector-label"><?php echo esc_html__('Label', 'runova-connector'); ?></label></th>
                     <td>
-                        <input type="text" id="agentmate-connector-label" name="label" class="regular-text" maxlength="100" autocomplete="off">
-                        <p class="description"><?php echo esc_html__('Optional. Helps you tell connections apart, for example "Office laptop".', 'agentmate-connector'); ?></p>
+                        <input type="text" id="runova-connector-label" name="label" class="regular-text" maxlength="100" autocomplete="off">
+                        <p class="description"><?php echo esc_html__('Optional. Helps you tell connections apart, for example "Office laptop".', 'runova-connector'); ?></p>
                     </td>
                 </tr>
                 <tr>
-                    <th scope="row"><label for="agentmate-connector-expires"><?php echo esc_html__('Connection lasts', 'agentmate-connector'); ?></label></th>
+                    <th scope="row"><label for="runova-connector-expires"><?php echo esc_html__('Connection lasts', 'runova-connector'); ?></label></th>
                     <td>
-                        <select id="agentmate-connector-expires" name="expires">
-                            <option value="0"><?php echo esc_html__('Until revoked', 'agentmate-connector'); ?></option>
-                            <option value="1"><?php echo esc_html__('1 day', 'agentmate-connector'); ?></option>
-                            <option value="7"><?php echo esc_html__('7 days', 'agentmate-connector'); ?></option>
-                            <option value="30"><?php echo esc_html__('30 days', 'agentmate-connector'); ?></option>
-                            <option value="90"><?php echo esc_html__('90 days', 'agentmate-connector'); ?></option>
-                            <option value="365"><?php echo esc_html__('1 year', 'agentmate-connector'); ?></option>
+                        <select id="runova-connector-expires" name="expires">
+                            <option value="0"><?php echo esc_html__('Until revoked', 'runova-connector'); ?></option>
+                            <option value="1"><?php echo esc_html__('1 day', 'runova-connector'); ?></option>
+                            <option value="7"><?php echo esc_html__('7 days', 'runova-connector'); ?></option>
+                            <option value="30"><?php echo esc_html__('30 days', 'runova-connector'); ?></option>
+                            <option value="90"><?php echo esc_html__('90 days', 'runova-connector'); ?></option>
+                            <option value="365"><?php echo esc_html__('1 year', 'runova-connector'); ?></option>
                         </select>
                     </td>
                 </tr>
             </table>
-            <?php submit_button(__('Create key', 'agentmate-connector')); ?>
+            <?php submit_button(__('Create key', 'runova-connector')); ?>
         </form>
         <?php
     }
 
     /**
-     * The pages' only script, enqueued as a fixed string: confirmations from data-agentmate-confirm,
+     * The pages' only script, enqueued as a fixed string: confirmations from data-runova-confirm,
      * and the copy button and countdown of a new key. It reads text from data attributes and
      * writes it with textContent, never as markup or code.
      */
     const SCRIPT = <<<'JS'
 (function () {
-    var forms = document.querySelectorAll('form[data-agentmate-confirm]');
+    var forms = document.querySelectorAll('form[data-runova-confirm]');
     Array.prototype.forEach.call(forms, function (form) {
         form.addEventListener('submit', function (event) {
-            if (!window.confirm(form.getAttribute('data-agentmate-confirm'))) {
+            if (!window.confirm(form.getAttribute('data-runova-confirm'))) {
                 event.preventDefault();
             }
         });
     });
-    var box = document.getElementById('agentmate-connector-key');
-    var copy = document.getElementById('agentmate-connector-copy');
-    var copied = document.getElementById('agentmate-connector-copied');
-    var countdown = document.getElementById('agentmate-connector-countdown');
+    var box = document.getElementById('runova-connector-key');
+    var copy = document.getElementById('runova-connector-copy');
+    var copied = document.getElementById('runova-connector-copied');
+    var countdown = document.getElementById('runova-connector-countdown');
     if (!box || !copy || !copied || !countdown) {
         return;
     }
@@ -198,9 +218,9 @@ JS;
     public static function connections(array $connections, int $now): void
     {
         ?>
-        <p><?php echo esc_html__('Computers paired with this site. Revoking one stops it at once; AgentMate on that computer has to connect again with a new key.', 'agentmate-connector'); ?></p>
+        <p><?php echo esc_html__('Computers paired with this site. Revoking one stops it at once; Runova on that computer has to connect again with a new key.', 'runova-connector'); ?></p>
         <?php if (count($connections) === 0) : ?>
-            <p><em><?php echo esc_html__('No connections yet. Create a key on the Keys tab.', 'agentmate-connector'); ?></em></p>
+            <p><em><?php echo esc_html__('No connections yet. Create a key on the Keys tab.', 'runova-connector'); ?></em></p>
             <?php
             return;
         endif;
@@ -208,14 +228,14 @@ JS;
         <table class="widefat striped">
             <thead>
                 <tr>
-                    <th scope="col"><?php echo esc_html__('Label', 'agentmate-connector'); ?></th>
-                    <th scope="col"><?php echo esc_html__('Access', 'agentmate-connector'); ?></th>
-                    <th scope="col"><?php echo esc_html__('Device', 'agentmate-connector'); ?></th>
-                    <th scope="col"><?php echo esc_html__('Created', 'agentmate-connector'); ?></th>
-                    <th scope="col"><?php echo esc_html__('Last seen', 'agentmate-connector'); ?></th>
-                    <th scope="col"><?php echo esc_html__('Expires', 'agentmate-connector'); ?></th>
-                    <th scope="col"><?php echo esc_html__('Status', 'agentmate-connector'); ?></th>
-                    <th scope="col"><span class="screen-reader-text"><?php echo esc_html__('Actions', 'agentmate-connector'); ?></span></th>
+                    <th scope="col"><?php echo esc_html__('Label', 'runova-connector'); ?></th>
+                    <th scope="col"><?php echo esc_html__('Access', 'runova-connector'); ?></th>
+                    <th scope="col"><?php echo esc_html__('Device', 'runova-connector'); ?></th>
+                    <th scope="col"><?php echo esc_html__('Created', 'runova-connector'); ?></th>
+                    <th scope="col"><?php echo esc_html__('Last seen', 'runova-connector'); ?></th>
+                    <th scope="col"><?php echo esc_html__('Expires', 'runova-connector'); ?></th>
+                    <th scope="col"><?php echo esc_html__('Status', 'runova-connector'); ?></th>
+                    <th scope="col"><span class="screen-reader-text"><?php echo esc_html__('Actions', 'runova-connector'); ?></span></th>
                 </tr>
             </thead>
             <tbody>
@@ -223,31 +243,31 @@ JS;
                     <?php
                     $expired = $connection['expires_at'] !== null && $connection['expires_at'] <= $now;
                     if ($connection['revoked_at'] !== null) {
-                        $status = __('Revoked', 'agentmate-connector');
+                        $status = __('Revoked', 'runova-connector');
                     } elseif ($expired) {
-                        $status = __('Expired', 'agentmate-connector');
+                        $status = __('Expired', 'runova-connector');
                     } else {
-                        $status = __('Active', 'agentmate-connector');
+                        $status = __('Active', 'runova-connector');
                     }
                     $seen = $connection['last_seen_at'] === null
-                        ? __('Not yet', 'agentmate-connector')
+                        ? __('Not yet', 'runova-connector')
                         : self::when($connection['last_seen_at'], '') . ($connection['last_ip'] !== '' ? ' (' . $connection['last_ip'] . ')' : '');
                     ?>
                     <tr>
                         <td><?php echo esc_html($connection['label']); ?></td>
-                        <td><?php echo esc_html($connection['scope'] === 'write' ? __('Read and write', 'agentmate-connector') : __('Read only', 'agentmate-connector')); ?></td>
+                        <td><?php echo esc_html($connection['scope'] === 'write' ? __('Read and write', 'runova-connector') : __('Read only', 'runova-connector')); ?></td>
                         <td><?php echo esc_html($connection['device_name']); ?></td>
                         <td><?php echo esc_html(self::when($connection['created_at'], '')); ?></td>
                         <td><?php echo esc_html($seen); ?></td>
-                        <td><?php echo esc_html(self::when($connection['expires_at'], __('Never', 'agentmate-connector'))); ?></td>
+                        <td><?php echo esc_html(self::when($connection['expires_at'], __('Never', 'runova-connector'))); ?></td>
                         <td><?php echo esc_html($status); ?></td>
                         <td>
                             <?php if ($connection['revoked_at'] === null && !$expired) : ?>
-                                <form method="post"<?php echo self::confirmAttribute(sprintf(/* translators: %s: connection label */ __('Revoke "%s"? AgentMate on that computer will lose access to this site.', 'agentmate-connector'), $connection['label'])); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside confirmAttribute(). ?>>
+                                <form method="post"<?php echo self::confirmAttribute(sprintf(/* translators: %s: connection label */ __('Revoke "%s"? Runova on that computer will lose access to this site.', 'runova-connector'), $connection['label'])); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside confirmAttribute(). ?>>
                                     <?php wp_nonce_field(AdminActions::nonceAction(AdminActions::REVOKE, $connection['id'])); ?>
-                                    <input type="hidden" name="agentmate_connector_action" value="<?php echo esc_attr(AdminActions::REVOKE); ?>">
+                                    <input type="hidden" name="runova_connector_action" value="<?php echo esc_attr(AdminActions::REVOKE); ?>">
                                     <input type="hidden" name="id" value="<?php echo esc_attr($connection['id']); ?>">
-                                    <button type="submit" class="button button-link-delete"><?php echo esc_html__('Revoke', 'agentmate-connector'); ?></button>
+                                    <button type="submit" class="button button-link-delete"><?php echo esc_html__('Revoke', 'runova-connector'); ?></button>
                                 </form>
                             <?php endif; ?>
                         </td>
@@ -261,20 +281,20 @@ JS;
     private static function stateLabel(string $state, ?string $reason): string
     {
         $states = array(
-            'open' => __('Open', 'agentmate-connector'),
-            'applying' => __('Applying', 'agentmate-connector'),
-            'applied' => __('Waiting for confirmation', 'agentmate-connector'),
-            'done' => __('Done', 'agentmate-connector'),
-            'rolledBack' => __('Rolled back', 'agentmate-connector'),
-            'aborted' => __('Aborted', 'agentmate-connector'),
-            'expired' => __('Expired', 'agentmate-connector'),
+            'open' => __('Open', 'runova-connector'),
+            'applying' => __('Applying', 'runova-connector'),
+            'applied' => __('Waiting for confirmation', 'runova-connector'),
+            'done' => __('Done', 'runova-connector'),
+            'rolledBack' => __('Rolled back', 'runova-connector'),
+            'aborted' => __('Aborted', 'runova-connector'),
+            'expired' => __('Expired', 'runova-connector'),
         );
         $reasons = array(
-            'requested' => __('on request', 'agentmate-connector'),
-            'healthCheck' => __('the site stopped answering properly', 'agentmate-connector'),
-            'fatalError' => __('a fatal PHP error', 'agentmate-connector'),
-            'notConfirmed' => __('not confirmed in time', 'agentmate-connector'),
-            'interrupted' => __('interrupted', 'agentmate-connector'),
+            'requested' => __('on request', 'runova-connector'),
+            'healthCheck' => __('the site stopped answering properly', 'runova-connector'),
+            'fatalError' => __('a fatal PHP error', 'runova-connector'),
+            'notConfirmed' => __('not confirmed in time', 'runova-connector'),
+            'interrupted' => __('interrupted', 'runova-connector'),
         );
         $label = isset($states[$state]) ? $states[$state] : $state;
         if ($reason !== null && isset($reasons[$reason])) {
@@ -290,17 +310,17 @@ JS;
     public static function deploys(array $records, ?array $pending, bool $canChangeCode): void
     {
         ?>
-        <p><?php echo esc_html__('The last 20 deploys from AgentMate. The five newest finished ones keep a copy of the files they replaced, so they can be rolled back while nothing has changed those files since.', 'agentmate-connector'); ?></p>
+        <p><?php echo esc_html__('The last 20 deploys from Runova. The five newest finished ones keep a copy of the files they replaced, so they can be rolled back while nothing has changed those files since.', 'runova-connector'); ?></p>
         <?php if ($pending !== null) : ?>
             <div class="notice notice-warning inline"><p>
                 <?php
                 /* translators: 1: state, 2: time */
-                echo esc_html(sprintf(__('A deploy is in progress (%1$s). If it is not confirmed by %2$s it is rolled back.', 'agentmate-connector'), self::stateLabel($pending['state'], null), self::when($pending['deadline'], '')));
+                echo esc_html(sprintf(__('A deploy is in progress (%1$s). If it is not confirmed by %2$s it is rolled back.', 'runova-connector'), self::stateLabel($pending['state'], null), self::when($pending['deadline'], '')));
                 ?>
             </p></div>
         <?php endif; ?>
         <?php if (count($records) === 0) : ?>
-            <p><em><?php echo esc_html__('No deploys yet.', 'agentmate-connector'); ?></em></p>
+            <p><em><?php echo esc_html__('No deploys yet.', 'runova-connector'); ?></em></p>
             <?php
             return;
         endif;
@@ -308,13 +328,13 @@ JS;
         <table class="widefat striped">
             <thead>
                 <tr>
-                    <th scope="col"><?php echo esc_html__('Deploy', 'agentmate-connector'); ?></th>
-                    <th scope="col"><?php echo esc_html__('State', 'agentmate-connector'); ?></th>
-                    <th scope="col"><?php echo esc_html__('Started', 'agentmate-connector'); ?></th>
-                    <th scope="col"><?php echo esc_html__('Finished', 'agentmate-connector'); ?></th>
-                    <th scope="col"><?php echo esc_html__('By', 'agentmate-connector'); ?></th>
-                    <th scope="col"><?php echo esc_html__('Files', 'agentmate-connector'); ?></th>
-                    <th scope="col"><span class="screen-reader-text"><?php echo esc_html__('Actions', 'agentmate-connector'); ?></span></th>
+                    <th scope="col"><?php echo esc_html__('Deploy', 'runova-connector'); ?></th>
+                    <th scope="col"><?php echo esc_html__('State', 'runova-connector'); ?></th>
+                    <th scope="col"><?php echo esc_html__('Started', 'runova-connector'); ?></th>
+                    <th scope="col"><?php echo esc_html__('Finished', 'runova-connector'); ?></th>
+                    <th scope="col"><?php echo esc_html__('By', 'runova-connector'); ?></th>
+                    <th scope="col"><?php echo esc_html__('Files', 'runova-connector'); ?></th>
+                    <th scope="col"><span class="screen-reader-text"><?php echo esc_html__('Actions', 'runova-connector'); ?></span></th>
                 </tr>
             </thead>
             <tbody>
@@ -323,21 +343,21 @@ JS;
                         <td><?php echo esc_html($record['label']); ?></td>
                         <td><?php echo esc_html(self::stateLabel($record['state'], isset($record['reason']) ? $record['reason'] : null)); ?></td>
                         <td><?php echo esc_html(self::when($record['startedAt'], '')); ?></td>
-                        <td><?php echo esc_html(self::when($record['finishedAt'], __('Not yet', 'agentmate-connector'))); ?></td>
+                        <td><?php echo esc_html(self::when($record['finishedAt'], __('Not yet', 'runova-connector'))); ?></td>
                         <td><?php echo esc_html($record['connectionLabel']); ?></td>
                         <td>
                             <?php
                             /* translators: 1: files written, 2: files deleted */
-                            echo esc_html(sprintf(__('%1$d written, %2$d deleted', 'agentmate-connector'), $record['puts'], $record['deletes']));
+                            echo esc_html(sprintf(__('%1$d written, %2$d deleted', 'runova-connector'), $record['puts'], $record['deletes']));
                             ?>
                         </td>
                         <td>
                             <?php if ($record['canRollback'] && $canChangeCode) : ?>
-                                <form method="post"<?php echo self::confirmAttribute(sprintf(/* translators: %s: deploy label */ __('Roll back "%s"? The files it changed go back to how they were before it.', 'agentmate-connector'), $record['label'])); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside confirmAttribute(). ?>>
+                                <form method="post"<?php echo self::confirmAttribute(sprintf(/* translators: %s: deploy label */ __('Roll back "%s"? The files it changed go back to how they were before it.', 'runova-connector'), $record['label'])); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside confirmAttribute(). ?>>
                                     <?php wp_nonce_field(AdminActions::nonceAction(AdminActions::ROLLBACK, $record['deployId'])); ?>
-                                    <input type="hidden" name="agentmate_connector_action" value="<?php echo esc_attr(AdminActions::ROLLBACK); ?>">
+                                    <input type="hidden" name="runova_connector_action" value="<?php echo esc_attr(AdminActions::ROLLBACK); ?>">
                                     <input type="hidden" name="id" value="<?php echo esc_attr($record['deployId']); ?>">
-                                    <button type="submit" class="button"><?php echo esc_html__('Roll back', 'agentmate-connector'); ?></button>
+                                    <button type="submit" class="button"><?php echo esc_html__('Roll back', 'runova-connector'); ?></button>
                                 </form>
                             <?php endif; ?>
                         </td>
@@ -354,34 +374,34 @@ JS;
     public static function audit(array $entries, ?string $olderUrl, ?string $newestUrl): void
     {
         $events = array(
-            'keyCreated' => __('Key created', 'agentmate-connector'),
-            'paired' => __('Paired', 'agentmate-connector'),
-            'pairFailed' => __('Pairing refused', 'agentmate-connector'),
-            'authFailed' => __('Request refused', 'agentmate-connector'),
-            'rateLimited' => __('Address locked out', 'agentmate-connector'),
-            'revoked' => __('Connection revoked', 'agentmate-connector'),
-            'pulled' => __('Files listed', 'agentmate-connector'),
-            'deployStarted' => __('Deploy started', 'agentmate-connector'),
-            'deployDone' => __('Deploy done', 'agentmate-connector'),
-            'deployRolledBack' => __('Deploy rolled back', 'agentmate-connector'),
-            'deployAborted' => __('Deploy aborted', 'agentmate-connector'),
-            'connectorUpdated' => __('Connector updated', 'agentmate-connector'),
-            'connectorRolledBack' => __('Connector update undone', 'agentmate-connector'),
-            'settingsChanged' => __('Settings changed', 'agentmate-connector'),
+            'keyCreated' => __('Key created', 'runova-connector'),
+            'paired' => __('Paired', 'runova-connector'),
+            'pairFailed' => __('Pairing refused', 'runova-connector'),
+            'authFailed' => __('Request refused', 'runova-connector'),
+            'rateLimited' => __('Address locked out', 'runova-connector'),
+            'revoked' => __('Connection revoked', 'runova-connector'),
+            'pulled' => __('Files listed', 'runova-connector'),
+            'deployStarted' => __('Deploy started', 'runova-connector'),
+            'deployDone' => __('Deploy done', 'runova-connector'),
+            'deployRolledBack' => __('Deploy rolled back', 'runova-connector'),
+            'deployAborted' => __('Deploy aborted', 'runova-connector'),
+            'connectorUpdated' => __('Connector updated', 'runova-connector'),
+            'connectorRolledBack' => __('Connector update undone', 'runova-connector'),
+            'settingsChanged' => __('Settings changed', 'runova-connector'),
         );
         ?>
-        <p><?php echo esc_html__('The newest 2,000 events: pairings, pulls, deploys, rollbacks and refused requests.', 'agentmate-connector'); ?></p>
+        <p><?php echo esc_html__('The newest 2,000 events: pairings, pulls, deploys, rollbacks and refused requests.', 'runova-connector'); ?></p>
         <?php if (count($entries) === 0) : ?>
-            <p><em><?php echo esc_html__('Nothing logged yet.', 'agentmate-connector'); ?></em></p>
+            <p><em><?php echo esc_html__('Nothing logged yet.', 'runova-connector'); ?></em></p>
         <?php else : ?>
             <table class="widefat striped">
                 <thead>
                     <tr>
-                        <th scope="col"><?php echo esc_html__('When', 'agentmate-connector'); ?></th>
-                        <th scope="col"><?php echo esc_html__('Event', 'agentmate-connector'); ?></th>
-                        <th scope="col"><?php echo esc_html__('Connection', 'agentmate-connector'); ?></th>
-                        <th scope="col"><?php echo esc_html__('Address', 'agentmate-connector'); ?></th>
-                        <th scope="col"><?php echo esc_html__('Details', 'agentmate-connector'); ?></th>
+                        <th scope="col"><?php echo esc_html__('When', 'runova-connector'); ?></th>
+                        <th scope="col"><?php echo esc_html__('Event', 'runova-connector'); ?></th>
+                        <th scope="col"><?php echo esc_html__('Connection', 'runova-connector'); ?></th>
+                        <th scope="col"><?php echo esc_html__('Address', 'runova-connector'); ?></th>
+                        <th scope="col"><?php echo esc_html__('Details', 'runova-connector'); ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -399,10 +419,10 @@ JS;
         <?php endif; ?>
         <p>
             <?php if ($newestUrl !== null) : ?>
-                <a class="button" href="<?php echo esc_url($newestUrl); ?>"><?php echo esc_html__('Newest', 'agentmate-connector'); ?></a>
+                <a class="button" href="<?php echo esc_url($newestUrl); ?>"><?php echo esc_html__('Newest', 'runova-connector'); ?></a>
             <?php endif; ?>
             <?php if ($olderUrl !== null) : ?>
-                <a class="button" href="<?php echo esc_url($olderUrl); ?>"><?php echo esc_html__('Older entries', 'agentmate-connector'); ?></a>
+                <a class="button" href="<?php echo esc_url($olderUrl); ?>"><?php echo esc_html__('Older entries', 'runova-connector'); ?></a>
             <?php endif; ?>
         </p>
         <?php
@@ -414,22 +434,22 @@ JS;
     public static function status(array $checks): void
     {
         ?>
-        <p><?php echo esc_html__('What this site allows, and what protects a deploy here. The loopback check runs each time this tab opens.', 'agentmate-connector'); ?></p>
+        <p><?php echo esc_html__('What this site allows, and what protects a deploy here. The loopback check runs each time this tab opens.', 'runova-connector'); ?></p>
         <table class="widefat striped">
             <tbody>
                 <?php foreach ($checks as $check) : ?>
                     <?php
                     if ($check['ok'] === true) {
                         $icon = 'dashicons-yes-alt';
-                        $word = __('OK', 'agentmate-connector');
+                        $word = __('OK', 'runova-connector');
                         $color = '#00a32a';
                     } elseif ($check['ok'] === false) {
                         $icon = 'dashicons-warning';
-                        $word = __('Problem', 'agentmate-connector');
+                        $word = __('Problem', 'runova-connector');
                         $color = '#d63638';
                     } else {
                         $icon = 'dashicons-info';
-                        $word = __('Note', 'agentmate-connector');
+                        $word = __('Note', 'runova-connector');
                         $color = '#646970';
                     }
                     ?>

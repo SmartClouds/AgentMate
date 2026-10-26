@@ -4,7 +4,7 @@ import {
   type SdkManagerProgress,
   type SystemImage,
   sortSystemImages,
-} from '@agentmat/core';
+} from '@runova/core';
 import { runSdkManager, runSdkManagerStreaming } from './exec';
 import type { ResolvedAndroidSdk } from './sdk';
 

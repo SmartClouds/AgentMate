@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 import { createProject, initGitRepo, type LaunchedApp, launchApp } from './app';
 
 /**
- * Every AgentMate feature that asks an AI CLI something in the background must start that CLI
+ * Every Runova feature that asks an AI CLI something in the background must start that CLI
  * with the Arguments box the user saved for it in AI CLI Manager, and nothing from Launch defaults
  * (those are for terminals only).
  * Each test calls the feature the way its screen does and checks the arguments the fake `claude`
@@ -35,12 +35,12 @@ test.afterAll(async () => {
   await launched?.close();
 });
 
-/** Calls `window.agentmat[area][method](...args)` and returns the CLI arguments it started. */
+/** Calls `window.runova[area][method](...args)` and returns the CLI arguments it started. */
 async function cliArgsFor(area: string, method: string, ...args: unknown[]): Promise<string> {
   const before = launched.claudeLaunches().length;
   const result = await launched.page.evaluate(
     ({ area, method, args }) =>
-      (window as unknown as { agentmat: Api }).agentmat[area]![method]!(...args),
+      (window as unknown as { runova: Api }).runova[area]![method]!(...args),
     { area, method, args },
   );
   await expect
@@ -110,9 +110,9 @@ test('a settings change applies to the next background run without a restart', a
   await launched.page.evaluate(() =>
     (
       window as unknown as {
-        agentmat: { settings: { update(patch: unknown): Promise<unknown> } };
+        runova: { settings: { update(patch: unknown): Promise<unknown> } };
       }
-    ).agentmat.settings.update({
+    ).runova.settings.update({
       cliArgs: { 'claude-code': '--model haiku' },
     }),
   );

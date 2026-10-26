@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { SonarHotspot, SonarIssue } from '@agentmat/core';
+import type { SonarHotspot, SonarIssue } from '@runova/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { json, type LocalServer, startHttpServer } from '../../test/main/fixtures';
 import type { ScanCancelToken } from './exec';

@@ -134,7 +134,7 @@
     "shared": {
       "name": "parity_shared",
       "driver_opts": {
-        "device": "/opt/agentmate-core/shared",
+        "device": "/opt/runova-core/shared",
         "o": "bind",
         "type": "none"
       }

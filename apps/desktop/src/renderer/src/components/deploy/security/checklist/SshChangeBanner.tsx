@@ -1,4 +1,4 @@
-import type { SshHardeningChangeInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { SshHardeningChangeInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type {
   DeploySshOperation,
   DeploySshProgressEvent,
@@ -40,7 +40,7 @@ export function useSshSteps(serverId: string) {
   });
   useEffect(
     () =>
-      window.agentmat.deployHardening.onSshProgress((event) => {
+      window.runova.deployHardening.onSshProgress((event) => {
         if (event.serverId !== serverId) return;
         setSteps((current) => {
           const list = current[event.operation];

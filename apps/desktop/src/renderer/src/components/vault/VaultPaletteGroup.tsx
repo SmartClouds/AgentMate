@@ -26,14 +26,14 @@ export function VaultPaletteGroup({
   const navigate = useNavigate();
   const statusQuery = useQuery({
     queryKey: queryKeys.vaultStatus,
-    queryFn: () => window.agentmat.vault.status(),
+    queryFn: () => window.runova.vault.status(),
     enabled,
     meta: { silentLoading: true },
   });
   const state = statusQuery.data?.state;
   const entriesQuery = useQuery({
     queryKey: queryKeys.vaultEntries,
-    queryFn: () => window.agentmat.vault.list(),
+    queryFn: () => window.runova.vault.list(),
     enabled: enabled && state === 'unlocked',
     meta: { silentLoading: true },
   });
@@ -65,7 +65,7 @@ export function VaultPaletteGroup({
         className={itemClass}
         onSelect={() => {
           onDone();
-          void window.agentmat.vault.lock();
+          void window.runova.vault.lock();
         }}
       >
         <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />

@@ -4,7 +4,7 @@ import {
   HEALTH_DEFAULT_PATH,
   type HealthAuthMode,
   type Project,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { ProjectEnvironment } from '@shared/apiTypes';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useId, useMemo, useState } from 'react';
@@ -31,7 +31,7 @@ import { TextPane, useSendToAgent } from './promptParts';
 /**
  * "Build with AI" before any target exists: pick the project and where it runs, and get the
  * prompt that has the project's agent (Claude Code, say) build a secured endpoint that follows
- * the AgentMate Health Protocol. The prompt is built here as the fields change. It names the
+ * the Runova Health Protocol. The prompt is built here as the fields change. It names the
  * server variables only; the key itself is made later, when a target is added.
  */
 
@@ -159,7 +159,7 @@ export function HealthBuildDialog({
   const environments = useQuery({
     queryKey: queryKeys.projectEnvironments(projectId),
     queryFn: async (): Promise<ProjectEnvironment[]> =>
-      (await window.agentmat.environments.list(projectId)) ?? [],
+      (await window.runova.environments.list(projectId)) ?? [],
     enabled: open && Boolean(projectId),
     meta: QUIET,
   });
@@ -201,8 +201,8 @@ export function HealthBuildDialog({
           </DialogTitle>
           <DialogDescription className="text-xs">
             Your agent reads the project, finds every service it uses, and adds a secured health
-            endpoint that follows the AgentMate Health Protocol. Then add a target for it and set
-            the key's hash on the server.
+            endpoint that follows the Runova Health Protocol. Then add a target for it and set the
+            key's hash on the server.
           </DialogDescription>
         </DialogHeader>
 

@@ -1,4 +1,4 @@
-import { type ChecklistRow, DEV_STACKS, getDevItem, overallFraction } from '@agentmat/core';
+import { type ChecklistRow, DEV_STACKS, getDevItem, overallFraction } from '@runova/core';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { GLASS_CARD, LoadFailure, Notice } from '@/components/pageKit';
@@ -153,7 +153,7 @@ export function DevSetupPanel(): React.JSX.Element {
         }
         break;
       case 'open-link':
-        if (action.url) void window.agentmat.shell.openExternal(action.url);
+        if (action.url) void window.runova.shell.openExternal(action.url);
         break;
       case 'retry':
         // A failed install is run again; a check that failed is simply checked again.
@@ -245,7 +245,7 @@ export function DevSetupPanel(): React.JSX.Element {
                 <Button
                   size="sm"
                   variant="soft"
-                  onClick={() => void window.agentmat.shell.openExternal(APP_INSTALLER_URL)}
+                  onClick={() => void window.runova.shell.openExternal(APP_INSTALLER_URL)}
                 >
                   Open the Microsoft Store page
                 </Button>

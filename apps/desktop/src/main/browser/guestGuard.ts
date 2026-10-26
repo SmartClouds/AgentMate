@@ -75,7 +75,7 @@ export function guestShortcut(
 /** The session's user agent without the Electron and app tokens, so sites see plain Chrome. */
 export function browserUserAgent(userAgent: string): string {
   return userAgent
-    .replace(/\s(?:Electron|agentmate[\w-]*|AgentMate)\/\S+/gi, '')
+    .replace(/\s(?:Electron|runova[\w-]*|Runova)\/\S+/gi, '')
     .replace(/\s{2,}/g, ' ')
     .trim();
 }

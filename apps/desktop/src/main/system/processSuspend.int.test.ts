@@ -11,7 +11,7 @@ import { createProcessSuspender } from './processSuspend';
  * inside a real interactive shell on a pty, which is where the shell-first order matters: bash
  * must not notice its job stopping, print "Stopped" and take the terminal back.
  *
- * Set AGENTMATE_STRESS_TESTS=1 to also time a pause with every core busy.
+ * Set RUNOVA_STRESS_TESTS=1 to also time a pause with every core busy.
  */
 
 const TICKER = `
@@ -64,7 +64,7 @@ describe('pausing a real process tree', () => {
   const suspender = () => createProcessSuspender({ helperDir: join(dir, 'bin') });
 
   beforeAll(() => {
-    dir = mkdtempSync(join(tmpdir(), 'agentmate-suspend-'));
+    dir = mkdtempSync(join(tmpdir(), 'runova-suspend-'));
     writeFileSync(join(dir, 'ticker.cjs'), TICKER, 'utf-8');
   });
 
@@ -112,7 +112,7 @@ describe('pausing a real process tree', () => {
     await until(() => size(file) > before[0] + 3 && size(`${file}.child`) > before[1] + 3);
   }, 60_000);
 
-  it.skipIf(process.env.AGENTMATE_STRESS_TESTS !== '1')(
+  it.skipIf(process.env.RUNOVA_STRESS_TESTS !== '1')(
     'pauses in reasonable time with every core busy',
     async () => {
       const file = join(dir, 'busy-ticks');
@@ -150,7 +150,7 @@ describe('pausing a real process tree', () => {
 describe.skipIf(!ptyLoads)('pausing a ticker inside an interactive shell', () => {
   it('keeps the ticker in front and the shell quiet', async () => {
     const pty = await import('node-pty');
-    const dir = mkdtempSync(join(tmpdir(), 'agentmate-suspend-pty-'));
+    const dir = mkdtempSync(join(tmpdir(), 'runova-suspend-pty-'));
     const script = join(dir, 'tick.cjs');
     writeFileSync(
       script,

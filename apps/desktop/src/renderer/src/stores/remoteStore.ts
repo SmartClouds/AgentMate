@@ -59,7 +59,7 @@ export const useRemoteStore = create<RemoteStore>((set, get) => ({
   transfers: [],
   initialized: false,
   refresh: async () => {
-    const state = await window.agentmat.remote.getState();
+    const state = await window.runova.remote.getState();
     const previous = get().state?.connection.status;
     set({ state });
     syncControllerVideo(state.connection.status, previous);
@@ -75,7 +75,7 @@ export function initRemote(): void {
   if (useRemoteStore.getState().initialized) return;
   useRemoteStore.setState({ initialized: true });
 
-  const api = window.agentmat.remote;
+  const api = window.runova.remote;
 
   api.onState((state) => {
     const previous = useRemoteStore.getState().state?.connection.status;

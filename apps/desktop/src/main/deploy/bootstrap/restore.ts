@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
-import { quoteForShell } from '@agentmat/core';
-import type { HealthResponse } from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import { quoteForShell } from '@runova/core';
+import type { HealthResponse } from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type {
   DeployRestorePhase,
   DeployRestoreProgress,
@@ -8,12 +8,14 @@ import type {
 import { sshErrorMessage } from '../../../shared/sshErrors';
 import type { ExecResult } from '../../ssh/connection';
 import { openRootShell, type RootShell } from '../../ssh/sudo';
+import { coreNames, LEGACY_CORE, RUNOVA_CORE } from '../coreLayout';
 import { type Enrollment, enrollOverSsh } from './enrollment';
 import type { InstallerConnection } from './installer';
 import {
-  PREVIOUS,
+  LAYOUT_PROBE,
   type RestoreStep,
   restoreCleanupStep,
+  restorePaths,
   restoreRollbackStep,
   stageStep,
   swapSteps,
@@ -35,8 +37,16 @@ import {
  */
 
 const STEP_TIMEOUT_MS = 10 * 60_000;
-/** Where the core keeps a backup it fetched from a destination (E28). */
-const FETCHED = /^\/var\/lib\/agentmate-core\/backups\/[0-9a-f]{32}\.ambackup$/;
+/** Where the core keeps a backup it fetched from a destination (E28), in either layout, under either extension. */
+function isFetched(path: string): boolean {
+  return [RUNOVA_CORE, LEGACY_CORE].some((names) => {
+    const folder = `${names.dataDirectory}/backups/`;
+    return (
+      path.startsWith(folder) &&
+      /^[0-9a-f]{32}\.(?:rnbackup|ambackup)$/.test(path.slice(folder.length))
+    );
+  });
+}
 const OUTPUT_BYTES = 256 * 1024;
 const FAILURE_CHARS = 1_500;
 
@@ -146,7 +156,7 @@ export async function restoreCore(
       return result;
     });
 
-  if (request.fileOnServer && (!FETCHED.test(request.file) || request.file.includes('..'))) {
+  if (request.fileOnServer && (!isFetched(request.file) || request.file.includes('..'))) {
     throw new Error('The fetched backup is not where the core keeps fetched backups.');
   }
   const lease = await deps.connect(request.serverId);
@@ -154,13 +164,16 @@ export async function restoreCore(
   try {
     const password = request.sudoPassword ?? lease.connection.endpoint.password ?? null;
     const shell = await openRootShell(lease.connection, password);
+    // A server set up before the rename keeps the old names until its core migrates it.
+    const probe = await shell.run(LAYOUT_PROBE, { timeoutMs: 30_000, maxOutputBytes: 1_024 });
+    const names = coreNames(probe.stdout.trim() === 'legacy' ? 'legacy' : 'runova');
 
     const uploaded = request.fileOnServer
       ? request.file
       : await phase('upload', TITLES.upload, async () => {
           const content = await readFile(request.file);
           staging = await lease.connection.createStagingDirectory();
-          const path = `${staging}/backup.ambackup`;
+          const path = `${staging}/backup.rnbackup`;
           let reported = -1;
           await lease.connection.upload(content, path, {
             mode: 0o600,
@@ -175,7 +188,7 @@ export async function restoreCore(
         });
 
     const staged = parseStaged(
-      (await run(shell, stageStep(uploaded), `${request.passphrase}\n`)).stdout,
+      (await run(shell, stageStep(uploaded, names), `${request.passphrase}\n`)).stdout,
     );
     const owner = staged.owners.find(
       (name) => name.toLowerCase() === request.userName.toLowerCase(),
@@ -188,12 +201,12 @@ export async function restoreCore(
     }
 
     try {
-      for (const step of swapSteps()) await run(shell, step);
+      for (const step of swapSteps(names)) await run(shell, step);
       await phase('health', TITLES.health, () => deps.health(lease.connection));
     } catch (error) {
       const reason = sshErrorMessage(error);
       try {
-        await run(shell, restoreRollbackStep());
+        await run(shell, restoreRollbackStep(names));
       } catch (rollbackError) {
         throw new Error(
           `${reason} Going back to the state from before failed too: ${sshErrorMessage(rollbackError)}`,
@@ -213,8 +226,8 @@ export async function restoreCore(
           ...(event.detail ? { detail: event.detail } : {}),
         }),
     );
-    await run(shell, restoreCleanupStep()).catch(() => undefined);
-    return { backup: staged, enrollment, previousStateFolder: PREVIOUS };
+    await run(shell, restoreCleanupStep(names)).catch(() => undefined);
+    return { backup: staged, enrollment, previousStateFolder: restorePaths(names).previous };
   } finally {
     if (staging) {
       await lease.connection

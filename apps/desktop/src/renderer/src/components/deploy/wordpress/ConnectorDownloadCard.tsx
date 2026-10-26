@@ -18,21 +18,21 @@ export function ConnectorSteps({ className }: { className?: string }): React.JSX
         install and activate it.
       </li>
       <li>
-        Open Tools &gt; AgentMate Connector and make a connection key. Pick read-only if you only
-        want to pull files.
+        Open Tools &gt; Runova Connector and make a connection key. Pick read-only if you only want
+        to pull files.
       </li>
     </ol>
   );
 }
 
 /**
- * Hands over the AgentMate Connector plugin that ships with the app. This is how a site first gets
+ * Hands over the Runova Connector plugin that ships with the app. This is how a site first gets
  * the plugin, and how one whose connector is too old to update itself gets a newer version. A
  * connector that can update itself is updated from the site's overview instead.
  */
 export function ConnectorDownloadCard({
-  title = 'Get the AgentMate Connector',
-  description = 'A small WordPress plugin that lets AgentMate pull and deploy theme and plugin files. It needs WordPress 6.0 and PHP 7.4 or newer.',
+  title = 'Get the Runova Connector',
+  description = 'A small WordPress plugin that lets Runova pull and deploy theme and plugin files. It needs WordPress 6.0 and PHP 7.4 or newer.',
   className,
 }: {
   title?: string;

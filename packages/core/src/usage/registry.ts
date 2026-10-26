@@ -612,7 +612,7 @@ export function getUsageProvider(id: string): UsageProviderDefinition | undefine
   return USAGE_PROVIDER_REGISTRY.find((p) => p.id === id);
 }
 
-/** Providers whose usage AgentMate can fetch live today. */
+/** Providers whose usage Runova can fetch live today. */
 export function isLiveProvider(def: UsageProviderDefinition): boolean {
   return def.dataSource !== 'unsupported';
 }

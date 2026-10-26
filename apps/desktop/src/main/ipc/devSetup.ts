@@ -5,7 +5,7 @@ import {
   type DevSetupEnvironment,
   type DevUpdateCheck,
   isDevItemId,
-} from '@agentmat/core';
+} from '@runova/core';
 import { ipcMain } from 'electron';
 import { IPC } from '../../shared/ipcChannels';
 import { getDevSetupService } from '../devSetup/runtime';
@@ -13,7 +13,7 @@ import type { UserPathResult } from '../devSetup/userPath';
 
 /**
  * The renderer sends item ids and nothing else. An id is only a key into the catalog in
- * @agentmat/core, and everything that follows (which command is probed, which file is read, what
+ * @runova/core, and everything that follows (which command is probed, which file is read, what
  * is installed) comes from that entry, so the one thing to get right here is refusing ids that are
  * not in it. No command line ever crosses this boundary.
  */

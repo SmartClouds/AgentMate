@@ -1,4 +1,4 @@
-import { AGENT_READY_TIMING } from '@agentmat/core';
+import { AGENT_READY_TIMING } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bracketedPaste, deliverWhenReady } from './delivery';
 

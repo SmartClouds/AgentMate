@@ -1,4 +1,4 @@
-import type { NginxProblemInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { NginxProblemInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * Where a problem the core reported belongs. The core names fields the way its validator walks

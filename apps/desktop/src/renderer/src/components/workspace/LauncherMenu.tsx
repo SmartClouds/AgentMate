@@ -4,7 +4,7 @@ import {
   launchPickLabel,
   launchPickOptions,
   type Project,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useNavigate } from 'react-router-dom';
 import { CliLogo } from '@/components/cliLogos';
 import { Globe, Keyboard, SettingsIcon, Sparkles, TerminalSquare } from '@/components/icons';

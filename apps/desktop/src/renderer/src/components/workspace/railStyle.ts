@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 
 /** A stable hue per project, so its tiles keep their colour between sessions. */
 function projectHue(project: Project): number {

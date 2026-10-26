@@ -7,7 +7,7 @@ keywords: terminal, agent, claude code, codex, cli, shell, powershell, status, n
 route: /workspace
 ---
 
-Terminals and agents are the heart of the [Workspace](workspace.md). An agent is an AI coding CLI, such as Claude Code or Codex, running in a terminal tab inside your project's folder. A shell is a plain terminal. You can run as many as you like, side by side, and AgentMate tells you which agents are working, which are waiting on you, and which have finished.
+Terminals and agents are the heart of the [Workspace](workspace.md). An agent is an AI coding CLI, such as Claude Code or Codex, running in a terminal tab inside your project's folder. A shell is a plain terminal. You can run as many as you like, side by side, and Runova tells you which agents are working, which are waiting on you, and which have finished.
 
 This page covers starting agents and shells, reading their status, the pasting and copying behavior, past conversations you can resume, and the **Fix with AI** dialog that other parts of the app use to hand a problem to an agent.
 
@@ -41,7 +41,7 @@ Claude Code, Codex, Gemini, Grok and Cursor also have an arrow at the right of t
 
 ### Which agents are offered
 
-AgentMate knows these CLIs: Claude Code CLI, Gemini CLI, OpenCode, OpenClaude, Codex CLI, Grok CLI, Cursor CLI, GitHub Copilot CLI, FreeBuff CLI, Qwen CLI, Aider, Goose, Cline CLI, Continue CLI, Pi and Muse Code CLI. Only the ones installed on your computer show up in the launchers. Install and update them from [AI CLI Manager](cli-manager.md).
+Runova knows these CLIs: Claude Code CLI, Gemini CLI, OpenCode, OpenClaude, Codex CLI, Grok CLI, Cursor CLI, GitHub Copilot CLI, FreeBuff CLI, Qwen CLI, Aider, Goose, Cline CLI, Continue CLI, Pi and Muse Code CLI. Only the ones installed on your computer show up in the launchers. Install and update them from [AI CLI Manager](cli-manager.md).
 
 ### Which agent is the default
 
@@ -59,7 +59,7 @@ When at least one launch default is set, launchers show **Alt+click: skip launch
 
 ### Starting from a prompt
 
-**Build a prompt…** (`Ctrl+G` in the Workspace) opens the prompt builder for the project on screen. When you choose **Open in agent**, AgentMate opens a tab in the focused pane, starts the suggested CLI on the suggested model and effort, and types the prompt into the CLI's input box once the CLI is ready. It does not press `Enter`, so you can read it first. The tab's tooltip shows the model line, for example **Opus 5.5 · High**.
+**Build a prompt…** (`Ctrl+G` in the Workspace) opens the prompt builder for the project on screen. When you choose **Open in agent**, Runova opens a tab in the focused pane, starts the suggested CLI on the suggested model and effort, and types the prompt into the CLI's input box once the CLI is ready. It does not press `Enter`, so you can read it first. The tab's tooltip shows the model line, for example **Opus 5.5 · High**.
 
 If the CLI never comes up, nothing is typed into the shell. The prompt goes to your clipboard instead and a message says **{CLI} did not come up**.
 
@@ -82,7 +82,7 @@ When a shell ends, the pane shows a bar at the bottom: **Process exited.** (or *
 
 ## Agent status
 
-AgentMate watches every agent tab, even ones you cannot see, and keeps a status for each.
+Runova watches every agent tab, even ones you cannot see, and keeps a status for each.
 
 | Status | What you see | Meaning |
 | --- | --- | --- |
@@ -91,11 +91,11 @@ AgentMate watches every agent tab, even ones you cannot see, and keeps a status 
 | Finished | A solid green dot | The agent finished, and you have not looked at it yet. |
 | Idle, Exited | Nothing | Nothing needs attention. |
 
-The status shows on the tab, on the project tile in the rail, next to **Workspace** in the sidebar, in the status bar, and in the [Running CLIs dialog](workspace.md#running-clis). Status comes from the terminal output and, for Claude Code, from hooks that AgentMate adds when it starts the agent.
+The status shows on the tab, on the project tile in the rail, next to **Workspace** in the sidebar, in the status bar, and in the [Running CLIs dialog](workspace.md#running-clis). Status comes from the terminal output and, for Claude Code, from hooks that Runova adds when it starts the agent.
 
 ### Notifications for agents
 
-When an agent finishes or asks something while you are in another tab, page or app, AgentMate shows a system notification such as **Claude Code CLI needs your input** or **Claude Code CLI finished**, naming the project and tab. A question outranks a finished run when several arrive together. Clicking the notification opens that tab. No notification is shown for a tab you are looking at.
+When an agent finishes or asks something while you are in another tab, page or app, Runova shows a system notification such as **Claude Code CLI needs your input** or **Claude Code CLI finished**, naming the project and tab. A question outranks a finished run when several arrive together. Clicking the notification opens that tab. No notification is shown for a tab you are looking at.
 
 Turn this on or off with **Workspace notifications** in **Settings**, on the **General** tab (it is on by default). See [Settings](settings.md#workspace-notifications). You can also have the desktop pet announce agent status, see [Widgets and the desktop pet](widgets-desktop-pet.md).
 
@@ -109,8 +109,8 @@ Agents stop when they hit a usage limit or lose their connection. Auto-continue 
 
 Click the play button in the pane header (**Auto-continue**), or right-click an agent tab, to turn on either or both:
 
-- **After the usage limit resets.** AgentMate waits for the reset time the agent printed, plus a short grace period, then sends **continue**.
-- **After a network error.** For internet, DNS or connection drops. AgentMate sends **continue** after 3 minutes, and waits longer each time it fails again (5, 10, 15, then 20 minutes).
+- **After the usage limit resets.** Runova waits for the reset time the agent printed, plus a short grace period, then sends **continue**.
+- **After a network error.** For internet, DNS or connection drops. Runova sends **continue** after 3 minutes, and waits longer each time it fails again (5, 10, 15, then 20 minutes).
 
 The switches are per tab, and they only show for a running agent. When a **continue** is scheduled, the button shows a pulsing dot, its tooltip tells you the time (for example **Usage limit hit. Sending "continue" at 3:05 PM**), and a **Cancel this time** button (**Cancel scheduled continue** in the tab menu) cancels that one attempt.
 
@@ -130,11 +130,11 @@ The switches are per tab, and they only show for a running agent. When a **conti
 | Right-click | Copies the selection if there is one, and otherwise pastes. |
 | `Shift+Enter` | Inserts a new line in an agent's prompt instead of sending it. |
 
-If a program asks for mouse events (Claude Code's full-screen mode does), right-click goes to the program, which pastes by itself. Use `Shift`+right-click to paste from AgentMate in that case.
+If a program asks for mouse events (Claude Code's full-screen mode does), right-click goes to the program, which pastes by itself. Use `Shift`+right-click to paste from Runova in that case.
 
 ### Pasted images and copied files
 
-You can paste a screenshot straight into an agent. AgentMate saves the image to a file in its own folder and types the file's path, quoted for your shell. Agents such as Claude Code and Codex attach an image when they are given its path. These saved images are cleaned up after about a week.
+You can paste a screenshot straight into an agent. Runova saves the image to a file in its own folder and types the file's path, quoted for your shell. Agents such as Claude Code and Codex attach an image when they are given its path. These saved images are cleaned up after about a week.
 
 Files you copy in File Explorer or Finder and paste (or drag onto a terminal pane) arrive the same way, as quoted paths. Drop a file on a pane and you see **Drop to paste the file path**.
 
@@ -150,7 +150,7 @@ When an agent such as Claude Code shows an `[Image #1]` label for a pasted pictu
 
 ## Right-to-left text
 
-Persian, Arabic and Hebrew text is drawn right to left, with letters joined the way they should be, instead of reversed and spaced out as terminals usually show it. English words inside a right-to-left line keep their place. Claude Code reorders right-to-left text itself before it prints it, so AgentMate lays out Claude Code's lines left to right to avoid reversing them twice.
+Persian, Arabic and Hebrew text is drawn right to left, with letters joined the way they should be, instead of reversed and spaced out as terminals usually show it. English words inside a right-to-left line keep their place. Claude Code reorders right-to-left text itself before it prints it, so Runova lays out Claude Code's lines left to right to avoid reversing them twice.
 
 ## Sending files and comments to an agent
 
@@ -174,7 +174,7 @@ The **Agent sessions** tab lists past conversations from every supported CLI (Cl
 - The refresh button in the panel's tab strip (**Refresh sessions**) reloads the list. It also updates on its own every 20 seconds.
 - With none yet, the tab says **No conversations yet**.
 
-An agent tab whose shell did not survive AgentMate closing (a reboot or a crash) resumes its conversation by itself when you come back, for tabs whose CLI reports a conversation going.
+An agent tab whose shell did not survive Runova closing (a reboot or a crash) resumes its conversation by itself when you come back, for tabs whose CLI reports a conversation going.
 
 ## Fix with AI
 
@@ -183,7 +183,7 @@ Many places in the app have a **Fix with AI** button: failed pipeline runs, fail
 1. The left side shows the **Prompt** the agent will get, already written from the failure. It is editable.
 2. The right side, **Recommended run**, sizes the prompt (**Light task**, **Moderate task** or **Complex task**) and suggests a model and effort. You can change both. **Why** explains the pick, **Copy command** copies the launch command, and **Size the prompt again** re-runs the sizing after you edit the prompt.
 3. Click the main button at the bottom right: **Run on {model · effort}**, or **Open in {CLI}** when there is no suggestion (it reads **Open in {CLI} (sizing…)** while the sizing runs). A second button, **Open in {your default CLI}**, appears when the suggested CLI differs from your default.
-4. AgentMate opens a tab in the focused pane, starts the CLI on those settings, and types the prompt for you to send with `Enter`. A message says **Starting {CLI}**.
+4. Runova opens a tab in the focused pane, starts the CLI on those settings, and types the prompt for you to send with `Enter`. A message says **Starting {CLI}**.
 
 **Copy prompt** at the bottom left copies the text without starting anything. While the failure is still being fetched, the dialog shows a loading line, and if it cannot be read you get **Try again**.
 

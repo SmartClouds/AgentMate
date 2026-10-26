@@ -15,7 +15,7 @@ Click **AI CLI Manager** in the sidebar under **Agents**, or open the command pa
 
 ## Supported CLIs
 
-AgentMate knows these 16 CLIs. Each one has a card on the page.
+Runova knows these 16 CLIs. Each one has a card on the page.
 
 | CLI | Notes |
 | --- | --- |
@@ -41,11 +41,11 @@ Each CLI installs the way its vendor recommends for your operating system:
 - **Their own installer**: Claude Code, Codex, Grok, Cursor, GitHub Copilot, Goose, Aider, Qwen, Pi, Muse Code and Continue. On macOS and Linux that is a `curl ... | bash` script, on Windows a PowerShell `irm ... | iex` script. Copilot on Windows installs with WinGet.
 - **npm**: Gemini CLI, OpenClaude, Cline and FreeBuff, plus OpenCode on Windows (it uses its own script on macOS and Linux).
 
-Node.js is only needed for the npm ones. If an install needs a tool that is not on your machine, such as Node.js, pipx, Homebrew or WinGet, AgentMate tells you which one is missing and gives you a button to its download page, instead of opening a terminal that would only fail.
+Node.js is only needed for the npm ones. If an install needs a tool that is not on your machine, such as Node.js, pipx, Homebrew or WinGet, Runova tells you which one is missing and gives you a button to its download page, instead of opening a terminal that would only fail.
 
 ## How detection works
 
-When you open the page, AgentMate looks for each CLI on your `PATH` and runs its version command. A CLI counts as installed as soon as its executable is found, even if the version check is slow (some CLIs take more than ten seconds to answer, and one that is updating itself may not answer at all). In that case the badge just says **Installed** instead of a version number.
+When you open the page, Runova looks for each CLI on your `PATH` and runs its version command. A CLI counts as installed as soon as its executable is found, even if the version check is slow (some CLIs take more than ten seconds to answer, and one that is updating itself may not answer at all). In that case the badge just says **Installed** instead of a version number.
 
 Results are cached for a few minutes, so moving between pages does not rescan every time. If something is missing, the scan result is only kept for about 20 seconds, so a CLI you just installed shows up quickly.
 
@@ -60,7 +60,7 @@ By default the page shows only the CLIs it found. Each card has the CLI's logo a
 
 ### Open a CLI in a terminal
 
-On an installed card, click the CLI's name or logo. AgentMate opens a terminal session and starts that CLI, with your launch defaults (see below) already added to the command.
+On an installed card, click the CLI's name or logo. Runova opens a terminal session and starts that CLI, with your launch defaults (see below) already added to the command.
 
 ### Install a CLI
 
@@ -73,7 +73,7 @@ If a CLI has no install command for your operating system, you get a message say
 
 ### Check for updates
 
-- Click the cloud icon (**Check for updates**) on an installed card to check that one CLI. AgentMate asks the package registry (npm, PyPI or GitHub Releases) for the latest version.
+- Click the cloud icon (**Check for updates**) on an installed card to check that one CLI. Runova asks the package registry (npm, PyPI or GitHub Releases) for the latest version.
 - Click **Check all for updates** at the top to check every installed CLI, one after another.
 
 If an update exists, an **Update <name>?** dialog shows the current version, the latest version and the exact command. Click **Update** to open a terminal with the command typed in (press `Enter` to run it), or **Cancel** to skip. When several CLIs have updates, the dialog steps through them one by one.
@@ -83,7 +83,7 @@ The update command is the CLI's own updater where it has one (`claude update`, `
 Possible messages:
 
 - "<name> is up to date" means you are on the latest version.
-- "Can't check updates for <name> automatically" means that CLI has no update source AgentMate can query.
+- "Can't check updates for <name> automatically" means that CLI has no update source Runova can query.
 - "Couldn't reach the update server" means the registry did not answer (check your connection).
 
 ### Refresh
@@ -94,11 +94,11 @@ Possible messages:
 
 On an installed card, click **Set as default**. The button turns into **Default CLI**, and clicking it again clears the default. Only one CLI can be the default.
 
-The default CLI is what AgentMate uses when a feature needs an AI agent and does not ask you which one. You can also pick it in **Settings** under **Agents** in the **Default CLI** card, which has a searchable list and a clear button.
+The default CLI is what Runova uses when a feature needs an AI agent and does not ask you which one. You can also pick it in **Settings** under **Agents** in the **Default CLI** card, which has a searchable list and a clear button.
 
 ### Background task arguments
 
-Each installed card has a **Background task arguments** box. Anything you type here (for example `--model sonnet`) is added when AgentMate runs that CLI in the background on its own: commit messages, tag suggestions, version bumps and skill audits. The box shows the full command underneath so you can see what will run.
+Each installed card has a **Background task arguments** box. Anything you type here (for example `--model sonnet`) is added when Runova runs that CLI in the background on its own: commit messages, tag suggestions, version bumps and skill audits. The box shows the full command underneath so you can see what will run.
 
 These arguments are never used for terminals or Workspace tabs. Those use **Launch defaults** instead. The value saves when you leave the box or press `Enter`. The same box also appears in **Settings** under the **Default CLI** card for the CLI you picked as the default.
 
@@ -108,10 +108,10 @@ The arrow icon (**Open homepage**) on a card opens the CLI's website in your bro
 
 ## Launch defaults
 
-**Launch defaults** is a card in **Settings** under **Agents**. It sets the model, effort and mode each agent starts with when AgentMate opens it in a terminal or a Workspace tab.
+**Launch defaults** is a card in **Settings** under **Agents**. It sets the model, effort and mode each agent starts with when Runova opens it in a terminal or a Workspace tab.
 
 1. Open **Settings**, go to **Agents** and find **Launch defaults**.
-2. Click an agent's row to expand it. Only agents that AgentMate knows launch flags for are listed, and installed ones come first. Click **Show N not installed** at the bottom to list the rest.
+2. Click an agent's row to expand it. Only agents that Runova knows launch flags for are listed, and installed ones come first. Click **Show N not installed** at the bottom to list the rest.
 3. Pick a **Model**. You can search the list or type any model name.
 4. Pick an **Effort** (a segmented control: **Not set**, Low, Med, High, XHigh, Max). Levels the chosen model cannot use are disabled, and the control dims when the model has no effort setting.
 5. For agents with permission modes, choose a **Mode** card. Modes depend on the CLI, for example **Ask first**, **Accept edits**, **Plan** and **Auto** for Claude Code. Modes that let the agent change files and run commands without asking, such as **Bypass permissions**, carry a warning triangle.
@@ -145,7 +145,7 @@ The window refreshes every few seconds while it is open.
 - The top strip shows total **CPU**, **RAM** and how many terminals are running. Each terminal counts its shell and every process it started, agent CLIs included.
 - Each row shows the terminal name, its project, where it lives (**Workspace**, **Terminal drawer**, **SSH** or **Detached**), the agent's state (such as needs input), how long it has been running, and its CPU, memory and process count. SSH sessions show **Remote, no stats** because they run on the remote server. A busy terminal's CPU is highlighted.
 - Click the arrow on a row (**Show details**) to see the shell, folder, process ID and a table of its processes.
-- The row buttons are **Open** (jumps to that terminal), **Restart** (Workspace tabs only, restarts it with the same command) and **End session** (or **Close tab** when its shell has already ended). Ending a session ends everything in it, including the agent, so unsaved agent work is lost. AgentMate asks you to confirm.
+- The row buttons are **Open** (jumps to that terminal), **Restart** (Workspace tabs only, restarts it with the same command) and **End session** (or **Close tab** when its shell has already ended). Ending a session ends everything in it, including the agent, so unsaved agent work is lost. Runova asks you to confirm.
 - Use the checkboxes and **End selected** to end several at once. **Select all** works on the rows currently shown.
 - Type in the search box to match name, project, CLI, folder or process. **Filters** lets you filter by **Where**, **Kind** (**Agent CLIs** or **Plain shells**) and **State** (**Running** or **Shell ended**). **Show everything** clears the filters.
 - **Sort by** offers CPU, Memory, Age, Name and Project. Choosing the same one again flips the direction.
@@ -153,13 +153,13 @@ The window refreshes every few seconds while it is open.
 
 ## CLI and tool update notifications
 
-In **Settings** under **General**, the **Check for CLI and tool updates** switch makes AgentMate check once a day. It looks at every installed CLI here and every installed tool on the [Agent Tools](agent-tools.md) page. When a newer version exists, it adds a notification ("<name> update available", with the old and new version) and rings the notification bell. Each release is announced only once. The check runs in the background, and a laptop that was asleep catches up soon after it wakes.
+In **Settings** under **General**, the **Check for CLI and tool updates** switch makes Runova check once a day. It looks at every installed CLI here and every installed tool on the [Agent Tools](agent-tools.md) page. When a newer version exists, it adds a notification ("<name> update available", with the old and new version) and rings the notification bell. Each release is announced only once. The check runs in the background, and a laptop that was asleep catches up soon after it wakes.
 
 ## Tips
 
-- If a CLI you just installed is not detected, click **Refresh**. If it is still missing, open a new terminal and make sure the command works there, since AgentMate looks on your `PATH`.
+- If a CLI you just installed is not detected, click **Refresh**. If it is still missing, open a new terminal and make sure the command works there, since Runova looks on your `PATH`.
 - Only the npm-based CLIs need Node.js. You don't have to install it for Claude Code, Codex or the other CLIs with their own installer.
-- Use **Launch defaults** for how an agent starts in the Workspace, and **Background task arguments** for what AgentMate runs silently. They are separate on purpose.
+- Use **Launch defaults** for how an agent starts in the Workspace, and **Background task arguments** for what Runova runs silently. They are separate on purpose.
 
 ## Related
 

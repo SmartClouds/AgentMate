@@ -1,4 +1,4 @@
-import type { ActivityResource, ResourceRef, ResourceStopResult } from '@agentmat/core';
+import type { ActivityResource, ResourceRef, ResourceStopResult } from '@runova/core';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -96,7 +96,7 @@ export function useStopIdleResources(): {
       refs: ResourceRef[];
       onlyIfIdle: boolean;
       keys: string[];
-    }) => window.agentmat.resourceActivity.stop(refs, { onlyIfIdle }),
+    }) => window.runova.resourceActivity.stop(refs, { onlyIfIdle }),
     meta: { silentLoading: true },
     onMutate: ({ keys }) => setPendingKeys((prev) => new Set([...prev, ...keys])),
     onSuccess: (outcome) => {

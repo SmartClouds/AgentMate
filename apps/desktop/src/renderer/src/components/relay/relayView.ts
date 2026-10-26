@@ -8,7 +8,7 @@ import {
   type RelayRunChoice,
   type RelayTaskStatus,
   relayPlanArgs,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { RelayBoard, RelayProjectSettings, RelayTaskCard } from '@shared/relayTypes';
 
 /**

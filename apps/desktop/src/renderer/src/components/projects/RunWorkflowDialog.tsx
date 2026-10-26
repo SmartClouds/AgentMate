@@ -125,7 +125,7 @@ export function RunWorkflowDialog({
 
   const refsQuery = useQuery({
     queryKey: queryKeys.pipelineRefs(repo),
-    queryFn: () => window.agentmat.pipelines.refs(repo),
+    queryFn: () => window.runova.pipelines.refs(repo),
     enabled: open,
     staleTime: 60_000,
   });
@@ -172,7 +172,7 @@ export function RunWorkflowDialog({
 
   const runMutation = useMutation({
     mutationFn: () =>
-      window.agentmat.pipelines.dispatch({
+      window.runova.pipelines.dispatch({
         repo,
         workflowId: workflow.id,
         ref,

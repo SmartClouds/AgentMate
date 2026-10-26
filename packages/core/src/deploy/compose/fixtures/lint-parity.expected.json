@@ -15,6 +15,6 @@
   "host-ipc:api",
   "host-uts:api",
   "host-root:api:/",
-  "core-data:api:/opt/agentmate-core/shared",
+  "core-data:api:/opt/runova-core/shared",
   "device-cgroup-rule:api:c 10:200 rwm"
 ]

@@ -4,7 +4,7 @@ import type {
   ContainerSummary,
   StackDetails,
   StackInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { describe, expect, it } from 'vitest';
 import { classifyContainer, findContainer, privateChange, publicAddress } from './makePrivate';
 
@@ -52,7 +52,7 @@ describe('make private', () => {
     expect(findContainer(list, { ...PORT, containerId: 'x', containerName: 'y' })).toBeNull();
   });
 
-  it('calls a container AgentMate deployed an app, by the app listing it', () => {
+  it('calls a container Runova deployed an app, by the app listing it', () => {
     expect(classifyContainer(container(), [STACK], details(['c1']))).toEqual({
       kind: 'stack',
       stack: STACK,

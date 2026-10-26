@@ -19,7 +19,7 @@ let sdkRoot: string | undefined;
 let sdk: FakeSdk | undefined;
 
 test.beforeEach(() => {
-  sdkRoot = mkdtempSync(join(tmpdir(), 'agentmate-android-'));
+  sdkRoot = mkdtempSync(join(tmpdir(), 'runova-android-'));
   sdk = writeFakeAndroidSdk(sdkRoot);
 });
 

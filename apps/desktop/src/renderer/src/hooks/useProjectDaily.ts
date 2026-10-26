@@ -20,7 +20,7 @@ export interface ProjectDailyResult {
 export function useProjectDaily(): ProjectDailyResult {
   const query = useQuery({
     queryKey: queryKeys.usageList,
-    queryFn: () => window.agentmat.usage.list(),
+    queryFn: () => window.runova.usage.list(),
     select: mergeProjectDaily,
   });
   return {

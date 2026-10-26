@@ -23,7 +23,7 @@ A browser tab shows a web page inside a pane. You can have several, in any pane,
 A new browser tab opens on **Open a page**, with:
 
 - An address box with the placeholder **localhost:3000, a site, or a search**.
-- **Running in this workspace**: dev servers that terminals of this workspace have printed an address for, such as `Local: http://localhost:5173/`. Click one to open it. AgentMate watches terminal output for these addresses, including from before you opened the browser, and remembers up to six per terminal.
+- **Running in this workspace**: dev servers that terminals of this workspace have printed an address for, such as `Local: http://localhost:5173/`. Click one to open it. Runova watches terminal output for these addresses, including from before you opened the browser, and remembers up to six per terminal.
 - **Recent**: the last few addresses you opened in this project.
 - When no server has been seen, a hint says to start your dev server in a terminal of this workspace and its address shows up here.
 
@@ -75,9 +75,9 @@ A page that fails shows a message instead of the browser's own error page. If no
 
 ### Privacy and limits
 
-The browser is separate from the rest of the app. Pages cannot use the camera, microphone, location or notifications, and cannot reach AgentMate's own features. Copy buttons on pages and video fullscreen work. Sites see a normal Chrome browser. Cookies and sign-ins are kept between sessions, so you stay logged in to your own dev app. Links that open a new window open as a new browser tab.
+The browser is separate from the rest of the app. Pages cannot use the camera, microphone, location or notifications, and cannot reach Runova's own features. Copy buttons on pages and video fullscreen work. Sites see a normal Chrome browser. Cookies and sign-ins are kept between sessions, so you stay logged in to your own dev app. Links that open a new window open as a new browser tab.
 
-Open tabs and their last address come back when you reopen AgentMate.
+Open tabs and their last address come back when you reopen Runova.
 
 ## Comment on page elements for your agent
 
@@ -103,7 +103,7 @@ Sending types all the comments into the agent's input box as one prompt, without
 
 ## Dev servers
 
-AgentMate does not start your dev server for you inside the browser. You start it in a terminal, the way you normally would, and the browser picks it up.
+Runova does not start your dev server for you inside the browser. You start it in a terminal, the way you normally would, and the browser picks it up.
 
 1. Open a terminal tab in the workspace (a shell or an agent) and start your server, for example `pnpm dev`.
 2. When the server prints its address, open a new browser tab. The address is listed under **Running in this workspace**.
@@ -134,7 +134,7 @@ Tests are shown as a tree: a test project for each framework found (a folder wit
 
 While tests run, a line says **Running {n} tests…** and the counts update live, for example **2 failed**, **40 passed**, **1 skipped**, with a timer. A stopped run says **Stopped**.
 
-A long suite is not cut off just because it takes a while. AgentMate only stops a test project when it has printed nothing at all for 30 minutes, and every line of output starts the wait again. A project stopped that way shows a card saying the run "printed nothing for 30 minutes and was stopped", with its log. When the run ends:
+A long suite is not cut off just because it takes a while. Runova only stops a test project when it has printed nothing at all for 30 minutes, and every line of output starts the wait again. A project stopped that way shows a card saying the run "printed nothing for 30 minutes and was stopped", with its log. When the run ends:
 
 - **Run failed** runs only what failed, and runs again every test project that could not run.
 - **Fix all with AI** appears when more than one thing failed, counting projects that could not run (except ones whose test tool was not found).

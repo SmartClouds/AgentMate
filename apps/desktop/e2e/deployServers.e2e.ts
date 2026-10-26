@@ -27,13 +27,13 @@ async function saveServers(page: Page): Promise<Saved[]> {
   return page.evaluate(async (nicknames) => {
     const ssh = (
       window as unknown as {
-        agentmat: {
+        runova: {
           ssh: {
             saveServer(input: unknown): Promise<{ id: string; nickname: string }>;
           };
         };
       }
-    ).agentmat.ssh;
+    ).runova.ssh;
     const saved: { id: string; nickname: string }[] = [];
     for (const nickname of nicknames) {
       saved.push(

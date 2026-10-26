@@ -1,4 +1,4 @@
-import { GEMINI_API_MODELS, OPENAI_API_MODELS } from '@agentmat/core';
+import { GEMINI_API_MODELS, OPENAI_API_MODELS } from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
@@ -85,7 +85,7 @@ export function AskAiChat({
 
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
   });
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: only seed each field once, the first time settings arrive with nothing chosen yet
@@ -98,14 +98,14 @@ export function AskAiChat({
 
   const ollamaModelsQuery = useQuery({
     queryKey: ['ollama-models'],
-    queryFn: () => window.agentmat.ai.listOllamaModels(),
+    queryFn: () => window.runova.ai.listOllamaModels(),
     enabled: provider === 'ollama',
     retry: false,
   });
 
   const geminiModelsQuery = useQuery({
     queryKey: ['gemini-models'],
-    queryFn: () => window.agentmat.ai.listGeminiModels(),
+    queryFn: () => window.runova.ai.listGeminiModels(),
     enabled: provider === 'gemini' && !!settingsQuery.data?.geminiApiKey,
     retry: false,
   });
@@ -158,7 +158,7 @@ export function AskAiChat({
     setPrompt('');
     setSending(true);
     try {
-      const result = await window.agentmat.ai.ask({ provider, model, prompt: trimmed, history });
+      const result = await window.runova.ai.ask({ provider, model, prompt: trimmed, history });
       addMessage({
         id: crypto.randomUUID(),
         role: result.ok ? 'assistant' : 'error',
@@ -187,7 +187,7 @@ export function AskAiChat({
 
     setSending(true);
     try {
-      const result = await window.agentmat.ai.ask({
+      const result = await window.runova.ai.ask({
         provider: errorMessage.provider,
         model: errorMessage.model,
         prompt: userMessage.content,

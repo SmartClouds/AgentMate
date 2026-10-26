@@ -131,7 +131,7 @@ describe('the Windows registry commands', () => {
 
 describe('the shell startup file', () => {
   it('reads it, and says it is missing only when it is', async () => {
-    const dir = tempDir('agentmate-startup-');
+    const dir = tempDir('runova-startup-');
     writeFileSync(join(dir, '.zshrc'), 'export A=1\n');
     const d = await deps();
 
@@ -141,7 +141,7 @@ describe('the shell startup file', () => {
 
   it('does not call a file it could not read an empty one, which would be written over', async () => {
     // A folder in the file's place fails to read with something other than "not found".
-    const dir = tempDir('agentmate-startup-');
+    const dir = tempDir('runova-startup-');
     mkdirSync(join(dir, '.zshrc'));
 
     await expect((await deps()).readFile(join(dir, '.zshrc'))).rejects.toThrow();

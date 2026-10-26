@@ -4,7 +4,7 @@ import type { HandoffSectionKey } from './types.js';
 export const RELAY_TASKS_DIR = 'tasks';
 /** Folder, under the tasks folder, that holds one handoff per task. */
 export const RELAY_HANDOFFS_DIR = 'handoffs';
-/** The guide AgentMate writes into the tasks folder so any agent can follow the format. */
+/** The guide Runova writes into the tasks folder so any agent can follow the format. */
 export const RELAY_GUIDE_FILE = 'RELAY.md';
 
 export const DEFAULT_RELAY_BUDGET = 200_000;
@@ -179,9 +179,9 @@ export function relayGuideMarkdown(docsFolder: string): string {
   ).join('\n');
   return `# Relay
 
-This project's work is split into tasks that each fit one AI coding session. AgentMate runs them
+This project's work is split into tasks that each fit one AI coding session. Runova runs them
 one after another, each in a fresh session, and every session leaves a handoff that the next one
-reads first. This file is the format. AgentMate wrote it; keep it as it is.
+reads first. This file is the format. Runova wrote it; keep it as it is.
 
 ## Files
 
@@ -207,7 +207,7 @@ specs: [docs/epics/01-example.md]
 The body has \`## Goal\`, \`## Scope\`, \`## Acceptance criteria\` (a checkbox per criterion) and
 \`## Test plan\`.
 
-AgentMate sets \`status\`. A session working on a task never edits its status or its spec; it
+Runova sets \`status\`. A session working on a task never edits its status or its spec; it
 reports through the handoff.
 
 ### Sizing

@@ -1,4 +1,4 @@
-import type { PrCheck, PullRequestInfo } from '@agentmat/core';
+import type { PrCheck, PullRequestInfo } from '@runova/core';
 import type { PullRequestStatus } from '@shared/apiTypes';
 import { act, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';

@@ -1,4 +1,4 @@
-import type { ProjectDraft, ScheduledTask } from '@agentmat/core';
+import type { ProjectDraft, ScheduledTask } from '@runova/core';
 import type { PromptHistoryEntry } from '@shared/apiTypes';
 import { describe, expect, it } from 'vitest';
 import {

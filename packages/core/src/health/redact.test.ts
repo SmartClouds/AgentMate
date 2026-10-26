@@ -38,9 +38,11 @@ describe('redactHealthText', () => {
     );
   });
 
-  it('masks an AgentMate health key wherever it appears', () => {
-    const key = `amh_${'Q'.repeat(43)}`;
-    expect(redactHealthText(`echoed ${key} back`)).not.toContain(key);
+  it('masks a Runova health key wherever it appears, including ones made before the rename', () => {
+    for (const prefix of ['rnh_', 'amh_']) {
+      const key = `${prefix}${'Q'.repeat(43)}`;
+      expect(redactHealthText(`echoed ${key} back`)).not.toContain(key);
+    }
   });
 
   it('masks the known token shapes and private keys', () => {

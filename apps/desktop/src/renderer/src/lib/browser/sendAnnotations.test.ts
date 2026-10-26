@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useBrowserStore } from '@/stores/browserStore';
 import type { BrowserAnnotation, PickPayload } from './types';

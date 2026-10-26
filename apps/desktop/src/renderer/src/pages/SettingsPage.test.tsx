@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import type { AppSettings } from '@agentmat/core';
-import { defaultGrammarSettings, defaultProxySettings, isStartupPage } from '@agentmat/core';
+import type { AppSettings } from '@runova/core';
+import { defaultGrammarSettings, defaultProxySettings, isStartupPage } from '@runova/core';
 import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NAV_ITEMS } from '@/components/layout/Sidebar';
@@ -674,7 +674,7 @@ describe('SettingsPage search', () => {
 describe('SettingsPage backup export', () => {
   it('exports with the switches as they were set and says where the file went', async () => {
     const { user, bridge } = renderSettings(
-      { 'backup.export': async () => ({ ok: true, path: 'C:/backups/agentmate.json' }) },
+      { 'backup.export': async () => ({ ok: true, path: 'C:/backups/runova.json' }) },
       '/settings?tab=data',
     );
     await screen.findByText('Backup & restore');
@@ -688,12 +688,12 @@ describe('SettingsPage backup export', () => {
         includeVault: true,
       }),
     );
-    expect(toast.success).toHaveBeenCalledWith('Backup saved to C:/backups/agentmate.json');
+    expect(toast.success).toHaveBeenCalledWith('Backup saved to C:/backups/runova.json');
   });
 
   it('leaves the Vault out when that switch is turned off', async () => {
     const { user, bridge } = renderSettings(
-      { 'backup.export': async () => ({ ok: true, path: 'C:/backups/agentmate.json' }) },
+      { 'backup.export': async () => ({ ok: true, path: 'C:/backups/runova.json' }) },
       '/settings?tab=data',
     );
     await screen.findByText('Backup & restore');
@@ -751,7 +751,7 @@ describe('SettingsPage backup export', () => {
 
   it('sends the password along once both fields agree', async () => {
     const { user, bridge } = renderSettings(
-      { 'backup.export': async () => ({ ok: true, path: 'C:/backups/agentmate.json' }) },
+      { 'backup.export': async () => ({ ok: true, path: 'C:/backups/runova.json' }) },
       '/settings?tab=data',
     );
     await screen.findByText('Backup & restore');
@@ -809,7 +809,7 @@ describe('SettingsPage backup restore', () => {
   it('says why a backup file could not be opened', async () => {
     const { user, bridge } = renderSettings(
       {
-        'backup.open': async () => ({ ok: false, error: 'That file is not an AgentMate backup.' }),
+        'backup.open': async () => ({ ok: false, error: 'That file is not a Runova backup.' }),
       },
       '/settings?tab=data',
     );
@@ -818,7 +818,7 @@ describe('SettingsPage backup restore', () => {
     await user.click(screen.getByRole('button', { name: /Restore from backup…/ }));
 
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith('That file is not an AgentMate backup.'),
+      expect(toast.error).toHaveBeenCalledWith('That file is not a Runova backup.'),
     );
     expect(bridge.backup.restore).not.toHaveBeenCalled();
   });

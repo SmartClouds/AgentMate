@@ -119,7 +119,7 @@ export function useVoiceInput({ language, onText }: UseVoiceInputOptions): UseVo
 
   // Surface first-run model-download progress pushed from the main process.
   useEffect(() => {
-    const unsubscribe = window.agentmat.speech.onModelProgress((progress) => {
+    const unsubscribe = window.runova.speech.onModelProgress((progress) => {
       setDownloadPercent(progress.percent);
     });
     return unsubscribe;
@@ -169,7 +169,7 @@ export function useVoiceInput({ language, onText }: UseVoiceInputOptions): UseVo
         }
         const requestId = crypto.randomUUID();
         requestIdRef.current = requestId;
-        const result = await window.agentmat.speech.transcribe({ samples, language, requestId });
+        const result = await window.runova.speech.transcribe({ samples, language, requestId });
         if (requestIdRef.current === requestId) requestIdRef.current = null;
         if (!current()) return;
         if (result.ok) {
@@ -245,7 +245,7 @@ export function useVoiceInput({ language, onText }: UseVoiceInputOptions): UseVo
     // just ignored.
     const requestId = requestIdRef.current;
     requestIdRef.current = null;
-    if (requestId) void window.agentmat.speech.cancel(requestId).catch(() => undefined);
+    if (requestId) void window.runova.speech.cancel(requestId).catch(() => undefined);
     recorderRef.current?.stop();
     recorderRef.current = null;
     stopTracks();

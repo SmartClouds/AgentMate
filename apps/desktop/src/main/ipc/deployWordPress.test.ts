@@ -467,7 +467,7 @@ describe('registerDeployWordPressHandlers', () => {
     expect(service.remoteFile).toHaveBeenCalledWith(input);
     for (const path of ['../wp-config.php', '/etc/passwd', 'C:x', '.claude/settings.json', '']) {
       await expect(call(IPC.deployWordPress.remoteFile, { ...input, path })).rejects.toThrow(
-        'not one AgentMate syncs',
+        'not one Runova syncs',
       );
     }
   });

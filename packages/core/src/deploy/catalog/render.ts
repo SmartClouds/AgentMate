@@ -157,7 +157,7 @@ function serviceYaml(
  * nothing with them. The parameters are never secrets, and strings are escaped like any other
  * literal, since Compose interpolates extension values too.
  */
-export const CATALOG_EXTENSION_KEY = 'x-agentmate';
+export const CATALOG_EXTENSION_KEY = 'x-runova';
 
 function catalogBlock(
   templateId: string,
@@ -263,7 +263,7 @@ export function renderCatalogApp(
   data[CATALOG_EXTENSION_KEY] = catalogBlock(template.id, version.id, params, publicUrl);
   const document = new Document(data);
   document.commentBefore = [
-    ` Written by AgentMate from the ${template.name} template (${version.label}).`,
+    ` Written by Runova from the ${template.name} template (${version.label}).`,
     ' Passwords and keys are read from the .env file next to this one.',
   ].join('\n');
   const compose = document.toString({

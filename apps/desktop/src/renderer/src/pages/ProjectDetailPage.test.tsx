@@ -1,5 +1,5 @@
-import type { Project } from '@agentmat/core';
-import { AGENT_TYPE_LABELS } from '@agentmat/core';
+import type { Project } from '@runova/core';
+import { AGENT_TYPE_LABELS } from '@runova/core';
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../test/renderer/renderWithProviders';
@@ -247,7 +247,7 @@ describe('ProjectDetailPage sections', () => {
     expect(screen.getByRole('button', { name: 'Set a run command' })).toBeTruthy();
 
     await openSection(user, /^Config/);
-    expect(await screen.findByText('.agentmate/config.json')).toBeTruthy();
+    expect(await screen.findByText('.runova/config.json')).toBeTruthy();
 
     await openSection(user, /^Prompts/);
     // Leaving a section really unmounts it, rather than stacking the sections up.

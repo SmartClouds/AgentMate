@@ -6,7 +6,7 @@ import type {
   ErrorTrackingProvider,
   RemoteOrganization,
   RemoteProject,
-} from '@agentmat/core';
+} from '@runova/core';
 
 /**
  * Error tracking (E24): what crosses IPC between the Monitoring page's Errors tab and the main
@@ -39,7 +39,7 @@ export interface ErrorConnectionSummary {
   problem: string | null;
 }
 
-/** A provider project linked to an AgentMate project. One project can have several. */
+/** A provider project linked to a Runova project. One project can have several. */
 export interface ErrorProjectLink {
   projectId: string;
   connectionId: string;
@@ -97,7 +97,7 @@ export interface ErrorIssueQuery {
 /** An issue as the list shows it, with where it came from. */
 export interface ErrorIssueSummary extends ErrorIssue {
   connectionId: string;
-  /** The AgentMate project the provider project is linked to. */
+  /** The Runova project the provider project is linked to. */
   projectId: string;
   /** First seen inside the period the list looks at. */
   isNew: boolean;

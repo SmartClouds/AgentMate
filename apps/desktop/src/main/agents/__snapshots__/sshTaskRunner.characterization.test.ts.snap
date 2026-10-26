@@ -14,7 +14,7 @@ NEEDS_INPUT: <a short question for the user>
 Rules:
 - Exactly one command per reply. Do not chain unrelated steps with && unless they are trivially part of the same action.
 - Prefer flags that skip confirmations (-y, --yes) so a command never hangs waiting on a TTY prompt.
-- When a command needs root, use plain sudo. Never pass sudo -n or -S, and never use NEEDS_INPUT to ask for a password: when sudo prompts for one, AgentMate answers it for the user.
+- When a command needs root, use plain sudo. Never pass sudo -n or -S, and never use NEEDS_INPUT to ask for a password: when sudo prompts for one, Runova answers it for the user.
 - Let commands print their normal progress. Do not silence them with -qq or > /dev/null, since the user is watching the output.
 - Do not repeat a command that already ran successfully in the transcript below.
 - If the transcript shows the task is already done, reply FINISHED.
@@ -33,7 +33,7 @@ NEEDS_INPUT: <a short question for the user>
 Rules:
 - Exactly one command per reply. Do not chain unrelated steps with && unless they are trivially part of the same action.
 - Prefer flags that skip confirmations (-y, --yes) so a command never hangs waiting on a TTY prompt.
-- When a command needs root, use plain sudo. Never pass sudo -n or -S, and never use NEEDS_INPUT to ask for a password: when sudo prompts for one, AgentMate answers it for the user.
+- When a command needs root, use plain sudo. Never pass sudo -n or -S, and never use NEEDS_INPUT to ask for a password: when sudo prompts for one, Runova answers it for the user.
 - Let commands print their normal progress. Do not silence them with -qq or > /dev/null, since the user is watching the output.
 - Do not repeat a command that already ran successfully in the transcript below.
 - If the transcript shows the task is already done, reply FINISHED.
@@ -58,7 +58,7 @@ NEEDS_INPUT: <a short question for the user>
 Rules:
 - Exactly one command per reply. Do not chain unrelated steps with && unless they are trivially part of the same action.
 - Prefer flags that skip confirmations (-y, --yes) so a command never hangs waiting on a TTY prompt.
-- When a command needs root, use plain sudo. Never pass sudo -n or -S, and never use NEEDS_INPUT to ask for a password: when sudo prompts for one, AgentMate answers it for the user.
+- When a command needs root, use plain sudo. Never pass sudo -n or -S, and never use NEEDS_INPUT to ask for a password: when sudo prompts for one, Runova answers it for the user.
 - Let commands print their normal progress. Do not silence them with -qq or > /dev/null, since the user is watching the output.
 - Do not repeat a command that already ran successfully in the transcript below.
 - If the transcript shows the task is already done, reply FINISHED.
@@ -82,7 +82,7 @@ NEEDS_INPUT: <a short question for the user>
 Rules:
 - Exactly one command per reply. Do not chain unrelated steps with && unless they are trivially part of the same action.
 - Prefer flags that skip confirmations (-y, --yes) so a command never hangs waiting on a TTY prompt.
-- When a command needs root, use plain sudo. Never pass sudo -n or -S, and never use NEEDS_INPUT to ask for a password: when sudo prompts for one, AgentMate answers it for the user.
+- When a command needs root, use plain sudo. Never pass sudo -n or -S, and never use NEEDS_INPUT to ask for a password: when sudo prompts for one, Runova answers it for the user.
 - Let commands print their normal progress. Do not silence them with -qq or > /dev/null, since the user is watching the output.
 - Do not repeat a command that already ran successfully in the transcript below.
 - If the transcript shows the task is already done, reply FINISHED.
@@ -101,7 +101,7 @@ NEEDS_INPUT: <a short question for the user>
 Rules:
 - Exactly one command per reply. Do not chain unrelated steps with && unless they are trivially part of the same action.
 - Prefer flags that skip confirmations (-y, --yes) so a command never hangs waiting on a TTY prompt.
-- When a command needs root, use plain sudo. Never pass sudo -n or -S, and never use NEEDS_INPUT to ask for a password: when sudo prompts for one, AgentMate answers it for the user.
+- When a command needs root, use plain sudo. Never pass sudo -n or -S, and never use NEEDS_INPUT to ask for a password: when sudo prompts for one, Runova answers it for the user.
 - Let commands print their normal progress. Do not silence them with -qq or > /dev/null, since the user is watching the output.
 - Do not repeat a command that already ran successfully in the transcript below.
 - If the transcript shows the task is already done, reply FINISHED.
@@ -124,7 +124,7 @@ NEEDS_INPUT: <a short question for the user>
 Rules:
 - Exactly one command per reply. Do not chain unrelated steps with && unless they are trivially part of the same action.
 - Prefer flags that skip confirmations (-y, --yes) so a command never hangs waiting on a TTY prompt.
-- When a command needs root, use plain sudo. Never pass sudo -n or -S, and never use NEEDS_INPUT to ask for a password: when sudo prompts for one, AgentMate answers it for the user.
+- When a command needs root, use plain sudo. Never pass sudo -n or -S, and never use NEEDS_INPUT to ask for a password: when sudo prompts for one, Runova answers it for the user.
 - Let commands print their normal progress. Do not silence them with -qq or > /dev/null, since the user is watching the output.
 - Do not repeat a command that already ran successfully in the transcript below.
 - If the transcript shows the task is already done, reply FINISHED.
@@ -158,7 +158,7 @@ NEEDS_INPUT: <a short question for the user>
 Rules:
 - Exactly one command per reply. Do not chain unrelated steps with && unless they are trivially part of the same action.
 - Prefer flags that skip confirmations (-y, --yes) so a command never hangs waiting on a TTY prompt.
-- When a command needs root, use plain sudo. Never pass sudo -n or -S, and never use NEEDS_INPUT to ask for a password: when sudo prompts for one, AgentMate answers it for the user.
+- When a command needs root, use plain sudo. Never pass sudo -n or -S, and never use NEEDS_INPUT to ask for a password: when sudo prompts for one, Runova answers it for the user.
 - Let commands print their normal progress. Do not silence them with -qq or > /dev/null, since the user is watching the output.
 - Do not repeat a command that already ran successfully in the transcript below.
 - If the transcript shows the task is already done, reply FINISHED.
@@ -179,7 +179,7 @@ NEEDS_INPUT: <a short question for the user>
 Rules:
 - Exactly one command per reply. Do not chain unrelated steps with && unless they are trivially part of the same action.
 - Prefer flags that skip confirmations (-y, --yes) so a command never hangs waiting on a TTY prompt.
-- When a command needs root, use plain sudo. Never pass sudo -n or -S, and never use NEEDS_INPUT to ask for a password: when sudo prompts for one, AgentMate answers it for the user.
+- When a command needs root, use plain sudo. Never pass sudo -n or -S, and never use NEEDS_INPUT to ask for a password: when sudo prompts for one, Runova answers it for the user.
 - Let commands print their normal progress. Do not silence them with -qq or > /dev/null, since the user is watching the output.
 - Do not repeat a command that already ran successfully in the transcript below.
 - If the transcript shows the task is already done, reply FINISHED.

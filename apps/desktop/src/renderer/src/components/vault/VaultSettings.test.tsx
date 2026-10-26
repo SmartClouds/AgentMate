@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { AppSettings } from '@agentmat/core';
+import type { AppSettings } from '@runova/core';
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -25,7 +25,7 @@ const update = vi.fn(async (patch: Partial<AppSettings>) => ({ ...settings, ...p
 
 function renderSettings() {
   installVaultApi(mock);
-  Object.assign(window.agentmat, { settings: { update } });
+  Object.assign(window.runova, { settings: { update } });
   return renderWithVaultProviders(<VaultSettings settings={settings} />);
 }
 

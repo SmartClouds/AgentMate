@@ -5,7 +5,7 @@ import type {
   ServiceInfo,
   SystemInfo,
   UpdatesInfo,
-} from '../protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * Plausible answers from a server core, for tests on either side of IPC: an Ubuntu 24.04 server

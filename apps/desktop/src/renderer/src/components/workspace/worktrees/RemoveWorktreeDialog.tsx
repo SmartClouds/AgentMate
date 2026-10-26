@@ -1,4 +1,4 @@
-import type { Project, WorktreeInfo } from '@agentmat/core';
+import type { Project, WorktreeInfo } from '@runova/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -84,12 +84,12 @@ export function RemoveWorktreeDialog({
 
   const preflightQuery = useQuery({
     queryKey: [...queryKeys.worktrees(project.id), 'remove', worktree.id],
-    queryFn: () => window.agentmat.worktrees.removePreflight(project.id, worktree.id),
+    queryFn: () => window.runova.worktrees.removePreflight(project.id, worktree.id),
     staleTime: 0,
   });
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
   });
 
   const [deleteChoice, setDeleteChoice] = useState<boolean | null>(null);
@@ -117,7 +117,7 @@ export function RemoveWorktreeDialog({
     const wasActive = store.activeProjectId === scopeId;
     store.closeWorkspace(scopeId);
     if (wasActive) navigate(`/workspace/${project.id}`);
-    const result = await window.agentmat.worktrees.remove({
+    const result = await window.runova.worktrees.remove({
       projectId: project.id,
       worktreeId: worktree.id,
       force,

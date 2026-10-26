@@ -1,4 +1,4 @@
-import { healthDays } from '@agentmat/core';
+import { healthDays } from '@runova/core';
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { usePageHeaderStore } from '@/stores/pageHeaderStore';

@@ -37,12 +37,12 @@ with the enrolled device keys and a certificate pinned at install time.
   is a Kestrel configuration endpoint fed by a configuration provider of the core's own, so turning
   it on, moving it or turning it off rebinds at runtime (Kestrel reloads its endpoints) and leaves
   the Unix socket alone; no restart. A spike proved the reload first. The setting lives in
-  `/var/lib/agentmate-core/direct-tls.json` (0600), not in `core.json`, which the installer owns.
+  `/var/lib/runova-core/direct-tls.json` (0600), not in `core.json`, which the installer owns.
   Everything that matters is set in code, not configuration: TLS 1.3 only, HTTP/1.1, a 10 second
   handshake limit, client certificate required. A taken port is refused up front with a plain
   message; a bind that still fails shows as "On, but the port is not open" with the reason.
 - **T1, the certificate and pin.** ECDSA P-256 from the BCL (`CertificateRequest`), made on the
-  core's first start, which is the install, and kept in `/var/lib/agentmate-core/tls/` (key 0600).
+  core's first start, which is the install, and kept in `/var/lib/runova-core/tls/` (key 0600).
   Making it on start rather than in an install step also covers cores installed before E16. The
   pin is base64 SHA-256 of the SubjectPublicKeyInfo. The app only ever takes it from a call made
   over SSH (`DeployService.withSshHub`, which skips the lasting link when that rides direct TLS),
@@ -67,7 +67,7 @@ with the enrolled device keys and a certificate pinned at install time.
 - **T3, firewall.** The rule is an E13 change set the renderer applies through the Firewall calls,
   so it gets the review with the exact commands, the SSH lockout guard and the countdown kept over
   a new SSH connection. The card offers it after turning the mode on, moving it (old rule out, new
-  in) or turning it off. Rules carry the comment "AgentMate direct TLS" on ufw; firewalld keeps no
+  in) or turning it off. Rules carry the comment "Runova direct TLS" on ufw; firewalld keeps no
   comments, so there a rule is matched by port, protocol and the sources the mode used. Deviation:
   the source restriction is also enforced by the core itself, before the handshake (a connection
   middleware on the endpoint), so it holds with the firewall off or bypassed. Sources are checked
@@ -97,6 +97,6 @@ with the enrolled device keys and a certificate pinned at install time.
   state, validation, the pill and the card in every state. `e2e/directTls.e2e.ts` turns it on
   against the DevHost (which serves the TLS listener on loopback only), keeps the firewall rule,
   sees the pill move to direct TLS, and turns it off again. `directTls.int.test.ts` (with
-  `AGENTMATE_SYSTEM_TESTS=1`) does it on the ufw test server: the port closed by ufw until the
+  `RUNOVA_SYSTEM_TESTS=1`) does it on the ufw test server: the port closed by ufw until the
   change set opens it (the link falls back to SSH meanwhile), the link on TLS, AC1 and AC2 with raw
   handshakes, a second device refused once revoked, and AC3 with `ss` and `ufw status`.

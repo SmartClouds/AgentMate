@@ -1,6 +1,6 @@
 import type { DockerContainer } from '@shared/apiTypes';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { installAgentmatBridge } from '../../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../../test/renderer/runovaBridge';
 import { queryClient } from '../../queryClient';
 import {
   dismissStopContainers,
@@ -63,7 +63,7 @@ function setup({ mode = 'ask', running = {}, stop: stopImpl, settingsGet }: Setu
   });
   stop = vi.fn(stopImpl ?? (async () => ({ ok: true })));
   settingsUpdate = vi.fn(async () => undefined);
-  installAgentmatBridge({
+  installRunovaBridge({
     'settings.get': settingsGet ?? (async () => ({ stopDockerWithRun: mode })),
     'settings.update': settingsUpdate,
     'docker.runningForProject': runningForProject,

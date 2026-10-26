@@ -1,4 +1,4 @@
-import type { PrReviewComment, PrReviewThread } from '@agentmat/core';
+import type { PrReviewComment, PrReviewThread } from '@runova/core';
 import { useState } from 'react';
 import { Check, MessageSquare, Send, Spinner, Undo } from '@/components/icons';
 import { Chip, SECTION_WELL } from '@/components/pageKit';

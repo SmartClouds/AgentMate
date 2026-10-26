@@ -7,13 +7,13 @@ keywords: api client, http, rest, request, postman, collection, get, post, put, 
 route: /api-client
 ---
 
-The API Client lets you try out a web API without leaving AgentMate. You pick an HTTP method, type a URL, add query parameters, headers and a body, press Send, and read the status, headers, timing and body of the response. Requests you want to keep are saved into collections (with optional folders), and collections are stored as standard Postman files.
+The API Client lets you try out a web API without leaving Runova. You pick an HTTP method, type a URL, add query parameters, headers and a body, press Send, and read the status, headers, timing and body of the response. Requests you want to keep are saved into collections (with optional folders), and collections are stored as standard Postman files.
 
 ## Where to find it
 
 Click **API Client** in the sidebar under **Build**, or open the command palette (`Ctrl+K`) and type API Client. The page is titled "API Client, Build, send and save HTTP requests. Collections use the Postman format."
 
-The page has two cards. On the left is the **Collections** sidebar. On the right is the request area with open request tabs, the URL bar, the request editor and the response. You can drag the divider between the two cards to change the sidebar width, and drag the divider between the request editor and the response to change their heights. AgentMate remembers both sizes.
+The page has two cards. On the left is the **Collections** sidebar. On the right is the request area with open request tabs, the URL bar, the request editor and the response. You can drag the divider between the two cards to change the sidebar width, and drag the divider between the request editor and the response to change their heights. Runova remembers both sizes.
 
 ## Send your first request
 
@@ -37,7 +37,7 @@ Every open request lives in a tab at the top of the request area. Each tab has i
 - Opening a request that is already open just switches to its tab.
 - Above the URL bar, **Request name** is an editable box. When the request is saved in a collection, the collection's name shows before it with an arrow. If you clear the name, it goes back to "Untitled Request". Renaming a saved request counts as an unsaved change.
 
-Open tabs stay while you visit other pages in AgentMate but are not restored after you quit the app, so save requests you want to keep.
+Open tabs stay while you visit other pages in Runova but are not restored after you quit the app, so save requests you want to keep.
 
 ## The URL bar
 
@@ -176,7 +176,7 @@ If a collection's file cannot be read, its row shows a warning icon (hover for t
 
 ### Where collections are stored
 
-Each collection is its own file in the Postman collection format (version 2.1), kept in the `data/api-client/collections` folder inside AgentMate's data folder on your computer. Because it is the standard format, you can import one of these files into Postman or another tool that reads Postman collections.
+Each collection is its own file in the Postman collection format (version 2.1), kept in the `data/api-client/collections` folder inside Runova's data folder on your computer. Because it is the standard format, you can import one of these files into Postman or another tool that reads Postman collections.
 
 Saved collections are the way to keep your requests between sessions.
 

@@ -5,8 +5,8 @@ import type {
   SshHardeningChangeInfo,
   SshHardeningPreview,
   SshHardeningRequest,
-} from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import type {
   DeploySshDecisionInput,
   DeploySshHardeningInput,
@@ -62,7 +62,7 @@ type Report = (
 ) => void;
 
 export const PASSWORD_LOGIN_REFUSAL =
-  'AgentMate signs in to this server with a password, so turning SSH passwords off would lock it out. Switch the saved server to key login in Remote first, then try again.';
+  'Runova signs in to this server with a password, so turning SSH passwords off would lock it out. Switch the saved server to key login in Remote first, then try again.';
 
 export class DeployHardening {
   private readonly now: () => number;

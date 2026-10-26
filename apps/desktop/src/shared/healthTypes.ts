@@ -6,7 +6,7 @@ import type {
   HealthReport,
   HealthSample,
   HealthState,
-} from '@agentmat/core';
+} from '@runova/core';
 
 /**
  * Project health checks (E22): what crosses IPC between the Health page and the main process.

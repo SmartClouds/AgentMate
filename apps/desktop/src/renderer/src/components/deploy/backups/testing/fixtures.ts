@@ -4,7 +4,7 @@ import type {
   BackupRunInfo,
   PendingServerRestore,
   StoredBackupInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployServer } from '@shared/deployTypes';
 import { SERVER } from '../../security/testing/fixtures';
 

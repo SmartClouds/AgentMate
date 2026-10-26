@@ -23,11 +23,11 @@ function writeHelper(root: string, ...parts: string[]): string {
 
 describe('findStagedNodePtyDirs', () => {
   it('finds the unpacked node-pty in a mac staging layout', () => {
-    const out = tempDir('agentmate-afterpack-');
+    const out = tempDir('runova-afterpack-');
     const staged = join(
       out,
       'mac-arm64',
-      'AgentMate.app',
+      'Runova.app',
       'Contents',
       'Resources',
       'app.asar.unpacked',
@@ -40,20 +40,20 @@ describe('findStagedNodePtyDirs', () => {
   });
 
   it('ignores a node-pty that is still packed inside the archive', () => {
-    const out = tempDir('agentmate-afterpack-');
-    writeHelper(out, 'mac-arm64', 'AgentMate.app', 'Contents', 'Resources', 'app.asar');
+    const out = tempDir('runova-afterpack-');
+    writeHelper(out, 'mac-arm64', 'Runova.app', 'Contents', 'Resources', 'app.asar');
 
     expect(findStagedNodePtyDirs(out)).toEqual([]);
   });
 
   it('finds nothing in an empty staging dir', () => {
-    expect(findStagedNodePtyDirs(tempDir('agentmate-afterpack-'))).toEqual([]);
+    expect(findStagedNodePtyDirs(tempDir('runova-afterpack-'))).toEqual([]);
   });
 });
 
 describe('stagedMacHelpers', () => {
   it('lists the macOS helpers and skips other platforms', () => {
-    const staged = tempDir('agentmate-node-pty-');
+    const staged = tempDir('runova-node-pty-');
     const arm = writeHelper(staged, 'prebuilds', 'darwin-arm64', 'spawn-helper');
     const x64 = writeHelper(staged, 'prebuilds', 'darwin-x64', 'spawn-helper');
     const built = writeHelper(staged, 'build', 'Release', 'spawn-helper');
@@ -63,7 +63,7 @@ describe('stagedMacHelpers', () => {
   });
 
   it('is empty when nothing is staged', () => {
-    expect(stagedMacHelpers(tempDir('agentmate-node-pty-'))).toEqual([]);
+    expect(stagedMacHelpers(tempDir('runova-node-pty-'))).toEqual([]);
   });
 });
 
@@ -76,7 +76,7 @@ describe('verifyStagedNodePtyDir', () => {
   });
 
   it('repairs the staged copy, then passes when every helper is executable', () => {
-    const dir = tempDir('agentmate-node-pty-');
+    const dir = tempDir('runova-node-pty-');
     const helper = writeHelper(dir, 'prebuilds', 'darwin-arm64', 'spawn-helper');
     const deps = depsFor(new Set([helper]));
 
@@ -85,7 +85,7 @@ describe('verifyStagedNodePtyDir', () => {
   });
 
   it('fails the packaging naming the helper that stayed broken', () => {
-    const dir = tempDir('agentmate-node-pty-');
+    const dir = tempDir('runova-node-pty-');
     const helper = writeHelper(dir, 'prebuilds', 'darwin-arm64', 'spawn-helper');
     const deps = depsFor(new Set());
     let thrown: unknown;
@@ -99,7 +99,7 @@ describe('verifyStagedNodePtyDir', () => {
   });
 
   it('lists staging without checking modes on a Windows build machine', () => {
-    const dir = tempDir('agentmate-node-pty-');
+    const dir = tempDir('runova-node-pty-');
     const helper = writeHelper(dir, 'prebuilds', 'darwin-arm64', 'spawn-helper');
     const deps = {
       platform: 'win32',

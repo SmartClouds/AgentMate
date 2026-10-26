@@ -20,10 +20,10 @@ const LIFECYCLE_PAST: Record<LifecycleAction, string> = {
 function runLifecycleAction(
   id: string,
   action: LifecycleAction,
-): ReturnType<typeof window.agentmat.docker.start> {
-  if (action === 'start') return window.agentmat.docker.start(id);
-  if (action === 'stop') return window.agentmat.docker.stop(id);
-  return window.agentmat.docker.restart(id);
+): ReturnType<typeof window.runova.docker.start> {
+  if (action === 'start') return window.runova.docker.start(id);
+  if (action === 'stop') return window.runova.docker.stop(id);
+  return window.runova.docker.restart(id);
 }
 
 /**
@@ -106,7 +106,7 @@ export function useDockerContainerActions(queryKey: QueryKey): {
 
   const removeMutation = useMutation({
     mutationFn: ({ id, options }: { id: string; options: DockerRemoveOptions }) =>
-      window.agentmat.docker.remove(id, options),
+      window.runova.docker.remove(id, options),
     onSuccess: (result) => {
       if (result.ok) {
         toast.success('Container removed.');

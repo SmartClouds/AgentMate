@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { GithubWorkflowInfo, GithubWorkflowRunInfo } from '@shared/apiTypes';
 import { act, screen, within } from '@testing-library/react';
 import { useState } from 'react';

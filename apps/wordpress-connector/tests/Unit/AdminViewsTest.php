@@ -3,14 +3,14 @@
  * Hostile labels and device names (they come from other people) must stay text on every admin
  * page: no event handler attributes, no inline scripts, no attribute breakouts.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Unit;
+namespace Runova\Connector\Tests\Unit;
 
-use AgentMate\Connector\Admin\AdminViews;
-use AgentMate\Connector\Support\Text;
-use AgentMate\Connector\Tests\Support\TestCase;
+use Runova\Connector\Admin\AdminViews;
+use Runova\Connector\Support\Text;
+use Runova\Connector\Tests\Support\TestCase;
 
 require_once dirname(__DIR__) . '/Support/wp-stubs.php';
 
@@ -104,11 +104,11 @@ final class AdminViewsTest extends TestCase
             AdminViews::connections($this->connections(), 1790000200);
         });
         $dom = $this->assertInert($html);
-        $forms = (new \DOMXPath($dom))->query('//form[@data-agentmate-confirm]');
+        $forms = (new \DOMXPath($dom))->query('//form[@data-runova-confirm]');
         $this->assertSame(count(self::HOSTILE), $forms->length);
         foreach ($forms as $index => $form) {
             // The question is plain data that still names the connection.
-            $question = $form->getAttribute('data-agentmate-confirm');
+            $question = $form->getAttribute('data-runova-confirm');
             $this->assertStringStartsWith('Revoke "', $question);
             $this->assertSame(1, $form->getElementsByTagName('button')->length);
         }
@@ -120,7 +120,7 @@ final class AdminViewsTest extends TestCase
             AdminViews::deploys($this->deploys(), null, true);
         });
         $dom = $this->assertInert($html);
-        $this->assertSame(count(self::HOSTILE), (new \DOMXPath($dom))->query('//form[@data-agentmate-confirm]')->length);
+        $this->assertSame(count(self::HOSTILE), (new \DOMXPath($dom))->query('//form[@data-runova-confirm]')->length);
     }
 
     public function testAuditAndKeysTabsAreInert(): void
@@ -139,7 +139,7 @@ final class AdminViewsTest extends TestCase
 
     public function testThePageScriptIsAFixedString(): void
     {
-        $this->assertStringContainsString("getAttribute('data-agentmate-confirm')", AdminViews::SCRIPT);
+        $this->assertStringContainsString("getAttribute('data-runova-confirm')", AdminViews::SCRIPT);
         $this->assertStringNotContainsString('innerHTML', AdminViews::SCRIPT);
         $this->assertStringNotContainsString('<?php', AdminViews::SCRIPT);
     }

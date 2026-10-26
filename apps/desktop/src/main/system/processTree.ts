@@ -10,7 +10,7 @@ import {
   parseProcStat,
   selectPreviousSample,
   summarizeProcessTrees,
-} from '@agentmat/core';
+} from '@runova/core';
 
 const execFileAsync = promisify(execFile);
 

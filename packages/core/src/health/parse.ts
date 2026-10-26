@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LEGACY_HEALTH_CHECK_KEY } from '../legacyNames.js';
 import { redactHealthText } from './redact.js';
 import type {
   HealthCheckStatus,
@@ -10,7 +11,7 @@ import type {
 
 /**
  * Turns an endpoint's answer into a `HealthReport`. The body follows the IETF draft "Health Check
- * Response Format for HTTP APIs" with an `agentmate` extension per check for error details.
+ * Response Format for HTTP APIs" with a `runova` extension per check for error details.
  *
  * The parser is strict about what decides the verdict (the top-level `status`) and lenient about
  * everything else: one malformed check entry is skipped, not allowed to hide the rest. Every
@@ -43,6 +44,18 @@ function statusOf(value: unknown): HealthCheckStatus | null {
 
 const text = z.string().optional();
 
+const extraSchema = z
+  .object({
+    errorCode: z.union([z.string(), z.number()]).optional(),
+    detail: text,
+    stack: text,
+    hint: text,
+    since: text,
+  })
+  .partial()
+  .optional()
+  .catch(undefined);
+
 const checkEntrySchema = z.object({
   componentId: text,
   componentType: text,
@@ -51,17 +64,9 @@ const checkEntrySchema = z.object({
   observedValue: z.union([z.string(), z.number(), z.boolean()]).nullable().optional(),
   observedUnit: text,
   output: text,
-  agentmate: z
-    .object({
-      errorCode: z.union([z.string(), z.number()]).optional(),
-      detail: text,
-      stack: text,
-      hint: text,
-      since: text,
-    })
-    .partial()
-    .optional()
-    .catch(undefined),
+  runova: extraSchema,
+  // Endpoints built before the app was renamed put the details under the old name.
+  [LEGACY_HEALTH_CHECK_KEY]: extraSchema,
 });
 
 export interface HealthResponseInput {
@@ -122,7 +127,7 @@ export function parseHealthResponse(input: HealthResponseInput): HealthReport {
     return {
       ...base,
       state: 'unauthorized',
-      problem: `The endpoint rejected AgentMate's credentials (HTTP ${status}). Check that the key or password on the server matches this target.`,
+      problem: `The endpoint rejected Runova's credentials (HTTP ${status}). Check that the key or password on the server matches this target.`,
       raw: null,
     };
   }
@@ -130,7 +135,7 @@ export function parseHealthResponse(input: HealthResponseInput): HealthReport {
     return {
       ...base,
       state: 'invalid',
-      problem: `The endpoint answered with a redirect (HTTP ${status}). AgentMate does not follow redirects, so its credentials are never sent to another address. Use the final URL.`,
+      problem: `The endpoint answered with a redirect (HTTP ${status}). Runova does not follow redirects, so its credentials are never sent to another address. Use the final URL.`,
       raw: null,
     };
   }
@@ -166,7 +171,7 @@ export function parseHealthResponse(input: HealthResponseInput): HealthReport {
       problem:
         raw === null
           ? `The endpoint answered HTTP ${status} with an empty body.`
-          : 'The endpoint answered, but the body is not JSON, so it does not follow the AgentMate Health Protocol.',
+          : 'The endpoint answered, but the body is not JSON, so it does not follow the Runova Health Protocol.',
       raw,
     };
   }
@@ -236,7 +241,7 @@ function readServices(
     for (const { entry, status } of valid) {
       if (services.length >= MAX_SERVICES) return services;
       const suffix = valid.length > 1 && entry.componentId ? `#${entry.componentId}` : '';
-      const extra = entry.agentmate ?? {};
+      const extra = entry.runova ?? entry[LEGACY_HEALTH_CHECK_KEY] ?? {};
       const error: HealthServiceError | null =
         RANK[status] === 0
           ? null

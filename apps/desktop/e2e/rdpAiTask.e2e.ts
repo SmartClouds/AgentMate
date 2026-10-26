@@ -97,7 +97,7 @@ async function openSession(replies: string[]): Promise<{ page: Page; sessionId: 
 
   // Saved through the app itself, so the password is encrypted the way a real save does it.
   const saved = await page.evaluate(
-    (input) => (window as unknown as { agentmat: Bridge }).agentmat.rdp.saveServer(input),
+    (input) => (window as unknown as { runova: Bridge }).runova.rdp.saveServer(input),
     {
       nickname: 'E2E desktop',
       host: server.host,
@@ -119,11 +119,11 @@ async function openSession(replies: string[]): Promise<{ page: Page; sessionId: 
     timeout: 30_000,
   });
   const sessionId = await page.evaluate(
-    (id) => (window as unknown as { agentmat: Bridge }).agentmat.rdp.openSession(id),
+    (id) => (window as unknown as { runova: Bridge }).runova.rdp.openSession(id),
     saved.id,
   );
   const session = await sessionWindow;
-  await session.waitForFunction(() => Boolean((window as { agentmat?: unknown }).agentmat));
+  await session.waitForFunction(() => Boolean((window as { runova?: unknown }).runova));
   // The button only turns on once the session is connected.
   await expect(session.getByRole('button', { name: /Ask AI/ })).toBeEnabled({ timeout: 60_000 });
   // Connected comes before the first picture; the AI should not start on a blank screen.
@@ -134,7 +134,7 @@ async function openSession(replies: string[]): Promise<{ page: Page; sessionId: 
 /** Starts the task fully autonomous on the Settings provider and waits for the run to end. */
 async function runTask(page: Page, sessionId: string, prompt: string): Promise<HistoryRun> {
   await page.evaluate(
-    (input) => (window as unknown as { agentmat: Bridge }).agentmat.rdpAgent.start(input),
+    (input) => (window as unknown as { runova: Bridge }).runova.rdpAgent.start(input),
     { sessionId, prompt, mode: 'autonomous', cliId: null },
   );
   let run: HistoryRun | undefined;
@@ -142,7 +142,7 @@ async function runTask(page: Page, sessionId: string, prompt: string): Promise<H
     .poll(
       async () => {
         const runs = await page.evaluate(
-          (id) => (window as unknown as { agentmat: Bridge }).agentmat.rdpAgent.history(id),
+          (id) => (window as unknown as { runova: Bridge }).runova.rdpAgent.history(id),
           sessionId,
         );
         run = runs[0];

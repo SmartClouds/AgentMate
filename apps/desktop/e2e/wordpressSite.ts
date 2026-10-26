@@ -3,9 +3,9 @@ import { pathToFileURL } from 'node:url';
 import { APP_ROOT } from './paths';
 
 /**
- * A throwaway WordPress site in Docker with the AgentMate Connector plugin, from the connector's
+ * A throwaway WordPress site in Docker with the Runova Connector plugin, from the connector's
  * own smoke fixture (apps/wordpress-connector/tests/smoke/fixture.mjs). Its containers are named
- * agentmate-wpc-<port>-* and `stop()` removes them with their volumes.
+ * runova-wpc-<port>-* and `stop()` removes them with their volumes.
  */
 
 export interface WordPressSite {
@@ -16,7 +16,7 @@ export interface WordPressSite {
   wp(args: string[], options?: { allowFail?: boolean }): string;
   /** A shell command in the WordPress container, as root. */
   exec(command: string, options?: { allowFail?: boolean }): string;
-  /** A new one-time connection key from `wp agentmate key create`. */
+  /** A new one-time connection key from `wp runova key create`. */
   keyFor(scope: 'read' | 'write'): string;
   stop(): void;
 }

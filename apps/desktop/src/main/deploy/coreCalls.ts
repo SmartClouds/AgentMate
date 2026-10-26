@@ -1,5 +1,5 @@
 import { coreErrorCode, encodeCoreError } from '../../shared/coreErrors';
-import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { hubMessage } from './connection/hubErrors';
 import type { CoreLinks } from './live/coreLinks';
 

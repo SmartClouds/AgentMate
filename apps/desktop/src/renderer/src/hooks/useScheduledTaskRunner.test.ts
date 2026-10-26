@@ -1,4 +1,4 @@
-import type { ScheduledTask } from '@agentmat/core';
+import type { ScheduledTask } from '@runova/core';
 import { waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCliStore } from '@/stores/cliStore';

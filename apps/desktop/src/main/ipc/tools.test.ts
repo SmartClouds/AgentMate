@@ -5,7 +5,7 @@ import {
   getToolUninstallCommandForCurrentOS,
   getToolUpdateCommandForCurrentOS,
   type SupportedOS,
-} from '@agentmat/core';
+} from '@runova/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IPC } from '../../shared/ipcChannels';
 import { tempDir, withPlatform, writeTree } from '../../test/main/fixtures';
@@ -36,7 +36,7 @@ const INSTALLER = /^(curl|wget|irm|iwr|powershell|pwsh)\b/i;
 const REMOVAL = /^(rm|remove-item|del|rd|rmdir|curl|wget|irm|iwr|powershell|pwsh)\b/i;
 
 beforeEach(async () => {
-  binDir = join(tempDir('agentmate-tools-'), 'bin');
+  binDir = join(tempDir('runova-tools-'), 'bin');
   mkdirSync(binDir, { recursive: true });
   const key = Object.keys(process.env).find((one) => one.toUpperCase() === 'PATH') ?? 'PATH';
   vi.stubEnv(key, binDir);

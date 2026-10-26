@@ -1,5 +1,5 @@
 /**
- * LanguageTool is the engine behind AgentMate's writing checks. Text goes to the
+ * LanguageTool is the engine behind Runova's writing checks. Text goes to the
  * public API by default. The desktop distribution the user drops into the app's
  * tools folder speaks the same HTTP contract, so switching to it is only a
  * change of base URL, which is why everything below is shared by both modes.
@@ -125,7 +125,7 @@ export interface GrammarSettings {
    * leaves the right-click check, which only runs when asked.
    */
   liveCheck: boolean;
-  /** 'online' is LanguageTool's public API; 'local' is the server AgentMate starts from its tools folder. */
+  /** 'online' is LanguageTool's public API; 'local' is the server Runova starts from its tools folder. */
   source: 'online' | 'local';
   /** Language code sent with each check, or 'auto' to let LanguageTool detect it per field. */
   language: string;

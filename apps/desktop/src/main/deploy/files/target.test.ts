@@ -57,7 +57,7 @@ beforeAll(async () => {
 }, 120_000);
 
 beforeEach(async () => {
-  folder = realpathSync(tempDir('agentmate-site-'));
+  folder = realpathSync(tempDir('runova-site-'));
   userData.writeData('ssh-servers.json', [
     {
       id: 'srv-1',

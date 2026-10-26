@@ -30,7 +30,7 @@ export const useRemoteFileManagerStore = create<RemoteFileManagerState>((set, ge
   loadRoots: async () => {
     set({ loading: true, error: null });
     try {
-      const roots = await window.agentmat.remote.fmRoots();
+      const roots = await window.runova.remote.fmRoots();
       set({ roots, path: null, entries: [], loading: false });
     } catch (err) {
       set({ loading: false, error: (err as Error).message });
@@ -40,7 +40,7 @@ export const useRemoteFileManagerStore = create<RemoteFileManagerState>((set, ge
   navigate: async (path) => {
     set({ loading: true, error: null });
     try {
-      const result = await window.agentmat.remote.fmList(path);
+      const result = await window.runova.remote.fmList(path);
       set({ path: result.path, entries: result.entries, loading: false });
     } catch (err) {
       set({ loading: false, error: (err as Error).message });
@@ -58,7 +58,7 @@ export const useRemoteFileManagerStore = create<RemoteFileManagerState>((set, ge
     const { path } = get();
     if (path === null) return;
     try {
-      await window.agentmat.remote.fmMkdir(path, name);
+      await window.runova.remote.fmMkdir(path, name);
       await get().refresh();
     } catch (err) {
       toast.error(`Could not create the folder: ${(err as Error).message}`);
@@ -67,7 +67,7 @@ export const useRemoteFileManagerStore = create<RemoteFileManagerState>((set, ge
 
   deleteEntry: async (entry) => {
     try {
-      await window.agentmat.remote.fmDelete(entry.path);
+      await window.runova.remote.fmDelete(entry.path);
       await get().refresh();
     } catch (err) {
       toast.error(`Could not delete "${entry.name}": ${(err as Error).message}`);
@@ -76,7 +76,7 @@ export const useRemoteFileManagerStore = create<RemoteFileManagerState>((set, ge
 
   rename: async (entry, newName) => {
     try {
-      await window.agentmat.remote.fmRename(entry.path, newName);
+      await window.runova.remote.fmRename(entry.path, newName);
       await get().refresh();
     } catch (err) {
       toast.error(`Could not rename "${entry.name}": ${(err as Error).message}`);
@@ -90,7 +90,7 @@ export const useRemoteFileManagerStore = create<RemoteFileManagerState>((set, ge
       return;
     }
     try {
-      await window.agentmat.remote.fmUploadTo(path);
+      await window.runova.remote.fmUploadTo(path);
     } catch (err) {
       toast.error(`Upload failed: ${(err as Error).message}`);
     }
@@ -98,7 +98,7 @@ export const useRemoteFileManagerStore = create<RemoteFileManagerState>((set, ge
 
   download: async (entry) => {
     try {
-      await window.agentmat.remote.fmDownload(entry.path);
+      await window.runova.remote.fmDownload(entry.path);
     } catch (err) {
       toast.error(`Could not download "${entry.name}": ${(err as Error).message}`);
     }

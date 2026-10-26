@@ -61,7 +61,7 @@ export function SecretTab({
     setProblem(null);
     try {
       const done = await stepUp.run(() =>
-        window.agentmat.deployServerBackups.setSecret({
+        window.runova.deployServerBackups.setSecret({
           serverId: server.id,
           newSecret: secret,
           ...(isSet ? { currentSecret: current } : {}),
@@ -90,8 +90,8 @@ export function SecretTab({
       <div className={cn(CARD_BODY, 'space-y-3')}>
         <Notice tone="destructive" icon={TriangleAlert} className="text-xs">
           If you lose the secret key, no backup made with it can be restored, by you or anyone. It
-          is never stored on the server, and AgentMate does not keep it either. Write it down
-          somewhere safe, away from this server.
+          is never stored on the server, and Runova does not keep it either. Write it down somewhere
+          safe, away from this server.
         </Notice>
         {status.isPending ? (
           <Skeleton className="h-4 w-56" />

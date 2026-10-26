@@ -83,14 +83,14 @@ export default function DockerPage(): React.JSX.Element {
 
   const availabilityQuery = useQuery({
     queryKey: queryKeys.dockerAvailability,
-    queryFn: () => window.agentmat.docker.availability(),
+    queryFn: () => window.runova.docker.availability(),
     meta: { silentLoading: true },
   });
   const available = availabilityQuery.data;
 
   const listQuery = useQuery({
     queryKey: queryKeys.dockerList,
-    queryFn: () => window.agentmat.docker.list(),
+    queryFn: () => window.runova.docker.list(),
     enabled: available === true,
     refetchInterval: available === true ? 4000 : false,
     meta: { silentLoading: true },
@@ -155,7 +155,7 @@ export default function DockerPage(): React.JSX.Element {
             size="lg"
             icon={Docker}
             title="Docker isn't available"
-            description="AgentMate couldn't find the docker command on PATH. Install Docker Desktop (or the Docker Engine CLI) and reopen this page."
+            description="Runova couldn't find the docker command on PATH. Install Docker Desktop (or the Docker Engine CLI) and reopen this page."
           />
         </div>
       </div>

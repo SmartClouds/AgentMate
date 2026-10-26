@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Runova.ServerCore/Runova.ServerCore.csproj" />
+    <Project Path="src/Runova.ServerCore.DevHost/Runova.ServerCore.DevHost.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Runova.ServerCore.Tests/Runova.ServerCore.Tests.csproj" />
+    <Project Path="tests/Runova.ServerCore.SystemTests/Runova.ServerCore.SystemTests.csproj" />
+  </Folder>
+</Solution>

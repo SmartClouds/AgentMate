@@ -545,7 +545,7 @@ export function SshAgentHistoryDialog({
   const desktop = source?.kind === 'rdp';
   const historyQuery = useQuery<AgentRun[]>({
     queryKey: source?.queryKey ?? queryKeys.sshAgentHistory(sessionId),
-    queryFn: source?.load ?? (() => window.agentmat.sshAgent.history(sessionId)),
+    queryFn: source?.load ?? (() => window.runova.sshAgent.history(sessionId)),
     enabled: open,
     meta: { silentLoading: true },
   });
@@ -602,8 +602,8 @@ export function SshAgentHistoryDialog({
               <TruncatedText
                 text={
                   desktop
-                    ? `Every task the AI ran in ${sessionTitle || 'this desktop'}, with each action, how it went, and what you answered. Answer, message or stop a task still going from here. Kept until AgentMate closes.`
-                    : `Every task the AI ran in ${sessionTitle || 'this terminal'}, with each command, its output, and what you answered. Answer a task still going, or continue one that ended, from here. Tasks on a saved server are kept after AgentMate closes.`
+                    ? `Every task the AI ran in ${sessionTitle || 'this desktop'}, with each action, how it went, and what you answered. Answer, message or stop a task still going from here. Kept until Runova closes.`
+                    : `Every task the AI ran in ${sessionTitle || 'this terminal'}, with each command, its output, and what you answered. Answer a task still going, or continue one that ended, from here. Tasks on a saved server are kept after Runova closes.`
                 }
               />
             </div>

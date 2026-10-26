@@ -266,7 +266,7 @@ function HostKeyFix({
           <p className="text-xs leading-relaxed text-muted-foreground">
             {changed
               ? "That's expected after the server was rebuilt or moved to a new machine. If neither happened, someone may be listening in between: don't trust it, and ask your host."
-              : 'Compare this fingerprint with the one your host shows for the server (in its control panel, or with ssh-keygen -lf on the server). If they match, trust it, and AgentMate will refuse a server that ever shows a different one.'}
+              : 'Compare this fingerprint with the one your host shows for the server (in its control panel, or with ssh-keygen -lf on the server). If they match, trust it, and Runova will refuse a server that ever shows a different one.'}
           </p>
         </div>
         {changed && stored && (

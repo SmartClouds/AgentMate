@@ -1,5 +1,5 @@
-import type { BlueprintPreset, BlueprintStepId } from '@agentmat/core';
-import { BLUEPRINT_STEPS } from '@agentmat/core';
+import type { BlueprintPreset, BlueprintStepId } from '@runova/core';
+import { BLUEPRINT_STEPS } from '@runova/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -34,7 +34,7 @@ export function BlueprintPresetSettings(): React.JSX.Element {
 
   const presetsQuery = useQuery({
     queryKey: queryKeys.blueprintPresets,
-    queryFn: () => window.agentmat.blueprints.listPresets(),
+    queryFn: () => window.runova.blueprints.listPresets(),
   });
 
   const presets = (presetsQuery.data ?? []).filter((preset) => preset.stepId === stepId);
@@ -53,7 +53,7 @@ export function BlueprintPresetSettings(): React.JSX.Element {
 
   const saveMutation = useMutation({
     mutationFn: () =>
-      window.agentmat.blueprints.savePreset({
+      window.runova.blueprints.savePreset({
         id: editingId ?? undefined,
         stepId,
         label: label.trim(),
@@ -68,7 +68,7 @@ export function BlueprintPresetSettings(): React.JSX.Element {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (presetId: string) => window.agentmat.blueprints.deletePreset(presetId),
+    mutationFn: (presetId: string) => window.runova.blueprints.deletePreset(presetId),
     onSuccess: (next) => {
       onCache(next);
       toast.success('Preset removed.');

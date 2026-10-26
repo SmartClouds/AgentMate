@@ -5,7 +5,7 @@ import {
   type Project,
   parentPath,
   relativeTo,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { DirectoryEntry, WorkspaceGitState } from '@shared/apiTypes';
 import { isImagePath } from '@shared/imageFiles';
 import { useQuery } from '@tanstack/react-query';
@@ -191,7 +191,7 @@ function dropHandlers(
       clearExpandTimer();
       patchExplorer(project.id, { dropTarget: null });
       const paths = Array.from(event.dataTransfer.files)
-        .map((file) => window.agentmat.shell.pathForFile(file))
+        .map((file) => window.runova.shell.pathForFile(file))
         .filter((path): path is string => Boolean(path));
       if (paths.length === 0) return;
       void transferExternalEntries(project, paths, folder);
@@ -255,7 +255,7 @@ function Directory({
   const { project, isRepo } = context;
   const listing = useQuery({
     queryKey: queryKeys.workspaceExplorerDir(project.id, path),
-    queryFn: () => window.agentmat.fs.listDirectory(path),
+    queryFn: () => window.runova.fs.listDirectory(path),
     meta: { silentLoading: true },
     staleTime: 30_000,
   });
@@ -267,7 +267,7 @@ function Directory({
     queryKey: [...queryKeys.workspaceExplorerIgnored(project.id, path), listing.dataUpdatedAt],
     queryFn: async () =>
       new Set(
-        await window.agentmat.explorer.ignoredPaths(
+        await window.runova.explorer.ignoredPaths(
           project.id,
           entries.map((entry) => entry.path),
         ),
@@ -823,7 +823,7 @@ function EmptyHint({ context }: { context: TreeContext }): React.JSX.Element | n
   const { project, root } = context;
   const empty = useQuery({
     queryKey: queryKeys.workspaceExplorerDir(project.id, root),
-    queryFn: () => window.agentmat.fs.listDirectory(root),
+    queryFn: () => window.runova.fs.listDirectory(root),
     select: (entries) => entries.filter((entry) => !HIDDEN.has(entry.name)).length === 0,
     meta: { silentLoading: true },
     staleTime: 30_000,

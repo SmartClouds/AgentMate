@@ -1,5 +1,5 @@
-import type { Project, WpItemRef } from '@agentmat/core';
-import { wpItemKey, wpItemRoot } from '@agentmat/core';
+import type { Project, WpItemRef } from '@runova/core';
+import { wpItemKey, wpItemRoot } from '@runova/core';
 import type { DeployWordPressLocalItem, DeployWordPressSite } from '@shared/deployWordPressTypes';
 import { wordPressErrorCode, wordPressErrorMessage } from '@shared/wordpressErrors';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -101,7 +101,7 @@ export function NewItemDialog({
   const localQuery = useQuery({
     queryKey: queryKeys.projectWordPressLocalItems(projectId ?? ''),
     queryFn: async () =>
-      (await window.agentmat.deployWordPress.localItems(projectId as string)) ?? [],
+      (await window.runova.deployWordPress.localItems(projectId as string)) ?? [],
     enabled: open && step === 'folders' && projectId !== null,
     // A folder made a moment ago must show, so every opening looks again.
     staleTime: 0,

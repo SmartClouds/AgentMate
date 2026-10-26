@@ -1,4 +1,4 @@
-import { getUsageProvider } from '@agentmat/core';
+import { getUsageProvider } from '@runova/core';
 import { siClaude, siCursor, siGooglegemini, siMeta, siOllama } from 'simple-icons';
 import { openaiMark, xaiMark } from '@/components/brandMarks';
 import { cn } from '@/lib/utils';

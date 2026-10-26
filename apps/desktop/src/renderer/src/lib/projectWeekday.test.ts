@@ -87,7 +87,7 @@ describe('mergeProjectDaily', () => {
 
   it('adds one project together across providers and keeps its first name', () => {
     const claude = splitOf([
-      projectRow({ key: 'project:p1', name: 'AgentMate', tokens: [0, 0, 0, 0, 0, 0, 100] }),
+      projectRow({ key: 'project:p1', name: 'Runova', tokens: [0, 0, 0, 0, 0, 0, 100] }),
     ]);
     const codex = splitOf([
       projectRow({ key: 'project:p1', name: 'Renamed', tokens: [0, 0, 0, 0, 0, 0, 50] }),
@@ -96,7 +96,7 @@ describe('mergeProjectDaily', () => {
     const merged = mergeProjectDaily([usageOf('claude-code', claude), usageOf('codex', codex)]);
 
     expect(merged?.projects).toHaveLength(1);
-    expect(merged?.projects[0].name).toBe('AgentMate');
+    expect(merged?.projects[0].name).toBe('Runova');
     // Saturday carries 150 (100 + 50) on each of the four Saturdays in the window.
     expect(merged?.projects[0].tokens.reduce((sum, value) => sum + value, 0)).toBe(600);
   });
@@ -314,11 +314,11 @@ describe('displayNames', () => {
 
   it('adds the parent folder to two projects with one name', () => {
     const names = displayNames([
-      { key: 'a', name: 'AgentMate', path: 'E:/AgentMate' },
-      { key: 'b', name: 'AgentMate', path: 'D:/Old/AgentMate' },
+      { key: 'a', name: 'Runova', path: 'E:/Runova' },
+      { key: 'b', name: 'Runova', path: 'D:/Old/Runova' },
     ]);
-    expect(names.get('a')).toBe('AgentMate (E:)');
-    expect(names.get('b')).toBe('AgentMate (Old)');
+    expect(names.get('a')).toBe('Runova (E:)');
+    expect(names.get('b')).toBe('Runova (Old)');
   });
 
   it('numbers names that are still the same after the parent is added', () => {

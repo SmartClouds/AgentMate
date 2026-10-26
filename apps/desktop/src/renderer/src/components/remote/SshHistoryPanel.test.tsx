@@ -1,4 +1,4 @@
-import type { AgentHistorySession } from '@agentmat/core';
+import type { AgentHistorySession } from '@runova/core';
 import type { SshAgentHistoryRun, SshConversationsResult, SshSavedServer } from '@shared/apiTypes';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { toast } from 'sonner';

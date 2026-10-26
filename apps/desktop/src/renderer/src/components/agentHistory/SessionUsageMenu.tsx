@@ -1,4 +1,4 @@
-import type { AgentHistorySession } from '@agentmat/core';
+import type { AgentHistorySession } from '@runova/core';
 import type { AgentSessionUsage } from '@shared/apiTypes';
 import { useQuery } from '@tanstack/react-query';
 import { CircleInfo, TriangleAlert } from '@/components/icons';
@@ -183,7 +183,7 @@ function Unavailable({
 function UsageBody({ session }: { session: AgentHistorySession }): React.JSX.Element {
   const usage = useQuery({
     queryKey: queryKeys.agentSessionUsage(session.provider, session.id),
-    queryFn: () => window.agentmat.agents.sessionUsage(session.provider, session.id),
+    queryFn: () => window.runova.agents.sessionUsage(session.provider, session.id),
     // A running conversation keeps adding to it, so a second look a little later is fresh.
     staleTime: 15_000,
     meta: { silentLoading: true },

@@ -1,5 +1,5 @@
-import type { BlueprintAttachment, BlueprintStepId } from '@agentmat/core';
-import { blueprintFileUrl, isImageMime, isVideoMime } from '@agentmat/core';
+import type { BlueprintAttachment, BlueprintStepId } from '@runova/core';
+import { blueprintFileUrl, isImageMime, isVideoMime } from '@runova/core';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { ExternalLink, FileText, Paperclip, Plus, Trash2 } from '@/components/icons';
@@ -186,7 +186,7 @@ export function BlueprintAttachments({
                       <Plus className="h-3 w-3" />
                     </Button>
                   </SimpleTooltip>
-                  <SimpleTooltip label="Open outside AgentMate">
+                  <SimpleTooltip label="Open outside Runova">
                     <Button
                       variant="ghost"
                       size="icon-xs"
@@ -219,6 +219,6 @@ export function BlueprintAttachments({
 }
 
 async function openExternally(projectId: string, attachmentId: string): Promise<void> {
-  const path = await window.agentmat.blueprints.attachmentPath(projectId, attachmentId);
-  if (path) await window.agentmat.shell.openPath(path);
+  const path = await window.runova.blueprints.attachmentPath(projectId, attachmentId);
+  if (path) await window.runova.shell.openPath(path);
 }

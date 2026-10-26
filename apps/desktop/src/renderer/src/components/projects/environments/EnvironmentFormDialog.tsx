@@ -1,4 +1,4 @@
-import { ENVIRONMENT_KIND_LABELS, ENVIRONMENT_KINDS, type EnvironmentKind } from '@agentmat/core';
+import { ENVIRONMENT_KIND_LABELS, ENVIRONMENT_KINDS, type EnvironmentKind } from '@runova/core';
 import type { ProjectEnvironment } from '@shared/apiTypes';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -157,7 +157,7 @@ export function EnvironmentFormDialog({
     if (!name.trim() || submitting) return;
     setSubmitting(true);
     try {
-      const saved = await window.agentmat.environments.save({
+      const saved = await window.runova.environments.save({
         id: initial?.id,
         projectId,
         name: name.trim(),

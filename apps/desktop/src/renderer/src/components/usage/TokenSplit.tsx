@@ -1,4 +1,4 @@
-import type { UsageTokens } from '@agentmat/core';
+import type { UsageTokens } from '@runova/core';
 import { formatTokens } from '@/lib/usageFormat';
 import { cn } from '@/lib/utils';
 

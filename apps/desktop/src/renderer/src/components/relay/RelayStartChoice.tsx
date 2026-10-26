@@ -1,4 +1,4 @@
-import type { RelayTrigger } from '@agentmat/core';
+import type { RelayTrigger } from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { CalendarDays, Clock, Play, Plus, TerminalSquare } from '@/components/icons';
@@ -55,7 +55,7 @@ function useBusySessions(): BusySession[] {
   const statuses = useAgentStatusStore((s) => s.statuses);
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   });
   return useMemo(() => {
     const names = new Map((projectsQuery.data ?? []).map((project) => [project.id, project.name]));
@@ -123,7 +123,7 @@ export function RelayStartChoice({
 }): React.JSX.Element {
   const boardQuery = useQuery({
     queryKey: queryKeys.relayBoard(projectId),
-    queryFn: () => window.agentmat.relay.board(projectId),
+    queryFn: () => window.runova.relay.board(projectId),
     enabled: value.kind === 'after-task',
   });
   const sessions = useBusySessions();

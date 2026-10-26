@@ -111,7 +111,7 @@ contractFor(
 describe('openFtpRemote', () => {
   let scratch = '';
   beforeAll(async () => {
-    scratch = await mkdtemp(join(tmpdir(), 'agentmate-ftp-remote-'));
+    scratch = await mkdtemp(join(tmpdir(), 'runova-ftp-remote-'));
   });
   afterAll(async () => {
     await rm(scratch, { recursive: true, force: true });
@@ -284,7 +284,7 @@ describe('openFtpRemote', () => {
     expect((await remote.capabilities()).atomicReplace).toBe(false);
     expect(
       server.log.some((line) =>
-        /^RNFR \/home\/deploy\/v\.txt RNTO \/home\/deploy\/v\.txt\.agentmate-[0-9a-f]{8}\.old$/.test(
+        /^RNFR \/home\/deploy\/v\.txt RNTO \/home\/deploy\/v\.txt\.runova-[0-9a-f]{8}\.old$/.test(
           line,
         ),
       ),
@@ -601,7 +601,7 @@ describe('FTPS certificates', () => {
     expect(info).toEqual({
       fingerprint256: PIN,
       subject: 'CN=example.com, O=A, O=B',
-      issuer: 'CN=unknown, O=AgentMate Test',
+      issuer: 'CN=unknown, O=Runova Test',
       names: ['example.com', 'www.example.com', '10.0.0.1'],
       validTo: 'Jan  1 00:00:00 2036 GMT',
       reason: 'expired',

@@ -1,4 +1,4 @@
-import type { WpDeployRecord, WpDeployState } from '@agentmat/core';
+import type { WpDeployRecord, WpDeployState } from '@runova/core';
 import type { DeployWordPressSite } from '@shared/deployWordPressTypes';
 import { wordPressErrorCode } from '@shared/wordpressErrors';
 import { useQueryClient } from '@tanstack/react-query';
@@ -86,7 +86,7 @@ export function SiteDeploysPanel({ site }: { site: DeployWordPressSite }): React
     setRunning({ deployId: record.deployId, operationId });
     let retryForced = false;
     try {
-      const result = await window.agentmat.deployWordPress.rollback({
+      const result = await window.runova.deployWordPress.rollback({
         operationId,
         siteId: site.id,
         deployId: record.deployId,

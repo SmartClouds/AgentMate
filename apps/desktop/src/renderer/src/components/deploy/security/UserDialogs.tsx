@@ -1,5 +1,5 @@
 import { coreErrorMessage } from '@shared/coreErrors';
-import type { UserInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { UserInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { DEPLOY_ROLES, type DeployRole } from '@shared/deploySecurityTypes';
 import type { DeployServer } from '@shared/deployTypes';
 import { useEffect, useId, useState } from 'react';

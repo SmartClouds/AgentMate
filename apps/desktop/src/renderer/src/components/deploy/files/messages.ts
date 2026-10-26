@@ -38,7 +38,7 @@ const PROBLEMS: Record<FilesErrorCode, string> = {
   planExpired: 'The review expired after 10 minutes. Review the changes again.',
   cancelled: 'Cancelled.',
   busy: 'Another deploy or test of this site is still running. Wait for it to finish.',
-  siteUnknown: "AgentMate doesn't know this site anymore. It may have been removed.",
+  siteUnknown: "Runova doesn't know this site anymore. It may have been removed.",
   projectUnknown: 'One of the attached projects no longer exists.',
   invalidInput: 'Some of the details are not valid. Check the highlighted fields.',
   exists: 'Something with that name is already there. Pick another name.',

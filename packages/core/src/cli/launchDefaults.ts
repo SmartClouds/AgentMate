@@ -10,7 +10,7 @@ import {
 import { getCliDefinition } from './registry.js';
 
 /**
- * What a CLI starts on when AgentMate opens it in a terminal: a model, a reasoning effort, and a
+ * What a CLI starts on when Runova opens it in a terminal: a model, a reasoning effort, and a
  * permission mode. Every field is optional on purpose. A field the user left unset adds no flag
  * at all, so the CLI falls back to its own config exactly as if it had been started by hand.
  */
@@ -314,7 +314,7 @@ const MODEL_SPECS: Record<string, readonly CliLaunchModelOption[]> = {
   })),
 };
 
-/** What can be preset for a CLI's launch. Null when AgentMate knows no launch flags for it. */
+/** What can be preset for a CLI's launch. Null when Runova knows no launch flags for it. */
 export function cliLaunchOptions(cliId: string): CliLaunchOptions | null {
   const cli = getCliDefinition(cliId);
   if (!cli) return null;

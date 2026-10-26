@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type {
   ChallengeResponse,
   SignedInResponse,
-} from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployRestoreProgress } from '../../shared/deployHardeningTypes';
 import type { DeployCoreRecord } from '../../shared/deployTypes';
 import { tempDir } from '../../test/main/fixtures';
@@ -27,7 +27,7 @@ import { DeployState } from './state';
 
 const RECORD: DeployCoreRecord = {
   version: '1.52.0',
-  release: '/opt/agentmate-core/releases/1.52.0-cdcdcdcdcdcd',
+  release: '/opt/runova-core/releases/1.52.0-cdcdcdcdcdcd',
   transport: 'streamlocal',
   installedAt: 1,
   os: 'Ubuntu 24.04.1 LTS',
@@ -103,7 +103,7 @@ function setup(machine: Partial<ScriptedMachine> = {}, deps: Partial<DeployServi
         return {
           version: '1.53.0',
           rid,
-          file: `agentmate-core-1.53.0-${rid}.tar.gz`,
+          file: `runova-core-1.53.0-${rid}.tar.gz`,
           sha256: 'ab'.repeat(32),
           localPath,
         };
@@ -141,7 +141,7 @@ describe('DeployService core updates', () => {
   it('starts the lasting connection over after a failed update, so the app reconnects', async () => {
     const { service, reset } = setup({
       installed: { release: RECORD.release, version: RECORD.version },
-      failures: [{ match: 'systemctl restart agentmate-core', stderr: 'Job failed' }],
+      failures: [{ match: 'systemctl restart runova-core', stderr: 'Job failed' }],
     });
 
     await expect(

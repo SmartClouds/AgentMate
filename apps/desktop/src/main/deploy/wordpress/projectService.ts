@@ -24,7 +24,7 @@ import {
   wpItemRoot,
   wpKeyTransportSecurity,
   wpMirrorPath,
-} from '@agentmat/core';
+} from '@runova/core';
 import type {
   DeployWordPressCreateProjectInput,
   DeployWordPressDeployResult,
@@ -299,7 +299,7 @@ export class WordPressProjectService extends WordPressService {
       if (siteItem?.protected) {
         throw wordPressError(
           'itemProtected',
-          `${wpItemRoot(item)} belongs to AgentMate Connector itself and is never synced.`,
+          `${wpItemRoot(item)} belongs to Runova Connector itself and is never synced.`,
         );
       }
       const remote = await readRemoteManifest(client, item, signal);
@@ -509,7 +509,7 @@ export class WordPressProjectService extends WordPressService {
           runDeploy({
             client,
             projectRoot: stored.projectRoot,
-            label: `AgentMate: ${cleanSiteText(stored.projectName, 80)}`,
+            label: `Runova: ${cleanSiteText(stored.projectName, 80)}`,
             changes,
             items: items.map((state) => ({
               item: state.item,

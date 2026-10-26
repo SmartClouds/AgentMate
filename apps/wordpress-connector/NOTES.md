@@ -1,4 +1,4 @@
-# AgentMate Connector: working notes
+# Runova Connector: working notes
 
 Short notes for whoever works on the plugin next. The contract lives in
 `packages/core/src/deploy/wordpress/` (TS is the source of truth); `tests/Unit/VectorsTest.php`
@@ -10,24 +10,24 @@ runs every shared vector.
   `php:X-cli`), `lint` (php -l on 7.4/8.0/8.3/8.4), `compat` (PHPCompatibilityWP 7.4-, WordPress
   Security and PreparedSQL sniffs), `smoke [--only=single|multisite]` (builds the zip, then
   `tests/smoke/smoke.mjs` on a single site and `tests/smoke/multisite.mjs` on a network, in
-  Docker; `AGENTMATE_WPC_PORT` (18990), `AGENTMATE_WPC_MS_PORT` (18991), `AGENTMATE_WPC_KEEP=1`).
+  Docker; `RUNOVA_WPC_PORT` (18990), `RUNOVA_WPC_MS_PORT` (18991), `RUNOVA_WPC_KEEP=1`).
 
 ## wp-admin and WP-CLI
 
 - One page with tabs (Keys, Connections, Deploys, Audit log, Status): Tools on a single site,
   Network Admin > Settings on multisite. `Admin\AdminPage` is the glue, `Admin\AdminViews` prints
   (escaped where printed), `Admin\AdminActions` decides: capability, then nonce, then the work.
-  Nonces are per object (`agentmate_connector_revoke_<id>`, `..._rollback_<id>`). Revoke and roll
-  back redirect with `agentmate_notice=<code>`; a new key renders once in the POST reply.
+  Nonces are per object (`runova_connector_revoke_<id>`, `..._rollback_<id>`). Revoke and roll
+  back redirect with `runova_notice=<code>`; a new key renders once in the POST reply.
 - Rights: manage_options (manage_network_options on multisite) for the page and revoking; write
   keys and rollbacks also need install_plugins and install_themes (so DISALLOW_FILE_MODS blocks
   them for everyone).
-- WP-CLI: `wp agentmate key create`, `connections list|revoke <id>`, `deploys list`, `status`,
-  `rescue status|rollback`. `Info\StatusChecks` backs both the Status tab and `wp agentmate status`;
+- WP-CLI: `wp runova key create`, `connections list|revoke <id>`, `deploys list`, `status`,
+  `rescue status|rollback`. `Info\StatusChecks` backs both the Status tab and `wp runova status`;
   its loopback probe from a WP-CLI container fails in Docker (localhost is the CLI container).
 - `build` is plain Node (no Docker, no node_modules; CD runs it on macOS and Windows): checks the
   version in protocol.ts, the header, the PHP constant and readme.txt agree, then writes
-  `dist/agentmate-connector.zip` from the `SHIPPED` list (own zip writer on node:zlib, sorted
+  `dist/runova-connector.zip` from the `SHIPPED` list (own zip writer on node:zlib, sorted
   entries, 1980-01-01 timestamps, CRLF turned into LF). New top-level files go into `SHIPPED`.
   The smoke fixture installs this zip with `wp plugin install`, so the zip is tested too.
 - The schema and guard check (`Activator::maybeUpgrade`) only runs in admin, WP-CLI and our own
@@ -72,7 +72,7 @@ runs every shared vector.
   deleted, and the audit log says why (`Auth\SiteMove`). Checked wherever the key loads (plugin,
   activation, rescue.php).
 - Admin pages hold no inline handlers or inline scripts with data in them: confirmations are
-  `data-agentmate-confirm` attributes run by one fixed enqueued script (`AdminViews::SCRIPT`).
+  `data-runova-confirm` attributes run by one fixed enqueued script (`AdminViews::SCRIPT`).
   Device names and labels pass `Text::displaySafe` before they are stored (no C0/C1 controls,
   bidi overrides or zero-width characters). Remember esc_attr does not double-encode: never put
   escaped user text inside JavaScript.
@@ -103,7 +103,7 @@ runs every shared vector.
 - Timeouts: open expires after 30 min without a call. Applying: deadline = last journal save +
   confirm window, rolledBack(interrupted) when passed. Applied: deadline = apply + confirm window,
   pushed by each verify, never past apply + 15 min, then rolledBack(notConfirmed). The confirm
-  window is 180 s; `AGENTMATE_CONNECTOR_CONFIRM_SECONDS` (5..180) shortens it for tests.
+  window is 180 s; `RUNOVA_CONNECTOR_CONFIRM_SECONDS` (5..180) shortens it for tests.
 - Begin and commit refuse (not forceable): path policy reasons, `symlink`, `notWritable` (folder in
   the way, unwritable item), `itemProtected`, `itemUnknown` (missing item without `create`),
   `tooLarge`. Forceable: conflicts, `deletesActivePluginMainFile`, `touchesActiveThemeCore`
@@ -116,10 +116,10 @@ runs every shared vector.
   journal is saved every 2 s and at the end of the time budget. Any write error rolls back
   (interrupted). Kept: 20 history records, snapshots of the 5 newest done deploys.
 - Data dir: `blobs/<sha256>` and `parts/<deploy>-<op>`, garbage-collected after each finish.
-- Guard: `guard/00-agentmate-connector-guard.php` is a template; activation (and maybeUpgrade)
+- Guard: `guard/00-runova-connector-guard.php` is a template; activation (and maybeUpgrade)
   writes it into mu-plugins with the plugin folder filled in; deactivation first rolls back
   (interrupted) or aborts any pending deploy, then removes it. Its option
-  `agentmate_connector_guard` always exists, autoloaded, `''` when idle (multisite: a network
+  `runova_connector_guard` always exists, autoloaded, `''` when idle (multisite: a network
   option, one small query). Pending value: `{d, t, f}` (deploy id, deadline, changed PHP files).
 - rescue.php finds wp-load.php through `rescue-config.php` (written into the plugin folder on
   activation), else by walking up. It answers only the rescue routes and nothing when the plugin
@@ -127,14 +127,14 @@ runs every shared vector.
 
 ## Connector update
 
-- `/connector/update` (write scope, so the dispatcher already applies `AGENTMATE_CONNECTOR_READ_ONLY`,
+- `/connector/update` (write scope, so the dispatcher already applies `RUNOVA_CONNECTOR_READ_ONLY`,
   `DISALLOW_FILE_MODS` and the direct filesystem check). `Update\ConnectorUpdater` is the whole
   thing; `Routes\UpdateHandlers` is the route. The request is `{version, files: [{path, size,
   sha256}]}` with one blob per file, so the plugin never needs ZipArchive and the update can't
   carry anything but plain files.
 - Or the site downloads it (`updateDownload` in `/site/info` and `/hello`): the same file list
   plus `download: {url}` and no blobs. The URL must match `Protocol::UPDATE_DOWNLOAD_URL` (the
-  plugin zip on an AgentMate GitHub release, tagged with the version being installed), so a key
+  plugin zip on a Runova GitHub release, tagged with the version being installed), so a key
   can't point the site at any other address. `Environment::download` fetches it with
   `wp_safe_remote_get` (redirects followed, 30 s, size capped), `Update\ZipReader` reads it in
   memory (stored or deflate, no ZipArchive, every offset bounds-checked), and every file must
@@ -145,7 +145,7 @@ runs every shared vector.
   sizes, sha256, required files, the main file's header and constant against `version`, no
   downgrade, `Requires PHP` and `Requires at least`, PHP syntax). Then, holding the deploy mutex
   and with no deploy open (`DeployService::whileIdle`): sweep leftovers, build
-  `.agentmate-connector-new-<hex>` beside the plugin (a dot folder: `get_plugins()` skips it),
+  `.runova-connector-new-<hex>` beside the plugin (a dot folder: `get_plugins()` skips it),
   copy `rescue-config.php` across, preload every class of the running version (so the rest of the
   request never mixes old and new code), take a health baseline, swap with two renames
   (`-old-<hex>` holds the previous folder), invalidate opcache for every PHP path, health check
@@ -163,6 +163,11 @@ runs every shared vector.
 - Tests: `ConnectorUpdateTest` (fake environment, injectable rename), and the smoke script's
   "Connector update from the app" (a broken release is rolled back on real WordPress, then a
   good one lands and a deploy still works).
+
+## Sites from before the rename
+
+The bridge package, the layout move and the names the plugin still answers to are in
+`legacy/NOTES.md`.
 
 ## Smoke fixture
 

@@ -1,4 +1,4 @@
-import type { GitChangeEntry, Project } from '@agentmat/core';
+import type { GitChangeEntry, Project } from '@runova/core';
 import type { WorkspaceGitState } from '@shared/apiTypes';
 import { isImagePath } from '@shared/imageFiles';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -126,7 +126,7 @@ export default function DiffTab({
   const actions = useGitActions(project.id);
   const { data: state } = useQuery<WorkspaceGitState>({
     queryKey: queryKeys.gitWorkspaceState(project.id),
-    queryFn: () => window.agentmat.git.workspaceState(project.id),
+    queryFn: () => window.runova.git.workspaceState(project.id),
     staleTime: Number.POSITIVE_INFINITY,
     meta: { silentLoading: true },
   });
@@ -137,8 +137,8 @@ export default function DiffTab({
       : queryKeys.gitFileDiff(project.id, tab.side, tab.path),
     queryFn: () =>
       tab.commit
-        ? window.agentmat.git.commitFileDiff(project.id, tab.commit, tab.path, tab.origPath)
-        : window.agentmat.git.fileDiff(project.id, tab.path, tab.side, tab.origPath),
+        ? window.runova.git.commitFileDiff(project.id, tab.commit, tab.path, tab.origPath)
+        : window.runova.git.fileDiff(project.id, tab.path, tab.side, tab.origPath),
     staleTime: tab.commit ? Number.POSITIVE_INFINITY : undefined,
     meta: { silentLoading: true },
     // While a refreshed diff loads, keep showing the old one, but never another file's.
@@ -233,7 +233,7 @@ export default function DiffTab({
     if (!dirty || draft === null || saving) return;
     setSaving(true);
     try {
-      await window.agentmat.git.writeWorkingFile(project.id, tab.path, draft);
+      await window.runova.git.writeWorkingFile(project.id, tab.path, draft);
       queryClient.setQueryData(queryKeys.gitFileDiff(project.id, tab.side, tab.path), {
         ...diff.data,
         modified: draft,

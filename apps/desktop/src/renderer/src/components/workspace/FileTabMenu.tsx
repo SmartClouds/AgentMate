@@ -1,4 +1,4 @@
-import { isSameOrInside, type Project } from '@agentmat/core';
+import { isSameOrInside, type Project } from '@runova/core';
 import {
   ContextMenuContent,
   ContextMenuItem,

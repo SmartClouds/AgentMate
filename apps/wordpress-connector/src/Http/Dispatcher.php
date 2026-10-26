@@ -12,37 +12,39 @@
  *  6. the bundle's hash goes into the canonical text and the Ed25519 signature is checked;
  *  7. the nonce is recorded, after the signature checked out, so a forged request burns nothing;
  *  8. scope (read-only keys get readOnly on write routes);
- *  9. kill switches: AGENTMATE_CONNECTOR_DISABLED; for writes also AGENTMATE_CONNECTOR_READ_ONLY,
- *     DISALLOW_FILE_MODS and a filesystem method other than direct;
+ *  9. kill switches: RUNOVA_CONNECTOR_DISABLED; for writes also RUNOVA_CONNECTOR_READ_ONLY,
+ *     DISALLOW_FILE_MODS and a filesystem method other than direct (each switch also under the
+ *     name it had before the rename);
  * 10. only then is the bundle gunzipped (with a limit) and the frame read.
  *
  * Every reply, errors included, is signed over the route, the request's nonce and the connection
- * id the request named ('-' for none), so /hello and /pair replies are signed with '-'.
+ * id the request named ('-' for none), so /hello and /pair replies are signed with '-'. The reply
+ * uses the signing prefix the request verified with, or the endpoint's when it never verified.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Http;
+namespace Runova\Connector\Http;
 
-use AgentMate\Connector\Audit\AuditLog;
-use AgentMate\Connector\Auth\Canonical;
-use AgentMate\Connector\Auth\Pairing;
-use AgentMate\Connector\Auth\RateLimiter;
-use AgentMate\Connector\Crypto\Base64Url;
-use AgentMate\Connector\Crypto\Crypto;
-use AgentMate\Connector\Crypto\SiteKeys;
-use AgentMate\Connector\Env\Environment;
-use AgentMate\Connector\Info\Limits;
-use AgentMate\Connector\Protocol;
-use AgentMate\Connector\Routes\Handler;
-use AgentMate\Connector\Routes\NotYetHandler;
-use AgentMate\Connector\Routes\RequestContext;
-use AgentMate\Connector\Storage\Storage;
+use Runova\Connector\Audit\AuditLog;
+use Runova\Connector\Auth\Canonical;
+use Runova\Connector\Auth\Pairing;
+use Runova\Connector\Auth\RateLimiter;
+use Runova\Connector\Crypto\Base64Url;
+use Runova\Connector\Crypto\Crypto;
+use Runova\Connector\Crypto\SiteKeys;
+use Runova\Connector\Env\Environment;
+use Runova\Connector\Info\Limits;
+use Runova\Connector\Protocol;
+use Runova\Connector\Routes\Handler;
+use Runova\Connector\Routes\NotYetHandler;
+use Runova\Connector\Routes\RequestContext;
+use Runova\Connector\Storage\Storage;
 
 final class Dispatcher
 {
     /** Features a client can count on from this build. */
-    const CAPABILITIES = array('pair', 'read', 'audit', 'revoke', 'deploy', 'update', 'updateDownload', 'rescue');
+    const CAPABILITIES = array('pair', 'read', 'audit', 'revoke', 'deploy', 'update', 'updateDownload', 'rescue', 'migrate');
 
     /** @var Storage */
     private $storage;
@@ -65,6 +67,9 @@ final class Dispatcher
     /** @var callable|null receives unexpected errors, for the PHP error log */
     private $logger;
 
+    /** @var string the signing prefix of the request being handled, which its reply is signed with */
+    private $prefix = Protocol::PREFIX;
+
     /**
      * @param array<string, Handler> $handlers route => handler
      */
@@ -86,6 +91,7 @@ final class Dispatcher
         $nonce = '-';
         $connectionId = null;
         $connection = null;
+        $this->prefix = $request->prefix;
         try {
             $locked = $this->limiter->lockedFor($request->ip, $now);
             if ($locked > 0 && !$this->namesLiveConnection($route, $request->auth, $now)) {
@@ -116,7 +122,7 @@ final class Dispatcher
                 return $this->respond($route, $nonce, $connectionId, 200, array('ok' => true, 'data' => $this->hello($now)));
             }
             if ($route === Protocol::ROUTES['pair']) {
-                $data = (new Pairing($this->storage, $this->env, $this->audit))->pair($auth, $request->bundle, $request->ip);
+                $data = (new Pairing($this->storage, $this->env, $this->audit))->pair($auth, $request->bundle, $request->ip, $this->prefix);
                 return $this->respond($route, $nonce, $connectionId, 200, array('ok' => true, 'data' => $data));
             }
 
@@ -197,12 +203,24 @@ final class Dispatcher
         if ($bundle->size() > Protocol::BATCH_MAX_BYTES) {
             throw new ApiError('tooLarge', 'The request is larger than this site accepts.', array('maxBytes' => Protocol::BATCH_MAX_BYTES));
         }
-        $text = Canonical::request($route, $auth['timestamp'], $auth['nonce'], $auth['connectionId'], $bundle->sha256());
         $signature = Base64Url::decode((string) $auth['signature']);
         $publicKey = Base64Url::decode($connection['public_key']);
-        if ($signature === null || $publicKey === null || !Crypto::verify($signature, $text, $publicKey)) {
+        $verified = null;
+        if ($signature !== null && $publicKey !== null) {
+            // The endpoint's prefix first, then the other one: a 1.63 desktop signs with the old
+            // prefix, and it may be calling the Runova endpoints a site reported to it.
+            foreach (array($this->prefix, Protocol::otherPrefix($this->prefix)) as $prefix) {
+                $text = Canonical::request($route, $auth['timestamp'], $auth['nonce'], $auth['connectionId'], $bundle->sha256(), $prefix);
+                if (Crypto::verify($signature, $text, $publicKey)) {
+                    $verified = $prefix;
+                    break;
+                }
+            }
+        }
+        if ($verified === null) {
             throw ApiError::auth('badSignature', 'The request signature does not match this connection.');
         }
+        $this->prefix = $verified;
         $nonceKey = hash('sha256', $connection['id'] . "\n" . $auth['nonce']);
         if (!$this->storage->insertNonce($nonceKey, $now + 2 * Protocol::TIMESTAMP_WINDOW_SECONDS + 60)) {
             throw ApiError::auth('replayed', 'This request was already used.');
@@ -211,12 +229,12 @@ final class Dispatcher
         if ($write && $connection['scope'] !== 'write') {
             throw new ApiError('readOnly', 'This connection can only read. Create a write key in wp-admin to deploy.');
         }
-        if ($this->env->constantOn('AGENTMATE_CONNECTOR_DISABLED')) {
-            throw new ApiError('disabled', 'AgentMate Connector is switched off in wp-config.php.');
+        if ($this->env->constantOn('RUNOVA_CONNECTOR_DISABLED')) {
+            throw new ApiError('disabled', 'Runova Connector is switched off in wp-config.php.');
         }
         if ($write) {
-            if ($this->env->constantOn('AGENTMATE_CONNECTOR_READ_ONLY')) {
-                throw new ApiError('readOnly', 'AgentMate Connector is set to read-only in wp-config.php.', array('byConstant' => true));
+            if ($this->env->constantOn('RUNOVA_CONNECTOR_READ_ONLY')) {
+                throw new ApiError('readOnly', 'Runova Connector is set to read-only in wp-config.php.', array('byConstant' => true));
             }
             if (!$this->env->fileModsAllowed()) {
                 throw new ApiError('fileModsDisabled', 'File changes are switched off on this site (DISALLOW_FILE_MODS).');
@@ -234,8 +252,8 @@ final class Dispatcher
      */
     private function hello(int $now): array
     {
-        if ($this->env->constantOn('AGENTMATE_CONNECTOR_DISABLED')) {
-            throw new ApiError('disabled', 'AgentMate Connector is switched off in wp-config.php.');
+        if ($this->env->constantOn('RUNOVA_CONNECTOR_DISABLED')) {
+            throw new ApiError('disabled', 'Runova Connector is switched off in wp-config.php.');
         }
         return array(
             'protocol' => Protocol::VERSION,
@@ -246,6 +264,9 @@ final class Dispatcher
             'rescueUrl' => $this->env->rescueUrl(),
             'multisite' => $this->env->isMultisite(),
             'siteName' => $this->env->siteName(),
+            'layout' => $this->env->layout(),
+            // Where this copy answers now, so an app that saved older addresses can repair them.
+            'endpoints' => array('restUrl' => $this->env->restUrl(), 'ajaxUrl' => $this->env->ajaxUrl()),
         );
     }
 
@@ -320,7 +341,7 @@ final class Dispatcher
         $payload = Gzip::encode($frame, $total > 1048576 ? 1 : 6);
         $timestamp = $this->env->now();
         try {
-            $signature = $this->keys->sign(Canonical::response($route === null ? '-' : $route, $nonce, $connectionId, $timestamp, $status, hash('sha256', $payload)));
+            $signature = $this->keys->sign(Canonical::response($route === null ? '-' : $route, $nonce, $connectionId, $timestamp, $status, hash('sha256', $payload), $this->prefix));
         } catch (\Throwable $error) {
             if ($this->logger !== null) {
                 call_user_func($this->logger, $error);

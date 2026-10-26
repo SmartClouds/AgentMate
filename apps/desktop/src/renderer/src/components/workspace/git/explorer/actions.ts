@@ -6,7 +6,7 @@ import {
   parentPath,
   relativeTo,
   topLevelPaths,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { DirectoryEntry, ExplorerMove } from '@shared/apiTypes';
 import { toast } from 'sonner';
 import { Trash2 } from '@/components/icons';
@@ -125,7 +125,7 @@ export async function createEntry(
   name: string,
 ): Promise<boolean> {
   try {
-    const api = window.agentmat.explorer;
+    const api = window.runova.explorer;
     const path =
       kind === 'newFile'
         ? await api.createFile(project.id, parent, name)
@@ -150,7 +150,7 @@ export async function renameEntry(
 ): Promise<boolean> {
   if (newName === baseName(path)) return true;
   try {
-    const next = await window.agentmat.explorer.rename(project.id, path, newName);
+    const next = await window.runova.explorer.rename(project.id, path, newName);
     followMoves(project.id, [{ from: path, to: next }]);
     await refreshTree(project.id);
     selectRows(project.id, [next], { focus: true });
@@ -217,7 +217,7 @@ export async function deleteEntries(
 
   let deleted = targets;
   try {
-    const result = await window.agentmat.explorer.delete(project.id, targets, options);
+    const result = await window.runova.explorer.delete(project.id, targets, options);
     if (result.failed.length > 0) {
       const again = await confirmDialog({
         title: `Could not move ${result.failed.length === 1 ? `"${baseName(result.failed[0] as string)}"` : `${result.failed.length} items`} to the ${trashName()}`,
@@ -226,7 +226,7 @@ export async function deleteEntries(
         variant: 'destructive',
       });
       if (again) {
-        await window.agentmat.explorer.delete(project.id, result.failed, { permanent: true });
+        await window.runova.explorer.delete(project.id, result.failed, { permanent: true });
       } else {
         deleted = targets.filter((path) => !result.failed.includes(path));
       }
@@ -258,7 +258,7 @@ export function copyToClipboard(project: Project, paths: string[], mode: 'copy' 
 function samePath(a: string, b: string): boolean {
   const norm = (path: string): string => {
     const trimmed = path.replace(/[\\/]+$/, '');
-    return window.agentmat.platform === 'linux' ? trimmed : trimmed.toLowerCase();
+    return window.runova.platform === 'linux' ? trimmed : trimmed.toLowerCase();
   };
   return norm(a) === norm(b);
 }
@@ -276,7 +276,7 @@ export async function transferEntries(
   target: string,
   mode: 'copy' | 'move',
 ): Promise<boolean> {
-  const api = window.agentmat.explorer;
+  const api = window.runova.explorer;
   try {
     let result =
       mode === 'copy'
@@ -320,7 +320,7 @@ export async function transferExternalEntries(
   target: string,
 ): Promise<boolean> {
   try {
-    const result = await window.agentmat.explorer.pasteExternal(project.id, sources, target);
+    const result = await window.runova.explorer.pasteExternal(project.id, sources, target);
     if (target !== projectRoot(project)) setFolderOpen(project.id, target, true);
     await refreshTree(project.id);
     const landed = result.moves.map((move) => move.to);
@@ -340,7 +340,7 @@ export async function transferExternalEntries(
  */
 export async function pasteInto(project: Project, target: string): Promise<void> {
   await clipboardWrite;
-  const external = await window.agentmat.explorer.osClipboardPaths().catch(() => []);
+  const external = await window.runova.explorer.osClipboardPaths().catch(() => []);
   if (external.length > 0) {
     // The in-app copy is older than these files, so it is done with, and a cut row stops fading.
     useExplorerStore.setState({ clipboard: null });
@@ -360,7 +360,7 @@ export async function pasteInto(project: Project, target: string): Promise<void>
 }
 
 export function copyPaths(project: Project, paths: string[], relative: boolean): void {
-  const separator = window.agentmat.platform === 'win32' ? '\\' : '/';
+  const separator = window.runova.platform === 'win32' ? '\\' : '/';
   const text = paths
     .map((path) => {
       if (!relative) return path;
@@ -415,7 +415,7 @@ export function sendPathsToAgent(project: Project, paths: string[]): void {
 }
 
 export function revealInOs(project: Project, path: string): void {
-  void window.agentmat.explorer
+  void window.runova.explorer
     .revealInOs(project.id, path)
     .catch((error) => fail('Could not open the folder', error));
 }
@@ -442,7 +442,7 @@ export async function addToGitignore(
   paths: string[],
   pattern: 'path' | 'extension',
 ): Promise<void> {
-  const api = window.agentmat.explorer;
+  const api = window.runova.explorer;
   const targets = pattern === 'extension' ? paths.slice(0, 1) : topLevelPaths(paths);
   const lines: string[] = [];
   const tracked: string[] = [];

@@ -80,7 +80,7 @@ import type {
   WidgetSize,
   WidgetStyle,
   WorktreeInfo,
-} from '@agentmat/core';
+} from '@runova/core';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import type {
   ApiCollectionSummary,
@@ -387,7 +387,7 @@ import type {
   SystemInfo,
   UpdatesInfo,
   UserInfo,
-} from '../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type {
   DeployAppInstallInput,
   DeployAppInstallResult,
@@ -926,7 +926,7 @@ const skills = {
   /** Lists the skills at a folder path or GitHub address, so either can be checked ad hoc. */
   previewAuditSource: (input: string): Promise<AuditSourcePreview> =>
     ipcRenderer.invoke(IPC.skills.previewAuditSource, input),
-  /** Skills present in a project's (or the global) skills dirs, installed by AgentMate or not. */
+  /** Skills present in a project's (or the global) skills dirs, installed by Runova or not. */
   listOnDiskSkills: (projectId: string | null): Promise<AuditSourceSkill[]> =>
     ipcRenderer.invoke(IPC.skills.listOnDiskSkills, projectId),
   listAudits: (options?: {
@@ -1339,7 +1339,7 @@ const ai = {
 };
 
 const help = {
-  /** Answers a question about using AgentMate from the Help articles. */
+  /** Answers a question about using Runova from the Help articles. */
   ask: (input: HelpAskInput): Promise<HelpAskResult> => ipcRenderer.invoke(IPC.help.ask, input),
   /** Aborts an in-flight ask() that was given the same requestId. */
   cancel: (requestId: string): Promise<boolean> => ipcRenderer.invoke(IPC.help.cancel, requestId),
@@ -1894,7 +1894,7 @@ const deployHardening = createDeployHardening(subscribe);
 /** A server's Backups section (E28): destinations, plans, runs and the restore wizard. */
 const deployServerBackups = createDeployServerBackups(subscribe);
 
-/** WordPress sites through the AgentMate Connector plugin, and WordPress projects (E19 to E21). */
+/** WordPress sites through the Runova Connector plugin, and WordPress projects (E19 to E21). */
 const deployWordPress = createDeployWordPress(subscribe);
 
 /** FTP and SFTP sites: a local deploy folder sent to a folder on a server (E23). */
@@ -1942,7 +1942,7 @@ const deployStacks = {
 };
 
 /**
- * A server's App Store (E12). The catalog is read from @agentmat/core in the renderer; these
+ * A server's App Store (E12). The catalog is read from @runova/core in the renderer; these
  * send what was picked, and the main process renders the files itself.
  */
 const deployAppStore = {
@@ -2725,7 +2725,7 @@ const runProposals = {
     subscribe(IPC.runProposals.onChanged, callback),
 };
 
-const agentmatApi = {
+const runovaApi = {
   platform: process.platform,
   windowsBuild: windowsBuildNumber(),
   app: appInfo,
@@ -2825,6 +2825,6 @@ const agentmatApi = {
   splash,
 };
 
-export type AgentmatApi = typeof agentmatApi;
+export type RunovaApi = typeof runovaApi;
 
-contextBridge.exposeInMainWorld('agentmat', agentmatApi);
+contextBridge.exposeInMainWorld('runova', runovaApi);

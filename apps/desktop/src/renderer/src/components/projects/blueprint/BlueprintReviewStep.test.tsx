@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { createBlankBlueprint, type Project, type ProjectBlueprint } from '@agentmat/core';
+import { createBlankBlueprint, type Project, type ProjectBlueprint } from '@runova/core';
 import { act, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useBlueprintGeneratorStore } from '@/stores/blueprintGeneratorStore';

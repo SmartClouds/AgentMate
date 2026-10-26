@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { GitStashEntry, WorkspaceGitState } from '@shared/apiTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -22,7 +22,7 @@ import { type GitActions, useGitActions } from './useWorkspaceGit';
 export function useStashes(projectId: string, enabled: boolean) {
   return useQuery({
     queryKey: queryKeys.gitStashList(projectId),
-    queryFn: () => window.agentmat.git.stashList(projectId),
+    queryFn: () => window.runova.git.stashList(projectId),
     enabled,
     meta: { silentLoading: true },
     placeholderData: (previous) => previous,

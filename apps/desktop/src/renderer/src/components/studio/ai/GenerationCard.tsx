@@ -1,4 +1,4 @@
-import type { GenerationView } from '@agentmat/studio';
+import type { GenerationView } from '@runova/studio';
 import { useEffect, useState } from 'react';
 import {
   Button,
@@ -148,7 +148,7 @@ export function GenerationCard({
   if (g.status === 'interrupted') {
     return (
       <Notice tone="warning" action={actions} aria-label="AI run interrupted">
-        <p className="font-medium">AgentMate closed while {label} was working on this.</p>
+        <p className="font-medium">Runova closed while {label} was working on this.</p>
         <p className="mt-0.5 text-xs">
           A CLI run cannot pick up where it stopped. Try again to run it anew.
         </p>

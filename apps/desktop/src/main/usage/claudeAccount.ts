@@ -7,7 +7,7 @@ import {
   type SubscriptionPlan,
   type SubscriptionWindow,
   type UsageAccountMode,
-} from '@agentmat/core';
+} from '@runova/core';
 
 // Claude Code account detection. Two questions to answer before the Usage card
 // can show anything subscription-shaped:

@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { BaseEntry } from '@agentmat/core';
+import type { BaseEntry } from '@runova/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useTempUserData } from '../../../test/main/ipcHarness';
 import type { BaseTarget } from './bases';

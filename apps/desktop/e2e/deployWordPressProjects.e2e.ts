@@ -7,7 +7,7 @@ import { addActiveTheme, startWordPressSite, type WordPressSite } from './wordpr
 
 /**
  * A WordPress site's themes and plugins put into projects straight from Deploy, end to end, on a
- * real WordPress in Docker with the AgentMate Connector:
+ * real WordPress in Docker with the Runova Connector:
  *
  * 1. the site connects with a pasted key;
  * 2. "New project with" on the active theme opens the new project wizard on its items step, with
@@ -21,19 +21,19 @@ import { addActiveTheme, startWordPressSite, type WordPressSite } from './wordpr
  *    goes on to the link dialog's items step for C;
  * 8. B is unlinked from the Projects section.
  *
- * Needs AGENTMATE_SYSTEM_TESTS=1 and Docker for Linux containers. The containers are named
- * agentmate-wpc-18996-* and removed in afterAll. With SHOTS_DIR set, each screen worth a design
+ * Needs RUNOVA_SYSTEM_TESTS=1 and Docker for Linux containers. The containers are named
+ * runova-wpc-18996-* and removed in afterAll. With SHOTS_DIR set, each screen worth a design
  * review is also saved there, in the dark and the light theme.
  */
 
-test.skip(!systemTestsEnabled(), 'needs AGENTMATE_SYSTEM_TESTS=1 and Docker for Linux containers');
+test.skip(!systemTestsEnabled(), 'needs RUNOVA_SYSTEM_TESTS=1 and Docker for Linux containers');
 
 const PORT = 18_996;
 const SITE_LABEL = 'WP projects site';
 const ALPHA = 'am-alpha';
-const ALPHA_NAME = 'AgentMate Alpha';
+const ALPHA_NAME = 'Runova Alpha';
 const BETA = 'am-beta';
-const BETA_NAME = 'AgentMate Beta';
+const BETA_NAME = 'Runova Beta';
 /** A new project from the site is named after it. */
 const PROJECT_A = SITE_LABEL;
 const PROJECT_B = 'Plain B';
@@ -98,9 +98,9 @@ test.describe('WordPress items into projects from Deploy', () => {
     const found = await page().evaluate(async (projectName) => {
       const api = (
         window as unknown as {
-          agentmat: { projects: { list(): Promise<Array<{ name: string }>> } };
+          runova: { projects: { list(): Promise<Array<{ name: string }>> } };
         }
-      ).agentmat;
+      ).runova;
       return (await api.projects.list()).find((project) => project.name === projectName) ?? null;
     }, name);
     if (!found) throw new Error(`No project named ${name}`);
@@ -109,7 +109,7 @@ test.describe('WordPress items into projects from Deploy', () => {
 
   async function waitForColdStart(): Promise<void> {
     const p = page();
-    await p.waitForFunction(() => Boolean((window as { agentmat?: unknown }).agentmat));
+    await p.waitForFunction(() => Boolean((window as { runova?: unknown }).runova));
     await expect(p.locator('div.absolute.inset-0.z-50.backdrop-blur-xl')).toHaveCount(0, {
       timeout: MINUTE,
     });
@@ -158,7 +158,7 @@ test.describe('WordPress items into projects from Deploy', () => {
     const dialog = p.getByRole('dialog', { name: 'Connect a WordPress site' });
     await dialog.getByLabel('Connection key').fill(wp().keyFor('write'));
     await expect(dialog.getByLabel('What this key connects')).toContainText(wp().url);
-    await dialog.getByLabel('Name in AgentMate (optional)').fill(SITE_LABEL);
+    await dialog.getByLabel('Name in Runova (optional)').fill(SITE_LABEL);
     await dialog.getByRole('button', { name: 'Connect', exact: true }).click();
     await expect(dialog).toBeHidden({ timeout: MINUTE });
     await expect(p.getByRole('heading', { name: SITE_LABEL })).toBeVisible();
@@ -231,9 +231,9 @@ test.describe('WordPress items into projects from Deploy', () => {
       async (plain) => {
         const api = (
           window as unknown as {
-            agentmat: { projects: { create(input: unknown): Promise<{ id: string }> } };
+            runova: { projects: { create(input: unknown): Promise<{ id: string }> } };
           }
-        ).agentmat;
+        ).runova;
         for (const { name, folderPath } of plain) {
           await api.projects.create({
             name,

@@ -12,7 +12,7 @@ import {
   type SupportedOS,
   type ToolSettingsAction,
   type ToolSettingsValues,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import { useMemo, useState } from 'react';
@@ -245,47 +245,47 @@ export default function ToolsPage(): React.JSX.Element {
 
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   });
   const statusQuery = useQuery({
     queryKey: queryKeys.toolsStatus,
-    queryFn: () => window.agentmat.tools.detectAll(),
+    queryFn: () => window.runova.tools.detectAll(),
   });
-  // CodeQL can live in AgentMate's tools folder rather than on PATH, which the shared
+  // CodeQL can live in Runova's tools folder rather than on PATH, which the shared
   // detectAll probe cannot see, so its card asks separately.
   const codeqlQuery = useQuery({
     queryKey: queryKeys.codeqlStatus,
-    queryFn: () => window.agentmat.security.codeqlStatus(),
+    queryFn: () => window.runova.security.codeqlStatus(),
     meta: { silentLoading: true },
   });
   // LanguageTool isn't on PATH: it lives in the app's tools folder, so its card
   // reads the grammar status instead of the PATH probe every other tool uses.
   const languageToolQuery = useQuery({
     queryKey: queryKeys.grammarLocalStatus,
-    queryFn: () => window.agentmat.grammar.localStatus(),
+    queryFn: () => window.runova.grammar.localStatus(),
   });
 
   // The Dev Setup nav entry shows how many required tools are missing. It reads what main already
   // remembers and only probes the items nobody has checked yet, so reopening this page is instant.
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
     meta: { silentLoading: true },
   });
   const devSetupStacks = normalizeDevSetupStacks(settingsQuery.data?.devSetupStacks);
   const devSetupOs: DevOs =
-    window.agentmat.platform === 'win32' || window.agentmat.platform === 'darwin'
-      ? window.agentmat.platform
+    window.runova.platform === 'win32' || window.runova.platform === 'darwin'
+      ? window.runova.platform
       : 'linux';
   const devSetupIds = itemsForStacks(devSetupStacks, devSetupOs).map((item) => item.id);
   const devSetupPeekQuery = useQuery({
     queryKey: [...queryKeys.devSetupPeek, devSetupIds.join(',')],
     queryFn: async () => {
-      const remembered = (await window.agentmat.devSetup.peek(devSetupIds)) ?? {};
+      const remembered = (await window.runova.devSetup.peek(devSetupIds)) ?? {};
       const unchecked = devSetupIds.filter((id) => !remembered[id]);
       if (unchecked.length === 0) return remembered;
-      await Promise.all(unchecked.map((id) => window.agentmat.devSetup.detect(id)));
-      return (await window.agentmat.devSetup.peek(devSetupIds)) ?? {};
+      await Promise.all(unchecked.map((id) => window.runova.devSetup.detect(id)));
+      return (await window.runova.devSetup.peek(devSetupIds)) ?? {};
     },
     meta: { silentLoading: true },
     staleTime: 5_000,
@@ -309,7 +309,7 @@ export default function ToolsPage(): React.JSX.Element {
   }
 
   async function openToolsFolder(): Promise<void> {
-    const dir = await window.agentmat.grammar.openToolsFolder();
+    const dir = await window.runova.grammar.openToolsFolder();
     toast.info(`Extract LanguageTool-stable.zip into ${dir}`);
   }
 
@@ -317,8 +317,8 @@ export default function ToolsPage(): React.JSX.Element {
     if (action === 'start') toast.info('Starting LanguageTool. The first start loads its rules.');
     const next =
       action === 'start'
-        ? await window.agentmat.grammar.startLocal()
-        : await window.agentmat.grammar.stopLocal();
+        ? await window.runova.grammar.startLocal()
+        : await window.runova.grammar.stopLocal();
     queryClient.setQueryData(queryKeys.grammarLocalStatus, next);
     if (action === 'start') {
       if (next.serverState === 'running') toast.success('LanguageTool is running.');
@@ -349,7 +349,7 @@ export default function ToolsPage(): React.JSX.Element {
         toast.error('Choose a target project first.');
         return;
       }
-      await window.agentmat.fs.writeFile(
+      await window.runova.fs.writeFile(
         `${selectedProject.folderPath}/${action.relativePath}`,
         action.content,
       );
@@ -361,7 +361,7 @@ export default function ToolsPage(): React.JSX.Element {
   }
 
   async function handleInstall(tool: AgentToolDefinition): Promise<void> {
-    const command = await window.agentmat.tools.getInstallCommand(tool.id);
+    const command = await window.runova.tools.getInstallCommand(tool.id);
     if (!command) {
       toast.error(`No install command available for ${tool.name} on this OS.`);
       return;
@@ -373,10 +373,10 @@ export default function ToolsPage(): React.JSX.Element {
     tool: AgentToolDefinition,
     currentVersion: string | null,
   ): Promise<PendingToolUpdate | 'uncheckable' | 'up-to-date' | null> {
-    const result = await window.agentmat.tools.checkForUpdate(tool.id, currentVersion);
+    const result = await window.runova.tools.checkForUpdate(tool.id, currentVersion);
     if (!result.supported || !result.latestVersion) return 'uncheckable';
     if (!result.updateAvailable) return 'up-to-date';
-    const command = await window.agentmat.tools.getUpdateCommand(tool.id);
+    const command = await window.runova.tools.getUpdateCommand(tool.id);
     if (!command) return null;
     return { tool, currentVersion, latestVersion: result.latestVersion, command };
   }
@@ -462,7 +462,7 @@ export default function ToolsPage(): React.JSX.Element {
   }
 
   async function handleUninstall(tool: AgentToolDefinition): Promise<void> {
-    const command = await window.agentmat.tools.getUninstallCommand(tool.id);
+    const command = await window.runova.tools.getUninstallCommand(tool.id);
     if (!command) {
       toast.error(`No uninstall command available for ${tool.name} on this OS.`);
       return;
@@ -477,7 +477,7 @@ export default function ToolsPage(): React.JSX.Element {
 
   async function handleInteractiveInstall(tool: AgentToolDefinition): Promise<void> {
     if (!tool.interactiveInstall) return;
-    const launchCommand = await window.agentmat.tools.getInteractiveLaunchCommand(tool.id);
+    const launchCommand = await window.runova.tools.getInteractiveLaunchCommand(tool.id);
     if (!launchCommand) {
       toast.error(`No launch command available for ${tool.name} on this OS.`);
       return;
@@ -488,7 +488,7 @@ export default function ToolsPage(): React.JSX.Element {
     // xterm.js reserves plain Ctrl+V for the shell's own control-character convention (^V) and
     // doesn't paste with it. Its actual paste shortcut is Ctrl+Shift+V (Cmd+V on macOS, which
     // isn't used for anything else there so it works as a normal paste).
-    const pasteShortcut = window.agentmat.platform === 'darwin' ? 'Cmd+V' : 'Ctrl+Shift+V';
+    const pasteShortcut = window.runova.platform === 'darwin' ? 'Cmd+V' : 'Ctrl+Shift+V';
     try {
       await navigator.clipboard.writeText(tool.interactiveInstall.pasteCommands);
       toast.info(
@@ -510,7 +510,7 @@ export default function ToolsPage(): React.JSX.Element {
     tool: AgentToolDefinition,
     action: DockerAction,
   ): Promise<void> {
-    const command = await window.agentmat.tools.getDockerCommand(tool.id, action);
+    const command = await window.runova.tools.getDockerCommand(tool.id, action);
     if (!command) {
       toast.error('Docker command unavailable for this tool.');
       return;
@@ -762,7 +762,7 @@ export default function ToolsPage(): React.JSX.Element {
                       // A shell tool with no command for this OS must not offer an Install button
                       // that can only fail; it falls back to its written instructions instead.
                       const osInstallCommand =
-                        tool.installCommand?.[window.agentmat.platform as SupportedOS];
+                        tool.installCommand?.[window.runova.platform as SupportedOS];
                       const canShellInstall =
                         tool.installKind === 'shell' && Boolean(osInstallCommand);
                       const languageTool = isLanguageTool ? languageToolQuery.data : undefined;
@@ -852,9 +852,7 @@ export default function ToolsPage(): React.JSX.Element {
                                   size="sm"
                                   variant={status?.installed ? 'soft' : 'default'}
                                   onClick={() =>
-                                    void window.agentmat.shell.openExternal(
-                                      LANGUAGETOOL_DOWNLOAD_URL,
-                                    )
+                                    void window.runova.shell.openExternal(LANGUAGETOOL_DOWNLOAD_URL)
                                   }
                                 >
                                   <Download /> Download zip
@@ -1016,7 +1014,7 @@ export default function ToolsPage(): React.JSX.Element {
                                           variant="ghost"
                                           size="icon-xs"
                                           onClick={() =>
-                                            void window.agentmat.shell.openExternal(
+                                            void window.runova.shell.openExternal(
                                               tool.docker!.dashboardUrl!,
                                             )
                                           }
@@ -1081,7 +1079,7 @@ export default function ToolsPage(): React.JSX.Element {
                                   variant="ghost"
                                   size="icon-sm"
                                   onClick={() =>
-                                    void window.agentmat.shell.openExternal(tool.websiteUrl!)
+                                    void window.runova.shell.openExternal(tool.websiteUrl!)
                                   }
                                 >
                                   <ExternalLink />
@@ -1093,7 +1091,7 @@ export default function ToolsPage(): React.JSX.Element {
                                 variant="ghost"
                                 size="icon-sm"
                                 onClick={() =>
-                                  void window.agentmat.shell.openExternal(tool.repositoryUrl)
+                                  void window.runova.shell.openExternal(tool.repositoryUrl)
                                 }
                               >
                                 <GitBranch />

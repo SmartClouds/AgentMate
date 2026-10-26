@@ -1,4 +1,4 @@
-import type { RenderJobView } from '@agentmat/studio';
+import type { RenderJobView } from '@runova/studio';
 import { useState } from 'react';
 import { studioRenderClient } from '../client';
 import { errorMessage, formatSeconds, formatWhen } from '../format';

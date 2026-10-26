@@ -30,7 +30,7 @@ describe('createDeviceKey', () => {
 describe('signMessage', () => {
   it('signs in the fixed-width r || s form, verifiable with the public key', () => {
     const key = createDeviceKey();
-    const message = 'agentmate-core/auth/v1\nlogin\nabc';
+    const message = 'runova-core/auth/v1\nlogin\nabc';
 
     const signature = Buffer.from(signMessage(key.privateKeyPem, message), 'base64');
 
@@ -63,10 +63,10 @@ describe('authMessage', () => {
         'f0e1d2c3-b4a5-4968-8776-655443322110',
       ),
     ).toBe(
-      'agentmate-core/auth/v1\nrenew\n0b8f1c3e-7c1e-4a8e-9d3a-2f0e5b6c7d8e\nbm9uY2U\na1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d\nf0e1d2c3-b4a5-4968-8776-655443322110',
+      'runova-core/auth/v1\nrenew\n0b8f1c3e-7c1e-4a8e-9d3a-2f0e5b6c7d8e\nbm9uY2U\na1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d\nf0e1d2c3-b4a5-4968-8776-655443322110',
     );
     expect(authMessage('login', 'c', 'n', 'd', null)).toBe(
-      'agentmate-core/auth/v1\nlogin\nc\nn\nd\n-',
+      'runova-core/auth/v1\nlogin\nc\nn\nd\n-',
     );
   });
 });

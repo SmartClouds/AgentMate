@@ -34,8 +34,8 @@ let dir = '';
 let destPath = '';
 
 beforeEach(() => {
-  dir = tempDir('agentmate-download-');
-  destPath = join(dir, 'AgentMate-Setup.exe');
+  dir = tempDir('runova-download-');
+  destPath = join(dir, 'Runova-Setup.exe');
 });
 
 afterEach(async () => {
@@ -53,10 +53,10 @@ function options(
 ) {
   const recorded: Recorded = { progress: [], reconnects: [] };
   const base = {
-    url: `${server?.url}/AgentMate-Setup.exe`,
+    url: `${server?.url}/Runova-Setup.exe`,
     destPath,
     expectedSize: BODY.length as number | null,
-    userAgent: 'AgentMate/1.0 (test)',
+    userAgent: 'Runova/1.0 (test)',
     onProgress: (progress: Recorded['progress'][number]) => recorded.progress.push(progress),
     onReconnect: (attempt: number, transferred: number) =>
       recorded.reconnects.push([attempt, transferred]),
@@ -108,7 +108,7 @@ describe('ResumableDownload happy path', () => {
     expect(readFileSync(destPath)).toEqual(BODY);
     // No partial file, so no Range header should go out at all.
     expect(server.requests[0].headers.range).toBeUndefined();
-    expect(server.requests[0].headers['user-agent']).toBe('AgentMate/1.0 (test)');
+    expect(server.requests[0].headers['user-agent']).toBe('Runova/1.0 (test)');
     expect(server.requests[0].headers['cache-control']).toBe('no-cache');
     expect(recorded.progress.length).toBeGreaterThan(0);
     const last = recorded.progress[recorded.progress.length - 1];

@@ -1,8 +1,8 @@
 import type { RdpAgentRequest } from '@shared/apiTypes';
 import { renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { currentBridge, type FakeBridge } from '../../../../test/renderer/agentmatBridge';
 import { Backend, FakeSession } from '../../../../test/renderer/mocks/ironRdp';
+import { currentBridge, type FakeBridge } from '../../../../test/renderer/runovaBridge';
 import { type RdpAgentTargets, useRdpAgentBridge } from './useRdpAgentBridge';
 
 let bridge: FakeBridge;

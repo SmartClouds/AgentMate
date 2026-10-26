@@ -2,12 +2,12 @@
 /**
  * An error that goes back to the client as a signed `{ok: false, error}` frame.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Http;
+namespace Runova\Connector\Http;
 
-use AgentMate\Connector\Protocol;
+use Runova\Connector\Protocol;
 
 final class ApiError extends \Exception
 {

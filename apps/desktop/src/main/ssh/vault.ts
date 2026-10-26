@@ -13,8 +13,9 @@ import { store } from '../store';
 import { VaultLockedError } from './vaultErrors';
 
 /** Encrypted under a just-derived key and stashed alongside the salt, so a wrong passkey is
- *  rejected right away instead of producing garbage the first time a server tries to connect. */
-const VERIFIER_PLAINTEXT = 'agentmate-ssh-vault';
+ *  rejected right away instead of producing garbage the first time a server tries to connect.
+ *  Saved verifiers hold this exact text, so it keeps the name from before the Runova rename. */
+const VERIFIER_PLAINTEXT = 'agentmate-ssh-vault'; // legacy-name
 
 /** Cached for the running app session only; cleared on `before-quit`. Never persisted. */
 let unlockedKey: Buffer | null = null;
@@ -111,65 +112,134 @@ export async function setPasskey(
   const salt = randomBytes(16).toString('base64');
   const nextKey = passphrase ? await deriveKey(passphrase, salt) : null;
 
+  const move = async (envelope: SecretEnvelope): Promise<SecretEnvelope> => {
+    const plaintext = await decryptSecret(envelope);
+    return nextKey ? encryptWithKey(plaintext, nextKey) : encryptWithSafeStorage(plaintext);
+  };
+
+  let commit: () => Promise<void>;
+  try {
+    commit = await prepareRewrite(move);
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+
+  await commit();
+  await store.setSshVault(nextKey ? { salt, verifier: makeVerifier(nextKey) } : null);
+  unlockedKey = nextKey;
+  return { ok: true };
+}
+
+/**
+ * Runs `move` over every saved secret: SSH servers, Remote Desktop servers and project
+ * environments share the one passkey, and so do the sealed stores, so every list moves together.
+ * Nothing is saved until the returned function runs, so a failure part way leaves all of them as
+ * they were.
+ */
+async function prepareRewrite(
+  moveSecret: (envelope: SecretEnvelope) => Promise<SecretEnvelope>,
+): Promise<() => Promise<void>> {
   async function move(envelope: SecretEnvelope): Promise<SecretEnvelope>;
   async function move(envelope: SecretEnvelope | undefined): Promise<SecretEnvelope | undefined>;
   async function move(envelope: SecretEnvelope | undefined): Promise<SecretEnvelope | undefined> {
-    if (!envelope) return undefined;
-    const plaintext = await decryptSecret(envelope);
-    return nextKey ? encryptWithKey(plaintext, nextKey) : encryptWithSafeStorage(plaintext);
+    return envelope ? moveSecret(envelope) : undefined;
   }
-
-  // SSH servers, Remote Desktop servers and project environments share the one passkey, so
-  // every list moves together.
   async function reencrypt<T extends { secretEnvelope?: SecretEnvelope }>(
     servers: T[],
   ): Promise<T[]> {
     return Promise.all(
       servers.map(async (server) =>
         server.secretEnvelope
-          ? { ...server, secretEnvelope: await move(server.secretEnvelope) }
+          ? { ...server, secretEnvelope: await moveSecret(server.secretEnvelope) }
           : server,
       ),
     );
   }
 
-  let sshServers: StoredSshServer[];
-  let rdpServers: StoredRdpServer[];
-  let environments: StoredProjectEnvironment[];
-  let commitSealed: Array<() => Promise<void>>;
-  try {
-    sshServers = await reencrypt(await store.getSshServers());
-    rdpServers = await reencrypt(await store.getRdpServers());
-    environments = await Promise.all(
-      (await store.getProjectEnvironments()).map(async (environment) => ({
-        ...environment,
-        files: await Promise.all(
-          environment.files.map(async (file) => ({
-            ...file,
-            contentEnvelope: await move(file.contentEnvelope),
-          })),
-        ),
-        credentials: await Promise.all(
-          environment.credentials.map(async (credential) => ({
-            ...credential,
-            secretEnvelope: await move(credential.secretEnvelope),
-            notesEnvelope: await move(credential.notesEnvelope),
-          })),
-        ),
-      })),
-    );
-    commitSealed = await Promise.all([...sealedStores].map((sealed) => sealed.prepare(move)));
-  } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : String(error) };
-  }
+  const sshServers: StoredSshServer[] = await reencrypt(await store.getSshServers());
+  const rdpServers: StoredRdpServer[] = await reencrypt(await store.getRdpServers());
+  const environments: StoredProjectEnvironment[] = await Promise.all(
+    (await store.getProjectEnvironments()).map(async (environment) => ({
+      ...environment,
+      files: await Promise.all(
+        environment.files.map(async (file) => ({
+          ...file,
+          contentEnvelope: await move(file.contentEnvelope),
+        })),
+      ),
+      credentials: await Promise.all(
+        environment.credentials.map(async (credential) => ({
+          ...credential,
+          secretEnvelope: await move(credential.secretEnvelope),
+          notesEnvelope: await move(credential.notesEnvelope),
+        })),
+      ),
+    })),
+  );
+  const commitSealed = await Promise.all(
+    [...sealedStores].map((sealed) => sealed.prepare(moveSecret)),
+  );
+  return async () => {
+    await store.setSshServers(sshServers);
+    await store.setRdpServers(rdpServers);
+    await store.setProjectEnvironments(environments);
+    for (const commitOne of commitSealed) await commitOne();
+  };
+}
 
-  await store.setSshServers(sshServers);
-  await store.setRdpServers(rdpServers);
-  await store.setProjectEnvironments(environments);
-  for (const commit of commitSealed) await commit();
-  await store.setSshVault(nextKey ? { salt, verifier: makeVerifier(nextKey) } : null);
-  unlockedKey = nextKey;
-  return { ok: true };
+/**
+ * On macOS and Linux the safeStorage key is kept in the OS keyring under the app's name, so the
+ * secrets saved before the rename from the old name are sealed under a key the renamed app can't
+ * reach. This opens those with `decryptLegacy` (a helper that runs under the old name) and seals
+ * them again under the current key. Secrets that open already, and passkey ones, are left as they
+ * are. Returns how many moved and how many neither key could open.
+ */
+export async function migrateLegacySafeStorage(
+  decryptLegacy: (ciphertexts: string[]) => Promise<(string | null)[]>,
+): Promise<{ moved: number; unreadable: number }> {
+  if (!safeStorage.isEncryptionAvailable()) return { moved: 0, unreadable: 0 };
+  const opensNow = (envelope: SecretEnvelope): boolean => {
+    try {
+      safeStorage.decryptString(Buffer.from(envelope.ciphertext, 'base64'));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  // First pass only looks: which safeStorage secrets does the current key fail on?
+  const stale = new Set<string>();
+  await prepareRewrite(async (envelope) => {
+    if (envelope.mode === 'safeStorage' && !opensNow(envelope)) stale.add(envelope.ciphertext);
+    return envelope;
+  });
+  if (stale.size === 0) return { moved: 0, unreadable: 0 };
+
+  const ciphertexts = [...stale];
+  const plaintexts = await decryptWithLegacy(ciphertexts, decryptLegacy);
+  let moved = 0;
+  const commit = await prepareRewrite(async (envelope) => {
+    if (envelope.mode !== 'safeStorage') return envelope;
+    const plaintext = plaintexts.get(envelope.ciphertext);
+    if (plaintext == null) return envelope;
+    moved += 1;
+    return encryptWithSafeStorage(plaintext);
+  });
+  await commit();
+  return { moved, unreadable: ciphertexts.length - plaintexts.size };
+}
+
+async function decryptWithLegacy(
+  ciphertexts: string[],
+  decryptLegacy: (ciphertexts: string[]) => Promise<(string | null)[]>,
+): Promise<Map<string, string>> {
+  const opened = await decryptLegacy(ciphertexts);
+  const plaintexts = new Map<string, string>();
+  ciphertexts.forEach((ciphertext, index) => {
+    const plaintext = opened[index];
+    if (plaintext != null) plaintexts.set(ciphertext, plaintext);
+  });
+  return plaintexts;
 }
 
 function encryptWithSafeStorage(plaintext: string): SecretEnvelope {

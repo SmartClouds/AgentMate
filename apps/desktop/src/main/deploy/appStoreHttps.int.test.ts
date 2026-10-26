@@ -1,4 +1,4 @@
-import { findCatalogTemplate, generateCatalogSecrets, renderCatalogApp } from '@agentmat/core';
+import { findCatalogTemplate, generateCatalogSecrets, renderCatalogApp } from '@runova/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DeployAppStore } from './appStore/service';
 import { CoreHttpClient } from './connection/coreHttp';
@@ -24,13 +24,13 @@ import {
  * domain" does (E10), and the certificate issued over HTTP-01 through nginx (E11). curl on the
  * server must then get WordPress's setup page over HTTPS, verified against Pebble's root alone.
  * Nightly only: Docker, nginx.org's nginx and the WordPress and MySQL images all come over the
- * network, which takes far longer than the every-push job allows. Needs AGENTMATE_SYSTEM_TESTS=1,
+ * network, which takes far longer than the every-push job allows. Needs RUNOVA_SYSTEM_TESTS=1,
  * Docker and `pnpm server-core:publish linux-x64`.
  */
 
 const enabled = systemTestsEnabled();
 const IMAGES = testServerImages(['ubuntu-24.04'], ['ubuntu-24.04']);
-const DOMAIN = 'blog.agentmate.test';
+const DOMAIN = 'blog.runova.test';
 const SITE_ID = 'blog';
 const TEST_TIMEOUT_MS = 3_600_000;
 

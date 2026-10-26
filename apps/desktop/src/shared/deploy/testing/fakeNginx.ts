@@ -16,7 +16,7 @@ import type {
   StreamProxyInfo,
   StreamProxySaveResult,
   StreamProxySettings,
-} from '../protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * nginx and its certificates inside a `FakeCore` (E10, E11), with the core's rules where the

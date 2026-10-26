@@ -1,4 +1,4 @@
-import { allGroups, findGroup, isWorktreeScope, type Project } from '@agentmat/core';
+import { allGroups, findGroup, isWorktreeScope, type Project } from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -145,7 +145,7 @@ function useReportViewing(visible: boolean): void {
     const report = (): void => {
       const [shown, focused] = signature.split('|');
       const hidden = document.visibilityState !== 'visible';
-      void window.agentmat.agents.setViewing(
+      void window.runova.agents.setViewing(
         hidden || !shown ? [] : shown.split(','),
         hidden ? null : focused || null,
       );
@@ -173,7 +173,7 @@ export function WorkspaceHost({ visible }: { visible: boolean }): React.JSX.Elem
   const closeProject = useWorkspaceStore((s) => s.closeProject);
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   });
   const projects = projectsQuery.data ?? [];
   // The active id is a project's, or a worktree's scope id; either way this is what its panes,

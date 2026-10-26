@@ -4,7 +4,7 @@ import {
   mergeBlockers,
   type Project,
   type PullRequestInfo,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { MergePullRequestResult, PullRequestStatus } from '@shared/apiTypes';
 import { useState } from 'react';
 import { toast } from 'sonner';

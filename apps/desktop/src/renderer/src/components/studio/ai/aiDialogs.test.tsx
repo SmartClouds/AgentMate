@@ -1,4 +1,4 @@
-import { createScene, type RecipeView } from '@agentmat/studio';
+import { createScene, type RecipeView } from '@runova/studio';
 import { screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';

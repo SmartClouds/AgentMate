@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { createReadStream, existsSync } from 'node:fs';
 import { mkdir, readFile, rm } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
+import { LEGACY_CORE } from '../coreLayout';
 import type { ReleaseRid } from './osSupport';
 
 /**
@@ -12,11 +13,16 @@ import type { ReleaseRid } from './osSupport';
  *
  * A packaged build can also name the release's public address (`remote`), so a server that can
  * reach GitHub downloads the core itself and this app downloads and uploads nothing.
+ *
+ * Each release is also published under the tarball name from before the rename (same bytes, same
+ * checksum), the only one a core from 1.63 or older takes when it updates itself.
  */
 
 export interface ReleaseAsset {
   rid: ReleaseRid;
   file: string;
+  /** The same tarball under its old name, for cores from before the rename. */
+  legacyFile?: string;
   sha256: string;
   size: number;
 }
@@ -30,6 +36,7 @@ export interface CoreRelease {
   version: string;
   rid: ReleaseRid;
   file: string;
+  legacyFile?: string;
   sha256: string;
   /** A local copy that was just checked against `sha256`. */
   localPath: string;
@@ -44,6 +51,8 @@ export interface RemoteRelease {
   /** In bytes, from the manifest: a core that downloads it stops at the first byte past this. */
   size: number;
   url: string;
+  /** The same tarball under its old name and address, for a core from before the rename. */
+  legacy?: { file: string; url: string };
 }
 
 export interface ReleaseSource {
@@ -57,7 +66,7 @@ export interface ReleaseSource {
 
 export type Downloader = (url: string, destination: string) => Promise<void>;
 
-const REPOSITORY = 'SmartClouds/AgentMate';
+const REPOSITORY = 'SmartClouds/Runova';
 const VERSION = /^[0-9A-Za-z][0-9A-Za-z.+-]{0,63}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
 const RIDS: ReadonlySet<string> = new Set<ReleaseRid>(['linux-x64', 'linux-arm64']);
@@ -75,17 +84,29 @@ export function parseReleaseManifest(value: unknown): ReleaseManifest {
   return {
     version,
     assets: assets.map((asset: unknown): ReleaseAsset => {
-      const { rid, file, sha256, size } = (asset ?? {}) as Record<string, unknown>;
+      const { rid, file, legacyFile, sha256, size } = (asset ?? {}) as Record<string, unknown>;
       if (typeof rid !== 'string' || !RIDS.has(rid))
         throw invalid(`"${String(rid)}" is not a Linux build`);
-      if (typeof file !== 'string' || file !== `agentmate-core-${version}-${rid}.tar.gz`) {
+      if (typeof file !== 'string' || file !== `runova-core-${version}-${rid}.tar.gz`) {
         throw invalid(`"${String(file)}" is not the ${rid} release file`);
+      }
+      if (
+        legacyFile !== undefined &&
+        legacyFile !== `${LEGACY_CORE.tarballPrefix}${version}-${rid}.tar.gz`
+      ) {
+        throw invalid(`"${String(legacyFile)}" is not the ${rid} release file under its old name`);
       }
       if (typeof sha256 !== 'string' || !SHA256.test(sha256))
         throw invalid(`${file} has no SHA-256`);
       if (typeof size !== 'number' || !Number.isInteger(size) || size <= 0)
         throw invalid(`${file} has no size`);
-      return { rid: rid as ReleaseRid, file, sha256, size };
+      return {
+        rid: rid as ReleaseRid,
+        file,
+        ...(typeof legacyFile === 'string' ? { legacyFile } : {}),
+        sha256,
+        size,
+      };
     }),
   };
 }
@@ -144,7 +165,14 @@ export function localArtifactSource(directory: string): ReleaseSource {
       );
       const localPath = join(directory, asset.file);
       await assertChecksum(localPath, asset);
-      return { version: manifest.version, rid, file: asset.file, sha256: asset.sha256, localPath };
+      return {
+        version: manifest.version,
+        rid,
+        file: asset.file,
+        ...(asset.legacyFile ? { legacyFile: asset.legacyFile } : {}),
+        sha256: asset.sha256,
+        localPath,
+      };
     },
   };
 }
@@ -167,6 +195,14 @@ export function githubReleaseSource(
         sha256: asset.sha256,
         size: asset.size,
         url: releaseDownloadUrl(manifest.version, asset.file),
+        ...(asset.legacyFile
+          ? {
+              legacy: {
+                file: asset.legacyFile,
+                url: releaseDownloadUrl(manifest.version, asset.legacyFile),
+              },
+            }
+          : {}),
       };
     },
     release: async (rid) => {
@@ -180,6 +216,7 @@ export function githubReleaseSource(
             version: manifest.version,
             rid,
             file: asset.file,
+            ...(asset.legacyFile ? { legacyFile: asset.legacyFile } : {}),
             sha256: asset.sha256,
             localPath,
           };
@@ -194,7 +231,14 @@ export function githubReleaseSource(
         await rm(localPath, { force: true });
         throw error;
       }
-      return { version: manifest.version, rid, file: asset.file, sha256: asset.sha256, localPath };
+      return {
+        version: manifest.version,
+        rid,
+        file: asset.file,
+        ...(asset.legacyFile ? { legacyFile: asset.legacyFile } : {}),
+        sha256: asset.sha256,
+        localPath,
+      };
     },
   };
 }

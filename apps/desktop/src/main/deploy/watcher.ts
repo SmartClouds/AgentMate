@@ -1,8 +1,8 @@
-import type { AppNotification } from '@agentmat/core';
+import type { AppNotification } from '@runova/core';
 import type {
   AlertInfo,
   AlertSeverity,
-} from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { CoreLinks } from './live/coreLinks';
 import { AlertsFeed } from './live/feeds';
 import type { DeployState } from './state';

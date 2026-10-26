@@ -1,4 +1,4 @@
-import type { GrammarIssueKind } from '@agentmat/core';
+import type { GrammarIssueKind } from '@runova/core';
 
 /** One thing LanguageTool flagged, flattened from its `matches` entry. */
 export interface GrammarIssue {

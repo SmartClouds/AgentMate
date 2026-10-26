@@ -36,7 +36,7 @@ test.afterEach(async () => {
 });
 
 type Bridge = {
-  agentmat: {
+  runova: {
     studio: { updateSettings(p: unknown): Promise<unknown> };
     studioScenes: {
       checkStyle(input: unknown): Promise<{ ok: boolean; problems: string[] }>;
@@ -49,9 +49,9 @@ async function launch(): Promise<LaunchedApp> {
   opened.push(launched);
   await launched.page.evaluate(
     async (defaultRoot) => {
-      await (window as unknown as Bridge).agentmat.studio.updateSettings({ defaultRoot });
+      await (window as unknown as Bridge).runova.studio.updateSettings({ defaultRoot });
     },
-    join(launched.root, 'Videos', 'AgentMate Studio'),
+    join(launched.root, 'Videos', 'Runova Studio'),
   );
   return launched;
 }
@@ -71,7 +71,7 @@ async function videoWithScenario(page: Page): Promise<void> {
 test('every style reference scene passes its check in the offscreen window', async () => {
   const { page } = await launch();
   const results = await page.evaluate(async (styles) => {
-    const scenes = (window as unknown as Bridge).agentmat.studioScenes;
+    const scenes = (window as unknown as Bridge).runova.studioScenes;
     const out: { id: string; ok: boolean; problems: string[] }[] = [];
     for (const styleId of styles) {
       const result = await scenes.checkStyle({ styleId, aspect: '16:9', language: 'fa' });

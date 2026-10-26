@@ -10,7 +10,7 @@ import {
   requestToDraft,
   syncParamsFromUrl,
   syncPathVariables,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { ApiExecutionResult } from '@shared/apiClientTypes';
 import { create } from 'zustand';
 

@@ -1,4 +1,4 @@
-import { bundledSkillsShDirectory, type Skill, type SkillRepository } from '@agentmat/core';
+import { bundledSkillsShDirectory, type Skill, type SkillRepository } from '@runova/core';
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type {
@@ -95,7 +95,7 @@ const changelog = skill({
   description: 'Turns commits into a readable changelog.',
   category: 'writing',
   tags: ['git'],
-  author: 'agentmate',
+  author: 'runova',
   version: '2.1.0',
 });
 
@@ -198,7 +198,7 @@ describe('SkillsPage repositories', () => {
     expect(within(card).getByText('Turns commits into a readable changelog.')).toBeTruthy();
     expect(within(card).getByText('writing')).toBeTruthy();
     expect(within(card).getByText('git')).toBeTruthy();
-    expect(within(card).getByText(/agentmate · v2\.1\.0/)).toBeTruthy();
+    expect(within(card).getByText(/runova · v2\.1\.0/)).toBeTruthy();
     expect(screen.getByText('DB Migrator')).toBeTruthy();
   });
 

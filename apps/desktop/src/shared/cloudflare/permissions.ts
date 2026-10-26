@@ -5,7 +5,7 @@ import type {
 } from '../cloudflareTypes';
 
 /**
- * The Cloudflare permissions AgentMate asks for, and nothing beyond them: every one is a zone
+ * The Cloudflare permissions Runova asks for, and nothing beyond them: every one is a zone
  * permission, so the token cannot touch billing, members, Workers or other tokens. The renderer
  * lists them in the setup guide; the main process checks a token against them.
  */
@@ -16,7 +16,7 @@ export interface CloudflarePermission<
   id: Id;
   /** As Cloudflare's token page shows it: group, permission, access level. */
   label: string;
-  /** What AgentMate uses it for, shown next to the label. */
+  /** What Runova uses it for, shown next to the label. */
   purpose: string;
   /** Finishes "This token is not allowed to ..." when Cloudflare refuses a call. */
   action: string;
@@ -118,7 +118,7 @@ export function cloudflarePermission(
   return permission;
 }
 
-/** The token page with AgentMate's permissions, all zones and a name filled in. */
+/** The token page with Runova's permissions, all zones and a name filled in. */
 export function tokenTemplateUrl(): string {
   const keys = CLOUDFLARE_PERMISSIONS.map(({ template }) => ({
     key: template.key,
@@ -128,7 +128,7 @@ export function tokenTemplateUrl(): string {
     `permissionGroupKeys=${encodeURIComponent(JSON.stringify(keys))}`,
     'accountId=*',
     'zoneId=all',
-    'name=AgentMate',
+    'name=Runova',
   ];
   return `${TOKEN_PAGE}?${query.join('&')}`;
 }
@@ -156,10 +156,10 @@ const GLOBAL_API_KEY = /^[0-9a-f]{37}$/;
 export function tokenProblem(token: string): string | null {
   if (token.length === 0) return 'Paste the token Cloudflare showed you.';
   if (GLOBAL_API_KEY.test(token)) {
-    return 'That looks like your Global API Key, which can do anything on your account. AgentMate needs an API token limited to the permissions listed here.';
+    return 'That looks like your Global API Key, which can do anything on your account. Runova needs an API token limited to the permissions listed here.';
   }
   if (token.startsWith('v1.0-')) {
-    return 'That looks like an Origin CA Key. AgentMate needs an API token from the same page.';
+    return 'That looks like an Origin CA Key. Runova needs an API token from the same page.';
   }
   if (/\s/.test(token)) return 'A token has no spaces in it. Copy it again from Cloudflare.';
   if (token.length < 20) return 'That is too short to be a Cloudflare API token.';

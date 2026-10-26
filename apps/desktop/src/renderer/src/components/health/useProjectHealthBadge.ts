@@ -10,7 +10,7 @@ export function useProjectHealthBadge(projectId: string | undefined): SectionBad
   useHealthChanges();
   const query = useQuery({
     queryKey: queryKeys.healthList(projectId ?? ''),
-    queryFn: async () => (await window.agentmat.health.list({ projectId: projectId ?? '' })) ?? [],
+    queryFn: async () => (await window.runova.health.list({ projectId: projectId ?? '' })) ?? [],
     enabled: Boolean(projectId),
     meta: { silentLoading: true },
   });

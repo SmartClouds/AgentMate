@@ -53,7 +53,7 @@ function writeFakeNode(version: string): void {
 }
 
 beforeEach(() => {
-  binDir = join(tempDir('agentmate-devsetup-'), 'bin');
+  binDir = join(tempDir('runova-devsetup-'), 'bin');
   mkdirSync(binDir, { recursive: true });
   const key = Object.keys(process.env).find((one) => one.toUpperCase() === 'PATH') ?? 'PATH';
   const system = onWindows

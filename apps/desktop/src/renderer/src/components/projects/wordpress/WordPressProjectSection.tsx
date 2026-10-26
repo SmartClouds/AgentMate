@@ -1,5 +1,5 @@
-import type { Project, WpItem, WpItemRef } from '@agentmat/core';
-import { wpItemKey, wpItemRoot } from '@agentmat/core';
+import type { Project, WpItem, WpItemRef } from '@runova/core';
+import { wpItemKey, wpItemRoot } from '@runova/core';
 import type { DeployWordPressSite } from '@shared/deployWordPressTypes';
 import { wordPressErrorCode, wordPressErrorMessage } from '@shared/wordpressErrors';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -60,7 +60,7 @@ const SILENT = { silentLoading: true } as const;
 const CARD = 'glass rounded-[calc(var(--radius)+2px)]';
 
 export const READ_ONLY_HINT =
-  "This site's key is read-only, so AgentMate can pull from it but not deploy. Make a read-write key in wp-admin and connect the site again.";
+  "This site's key is read-only, so Runova can pull from it but not deploy. Make a read-write key in wp-admin and connect the site again.";
 
 export function WordPressProjectSection({ project }: { project: Project }): React.JSX.Element {
   const link = project.wordpress;
@@ -78,7 +78,7 @@ export function WordPressProjectSection({ project }: { project: Project }): Reac
 
   const sitesQuery = useQuery({
     queryKey: queryKeys.deployWordPressSites,
-    queryFn: () => window.agentmat.deployWordPress.listSites(),
+    queryFn: () => window.runova.deployWordPress.listSites(),
     meta: SILENT,
   });
   const site = sitesQuery.data?.find((candidate) => candidate.id === link?.siteId) ?? null;
@@ -86,7 +86,7 @@ export function WordPressProjectSection({ project }: { project: Project }): Reac
 
   const itemsQuery = useQuery({
     queryKey: queryKeys.deployWordPressItems(link?.siteId ?? ''),
-    queryFn: () => window.agentmat.deployWordPress.listItems(link?.siteId as string),
+    queryFn: () => window.runova.deployWordPress.listItems(link?.siteId as string),
     enabled: site !== null,
     meta: SILENT,
   });
@@ -94,7 +94,7 @@ export function WordPressProjectSection({ project }: { project: Project }): Reac
   const changesKey = queryKeys.projectWordPressChanges(project.id);
   const changesQuery = useQuery({
     queryKey: changesKey,
-    queryFn: () => window.agentmat.deployWordPress.localChanges(project.id),
+    queryFn: () => window.runova.deployWordPress.localChanges(project.id),
     enabled: link !== undefined,
     refetchOnWindowFocus: true,
     meta: SILENT,
@@ -181,7 +181,7 @@ export function WordPressProjectSection({ project }: { project: Project }): Reac
                       <button
                         type="button"
                         className="inline-flex cursor-pointer items-center gap-1 rounded-sm hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        onClick={() => void window.agentmat.shell.openExternal(site.siteUrl)}
+                        onClick={() => void window.runova.shell.openExternal(site.siteUrl)}
                       >
                         {siteHost(site.siteUrl)} <ExternalLink className="h-2.5 w-2.5" />
                       </button>

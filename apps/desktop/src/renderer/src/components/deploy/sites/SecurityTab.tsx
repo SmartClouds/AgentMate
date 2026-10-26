@@ -2,7 +2,7 @@ import type {
   SiteFrameOptions,
   SiteRatePeriod,
   SiteReferrerPolicy,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useId } from 'react';
 import { Plus, Trash2 } from '@/components/icons';
 import { Button } from '@/components/ui/button';

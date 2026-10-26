@@ -1,5 +1,5 @@
-import type { ProjectWordPressItemKind, WpItemRef, WpRollbackReason } from '@agentmat/core';
-import { WP_AGENT_PREFIXES, WP_HARD_DENY_DIRS, WP_HARD_DENY_FILES } from '@agentmat/core';
+import type { ProjectWordPressItemKind, WpItemRef, WpRollbackReason } from '@runova/core';
+import { WP_AGENT_PREFIXES, WP_HARD_DENY_DIRS, WP_HARD_DENY_FILES } from '@runova/core';
 import type {
   DeployWordPressDeployResult,
   DeployWordPressLeftOutReason,
@@ -96,10 +96,10 @@ export const PLANNED_PHASES: Record<DeployWordPressOperationKind, DeployWordPres
 };
 
 export const LEFT_OUT_REASON: Record<DeployWordPressLeftOutReason, string> = {
-  agentFiles: "Agent settings or AgentMate's own files",
+  agentFiles: "Agent settings or Runova's own files",
   hardDenied: 'Never sent: version control, secrets, PHP settings or system clutter',
   ignored:
-    'Left out by an ignore rule (your ignore list, .gitignore, .distignore, .agentmateignore or the defaults)',
+    'Left out by an ignore rule (your ignore list, .gitignore, .distignore, .runovaignore or the defaults)',
   symlink: 'A link to somewhere else, which is never followed',
   tooLarge: 'Larger than 64 MB',
   caseCollision: 'Another file has the same name apart from upper and lower case',
@@ -107,7 +107,7 @@ export const LEFT_OUT_REASON: Record<DeployWordPressLeftOutReason, string> = {
   pathRejected: "A name a WordPress site can't safely hold",
 };
 
-/** Agent and AgentMate folders on the hard deny list; the rest of it is version control. */
+/** Agent and Runova folders on the hard deny list; the rest of it is version control. */
 const VCS_DIRS = new Set(['.github', '.git', '.svn', '.hg', '.worktrees']);
 const AGENT_DIRS = new Set(WP_HARD_DENY_DIRS.filter((dir) => !VCS_DIRS.has(dir)));
 const AGENT_FILES = new Set(
@@ -119,12 +119,12 @@ const AGENT_FILES = new Set(
       name === '.cursorrules' ||
       name === '.windsurfrules' ||
       name === '.roomodes' ||
-      name === '.agentmateignore',
+      name === '.runovaignore',
   ),
 );
 const AGENT_PREFIXES = WP_AGENT_PREFIXES;
 
-/** Whether a path is (or sits inside) an agent's settings, skills or AgentMate's own files. */
+/** Whether a path is (or sits inside) an agent's settings, skills or Runova's own files. */
 export function isAgentPath(path: string): boolean {
   return path.split('/').some((segment) => {
     const name = segment.toLowerCase();
@@ -158,7 +158,7 @@ export const WARNING_COPY: Record<DeployWordPressWarning, WarningCopy> = {
   noRescueGuard: {
     title: "The site's safety guard isn't installed",
     detail:
-      'If a change breaks the site badly, it may not be able to put the old files back on its own. Reinstall the AgentMate Connector to bring the guard back.',
+      'If a change breaks the site badly, it may not be able to put the old files back on its own. Reinstall the Runova Connector to bring the guard back.',
   },
   healthCheckUnavailable: {
     title: "The site can't check itself after the change",
@@ -173,7 +173,7 @@ export const WARNING_COPY: Record<DeployWordPressWarning, WarningCopy> = {
   readOnlyScope: {
     title: "This site's key is read-only",
     detail:
-      'AgentMate can pull from this site but not deploy to it. Make a read-write key in wp-admin and connect the site again to deploy.',
+      'Runova can pull from this site but not deploy to it. Make a read-write key in wp-admin and connect the site again to deploy.',
   },
   lineEndingsOnly: {
     title: 'Some files differ only in line endings',
@@ -192,7 +192,7 @@ export const ROLLBACK_REASON: Record<WpRollbackReason, string> = {
   fatalError:
     'A changed file caused a PHP fatal error on the site, so the old files were put back.',
   notConfirmed:
-    "The site didn't hear back from AgentMate in time to keep the change, so it put the old files back on its own.",
+    "The site didn't hear back from Runova in time to keep the change, so it put the old files back on its own.",
   interrupted: 'The deploy was cut off before it finished, so the old files were put back.',
   requested: 'The deploy was stopped, so the old files were put back.',
 };
@@ -240,7 +240,7 @@ export function deployOutcome(result: DeployWordPressDeployResult): OutcomeCopy 
         tone: 'error',
         title: "The deploy didn't finish",
         detail:
-          "AgentMate lost track of it partway. Open the site's Deploys in Deploy to see where it stands.",
+          "Runova lost track of it partway. Open the site's Deploys in Deploy to see where it stands.",
       };
   }
 }

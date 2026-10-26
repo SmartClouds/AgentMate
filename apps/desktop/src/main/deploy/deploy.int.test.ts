@@ -27,14 +27,14 @@ import {
 /**
  * The whole install on real machines: systemd test servers in Docker, the published linux-x64
  * release, real sshd, real sudo that asks for the password, and the app's own pool, service and
- * REST client. Needs AGENTMATE_SYSTEM_TESTS=1, Docker, and `pnpm server-core:publish linux-x64`.
+ * REST client. Needs RUNOVA_SYSTEM_TESTS=1, Docker, and `pnpm server-core:publish linux-x64`.
  */
 
 const enabled = systemTestsEnabled();
 const onUbuntu = testServerImages(['ubuntu-24.04'], ['ubuntu-24.04']).length > 0;
 const REPO = fileURLToPath(new URL('../../../../../', import.meta.url));
 const ARTIFACTS = join(REPO, 'apps', 'server-core', 'artifacts', 'release');
-const UNIT = join(REPO, 'apps', 'server-core', 'packaging', 'agentmate-core.service');
+const UNIT = join(REPO, 'apps', 'server-core', 'packaging', 'runova-core.service');
 const INSTALL_TIMEOUT_MS = 600_000;
 
 type Login = keyof typeof TEST_LOGINS;
@@ -138,11 +138,11 @@ function brokenRelease(): ReleaseSource {
   const content = join(dir, 'content');
   mkdirSync(content);
   writeFileSync(
-    join(content, 'agentmate-core'),
+    join(content, 'runova-core'),
     '#!/bin/sh\necho "this build is broken" >&2\nexit 1\n',
   );
-  copyFileSync(UNIT, join(content, 'agentmate-core.service'));
-  const file = 'agentmate-core-0.0.1-broken-linux-x64.tar.gz';
+  copyFileSync(UNIT, join(content, 'runova-core.service'));
+  const file = 'runova-core-0.0.1-broken-linux-x64.tar.gz';
   execFileSync('tar', ['-czf', join('..', file), '.'], { cwd: content });
   const localPath = join(dir, file);
   const sha256 = createHash('sha256').update(readFileSync(localPath)).digest('hex');
@@ -186,13 +186,13 @@ describe.skipIf(!enabled)('installing the server core on real servers', () => {
             previousVersion: null,
           });
           expect(health.version).toBe('0.0.0-dev');
-          expect(server.run('stat -c "%U:%G %a" /run/agentmate-core/core.sock')).toBe(
-            'root:agentmate 660',
+          expect(server.run('stat -c "%U:%G %a" /run/runova-core/core.sock')).toBe(
+            'root:runova 660',
           );
-          expect(server.run('stat -c "%a" /var/lib/agentmate-core')).toBe('700');
-          expect(server.run('systemctl is-active agentmate-core')).toBe('active');
+          expect(server.run('stat -c "%a" /var/lib/runova-core')).toBe('700');
+          expect(server.run('systemctl is-active runova-core')).toBe('active');
           if (login === 'deployer') {
-            expect(server.run('id -nG deployer').split(' ')).toContain('agentmate');
+            expect(server.run('id -nG deployer').split(' ')).toContain('runova');
           }
           pool.closeAll();
         },
@@ -232,7 +232,7 @@ describe.skipIf(!enabled || !onUbuntu)('the server core on a real Ubuntu server'
       expect(account.userName).toBe('maria');
       expect(stepUp.stepUpUntilUnixMs).toBeGreaterThan(Date.now());
       expect(totp.qrDataUrl).toMatch(/^data:image\/png;base64,/);
-      expect(server.run('/opt/agentmate-core/current/agentmate-core admin status')).toContain(
+      expect(server.run('/opt/runova-core/current/runova-core admin status')).toContain(
         '"userName":"maria","roles":["owner"],"devices":1',
       );
       await service.signOut('srv');
@@ -300,7 +300,7 @@ describe.skipIf(!enabled || !onUbuntu)('the server core on a real Ubuntu server'
       expect(final).toBe('cancelled');
       await until(
         () =>
-          server.run("systemctl list-units --all --no-legend 'agentmate-*-*' || true") === '' &&
+          server.run("systemctl list-units --all --no-legend 'runova-*-*' || true") === '' &&
           server.run("pgrep -fa '[a]pt-get|[d]pkg|[d]nf' || true") === '',
         30_000,
         'the unit and its processes to be gone',
@@ -315,16 +315,16 @@ describe.skipIf(!enabled || !onUbuntu)('the server core on a real Ubuntu server'
     'refuses a download that does not match its checksum, and the running core carries on',
     async () => {
       const { server, pool } = await freshInstall('ubuntu-24.04', 'deployer');
-      const before = server.run('readlink -f /opt/agentmate-core/current');
+      const before = server.run('readlink -f /opt/runova-core/current');
 
       const tampered = deploy(server, 'deployer', tamperedRelease());
       await expect(
         tampered.service.install({ serverId: 'srv', sudoPassword: null }),
       ).rejects.toThrow(/does not match its published checksum/);
 
-      expect(server.run('readlink -f /opt/agentmate-core/current')).toBe(before);
-      expect(server.run('ls /opt/agentmate-core/releases')).not.toContain('eeeeeeeeeeee');
-      expect(server.run('systemctl is-active agentmate-core')).toBe('active');
+      expect(server.run('readlink -f /opt/runova-core/current')).toBe(before);
+      expect(server.run('ls /opt/runova-core/releases')).not.toContain('eeeeeeeeeeee');
+      expect(server.run('systemctl is-active runova-core')).toBe('active');
       tampered.pool.closeAll();
       pool.closeAll();
     },
@@ -335,15 +335,15 @@ describe.skipIf(!enabled || !onUbuntu)('the server core on a real Ubuntu server'
     'goes back to the previous release when an upgrade will not start',
     async () => {
       const { server, pool } = await freshInstall('ubuntu-24.04', 'deployer');
-      const good = server.run('readlink -f /opt/agentmate-core/current');
+      const good = server.run('readlink -f /opt/runova-core/current');
 
       const broken = deploy(server, 'deployer', brokenRelease());
       await expect(broken.service.install({ serverId: 'srv', sudoPassword: null })).rejects.toThrow(
         /did not start.*went back to 0\.0\.0-dev/s,
       );
 
-      expect(server.run('readlink -f /opt/agentmate-core/current')).toBe(good);
-      expect(server.run('systemctl is-active agentmate-core')).toBe('active');
+      expect(server.run('readlink -f /opt/runova-core/current')).toBe(good);
+      expect(server.run('systemctl is-active runova-core')).toBe('active');
       const lease = await broken.pool.acquire('srv');
       try {
         const health = await new CoreHttpClient(streamLocalTransport(lease.connection)).health();

@@ -2,7 +2,7 @@ import {
   MAX_IDLE_RESOURCE_MINUTES,
   MIN_IDLE_RESOURCE_MINUTES,
   normalizeIdleResourceMinutes,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';

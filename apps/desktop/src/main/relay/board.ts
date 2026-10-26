@@ -1,4 +1,4 @@
-import { orderTasks } from '@agentmat/core';
+import { orderTasks } from '@runova/core';
 import type { RelayBoard, RelayHandoffSummary, RelayTaskDetail } from '../../shared/relayTypes';
 import { findProjectScope } from '../worktrees/resolve';
 import { getRelayRuntime } from './runtime';

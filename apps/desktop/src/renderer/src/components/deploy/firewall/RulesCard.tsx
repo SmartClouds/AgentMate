@@ -1,4 +1,4 @@
-import type { FirewallRuleInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { FirewallRuleInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import {
   CircleCheck,
   CircleX,

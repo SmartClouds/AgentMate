@@ -2,13 +2,13 @@
 /**
  * The full state table: every action in every state, through the real service.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Unit;
+namespace Runova\Connector\Tests\Unit;
 
-use AgentMate\Connector\Deploy\StateMachine;
-use AgentMate\Connector\Tests\Support\DeployTestCase;
+use Runova\Connector\Deploy\StateMachine;
+use Runova\Connector\Tests\Support\DeployTestCase;
 
 final class StateMachineTest extends DeployTestCase
 {

@@ -454,7 +454,7 @@ export const CLI_REGISTRY: CliDefinition[] = [
     fileMention: 'plain',
     // The Windows script calls `exit 1` when something fails, which piped straight into this
     // tab's `iex` would close the tab along with the error. A child PowerShell keeps the message.
-    // It installs to %USERPROFILE%\.local\bin without touching PATH; AgentMate looks there itself.
+    // It installs to %USERPROFILE%\.local\bin without touching PATH; Runova looks there itself.
     installCommand: {
       win32:
         'powershell -ExecutionPolicy ByPass -c "irm https://raw.githubusercontent.com/aaif-goose/goose/main/download_cli.ps1 | iex"',

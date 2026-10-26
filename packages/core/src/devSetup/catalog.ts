@@ -1,7 +1,7 @@
 import type { DevItem, DevItemId, DevOs, DevRecipe, DevStack, DevStackId } from './types.js';
 
 /**
- * What a developer needs to work on AgentMate and on the projects it manages, grouped into stacks
+ * What a developer needs to work on Runova and on the projects it manages, grouped into stacks
  * the user picks from. Adding a tool is one entry here: detection, install recipes per OS and the
  * dependencies between items all live in this data, so nothing else needs to learn about it.
  *
@@ -115,7 +115,7 @@ export const DEV_ITEMS: readonly DevItem[] = [
   {
     id: 'node',
     name: 'Node.js',
-    description: 'Runs JavaScript outside the browser. AgentMate and most web tooling need it.',
+    description: 'Runs JavaScript outside the browser. Runova and most web tooling need it.',
     stack: 'essentials',
     minVersion: '22.12.0',
     detect: {
@@ -171,7 +171,7 @@ export const DEV_ITEMS: readonly DevItem[] = [
   {
     id: 'pnpm',
     name: 'pnpm',
-    description: 'A faster package manager. The AgentMate repository itself is built with it.',
+    description: 'A faster package manager. The Runova repository itself is built with it.',
     stack: 'essentials',
     optional: true,
     dependsOn: ['npm'],
@@ -198,7 +198,7 @@ export const DEV_ITEMS: readonly DevItem[] = [
   {
     id: 'dotnet-sdk',
     name: '.NET SDK',
-    description: 'Builds and runs C# projects. The AgentMate server component targets .NET 10.',
+    description: 'Builds and runs C# projects. The Runova server component targets .NET 10.',
     stack: 'dotnet',
     minVersion: '10.0.100',
     detect: {
@@ -548,7 +548,7 @@ export const DEV_ITEMS: readonly DevItem[] = [
     id: 'studio-piper',
     name: 'Piper',
     description:
-      'Speaks narration on this computer, offline, in Persian and English. Installed in its own Python inside AgentMate, nothing system-wide.',
+      'Speaks narration on this computer, offline, in Persian and English. Installed in its own Python inside Runova, nothing system-wide.',
     stack: 'studio',
     optional: true,
     detect: { kind: 'resolver', id: 'studio-tool', tool: 'piper' },

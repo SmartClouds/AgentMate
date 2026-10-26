@@ -1,5 +1,6 @@
-import { quoteForShell } from '@agentmat/core';
+import { quoteForShell } from '@runova/core';
 import type { SshConnection } from '../../ssh/connection';
+import { LEGACY_CORE, RUNOVA_CORE } from '../coreLayout';
 
 /**
  * Who can open the core's socket: root, and the members of its group (the installer adds the
@@ -7,7 +8,12 @@ import type { SshConnection } from '../../ssh/connection';
  * admin of the server to add it first. Group membership only counts from the next login on.
  */
 
-export const CORE_GROUP = 'agentmate';
+export const CORE_GROUP = RUNOVA_CORE.group;
+
+/** Either name counts: a server set up before the rename has the old group until it migrates. */
+const CORE_GROUPS = [RUNOVA_CORE.group, LEGACY_CORE.group];
+
+const inCoreGroup = (names: string[]) => names.some((name) => CORE_GROUPS.includes(name));
 
 const CHECK_TIMEOUT_MS = 30_000;
 
@@ -25,13 +31,12 @@ async function groups(connection: GroupConnection, command: string): Promise<str
  * before they were added; 'missing' when they are not in it.
  */
 export async function coreGroupAccess(connection: GroupConnection): Promise<CoreGroupAccess> {
-  if ((await groups(connection, 'id -nG')).includes(CORE_GROUP)) return 'ok';
+  if (inCoreGroup(await groups(connection, 'id -nG'))) return 'ok';
   const user = quoteForShell(connection.endpoint.username, 'posix');
-  return (await groups(connection, `id -nG -- ${user}`)).includes(CORE_GROUP)
-    ? 'new-login'
-    : 'missing';
+  return inCoreGroup(await groups(connection, `id -nG -- ${user}`)) ? 'new-login' : 'missing';
 }
 
-export function coreGroupProblem(loginUser: string): string {
-  return `The server core runs here, but your login ${loginUser} cannot reach it: it is not in the ${CORE_GROUP} group. Someone with sudo on this server can add it with "sudo usermod -aG ${CORE_GROUP} ${loginUser}", then try again.`;
+/** `group` is the one the server's layout uses. */
+export function coreGroupProblem(loginUser: string, group: string = CORE_GROUP): string {
+  return `The server core runs here, but your login ${loginUser} cannot reach it: it is not in the ${group} group. Someone with sudo on this server can add it with "sudo usermod -aG ${group} ${loginUser}", then try again.`;
 }

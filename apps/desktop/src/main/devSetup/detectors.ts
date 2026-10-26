@@ -14,8 +14,8 @@ import {
   parsePackageRevision,
   parseVersion,
   type StudioToolId,
-} from '@agentmat/core';
-import { installMarkerSchema, type StudioEnvId, studioToolPaths } from '@agentmat/studio';
+} from '@runova/core';
+import { installMarkerSchema, type StudioEnvId, studioToolPaths } from '@runova/studio';
 import type { ProbeResult } from './probe';
 
 /**

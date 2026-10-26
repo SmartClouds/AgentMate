@@ -122,7 +122,7 @@ export default function App(): React.JSX.Element {
     // Usage threshold alerts prefer an OS notification; main only falls back
     // to this event when the platform has none to show. The OS notification's own
     // click already opens Usage there, so this toast gets the same shortcut.
-    const unsubscribeThresholdAlert = window.agentmat.usage.onThresholdAlert(
+    const unsubscribeThresholdAlert = window.runova.usage.onThresholdAlert(
       ({ title, body, providerId }) => {
         toast.warning(title, {
           description: body,

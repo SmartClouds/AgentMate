@@ -5,7 +5,7 @@ import {
   metersFableWeekly,
   type SubscriptionPlan,
   type SubscriptionWindow,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { UsageEntry } from './shared';
 
 // Local reconstruction of the rolling limits a Claude Code subscription is

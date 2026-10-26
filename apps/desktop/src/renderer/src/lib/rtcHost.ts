@@ -110,15 +110,15 @@ function updateHostQuality(peerId: string, sample: QualitySample): void {
 export function initRtcHost(): void {
   if (initialized) return;
   initialized = true;
-  window.agentmat.remote.onRtcSignal(({ peerId, message }) => {
+  window.runova.remote.onRtcSignal(({ peerId, message }) => {
     void handleSignal(peerId, message).catch(() => {
       closeRtcPeer(peerId);
       signal(peerId, { t: 'rtc-unavailable', reason: 'WebRTC negotiation failed on the host.' });
     });
   });
-  window.agentmat.remote.onRtcPeerGone((peerId) => closeRtcPeer(peerId));
-  window.agentmat.remote.onHostCursor((point) => broadcastCursor(point));
-  window.agentmat.remote.onPeerDisplaySize(({ peerId, width, height }) => {
+  window.runova.remote.onRtcPeerGone((peerId) => closeRtcPeer(peerId));
+  window.runova.remote.onHostCursor((point) => broadcastCursor(point));
+  window.runova.remote.onPeerDisplaySize(({ peerId, width, height }) => {
     peerDisplaySizes.set(peerId, { width, height });
   });
 }
@@ -140,7 +140,7 @@ export function closeRtcPeer(peerId: string): void {
   updateCursorTracking();
   if (peers.size === 0) setHostQuality(null);
   // Tiles resume for this peer (no-op in main if the peer already left).
-  window.agentmat.remote.rtcPeerState(peerId, false);
+  window.runova.remote.rtcPeerState(peerId, false);
 }
 
 /** Called when screen capture stops entirely: drop every video connection. */
@@ -149,7 +149,7 @@ export function closeAllRtcPeers(): void {
 }
 
 function signal(peerId: string, message: RemoteRtcMessage): void {
-  window.agentmat.remote.rtcSignal(peerId, message);
+  window.runova.remote.rtcSignal(peerId, message);
 }
 
 async function handleSignal(peerId: string, message: RemoteRtcMessage): Promise<void> {
@@ -260,7 +260,7 @@ async function startPeer(peerId: string): Promise<void> {
       // Video is flowing; main stops JPEG tiles for this peer. 'disconnected'
       // is deliberately ignored, it is usually a transient blip that returns
       // to 'connected' on its own, and tearing down would flap transports.
-      window.agentmat.remote.rtcPeerState(peerId, true);
+      window.runova.remote.rtcPeerState(peerId, true);
     } else if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
       closeRtcPeer(peerId);
     }
@@ -281,7 +281,7 @@ function onInputMessage(peerId: string, event: MessageEvent<unknown>): void {
   }
   // Main re-checks that the peer is authorized before injecting; the renderer
   // owns no authorization state.
-  window.agentmat.remote.rtcInput(peerId, parsed);
+  window.runova.remote.rtcInput(peerId, parsed);
 }
 
 // --- Cursor plane --------------------------------------------------------------
@@ -294,7 +294,7 @@ function updateCursorTracking(): void {
   const wanted = [...peers.values()].some((s) => s.cursor?.readyState === 'open');
   if (wanted === cursorTracking) return;
   cursorTracking = wanted;
-  window.agentmat.remote.setCursorTracking(wanted);
+  window.runova.remote.setCursorTracking(wanted);
 }
 
 function broadcastCursor(point: { x: number; y: number; visible: boolean }): void {

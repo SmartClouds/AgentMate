@@ -18,17 +18,17 @@ RUN apt-get update \
  && useradd -m -s /bin/bash ftpuser \
  && echo 'ftpuser:ftp-s3cret' | chpasswd \
  && mkdir -p /etc/proftpd/tls /var/run/vsftpd/empty /var/log/proftpd \
- && openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -subj '/CN=agentmate-e2e-ftp' \
-      -addext 'subjectAltName=DNS:localhost,DNS:agentmate-e2e-ftp,IP:127.0.0.1' \
+ && openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -subj '/CN=runova-e2e-ftp' \
+      -addext 'subjectAltName=DNS:localhost,DNS:runova-e2e-ftp,IP:127.0.0.1' \
       -keyout /etc/proftpd/tls/key.pem -out /etc/proftpd/tls/cert.pem \
  && chmod 0600 /etc/proftpd/tls/key.pem \
  && ssh-keygen -q -m PEM -t rsa -b 2048 -N '' -f /etc/proftpd/ssh_host_rsa_key \
  && chmod 0600 /etc/proftpd/ssh_host_rsa_key
-COPY proftpd.conf /etc/proftpd/agentmate.conf
-COPY vsftpd.conf /etc/vsftpd-agentmate.conf
+COPY proftpd.conf /etc/proftpd/runova.conf
+COPY vsftpd.conf /etc/vsftpd-runova.conf
 COPY entrypoint.sh /entrypoint.sh
 # A Windows checkout may turn these into CRLF, which breaks the shebang and vsftpd's YES values.
-RUN sed -i 's/\r$//' /entrypoint.sh /etc/proftpd/agentmate.conf /etc/vsftpd-agentmate.conf \
+RUN sed -i 's/\r$//' /entrypoint.sh /etc/proftpd/runova.conf /etc/vsftpd-runova.conf \
  && chmod +x /entrypoint.sh
 EXPOSE 21 2121 2222
 ENTRYPOINT ["/entrypoint.sh"]

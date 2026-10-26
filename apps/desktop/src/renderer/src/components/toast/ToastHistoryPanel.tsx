@@ -1,5 +1,5 @@
-import type { Project } from '@agentmat/core';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
+import type { Project } from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -122,7 +122,7 @@ export function ToastHistoryPanel(): React.JSX.Element {
   const navigate = useNavigate();
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   });
   const projectsById = useMemo(
     () => new Map((projectsQuery.data ?? []).map((project) => [project.id, project])),

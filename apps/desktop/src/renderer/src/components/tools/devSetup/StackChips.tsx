@@ -1,4 +1,4 @@
-import type { DevStack } from '@agentmat/core';
+import type { DevStack } from '@runova/core';
 import { Lock } from '@/components/icons';
 import { FilterChip, GLASS_CARD } from '@/components/pageKit';
 import { SimpleTooltip } from '@/components/ui/tooltip';

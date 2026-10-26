@@ -1,6 +1,6 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import type { StudioSecretsHost } from '@agentmat/studio/node';
+import type { StudioSecretsHost } from '@runova/studio/node';
 
 /**
  * Studio's own keys (ElevenLabs, Azure Speech), sealed with the app's vault and kept in

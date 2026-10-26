@@ -1,11 +1,11 @@
 import { serializeCsv } from './csv.js';
 import type { VaultEntry } from './entries.js';
-import { AGENTMATE_CSV_COLUMNS, BITWARDEN_CSV_COLUMNS } from './importers.js';
+import { BITWARDEN_CSV_COLUMNS, RUNOVA_CSV_COLUMNS } from './importers.js';
 
-export type VaultExportFormat = 'agentmate' | 'bitwarden';
+export type VaultExportFormat = 'runova' | 'bitwarden';
 
-function agentMateRow(entry: VaultEntry): string[] {
-  const row: Record<(typeof AGENTMATE_CSV_COLUMNS)[number], string> = {
+function runovaRow(entry: VaultEntry): string[] {
+  const row: Record<(typeof RUNOVA_CSV_COLUMNS)[number], string> = {
     type: entry.type,
     title: entry.title,
     username: entry.type === 'login' ? entry.username : '',
@@ -29,7 +29,7 @@ function agentMateRow(entry: VaultEntry): string[] {
           )
         : '',
   };
-  return AGENTMATE_CSV_COLUMNS.map((column) => row[column]);
+  return RUNOVA_CSV_COLUMNS.map((column) => row[column]);
 }
 
 function bitwardenRow(entry: VaultEntry): string[] {
@@ -76,7 +76,7 @@ function bitwardenRow(entry: VaultEntry): string[] {
 
 /** Plain text CSV. Anyone who can read the file can read every password in it. */
 export function exportEntriesCsv(entries: VaultEntry[], format: VaultExportFormat): string {
-  const header = format === 'agentmate' ? [...AGENTMATE_CSV_COLUMNS] : [...BITWARDEN_CSV_COLUMNS];
-  const rows = entries.map(format === 'agentmate' ? agentMateRow : bitwardenRow);
+  const header = format === 'runova' ? [...RUNOVA_CSV_COLUMNS] : [...BITWARDEN_CSV_COLUMNS];
+  const rows = entries.map(format === 'runova' ? runovaRow : bitwardenRow);
   return serializeCsv([header, ...rows]);
 }

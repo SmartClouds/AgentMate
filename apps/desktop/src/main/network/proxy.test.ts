@@ -1,6 +1,6 @@
 import { request as httpRequest } from 'node:http';
-import type { ProxySettings } from '@agentmat/core';
-import { defaultProxySettings } from '@agentmat/core';
+import type { ProxySettings } from '@runova/core';
+import { defaultProxySettings } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { electronState } from '../../test/main/electronMock';
 import { json, type LocalServer, startHttpServer } from '../../test/main/fixtures';

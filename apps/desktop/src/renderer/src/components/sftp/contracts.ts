@@ -64,7 +64,7 @@ export interface PropertiesDialogProps {
 /** RemoteEditorDialog.tsx: a remote text file in Monaco, loaded lazily. */
 export interface RemoteEditorDialogProps {
   open: boolean;
-  /** The session to read and save through (`window.agentmat.sftp.readText` and `writeText`). */
+  /** The session to read and save through (`window.runova.sftp.readText` and `writeText`). */
   sessionId: string;
   /**
    * The saved server the file is on. When given, unsaved edits are kept under it and the path

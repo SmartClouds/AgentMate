@@ -1,4 +1,4 @@
-import { type AgentStatus, type AutoContinuePending, catalogModelForApiId } from '@agentmat/core';
+import { type AgentStatus, type AutoContinuePending, catalogModelForApiId } from '@runova/core';
 import type {
   AgentRunInfo,
   AgentRunInfoMap,
@@ -151,7 +151,7 @@ let started = false;
 export function initAgentStatus(): void {
   if (started) return;
   started = true;
-  const agents = window.agentmat.agents;
+  const agents = window.runova.agents;
   prepareStatusHooks(['claude-code']);
 
   agents.onStatus((changes) => {

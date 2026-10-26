@@ -1,4 +1,4 @@
-import type { HealthProbeState, HealthSample } from '@agentmat/core';
+import type { HealthProbeState, HealthSample } from '@runova/core';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { formatClock, formatLatency, HEALTH_STATE_META, healthBucket } from './healthView';

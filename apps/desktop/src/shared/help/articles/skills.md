@@ -11,7 +11,7 @@ A skill is a folder of instructions (usually a `SKILL.md` file) that an AI agent
 
 ## Where to find it
 
-Click **Skills** in the sidebar under **Agents**, or open the command palette and type "Skills". The page title reads **Skill Marketplace**. The command palette also searches the skills in your repositories: pick one and AgentMate opens the Skills page with that repository and skill name carried into the **Repositories** tab's filter.
+Click **Skills** in the sidebar under **Agents**, or open the command palette and type "Skills". The page title reads **Skill Marketplace**. The command palette also searches the skills in your repositories: pick one and Runova opens the Skills page with that repository and skill name carried into the **Repositories** tab's filter.
 
 Installed skills also show up in a project's **Skills** tab (see [Projects](projects.md)), and **Settings** under **General** has a **Skill repositories** card with a **Manage** button that jumps here.
 
@@ -47,9 +47,9 @@ Each card shows the skill name, a short description, **Official** or **Community
 
 ## Repositories
 
-The **Repositories** tab is for skills you collect yourself. A repository is a source of skills that AgentMate indexes for you.
+The **Repositories** tab is for skills you collect yourself. A repository is a source of skills that Runova indexes for you.
 
-If you have no repositories yet, AgentMate adds one called **AgentMate Examples** that lives on your machine and holds three sample skills (Code Review Checklist, Commit Message Guide and Caveman).
+If you have no repositories yet, Runova adds one called **Runova Examples** that lives on your machine and holds three sample skills (Code Review Checklist, Commit Message Guide and Caveman).
 
 ### Add a repository
 
@@ -57,7 +57,7 @@ If you have no repositories yet, AgentMate adds one called **AgentMate Examples*
 2. Enter a **Name**. For a local folder you can leave it empty to use the folder name.
 3. Choose the **Type**:
    - **Local folder**: a folder on your computer. Type or paste the path, or click the folder icon to browse. The dialog checks the folder and tells you how many skills it found. A folder of skills can be subfolders that each hold a `SKILL.md`, or plain `.md` files. A `repository.json` file is optional.
-   - **Git repository**: a URL such as `https://github.com/org/skills.git`. AgentMate clones it and pulls updates when you refresh.
+   - **Git repository**: a URL such as `https://github.com/org/skills.git`. Runova clones it and pulls updates when you refresh.
    - **URL (JSON index)**: a link to a `repository.json` index file.
 4. Click **Add**. For git and URL sources a name is required.
 
@@ -66,7 +66,7 @@ Local folders are watched, so adding or deleting a skill in the folder updates t
 ### Browse a repository
 
 - The **Repository** picker defaults to **All repositories**, which puts every repository's skills in one grid. Pick a single repository to narrow it down. In the all view, a repository name on a card is a link that switches to that repository.
-- The refresh button re-reads the selected repository (or all of them). The trash button removes the selected repository from AgentMate (skills already installed stay where they are).
+- The refresh button re-reads the selected repository (or all of them). The trash button removes the selected repository from Runova (skills already installed stay where they are).
 - **Search** filters by name, description, category, tag or repository name.
 - Each card shows the name, category, tags, author and version, and the last security check result. Buttons: the star, **Install**, the shield (security check) and **Docs** when the skill has a documentation link.
 - If a repository cannot be read, its name and the error appear in red above the grid.
@@ -82,8 +82,8 @@ Clicking **Install** on any card opens an **Install <skill>** dialog.
 
 What happens next depends on where the skill came from:
 
-- **From a repository** (including the example repository): AgentMate copies the skill files straight into each project's agent skills folder. It uses the folders the project already has (for example `.claude/skills`, `.agents/skills`, `.codex/skills` or `.cursor/skills`), or falls back to the default for the project's agent type. A global install goes into `~/.claude/skills`. You get an "Installed to N locations" message.
-- **From skills.sh**: AgentMate opens a terminal for each place you picked and types the exact install command skills.sh publishes. Press `Enter` in each terminal to run it. A global install runs the same command from your home folder.
+- **From a repository** (including the example repository): Runova copies the skill files straight into each project's agent skills folder. It uses the folders the project already has (for example `.claude/skills`, `.agents/skills`, `.codex/skills` or `.cursor/skills`), or falls back to the default for the project's agent type. A global install goes into `~/.claude/skills`. You get an "Installed to N locations" message.
+- **From skills.sh**: Runova opens a terminal for each place you picked and types the exact install command skills.sh publishes. Press `Enter` in each terminal to run it. A global install runs the same command from your home folder.
 
 > [!NOTE]
 > Skills.sh installs need Node.js, since the command runs through `npx`.
@@ -100,7 +100,7 @@ Updates to a project's skills are shown in that project's **Skills** tab, with t
 
 ## Featured: UI UX Pro Max
 
-The **Featured** tab holds skills that come with their own installer, so AgentMate walks you through the installer instead of copying a folder. Right now that is **UI UX Pro Max**, a design skill that turns a product description into a design system and keeps the assistant on it while it writes UI code.
+The **Featured** tab holds skills that come with their own installer, so Runova walks you through the installer instead of copying a folder. Right now that is **UI UX Pro Max**, a design skill that turns a product description into a design system and keeps the assistant on it while it writes UI code.
 
 The card has these buttons:
 
@@ -124,7 +124,7 @@ Click the star on a skill to favorite it. A star works on cards in the Directory
 
 ## Usage
 
-The **Usage** tab shows which skills your agents actually invoked. It reads the Claude Code session transcripts on your machine, so it counts every run, whether you started the session from AgentMate or from another terminal. Nothing leaves your computer. The first scan reads every session and can take a moment. Click **Rescan** to read new activity, and the header shows how many sessions were read and when.
+The **Usage** tab shows which skills your agents actually invoked. It reads the Claude Code session transcripts on your machine, so it counts every run, whether you started the session from Runova or from another terminal. Nothing leaves your computer. The first scan reads every session and can take a moment. Click **Rescan** to read new activity, and the header shows how many sessions were read and when.
 
 - Four tiles show **Skills used**, **Total invocations**, **Last 7 days** and **Last used**.
 - A **Last 30 days** bar chart shows invocations per day. Hover a bar for the exact count.
@@ -138,7 +138,7 @@ If there are no transcripts yet, or none that used a skill, the tab says so.
 
 ## Security checks
 
-A skill is text an agent will follow, so a bad one can do real harm. AgentMate can scan a skill's files for risky instructions without installing or running anything.
+A skill is text an agent will follow, so a bad one can do real harm. Runova can scan a skill's files for risky instructions without installing or running anything.
 
 ### What it looks for
 
@@ -163,12 +163,12 @@ Turn on **Deep review with an agent CLI** to send the skill's text to an install
 At the top of the **Security** tab, **Check any skill** scans something that is not installed or added as a repository:
 
 1. Type or paste a folder path or a GitHub address, or click the folder icon to browse. A GitHub link can point at the repository, a branch or the skill's own folder. Short forms like `owner/repo`, a skills.sh address, or a whole `npx skills add ...` command work too.
-2. AgentMate lists the skills it finds there (**N skills found**).
+2. Runova lists the skills it finds there (**N skills found**).
 3. Click **Check** on one, or **Check all (N)** to scan them one after another with progress ("Checking 3 of 12"). **Open** appears instead of **Check** when a skill already has a result.
 
 The deep-review switch applies to the whole **Check all** run, and it runs the CLI once per skill, so it can take a long time.
 
-A project's **Skills** tab has the same **Check all** and deep review options for the skills installed there, and an "Also in this project" list for skills that came with the repository rather than from AgentMate.
+A project's **Skills** tab has the same **Check all** and deep review options for the skills installed there, and an "Also in this project" list for skills that came with the repository rather than from Runova.
 
 ### Check history
 

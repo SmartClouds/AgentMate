@@ -1,4 +1,4 @@
-import type { Project, WorktreeInfo } from '@agentmat/core';
+import type { Project, WorktreeInfo } from '@runova/core';
 import type { CreateWorktreeInput, CreateWorktreeResult } from '@shared/apiTypes';
 import { asWorkspaceProject, type WorkspaceProject } from './scope';
 

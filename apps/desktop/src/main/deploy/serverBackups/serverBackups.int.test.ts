@@ -2,13 +2,13 @@ import { execFileSync } from 'node:child_process';
 import { createWriteStream, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import type {
   BackupRunInfo,
   JobInfo,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { tempDir } from '../../../test/main/fixtures';
 import { SshConnectionPool } from '../../ssh/pool';
 import { localArtifactSource } from '../bootstrap/releaseSource';
@@ -39,7 +39,7 @@ import {
  *   container, and reports the stack file that still names the old address. The restored plan is
  *   scheduled again on the new server.
  *
- * Needs AGENTMATE_SYSTEM_TESTS=1, Docker, network access from the test servers (Docker's packages
+ * Needs RUNOVA_SYSTEM_TESTS=1, Docker, network access from the test servers (Docker's packages
  * and the backup helper image) and `pnpm server-core:publish linux-x64`.
  */
 
@@ -53,7 +53,7 @@ const PASSWORD = 'correct horse battery staple';
 const SECRET = 'violet harbor lantern pebble';
 const OLD_ADDRESS = '203.0.113.10';
 const NEW_ADDRESS = '203.0.113.20';
-const FOLDER = '/var/backups/agentmate-e28';
+const FOLDER = '/var/backups/runova-e28';
 
 const COMPOSE = `services:
   web:
@@ -89,7 +89,7 @@ afterEach((context) => {
 });
 
 /** A network in the documentation range, which the core counts as public. */
-const PUBLIC_NETWORK = `agentmate-e28-public-${process.pid}`;
+const PUBLIC_NETWORK = `runova-e28-public-${process.pid}`;
 
 function joinPublicNetwork(server: TestServer, address: string): void {
   try {
@@ -242,7 +242,7 @@ describe.skipIf(!enabled)('server backups on real servers', () => {
         loadImage(first.server, 'busybox:1.37');
 
         // A stack with data in a volume, and a container outside any stack with its own.
-        const folder = tempDir('agentmate-backup-system-');
+        const folder = tempDir('runova-backup-system-');
         for (const [path, content] of Object.entries({ 'compose.yaml': COMPOSE })) {
           mkdirSync(dirname(join(folder, path)), { recursive: true });
           writeFileSync(join(folder, path), content);
@@ -337,9 +337,7 @@ describe.skipIf(!enabled)('server backups on real servers', () => {
           (fetch) => fetch.state !== 'running',
         );
         expect(fetched.state, fetched.error).toBe('succeeded');
-        expect(fetched.path).toMatch(
-          /^\/var\/lib\/agentmate-core\/backups\/[0-9a-f]{32}\.ambackup$/,
-        );
+        expect(fetched.path).toMatch(/^\/var\/lib\/runova-core\/backups\/[0-9a-f]{32}\.ambackup$/);
         const file = join(tempDir(), 'server.ambackup');
         await first.service.withCoreHttp('srv', (client, token) =>
           client.download(`/api/v1/backups/${fetched.backupId}`, createWriteStream(file), {
@@ -411,7 +409,7 @@ describe.skipIf(!enabled)('server backups on real servers', () => {
         expect(second.server.run('docker exec keeper cat /data/note')).toBe('kept');
         // Nothing waits any more, and the plan is on the new server's schedule.
         expect(
-          second.server.run('test -d /var/lib/agentmate-core/server && echo left || echo gone'),
+          second.server.run('test -d /var/lib/runova-core/server && echo left || echo gone'),
         ).toBe('gone');
         const plans = await second.hub((hub) => hub.listBackupPlans());
         expect(plans.map((p) => [p.name, p.keepLast])).toEqual([['Nightly', 2]]);

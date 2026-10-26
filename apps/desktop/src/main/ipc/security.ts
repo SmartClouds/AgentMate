@@ -5,8 +5,8 @@ import type {
   SecurityScannerSettings,
   SecurityScanOptions,
   SecurityScanRecord,
-} from '@agentmat/core';
-import { DEFAULT_SCAN_OPTIONS } from '@agentmat/core';
+} from '@runova/core';
+import { DEFAULT_SCAN_OPTIONS } from '@runova/core';
 import { ipcMain, shell } from 'electron';
 import type { ActiveScan } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';
@@ -174,7 +174,7 @@ export function registerSecurityHandlers(): void {
   );
 
   // --- CodeQL local install ---
-  // CodeQL has no package manager on Windows or Linux, so AgentMate fetches the release zip
+  // CodeQL has no package manager on Windows or Linux, so Runova fetches the release zip
   // itself rather than leaving the Install button with nothing to run.
 
   ipcMain.handle(IPC.security.codeqlStatus, (): Promise<CodeqlLocalStatus> => getCodeqlStatus());

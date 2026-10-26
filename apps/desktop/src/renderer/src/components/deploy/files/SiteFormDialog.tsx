@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { SshSavedServer } from '@shared/apiTypes';
 import { filesError } from '@shared/deployFilesErrors';
 import type { FileSite, FileSiteProtocol, FilesTestResult } from '@shared/deployFilesTypes';
@@ -155,13 +155,13 @@ export function SiteFormDialog({
 
   const servers = useQuery({
     queryKey: queryKeys.sshServers,
-    queryFn: async (): Promise<SshSavedServer[]> => (await window.agentmat.ssh.listServers()) ?? [],
+    queryFn: async (): Promise<SshSavedServer[]> => (await window.runova.ssh.listServers()) ?? [],
     enabled: open,
     meta: QUIET,
   });
   const projects = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: async (): Promise<Project[]> => (await window.agentmat.projects.list()) ?? [],
+    queryFn: async (): Promise<Project[]> => (await window.runova.projects.list()) ?? [],
     enabled: open,
     meta: QUIET,
   });
@@ -228,7 +228,7 @@ export function SiteFormDialog({
     const seen: { last: FilesTestResult | null } = { last: null };
     const attempt = async (): Promise<FilesTestResult> => {
       seen.last = null;
-      const result = await window.agentmat.deployFiles.test({
+      const result = await window.runova.deployFiles.test({
         siteId: site?.id ?? null,
         site: input,
       });
@@ -287,7 +287,7 @@ export function SiteFormDialog({
       return;
     }
     try {
-      await window.agentmat.ssh.trustHostKey(draft.sshServerId, fingerprint);
+      await window.runova.ssh.trustHostKey(draft.sshServerId, fingerprint);
     } catch (error) {
       setTestFailure(filesProblem(error));
       return;
@@ -317,8 +317,8 @@ export function SiteFormDialog({
     try {
       const input = draftToInput(draft, savedServer?.nickname);
       const saved = site
-        ? await window.agentmat.deployFiles.update(site.id, input)
-        : await window.agentmat.deployFiles.create(input);
+        ? await window.runova.deployFiles.update(site.id, input)
+        : await window.runova.deployFiles.create(input);
       toast.success(site ? `Saved ${saved.label}.` : `Added ${saved.label}.`);
       void queryClient.invalidateQueries({ queryKey: queryKeys.deployFilesSites });
       setDraft((current) => ({ ...current, secret: '' }));
@@ -353,12 +353,12 @@ export function SiteFormDialog({
 
   async function pickLocalFolder(): Promise<void> {
     const start = draft.localFolder.trim() || sourceProject?.folderPath || null;
-    const picked = await window.agentmat.deployFiles.pickLocalFolder(start);
+    const picked = await window.runova.deployFiles.pickLocalFolder(start);
     if (picked) set('localFolder', picked);
   }
 
   async function pickKeyFile(): Promise<void> {
-    const picked = await window.agentmat.ssh.pickPrivateKeyFile();
+    const picked = await window.runova.ssh.pickPrivateKeyFile();
     if (picked) set('privateKeyPath', picked);
   }
 

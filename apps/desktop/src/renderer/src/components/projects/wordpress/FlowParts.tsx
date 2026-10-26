@@ -1,4 +1,4 @@
-import type { WpHealthCheck } from '@agentmat/core';
+import type { WpHealthCheck } from '@runova/core';
 import type { DeployWordPressWarning } from '@shared/deployWordPressTypes';
 import type { WordPressErrorCode } from '@shared/wordpressErrors';
 import { CircleCheck, CircleInfo, CircleX, TriangleAlert } from '@/components/icons';

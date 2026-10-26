@@ -5,7 +5,7 @@ import {
   type UsageProviderConfig,
   type UsageSegment,
   type UsageTokens,
-} from '@agentmat/core';
+} from '@runova/core';
 
 // Cursor usage, read from the Cursor Admin API. Cursor keeps nothing usable on
 // disk: `~/.cursor` holds settings, extensions and an AI-edit-tracking DB, but

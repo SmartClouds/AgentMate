@@ -98,7 +98,7 @@ function setup(overrides: Partial<SftpServiceDeps> = {}) {
   const sent: Sent[] = [];
   const awake: boolean[] = [];
   const localBrowse = new LocalBrowseRegistry();
-  const temp = tempDir('agentmate-sftp-service-');
+  const temp = tempDir('runova-sftp-service-');
   const service = new SftpService({
     pool: server.pool,
     findServer: async (serverId) => SERVERS[serverId] ?? null,

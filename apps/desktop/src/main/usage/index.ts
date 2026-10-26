@@ -3,7 +3,7 @@ import {
   type ProviderUsage,
   USAGE_PROVIDER_REGISTRY,
   type UsageProviderConfig,
-} from '@agentmat/core';
+} from '@runova/core';
 import { fetchApiProviderUsage } from './apiProviders';
 import { clearLiveWindowCache } from './claudeAccount';
 import { fetchCopilotUsage } from './copilot';

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import type { RunAssessment } from '@agentmat/core';
-import { recommendationFromAssessment, runProfileForTargetAI } from '@agentmat/core';
+import type { RunAssessment } from '@runova/core';
+import { recommendationFromAssessment, runProfileForTargetAI } from '@runova/core';
 import { act, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import {

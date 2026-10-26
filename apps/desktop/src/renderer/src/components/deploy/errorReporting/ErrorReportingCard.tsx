@@ -37,7 +37,7 @@ export function ErrorReportingCard({
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: queryKeys.deployErrorReporting(serverId),
-    queryFn: () => window.agentmat.deployErrorReporting.status(serverId),
+    queryFn: () => window.runova.deployErrorReporting.status(serverId),
     retry: false,
   });
   const stepUp = useProofStepUp(server);
@@ -57,7 +57,7 @@ export function ErrorReportingCard({
     setProblems([]);
     try {
       const result = await stepUp.run(
-        (proof) => window.agentmat.deployErrorReporting.save({ serverId, ...values, ...proof }),
+        (proof) => window.runova.deployErrorReporting.save({ serverId, ...values, ...proof }),
         'change error reporting',
       );
       if (!result) return false;
@@ -92,7 +92,7 @@ export function ErrorReportingCard({
     setBusy('remove');
     try {
       const next = await stepUp.run(
-        (proof) => window.agentmat.deployErrorReporting.remove({ serverId, ...proof }),
+        (proof) => window.runova.deployErrorReporting.remove({ serverId, ...proof }),
         'remove error reporting',
       );
       if (!next) return;
@@ -109,7 +109,7 @@ export function ErrorReportingCard({
     setTesting(true);
     setTested(null);
     try {
-      setTested(await window.agentmat.deployErrorReporting.test(serverId));
+      setTested(await window.runova.deployErrorReporting.test(serverId));
       void query.refetch();
     } catch (error) {
       toast.error(coreErrorMessage(error));

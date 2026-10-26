@@ -1,4 +1,4 @@
-import type { DevArch, DevOs } from '@agentmat/core';
+import type { DevArch, DevOs } from '@runova/core';
 import { describe, expect, it, vi } from 'vitest';
 import type { CancelToken } from '../../process/spawnStreaming';
 import { createFlutterInstaller, type FlutterInstallerDeps } from './flutterInstaller';
@@ -40,10 +40,10 @@ const WIN = {
   os: 'win32' as const,
   arch: 'x64' as const,
   home: 'C:\\Users\\me',
-  workDir: 'C:\\Users\\me\\AppData\\Roaming\\AgentMate\\tools\\dev-setup',
+  workDir: 'C:\\Users\\me\\AppData\\Roaming\\Runova\\tools\\dev-setup',
 };
 const ROOT = 'C:\\Users\\me\\develop\\flutter';
-const STAGING = 'C:\\Users\\me\\develop\\.agentmate-flutter-abc123';
+const STAGING = 'C:\\Users\\me\\develop\\.runova-flutter-abc123';
 const ARCHIVE = `${WIN.workDir}\\flutter-3.47.7.zip`;
 /** Where the download goes until it has finished, so a half-downloaded file never looks whole. */
 const PART = `${ARCHIVE}.part`;
@@ -92,7 +92,7 @@ function world(options: Options = {}) {
   let abort: (() => void) | null = null;
   let hashChecks = 0;
   const hashed: string[] = [];
-  const stageDir = env.os === 'win32' ? STAGING : `${env.home}/develop/.agentmate-flutter-abc123`;
+  const stageDir = env.os === 'win32' ? STAGING : `${env.home}/develop/.runova-flutter-abc123`;
   const root = env.os === 'win32' ? ROOT : `${env.home}/develop/flutter`;
   const flutterBin = env.os === 'win32' ? FLUTTER_BAT : `${root}/bin/flutter`;
 
@@ -299,7 +299,7 @@ describe('a clean install', () => {
         os: 'linux',
         arch: 'x64',
         home: '/home/me',
-        workDir: '/home/me/.config/AgentMate/tools/dev-setup',
+        workDir: '/home/me/.config/Runova/tools/dev-setup',
       },
     });
 
@@ -310,7 +310,7 @@ describe('a clean install', () => {
       'download:https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.47.7-stable.tar.xz',
     );
     expect(w.calls).toContain(
-      'rename:/home/me/develop/.agentmate-flutter-abc123/flutter->/home/me/develop/flutter',
+      'rename:/home/me/develop/.runova-flutter-abc123/flutter->/home/me/develop/flutter',
     );
     expect(w.calls).toContain('path:/home/me/develop/flutter/bin');
     expect(w.calls).toContain('run:/home/me/develop/flutter/bin/flutter --version');
@@ -818,7 +818,7 @@ describe('updating the Flutter that is there', () => {
     expect(w.deps.addToUserPath).not.toHaveBeenCalled();
   });
 
-  it('uses the copy AgentMate installed when none was named', async () => {
+  it('uses the copy Runova installed when none was named', async () => {
     const w = world({ existing: [FLUTTER_BAT, `${ROOT}\\.git`] });
 
     expect(await w.update()).toEqual(OK);

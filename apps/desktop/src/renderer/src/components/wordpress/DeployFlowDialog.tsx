@@ -1,4 +1,4 @@
-import type { WpItemRef, WpPlannedChange } from '@agentmat/core';
+import type { WpItemRef, WpPlannedChange } from '@runova/core';
 import type { DeployWordPressPlan } from '@shared/deployWordPressTypes';
 import { wordPressErrorCode, wordPressErrorMessage } from '@shared/wordpressErrors';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -94,13 +94,13 @@ export function DeployFlowDialog({
 
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
     enabled: open,
   });
   const project = projectsQuery.data?.find((candidate) => candidate.id === projectId);
   const sitesQuery = useQuery({
     queryKey: queryKeys.deployWordPressSites,
-    queryFn: () => window.agentmat.deployWordPress.listSites(),
+    queryFn: () => window.runova.deployWordPress.listSites(),
     enabled: open,
     meta: SILENT,
   });
@@ -118,7 +118,7 @@ export function DeployFlowDialog({
     const request = planRequest.current;
     setUpdating(true);
     try {
-      const next = await window.agentmat.deployWordPress.planDeploy({
+      const next = await window.runova.deployWordPress.planDeploy({
         projectId,
         ...(items ? { items } : {}),
       });
@@ -185,7 +185,7 @@ export function DeployFlowDialog({
     setAcknowledged(false);
     setOperationId(null);
     try {
-      const next = await window.agentmat.deployWordPress.planDeploy({
+      const next = await window.runova.deployWordPress.planDeploy({
         projectId,
         ...(items ? { items } : {}),
       });
@@ -397,7 +397,7 @@ export function DeployFlowDialog({
                 </li>
               ) : null}
               <li className="text-muted-foreground">
-                Agent settings and AgentMate's own files stay on this computer.
+                Agent settings and Runova's own files stay on this computer.
               </li>
             </ul>
           ) : null}

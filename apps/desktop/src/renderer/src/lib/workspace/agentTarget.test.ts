@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { PaneNode } from '@agentmat/core';
+import type { PaneNode } from '@runova/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProjectWorkspace, WorkspaceTab } from '@/stores/workspaceStore';
 import {

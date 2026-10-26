@@ -3,7 +3,7 @@ import { createEmulatorSource, type EmulatorSourceDeps, type TreeUsage } from '.
 
 /**
  * The emulator reader has two jobs that go wrong quietly: never touching adb when no server is
- * running (asking adb would start one), and finding the process behind an emulator AgentMate did
+ * running (asking adb would start one), and finding the process behind an emulator Runova did
  * not launch. Both are exercised through fakes here.
  */
 
@@ -100,7 +100,7 @@ describe('emulator source', () => {
     expect(only).toMatchObject({ cpuPercent: null, measurable: true });
   });
 
-  it('prefers the pid AgentMate recorded and skips the port lookup', async () => {
+  it('prefers the pid Runova recorded and skips the port lookup', async () => {
     const { deps, read } = setup({
       launchedPids: vi.fn(() => new Map([['emulator-5554', 999]])),
     });

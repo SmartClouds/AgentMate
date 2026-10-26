@@ -1,7 +1,7 @@
 import type {
   ChecklistFix,
   ChecklistStatus,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /** What each status says in words, so it never rests on colour alone. */
 export const STATUS_WORD: Record<ChecklistStatus, string> = {

@@ -1,4 +1,4 @@
-import { noProxyEnvValue, type ProxySettings, proxyEnvUrl } from '@agentmat/core';
+import { noProxyEnvValue, type ProxySettings, proxyEnvUrl } from '@runova/core';
 import type { EngineProxy } from './engine/types';
 
 /**

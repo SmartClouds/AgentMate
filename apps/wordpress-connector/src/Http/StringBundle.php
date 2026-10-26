@@ -2,10 +2,10 @@
 /**
  * A bundle already in memory (tests, and the rescue path later on).
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Http;
+namespace Runova\Connector\Http;
 
 final class StringBundle implements Bundle
 {

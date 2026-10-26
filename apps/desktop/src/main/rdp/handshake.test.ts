@@ -186,7 +186,7 @@ describe('handshake', () => {
     expect(server.connections()).toBe(1);
     expect(failure.code).toBe('tls-failed');
     expect(failure.message).toBe(
-      `AgentMate couldn't set up a secure connection with 127.0.0.1:${server.port}.`,
+      `Runova couldn't set up a secure connection with 127.0.0.1:${server.port}.`,
     );
     expect(failure.detail).toBe('certificate verify failed (SSL routines)');
   });

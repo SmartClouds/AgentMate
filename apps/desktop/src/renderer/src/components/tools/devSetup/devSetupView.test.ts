@@ -5,7 +5,7 @@ import {
   type DevItemJob,
   type DevSetupEnvironment,
   type DevUpdateCheck,
-} from '@agentmat/core';
+} from '@runova/core';
 import { describe, expect, it } from 'vitest';
 import {
   describeInstallAll,

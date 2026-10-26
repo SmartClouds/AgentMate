@@ -4,7 +4,7 @@ import type { SupportedOS } from '../cli/registry.js';
  * CodeQL is the one scanner with no package manager behind it on most platforms: Homebrew has a
  * cask for macOS, but there is no winget, chocolatey or apt package, so the documented install is
  * "download a zip and put it on your PATH". That is a poor thing to ask of someone who just wants
- * to scan a project, so AgentMate can fetch and unpack it into its own tools folder instead, the
+ * to scan a project, so Runova can fetch and unpack it into its own tools folder instead, the
  * same place LanguageTool lives.
  *
  * Nothing here touches the filesystem or the network; it only works out the names and URLs, so the
@@ -15,7 +15,7 @@ export const CODEQL_TOOL_ID = 'codeql';
 export const CODEQL_REPO = 'github/codeql-cli-binaries';
 export const CODEQL_LATEST_RELEASE_API = `https://api.github.com/repos/${CODEQL_REPO}/releases/latest`;
 
-/** The folder the zip unpacks into, and the folder AgentMate keeps it in. */
+/** The folder the zip unpacks into, and the folder Runova keeps it in. */
 export const CODEQL_INSTALL_DIRNAME = 'codeql';
 
 /**
@@ -78,7 +78,7 @@ export interface CodeqlInstallProgress {
 }
 
 export interface CodeqlLocalStatus {
-  /** True when a managed copy is unpacked in AgentMate's tools folder. */
+  /** True when a managed copy is unpacked in Runova's tools folder. */
   installed: boolean;
   /** Absolute path to the managed binary, or null. */
   path: string | null;

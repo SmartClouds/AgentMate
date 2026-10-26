@@ -1,4 +1,4 @@
-import { DEFAULT_REVIEW_COMMANDS } from '@agentmat/core';
+import { DEFAULT_REVIEW_COMMANDS } from '@runova/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Plus, X } from '@/components/icons';
@@ -14,14 +14,14 @@ export function ReviewCommandsSettings(): React.JSX.Element {
   const queryClient = useQueryClient();
   const settings = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
   });
   const commands = settings.data?.reviewCommands ?? [...DEFAULT_REVIEW_COMMANDS];
   const [draft, setDraft] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
 
   const mutation = useMutation({
-    mutationFn: (next: string[]) => window.agentmat.settings.update({ reviewCommands: next }),
+    mutationFn: (next: string[]) => window.runova.settings.update({ reviewCommands: next }),
     meta: { silentLoading: true },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.settings }),
   });

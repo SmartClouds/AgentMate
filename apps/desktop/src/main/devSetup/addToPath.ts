@@ -1,5 +1,5 @@
 import { posix, win32 } from 'node:path';
-import type { DevDetection, DevItemId, DevOs } from '@agentmat/core';
+import type { DevDetection, DevItemId, DevOs } from '@runova/core';
 import type { UserPathResult } from './userPath';
 
 /**

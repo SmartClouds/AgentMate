@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ContainerLogLine } from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { ContainerLogLine } from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { containerStatsSample, logLine } from '../../../shared/deploy/testing/fakeDockerData';
 import { IPC } from '../../../shared/ipcChannels';
 import type { ConsoleFeedEvents, ContainerLogsFeedEvents, StatsListener } from './dockerFeeds';

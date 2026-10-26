@@ -1,4 +1,4 @@
-import { findGroup, getCliDefinition, type Project } from '@agentmat/core';
+import { findGroup, getCliDefinition, type Project } from '@runova/core';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -34,7 +34,7 @@ const STEPS = [
   },
   {
     title: 'It suggests a command',
-    detail: 'The suggestion comes back to AgentMate. Nothing is saved at this point.',
+    detail: 'The suggestion comes back to Runova. Nothing is saved at this point.',
   },
   {
     title: 'You review and add it',
@@ -69,7 +69,7 @@ export function CreateRunWithAiDialog({
   const [request, setRequest] = useState(DEFAULT_RUN_SETUP_REQUEST);
   const [busy, setBusy] = useState(false);
   const agents = useAgentChoices(project);
-  const platform = window.agentmat.platform;
+  const platform = window.runova.platform;
   const cliLabel = getCliDefinition(SETUP_CLI_ID)?.label ?? 'Claude Code';
   // Start is held back only once we know the agent is missing, so it never waits on the lookup.
   const cliMissing = !agents.loading && !agents.installed.some((a) => a.cli.id === SETUP_CLI_ID);
@@ -85,9 +85,7 @@ export function CreateRunWithAiDialog({
     try {
       // In a worktree workspace the agent works in the worktree folder, but run commands belong
       // to the project it was made from.
-      const session = await window.agentmat.runProposals.startGuided(
-        project.parentId ?? project.id,
-      );
+      const session = await window.runova.runProposals.startGuided(project.parentId ?? project.id);
       if (!session.ok) {
         toast.error(session.error);
         return;

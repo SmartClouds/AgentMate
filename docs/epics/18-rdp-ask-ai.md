@@ -7,7 +7,7 @@ Ask AI runner.
 
 Let an AI operate a Remote Desktop session the way "Ask AI" already operates an SSH terminal. Each
 step the AI gets a screenshot of the remote desktop and answers with one mouse or keyboard action,
-which AgentMate carries out while the user watches, approves or takes over.
+which Runova carries out while the user watches, approves or takes over.
 
 ## Tasks
 

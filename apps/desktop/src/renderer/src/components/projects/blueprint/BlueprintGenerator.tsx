@@ -9,7 +9,7 @@ import {
   type Project,
   type RunModelOption,
   runProfileForTargetAI,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { SHORT_EFFORT_LABELS } from '@/components/cli/RunSettingsFields';
 import { CliLogo } from '@/components/cliLogos';
@@ -71,18 +71,18 @@ export function useBlueprintGenerator(project: Project): BlueprintGenerator {
 
   const cliQuery = useQuery({
     queryKey: queryKeys.cliStatus,
-    queryFn: () => window.agentmat.cli.detectAll(),
+    queryFn: () => window.runova.cli.detectAll(),
     meta: { silentLoading: true },
   });
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
-    queryFn: () => window.agentmat.settings.get(),
+    queryFn: () => window.runova.settings.get(),
     meta: { silentLoading: true },
   });
 
   // On Windows a CLI that takes the prompt as an argument goes through cmd.exe, which cuts it at
   // a few thousand characters. A Blueprint request is long, so only list CLIs that read stdin.
-  const windows = window.agentmat.platform === 'win32';
+  const windows = window.runova.platform === 'win32';
   const clis = CLI_REGISTRY.filter(
     (cli) =>
       cli.promptCommand &&

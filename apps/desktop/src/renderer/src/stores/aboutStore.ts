@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 /**
- * Whether the About AgentMate dialog is showing. It lives in a store because the sidebar's about
+ * Whether the About Runova dialog is showing. It lives in a store because the sidebar's about
  * card and the top menu's version chip both open it, while the dialog itself is mounted once.
  */
 interface AboutState {

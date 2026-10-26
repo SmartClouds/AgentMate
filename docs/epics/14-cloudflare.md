@@ -116,7 +116,7 @@ Server side and the rest of the desktop (this commit): T5 to T7.
   when Cloudflare refuses a call, so the main token can stay without them; for the second one the
   fix also offers pasting a token made by hand.
 - e2e: `cloudflareServer.e2e.ts` runs the recorded fake on loopback (`e2e/fakeCloudflareServer.ts`)
-  and points the app at it with `AGENTMATE_E2E_CLOUDFLARE_API`, honoured only in an e2e run of an
+  and points the app at it with `RUNOVA_E2E_CLOUDFLARE_API`, honoured only in an e2e run of an
   unpackaged build. It saves the token, sends the DevHost a DNS token and locks the DevHost to
   Cloudflare with the firewall countdown.
 

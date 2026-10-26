@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { installAgentmatBridge } from '../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../test/renderer/runovaBridge';
 import {
   bindingProblem,
   digitOf,
@@ -229,7 +229,7 @@ describe('keyLabel', () => {
 
 describe('formatShortcut', () => {
   it('spells the modifiers out with plus signs off macOS', () => {
-    installAgentmatBridge({ platform: 'win32' });
+    installRunovaBridge({ platform: 'win32' });
     expect(formatShortcut({ code: 'KeyT', mod: true })).toBe('Ctrl+T');
     expect(formatShortcut({ code: 'ArrowLeft', mod: true, alt: true })).toBe('Ctrl+Alt+←');
     expect(formatShortcut({ code: 'Enter', mod: true, shift: true })).toBe('Ctrl+Shift+Enter');
@@ -237,14 +237,14 @@ describe('formatShortcut', () => {
   });
 
   it('uses the Mac symbols, run together, on macOS', () => {
-    installAgentmatBridge({ platform: 'darwin' });
+    installRunovaBridge({ platform: 'darwin' });
     expect(isMacPlatform()).toBe(true);
     expect(formatShortcut({ code: 'KeyT', mod: true })).toBe('⌘T');
     expect(formatShortcut({ code: 'KeyT', mod: true, alt: true, shift: true })).toBe('⌘⌥⇧T');
   });
 
   it('shows a digit-row binding as a range', () => {
-    installAgentmatBridge({ platform: 'win32' });
+    installRunovaBridge({ platform: 'win32' });
     const goToTab = SHORTCUT_COMMANDS.find((command) => command.id === 'workspace.goToTab');
     if (!goToTab) throw new Error('workspace.goToTab is missing from the registry');
     expect(formatCommandShortcut(goToTab, goToTab.defaults[0])).toBe('Alt+1…9');
@@ -254,7 +254,7 @@ describe('formatShortcut', () => {
   });
 
   it('leaves a normal command is binding as it is', () => {
-    installAgentmatBridge({ platform: 'win32' });
+    installRunovaBridge({ platform: 'win32' });
     const newTab = SHORTCUT_COMMANDS.find((command) => command.id === 'workspace.newTab');
     if (!newTab) throw new Error('workspace.newTab is missing from the registry');
     expect(formatCommandShortcut(newTab, newTab.defaults[0])).toBe('Ctrl+Shift+T');

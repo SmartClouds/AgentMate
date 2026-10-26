@@ -2,13 +2,18 @@ import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { rename, rm, stat } from 'node:fs/promises';
 import { basename } from 'node:path';
-import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+import { LEGACY_CORE_NAMES } from '../../shared/deploy/coreLegacyNames';
+import type { ICoreHub } from '../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import type {
   DeployBackupFile,
   DeployBackupInput,
   DeployBackupResult,
 } from '../../shared/deployHardeningTypes';
 import type { CoreHttpClient } from './connection/coreHttp';
+
+/** What backups are saved as. Files saved before the rename end in the old extension and still open. */
+export const BACKUP_EXTENSION = 'rnbackup';
+export const BACKUP_EXTENSIONS = [BACKUP_EXTENSION, LEGACY_CORE_NAMES.backupExtension];
 
 /**
  * Backups of a server's core (E15). The core encrypts its state with the user's passphrase
@@ -74,7 +79,7 @@ export class DeployBackups {
     const problem = passphraseProblem(input.passphrase);
     if (problem) throw new Error(problem);
     const date = new Date(this.now()).toISOString().slice(0, 16).replace(/[:T]/g, '-');
-    const name = `agentmate-${fileSafe(await this.deps.serverName(input.serverId))}-${date}.ambackup`;
+    const name = `runova-${fileSafe(await this.deps.serverName(input.serverId))}-${date}.${BACKUP_EXTENSION}`;
     const path = await this.deps.pickSavePath(name);
     if (!path) return { saved: false };
 

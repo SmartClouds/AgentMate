@@ -1,4 +1,4 @@
-import type { AndroidEvent } from '@agentmat/core';
+import type { AndroidEvent } from '@runova/core';
 import { IPC } from '../../shared/ipcChannels';
 import { broadcastToWindows } from '../ipc/send';
 

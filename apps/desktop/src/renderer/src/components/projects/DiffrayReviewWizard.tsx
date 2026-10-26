@@ -1,4 +1,4 @@
-import type { AgentType, Project } from '@agentmat/core';
+import type { AgentType, Project } from '@runova/core';
 import {
   allDiffrayAgentIds,
   allDiffraySeverities,
@@ -22,7 +22,7 @@ import {
   filterDiffrayCodebaseFiles,
   joinDiffrayCommands,
   planDiffrayReview,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { GitStatus } from '@shared/apiTypes';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -119,7 +119,7 @@ const COMMIT_PRESETS = [1, 3, 5, 10];
 const FILE_PREVIEW_LIMIT = 200;
 
 function terminalShell(): DiffrayShellKind {
-  return window.agentmat.platform === 'win32' ? 'powershell' : 'posix';
+  return window.runova.platform === 'win32' ? 'powershell' : 'posix';
 }
 
 function defaultScope(status: GitStatus | undefined): DiffrayReviewScope {
@@ -253,14 +253,14 @@ export function DiffrayReviewWizard({
 
   const gitQuery = useQuery({
     queryKey: queryKeys.gitStatus(projectId),
-    queryFn: () => window.agentmat.git.status(projectId),
+    queryFn: () => window.runova.git.status(projectId),
     enabled: installed,
   });
 
   // Only the codebase scope needs the full file list, so it is not fetched until asked for.
   const repoFilesQuery = useQuery({
     queryKey: queryKeys.gitFiles(projectId),
-    queryFn: () => window.agentmat.git.listFiles(projectId),
+    queryFn: () => window.runova.git.listFiles(projectId),
     enabled: installed && scope === 'codebase',
     staleTime: 30_000,
   });
@@ -268,7 +268,7 @@ export function DiffrayReviewWizard({
   useEffect(() => {
     if (!installed) return;
     let cancelled = false;
-    void window.agentmat.fs
+    void window.runova.fs
       .readFile(`${folderPath}/${DIFFRAY_PROJECT_CONFIG_FILE}`)
       .then(() => {
         if (!cancelled) setHasConfig(true);
@@ -484,14 +484,14 @@ export function DiffrayReviewWizard({
         excludeTests: true,
       });
       if (action.kind === 'write-project-file') {
-        await window.agentmat.fs.writeFile(`${folderPath}/${action.relativePath}`, action.content);
+        await window.runova.fs.writeFile(`${folderPath}/${action.relativePath}`, action.content);
         setHasConfig(true);
         toast.success(`${DIFFRAY_PROJECT_CONFIG_FILE} written to ${projectName}.`);
       }
     }
     let initialInput = joinDiffrayCommands(commands);
     if (codebaseScript) {
-      const scriptPath = await window.agentmat.fs.writeScratchFile(
+      const scriptPath = await window.runova.fs.writeScratchFile(
         codebaseScript.fileName,
         codebaseScript.content,
       );
@@ -1137,7 +1137,7 @@ export function DiffrayReviewWizard({
             <button
               type="button"
               className="flex w-full items-center justify-between gap-2 rounded-lg border border-dashed border-border px-3 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted/40"
-              onClick={() => void window.agentmat.shell.openExternal(DIFFRAY_GITHUB_APP_URL)}
+              onClick={() => void window.runova.shell.openExternal(DIFFRAY_GITHUB_APP_URL)}
             >
               <span className="flex items-center gap-2">
                 <Github className="h-3.5 w-3.5 shrink-0" />

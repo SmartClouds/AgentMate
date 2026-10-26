@@ -5,7 +5,7 @@ import {
   healthHoursFromSamples,
   healthLatencyHours,
   healthUptimeSince,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { HealthTargetDetail, HealthTargetSummary } from '../../shared/healthTypes';
 import type { HealthResultRecord, StoredHealthTarget } from './store';
 

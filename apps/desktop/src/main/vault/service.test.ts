@@ -1,4 +1,4 @@
-import type { SaveVaultEntryInput } from '@agentmat/core';
+import type { SaveVaultEntryInput } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ClipboardPort } from './clipboardGuard';
 import type { KdfCost } from './kdf';
@@ -130,7 +130,7 @@ describe('VaultService status and unlocking', () => {
   });
 
   it('uses the shorter test backoff only when the override is present', async () => {
-    const { service } = setup({ env: { AGENTMATE_VAULT_TEST_TIMERS: 'backoffBaseMs=300' } });
+    const { service } = setup({ env: { RUNOVA_VAULT_TEST_TIMERS: 'backoffBaseMs=300' } });
     await service.create(PASSWORD);
     await service.lock('manual');
     await service.unlock('bad 1 bad 1 bad');

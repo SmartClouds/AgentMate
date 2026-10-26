@@ -276,7 +276,7 @@ export const queryKeys = {
   /** Which sign-in goes with an app's deploys, per registry it pulls from. */
   deployRegistryPlan: (input: object) => ['deploy', 'registries', 'plan', input] as const,
   /**
-   * WordPress sites connected through the AgentMate Connector (E19 to E21). Under `deploy`, so
+   * WordPress sites connected through the Runova Connector (E19 to E21). Under `deploy`, so
    * unlocking the Servers vault refreshes them with everything else.
    */
   deployWordPressSites: ['deploy', 'wordpress', 'sites'] as const,

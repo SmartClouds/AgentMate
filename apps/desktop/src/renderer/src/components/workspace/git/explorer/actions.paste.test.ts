@@ -1,11 +1,8 @@
 // @vitest-environment jsdom
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { explorerProject, useExplorerStore } from '@/stores/explorerStore';
-import {
-  type FakeBridge,
-  installAgentmatBridge,
-} from '../../../../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../../../../test/renderer/runovaBridge';
 import { copyToClipboard, pasteInto, transferExternalEntries } from './actions';
 
 /**
@@ -24,7 +21,7 @@ let bridge: FakeBridge;
 beforeEach(() => {
   toast.success.mockClear();
   toast.error.mockClear();
-  bridge = installAgentmatBridge();
+  bridge = installRunovaBridge();
   useExplorerStore.setState({ clipboard: null, projects: {} });
 });
 

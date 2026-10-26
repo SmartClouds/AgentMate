@@ -1,7 +1,7 @@
 import type {
   CertificateRevocationReason,
   SiteLogKind,
-} from './deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from './deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployStepUpInput } from './deployTypes';
 
 /**

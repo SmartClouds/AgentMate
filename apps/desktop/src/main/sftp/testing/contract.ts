@@ -64,7 +64,7 @@ export function describeSftpClientContract(
     let counter = 0;
 
     beforeAll(async () => {
-      scratch = await mkdtemp(join(tmpdir(), 'agentmate-sftp-contract-'));
+      scratch = await mkdtemp(join(tmpdir(), 'runova-sftp-contract-'));
     });
     afterAll(async () => {
       await rm(scratch, { recursive: true, force: true });

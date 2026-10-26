@@ -1,5 +1,5 @@
 import type { CloudflareDomainCheck, CloudflareOriginLockPlan } from '@shared/cloudflareTypes';
-import type { FirewallChangeSetInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { FirewallChangeSetInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { toast } from 'sonner';
@@ -85,7 +85,7 @@ export function OriginLockDialog({
     let current = true;
     setPlan(null);
     setLoadError(null);
-    window.agentmat.cloudflareServer
+    window.runova.cloudflareServer
       .previewOriginLock({
         serverId,
         enabled: enabling,
@@ -102,7 +102,7 @@ export function OriginLockDialog({
     setBusy(true);
     setApplyError(null);
     try {
-      const result = await window.agentmat.cloudflareServer.applyOriginLock({
+      const result = await window.runova.cloudflareServer.applyOriginLock({
         serverId,
         enabled: enabling,
         authenticatedOriginPulls: enabling && pulls,

@@ -4,7 +4,7 @@ import type {
   PostmanEvent,
   PostmanRequest,
   PostmanRequestItem,
-} from '@agentmat/core';
+} from '@runova/core';
 
 /**
  * What the API Client page and the main process exchange. Types only, so this file adds nothing

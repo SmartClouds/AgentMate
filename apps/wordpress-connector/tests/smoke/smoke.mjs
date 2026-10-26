@@ -2,9 +2,9 @@
  * End-to-end checks against a real WordPress in Docker: pairing, a full deploy with manual
  * rollback, a syntax refusal, a health-check rollback, a fatal-error rollback by the guard, the
  * confirmation deadline, rescue through rescue.php when another mu-plugin is broken, and
- * `wp agentmate rescue`. Run with: node scripts/wordpress-connector.mjs smoke
+ * `wp runova rescue`. Run with: node scripts/wordpress-connector.mjs smoke
  *
- * AGENTMATE_WPC_PORT picks the port (18990); AGENTMATE_WPC_KEEP=1 leaves the site running.
+ * RUNOVA_WPC_PORT picks the port (18990); RUNOVA_WPC_KEEP=1 leaves the site running.
  */
 import { readFileSync } from 'node:fs';
 import { forms, login } from './admin.mjs';
@@ -13,7 +13,7 @@ import { connectorZip, startWordPressFixture } from './fixture.mjs';
 import { request } from './http.mjs';
 import { connectorRelease, nextVersion, sendConnectorUpdate, sourceVersion } from './release.mjs';
 
-const port = Number(process.env.AGENTMATE_WPC_PORT || 18990);
+const port = Number(process.env.RUNOVA_WPC_PORT || 18990);
 let failures = 0;
 
 /** This file is a command-line runner; its output is the report. */
@@ -68,7 +68,7 @@ async function readText(client, item, path) {
 }
 
 async function homeStatus(url) {
-  const response = await request(`${url}/?agentmate_smoke=${Date.now()}`, { redirect: 'manual' });
+  const response = await request(`${url}/?runova_smoke=${Date.now()}`, { redirect: 'manual' });
   return response.status;
 }
 
@@ -108,8 +108,8 @@ try {
   say('Full deploy, confirm, then manual rollback');
   {
     const ops = [
-      putOp(theme, 'functions.php', `${functionsOld}\n// agentmate smoke deploy\n`, functionsSha),
-      putOp(theme, 'agentmate-smoke/added.php', '<?php // added by the smoke test\n', null),
+      putOp(theme, 'functions.php', `${functionsOld}\n// runova smoke deploy\n`, functionsSha),
+      putOp(theme, 'runova-smoke/added.php', '<?php // added by the smoke test\n', null),
     ];
     const run = await deploy(client, 'Smoke: full deploy', [theme], ops);
     check(
@@ -126,7 +126,7 @@ try {
     const finalize = await client.call('/deploy/finalize', { deployId: run.deployId });
     check(finalize.ok && finalize.data.state === 'done', 'finalize', finalize);
     const onDisk = site.exec(`cat /var/www/html/wp-content/themes/${theme.slug}/functions.php`);
-    check(onDisk.includes('agentmate smoke deploy'), 'the change is on the site');
+    check(onDisk.includes('runova smoke deploy'), 'the change is on the site');
     const history = await client.call('/deploy/history', { limit: 5 });
     check(
       history.data.deploys[0].deployId === run.deployId && history.data.deploys[0].canRollback,
@@ -141,7 +141,7 @@ try {
     );
     const after = await hashes(client, theme);
     check(
-      after['functions.php'] === functionsSha && !after['agentmate-smoke/added.php'],
+      after['functions.php'] === functionsSha && !after['runova-smoke/added.php'],
       'files are back as they were',
     );
   }
@@ -152,7 +152,7 @@ try {
       putOp(
         theme,
         'functions.php',
-        `${functionsOld}\nfunction agentmate_smoke_broken( {\n`,
+        `${functionsOld}\nfunction runova_smoke_broken( {\n`,
         functionsSha,
       ),
     ];
@@ -171,7 +171,7 @@ try {
 
   say('Health check rolls back a deploy that breaks the home page');
   {
-    const broken = `${functionsOld}\nadd_action('template_redirect', function () { status_header(500); exit('agentmate smoke: broken on purpose'); });\n`;
+    const broken = `${functionsOld}\nadd_action('template_redirect', function () { status_header(500); exit('runova smoke: broken on purpose'); });\n`;
     const run = await deploy(
       client,
       'Smoke: health',
@@ -192,8 +192,7 @@ try {
   {
     const plugin = { kind: 'plugin', slug: 'hello.php' };
     const before = await hashes(client, plugin);
-    const fatal =
-      '<?php\n/*\nPlugin Name: Hello Dolly\n*/\nagentmate_smoke_undefined_function();\n';
+    const fatal = '<?php\n/*\nPlugin Name: Hello Dolly\n*/\nrunova_smoke_undefined_function();\n';
     const run = await deploy(
       client,
       'Smoke: fatal',
@@ -256,10 +255,10 @@ try {
 
   say('An unconfirmed deploy rolls back at its deadline');
   {
-    site.wp(['config', 'set', 'AGENTMATE_CONNECTOR_CONFIRM_SECONDS', '5', '--raw']);
+    site.wp(['config', 'set', 'RUNOVA_CONNECTOR_CONFIRM_SECONDS', '5', '--raw']);
     // Apache's opcache rechecks wp-config.php every 2 seconds.
     await sleep(3000);
-    const ops = [putOp(theme, 'agentmate-smoke/deadline.txt', 'temporary', null)];
+    const ops = [putOp(theme, 'runova-smoke/deadline.txt', 'temporary', null)];
     const run = await deploy(client, 'Smoke: deadline', [theme], ops);
     check(run.commit.ok && run.commit.data.state === 'applied', 'commit applies', run.commit);
     await sleep(7000);
@@ -271,14 +270,14 @@ try {
       'rolled back as notConfirmed',
       status.data,
     );
-    check(!(await hashes(client, theme))['agentmate-smoke/deadline.txt'], 'the file is gone again');
-    site.wp(['config', 'delete', 'AGENTMATE_CONNECTOR_CONFIRM_SECONDS']);
+    check(!(await hashes(client, theme))['runova-smoke/deadline.txt'], 'the file is gone again');
+    site.wp(['config', 'delete', 'RUNOVA_CONNECTOR_CONFIRM_SECONDS']);
   }
 
   say('rescue.php rolls back when a broken mu-plugin stops WordPress before the guard');
   {
-    const mu = { kind: 'mu-plugin', slug: '0-agentmate-smoke-broken.php' };
-    const ops = [putOp(mu, mu.slug, '<?php\nagentmate_smoke_undefined_function();\n', null)];
+    const mu = { kind: 'mu-plugin', slug: '0-runova-smoke-broken.php' };
+    const ops = [putOp(mu, mu.slug, '<?php\nrunova_smoke_undefined_function();\n', null)];
     const run = await deploy(client, 'Smoke: broken mu-plugin', [{ ...mu, create: true }], ops);
     check(
       run.commit?.ok && run.commit.data.state === 'applied',
@@ -313,22 +312,22 @@ try {
     );
   }
 
-  say('wp agentmate rescue');
+  say('wp runova rescue');
   {
     const run = await deploy(
       client,
       'Smoke: cli',
       [theme],
-      [putOp(theme, 'agentmate-smoke/cli.txt', 'cli', null)],
+      [putOp(theme, 'runova-smoke/cli.txt', 'cli', null)],
     );
     check(run.commit.ok && run.commit.data.state === 'applied', 'commit applies', run.commit);
-    const status = site.wp(['agentmate', 'rescue', 'status', '--skip-plugins']);
+    const status = site.wp(['runova', 'rescue', 'status', '--skip-plugins']);
     check(
       status.includes(run.deployId) && status.includes('applied'),
       'status names the pending deploy',
       status,
     );
-    const rollback = site.wp(['agentmate', 'rescue', 'rollback', '--yes', '--skip-plugins']);
+    const rollback = site.wp(['runova', 'rescue', 'rollback', '--yes', '--skip-plugins']);
     check(rollback.includes('rolledBack'), 'rollback from the command line', rollback);
   }
 
@@ -343,7 +342,7 @@ try {
   say('wp-admin pages');
   {
     const admin = await login(site.url, 'admin', 'admin');
-    const page = '/wp-admin/tools.php?page=agentmate-connector';
+    const page = '/wp-admin/tools.php?page=runova-connector';
     for (const tab of ['keys', 'connections', 'deploys', 'audit', 'status']) {
       const view = await admin.get(`${page}&tab=${tab}`);
       check(
@@ -362,7 +361,7 @@ try {
 
     const keys = await admin.get(`${page}&tab=keys`);
     const createForm = forms(keys.text).find(
-      (form) => form.agentmate_connector_action === 'create_key',
+      (form) => form.runova_connector_action === 'create_key',
     );
     const created = await admin.post(page, {
       ...createForm,
@@ -395,13 +394,13 @@ try {
       'no inline event handlers on the page',
       handlers,
     );
-    check(ours.includes('data-agentmate-confirm'), 'confirmations are plain data attributes');
+    check(ours.includes('data-runova-confirm'), 'confirmations are plain data attributes');
     check(
-      /<script[^>]*id="agentmate-connector-admin-js-after"/.test(connections.text),
+      /<script[^>]*id="runova-connector-admin-js-after"/.test(connections.text),
       'the one enqueued script is on the page',
     );
     const revokeForm = forms(connections.text).find(
-      (form) => form.agentmate_connector_action === 'revoke' && form.id === viaAdmin.connectionId,
+      (form) => form.runova_connector_action === 'revoke' && form.id === viaAdmin.connectionId,
     );
     check(revokeForm !== undefined, 'the Connections tab lists it with a Revoke button');
     check(
@@ -425,7 +424,7 @@ try {
     check((await editor.post(page, revokeForm)).status === 403, 'an editor cannot revoke');
     const revoked = await admin.post(page, revokeForm);
     check(
-      revoked.status === 302 && revoked.location?.includes('agentmate_notice=revoked'),
+      revoked.status === 302 && revoked.location?.includes('runova_notice=revoked'),
       'revoke works and redirects',
       revoked.location,
     );
@@ -438,13 +437,13 @@ try {
       client,
       'Smoke: admin rollback',
       [theme],
-      [putOp(theme, 'agentmate-smoke/admin.txt', 'admin rollback', null)],
+      [putOp(theme, 'runova-smoke/admin.txt', 'admin rollback', null)],
     );
     await client.call('/deploy/verify', { deployId: run.deployId });
     await client.call('/deploy/finalize', { deployId: run.deployId });
     const deploys = await admin.get(`${page}&tab=deploys`);
     const rollbackForm = forms(deploys.text).find(
-      (form) => form.agentmate_connector_action === 'rollback' && form.id === run.deployId,
+      (form) => form.runova_connector_action === 'rollback' && form.id === run.deployId,
     );
     check(rollbackForm !== undefined, 'the Deploys tab offers Roll back');
     // Apache's opcache rechecks wp-config.php every 2 seconds, so give a change time to land.
@@ -458,11 +457,11 @@ try {
     await sleep(3000);
     const rolled = await admin.post(page, rollbackForm);
     check(
-      rolled.status === 302 && rolled.location?.includes('agentmate_notice=rolledBack'),
+      rolled.status === 302 && rolled.location?.includes('runova_notice=rolledBack'),
       'roll back from wp-admin',
       rolled.location,
     );
-    check(!(await hashes(client, theme))['agentmate-smoke/admin.txt'], 'the deployed file is gone');
+    check(!(await hashes(client, theme))['runova-smoke/admin.txt'], 'the deployed file is gone');
     const audit = await admin.get(`${page}&tab=audit`);
     check(
       audit.text.includes('Connection revoked') && audit.text.includes('Deploy rolled back'),
@@ -479,22 +478,22 @@ try {
 
   say('WP-CLI commands');
   {
-    const list = JSON.parse(site.wp(['agentmate', 'connections', 'list', '--format=json']));
+    const list = JSON.parse(site.wp(['runova', 'connections', 'list', '--format=json']));
     check(
       list.some((row) => row.id === client.connectionId && row.status === 'active'),
       'connections list',
     );
-    const checks = JSON.parse(site.wp(['agentmate', 'status', '--format=json']));
+    const checks = JSON.parse(site.wp(['runova', 'status', '--format=json']));
     check(
       checks.length >= 10 && checks.find((row) => row.check === 'Recovery guard')?.result === 'ok',
       'status',
       checks,
     );
-    const deploys = JSON.parse(site.wp(['agentmate', 'deploys', 'list', '--format=json']));
+    const deploys = JSON.parse(site.wp(['runova', 'deploys', 'list', '--format=json']));
     check(deploys[0]?.label === 'Smoke: admin rollback', 'deploys list', deploys[0]);
     const doomed = new SiteClient(site.keyFor('read'));
     await doomed.pair('Revoked from WP-CLI');
-    site.wp(['agentmate', 'connections', 'revoke', doomed.connectionId, '--yes']);
+    site.wp(['runova', 'connections', 'revoke', doomed.connectionId, '--yes']);
     check((await doomed.call('/site/info')).error?.code === 'revoked', 'connections revoke');
   }
 
@@ -504,14 +503,14 @@ try {
   });
   const ours = debugLog
     .split('\n')
-    .filter((line) => /agentmate-connector|AgentMate Connector/i.test(line));
+    .filter((line) => /runova-connector|Runova Connector/i.test(line));
   check(
     ours.length === 0,
     'no notices, warnings or errors from the connector in debug.log',
     ours.slice(0, 5),
   );
   check(
-    /agentmate_smoke_undefined_function/.test(debugLog),
+    /runova_smoke_undefined_function/.test(debugLog),
     'debug.log is on (it holds the smoke fatal)',
   );
 
@@ -556,7 +555,7 @@ try {
         const plugin = files.get('src/Plugin.php').toString('utf8');
         const patched = plugin.replace(
           /public static function boot\(\): void\n {4}\{\n/,
-          'public static function boot(): void\n    {\n        agentmate_smoke_update_fatal();\n',
+          'public static function boot(): void\n    {\n        runova_smoke_update_fatal();\n',
         );
         files.set('src/Plugin.php', Buffer.from(patched));
       }),
@@ -574,10 +573,7 @@ try {
       'the old version is running again',
       afterBroken.data?.pluginVersion,
     );
-    check(
-      !/\.agentmate-connector/.test(pluginsLs()),
-      'no staging folder is left beside the plugin',
-    );
+    check(!/\.runova-connector/.test(pluginsLs()), 'no staging folder is left beside the plugin');
 
     const update = await send(release(next), next);
     check(
@@ -594,25 +590,20 @@ try {
     check(
       site
         .exec(
-          'test -f /var/www/html/wp-content/plugins/agentmate-connector/src/SmokeMarker.php && echo there || echo gone',
+          'test -f /var/www/html/wp-content/plugins/runova-connector/src/SmokeMarker.php && echo there || echo gone',
         )
         .trim() === 'there',
       'the new files are in the plugin folder',
     );
+    check(!/\.runova-connector/.test(pluginsLs()), 'no staging folder is left beside the plugin');
     check(
-      !/\.agentmate-connector/.test(pluginsLs()),
-      'no staging folder is left beside the plugin',
-    );
-    check(
-      site
-        .wp(['plugin', 'list', '--status=active', '--field=name'])
-        .includes('agentmate-connector'),
+      site.wp(['plugin', 'list', '--status=active', '--field=name']).includes('runova-connector'),
       'the connector is still active',
     );
     check(
       site
         .exec(
-          'grep -m1 "Version:" /var/www/html/wp-content/mu-plugins/00-agentmate-connector-guard.php',
+          'grep -m1 "Version:" /var/www/html/wp-content/mu-plugins/00-runova-connector-guard.php',
         )
         .includes(next),
       'the guard was rewritten for the new version',
@@ -623,14 +614,14 @@ try {
       client,
       'Smoke: after the update',
       [theme],
-      [putOp(theme, 'agentmate-smoke/after-update.txt', 'still deploys', null)],
+      [putOp(theme, 'runova-smoke/after-update.txt', 'still deploys', null)],
     );
     check(run.commit?.ok && run.commit.data.state === 'applied', 'a deploy still applies', run);
     const undone = await client.call('/deploy/rollback', { deployId: run.deployId });
     check(undone.ok && undone.data.state === 'rolledBack', 'and rolls back', undone);
 
     const admin = await login(site.url, 'admin', 'admin');
-    const audit = await admin.get('/wp-admin/tools.php?page=agentmate-connector&tab=audit');
+    const audit = await admin.get('/wp-admin/tools.php?page=runova-connector&tab=audit');
     check(
       audit.text.includes('Connector updated') && audit.text.includes('Connector update undone'),
       'the audit log shows the update and the undone one',
@@ -640,9 +631,9 @@ try {
   say('A copy of the site at another address gets its own key');
   {
     // What a staging copy looks like from inside: the stored key says it belongs elsewhere.
-    const stored = JSON.parse(site.wp(['option', 'get', 'agentmate_connector_site_key']));
+    const stored = JSON.parse(site.wp(['option', 'get', 'agentmate_connector_site_key'])); // legacy-name
     stored.home = 'https://original.example.test';
-    site.wp(['option', 'update', 'agentmate_connector_site_key', JSON.stringify(stored)]);
+    site.wp(['option', 'update', 'agentmate_connector_site_key', JSON.stringify(stored)]); // legacy-name
     const hello = await client.call('/hello', {}, { unsigned: true });
     check(
       hello.ok && hello.data.sitePublicKey !== client.key.sitePublicKey && hello.verified === false,
@@ -653,7 +644,7 @@ try {
     const detail = site.wp([
       'db',
       'query',
-      "SELECT detail FROM wp_agentmate_audit WHERE detail LIKE 'This site%' ORDER BY id DESC LIMIT 1",
+      "SELECT detail FROM wp_agentmate_audit WHERE detail LIKE 'This site%' ORDER BY id DESC LIMIT 1", // legacy-name
       '--skip-column-names',
     ]);
     check(
@@ -667,29 +658,26 @@ try {
   {
     const fingerprint = () =>
       site.exec(
-        "cd /var/www/html/wp-content && find themes plugins mu-plugins -type f -not -path 'plugins/agentmate-connector/*' -not -name '00-agentmate-connector-guard.php' -exec sha256sum {} + | sort",
+        "cd /var/www/html/wp-content && find themes plugins mu-plugins -type f -not -path 'plugins/runova-connector/*' -not -name '00-runova-connector-guard.php' -exec sha256sum {} + | sort",
       );
     const before = fingerprint();
-    const dataDir = site.wp(['option', 'get', 'agentmate_connector_data_dir']);
-    site.wp(['plugin', 'deactivate', 'agentmate-connector']);
-    const guard = '/var/www/html/wp-content/mu-plugins/00-agentmate-connector-guard.php';
+    const dataDir = site.wp(['option', 'get', 'agentmate_connector_data_dir']); // legacy-name
+    site.wp(['plugin', 'deactivate', 'runova-connector']);
+    const guard = '/var/www/html/wp-content/mu-plugins/00-runova-connector-guard.php';
     check(
       site.exec(`test -e ${guard} && echo there || echo gone`).trim() === 'gone',
       'deactivation removes the guard',
     );
-    site.wp(['plugin', 'uninstall', 'agentmate-connector']);
-    const tables = site.wp([
-      'db',
-      'query',
-      "SHOW TABLES LIKE '%agentmate%'",
-      '--skip-column-names',
-    ]);
+    site.wp(['plugin', 'uninstall', 'runova-connector']);
+    // The tables kept the names the plugin gave them before the rename.
+    const showTables = "SHOW TABLES LIKE '%agentmate%'"; // legacy-name
+    const tables = site.wp(['db', 'query', showTables, '--skip-column-names']);
     check(tables === '', 'its tables are dropped', tables);
     for (const option of [
-      'agentmate_connector_site_key',
-      'agentmate_connector_data_dir',
-      'agentmate_connector_guard',
-      'agentmate_connector_db_version',
+      'agentmate_connector_site_key', // legacy-name
+      'agentmate_connector_data_dir', // legacy-name
+      'agentmate_connector_guard', // legacy-name
+      'agentmate_connector_db_version', // legacy-name
     ]) {
       check(
         site.wp(['option', 'get', option], { allowFail: true }) === '',
@@ -713,7 +701,7 @@ try {
     body.set('_wpnonce', form._wpnonce);
     body.set('_wp_http_referer', form._wp_http_referer ?? '');
     body.set('install-plugin-submit', 'Install Now');
-    body.set('pluginzip', new Blob([readFileSync(connectorZip())]), 'agentmate-connector.zip');
+    body.set('pluginzip', new Blob([readFileSync(connectorZip())]), 'runova-connector.zip');
     const installed = await admin.upload('/wp-admin/update.php?action=upload-plugin', body);
     check(
       installed.status === 200 && /Plugin installed successfully/i.test(installed.text),
@@ -723,7 +711,7 @@ try {
         .replace(/\s+/g, ' ')
         .slice(-300),
     );
-    site.wp(['plugin', 'activate', 'agentmate-connector']);
+    site.wp(['plugin', 'activate', 'runova-connector']);
     const fresh = new SiteClient(site.keyFor('write'));
     await fresh.pair('After reinstall');
     const info = await fresh.call('/site/info');
@@ -733,7 +721,7 @@ try {
     );
   }
 } finally {
-  if (process.env.AGENTMATE_WPC_KEEP === '1') {
+  if (process.env.RUNOVA_WPC_KEEP === '1') {
     say(`Left running: ${site.url}`);
   } else {
     site.stop();

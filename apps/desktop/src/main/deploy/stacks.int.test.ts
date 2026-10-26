@@ -6,9 +6,9 @@ import {
   generateCatalogSecrets,
   type Project,
   renderCatalogApp,
-} from '@agentmat/core';
+} from '@runova/core';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { JobInfo } from '../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { JobInfo } from '../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { tempDir } from '../../test/main/fixtures';
 import { CoreHttpClient } from './connection/coreHttp';
 import { buildContextTarball } from './stacks/buildContext';
@@ -32,7 +32,7 @@ import {
  * up on 127.0.0.1 only (AC3), and a rollback brings the previous revision's files and running
  * state back (AC4). Then E13's "make private" moves a public service to 127.0.0.1 as a new
  * revision, and every App Store template (E12 AC1) goes through the server's own docker compose
- * config and risk linter. Needs AGENTMATE_SYSTEM_TESTS=1, Docker, network access from the test server
+ * config and risk linter. Needs RUNOVA_SYSTEM_TESTS=1, Docker, network access from the test server
  * (Docker's packages and busybox), and `pnpm server-core:publish linux-x64`.
  */
 
@@ -115,7 +115,7 @@ function loadImage(server: TestServer, image: string): void {
 }
 
 function writeProject(files: Record<string, string>): string {
-  const folder = tempDir('agentmate-stack-system-');
+  const folder = tempDir('runova-stack-system-');
   for (const [path, content] of Object.entries(files)) {
     mkdirSync(dirname(join(folder, path)), { recursive: true });
     writeFileSync(join(folder, path), content);

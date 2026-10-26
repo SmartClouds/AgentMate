@@ -5,7 +5,7 @@ import {
   USAGE_PROVIDER_REGISTRY,
   type UsagePeriod,
   type UsageSegment,
-} from '@agentmat/core';
+} from '@runova/core';
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { readableAccent } from '@/lib/chartColors';
@@ -667,12 +667,12 @@ describe('UsagePage project weekday chart', () => {
       last7d: period(7_000, 3),
       last30d: period(30_000, 12),
       projectDaily: splitOf([
-        projectRow({ key: 'project:p1', name: 'AgentMate', tokens: [0, 0, 0, 0, 0, 0, 1000] }),
+        projectRow({ key: 'project:p1', name: 'Runova', tokens: [0, 0, 0, 0, 0, 0, 1000] }),
       ]),
     });
     renderPage({ 'settings.get': {}, 'usage.list': [withSplit] });
 
-    expect(await screen.findByRole('button', { name: /AgentMate/ })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /Runova/ })).toBeTruthy();
     await waitFor(() => expect(tileValue('Tokens today')).toBe('1.0K'));
   });
 

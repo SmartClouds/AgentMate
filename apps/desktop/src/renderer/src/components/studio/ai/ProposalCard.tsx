@@ -1,4 +1,4 @@
-import type { FieldChange, GenerationView, ProposalChange } from '@agentmat/studio';
+import type { FieldChange, GenerationView, ProposalChange } from '@runova/studio';
 import { scriptClass } from '../format';
 import { Button, Check, cn, GLASS_CARD, Sparkles, X } from '../kit';
 import { runLabel } from './runSettings';

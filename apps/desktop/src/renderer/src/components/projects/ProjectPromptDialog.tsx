@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -46,7 +46,7 @@ export function ProjectPromptDialog({
   }, [open]);
 
   const saveMutation = useMutation({
-    mutationFn: (value: string) => window.agentmat.projects.update(project.id, { prompt: value }),
+    mutationFn: (value: string) => window.runova.projects.update(project.id, { prompt: value }),
     onSuccess: (_result, value) => {
       toast.success(value.trim() ? 'Project prompt saved.' : 'Project prompt cleared.');
       void queryClient.invalidateQueries({ queryKey: queryKeys.projects });

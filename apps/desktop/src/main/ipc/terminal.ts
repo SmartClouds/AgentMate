@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { delimiter, join } from 'node:path';
-import { looksLikeNeedsInput, type RunPauseReason } from '@agentmat/core';
+import { looksLikeNeedsInput, type RunPauseReason } from '@runova/core';
 import { app, type IpcMainInvokeEvent, ipcMain, type WebContents } from 'electron';
 import type {
   AgentSessionEntry,
@@ -298,8 +298,8 @@ function terminalEnv(sessionId: string, projectId?: string): Record<string, stri
     ...(process.env as Record<string, string>),
     // The ids let a hook script started inside this shell (Claude Code's, say) say
     // which tab it belongs to. Only a brand-new shell picks them up.
-    AGENTMATE_SESSION_ID: sessionId,
-    AGENTMATE_PROJECT_ID: projectId ?? '',
+    RUNOVA_SESSION_ID: sessionId,
+    RUNOVA_PROJECT_ID: projectId ?? '',
   };
   const key = pathKey(env);
   const current = (env[key] ?? '').split(delimiter).filter(Boolean);

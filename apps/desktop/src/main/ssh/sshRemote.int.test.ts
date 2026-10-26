@@ -101,16 +101,16 @@ describe.skipIf(!docker)('SSH against OpenSSH', () => {
       const content = randomBytes(1024 * 1024);
       const progress: number[] = [];
 
-      await connection.upload(content, `${staging}/agentmate-core`, {
+      await connection.upload(content, `${staging}/runova-core`, {
         mode: 0o600,
         onProgress: (sent) => progress.push(sent),
       });
       const listing = await connection.exec(`ls -A ${staging}`);
       const check = await connection.exec(
-        `sha256sum ${staging}/agentmate-core | cut -d' ' -f1; stat -c %a ${staging}/agentmate-core`,
+        `sha256sum ${staging}/runova-core | cut -d' ' -f1; stat -c %a ${staging}/runova-core`,
       );
 
-      expect(listing.stdout.trim()).toBe('agentmate-core');
+      expect(listing.stdout.trim()).toBe('runova-core');
       const [hash, mode] = check.stdout.trim().split('\n');
       expect(hash).toBe(sha256(content));
       expect(mode).toBe('600');
@@ -123,7 +123,7 @@ describe.skipIf(!docker)('SSH against OpenSSH', () => {
   it('never leaves a partial file at the destination when the connection drops', async () => {
     const first = await open();
     const staging = await first.createStagingDirectory();
-    const upload = first.upload(randomBytes(16 * 1024 * 1024), `${staging}/agentmate-core`, {
+    const upload = first.upload(randomBytes(16 * 1024 * 1024), `${staging}/runova-core`, {
       onProgress: (sent) => {
         if (sent > 256 * 1024) first.close();
       },
@@ -133,7 +133,7 @@ describe.skipIf(!docker)('SSH against OpenSSH', () => {
     const second = await open();
     try {
       const check = await second.exec(
-        `test -e ${staging}/agentmate-core && echo present || echo absent`,
+        `test -e ${staging}/runova-core && echo present || echo absent`,
       );
       expect(check.stdout.trim()).toBe('absent');
     } finally {
@@ -159,7 +159,7 @@ describe.skipIf(!docker)('SSH against OpenSSH', () => {
   it('tunnels to a Unix socket on the server', async () => {
     const connection = await open();
     try {
-      const socketPath = `/tmp/agentmate-uds-${Date.now()}.sock`;
+      const socketPath = `/tmp/runova-uds-${Date.now()}.sock`;
       // ssh-agent is part of every OpenSSH install and listens on a Unix socket of our choosing.
       const agent = await connection.exec(`ssh-agent -a ${socketPath}`);
       expect(agent.exitCode).toBe(0);

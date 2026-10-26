@@ -1,9 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
-import { CLI_REGISTRY, launchPickArgs } from '@agentmat/core';
-import type { StudioEvent } from '@agentmat/studio';
-import { checkScene, type StudioHost, type StudioService } from '@agentmat/studio/node';
+import { CLI_REGISTRY, launchPickArgs } from '@runova/core';
+import type { StudioEvent } from '@runova/studio';
+import { checkScene, type StudioHost, type StudioService } from '@runova/studio/node';
 import { app, nativeImage, net } from 'electron';
 import type { SecretEnvelope } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';
@@ -38,7 +38,7 @@ async function studioServiceForHost(): Promise<StudioService> {
 }
 
 /**
- * Where Studio meets the rest of AgentMate. This is the one file under main/studio allowed to
+ * Where Studio meets the rest of Runova. This is the one file under main/studio allowed to
  * import the app's own modules (see studioBoundary.test.ts): everything Studio needs from the app
  * comes through the `StudioHost` built here, so Studio could move to an app of its own by
  * replacing this file.
@@ -52,7 +52,7 @@ async function studioServiceForHost(): Promise<StudioService> {
 export function studioPackageRoot(): string {
   if (app.isPackaged) return join(process.resourcesPath, 'studio');
   // dist/node/index.js, three folders below the package root.
-  const entry = createRequire(import.meta.url).resolve('@agentmat/studio/node');
+  const entry = createRequire(import.meta.url).resolve('@runova/studio/node');
   return dirname(dirname(dirname(entry)));
 }
 
@@ -71,7 +71,7 @@ export function createDesktopStudioHost(): StudioHost {
     dataDir,
     // Videos, not Documents: Documents is often redirected to OneDrive, and large files and a
     // history database under a sync client are trouble.
-    defaultLibraryRoot: join(app.getPath('videos'), 'AgentMate Studio'),
+    defaultLibraryRoot: join(app.getPath('videos'), 'Runova Studio'),
     defaultCacheDir: join(app.getPath('userData'), 'studio-cache'),
     appDir: app.isPackaged ? dirname(app.getPath('exe')) : null,
     appId: app.getName(),
@@ -113,12 +113,12 @@ export function createDesktopStudioHost(): StudioHost {
       secrets,
       fetch: (url, init) => net.fetch(url as string, init),
       // The e2e suite points every engine at its fake servers.
-      baseUrl: process.env.AGENTMATE_STUDIO_TTS_URL || undefined,
+      baseUrl: process.env.RUNOVA_STUDIO_TTS_URL || undefined,
       local: () =>
         findLocalVoiceTools(join(app.getPath('userData'), 'studio-tools'), process.platform),
       async transcribe({ wav, lang }) {
         // The e2e suite answers for Whisper, whose model it would otherwise have to download.
-        const canned = isE2E ? process.env.AGENTMATE_STUDIO_TRANSCRIPT : undefined;
+        const canned = isE2E ? process.env.RUNOVA_STUDIO_TRANSCRIPT : undefined;
         if (canned !== undefined) return canned;
         const result = await transcribeSamples({
           samples: wavToWhisperSamples(new Uint8Array(await readFile(wav))),
@@ -212,7 +212,7 @@ function noticeFor(event: StudioEvent): { title: string; body: string } | null {
     : { title: 'Render failed', body: `${event.fileName}: ${event.error ?? 'it stopped.'}` };
 }
 
-/** The ids of the projects AgentMate still has, for pruning Studio's per-project settings. */
+/** The ids of the projects Runova still has, for pruning Studio's per-project settings. */
 export async function liveProjectIds(): Promise<Set<string>> {
   return new Set((await store.getProjects()).map((project) => project.id));
 }

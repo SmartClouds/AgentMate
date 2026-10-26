@@ -1,4 +1,4 @@
-import type { StudioEvent } from '@agentmat/studio';
+import type { StudioEvent } from '@runova/studio';
 import { useQueryClient } from '@tanstack/react-query';
 import { act } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';

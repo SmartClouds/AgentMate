@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { ImageFileData } from '@shared/apiTypes';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -79,8 +79,8 @@ export function ImageDiffView({
       : queryKeys.gitFileImage(project.id, tab.side, tab.path),
     queryFn: () =>
       tab.commit
-        ? window.agentmat.git.commitFileImage(project.id, tab.commit, tab.path, tab.origPath)
-        : window.agentmat.git.fileImage(project.id, tab.path, tab.side, tab.origPath),
+        ? window.runova.git.commitFileImage(project.id, tab.commit, tab.path, tab.origPath)
+        : window.runova.git.fileImage(project.id, tab.path, tab.side, tab.origPath),
     staleTime: tab.commit ? Number.POSITIVE_INFINITY : undefined,
     meta: { silentLoading: true },
     // Keep the old picture up while a refreshed one loads, but never another file's.

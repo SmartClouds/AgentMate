@@ -205,7 +205,7 @@ export function selectRecipe(item: DevItem, context: RecipeContext): InstallMode
 
 /**
  * The command a person could run by hand to get the same result, for "Copy command" and "Open in
- * terminal". Null when there is no single command: AgentMate's own installers, bundled items and
+ * terminal". Null when there is no single command: Runova's own installers, bundled items and
  * download pages.
  */
 export function recipeCommandLine(mode: InstallMode, os: DevOs): string | null {

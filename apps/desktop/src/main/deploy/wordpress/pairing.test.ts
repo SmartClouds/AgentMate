@@ -1,4 +1,4 @@
-import { formatWpConnectionKey } from '@agentmat/core';
+import { formatWpConnectionKey } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { wordPressErrorCode } from '../../../shared/wordpressErrors';
 import {
@@ -103,7 +103,7 @@ describe('pairWithSite', () => {
   it('refuses plain HTTP to another computer unless allowed', async () => {
     const urls = {
       siteUrl: 'http://shop.example',
-      restUrl: 'http://shop.example/wp-json/agentmate/v1',
+      restUrl: 'http://shop.example/wp-json/runova/v1',
       ajaxUrl: 'http://shop.example/wp-admin/admin-ajax.php',
     };
     let called = false;
@@ -141,7 +141,7 @@ describe('pairWithSite', () => {
 describe('readConnectionKey', () => {
   const key = {
     siteUrl: 'https://a.example',
-    restUrl: 'https://a.example/wp-json/agentmate/v1',
+    restUrl: 'https://a.example/wp-json/runova/v1',
     ajaxUrl: 'https://a.example/wp-admin/admin-ajax.php',
     pairingId: 'pairing-0001',
     pairingSecret: WP_VECTORS.pairProof[0].secret,
@@ -193,14 +193,14 @@ describe('policy helpers', () => {
 
   it('makes a device name the site accepts', () => {
     expect(wpDeviceName('DESKTOP-1')).toBe('DESKTOP-1');
-    expect(wpDeviceName('\u0000\n')).toBe('AgentMate');
+    expect(wpDeviceName('\u0000\n')).toBe('Runova');
     expect([...wpDeviceName('x'.repeat(100))].length).toBeLessThanOrEqual(64);
   });
 
   it('keeps a rescue URL only on the site origin', () => {
     const key = {
       siteUrl: 'https://a.example',
-      restUrl: 'https://a.example/wp-json/agentmate/v1',
+      restUrl: 'https://a.example/wp-json/runova/v1',
       ajaxUrl: 'https://a.example/wp-admin/admin-ajax.php',
     };
     expect(sameOriginRescueUrl('https://a.example/wp-content/plugins/x/rescue.php', key)).toBe(

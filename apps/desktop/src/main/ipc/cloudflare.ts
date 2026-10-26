@@ -125,7 +125,7 @@ function saveInput(value: unknown): CloudflareSaveTokenInput {
 function recordInput(value: unknown): CloudflareRecordInput {
   const input = object(value, 'a DNS record');
   if (typeof input.type !== 'string' || !CLOUDFLARE_RECORD_TYPES.includes(input.type as never)) {
-    throw new Error('AgentMate edits A, AAAA, CNAME, TXT, MX, CAA and SRV records.');
+    throw new Error('Runova edits A, AAAA, CNAME, TXT, MX, CAA and SRV records.');
   }
   const type = input.type as CloudflareRecordType;
   const name = text(input.name, MAX_NAME, 'record name');

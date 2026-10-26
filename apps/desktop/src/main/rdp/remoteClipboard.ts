@@ -16,7 +16,7 @@ const execFileAsync = promisify(execFile);
 /** Past this the download would hold the window up for no good reason; "Save files" still works. */
 export const MAX_STAGED_BYTES = 256 * 1024 * 1024;
 
-const ROOT_NAME = 'agentmate-rdp-clipboard';
+const ROOT_NAME = 'runova-rdp-clipboard';
 
 /** Only Windows has a way in place to put a file list on the clipboard. */
 export function stagingSupported(): boolean {
@@ -29,7 +29,7 @@ function defaultRoot(): string {
 
 /**
  * An empty folder for the files of one session's latest server copy. It sits under this
- * process's id so a second running AgentMate never sweeps it away.
+ * process's id so a second running Runova never sweeps it away.
  */
 export async function prepareStagingFolder(
   sessionId: string,
@@ -80,7 +80,7 @@ export async function putFilesOnClipboard(paths: string[]): Promise<void> {
     throw new Error('Copying files to the clipboard is only supported on Windows.');
   const script = [
     "$ErrorActionPreference = 'Stop'",
-    "$paths = $env:AGENTMATE_CLIPBOARD_PATHS -split '\\|'",
+    "$paths = $env:RUNOVA_CLIPBOARD_PATHS -split '\\|'",
     'for ($i = 0; $i -lt 5; $i++) {',
     '  try { Set-Clipboard -LiteralPath $paths; exit 0 } catch { Start-Sleep -Milliseconds 150 }',
     '}',
@@ -90,7 +90,7 @@ export async function putFilesOnClipboard(paths: string[]): Promise<void> {
     await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
       windowsHide: true,
       timeout: 15_000,
-      env: { ...process.env, AGENTMATE_CLIPBOARD_PATHS: paths.join('|') },
+      env: { ...process.env, RUNOVA_CLIPBOARD_PATHS: paths.join('|') },
     });
   } catch (cause) {
     throw new Error('Windows would not take the files onto the clipboard. Try again.', { cause });

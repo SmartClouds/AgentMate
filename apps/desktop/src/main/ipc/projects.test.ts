@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import type { DetectedClaudeHook, Project } from '@agentmat/core';
-import { defaultProjectNotifications } from '@agentmat/core';
+import type { DetectedClaudeHook, Project } from '@runova/core';
+import { defaultProjectNotifications } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { BootstrapResult, CreateProjectInput, FaviconResult } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';
@@ -55,7 +55,7 @@ function storedProjects(): Project[] {
 let projectsModule: typeof import('./projects');
 
 beforeEach(async () => {
-  folder.path = tempDir('agentmate-projects-folder-');
+  folder.path = tempDir('runova-projects-folder-');
   projectsModule = await loadIpc(
     () => import('./projects'),
     (module) => module.registerProjectHandlers(),
@@ -396,7 +396,7 @@ describe('projects notification hooks', () => {
     );
     expect(updated.notifications.completion.enabled).toBe(true);
 
-    const hooksDir = join(folder.path, '.agentmate', 'hooks');
+    const hooksDir = join(folder.path, '.runova', 'hooks');
     expect(existsSync(hooksDir)).toBe(true);
     const settings = JSON.parse(
       readFileSync(join(folder.path, '.claude', 'settings.json'), 'utf-8'),
@@ -404,7 +404,7 @@ describe('projects notification hooks', () => {
     const commands = Object.values(settings.hooks).flatMap((groups) =>
       groups.flatMap((group) => group.hooks.map((hook) => hook.command)),
     );
-    expect(commands.some((command) => command.includes('.agentmate'))).toBe(true);
+    expect(commands.some((command) => command.includes('.runova'))).toBe(true);
   });
 
   it('lists, edits and removes the hooks in the project settings file', async () => {
@@ -429,7 +429,7 @@ describe('projects notification hooks', () => {
       id: 'settings.json:Stop:0:0',
       event: 'Stop',
       matcher: 'Bash',
-      managedByAgentMate: false,
+      managedByRunova: false,
     });
 
     await invoke(IPC.projects.updateClaudeHook, project.id, listed[0].id, {

@@ -2,11 +2,11 @@
 title: Interface tour
 category: Getting started
 order: 20
-summary: A tour of the AgentMate window, covering the sidebar or top menu, title bar, back and forward buttons, header buttons, status bar, version and updates, messages, themes and quitting.
+summary: A tour of the Runova window, covering the sidebar or top menu, title bar, back and forward buttons, header buttons, status bar, version and updates, messages, themes and quitting.
 keywords: interface, layout, sidebar, top menu, menu bar, title bar, status bar, back forward, toast, recent messages, bell, update, check for updates, version, theme, glass, quit, loading, github account, gh, relay, pause run, macos update, rosetta, apple silicon, arm64
 ---
 
-The AgentMate window has the same few parts on every page: a title bar across the top, the main menu (a sidebar on the left or a bar along the top), a header with the page title and a few buttons, the page itself, and a status bar along the bottom. This article explains what each part does and how to change the ones you can.
+The Runova window has the same few parts on every page: a title bar across the top, the main menu (a sidebar on the left or a bar along the top), a header with the page title and a few buttons, the page itself, and a status bar along the bottom. This article explains what each part does and how to change the ones you can.
 
 ## Where to find it
 
@@ -25,7 +25,7 @@ Two small signals appear on menu entries:
 - **Pipelines** shows a red count of unread pipeline results (99+ when there are more than 99).
 - **Workspace** shows a dot when an agent needs attention. The dot is amber when an agent is waiting for your input and in the main color when one has finished.
 
-The button at the left of the header folds the sidebar. Each click moves to the next state: full labels, then icons only (a narrow rail where each icon has a tooltip), then hidden completely so the page gets the whole width. Click again to start over. Its tooltip reads **Collapse sidebar**, **Hide sidebar** or **Show sidebar** depending on the current state. AgentMate remembers the state between launches.
+The button at the left of the header folds the sidebar. Each click moves to the next state: full labels, then icons only (a narrow rail where each icon has a tooltip), then hidden completely so the page gets the whole width. Click again to start over. Its tooltip reads **Collapse sidebar**, **Hide sidebar** or **Show sidebar** depending on the current state. Runova remembers the state between launches.
 
 ### Top menu bar
 
@@ -43,7 +43,7 @@ The change applies straight away.
 
 ## The title bar
 
-The title bar holds the AgentMate icon and name on the left, the search box in the middle with the back and forward buttons beside it, and the window controls.
+The title bar holds the Runova icon and name on the left, the search box in the middle with the back and forward buttons beside it, and the window controls.
 
 - **Search box.** It reads "Search projects, history, skills…" and shows the shortcut (`Ctrl+K`, or `Cmd+K` on macOS). Click it to open the command palette. See [Command palette and search](command-palette-search.md).
 - **Window controls.** On Windows and Linux the **Minimize**, **Maximize** (or **Restore**) and **Close** buttons are at the right. On macOS the red, yellow and green traffic lights are at the left.
@@ -108,13 +108,13 @@ Click the **Keep computer awake** item and choose one of three modes:
 
 ## Version, about card and updates
 
-At the bottom of the sidebar, the about card shows the AgentMate icon, "AgentMate by SmartClouds" and the running version. In the top menu layout the version chip at the right end does the same job. With the narrow icon rail, only the icon is shown, with the details in its tooltip. A small dot on the card means an update is waiting.
+At the bottom of the sidebar, the about card shows the Runova icon, "Runova by SmartClouds" and the running version. In the top menu layout the version chip at the right end does the same job. With the narrow icon rail, only the icon is shown, with the details in its tooltip. A small dot on the card means an update is waiting.
 
 Click the card (or chip) to check for updates. If you are current, a message says "You're on the latest version." If a newer version exists, the update dialog opens.
 
 ### How updates work
 
-AgentMate checks for updates on its own when it starts and then about every hour, but only in an installed build (a development build shows "dev" as its version and does not check). Nothing is downloaded and nothing restarts without you clicking.
+Runova checks for updates on its own when it starts and then about every hour, but only in an installed build (a development build shows "dev" as its version and does not check). Nothing is downloaded and nothing restarts without you clicking.
 
 The update dialog changes as the update moves along:
 
@@ -128,14 +128,14 @@ The update dialog changes as the update moves along:
 
 If you hide the dialog while a download is running, paused, finished or interrupted, a small chip stays in the page header showing the version (or **Paused**, **Ready**, **Interrupted**, **Resume**) and the percentage. Click the chip to bring the dialog back.
 
-**Restart now** turns into **Restarting...** and both buttons are greyed out while AgentMate hands over to the installer. If that fails, a message says "Restart to install failed. Quit the app and it installs on the way out." and the update still installs when you quit.
+**Restart now** turns into **Restarting...** and both buttons are greyed out while Runova hands over to the installer. If that fails, a message says "Restart to install failed. Quit the app and it installs on the way out." and the update still installs when you quit.
 
 ### Updates on macOS
 
-The macOS builds are not signed with an Apple Developer ID, so the system's own updater cannot install them. AgentMate does it itself: it unpacks the new version next to the app, quits, swaps the app for the new one and opens it again. Two things can stop it, and both come with a message:
+The macOS builds are not signed with an Apple Developer ID, so the system's own updater cannot install them. Runova does it itself: it unpacks the new version next to the app, quits, swaps the app for the new one and opens it again. Two things can stop it, and both come with a message:
 
-- **"macOS is running AgentMate from a temporary copy."** The app was opened straight from a downloaded disk image or zip. Move AgentMate to the Applications folder, open it from there, and update again.
-- **"AgentMate can't write to (folder), so it can't replace itself."** Your account cannot change the folder the app is in. Download the new version from the releases page instead.
+- **"macOS is running Runova from a temporary copy."** The app was opened straight from a downloaded disk image or zip. Move Runova to the Applications folder, open it from there, and update again.
+- **"Runova can't write to (folder), so it can't replace itself."** Your account cannot change the folder the app is in. Download the new version from the releases page instead.
 
 On a Mac with an Apple Silicon chip, updates always bring the Apple Silicon (arm64) version. If you are running the Intel version through Rosetta, a notice titled **Install the Apple Silicon version** appears when the window opens. Git and the built-in terminals fail under Rosetta with "missing compatible architecture". **Open releases page** takes you to the download, and you drag the new app over the old one in Applications. Your projects and settings are kept. Tick **Don't show this again** to stop the notice, otherwise it comes back each launch. The next update switches you over by itself.
 
@@ -145,7 +145,7 @@ You can also check and manage updates from **Settings**, **Data** tab, in the **
 
 Short alerts appear in the bottom right corner of the window as toasts. They have a close button and fade on their own. Success, error, warning and info messages all use the same frosted look, with a colored accent.
 
-If you miss one, click **Recent messages** (the bell) in the header. A panel slides in from the right, titled **Recent messages**, with the alerts that flashed in the corner. AgentMate also puts pipeline results and CLI update notices here.
+If you miss one, click **Recent messages** (the bell) in the header. A panel slides in from the right, titled **Recent messages**, with the alerts that flashed in the corner. Runova also puts pipeline results and CLI update notices here.
 
 - The bell shows a dot when there are messages you have not seen. The dot turns red if any unread one is an error. Opening the panel marks everything as read.
 - Messages are grouped by day. If the same message repeats back to back, it collapses into one entry with a count such as ×3.
@@ -177,7 +177,7 @@ On Windows 11 (version 22H2 or newer) the window uses the Mica material, and on 
 
 ## Closing the app
 
-Closing the window or quitting while a CLI, SSH connection or Remote Desktop session is still open asks first. The dialog is titled **Close AgentMate?** and lists what is open, for example "You still have 2 CLI sessions open." The text under it depends on your **Keep terminals running** setting (Settings, General):
+Closing the window or quitting while a CLI, SSH connection or Remote Desktop session is still open asks first. The dialog is titled **Close Runova?** and lists what is open, for example "You still have 2 CLI sessions open." The text under it depends on your **Keep terminals running** setting (Settings, General):
 
 - With it on, CLI sessions keep running in the background and are ready when you reopen the app, while server connections are closed.
 - With it off, closing the app stops the CLI sessions and disconnects from every server.
@@ -186,7 +186,7 @@ Click **Close app** to quit or cancel to stay. If nothing is open, the app close
 
 ## Loading states
 
-When AgentMate starts, the splash window covers the wait, and the first page then loads behind it. If that first load is slow, a glass overlay with the AgentMate logo and a spinning ring covers the page. After that, pages do not blank out while loading. Each card shows a shimmering placeholder in its own place until its data arrives. A save that has to block the page can briefly bring the overlay back.
+When Runova starts, the splash window covers the wait, and the first page then loads behind it. If that first load is slow, a glass overlay with the Runova logo and a spinning ring covers the page. After that, pages do not blank out while loading. Each card shows a shimmering placeholder in its own place until its data arrives. A save that has to block the page can briefly bring the overlay back.
 
 If a page crashes, the rest of the window keeps working. The menu stays usable and the error is shown in place of the page.
 

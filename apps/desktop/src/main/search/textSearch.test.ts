@@ -9,7 +9,7 @@ import { cancelTextSearch, runTextSearch } from './textSearch';
 const PLAIN: TextSearchRequest = { query: '', matchCase: false, wholeWord: false, regex: false };
 
 function project(files: Record<string, string>): string {
-  return writeTree(tempDir('agentmate-search-'), files);
+  return writeTree(tempDir('runova-search-'), files);
 }
 
 async function search(

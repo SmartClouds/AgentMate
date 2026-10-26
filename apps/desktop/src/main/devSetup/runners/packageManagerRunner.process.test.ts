@@ -77,7 +77,7 @@ const WINGET = { kind: 'winget', id: 'GitHub.cli' } as const;
 
 describe('the runner with a real process', () => {
   it('runs the command it was given, reads its output and succeeds', async () => {
-    const bin = join(tempDir('agentmate-runner-'), 'bin');
+    const bin = join(tempDir('runova-runner-'), 'bin');
     fakeWinget(
       bin,
       ['Found GitHub CLI [GitHub.cli] Version 2.62.0', '  40%', 'Successfully installed'],
@@ -87,7 +87,7 @@ describe('the runner with a real process', () => {
 
     const result = await createPackageManagerRunner({
       spawn: spawnStreaming,
-      cwd: tempDir('agentmate-cwd-'),
+      cwd: tempDir('runova-cwd-'),
       env: environmentWith(bin),
     }).run(WINGET, 'install', h.hooks);
 
@@ -101,13 +101,13 @@ describe('the runner with a real process', () => {
   });
 
   it('hands the tool the arguments, with no shell between that could change them', async () => {
-    const bin = join(tempDir('agentmate-runner-'), 'bin');
+    const bin = join(tempDir('runova-runner-'), 'bin');
     fakeWinget(bin, [], 0);
     const h = hooks();
 
     await createPackageManagerRunner({
       spawn: spawnStreaming,
-      cwd: tempDir('agentmate-cwd-'),
+      cwd: tempDir('runova-cwd-'),
       env: environmentWith(bin),
     }).run(WINGET, 'install', h.hooks);
 
@@ -119,13 +119,13 @@ describe('the runner with a real process', () => {
   });
 
   it("turns the tool's exit code into a sentence", async () => {
-    const bin = join(tempDir('agentmate-runner-'), 'bin');
+    const bin = join(tempDir('runova-runner-'), 'bin');
     fakeWinget(bin, ['Installer failed with exit code 1603'], 1603);
     const h = hooks();
 
     const result = await createPackageManagerRunner({
       spawn: spawnStreaming,
-      cwd: tempDir('agentmate-cwd-'),
+      cwd: tempDir('runova-cwd-'),
       env: environmentWith(bin),
     }).run(WINGET, 'install', h.hooks);
 
@@ -140,13 +140,13 @@ describe('the runner with a real process', () => {
   });
 
   it('really says the tool is missing when it is', async () => {
-    const empty = join(tempDir('agentmate-runner-'), 'bin');
+    const empty = join(tempDir('runova-runner-'), 'bin');
     mkdirSync(empty, { recursive: true });
     const h = hooks();
 
     const result = await createPackageManagerRunner({
       spawn: spawnStreaming,
-      cwd: tempDir('agentmate-cwd-'),
+      cwd: tempDir('runova-cwd-'),
       env: environmentWith(empty),
     }).run(WINGET, 'install', h.hooks);
 

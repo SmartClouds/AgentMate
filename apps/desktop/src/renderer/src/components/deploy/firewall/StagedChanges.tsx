@@ -1,7 +1,7 @@
 import type {
   FirewallChange,
   FirewallRuleInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { X } from '@/components/icons';
 import { FOOTER_HAIRLINE } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';

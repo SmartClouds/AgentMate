@@ -4,7 +4,7 @@ import {
   flutterInstallRoot,
   flutterManifestUrl,
   pickFlutterRelease,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { CancelToken } from '../../process/spawnStreaming';
 import type { UserPathResult } from '../userPath';
 import { type CommandResult, createDownloadHooks, type ManagedKit } from './managed';
@@ -152,7 +152,7 @@ export function createFlutterInstaller(deps: FlutterInstallerDeps): {
 
     hooks.onProgress({ phase: 'extracting', fraction: null });
     // Beside the final folder, so moving it into place stays on one drive and is a rename.
-    const staging = `${root.slice(0, root.lastIndexOf(sep))}${sep}.agentmate-flutter-${kit.randomId()}`;
+    const staging = `${root.slice(0, root.lastIndexOf(sep))}${sep}.runova-flutter-${kit.randomId()}`;
     await kit.fs.mkdir(staging);
     try {
       const extracted = await kit.extract(archivePath, staging, {

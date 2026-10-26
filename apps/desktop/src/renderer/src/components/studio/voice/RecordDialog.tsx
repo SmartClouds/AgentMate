@@ -1,4 +1,4 @@
-import type { EditResponse, Scene } from '@agentmat/studio';
+import type { EditResponse, Scene } from '@runova/studio';
 import { useEffect, useState } from 'react';
 import { studioAudioClient } from '../client';
 import { errorMessage, formatSeconds } from '../format';

@@ -33,7 +33,7 @@ describe('createCoreHubConnection', () => {
 
       expect(pong).toEqual({ serverTimeUnixMs: 123 });
       expect(upgrades[0].url).toBe('/hubs/core');
-      expect(upgrades[0].headers.host).toBe('agentmate-core');
+      expect(upgrades[0].headers.host).toBe('runova-core');
       expect(upgrades[0].headers.authorization).toBe('Bearer t0k');
       expect(upgrades[0].headers.origin).toBeUndefined();
     } finally {

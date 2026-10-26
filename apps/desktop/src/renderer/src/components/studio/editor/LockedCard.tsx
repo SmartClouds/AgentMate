@@ -1,4 +1,4 @@
-import type { LockHolderView } from '@agentmat/studio';
+import type { LockHolderView } from '@runova/studio';
 import { formatWhen } from '../format';
 import { Button, EmptyState, Lock } from '../kit';
 
@@ -10,7 +10,7 @@ export interface LockedCardProps {
 }
 
 /**
- * The video is open in another copy of AgentMate (the dev build, or another computer on a shared
+ * The video is open in another copy of Runova (the dev build, or another computer on a shared
  * drive). Only one may edit it at a time, so this says who has it; when that copy stopped
  * answering, the user can take it over.
  */
@@ -24,12 +24,12 @@ export function LockedCard({
     <EmptyState
       card
       icon={Lock}
-      title="Open in another AgentMate"
+      title="Open in another Runova"
       description={
         <>
           <p>
-            {holder.appId} on {holder.host} has this video open. Only one copy of AgentMate can edit
-            a video at a time, so nothing gets lost.
+            {holder.appId} on {holder.host} has this video open. Only one copy of Runova can edit a
+            video at a time, so nothing gets lost.
           </p>
           {stale && (
             <p className="mt-2">

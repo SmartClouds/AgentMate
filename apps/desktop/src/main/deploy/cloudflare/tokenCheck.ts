@@ -9,7 +9,7 @@ import type { CloudflareApi } from './client';
 import { isNotFound, isPermissionDenied, isUnauthorized } from './errors';
 
 /**
- * Checks a token against the permissions AgentMate asks for, without changing anything. A token
+ * Checks a token against the permissions Runova asks for, without changing anything. A token
  * that may read itself (it has API Tokens Read) shows its policies, which say exactly what it
  * has. Most tokens made from the template cannot, so then each permission is tried with a call
  * that only reads: a refusal means the permission is missing. Reads cannot tell Read from Edit,
@@ -22,7 +22,7 @@ export interface TokenPolicy {
   permission_groups?: Array<{ id?: string; name?: string }>;
 }
 
-/** Each AgentMate permission, granted when an allow policy has one of its groups and none denies it. */
+/** Each Runova permission, granted when an allow policy has one of its groups and none denies it. */
 export function permissionsFromPolicies(policies: TokenPolicy[]): CloudflarePermissionCheck[] {
   const allowed = new Set<string>();
   const denied = new Set<string>();

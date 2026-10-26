@@ -32,7 +32,7 @@ export function ResetVaultDialog({
   async function reset(): Promise<void> {
     setBusy(true);
     try {
-      await window.agentmat.vault.reset();
+      await window.runova.vault.reset();
       await queryClient.invalidateQueries({ queryKey: queryKeys.vaultStatus });
       toast.success('Vault reset', {
         description: 'The old vault file was set aside. You can create a new vault now.',
@@ -58,9 +58,9 @@ export function ResetVaultDialog({
         <DialogHeader>
           <DialogTitle>Reset the vault?</DialogTitle>
           <DialogDescription>
-            Without the master password nothing in the vault can be opened, by you or by AgentMate.
-            Resetting sets the current vault file aside in AgentMate's data folder and starts an
-            empty vault.
+            Without the master password nothing in the vault can be opened, by you or by Runova.
+            Resetting sets the current vault file aside in Runova's data folder and starts an empty
+            vault.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-1.5">

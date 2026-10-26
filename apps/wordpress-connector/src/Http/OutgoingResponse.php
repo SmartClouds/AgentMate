@@ -2,10 +2,10 @@
 /**
  * The bytes and headers to send back. Always an envelope; the transport only copies it out.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Http;
+namespace Runova\Connector\Http;
 
 final class OutgoingResponse
 {

@@ -1,4 +1,4 @@
-import type { AiProvider, AppSettings } from '@agentmat/core';
+import type { AiProvider, AppSettings } from '@runova/core';
 
 /** The AI provider Settings picked for writing prompts, with that provider's configured model. */
 export function promptProviderModel(

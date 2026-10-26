@@ -632,7 +632,7 @@ describe('files copied on the server', () => {
   }
 
   beforeEach(() => {
-    fakes.staging = { supported: true, folder: tempDir('agentmate-staging-') };
+    fakes.staging = { supported: true, folder: tempDir('runova-staging-') };
     fakes.putFilesOnClipboard.mockReset();
     fakes.putFilesOnClipboard.mockResolvedValue(undefined);
   });

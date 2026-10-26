@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -63,7 +63,7 @@ beforeEach(() => {
   analyze.mockClear();
   runError.mockReset();
   writeText.mockClear();
-  Object.assign(window, { agentmat: { pipelines: { runError } } });
+  Object.assign(window, { runova: { pipelines: { runError } } });
   Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
 });
 

@@ -109,7 +109,7 @@ export function buildRule(spec: CloudflareRuleSpec): RuleBuild {
       };
     }
     default:
-      return { ok: false, problem: 'That is not a rule AgentMate can build.' };
+      return { ok: false, problem: 'That is not a rule Runova can build.' };
   }
 }
 

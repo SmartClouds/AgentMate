@@ -1,5 +1,5 @@
 import { coreErrorMessage } from '@shared/coreErrors';
-import type { UserInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { UserInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { DEPLOY_ROLES, type DeployRole } from '@shared/deploySecurityTypes';
 import type { DeployServer } from '@shared/deployTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -89,10 +89,10 @@ export function UsersCard({ server }: { server: DeployServer }): React.JSX.Eleme
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const users = useQuery({
     queryKey: queryKeys.deployUsers(server.id),
-    queryFn: () => window.agentmat.deploySecurity.listUsers(server.id),
+    queryFn: () => window.runova.deploySecurity.listUsers(server.id),
     retry: false,
   });
-  const api = window.agentmat.deploySecurity;
+  const api = window.runova.deploySecurity;
 
   const refresh = () =>
     void queryClient.invalidateQueries({ queryKey: queryKeys.deploySecurity(server.id) });

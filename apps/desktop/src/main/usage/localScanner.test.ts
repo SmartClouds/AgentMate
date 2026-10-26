@@ -64,7 +64,7 @@ beforeAll(async () => {
 }, 120_000);
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'agentmate-local-scanner-'));
+  root = mkdtempSync(join(tmpdir(), 'runova-local-scanner-'));
   paths.userData = join(root, 'userData');
   mkdirSync(paths.userData, { recursive: true });
   now = Date.UTC(2026, 9, 5, 12, 0, 0);

@@ -1,6 +1,6 @@
-appId: com.agentmate.app
-productName: AgentMate
-executableName: AgentMate
+appId: com.runova.app
+productName: Runova
+executableName: Runova
 directories:
   output: release
 
@@ -34,11 +34,15 @@ extraResources:
   # fine (electron-builder only warns) and its Deploy section says it has no core to install.
   - from: build/server-core-manifest.json
     to: server-core-manifest.json
-  # The AgentMate Connector WordPress plugin (E19), built by `node scripts/wordpress-connector.mjs
+  # The Runova Connector WordPress plugin (E19), built by `node scripts/wordpress-connector.mjs
   # build` (CD runs it before packaging). Deploy offers it as a download for wp-admin. Without
   # it the app still packages; the download button then says the zip is missing.
-  - from: ../wordpress-connector/dist/agentmate-connector.zip
-    to: wordpress-connector/agentmate-connector.zip
+  - from: ../wordpress-connector/dist/runova-connector.zip
+    to: wordpress-connector/runova-connector.zip
+  # The bridge package from the same build, which the app sends to sites still on 1.63 before it
+  # moves them to runova-connector/.
+  - from: ../wordpress-connector/dist/agentmate-connector.zip # legacy-name
+    to: wordpress-connector/agentmate-connector.zip # legacy-name
 
 # node-pty ships native .node/.dll/.exe files that must exist as real files on
 # disk (it also spawns conpty/winpty helper executables at runtime); they
@@ -83,17 +87,21 @@ nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
-  # Default artifactName has spaces ("AgentMate Setup 1.1.0.exe"). GitHub
+  # Default artifactName has spaces ("Runova Setup 1.1.0.exe"). GitHub
   # renames uploaded assets with spaces to dots on download, but the
   # latest.yml electron-builder writes for electron-updater sanitizes spaces
   # to dashes instead - the two disagree and auto-update downloads 404. Keep
   # this dash-only, matching the other platforms' artifact names.
   artifactName: ${productName}-Setup-${version}.${ext}
+  # The app was called AgentMate before, and electron-builder derives this id from the appId it  # legacy-name
+  # had then (com.agentmate.app). Keeping it makes the Runova installer an upgrade of that install  # legacy-name
+  # (same uninstall entry, the old shortcuts removed) instead of a second app beside it.
+  guid: 76b8d710-e984-550c-8238-6729e4607618
 
 mac:
   icon: build/icon.png
   # There is no Apple Developer ID, so sign ad-hoc ("-"). Left unsigned, the arm64 build
-  # won't open on Apple Silicon at all ("AgentMate is damaged"), because arm64 code must
+  # won't open on Apple Silicon at all ("Runova is damaged"), because arm64 code must
   # carry a valid signature; the x64 build only got away with it by running under Rosetta.
   # Hardened runtime and notarization both need a real identity, so they are off.
   identity: '-'
@@ -102,7 +110,7 @@ mac:
   # Required for Prompt Builder's voice input: macOS crashes the app on mic
   # access unless this usage string is present in Info.plist.
   extendInfo:
-    NSMicrophoneUsageDescription: AgentMate uses the microphone to transcribe your voice into the Prompt Builder.
+    NSMicrophoneUsageDescription: Runova uses the microphone to transcribe your voice into the Prompt Builder.
   target:
     - target: dmg
       arch: [x64, arm64]
@@ -122,11 +130,14 @@ linux:
   category: Development
 
 # The deb target's default artifact name embeds the raw package.json "name"
-# ("@agentmat/desktop"), which contains a slash and would build to a nested
-# path (release/@agentmat/desktop_1.0.0_amd64.deb) that the CD workflow's
+# ("@runova/desktop"), which contains a slash and would build to a nested
+# path (release/@runova/desktop_1.0.0_amd64.deb) that the CD workflow's
 # `apps/desktop/release/*.deb` upload glob can't see. Use productName instead.
 deb:
   artifactName: ${productName}-${version}-${arch}.${ext}
+  # The package was named agentmate before the rename. Taking its place lets dpkg upgrade it  # legacy-name
+  # instead of installing Runova beside it.
+  fpm: ['--replaces=agentmate', '--conflicts=agentmate']  # legacy-name
 
 # electron-updater reads this to know where to look for new releases. The CD
 # workflow builds with `--publish never` and uploads artifacts to the GitHub
@@ -135,5 +146,5 @@ deb:
 publish:
   provider: github
   owner: SmartClouds
-  repo: AgentMate
+  repo: Runova
   releaseType: release

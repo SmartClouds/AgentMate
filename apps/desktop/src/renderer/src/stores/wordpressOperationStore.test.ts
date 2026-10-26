@@ -3,7 +3,7 @@ import type {
   DeployWordPressProgressEvent,
 } from '@shared/deployWordPressTypes';
 import { describe, expect, it } from 'vitest';
-import { installAgentmatBridge } from '../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../test/renderer/runovaBridge';
 import {
   findWordPressRun,
   listenForWordPressProgress,
@@ -46,7 +46,7 @@ const deployed: DeployWordPressDeployResult = {
 describe('wordpressOperationStore', () => {
   it('follows its own run through the phases and keeps the result with the done state', async () => {
     const call = deferred<DeployWordPressDeployResult>();
-    const bridge = installAgentmatBridge({ 'deployWordPress.deploy': () => call.promise });
+    const bridge = installRunovaBridge({ 'deployWordPress.deploy': () => call.promise });
 
     const done = useWordPressOperationStore
       .getState()
@@ -78,7 +78,7 @@ describe('wordpressOperationStore', () => {
   });
 
   it('listens once, however many runs start', async () => {
-    const bridge = installAgentmatBridge({
+    const bridge = installRunovaBridge({
       'deployWordPress.pull': async () => ({
         downloaded: 0,
         deletedLocal: 0,
@@ -101,7 +101,7 @@ describe('wordpressOperationStore', () => {
   });
 
   it('keeps the reason and its code when a run fails', async () => {
-    installAgentmatBridge({
+    installRunovaBridge({
       'deployWordPress.createProject': async () => {
         throw new Error(
           "Error invoking remote method 'deployWordPress:createProject': Error: [wp:folderNotEmpty] wp-content/themes/twentytwentyfive already holds files.",
@@ -128,7 +128,7 @@ describe('wordpressOperationStore', () => {
   });
 
   it('shows a run it did not start, and ends it on its own done or failed event', () => {
-    const bridge = installAgentmatBridge();
+    const bridge = installRunovaBridge();
     listenForWordPressProgress();
 
     bridge.$emit('deployWordPress.onProgress', progress('elsewhere', 'download', 2, 9));
@@ -151,7 +151,7 @@ describe('wordpressOperationStore', () => {
 
   it('asks the main process to stop a running operation, and forgets a cleared one', async () => {
     const call = deferred<DeployWordPressDeployResult>();
-    const bridge = installAgentmatBridge({ 'deployWordPress.deploy': () => call.promise });
+    const bridge = installRunovaBridge({ 'deployWordPress.deploy': () => call.promise });
     const store = useWordPressOperationStore.getState();
     const done = store.deploy(
       { planId: 'plan-1', operationId: 'op-1', force: true },
@@ -180,7 +180,7 @@ describe('wordpressOperationStore', () => {
 
   it('refuses to start a second run under an id that is still running', async () => {
     const call = deferred<DeployWordPressDeployResult>();
-    const bridge = installAgentmatBridge({ 'deployWordPress.deploy': () => call.promise });
+    const bridge = installRunovaBridge({ 'deployWordPress.deploy': () => call.promise });
     const store = useWordPressOperationStore.getState();
     const input = { planId: 'plan-1', operationId: 'op-1', force: false };
     const first = store.deploy(input, { siteId: 's1', projectId: 'p1' });
@@ -192,7 +192,7 @@ describe('wordpressOperationStore', () => {
   });
 
   it('finds the newest run of a kind for a project', async () => {
-    installAgentmatBridge({ 'deployWordPress.deploy': async () => deployed });
+    installRunovaBridge({ 'deployWordPress.deploy': async () => deployed });
     const store = useWordPressOperationStore.getState();
     await store.deploy(
       { planId: 'a', operationId: 'old', force: false },
@@ -214,7 +214,7 @@ describe('wordpressOperationStore', () => {
   });
 
   it('swaps in the project a changed item list returns', async () => {
-    const bridge = installAgentmatBridge({
+    const bridge = installRunovaBridge({
       'deployWordPress.setProjectItems': async () => ({ id: 'p1', name: 'Site' }),
     });
     const project = await useWordPressOperationStore

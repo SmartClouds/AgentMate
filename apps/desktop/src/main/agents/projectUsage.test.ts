@@ -4,7 +4,7 @@ import {
   type AgentHistorySession,
   getModelPrice,
   MODEL_PRICES,
-} from '@agentmat/core';
+} from '@runova/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { FileScanState } from '../usage/logParsers';
 import type { HistorySource } from './historySources';

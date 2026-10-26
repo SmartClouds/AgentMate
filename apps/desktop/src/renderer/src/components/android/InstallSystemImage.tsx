@@ -1,4 +1,4 @@
-import { describeSystemImage, type SystemImage } from '@agentmat/core';
+import { describeSystemImage, type SystemImage } from '@runova/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Download, ExternalLink, RefreshCw } from '@/components/icons';
@@ -36,7 +36,7 @@ export function InstallSystemImage({ onInstalled }: InstallSystemImageProps): Re
 
   const availableQuery = useQuery({
     queryKey: queryKeys.androidAvailableImages,
-    queryFn: () => window.agentmat.android.availableSystemImages(),
+    queryFn: () => window.runova.android.availableSystemImages(),
     meta: { silentLoading: true },
   });
   const available = availableQuery.data?.images ?? [];
@@ -49,7 +49,7 @@ export function InstallSystemImage({ onInstalled }: InstallSystemImageProps): Re
    * it was when the query was made, so a flag flipped just beforehand would not be in it yet.
    */
   const retry = useMutation({
-    mutationFn: () => window.agentmat.android.availableSystemImages(true),
+    mutationFn: () => window.runova.android.availableSystemImages(true),
     onSuccess: (data) => queryClient.setQueryData(queryKeys.androidAvailableImages, data),
   });
 
@@ -60,14 +60,14 @@ export function InstallSystemImage({ onInstalled }: InstallSystemImageProps): Re
 
   // The download reports through the shared event channel, keyed by the package being installed.
   useEffect(() => {
-    return window.agentmat.android.onEvent((event) => {
+    return window.runova.android.onEvent((event) => {
       if (event.kind !== 'task' || !event.id.startsWith('install:')) return;
       setProgress(event.done ? null : { percent: event.progress, label: event.label });
     });
   }, []);
 
   const install = useMutation({
-    mutationFn: () => window.agentmat.android.installSystemImage(choice),
+    mutationFn: () => window.runova.android.installSystemImage(choice),
     onMutate: () => {
       setError(null);
       setProgress({ percent: 0, label: 'Starting' });
@@ -113,7 +113,7 @@ export function InstallSystemImage({ onInstalled }: InstallSystemImageProps): Re
         {listError ? (
           <>
             <p className="text-xs text-muted-foreground">
-              AgentMate asked the SDK for the list of images and got this back:
+              Runova asked the SDK for the list of images and got this back:
             </p>
             <p className="break-words font-mono text-xs text-destructive">{listError}</p>
           </>
@@ -181,7 +181,7 @@ export function InstallSystemImage({ onInstalled }: InstallSystemImageProps): Re
           variant="ghost"
           size="sm"
           className="ml-auto h-6 shrink-0 px-2 text-xs"
-          onClick={() => void window.agentmat.shell.openExternal(LICENSE_URL)}
+          onClick={() => void window.runova.shell.openExternal(LICENSE_URL)}
         >
           <ExternalLink className="h-3 w-3" />
           Read

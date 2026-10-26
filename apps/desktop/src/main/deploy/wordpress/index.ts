@@ -59,6 +59,15 @@ export function registerDeployWordPressIpc(deps: {
         resourcesPath: process.resourcesPath,
         appPath: app.getAppPath(),
       }),
+    readBridgeBundle: () =>
+      readShippedConnector(
+        {
+          isPackaged: app.isPackaged,
+          resourcesPath: process.resourcesPath,
+          appPath: app.getAppPath(),
+        },
+        'bridge',
+      ),
     saveConnectorZip: () =>
       saveConnectorZip({
         isPackaged: app.isPackaged,
@@ -66,7 +75,7 @@ export function registerDeployWordPressIpc(deps: {
         appPath: app.getAppPath(),
         pickSavePath: async (suggestedName) => {
           const options = {
-            title: 'Save the AgentMate Connector plugin',
+            title: 'Save the Runova Connector plugin',
             defaultPath: suggestedName,
             filters: [{ name: 'WordPress plugin', extensions: ['zip'] }],
           };

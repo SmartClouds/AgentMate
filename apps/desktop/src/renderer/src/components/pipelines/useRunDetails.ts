@@ -22,7 +22,7 @@ export function useRunDetails(
   return useQuery({
     queryKey: queryKeys.runDetails(repo, run?.id ?? 0, run?.runAttempt ?? 1, live),
     queryFn: async (): Promise<GithubRunJob[]> => {
-      const result = await window.agentmat.pipelines.runDetails({
+      const result = await window.runova.pipelines.runDetails({
         repo,
         runId: run?.id ?? 0,
       });

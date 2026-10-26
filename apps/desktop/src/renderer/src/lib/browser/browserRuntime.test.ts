@@ -334,13 +334,13 @@ describe('the picker', () => {
     await runtime.picker('b1', 'arm()');
     await runtime.picker('b1', 'inspect()');
     const calls = el.executeJavaScript.mock.calls.map(([code]) => code as string);
-    expect(calls.filter((code) => code.includes('__agentmatPicker = {'))).toHaveLength(1);
-    expect(calls).toContain('window.__agentmatPicker.arm()');
+    expect(calls.filter((code) => code.includes('__runovaPicker = {'))).toHaveLength(1);
+    expect(calls).toContain('window.__runovaPicker.arm()');
     fire(el, 'dom-ready');
     await runtime.picker('b1', 'arm()');
     expect(
       el.executeJavaScript.mock.calls.filter(([code]) =>
-        String(code).includes('__agentmatPicker = {'),
+        String(code).includes('__runovaPicker = {'),
       ),
     ).toHaveLength(2);
   });

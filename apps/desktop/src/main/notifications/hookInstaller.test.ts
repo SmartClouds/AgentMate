@@ -1,19 +1,19 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { NotificationHookKind, Project } from '@agentmat/core';
+import type { NotificationHookKind, Project } from '@runova/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { tempDir, writeTree } from '../../test/main/fixtures';
 
 /**
  * This module edits a file the user also edits by hand, so the cases worth pinning are all about
  * not breaking what is already there: an unrelated hook must survive, saving twice must not
- * duplicate anything, and turning a hook off must leave the file as if AgentMate never touched it.
+ * duplicate anything, and turning a hook off must leave the file as if Runova never touched it.
  *
  * `hookServer` is stubbed only for the port file path: importing it for real boots the terminal
  * subsystem, and it has its own test file.
  */
 vi.mock('./hookServer', () => ({
-  portFilePath: () => 'C:/Users/test/AppData/Roaming/AgentMate/data/hook-server.json',
+  portFilePath: () => 'C:/Users/test/AppData/Roaming/Runova/data/hook-server.json',
 }));
 
 const { deleteClaudeHook, installProjectNotificationHooks, listClaudeHooks, updateClaudeHook } =
@@ -22,7 +22,7 @@ const { deleteClaudeHook, installProjectNotificationHooks, listClaudeHooks, upda
 let folder = '';
 
 beforeEach(() => {
-  folder = tempDir('agentmate-hooks-');
+  folder = tempDir('runova-hooks-');
 });
 
 type HookOverrides = Partial<Record<NotificationHookKind, { enabled: boolean; cliId?: string }>>;
@@ -69,7 +69,7 @@ describe('installProjectNotificationHooks', () => {
       projectWith({ completion: { enabled: true, cliId: 'claude-code' } }),
     );
 
-    const scriptPath = join(folder, '.agentmate', 'hooks', 'notify-completion.cjs');
+    const scriptPath = join(folder, '.runova', 'hooks', 'notify-completion.cjs');
     expect(result.completion).toEqual({ scriptPath, wiredAutomatically: true });
     expect(existsSync(scriptPath)).toBe(true);
 
@@ -101,8 +101,8 @@ describe('installProjectNotificationHooks', () => {
     );
 
     expect(result.pet?.wiredAutomatically).toBe(false);
-    expect(existsSync(join(folder, '.agentmate', 'hooks', 'notify-pet.cjs'))).toBe(true);
-    // Only Claude Code has a schema AgentMate can safely edit, so nothing may be wired here.
+    expect(existsSync(join(folder, '.runova', 'hooks', 'notify-pet.cjs'))).toBe(true);
+    // Only Claude Code has a schema Runova can safely edit, so nothing may be wired here.
     expect(claudeSettings().hooks).toBeUndefined();
   });
 
@@ -148,7 +148,7 @@ describe('installProjectNotificationHooks', () => {
   it('removes the script and the wiring when the hook is turned off', async () => {
     const project = projectWith({ completion: { enabled: true } });
     await installProjectNotificationHooks(project);
-    const scriptPath = join(folder, '.agentmate', 'hooks', 'notify-completion.cjs');
+    const scriptPath = join(folder, '.runova', 'hooks', 'notify-completion.cjs');
     expect(existsSync(scriptPath)).toBe(true);
 
     const result = await installProjectNotificationHooks(projectWith({}));
@@ -230,7 +230,7 @@ describe('listClaudeHooks', () => {
     expect(hooks[2].event).toBe('PreToolUse');
   });
 
-  it('flags the hooks AgentMate generated', async () => {
+  it('flags the hooks Runova generated', async () => {
     await installProjectNotificationHooks(projectWith({ completion: { enabled: true } }));
     writeTree(folder, {
       '.claude/settings.local.json': JSON.stringify({
@@ -240,11 +240,11 @@ describe('listClaudeHooks', () => {
 
     const hooks = await listClaudeHooks(folder);
 
-    // The UI only offers to manage the ones AgentMate owns, so this flag has to be right.
-    expect(hooks.find((one) => one.managedByAgentMate)?.hook.command).toContain(
+    // The UI only offers to manage the ones Runova owns, so this flag has to be right.
+    expect(hooks.find((one) => one.managedByRunova)?.hook.command).toContain(
       'notify-completion.cjs',
     );
-    expect(hooks.filter((one) => one.managedByAgentMate)).toHaveLength(1);
+    expect(hooks.filter((one) => one.managedByRunova)).toHaveLength(1);
   });
 
   it('attributes a hook to another agent only when its executable is a standalone token', async () => {

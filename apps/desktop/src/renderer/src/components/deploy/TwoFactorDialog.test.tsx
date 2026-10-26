@@ -28,7 +28,7 @@ const PASSWORD = 'correct horse battery staple';
 
 const SETUP: DeployTotpSetup = {
   sharedKey: 'jbsw y3dp ehpk 3pxp',
-  authenticatorUri: 'otpauth://totp/AgentMate%20Core:maria?secret=JBSWY3DPEHPK3PXP',
+  authenticatorUri: 'otpauth://totp/Runova%20Core:maria?secret=JBSWY3DPEHPK3PXP',
   qrDataUrl: 'data:image/png;base64,iVBORw0KGgo=',
 };
 

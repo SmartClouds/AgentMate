@@ -159,7 +159,7 @@ export default function RdpSessionRoute(): React.JSX.Element {
   const [askAiOpen, setAskAiOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const isMac = window.agentmat.platform === 'darwin';
+  const isMac = window.runova.platform === 'darwin';
   const agentState = useRdpAgentSession(sessionId);
   const agentActive = isRdpAgentActive(agentState);
   const nicknameRef = useRef(session.nickname);
@@ -170,8 +170,8 @@ export default function RdpSessionRoute(): React.JSX.Element {
   useEffect(() => initRdpAgentStatus(() => nicknameRef.current), []);
 
   useEffect(() => {
-    void window.agentmat.rdpWindow.getState().then(setWindowState);
-    return window.agentmat.rdpWindow.onStateChange(setWindowState);
+    void window.runova.rdpWindow.getState().then(setWindowState);
+    return window.runova.rdpWindow.onStateChange(setWindowState);
   }, []);
 
   // Ctrl+Alt+Break toggles full screen, as in the Windows client. Captured before the remote
@@ -181,7 +181,7 @@ export default function RdpSessionRoute(): React.JSX.Element {
       if (event.ctrlKey && event.altKey && (event.code === 'Pause' || event.key === 'Cancel')) {
         event.preventDefault();
         event.stopImmediatePropagation();
-        void window.agentmat.rdpWindow.fullscreenToggle();
+        void window.runova.rdpWindow.fullscreenToggle();
       }
     };
     window.addEventListener('keydown', onKeyDown, true);
@@ -201,9 +201,9 @@ export default function RdpSessionRoute(): React.JSX.Element {
 
   const controlProps: WindowControlsProps = {
     isMaximized: windowState.isMaximized,
-    onMinimize: () => void window.agentmat.rdpWindow.minimize(),
-    onMaximizeToggle: () => void window.agentmat.rdpWindow.maximizeToggle(),
-    onClose: () => void window.agentmat.rdpWindow.close(),
+    onMinimize: () => void window.runova.rdpWindow.minimize(),
+    onMaximizeToggle: () => void window.runova.rdpWindow.maximizeToggle(),
+    onClose: () => void window.runova.rdpWindow.close(),
   };
 
   const showBar = (): void => {
@@ -300,7 +300,7 @@ export default function RdpSessionRoute(): React.JSX.Element {
             ? 'Leave full screen (Ctrl+Alt+Break)'
             : 'Full screen (Ctrl+Alt+Break). Windows key shortcuts like Win+V then go to the server.'
         }
-        onClick={() => void window.agentmat.rdpWindow.fullscreenToggle()}
+        onClick={() => void window.runova.rdpWindow.fullscreenToggle()}
       >
         {windowState.isFullScreen ? (
           <Compress className="h-3.5 w-3.5" />
@@ -481,7 +481,7 @@ export default function RdpSessionRoute(): React.JSX.Element {
         source={{
           kind: 'rdp',
           queryKey: queryKeys.rdpAgentHistory(sessionId),
-          load: () => window.agentmat.rdpAgent.history(sessionId),
+          load: () => window.runova.rdpAgent.history(sessionId),
           live: agentState,
           // So the history can answer, message and stop the task, as the bar above does.
           controls: agentState

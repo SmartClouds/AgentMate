@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type {
   PendingServerRestore,
   ServerRestoreStatus,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type {
   DeployServerRestoreEvent,
   DeployServerRestoreInput,
@@ -25,7 +25,7 @@ const RESULT = {
   backupCoreVersion: '1.60.0',
   backupHostName: 'old-web',
   backupCreatedAtUnixMs: 1,
-  previousStateFolder: '/var/lib/agentmate-core-restore/previous',
+  previousStateFolder: '/var/lib/runova-core-restore/previous',
 };
 
 const PENDING: PendingServerRestore = {
@@ -66,7 +66,7 @@ function setup(more: Partial<Record<keyof ServerBackups, unknown>> = {}) {
         state: 'succeeded',
         sizeBytes: 100,
         bytesDone: 100,
-        path: '/var/lib/agentmate-core/backups/f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1.ambackup',
+        path: '/var/lib/runova-core/backups/f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1.ambackup',
       };
     }),
     stream: vi.fn(async (_s, _b, _path, onBytes) => {
@@ -134,7 +134,7 @@ describe('ServerRestores.restore', () => {
     expect(backups.stream).not.toHaveBeenCalled();
     expect(restoreCore).toHaveBeenCalledWith(
       expect.objectContaining({
-        file: '/var/lib/agentmate-core/backups/f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1.ambackup',
+        file: '/var/lib/runova-core/backups/f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1.ambackup',
         fileOnServer: true,
         passphrase: INPUT.secret,
       }),

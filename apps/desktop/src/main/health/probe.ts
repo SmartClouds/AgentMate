@@ -4,7 +4,7 @@ import {
   parseHealthResponse,
   probeFailureReport,
   redactHealthText,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { HealthTargetInput } from '../../shared/healthTypes';
 
 /**
@@ -32,9 +32,9 @@ export interface HealthProbeDeps {
 
 export const HEALTH_MAX_BODY_BYTES = 512 * 1024;
 
-const TOO_LARGE = 'The response is larger than 512 KB, so AgentMate stopped reading it.';
+const TOO_LARGE = 'The response is larger than 512 KB, so Runova stopped reading it.';
 const REDIRECTED =
-  'The endpoint answered with a redirect. AgentMate does not follow redirects, so its credentials are never sent to another address. Use the final URL.';
+  'The endpoint answered with a redirect. Runova does not follow redirects, so its credentials are never sent to another address. Use the final URL.';
 
 const NODE_TLS_CODES = new Set([
   'DEPTH_ZERO_SELF_SIGNED_CERT',
@@ -159,7 +159,7 @@ export async function probeHealthTarget(
   }
   if (url.protocol === 'http:' && !isLoopbackHost(url.hostname) && !target.allowInsecure) {
     return fail(
-      'Plain http:// would send the key unencrypted, so AgentMate only uses it for this computer. Use https://, or allow insecure HTTP for this target.',
+      'Plain http:// would send the key unencrypted, so Runova only uses it for this computer. Use https://, or allow insecure HTTP for this target.',
       'invalid',
     );
   }
@@ -171,7 +171,7 @@ export async function probeHealthTarget(
       headers: {
         Authorization: authorization(target, secret),
         Accept: HEALTH_MEDIA_TYPE,
-        'User-Agent': 'AgentMate-Health/1',
+        'User-Agent': 'Runova-Health/1',
         'Cache-Control': 'no-cache',
       },
       redirect: 'manual',

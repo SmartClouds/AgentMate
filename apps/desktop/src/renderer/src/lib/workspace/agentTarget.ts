@@ -1,4 +1,4 @@
-import { allGroups, findGroup } from '@agentmat/core';
+import { allGroups, findGroup } from '@runova/core';
 import { useTerminalSessionStore } from '@/lib/terminal/terminalRuntime';
 import { useWorkspaceStore, type WorkspaceTerminalTab } from '@/stores/workspaceStore';
 

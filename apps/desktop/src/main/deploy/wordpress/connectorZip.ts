@@ -1,15 +1,21 @@
 import { copyFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
+import { WP_LEGACY_CONNECTOR_ZIP } from '@runova/core';
 import type { DeployWordPressSaveZipResult } from '../../../shared/deployWordPressTypes';
 import { wordPressError } from '../../../shared/wordpressErrors';
 
 /**
- * The AgentMate Connector plugin zip that ships with the app (E19), saved wherever the user picks
+ * The Runova Connector plugin zip that ships with the app (E19), saved wherever the user picks
  * so they can upload it in wp-admin. Packaged builds carry it in their resources; a development
  * run uses the one `node scripts/wordpress-connector.mjs build` writes.
  */
 
-export const CONNECTOR_ZIP_NAME = 'agentmate-connector.zip';
+export const CONNECTOR_ZIP_NAME = 'runova-connector.zip';
+/**
+ * The bridge package, the same plugin in the folder 1.63 used: the only update a 1.63 site takes.
+ * The app sends it to such a site, then asks the site to move to its own folder.
+ */
+export const BRIDGE_ZIP_NAME = WP_LEGACY_CONNECTOR_ZIP;
 
 export interface ConnectorZipDeps {
   isPackaged: boolean;
@@ -24,10 +30,11 @@ export interface ConnectorZipDeps {
 
 export function connectorZipPath(
   deps: Pick<ConnectorZipDeps, 'isPackaged' | 'resourcesPath' | 'appPath'>,
+  name: string = CONNECTOR_ZIP_NAME,
 ): string {
   return deps.isPackaged
-    ? join(deps.resourcesPath, 'wordpress-connector', CONNECTOR_ZIP_NAME)
-    : join(deps.appPath, '..', 'wordpress-connector', 'dist', CONNECTOR_ZIP_NAME);
+    ? join(deps.resourcesPath, 'wordpress-connector', name)
+    : join(deps.appPath, '..', 'wordpress-connector', 'dist', name);
 }
 
 export async function saveConnectorZip(
@@ -39,8 +46,8 @@ export async function saveConnectorZip(
     throw wordPressError(
       'internal',
       deps.isPackaged
-        ? 'This build of AgentMate does not include the AgentMate Connector plugin. Download it from the AgentMate release page instead.'
-        : 'The AgentMate Connector zip has not been built yet. Run "node scripts/wordpress-connector.mjs build" first.',
+        ? 'This build of Runova does not include the Runova Connector plugin. Download it from the Runova release page instead.'
+        : 'The Runova Connector zip has not been built yet. Run "node scripts/wordpress-connector.mjs build" first.',
     );
   }
   const target = await deps.pickSavePath(CONNECTOR_ZIP_NAME);

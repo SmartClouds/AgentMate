@@ -1,5 +1,5 @@
-import type { ScannerRunResult } from '@agentmat/core';
-import { getSecurityScanner } from '@agentmat/core';
+import type { ScannerRunResult } from '@runova/core';
+import { getSecurityScanner } from '@runova/core';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Check, ChevronDown, Copy, TerminalSquare } from '@/components/icons';

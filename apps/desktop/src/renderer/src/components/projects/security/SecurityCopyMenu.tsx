@@ -1,9 +1,9 @@
-import type { SecurityScanRecord } from '@agentmat/core';
+import type { SecurityScanRecord } from '@runova/core';
 import {
   buildSecurityFixPrompt,
   buildSecurityJson,
   buildSecurityReportMarkdown,
-} from '@agentmat/core';
+} from '@runova/core';
 import { toast } from 'sonner';
 import { Check, ChevronDown, Copy, FileCode, Sparkles } from '@/components/icons';
 import { Button } from '@/components/ui/button';

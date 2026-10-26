@@ -1,4 +1,4 @@
-import type { PostmanRequestItem } from '@agentmat/core';
+import type { PostmanRequestItem } from '@runova/core';
 import { ipcMain } from 'electron';
 import type {
   ApiCollectionSummary,

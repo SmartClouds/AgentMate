@@ -1,6 +1,6 @@
 import { isIP, isIPv4, connect as netConnect, type Socket } from 'node:net';
 import { connect as tlsConnect } from 'node:tls';
-import type { ProxyProtocol } from '@agentmat/core';
+import type { ProxyProtocol } from '@runova/core';
 
 /**
  * A raw TCP connection opened through a proxy, for the features that need a socket rather than

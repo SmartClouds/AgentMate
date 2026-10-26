@@ -10,7 +10,7 @@ import {
   sceneConfig,
   sceneUrl,
   type Track,
-} from '@agentmat/studio';
+} from '@runova/studio';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '../kit';
 import { useSceneSeek } from '../scenes/useSceneSeek';

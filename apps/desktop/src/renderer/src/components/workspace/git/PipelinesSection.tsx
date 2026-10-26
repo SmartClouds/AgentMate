@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { GithubActionsRunErrorInput } from '@shared/apiTypes';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -137,7 +137,7 @@ export function FailedRunActions({
   async function copy(): Promise<void> {
     setCopying(true);
     try {
-      const result = await window.agentmat.pipelines.runError(run);
+      const result = await window.runova.pipelines.runError(run);
       if (!result.ok) {
         toast.error(result.error);
         return;

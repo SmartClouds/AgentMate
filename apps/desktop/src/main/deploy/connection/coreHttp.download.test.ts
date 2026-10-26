@@ -64,7 +64,7 @@ describe('CoreHttpClient.download', () => {
     expect(Buffer.concat(received).subarray(0, 8).toString()).toBe('AMBACKUP');
     expect(progress.at(-1)).toBe(70_008);
     expect(seen[0].headers.authorization).toBe('Bearer tok');
-    expect(seen[0].headers.host).toBe('agentmate-core');
+    expect(seen[0].headers.host).toBe('runova-core');
   });
 
   it('rejects a refusal with its status and writes nothing', async () => {

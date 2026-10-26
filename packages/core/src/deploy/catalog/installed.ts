@@ -1,4 +1,5 @@
 import { parse } from 'yaml';
+import { LEGACY_CATALOG_EXTENSION_KEY } from '../deployLegacyNames.js';
 import { findCatalogTemplate } from './index.js';
 import { CATALOG_EXTENSION_KEY, type CatalogRender, renderCatalogApp } from './render.js';
 import { generateCatalogSecrets } from './secrets.js';
@@ -6,7 +7,7 @@ import type { AnyCatalogTemplate, RenderedCatalogFact } from './types.js';
 import type { InstalledCatalogApp } from './updates.js';
 
 /**
- * An app after its install: what its compose file says it is (the `x-agentmate` block the
+ * An app after its install: what its compose file says it is (the `x-runova` block the
  * renderer writes), what it runs, its facts with the secrets masked or filled in, and the compose
  * file of an update. The secrets themselves stay on the server, in the stack's .env: an update
  * sends a new compose file only and keeps the .env the server has.
@@ -57,7 +58,8 @@ export function readCatalogInstall(
     return { ok: false, reason: 'The compose file is not valid YAML.' };
   }
   if (!isRecord(document)) return { ok: false, reason: NOT_CATALOG, notCatalog: true };
-  const block = document[CATALOG_EXTENSION_KEY];
+  // Apps installed before the rename carry the block under its old key.
+  const block = document[CATALOG_EXTENSION_KEY] ?? document[LEGACY_CATALOG_EXTENSION_KEY];
   const catalog = isRecord(block) ? block.catalog : undefined;
   if (!isRecord(catalog)) return { ok: false, reason: NOT_CATALOG, notCatalog: true };
   const { template: id, version, params, domain } = catalog;

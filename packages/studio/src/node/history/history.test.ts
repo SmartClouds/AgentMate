@@ -31,10 +31,10 @@ async function setup() {
   const root = await tempDir();
   const service = createStudioService({
     dataDir: join(root, 'userData', 'studio'),
-    defaultLibraryRoot: join(root, 'Videos', 'AgentMate Studio'),
+    defaultLibraryRoot: join(root, 'Videos', 'Runova Studio'),
     defaultCacheDir: join(root, 'userData', 'studio-cache'),
     appDir: join(root, 'app'),
-    appId: 'AgentMate',
+    appId: 'Runova',
     openDb: openNodeSqlite,
     projects: { get: () => null },
     notify: () => undefined,
@@ -176,7 +176,7 @@ describe("Studio's part of the app backup", () => {
       defaultLibraryRoot: join(await tempDir(), 'Videos'),
       defaultCacheDir: join(await tempDir(), 'cache'),
       appDir: null,
-      appId: 'AgentMate',
+      appId: 'Runova',
       openDb: openNodeSqlite,
       projects: { get: () => null },
       notify: () => undefined,

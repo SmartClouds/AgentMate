@@ -1,4 +1,4 @@
-import type { OpenSqlDriver, SqlRow, SqlValue } from '@agentmat/studio/node';
+import type { OpenSqlDriver, SqlRow, SqlValue } from '@runova/studio/node';
 import Database from 'better-sqlite3';
 
 /** Studio's SQLite port over the app's better-sqlite3 build. */

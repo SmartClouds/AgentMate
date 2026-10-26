@@ -1,4 +1,4 @@
-import { HEALTH_ENV } from '@agentmat/core';
+import { HEALTH_ENV } from '@runova/core';
 import type { HealthSecretReveal } from '@shared/healthTypes';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -147,8 +147,8 @@ export function HealthSecretStep({
             copyWhat="Variable"
           />
           <p className="text-xs text-muted-foreground">
-            Set it on the server where the app runs, not in the repository. AgentMate keeps the{' '}
-            {noun} encrypted and sends it only to this endpoint.
+            Set it on the server where the app runs, not in the repository. Runova keeps the {noun}{' '}
+            encrypted and sends it only to this endpoint.
           </p>
         </div>
       </div>

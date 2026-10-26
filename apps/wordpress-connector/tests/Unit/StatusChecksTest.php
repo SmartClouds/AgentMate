@@ -1,14 +1,14 @@
 <?php
 /**
- * The Status tab and `wp agentmate status`.
+ * The Status tab and `wp runova status`.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Unit;
+namespace Runova\Connector\Tests\Unit;
 
-use AgentMate\Connector\Info\StatusChecks;
-use AgentMate\Connector\Tests\Support\TestCase;
+use Runova\Connector\Info\StatusChecks;
+use Runova\Connector\Tests\Support\TestCase;
 
 final class StatusChecksTest extends TestCase
 {
@@ -27,7 +27,7 @@ final class StatusChecksTest extends TestCase
     public function testAHealthySite(): void
     {
         $this->makeSite();
-        $this->env->put('mu-plugins/00-agentmate-connector-guard.php', '<?php');
+        $this->env->put('mu-plugins/00-runova-connector-guard.php', '<?php');
         $checks = $this->checks(array('headerVersion' => '1.0.0', 'guardCurrent' => true));
         $this->assertSame(
             array('version', 'fileMods', 'filesystem', 'switches', 'loopback', 'guard', 'sodium', 'dataDir', 'syntax', 'https'),
@@ -45,12 +45,12 @@ final class StatusChecksTest extends TestCase
         $this->makeSite();
         $this->env->fileModsAllowed = false;
         $this->env->filesystemMethod = 'ftpext';
-        $this->env->constants['AGENTMATE_CONNECTOR_DISABLED'] = true;
+        $this->env->constants['RUNOVA_CONNECTOR_DISABLED'] = true;
         $this->env->health = array(array(
             array('name' => 'home', 'status' => 500, 'ok' => false, 'detail' => 'HTTP 500'),
             array('name' => 'ajaxPing', 'status' => null, 'ok' => null, 'detail' => 'blocked'),
         ));
-        $this->env->dataDir = '/nonexistent/agentmate/data';
+        $this->env->dataDir = '/nonexistent/runova/data';
         $checks = $this->checks(array('headerVersion' => '0.9.0', 'guardCurrent' => false));
         foreach (array('version', 'fileMods', 'filesystem', 'switches', 'loopback', 'guard', 'dataDir') as $id) {
             $this->assertFalse($checks[$id]['ok'], $id);
@@ -66,7 +66,7 @@ final class StatusChecksTest extends TestCase
     public function testNotesAreNeitherGoodNorBad(): void
     {
         $this->makeSite();
-        $this->env->constants['AGENTMATE_CONNECTOR_READ_ONLY'] = true;
+        $this->env->constants['RUNOVA_CONNECTOR_READ_ONLY'] = true;
         $this->env->health = array(array(array('name' => 'home', 'status' => null, 'ok' => null, 'detail' => 'blocked')));
         $checks = $this->checks();
         $this->assertNull($checks['switches']['ok']);

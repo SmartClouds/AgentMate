@@ -17,11 +17,7 @@ describe('workspace relative paths', () => {
 
   it('maps absolute Windows report paths regardless of case and separators', () => {
     expect(
-      workspaceRelative(
-        'e:\\AgentMate\\apps\\desktop\\src\\a.test.ts',
-        'E:\\AgentMate',
-        'apps/desktop',
-      ),
+      workspaceRelative('e:\\Runova\\apps\\desktop\\src\\a.test.ts', 'E:\\Runova', 'apps/desktop'),
     ).toBe('apps/desktop/src/a.test.ts');
   });
 

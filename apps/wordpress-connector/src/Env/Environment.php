@@ -3,10 +3,10 @@
  * What the request handling needs to know about the site, behind one interface so it can be
  * tested without WordPress. WordPressEnvironment is the real one.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Env;
+namespace Runova\Connector\Env;
 
 interface Environment
 {
@@ -16,6 +16,9 @@ interface Environment
     public function elapsed(): float;
 
     public function pluginVersion(): string;
+
+    /** Layout::RUNOVA, or Layout::BRIDGE while the site still runs from the 1.63 folder. */
+    public function layout(): string;
 
     public function siteName(): string;
 

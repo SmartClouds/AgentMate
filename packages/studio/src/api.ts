@@ -1,4 +1,4 @@
-import type { EffortLevel } from '@agentmat/core';
+import type { EffortLevel } from '@runova/core';
 import { z } from 'zod';
 import type { EditProposal } from './ai/edit/answer.js';
 import { editOpSchema } from './document/ops.js';
@@ -268,7 +268,7 @@ export interface VideoSummary {
   linkedProjectId: string | null;
   createdAt: number;
   lastOpenedAt: number | null;
-  /** The folder is gone (moved, renamed or deleted outside AgentMate); Locate finds it again. */
+  /** The folder is gone (moved, renamed or deleted outside Runova); Locate finds it again. */
   missing: boolean;
 }
 

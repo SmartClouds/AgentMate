@@ -5,7 +5,7 @@ import {
   parseLsofListening,
   parseNetstatListening,
   parseSsListening,
-} from '@agentmat/core';
+} from '@runova/core';
 
 const execFileAsync = promisify(execFile);
 

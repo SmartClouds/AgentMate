@@ -1,5 +1,5 @@
-import type { Project, ProjectBlueprint } from '@agentmat/core';
-import { blueprintStep, DEFAULT_RELAY_BUDGET, targetAIForProject } from '@agentmat/core';
+import type { Project, ProjectBlueprint } from '@runova/core';
+import { blueprintStep, DEFAULT_RELAY_BUDGET, targetAIForProject } from '@runova/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -90,7 +90,7 @@ export function BlueprintReviewStep({
     // The prompt points the agent at the Relay guide, so it has to be in the project first.
     if (relay.enabled) {
       try {
-        await window.agentmat.relay.ensureGuide(project.id, blueprint.docsFolder);
+        await window.runova.relay.ensureGuide(project.id, blueprint.docsFolder);
       } catch {
         toast.error('Could not write the Relay guide into the project.', {
           description: 'The agent will not find the task format. Check the docs folder.',
@@ -116,7 +116,7 @@ export function BlueprintReviewStep({
 
   async function saveAsDraft(): Promise<void> {
     try {
-      await window.agentmat.projectDrafts.create({
+      await window.runova.projectDrafts.create({
         projectId: project.id,
         rawInput: filled.map((section) => section.text).join('\n\n'),
         promptType: 'Product',
@@ -132,7 +132,7 @@ export function BlueprintReviewStep({
 
   async function setAsStandingPrompt(): Promise<void> {
     try {
-      await window.agentmat.projects.update(project.id, { prompt });
+      await window.runova.projects.update(project.id, { prompt });
       void queryClient.invalidateQueries({ queryKey: queryKeys.projects });
       toast.success('Set as this project’s standing prompt.');
     } catch {
@@ -189,7 +189,7 @@ export function BlueprintReviewStep({
               Split into Relay tasks
             </Label>
             <p className="text-xs text-muted-foreground">
-              The backlog becomes task files that each fit one AI session. AgentMate runs them one
+              The backlog becomes task files that each fit one AI session. Runova runs them one
               after another, and every session leaves a handoff for the next.
             </p>
           </div>

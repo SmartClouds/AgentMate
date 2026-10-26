@@ -5,7 +5,7 @@ import type { DeployCloudDriveKind } from '../../../shared/deployServerBackupsTy
 
 /**
  * Signing in to Google Drive or OneDrive for a backup destination (E28), with the user's own OAuth
- * client, so AgentMate registers nothing with either. The browser opens the provider's consent
+ * client, so Runova registers nothing with either. The browser opens the provider's consent
  * page; it comes back to a listener on 127.0.0.1 at a random port (the loopback redirect both
  * allow for desktop clients), with PKCE (S256) and a random state. The code is traded for a
  * refresh token here, and the token goes straight on to the core, which seals it. The listener
@@ -114,22 +114,22 @@ export async function signInWithLoopback(
     }
     // A request without this sign-in's state is not the browser coming back from it.
     if (url.searchParams.get('state') !== state) {
-      answer(response, 400, 'Not this sign-in', 'Start the sign-in again from AgentMate.');
+      answer(response, 400, 'Not this sign-in', 'Start the sign-in again from Runova.');
       return;
     }
     const error = url.searchParams.get('error');
     if (error) {
       const description = url.searchParams.get('error_description') ?? error;
-      answer(response, 200, 'Sign-in stopped', 'You can close this tab and go back to AgentMate.');
+      answer(response, 200, 'Sign-in stopped', 'You can close this tab and go back to Runova.');
       settle?.reject(new Error(`${provider.label} did not sign in: ${description}`));
       return;
     }
     const value = url.searchParams.get('code');
     if (!value) {
-      answer(response, 400, 'No code', 'Start the sign-in again from AgentMate.');
+      answer(response, 400, 'No code', 'Start the sign-in again from Runova.');
       return;
     }
-    answer(response, 200, 'Signed in', 'You can close this tab and go back to AgentMate.');
+    answer(response, 200, 'Signed in', 'You can close this tab and go back to Runova.');
     settle?.resolve(value);
   });
 

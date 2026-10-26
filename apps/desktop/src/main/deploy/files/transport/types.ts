@@ -1,4 +1,4 @@
-import type { RemoteTimeSource } from '@agentmat/core';
+import type { RemoteTimeSource } from '@runova/core';
 import type { FileSiteProtocol } from '../../../../shared/deployFilesTypes';
 import type { FilesConnectTarget } from '../types';
 
@@ -83,15 +83,15 @@ export interface RemoteFiles {
 }
 
 /** The temporary name pattern `putFile` uses, so a later run can clean up what a crash left. */
-export const PART_FILE = /\.agentmate-[0-9a-f]{8}\.part$/;
+export const PART_FILE = /\.runova-[0-9a-f]{8}\.part$/;
 
 /**
  * The name the old file has while a replace that cannot rename onto it is under way. A run that
  * finds one deletes it when the real file is there, and renames it back when it is not.
  */
-export const BACKUP_FILE = /\.agentmate-[0-9a-f]{8}\.old$/;
+export const BACKUP_FILE = /\.runova-[0-9a-f]{8}\.old$/;
 
-/** The real name of a backup left by `putFile`: `a.css.agentmate-0123abcd.old` gives `a.css`. */
+/** The real name of a backup left by `putFile`: `a.css.runova-0123abcd.old` gives `a.css`. */
 export function backupTargetOf(path: string): string {
   return path.replace(BACKUP_FILE, '');
 }

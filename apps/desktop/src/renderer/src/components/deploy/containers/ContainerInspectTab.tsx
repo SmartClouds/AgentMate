@@ -2,7 +2,7 @@ import { coreErrorMessage } from '@shared/coreErrors';
 import type {
   ContainerDetails,
   ContainerEnvVariable,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useState } from 'react';
 import { Eye, EyeOff, Lock, Spinner } from '@/components/icons';
 import { SECTION_HEADING, SECTION_WELL } from '@/components/pageKit';
@@ -41,7 +41,7 @@ export function ContainerInspectTab({
     setProblem(null);
     try {
       const values = await stepUp.run(
-        (proof) => window.agentmat.deployDocker.revealEnv({ serverId, containerId, ...proof }),
+        (proof) => window.runova.deployDocker.revealEnv({ serverId, containerId, ...proof }),
         'Showing environment values',
       );
       if (values) onRevealed(values);

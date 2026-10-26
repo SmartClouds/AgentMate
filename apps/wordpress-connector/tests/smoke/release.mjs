@@ -10,7 +10,7 @@ import { sha } from './client.mjs';
 const source = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const TEXT = /\.(php|txt|md|css|js|json|xml|html)$/i;
 const SHIPPED = [
-  'agentmate-connector.php',
+  'runova-connector.php',
   'uninstall.php',
   'readme.txt',
   'rescue.php',
@@ -45,7 +45,7 @@ export function sourceFiles() {
 
 /** The version the source says it is. */
 export function sourceVersion() {
-  return readFileSync(join(source, 'agentmate-connector.php'), 'utf8').match(
+  return readFileSync(join(source, 'runova-connector.php'), 'utf8').match(
     /^ \* Version:\s+(\S+)/m,
   )[1];
 }
@@ -62,7 +62,7 @@ export function nextVersion(version) {
  */
 export function connectorRelease(current, version, edit) {
   const files = sourceFiles();
-  for (const name of ['agentmate-connector.php', 'guard/00-agentmate-connector-guard.php']) {
+  for (const name of ['runova-connector.php', 'guard/00-runova-connector-guard.php']) {
     files.set(name, Buffer.from(files.get(name).toString('utf8').replaceAll(current, version)));
   }
   files.set('src/SmokeMarker.php', Buffer.from(`<?php // smoke ${version}\n`));

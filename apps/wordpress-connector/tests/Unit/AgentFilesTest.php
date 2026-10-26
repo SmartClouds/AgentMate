@@ -3,13 +3,13 @@
  * The shared agent-files fixture: every hardDenied path is refused with pathRejected/hardDenied,
  * on its own and through /files/read; synced and ignoredUntracked paths are allowed.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Unit;
+namespace Runova\Connector\Tests\Unit;
 
-use AgentMate\Connector\Files\PathPolicy;
-use AgentMate\Connector\Tests\Support\TestCase;
+use Runova\Connector\Files\PathPolicy;
+use Runova\Connector\Tests\Support\TestCase;
 
 final class AgentFilesTest extends TestCase
 {

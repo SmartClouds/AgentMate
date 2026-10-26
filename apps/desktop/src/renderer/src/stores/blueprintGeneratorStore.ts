@@ -1,4 +1,4 @@
-import type { EffortLevel } from '@agentmat/core';
+import type { EffortLevel } from '@runova/core';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -17,7 +17,7 @@ interface BlueprintGeneratorState {
   setChoice: (projectId: string, choice: BlueprintGeneratorChoice) => void;
 }
 
-const STORE_NAME = 'agentmate-blueprint-generator';
+const STORE_NAME = 'runova-blueprint-generator';
 
 export const useBlueprintGeneratorStore = create<BlueprintGeneratorState>()(
   persist(

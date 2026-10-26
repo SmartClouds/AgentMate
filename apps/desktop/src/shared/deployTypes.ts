@@ -4,7 +4,7 @@ import type {
   JobLogLine,
   MetricsResolution,
   MetricsSample,
-} from './deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from './deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * Plain data the Deploy section passes between the main process and the renderer. Nothing here
@@ -18,10 +18,18 @@ import type {
 export type DeployTransport = 'streamlocal' | 'bridge' | 'dev-tcp' | 'direct-tls';
 
 /** What the app remembers about the core it installed on a server. */
+/**
+ * Where a server's core is installed: the layout from before the rename (release 1.63 and older)
+ * or the Runova one. A core from 1.64 on moves a server from the first to the second.
+ */
+export type DeployCoreLayout = 'legacy' | 'runova';
+
 export interface DeployCoreRecord {
   version: string;
   /** The release folder on the server. */
   release: string;
+  /** Left out by records saved before the rename, which are all `legacy`. */
+  layout?: DeployCoreLayout;
   transport: DeployTransport;
   installedAt: number;
   /** The server's own name for its OS, such as "Ubuntu 24.04.1 LTS", at install time. */
@@ -89,6 +97,7 @@ export type DeploySetupPhase =
   | 'cleanup'
   | 'rollback'
   | 'health'
+  | 'migrate'
   | 'owner'
   | 'enroll'
   | 'sign-in'
@@ -124,6 +133,10 @@ export type DeployCoreUpdateResult =
       previousVersion: string;
       /** Whether the server fetched the release itself or this app uploaded it. */
       via: 'server-download' | 'upload';
+      /** The layout the core runs in afterwards. */
+      layout?: DeployCoreLayout;
+      /** The update worked, but moving the server to the Runova layout did not (and was put back). */
+      migrationError?: string;
     }
   | { outcome: 'needs-ssh'; reason: string };
 
@@ -138,6 +151,10 @@ export interface DeployInstallResult {
   transport: 'streamlocal' | 'bridge';
   /** The version this install replaced, if any. */
   previousVersion: string | null;
+  /** The layout the core ended up in. */
+  layout?: DeployCoreLayout;
+  /** The server stayed on the legacy layout because moving it failed (and was put back). */
+  migrationError?: string;
   /** The core runs, but this computer's access could not be set up; it can be retried. */
   enrollmentError?: string;
 }
@@ -217,6 +234,10 @@ export interface DeployHealth {
   checkedAt: number;
   /** What the check went through: direct TLS when it answers, else the install's SSH channel. */
   transport?: DeployTransport;
+  /** The layout the core runs in; cores from before the rename do not say, and are legacy. */
+  layout?: DeployCoreLayout;
+  /** Why the last move to the Runova layout was put back. */
+  migrationError?: string;
 }
 
 /**

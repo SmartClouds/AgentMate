@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-export type SystemStatsSample = Awaited<ReturnType<typeof window.agentmat.system.sample>>;
+export type SystemStatsSample = Awaited<ReturnType<typeof window.runova.system.sample>>;
 
 const SAMPLE_INTERVAL_MS = 2000;
 const MAX_SAMPLES = 60;
@@ -33,7 +33,7 @@ export function useSystemStatsHistory(
     async function tick(): Promise<void> {
       const started = Date.now();
       try {
-        const sample = await window.agentmat.system.sample();
+        const sample = await window.runova.system.sample();
         if (cancelled) return;
         setHistory((prev) => {
           const next = [...prev.slice(-(MAX_SAMPLES - 1)), sample];

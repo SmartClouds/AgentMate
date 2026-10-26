@@ -12,7 +12,7 @@ import { join } from 'node:path';
 
 /**
  * A private set of developer tools for the Dev Setup tests. The app is pointed at this folder
- * (AGENTMATE_DEVSETUP_SANDBOX), which replaces its PATH, home and Program Files while it looks for
+ * (RUNOVA_DEVSETUP_SANDBOX), which replaces its PATH, home and Program Files while it looks for
  * tools, so a test sees exactly what is here and never what the machine running it has installed.
  *
  * The tools are scripts that print what the real ones print. `winget` is a script too: it logs how
@@ -59,7 +59,7 @@ function writeTool(bin: string, name: string, windows: string[], posix: string[]
 }
 
 export function createDevSetupSandbox(): DevSetupSandbox {
-  const folder = mkdtempSync(join(tmpdir(), 'agentmate-devsetup-'));
+  const folder = mkdtempSync(join(tmpdir(), 'runova-devsetup-'));
   const bin = join(folder, 'bin');
   mkdirSync(bin, { recursive: true });
 
@@ -151,7 +151,7 @@ export function createDevSetupSandbox(): DevSetupSandbox {
   return {
     folder,
     bin,
-    env: () => ({ AGENTMATE_DEVSETUP_SANDBOX: folder }),
+    env: () => ({ RUNOVA_DEVSETUP_SANDBOX: folder }),
     wingetCalls: () => callsIn('winget.log'),
     wingetChecks: () => callsIn('winget-checks.log'),
     installGh: (version = '2.62.0') =>

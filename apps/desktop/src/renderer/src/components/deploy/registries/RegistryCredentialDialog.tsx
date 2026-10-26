@@ -60,7 +60,7 @@ export function RegistryCredentialDialog({
     setBusy(true);
     setProblem(null);
     try {
-      await window.agentmat.deployRegistry.saveCredential({
+      await window.runova.deployRegistry.saveCredential({
         kind,
         ...(kind === 'custom' ? { registry: registry.trim() } : {}),
         username,

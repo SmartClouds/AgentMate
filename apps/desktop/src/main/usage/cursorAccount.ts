@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { SubscriptionPlan } from '@agentmat/core';
+import type { SubscriptionPlan } from '@runova/core';
 import Database from 'better-sqlite3';
 
 // Cursor account detection, the same shape as `claudeAccount.ts`: read the
@@ -91,7 +91,7 @@ function readKeys(file: string, keys: string[]): Map<string, string> {
 
   let dir: string | null = null;
   try {
-    dir = mkdtempSync(join(tmpdir(), 'agentmate-cursor-'));
+    dir = mkdtempSync(join(tmpdir(), 'runova-cursor-'));
     const copy = join(dir, 'state.vscdb');
     copyFileSync(file, copy);
     for (const ext of ['-wal', '-shm']) {

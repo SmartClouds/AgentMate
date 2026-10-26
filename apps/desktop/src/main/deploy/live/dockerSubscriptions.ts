@@ -3,7 +3,7 @@ import type {
   ContainerLogLine,
   ContainerStatsBatch,
   DockerEvent,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type {
   DeployConsoleEvent,
   DeployConsoleOpenInput,

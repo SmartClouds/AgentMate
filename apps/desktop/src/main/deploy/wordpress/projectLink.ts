@@ -10,7 +10,7 @@ import {
   type WpItemRef,
   wpItemKey,
   wpItemRoot,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { CreateProjectInput } from '../../../shared/apiTypes';
 import type { DeployWordPressLocalItem } from '../../../shared/deployWordPressTypes';
 import { wordPressError } from '../../../shared/wordpressErrors';
@@ -207,8 +207,8 @@ export async function assertItemFoldersEmpty(
       'folderNotEmpty',
       [
         taken.length === 1
-          ? 'This folder already holds files, so AgentMate will not pull into it:'
-          : 'These folders already hold files, so AgentMate will not pull into them:',
+          ? 'This folder already holds files, so Runova will not pull into it:'
+          : 'These folders already hold files, so Runova will not pull into them:',
         ...taken,
       ].join('\n'),
     );

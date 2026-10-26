@@ -1,4 +1,4 @@
-import type { HealthServiceResult } from '@agentmat/core';
+import type { HealthServiceResult } from '@runova/core';
 import type { HealthTargetSummary } from '@shared/healthTypes';
 import { useId, useState } from 'react';
 import { ChevronDown, Server, TriangleAlert } from '@/components/icons';

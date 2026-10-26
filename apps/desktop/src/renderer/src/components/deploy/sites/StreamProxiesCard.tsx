@@ -1,5 +1,5 @@
 import { coreErrorMessage } from '@shared/coreErrors';
-import type { StreamProxyInfo } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { StreamProxyInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { NetworkIcon, Pencil, Plus, Trash2 } from '@/components/icons';
@@ -43,7 +43,7 @@ export function StreamProxiesCard({
     });
     if (!confirmed) return;
     try {
-      await window.agentmat.deploySites.removeStream(serverId, proxy.settings.id);
+      await window.runova.deploySites.removeStream(serverId, proxy.settings.id);
       toast.success('Proxy deleted. Apply to close the port.');
       onChanged();
     } catch (failure) {

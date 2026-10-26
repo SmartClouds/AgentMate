@@ -73,7 +73,7 @@ describe('CoreHttpClient.download for file transfers', () => {
     const client = await serve((_request, response) => {
       response.writeHead(206, {
         'content-length': '3',
-        'x-agentmate-mtime-ms': '1700000000000',
+        'x-runova-mtime-ms': '1700000000000',
       });
       response.end('abc');
     });
@@ -83,7 +83,7 @@ describe('CoreHttpClient.download for file transfers', () => {
     const bytes = await client.download('/file', stream, {
       headers: { range: 'bytes=2-4' },
       onResponse: (status, headers) => {
-        order.push(`response ${status} ${headers['x-agentmate-mtime-ms']}`);
+        order.push(`response ${status} ${headers['x-runova-mtime-ms']}`);
       },
       onProgress: (got) => order.push(`progress ${got}`),
     });
@@ -92,7 +92,7 @@ describe('CoreHttpClient.download for file transfers', () => {
     expect(Buffer.concat(received).toString()).toBe('abc');
     expect(order).toEqual(['response 206 1700000000000', 'progress 3']);
     expect(seen[0].headers.range).toBe('bytes=2-4');
-    expect(seen[0].headers.host).toBe('agentmate-core');
+    expect(seen[0].headers.host).toBe('runova-core');
   });
 
   it('keeps the JSON body of a refusal', async () => {

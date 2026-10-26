@@ -7,7 +7,7 @@ import {
   type OpenVideoResult,
   type VideoSummary,
   type VoiceEngineView,
-} from '@agentmat/studio';
+} from '@runova/studio';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IPC } from '../../shared/ipcChannels';
 import { setElectronPath } from '../../test/main/electronMock';
@@ -58,10 +58,7 @@ beforeEach(async () => {
     );
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  vi.stubEnv(
-    'AGENTMATE_STUDIO_TTS_URL',
-    `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
-  );
+  vi.stubEnv('RUNOVA_STUDIO_TTS_URL', `http://127.0.0.1:${(server.address() as AddressInfo).port}`);
   setElectronPath('videos', join(userData.dir, 'Videos'));
   userData.writeData('settings.json', { openaiApiKey: 'sk-app' });
   await loadIpc(

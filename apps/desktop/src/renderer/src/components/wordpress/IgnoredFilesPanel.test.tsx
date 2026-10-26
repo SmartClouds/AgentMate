@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -45,7 +45,7 @@ function Harness({
 }): React.JSX.Element | null {
   const { data } = useQuery({
     queryKey: queryKeys.projects,
-    queryFn: () => window.agentmat.projects.list(),
+    queryFn: () => window.runova.projects.list(),
   });
   const project = data?.find((entry) => entry.id === id);
   return project ? (
@@ -97,7 +97,7 @@ describe('IgnoredFilesPanel', () => {
     const note = screen.getByText(/Left out on their own/);
     expect(note.textContent).toContain('.gitignore');
     expect(note.textContent).toContain('.claude');
-    expect(note.textContent).toContain('.agentmate');
+    expect(note.textContent).toContain('.runova');
     expect(screen.queryByRole('list', { name: 'Ignored files and folders' })).toBeNull();
   });
 

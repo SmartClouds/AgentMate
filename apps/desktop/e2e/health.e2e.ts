@@ -8,7 +8,7 @@ import { type LaunchedApp, launchApp } from './app';
 
 /**
  * Monitoring (E22) through the real UI, against a small endpoint in this process that
- * follows the AgentMate Health Protocol the way the setup prompt asks: it keeps only the key's
+ * follows the Runova Health Protocol the way the setup prompt asks: it keeps only the key's
  * SHA-256, answers 401 with an empty body to anything else, and reports a failing database with
  * its error when told to.
  *
@@ -39,7 +39,7 @@ async function startEndpoint(): Promise<FakeEndpoint> {
       ? createHash('sha256').update(header.slice(7), 'utf8').digest('hex')
       : '';
     if (!expected || presented !== expected) {
-      res.setHeader('WWW-Authenticate', 'Bearer realm="agentmate-health"');
+      res.setHeader('WWW-Authenticate', 'Bearer realm="runova-health"');
       res.statusCode = 401;
       res.end();
       return;
@@ -54,13 +54,13 @@ async function startEndpoint(): Promise<FakeEndpoint> {
                 componentType: 'datastore',
                 status: 'fail',
                 output: 'connect ECONNREFUSED 10.0.0.5:5432',
-                agentmate: { errorCode: 'ECONNREFUSED', hint: 'Start the database container' },
+                runova: { errorCode: 'ECONNREFUSED', hint: 'Start the database container' },
               }
             : { componentType: 'datastore', status: 'pass', observedValue: 3, observedUnit: 'ms' },
         ],
         'redis:ping': [{ componentType: 'datastore', status: 'pass' }],
       },
-      agentmate: { protocol: 'agentmate-health/1' },
+      runova: { protocol: 'runova-health/1' },
     };
     res.statusCode = failing ? 503 : 200;
     res.setHeader('Content-Type', 'application/health+json');
@@ -69,7 +69,7 @@ async function startEndpoint(): Promise<FakeEndpoint> {
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address() as AddressInfo;
   return {
-    url: `http://127.0.0.1:${port}/_agentmate/health`,
+    url: `http://127.0.0.1:${port}/_runova/health`,
     setHash: (hash) => {
       expected = hash;
     },
@@ -96,9 +96,9 @@ async function createProject(current: LaunchedApp): Promise<void> {
     async ({ folderPath, name }) => {
       const api = (
         window as unknown as {
-          agentmat: { projects: { create(input: unknown): Promise<{ id: string }> } };
+          runova: { projects: { create(input: unknown): Promise<{ id: string }> } };
         }
-      ).agentmat;
+      ).runova;
       await api.projects.create({
         name,
         folderPath,
@@ -148,8 +148,8 @@ test('a target goes healthy, shows a failing service, and turns a rotated key do
   await page.getByRole('option', { name: PROJECT }).click();
   const prompt = build.getByRole('region', { name: 'Prompt for your agent' });
   await expect(prompt).toContainText(`Add a healthcheck endpoint to ${PROJECT}`);
-  await expect(prompt).toContainText('AGENTMATE_HEALTH_TOKEN_SHA256');
-  await expect(prompt).not.toContainText(/amh_[A-Za-z0-9_-]{10,}/);
+  await expect(prompt).toContainText('RUNOVA_HEALTH_TOKEN_SHA256');
+  await expect(prompt).not.toContainText(/rnh_[A-Za-z0-9_-]{10,}/);
   await build.getByRole('button', { name: 'Close' }).click();
   await expect(build).toBeHidden();
 
@@ -168,7 +168,7 @@ test('a target goes healthy, shows a failing service, and turns a rotated key do
   expect(hash).toMatch(/^[0-9a-f]{64}$/);
   await page.getByRole('button', { name: 'Show key' }).click();
   const key = await copyRowValue(page, 'Key');
-  expect(key).toMatch(/^amh_[A-Za-z0-9_-]{43}$/);
+  expect(key).toMatch(/^rnh_[A-Za-z0-9_-]{43}$/);
   expect(createHash('sha256').update(key, 'utf8').digest('hex')).toBe(hash);
   server.setHash(hash);
   await page.getByRole('button', { name: 'I saved it' }).click();
@@ -198,11 +198,11 @@ test('a target goes healthy, shows a failing service, and turns a rotated key do
         page.evaluate(async () => {
           const api = (
             window as unknown as {
-              agentmat: {
+              runova: {
                 appNotifications: { list(): Promise<{ kind: string; route?: string }[]> };
               };
             }
-          ).agentmat;
+          ).runova;
           return (await api.appNotifications.list()).filter(
             (item) => item.kind === 'health-failure',
           ).length;

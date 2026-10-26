@@ -119,8 +119,8 @@ export async function startPebble(): Promise<Pebble> {
   ensureImage(PEBBLE_IMAGE);
   ensureImage(CHALLTESTSRV_IMAGE);
   const suffix = randomBytes(5).toString('hex');
-  const pebble = `agentmate-pebble-${suffix}`;
-  const challenges = `agentmate-challtestsrv-${suffix}`;
+  const pebble = `runova-pebble-${suffix}`;
+  const challenges = `runova-challtestsrv-${suffix}`;
   const created: string[] = [];
   const stop = () => {
     for (const container of created.splice(0)) {
@@ -178,16 +178,16 @@ export async function startPebble(): Promise<Pebble> {
       'PEBBLE_VA_NOSLEEP=1',
       PEBBLE_IMAGE,
       '-config',
-      '/test/config/agentmate.json',
+      '/test/config/runova.json',
       '-strict',
       '-dnsserver',
       `${challengeAddress}:8053`,
     ]);
-    const folder = mkdtempSync(join(tmpdir(), 'agentmate-pebble-'));
+    const folder = mkdtempSync(join(tmpdir(), 'runova-pebble-'));
     let rootPem: string;
     try {
-      writeFileSync(join(folder, 'agentmate.json'), CONFIGURATION);
-      docker(['cp', join(folder, 'agentmate.json'), `${pebble}:/test/config/agentmate.json`]);
+      writeFileSync(join(folder, 'runova.json'), CONFIGURATION);
+      docker(['cp', join(folder, 'runova.json'), `${pebble}:/test/config/runova.json`]);
       docker(['cp', `${pebble}:/test/certs/pebble.minica.pem`, join(folder, 'minica.pem')]);
       rootPem = readFileSync(join(folder, 'minica.pem'), 'utf-8');
     } finally {

@@ -90,7 +90,7 @@ function make(overrides: Partial<Parameters<typeof createHelpService>[0]> = {}):
 }
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'agentmate-help-svc-'));
+  dir = mkdtempSync(join(tmpdir(), 'runova-help-svc-'));
   runPrompt = vi.fn<HelpServiceDeps['runPrompt']>(
     async () => 'Open **Vault** and type your master password [1].',
   );
@@ -120,7 +120,7 @@ describe('createHelpService', () => {
     expect([provider, model, history, images]).toEqual(['openai', 'gpt', [], []]);
     expect(prompt).toContain('[1] Vault > Unlock the vault');
     expect(prompt).toContain('Question: How do I unlock my secrets?');
-    expect(system).toMatch(/AgentMate/);
+    expect(system).toMatch(/Runova/);
     expect(system).toMatch(/same language/);
   });
 

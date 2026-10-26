@@ -6,7 +6,7 @@ import {
   matchCopyGlobs,
   parseWorktreeList,
   type WorktreeStatus,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { WorktreeMergePreflight, WorktreeMergeResult } from '../../shared/apiTypes';
 import {
   currentBranch,

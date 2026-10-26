@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { TextSearchRequest } from '@shared/apiTypes';
 import { packSymbolIndex, type SymbolEntry } from '@shared/symbolIndex';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
@@ -6,8 +6,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useRecentFilesStore } from '@/stores/recentFilesStore';
 import { useWorkspaceSearchStore } from '@/stores/workspaceSearchStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
-import type { FakeBridge } from '../../../../../test/renderer/agentmatBridge';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
+import type { FakeBridge } from '../../../../../test/renderer/runovaBridge';
 import { WorkspaceSearchDialog } from './WorkspaceSearchDialog';
 
 // The real setup loads Monaco's web workers, which only the app's bundler can resolve.

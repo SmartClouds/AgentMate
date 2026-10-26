@@ -168,7 +168,7 @@ function tlsFailure(error: Error, host: string, port: number): RdpHandshakeError
   }
   return new RdpHandshakeError(
     'tls-failed',
-    `AgentMate couldn't set up a secure connection with ${host}:${port}.`,
+    `Runova couldn't set up a secure connection with ${host}:${port}.`,
     detail,
   );
 }

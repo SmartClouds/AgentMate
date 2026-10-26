@@ -1,4 +1,4 @@
-import type { AgentInstructionTarget } from '@agentmat/core';
+import type { AgentInstructionTarget } from '@runova/core';
 import { MAX_SSH_AGENT_MESSAGE_CHARS } from '@shared/sshAgentMessage';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';

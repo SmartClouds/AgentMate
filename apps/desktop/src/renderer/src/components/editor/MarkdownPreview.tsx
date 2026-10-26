@@ -1,4 +1,4 @@
-import { BLUEPRINT_FILE_SCHEME } from '@agentmat/core';
+import { BLUEPRINT_FILE_SCHEME } from '@runova/core';
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { persianTextProps } from '@/lib/rtl';

@@ -32,7 +32,7 @@ function useRunnerMachineStats(link: RunnerMachineLink, enabled: boolean) {
     queryKey: queryKeys.runnerMachineStats(machineKey(link)),
     queryFn: async (): Promise<RunnerMachineStatsResult> => {
       try {
-        return await window.agentmat.pipelines.runnerMachineStats(link);
+        return await window.runova.pipelines.runnerMachineStats(link);
       } catch (error) {
         return {
           ok: false,

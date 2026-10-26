@@ -2,8 +2,8 @@ import { act, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { FakeBridge } from '../../../../test/renderer/agentmatBridge';
 import { renderHookWithProviders } from '../../../../test/renderer/renderWithProviders';
+import type { FakeBridge } from '../../../../test/renderer/runovaBridge';
 import { type ComposerAssistOptions, useComposerAssist } from './useComposerAssist';
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));

@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import type { PromptTemplate } from '@agentmat/core';
+import type { PromptTemplate } from '@runova/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IPC } from '../../shared/ipcChannels';
 import {

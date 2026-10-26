@@ -1,4 +1,4 @@
-import type { Project, WpItemRef } from '@agentmat/core';
+import type { Project, WpItemRef } from '@runova/core';
 import type { DeployWordPressLocalItem } from '@shared/deployWordPressTypes';
 import { screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -28,7 +28,7 @@ const LOCAL: DeployWordPressLocalItem[] = [
   { kind: 'theme', slug: 'bakery', isFile: false, linked: false },
   { kind: 'plugin', slug: 'oven-timer', isFile: false, linked: false },
   { kind: 'plugin', slug: 'solo.php', isFile: true, linked: false },
-  { kind: 'plugin', slug: 'agentmate-connector', isFile: false, linked: false },
+  { kind: 'plugin', slug: 'runova-connector', isFile: false, linked: false },
 ];
 
 const SHOP = wpProject();
@@ -82,7 +82,7 @@ describe('NewItemDialog', () => {
     // Linked already, on the site already, or the connector itself.
     expect(screen.queryByRole('checkbox', { name: /storefront/ })).toBeNull();
     expect(screen.queryByRole('checkbox', { name: /twentytwentyfive/ })).toBeNull();
-    expect(screen.queryByRole('checkbox', { name: /agentmate-connector/ })).toBeNull();
+    expect(screen.queryByRole('checkbox', { name: /runova-connector/ })).toBeNull();
     expect(screen.getByText('wp-content/themes/bakery')).toBeTruthy();
     expect(screen.getByText('Single file')).toBeTruthy();
     expect(screen.getByText('Themes')).toBeTruthy();

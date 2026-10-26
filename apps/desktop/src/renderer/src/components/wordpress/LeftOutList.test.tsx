@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { WpItemRef } from '@agentmat/core';
+import type { WpItemRef } from '@runova/core';
 import type { DeployWordPressLeftOut } from '@shared/deployWordPressTypes';
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
@@ -35,8 +35,8 @@ const AGENT_PATHS = [
   '.claude/settings.json',
   '.claude/settings.local.json',
   '.claude/skills/x/SKILL.md',
-  '.agentmate/hooks/notify.sh',
-  '.agentmate/installed-skills.json',
+  '.runova/hooks/notify.sh',
+  '.runova/installed-skills.json',
   '.agents/skills/y/SKILL.md',
   '.codex/config.toml',
   '.cursor/rules/r.mdc',

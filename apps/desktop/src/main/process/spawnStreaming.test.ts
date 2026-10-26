@@ -18,7 +18,7 @@ let dir = '';
 
 beforeEach(async () => {
   // A space and an ampersand, the two characters that break naive cmd.exe quoting.
-  dir = await mkdtemp(join(tmpdir(), 'agentmate spawn & '));
+  dir = await mkdtemp(join(tmpdir(), 'runova spawn & '));
 });
 
 afterEach(async () => {
@@ -102,16 +102,13 @@ describe('spawnStreaming', () => {
   });
 
   it('passes extra environment variables through', async () => {
-    const path = await script(
-      'env.js',
-      "console.log('value=' + process.env.AGENTMATE_TEST_VALUE);",
-    );
+    const path = await script('env.js', "console.log('value=' + process.env.RUNOVA_TEST_VALUE);");
     const lines: string[] = [];
     await spawnStreaming({
       command: 'node',
       args: [path],
       cwd: dir,
-      env: { ...process.env, AGENTMATE_TEST_VALUE: 'C:\\tmp\\run 1\\report.json' },
+      env: { ...process.env, RUNOVA_TEST_VALUE: 'C:\\tmp\\run 1\\report.json' },
       timeoutMs: 20_000,
       token: { cancelled: false, child: null },
       onLine: (line) => lines.push(line),
@@ -133,7 +130,7 @@ describe('spawnStreaming', () => {
 
   it('says so when the command does not exist', async () => {
     const result = await spawnStreaming({
-      command: 'agentmate-no-such-tool-xyz',
+      command: 'runova-no-such-tool-xyz',
       args: [],
       cwd: dir,
       timeoutMs: 20_000,

@@ -1,4 +1,4 @@
-import { ENVIRONMENT_KIND_LABELS, type EnvironmentKind } from '@agentmat/core';
+import { ENVIRONMENT_KIND_LABELS, type EnvironmentKind } from '@runova/core';
 import { cn } from '@/lib/utils';
 
 /**

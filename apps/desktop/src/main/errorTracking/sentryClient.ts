@@ -1,8 +1,8 @@
-import { redactHealthText } from '@agentmat/core';
+import { redactHealthText } from '@runova/core';
 
 /**
  * The Sentry Web API over HTTP (E24), nothing more: it sends the token, reads the JSON back and
- * turns every way a call can fail into a sentence for the user. Turning the JSON into AgentMate's
+ * turns every way a call can fail into a sentence for the user. Turning the JSON into Runova's
  * own types is the provider's job (provider.ts), so this file knows URLs and status codes only.
  *
  * The token goes in one header to the one base it was given. A redirect is refused rather than
@@ -94,7 +94,7 @@ const SCOPE = {
 } as const;
 
 const REDIRECTED =
-  'Sentry answered with a redirect. AgentMate does not follow redirects, so the token is never sent to another address. Check the host.';
+  'Sentry answered with a redirect. Runova does not follow redirects, so the token is never sent to another address. Check the host.';
 
 const NODE_TLS_CODES = new Set([
   'DEPTH_ZERO_SELF_SIGNED_CERT',
@@ -296,7 +296,7 @@ export function createSentryClient(options: SentryClientOptions) {
     const headers: Record<string, string> = {
       Authorization: `Bearer ${options.token}`,
       Accept: 'application/json',
-      'User-Agent': 'AgentMate-ErrorTracking/1',
+      'User-Agent': 'Runova-ErrorTracking/1',
     };
     if (init.body !== undefined) headers['Content-Type'] = 'application/json';
     let response: Response;
@@ -325,7 +325,7 @@ export function createSentryClient(options: SentryClientOptions) {
       if (error instanceof TooLargeError) {
         throw new SentryApiError(
           'tooLarge',
-          'Sentry sent more than 2 MB, so AgentMate stopped reading it.',
+          'Sentry sent more than 2 MB, so Runova stopped reading it.',
           null,
           null,
         );

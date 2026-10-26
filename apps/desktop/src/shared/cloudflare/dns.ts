@@ -130,7 +130,7 @@ function contentProblem(input: CloudflareRecordInput): string | null {
         : "Enter the target server's name, like sip.example.com.";
     }
     default:
-      return 'AgentMate edits A, AAAA, CNAME, TXT, MX, CAA and SRV records, not that type.';
+      return 'Runova edits A, AAAA, CNAME, TXT, MX, CAA and SRV records, not that type.';
   }
 }
 

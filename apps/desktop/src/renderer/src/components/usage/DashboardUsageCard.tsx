@@ -1,4 +1,4 @@
-import { getUsageProvider, type ProviderUsage, type WidgetMode } from '@agentmat/core';
+import { getUsageProvider, type ProviderUsage, type WidgetMode } from '@runova/core';
 import { useNavigate } from 'react-router-dom';
 import { ExternalLink, X } from '@/components/icons';
 import { Chip, TileHeader } from '@/components/pageKit';

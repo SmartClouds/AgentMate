@@ -1,4 +1,4 @@
-import { STUDIO_OMNIVOICE, STUDIO_PIPER, STUDIO_TTS } from '@agentmat/core';
+import { STUDIO_OMNIVOICE, STUDIO_PIPER, STUDIO_TTS } from '@runova/core';
 import type { VoiceEngineView, VoiceView } from '../../api.js';
 import {
   piperVoicesFor,

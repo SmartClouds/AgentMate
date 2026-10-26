@@ -58,9 +58,9 @@ async function rdp<T>(page: Page, method: string, ...args: unknown[]): Promise<T
     ([name, params]) =>
       (
         window as unknown as {
-          agentmat: { rdp: Record<string, (...input: unknown[]) => Promise<unknown>> };
+          runova: { rdp: Record<string, (...input: unknown[]) => Promise<unknown>> };
         }
-      ).agentmat.rdp[name as string](...(params as unknown[])),
+      ).runova.rdp[name as string](...(params as unknown[])),
     [method, args] as const,
   )) as T;
 }
@@ -89,7 +89,7 @@ async function openSession(app: LaunchedApp, id: string): Promise<Page> {
   });
   await rdp<string>(app.page, 'openSession', id);
   const session = await opened;
-  await session.waitForFunction(() => Boolean((window as { agentmat?: unknown }).agentmat));
+  await session.waitForFunction(() => Boolean((window as { runova?: unknown }).runova));
   return session;
 }
 
@@ -145,7 +145,7 @@ test('shows the new certificate of a reinstalled server in the Certificate dialo
 
   await dialog.getByRole('button', { name: /Get certificate from server/ }).click();
 
-  await expect(dialog.getByText(/This is not the certificate AgentMate saved/)).toBeVisible();
+  await expect(dialog.getByText(/This is not the certificate Runova saved/)).toBeVisible();
   await expect(dialog).toContainText(newFingerprint);
   await testInfo.attach('certificate-changed.png', {
     body: await dialog.screenshot({ animations: 'disabled' }),

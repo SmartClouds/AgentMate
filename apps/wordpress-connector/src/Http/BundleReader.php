@@ -3,10 +3,10 @@
  * Opens a bundle once it may be trusted: size first, then gunzip with a hard limit, then the frame,
  * which must be for the route the URL named.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Http;
+namespace Runova\Connector\Http;
 
 final class BundleReader
 {

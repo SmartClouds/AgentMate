@@ -1,4 +1,4 @@
-import { DEFAULT_RELAY_OPTIONS } from '@agentmat/core';
+import { DEFAULT_RELAY_OPTIONS } from '@runova/core';
 import type { RelayBoard, RelayLegView, RelayRunView, RelayTaskCard } from '@shared/relayTypes';
 
 /** Shapes for Relay renderer tests: a task card, a board and a live relay. */

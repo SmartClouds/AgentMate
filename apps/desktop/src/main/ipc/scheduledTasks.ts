@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { ScheduledTask, ScheduledTaskStatus } from '@agentmat/core';
+import type { ScheduledTask, ScheduledTaskStatus } from '@runova/core';
 import { ipcMain } from 'electron';
 import type {
   CreateScheduledTasksInput,

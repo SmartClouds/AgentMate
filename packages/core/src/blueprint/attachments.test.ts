@@ -10,6 +10,7 @@ import {
   isInlineMedia,
   isVideoMime,
   referencedAttachmentNames,
+  relinkLegacyAttachments,
   removeAttachmentRefs,
 } from './attachments.js';
 
@@ -185,5 +186,22 @@ describe('removeAttachmentRefs', () => {
     const text = `a ![One](${PREFIX}a.png) b`;
     expect(removeAttachmentRefs(text, 'other.png')).toBe(text);
     expect(removeAttachmentRefs('', 'a.png')).toBe('');
+  });
+});
+
+describe('relinkLegacyAttachments', () => {
+  it('points links saved before the rename at the current scheme', () => {
+    const old =
+      '![shot](agentmate-file://blueprint/a.png) and [log](agentmate-file://blueprint/b.txt)'; // legacy-name
+    expect(relinkLegacyAttachments(old)).toBe(
+      `![shot](${blueprintFileUrl('a.png')}) and [log](${blueprintFileUrl('b.txt')})`,
+    );
+    expect(referencedAttachmentNames(relinkLegacyAttachments(old))).toEqual(
+      new Set(['a.png', 'b.txt']),
+    );
+  });
+
+  it('leaves text without old links alone', () => {
+    expect(relinkLegacyAttachments('plain text')).toBe('plain text');
   });
 });

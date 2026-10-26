@@ -1,4 +1,4 @@
-import { getCliDefinition, type Project } from '@agentmat/core';
+import { getCliDefinition, type Project } from '@runova/core';
 import { toast } from 'sonner';
 import { terminalRuntime, useTerminalSessionStore } from '@/lib/terminal/terminalRuntime';
 import { findAgentTerminal } from '@/lib/workspace/agentTarget';

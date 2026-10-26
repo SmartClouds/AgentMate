@@ -1,11 +1,11 @@
-import type { SecurityScannerId, SecurityScannerSettings } from '@agentmat/core';
+import type { SecurityScannerId, SecurityScannerSettings } from '@runova/core';
 import {
   CODEQL_LANGUAGES,
   codeqlLanguageNeedsBuild,
   getSecurityScanner,
   SEMGREP_RULESETS,
   STRIX_DEFAULT_MODEL,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
@@ -87,7 +87,7 @@ export function ScannerSetupDialog({
               />
               <p className="text-xs text-muted-foreground">
                 Auto downloads rules from semgrep.dev on every scan. Pick one of the p/ packs to
-                stay offline. AgentMate always runs Semgrep with metrics off.
+                stay offline. Runova always runs Semgrep with metrics off.
               </p>
             </div>
           )}

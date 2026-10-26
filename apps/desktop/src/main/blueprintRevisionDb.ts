@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import type { BlueprintRevision, BlueprintRevisionTarget, BlueprintStepId } from '@agentmat/core';
+import type { BlueprintRevision, BlueprintRevisionTarget, BlueprintStepId } from '@runova/core';
 import Database from 'better-sqlite3';
 import { app } from 'electron';
 import type { AddBlueprintRevisionInput } from '../shared/apiTypes';

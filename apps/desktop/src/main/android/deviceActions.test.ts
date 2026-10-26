@@ -154,13 +154,11 @@ describe('revealCapture', () => {
   it('only reveals a file inside the captures folder', async () => {
     const { revealCapture } = await import('./deviceActions');
 
-    await expect(
-      revealCapture('/home/dev/pictures/AgentMate/Android/a.png'),
-    ).resolves.not.toThrow();
+    await expect(revealCapture('/home/dev/pictures/Runova/Android/a.png')).resolves.not.toThrow();
     // A path from the renderer must not be able to point anywhere it likes.
     await expect(revealCapture('/etc/passwd')).rejects.toThrow();
     await expect(
-      revealCapture('/home/dev/pictures/AgentMate/Android/../../../secrets.txt'),
+      revealCapture('/home/dev/pictures/Runova/Android/../../../secrets.txt'),
     ).rejects.toThrow();
   });
 });

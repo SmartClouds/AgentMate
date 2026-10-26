@@ -1,4 +1,4 @@
-import type { GenerationView } from '@agentmat/studio';
+import type { GenerationView } from '@runova/studio';
 import { useEffect, useState } from 'react';
 import { AskAiBar } from '../ai/AskAiBar';
 import { BriefCard } from '../ai/BriefCard';

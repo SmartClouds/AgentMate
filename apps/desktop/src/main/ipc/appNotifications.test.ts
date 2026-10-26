@@ -1,4 +1,4 @@
-import type { AppNotification } from '@agentmat/core';
+import type { AppNotification } from '@runova/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IPC } from '../../shared/ipcChannels';
 import {

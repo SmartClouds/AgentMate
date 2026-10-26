@@ -1,4 +1,4 @@
-import type { EnrollResponse } from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { EnrollResponse } from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { type CoreRest, coded } from './coreSessions';
 import { createDeviceKey } from './deviceKey';
 

@@ -87,7 +87,7 @@ export function pickFlutterRelease(
 }
 
 /**
- * Where AgentMate puts Flutter: a `develop` folder in the home folder. Flutter's own guide says to
+ * Where Runova puts Flutter: a `develop` folder in the home folder. Flutter's own guide says to
  * avoid a path with spaces or one that needs administrator rights, and this is neither.
  */
 export function flutterInstallRoot(os: DevOs, home: string): string {

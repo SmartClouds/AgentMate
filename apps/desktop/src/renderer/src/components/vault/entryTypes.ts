@@ -1,4 +1,4 @@
-import type { VaultEntrySummary, VaultEntryType, VaultFieldRef } from '@agentmat/core';
+import type { VaultEntrySummary, VaultEntryType, VaultFieldRef } from '@runova/core';
 import { FileText, Globe, type IconProps, Key, Sliders } from '@/components/icons';
 
 export interface EntryTypeMeta {

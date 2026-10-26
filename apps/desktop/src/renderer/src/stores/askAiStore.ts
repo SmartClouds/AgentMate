@@ -56,7 +56,7 @@ export const useAskAiStore = create<AskAiState>()(
         set((s) => ({ messages: s.messages.map((m) => (m.id === id ? message : m)) })),
     }),
     {
-      name: 'agentmate-ask-ai',
+      name: 'runova-ask-ai',
       // The modal's open/closed state shouldn't survive a restart; only the conversation should.
       partialize: (s) => ({
         provider: s.provider,

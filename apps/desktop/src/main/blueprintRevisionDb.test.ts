@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import type { BlueprintRevision } from '@agentmat/core';
+import type { BlueprintRevision } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AddBlueprintRevisionInput } from '../shared/apiTypes';
 import { useTempUserData } from '../test/main/ipcHarness';

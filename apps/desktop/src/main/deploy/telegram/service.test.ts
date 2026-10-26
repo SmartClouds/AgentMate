@@ -3,8 +3,8 @@ import type {
   AlertKind,
   TelegramNotificationsRequest,
   TelegramNotificationsStatus,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
-import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import { DeployTelegram } from './service';
 
 const TOKEN = '7712345678:AAHk3jQx9v2Lw8YtPz5rNc4mBq7sDf1gHjE';

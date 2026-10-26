@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { GitImageDiff } from '@shared/apiTypes';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { WorkspaceDiffTab } from '@/stores/workspaceStore';
-import { installAgentmatBridge } from '../../../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../../../test/renderer/runovaBridge';
 import { ImageDiffView } from './ImageDiffView';
 
 const project = { id: 'p1', name: 'App', folderPath: 'E:\\work\\app' } as Project;
@@ -20,7 +20,7 @@ const tab: WorkspaceDiffTab = {
 };
 
 function renderDiff(answer: GitImageDiff | (() => Promise<never>), view = tab) {
-  const bridge = installAgentmatBridge({ 'git.fileImage': answer, 'git.commitFileImage': answer });
+  const bridge = installRunovaBridge({ 'git.fileImage': answer, 'git.commitFileImage': answer });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>

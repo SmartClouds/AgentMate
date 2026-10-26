@@ -4,7 +4,7 @@ import {
   SPEECH_LANGUAGES,
   speechModelTooSmallFor,
   WHISPER_MODELS,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
@@ -71,7 +71,7 @@ export function useSpeechSettings(
   const queryClient = useQueryClient();
   const save = useMutation({
     mutationFn: (patch: { speechLanguage?: string; speechModel?: string }) =>
-      window.agentmat.settings.update(patch),
+      window.runova.settings.update(patch),
     onSuccess: (next) => {
       queryClient.setQueryData(queryKeys.settings, next);
     },

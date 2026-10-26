@@ -159,7 +159,7 @@ export function InstalledAppView({
     try {
       const values = await stepUp.run(
         (proof) =>
-          window.agentmat.deployAppStore.revealSecrets({ serverId, stackId, revision, ...proof }),
+          window.runova.deployAppStore.revealSecrets({ serverId, stackId, revision, ...proof }),
         'reveal the passwords',
       );
       if (values) setRevealed(values);
@@ -201,7 +201,7 @@ export function InstalledAppView({
       confirmLabel: offer.kind === 'digest' ? 'Update' : 'Move',
     });
     if (!ok) return;
-    await started(() => window.agentmat.deployAppStore.update({ serverId, stackId, version }));
+    await started(() => window.runova.deployAppStore.update({ serverId, stackId, version }));
   }
 
   async function rollback(): Promise<void> {
@@ -213,7 +213,7 @@ export function InstalledAppView({
     });
     if (!ok) return;
     await started(() =>
-      window.agentmat.deployStacks.rollback({ serverId, stackId, revision: earlier.number }),
+      window.runova.deployStacks.rollback({ serverId, stackId, revision: earlier.number }),
     );
   }
 

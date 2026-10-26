@@ -3,7 +3,7 @@ import type {
   AuditEventInfo,
   ContainerLogLine,
   JournalLine,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useEffect, useMemo, useState } from 'react';
 import { appendLines, DEFAULT_TAIL, MAX_TEXT_LOG_TAIL } from '@/lib/deploy/containers/logs';
 import {
@@ -89,15 +89,15 @@ export function useLogSource(
       for (const target of targets) {
         stops.push(
           ownedSubscription({
-            listen: window.agentmat.deployDocker.onLogs,
+            listen: window.runova.deployDocker.onLogs,
             start: () =>
-              window.agentmat.deployDocker.watchLogs({
+              window.runova.deployDocker.watchLogs({
                 serverId,
                 containerId: target.id,
                 follow,
                 tail,
               }),
-            stop: window.agentmat.deployDocker.unwatchLogs,
+            stop: window.runova.deployDocker.unwatchLogs,
             onEvent: (event) => {
               setRaw((current) => ({
                 ...current,
@@ -122,15 +122,15 @@ export function useLogSource(
     } else if (source.kind === 'journal') {
       stops.push(
         ownedSubscription({
-          listen: window.agentmat.deployLogs.onJournal,
+          listen: window.runova.deployLogs.onJournal,
           start: () =>
-            window.agentmat.deployLogs.watchJournal({
+            window.runova.deployLogs.watchJournal({
               serverId,
               unit: source.unit,
               follow,
               lines: textTail,
             }),
-          stop: window.agentmat.deployLogs.unwatchJournal,
+          stop: window.runova.deployLogs.unwatchJournal,
           onEvent: (event) => {
             setRaw((current) => ({
               ...current,
@@ -148,15 +148,15 @@ export function useLogSource(
     } else if (source.kind === 'site') {
       stops.push(
         ownedSubscription({
-          listen: window.agentmat.deploySites.onLog,
+          listen: window.runova.deploySites.onLog,
           start: () =>
-            window.agentmat.deploySites.watchLog({
+            window.runova.deploySites.watchLog({
               serverId,
               siteId: source.siteId,
               kind: source.logKind,
               tailLines: textTail,
             }),
-          stop: window.agentmat.deploySites.unwatchLog,
+          stop: window.runova.deploySites.unwatchLog,
           onEvent: (event) => {
             setRaw((current) => ({
               ...current,
@@ -175,7 +175,7 @@ export function useLogSource(
       );
     } else {
       let cancelled = false;
-      window.agentmat.deploySecurity.queryAudit({ serverId, limit: 200 }).then(
+      window.runova.deploySecurity.queryAudit({ serverId, limit: 200 }).then(
         (page) => {
           if (cancelled) return;
           setRaw((current) => ({ ...current, audit: page?.events ?? [] }));

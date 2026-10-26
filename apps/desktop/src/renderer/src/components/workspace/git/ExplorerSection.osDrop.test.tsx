@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useExplorerStore } from '@/stores/explorerStore';
-import { installAgentmatBridge } from '../../../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../../../test/renderer/runovaBridge';
 import { ExplorerSection } from './ExplorerSection';
 
 /**
@@ -62,7 +62,7 @@ async function row(name: string): Promise<Element> {
 beforeEach(() => {
   transferExternalEntries.mockClear();
   useExplorerStore.setState({ projects: {} });
-  installAgentmatBridge({
+  installRunovaBridge({
     'fs.listDirectory': [
       { name: 'src', path: SRC, isDirectory: true },
       { name: 'README.md', path: README, isDirectory: false },
@@ -131,7 +131,7 @@ describe('ExplorerSection OS drag-and-drop', () => {
   });
 
   it('still moves or copies normally for an in-app drag', async () => {
-    installAgentmatBridge({
+    installRunovaBridge({
       'fs.listDirectory': [
         { name: 'src', path: SRC, isDirectory: true },
         { name: 'README.md', path: README, isDirectory: false },

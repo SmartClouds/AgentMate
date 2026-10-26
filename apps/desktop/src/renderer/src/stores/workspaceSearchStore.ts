@@ -74,7 +74,7 @@ export const useWorkspaceSearchStore = create<WorkspaceSearchState>()(
         }),
     }),
     {
-      name: 'agentmate-workspace-search',
+      name: 'runova-workspace-search',
       version: 1,
       partialize: (state) => ({
         queries: state.queries,

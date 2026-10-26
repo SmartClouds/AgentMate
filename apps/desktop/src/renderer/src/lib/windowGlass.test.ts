@@ -44,7 +44,7 @@ describe('applyWindowGlass', () => {
   });
 });
 
-/** A stand-in for `window.agentmat.window` whose focus answer and change events the test drives. */
+/** A stand-in for `window.runova.window` whose focus answer and change events the test drives. */
 function fakeFocusSource(answer: Promise<boolean>) {
   const listeners: ((focused: boolean) => void)[] = [];
   return {

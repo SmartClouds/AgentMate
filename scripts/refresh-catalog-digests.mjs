@@ -10,7 +10,7 @@
 //   node scripts/refresh-catalog-digests.mjs          rewrite images.ts
 //   node scripts/refresh-catalog-digests.mjs --check  only report, exit 1 when a digest moved
 //
-// Needs Docker with buildx and network access to the registries. Build @agentmat/core first
+// Needs Docker with buildx and network access to the registries. Build @runova/core first
 // (pnpm build:packages), since the list of images is read from its build.
 
 import { execFileSync } from 'node:child_process';

@@ -41,13 +41,13 @@ describe('createDesktopStudioHost', () => {
   it('keeps the library under Videos and its own data under userData', async () => {
     const { createDesktopStudioHost } = await load();
     const host = createDesktopStudioHost();
-    expect(host.defaultLibraryRoot).toBe(join(userData.dir, 'Videos', 'AgentMate Studio'));
+    expect(host.defaultLibraryRoot).toBe(join(userData.dir, 'Videos', 'Runova Studio'));
     expect(host.dataDir).toBe(join(userData.dir, 'data', 'studio'));
     expect(host.defaultCacheDir).toBe(join(userData.dir, 'studio-cache'));
     expect(host.appDir).toBeNull();
   });
 
-  it('finds the projects AgentMate has, and nothing else', async () => {
+  it('finds the projects Runova has, and nothing else', async () => {
     const { createDesktopStudioHost, liveProjectIds } = await load();
     const host = createDesktopStudioHost();
     expect(await host.projects.get('p1')).toEqual({

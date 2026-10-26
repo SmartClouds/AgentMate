@@ -1,4 +1,4 @@
-import type { GitChangeEntry, GitChangeStatus } from '@agentmat/core';
+import type { GitChangeEntry, GitChangeStatus } from '@runova/core';
 
 /** Splits a repo path into its folder (with the trailing slash) and file name. */
 export function splitGitPath(path: string): { dir: string; name: string } {

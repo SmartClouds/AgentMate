@@ -1,26 +1,27 @@
 <?php
 /**
  * Shared setup: the vectors, a temporary wp-content, a site with the vector keys, and a desktop
- * client that signs requests the way AgentMate does.
+ * client that signs requests the way Runova does.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Support;
+namespace Runova\Connector\Tests\Support;
 
-use AgentMate\Connector\Auth\Canonical;
-use AgentMate\Connector\Crypto\Base64Url;
-use AgentMate\Connector\Crypto\Crypto;
-use AgentMate\Connector\Crypto\SiteKeys;
-use AgentMate\Connector\Http\Dispatcher;
-use AgentMate\Connector\Http\Envelope;
-use AgentMate\Connector\Http\Frame;
-use AgentMate\Connector\Http\Gzip;
-use AgentMate\Connector\Http\IncomingRequest;
-use AgentMate\Connector\Http\OutgoingResponse;
-use AgentMate\Connector\Http\StringBundle;
-use AgentMate\Connector\Routes\Handlers;
-use AgentMate\Connector\Storage\MemoryStorage;
+use Runova\Connector\Auth\Canonical;
+use Runova\Connector\Crypto\Base64Url;
+use Runova\Connector\Crypto\Crypto;
+use Runova\Connector\Crypto\SiteKeys;
+use Runova\Connector\Http\Dispatcher;
+use Runova\Connector\Http\Envelope;
+use Runova\Connector\Http\Frame;
+use Runova\Connector\Http\Gzip;
+use Runova\Connector\Http\IncomingRequest;
+use Runova\Connector\Http\OutgoingResponse;
+use Runova\Connector\Http\StringBundle;
+use Runova\Connector\Protocol;
+use Runova\Connector\Routes\Handlers;
+use Runova\Connector\Storage\MemoryStorage;
 
 abstract class TestCase extends \PHPUnit\Framework\TestCase
 {
@@ -51,7 +52,7 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
     protected static function vectors(): array
     {
         if (self::$vectors === null) {
-            $text = file_get_contents(AGENTMATE_TEST_VECTORS . '/protocol-v1.json');
+            $text = file_get_contents(RUNOVA_TEST_VECTORS . '/protocol-v1.json');
             self::$vectors = json_decode((string) $text, true);
         }
         return self::$vectors;
@@ -62,12 +63,12 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
      */
     protected static function agentFiles(): array
     {
-        return json_decode((string) file_get_contents(AGENTMATE_TEST_VECTORS . '/agent-files.json'), true);
+        return json_decode((string) file_get_contents(RUNOVA_TEST_VECTORS . '/agent-files.json'), true);
     }
 
     protected function tempDir(): string
     {
-        $dir = sys_get_temp_dir() . '/agentmate-wpc-' . bin2hex(random_bytes(6));
+        $dir = sys_get_temp_dir() . '/runova-wpc-' . bin2hex(random_bytes(6));
         mkdir($dir, 0777, true);
         $this->tempDirs[] = $dir;
         return $dir;
@@ -117,15 +118,18 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
         $this->desktop = Crypto::keypairFromSeed((string) hex2bin($vectors['keys']['desktop']['seedHex']));
     }
 
-    /** @var \AgentMate\Connector\Files\AtomicWriter|null a writer tests swap in (Windows rename) */
+    /** @var \Runova\Connector\Files\AtomicWriter|null a writer tests swap in (Windows rename) */
     protected $writer = null;
 
     /** @var callable|null how the connector update moves folders; tests swap in one that fails */
     protected $rename = null;
 
+    /** @var FakeLayoutHost|null WordPress's side of the layout move */
+    protected $layoutHost = null;
+
     protected function dispatcher(): Dispatcher
     {
-        $handlers = Handlers::all($this->storage, $this->env, $this->writer, $this->rename);
+        $handlers = Handlers::all($this->storage, $this->env, $this->writer, $this->rename, $this->layoutHost !== null ? $this->layoutHost : new FakeLayoutHost());
         $logged = &$this->logged;
         return new Dispatcher($this->storage, $this->env, $this->siteKeys, $handlers, function (\Throwable $error) use (&$logged) {
             $logged[] = $error;
@@ -166,7 +170,9 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
 
     /**
      * Builds and sends a signed request. Options: connectionId, timestamp, nonce, secretKey,
-     * bundle (raw gzip bytes), auth (a ready am_auth), ip, unsigned.
+     * bundle (raw gzip bytes), auth (a ready am_auth), ip, unsigned, prefix (what the request is
+     * signed with), hint (the prefix the endpoint suggests), replyPrefix (what the reply must be
+     * signed with; prefix, else hint, by default).
      *
      * @param mixed $body
      * @param array<string, mixed> $options
@@ -185,12 +191,14 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
             $auth = Canonical::formatAuth($connectionId, $timestamp, $nonce, null);
         } else {
             $secret = isset($options['secretKey']) ? $options['secretKey'] : $this->desktop['secret'];
-            $text = Canonical::request($route, $timestamp, $nonce, $connectionId, hash('sha256', $bundle));
+            $text = Canonical::request($route, $timestamp, $nonce, $connectionId, hash('sha256', $bundle), isset($options['prefix']) ? $options['prefix'] : Protocol::PREFIX);
             $auth = Canonical::formatAuth($connectionId, $timestamp, $nonce, Base64Url::encode(Crypto::sign($text, $secret)));
         }
-        $request = new IncomingRequest($route, $auth, $bundle === false ? null : new StringBundle($bundle), isset($options['ip']) ? $options['ip'] : '203.0.113.5', !empty($options['tooLarge']));
+        $hint = isset($options['hint']) ? $options['hint'] : Protocol::PREFIX;
+        $request = new IncomingRequest($route, $auth, $bundle === false ? null : new StringBundle($bundle), isset($options['ip']) ? $options['ip'] : '203.0.113.5', !empty($options['tooLarge']), $hint);
         $response = $this->dispatcher()->handle($request);
-        return $this->open($response, $route, $nonce, $connectionId);
+        $reply = isset($options['replyPrefix']) ? $options['replyPrefix'] : (isset($options['prefix']) ? $options['prefix'] : $hint);
+        return $this->open($response, $route, $nonce, $connectionId, $reply);
     }
 
     /**
@@ -198,14 +206,14 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
      *
      * @return array{status: int, meta: array<string, mixed>, frame: Frame, body: array<string, mixed>, nonce: string, response: OutgoingResponse}
      */
-    protected function open(OutgoingResponse $response, string $route, string $nonce, ?string $connectionId): array
+    protected function open(OutgoingResponse $response, string $route, string $nonce, ?string $connectionId, string $prefix = Protocol::PREFIX): array
     {
         $envelope = Envelope::decode($response->body);
         $this->assertNotNull($envelope, 'The reply is an envelope.');
         $meta = $envelope['meta'];
         $this->assertSame($response->status, $meta['status']);
         if ($meta['sig'] !== '') {
-            $text = Canonical::response($route, $nonce, $connectionId, $meta['ts'], $meta['status'], hash('sha256', $envelope['payload']));
+            $text = Canonical::response($route, $nonce, $connectionId, $meta['ts'], $meta['status'], hash('sha256', $envelope['payload']), $prefix);
             $this->assertTrue(
                 Crypto::verify((string) Base64Url::decode($meta['sig']), $text, $this->siteKeys->publicKey()),
                 'The reply is signed by the site for this request.'

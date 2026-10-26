@@ -1,4 +1,4 @@
-import type { AgentInstructionTarget } from '@agentmat/core';
+import type { AgentInstructionTarget } from '@runova/core';
 import type { RdpAgentHistoryRun, SshAgentHistoryRun } from '@shared/apiTypes';
 import { MAX_SSH_AGENT_MESSAGE_CHARS } from '@shared/sshAgentMessage';
 import { useState } from 'react';

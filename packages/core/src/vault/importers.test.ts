@@ -46,7 +46,7 @@ describe('detectImportFormat', () => {
         'favorite',
         'fields',
       ]),
-    ).toBe('agentmate');
+    ).toBe('runova');
   });
 
   it('returns null for anything else', () => {
@@ -250,7 +250,7 @@ describe('mapImportRows: shared behavior', () => {
   });
 });
 
-describe('mapImportRows: agentmate edge cases', () => {
+describe('mapImportRows: runova edge cases', () => {
   const header = [
     'type',
     'title',
@@ -294,7 +294,7 @@ describe('mapImportRows: agentmate edge cases', () => {
         row('apiKey', '', ''),
         row('custom', '[{"value":7}]'),
       ],
-      'agentmate',
+      'runova',
     );
     expect(skipped).toEqual([
       { row: 2, reason: 'The fields column is not valid JSON' },

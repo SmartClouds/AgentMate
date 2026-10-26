@@ -1,4 +1,4 @@
-import { type HealthDayBucket, healthDays } from '@agentmat/core';
+import { type HealthDayBucket, healthDays } from '@runova/core';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';

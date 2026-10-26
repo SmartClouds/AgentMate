@@ -130,7 +130,7 @@ describe('run suggestions for a project', () => {
       status: 409,
       payload: {
         ok: false,
-        error: 'AgentMate is already waiting for your approval of that command.',
+        error: 'Runova is already waiting for your approval of that command.',
       },
     });
     expect(service.listPendingRunProposals()).toHaveLength(1);
@@ -150,7 +150,7 @@ describe('run suggestions for a project', () => {
       status: 429,
       payload: {
         ok: false,
-        error: 'Too many suggestions are waiting. Review them in AgentMate first.',
+        error: 'Too many suggestions are waiting. Review them in Runova first.',
       },
     });
     expect(service.listPendingRunProposals()).toHaveLength(10);
@@ -238,7 +238,7 @@ describe('run suggestions for a project', () => {
 
     expect(await service.handleRunCommandsRequest({ projectId: 'nope', action: 'list' })).toEqual({
       status: 404,
-      payload: { ok: false, error: 'AgentMate does not know this project.' },
+      payload: { ok: false, error: 'Runova does not know this project.' },
     });
     await service.setRunProposalsEnabled('p1', true, PORT_FILE);
     expect(await service.handleRunCommandsRequest({ projectId: 'p1', action: 'delete' })).toEqual({
@@ -259,8 +259,8 @@ describe('run suggestions for a project', () => {
     expect(result).toEqual({ ok: true });
     expect(service.listPendingRunProposals()).toEqual([]);
     expect(await service.getRunProposalsEnabled('p1')).toBe(false);
-    expect(existsSync(join(folder, '.agentmate', 'run-commands-mcp.cjs'))).toBe(false);
-    expect(readFileSync(join(folder, '.mcp.json'), 'utf-8').includes('agentmate')).toBe(false);
+    expect(existsSync(join(folder, '.runova', 'run-commands-mcp.cjs'))).toBe(false);
+    expect(readFileSync(join(folder, '.mcp.json'), 'utf-8').includes('runova')).toBe(false);
   });
 
   it('reports a project whose .mcp.json cannot be read, and changes nothing', async () => {

@@ -4,7 +4,7 @@ import {
   parseRunInputs,
   runCommandParts,
   runInputLabel,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Play, TriangleAlert } from '@/components/icons';
 import { Button } from '@/components/ui/button';

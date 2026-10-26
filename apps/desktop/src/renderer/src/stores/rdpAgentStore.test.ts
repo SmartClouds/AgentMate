@@ -1,6 +1,6 @@
 import type { RdpAgentProgress } from '@shared/apiTypes';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { currentBridge, type FakeBridge } from '../../../test/renderer/agentmatBridge';
+import { currentBridge, type FakeBridge } from '../../../test/renderer/runovaBridge';
 import {
   answerRdpAgentInput,
   approveRdpAgentAction,

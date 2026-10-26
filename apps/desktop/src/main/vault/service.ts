@@ -20,7 +20,7 @@ import {
   type VaultExportFormat,
   type VaultFieldRef,
   type VaultImportFormat,
-} from '@agentmat/core';
+} from '@runova/core';
 import type {
   VaultCopyResult,
   VaultImportPreview,

@@ -18,7 +18,7 @@ import { type DevHost, dotnetAvailable, startDevHost } from './devHost';
 test.skip(!dotnetAvailable(), 'needs the .NET SDK to build the server core DevHost');
 
 /** The DevHost's fixed development owner (see its DevHost.cs). */
-const DEV_PASSWORD = 'agentmate-local-password';
+const DEV_PASSWORD = 'runova-local-password';
 const UPLOADED = 'e2e-note.txt';
 const CONTENT = 'Hello from the E27 e2e test.\nSecond line, with ünïcode.\n';
 
@@ -29,7 +29,7 @@ let localRoot = '';
 test.beforeAll(async () => {
   test.setTimeout(300_000);
   devHost = await startDevHost();
-  localRoot = mkdtempSync(join(tmpdir(), 'agentmate-e2e-deploy-files-'));
+  localRoot = mkdtempSync(join(tmpdir(), 'runova-e2e-deploy-files-'));
   writeFileSync(join(localRoot, UPLOADED), CONTENT);
 });
 
@@ -106,7 +106,7 @@ test('moves files in and out of a container and a volume', async () => {
   if (!devHost) throw new Error('DevHost did not start');
   launched = await launchApp({
     settings: {},
-    env: { AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port) },
+    env: { RUNOVA_DEPLOY_DEV_CORE: String(devHost.port) },
   });
   const { page } = launched;
   await signInAndOpenFiles(page);
@@ -184,7 +184,7 @@ test('a stopped container lists and copies but cannot rename or delete', async (
   if (!devHost) throw new Error('DevHost did not start');
   launched = await launchApp({
     settings: {},
-    env: { AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port) },
+    env: { RUNOVA_DEPLOY_DEV_CORE: String(devHost.port) },
   });
   const { page } = launched;
   await signInAndOpenFiles(page);

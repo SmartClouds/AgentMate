@@ -10,8 +10,8 @@ describe('loadKnownProjects', () => {
     store.getProjects.mockResolvedValue([
       {
         id: 'p1',
-        name: 'AgentMate',
-        folderPath: 'E:\\AgentMate',
+        name: 'Runova',
+        folderPath: 'E:\\Runova',
         iconDataUrl: 'data:image/png;base64,AAAA',
         archived: false,
       },
@@ -19,7 +19,7 @@ describe('loadKnownProjects', () => {
     store.getWorktrees.mockResolvedValue([{ projectId: 'p1', path: 'C:\\wt\\x', branch: 'main' }]);
 
     await expect(loadKnownProjects()).resolves.toEqual({
-      projects: [{ id: 'p1', name: 'AgentMate', folderPath: 'E:\\AgentMate' }],
+      projects: [{ id: 'p1', name: 'Runova', folderPath: 'E:\\Runova' }],
       worktrees: [{ projectId: 'p1', path: 'C:\\wt\\x' }],
     });
   });

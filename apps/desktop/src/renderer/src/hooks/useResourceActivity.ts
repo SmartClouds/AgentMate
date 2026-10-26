@@ -1,4 +1,4 @@
-import type { ResourceActivitySnapshot } from '@agentmat/core';
+import type { ResourceActivitySnapshot } from '@runova/core';
 import { type UseQueryResult, useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryKeys';
 
@@ -15,7 +15,7 @@ export const RESOURCE_ACTIVITY_REFRESH_MS = 10_000;
 export function useResourceActivity(): UseQueryResult<ResourceActivitySnapshot> {
   return useQuery({
     queryKey: queryKeys.resourceActivity,
-    queryFn: () => window.agentmat.resourceActivity.snapshot(),
+    queryFn: () => window.runova.resourceActivity.snapshot(),
     refetchInterval: RESOURCE_ACTIVITY_REFRESH_MS,
     // Keeps the Dashboard from counting this toward the one-time loading overlay.
     meta: { silentLoading: true },

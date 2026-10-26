@@ -14,7 +14,7 @@ import {
   removeItem,
   updateItem,
   walkItems,
-} from '@agentmat/core';
+} from '@runova/core';
 import { app } from 'electron';
 import type { ApiCollectionSummary, SaveApiRequestInput } from '../../shared/apiClientTypes';
 

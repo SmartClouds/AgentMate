@@ -3,10 +3,10 @@
  * Builds plugin zips the way scripts/wordpress-connector.mjs does (a top folder entry, then the
  * files), for tests of an update the site downloads. ZipArchive is not needed.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Support;
+namespace Runova\Connector\Tests\Support;
 
 final class ZipFixture
 {
@@ -15,7 +15,7 @@ final class ZipFixture
      * @param int $method 8 deflates, 0 stores
      * @param int $flags general purpose flags for every file (bit 0 is encryption)
      */
-    public static function build(array $files, string $root = 'agentmate-connector/', int $method = 8, int $flags = 0x0800): string
+    public static function build(array $files, string $root = 'runova-connector/', int $method = 8, int $flags = 0x0800): string
     {
         $entries = array($root => null) + array_combine(
             array_map(function ($path) use ($root) {

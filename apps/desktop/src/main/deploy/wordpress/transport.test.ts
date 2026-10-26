@@ -10,7 +10,7 @@ import { createFetchTransport, networkError, type WpHttpRequest } from './transp
 
 function request(overrides: Partial<WpHttpRequest> = {}): WpHttpRequest {
   return {
-    url: 'https://shop.example/wp-json/agentmate/v1/hello',
+    url: 'https://shop.example/wp-json/runova/v1/hello',
     method: 'POST',
     headers: {},
     body: new Uint8Array([1]),

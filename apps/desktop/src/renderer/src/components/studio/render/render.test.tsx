@@ -4,7 +4,7 @@ import type {
   RenderJobView,
   RenderToolsView,
   StudioDocument,
-} from '@agentmat/studio';
+} from '@runova/studio';
 import { screen, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

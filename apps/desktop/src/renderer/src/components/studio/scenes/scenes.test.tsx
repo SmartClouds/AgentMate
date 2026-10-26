@@ -1,4 +1,4 @@
-import type { SceneCodeView } from '@agentmat/studio';
+import type { SceneCodeView } from '@runova/studio';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';

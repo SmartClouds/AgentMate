@@ -1,5 +1,5 @@
 import type { SshAgentProgress } from '@shared/apiTypes';
-import type { ExecLine } from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { ExecLine } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type {
   DeployAssistantContextInput,
   DeployAssistantOutputEvent,

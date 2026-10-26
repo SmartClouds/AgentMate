@@ -64,10 +64,10 @@ async function setup() {
   const root = await tempDir();
   const service = createStudioService({
     dataDir: join(root, 'userData', 'studio'),
-    defaultLibraryRoot: join(root, 'Videos', 'AgentMate Studio'),
+    defaultLibraryRoot: join(root, 'Videos', 'Runova Studio'),
     defaultCacheDir: join(root, 'userData', 'studio-cache'),
     appDir: join(root, 'app'),
-    appId: 'AgentMate',
+    appId: 'Runova',
     openDb: openNodeSqlite,
     projects: { get: () => null },
     notify: () => undefined,

@@ -1,4 +1,4 @@
-import type { AppNotification, Project } from '@agentmat/core';
+import type { AppNotification, Project } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GithubWorkflowRunInfo } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';

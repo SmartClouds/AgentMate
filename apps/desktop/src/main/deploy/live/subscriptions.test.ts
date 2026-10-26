@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   AlertInfo,
   MetricsSample,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { metricsSample, sampleAlert, sampleJob } from '../../../shared/deploy/testing/fakeCoreData';
 import { IPC } from '../../../shared/ipcChannels';
 import type { CoreLinks } from './coreLinks';

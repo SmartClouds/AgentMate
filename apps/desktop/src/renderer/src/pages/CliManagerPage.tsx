@@ -1,4 +1,4 @@
-import { CLI_REGISTRY, type CliDefinition } from '@agentmat/core';
+import { CLI_REGISTRY, type CliDefinition } from '@runova/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -58,7 +58,7 @@ export default function CliManagerPage(): React.JSX.Element {
 
   const cliQuery = useQuery({
     queryKey: queryKeys.cliStatus,
-    queryFn: () => window.agentmat.cli.detectAll(),
+    queryFn: () => window.runova.cli.detectAll(),
   });
 
   const [query, setQuery] = useState('');
@@ -77,7 +77,7 @@ export default function CliManagerPage(): React.JSX.Element {
     CLI_REGISTRY.length - (cliQuery.data?.filter((c) => c.installed).length ?? 0);
 
   async function handleInstall(cliId: string, cliName: string): Promise<void> {
-    const command = await window.agentmat.cli.getInstallCommand(cliId);
+    const command = await window.runova.cli.getInstallCommand(cliId);
     if (!command) {
       toast.error(`No install command available for ${cliName} on this OS.`);
       return;
@@ -91,7 +91,7 @@ export default function CliManagerPage(): React.JSX.Element {
   ): Promise<void> {
     setCheckingCliId(cli.id);
     try {
-      const result = await window.agentmat.cli.checkForUpdate(cli.id, currentVersion);
+      const result = await window.runova.cli.checkForUpdate(cli.id, currentVersion);
       if (!result.supported) {
         toast.info(`Can't check updates for ${cli.name} automatically.`);
         return;
@@ -105,7 +105,7 @@ export default function CliManagerPage(): React.JSX.Element {
         return;
       }
 
-      const command = await window.agentmat.cli.getUpdateCommand(cli.id);
+      const command = await window.runova.cli.getUpdateCommand(cli.id);
       if (!command) {
         toast.error(`No update command available for ${cli.name} on this OS.`);
         return;
@@ -147,13 +147,13 @@ export default function CliManagerPage(): React.JSX.Element {
 
       for (const cli of installedClis) {
         const currentVersion = cliQuery.data?.find((c) => c.id === cli.id)?.version ?? null;
-        const result = await window.agentmat.cli.checkForUpdate(cli.id, currentVersion);
+        const result = await window.runova.cli.checkForUpdate(cli.id, currentVersion);
         if (!result.supported || !result.latestVersion) {
           uncheckable += 1;
           continue;
         }
         if (result.updateAvailable) {
-          const command = await window.agentmat.cli.getUpdateCommand(cli.id);
+          const command = await window.runova.cli.getUpdateCommand(cli.id);
           if (command) {
             updates.push({ cli, currentVersion, latestVersion: result.latestVersion, command });
           }
@@ -219,7 +219,7 @@ export default function CliManagerPage(): React.JSX.Element {
               toast.info('Re-scanning installed CLIs…');
               // `true` skips the main process's detection cache, which is what
               // makes this button different from a plain query invalidation.
-              void window.agentmat.cli
+              void window.runova.cli
                 .detectAll(true)
                 .then((fresh) => queryClient.setQueryData(queryKeys.cliStatus, fresh));
             }}
@@ -325,7 +325,7 @@ export default function CliManagerPage(): React.JSX.Element {
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        onClick={() => void window.agentmat.shell.openExternal(cli.homepageUrl!)}
+                        onClick={() => void window.runova.shell.openExternal(cli.homepageUrl!)}
                       >
                         <ExternalLink />
                       </Button>

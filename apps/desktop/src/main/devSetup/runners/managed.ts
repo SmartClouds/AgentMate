@@ -1,4 +1,4 @@
-import type { DevArch, DevOs } from '@agentmat/core';
+import type { DevArch, DevOs } from '@runova/core';
 import type { CancelToken } from '../../process/spawnStreaming';
 import type { RunHooks } from './packageManagerRunner';
 

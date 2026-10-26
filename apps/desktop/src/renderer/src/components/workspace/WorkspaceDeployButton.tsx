@@ -47,7 +47,7 @@ export function WorkspaceDeployButton({
   );
   const sitesQuery = useQuery({
     queryKey: queryKeys.deployWordPressSites,
-    queryFn: () => window.agentmat.deployWordPress.listSites(),
+    queryFn: () => window.runova.deployWordPress.listSites(),
     meta: SILENT,
   });
   const site = sitesQuery.data?.find((candidate) => candidate.id === siteId) ?? null;

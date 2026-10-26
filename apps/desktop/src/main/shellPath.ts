@@ -24,7 +24,7 @@ const SHELL_TIMEOUT_MS = 5000;
 /** Starting a login shell costs a few hundred ms, and PATH rarely changes. */
 const REFRESH_THROTTLE_MS = 30_000;
 /** Shell startup files can print banners, so the PATH is fenced off from whatever else comes out. */
-const MARKER = '__AGENTMATE_PATH__';
+const MARKER = '__RUNOVA_PATH__';
 /** Only ever runs on macOS and Linux, so POSIX paths, also when the tests run on Windows. */
 const { delimiter, isAbsolute, join } = posix;
 

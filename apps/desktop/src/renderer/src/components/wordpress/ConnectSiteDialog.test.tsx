@@ -100,7 +100,7 @@ describe('ConnectSiteDialog plain HTTP', () => {
   const plainKey = () =>
     wpKey({
       siteUrl: 'http://staging.bakery.example',
-      restUrl: 'http://staging.bakery.example/wp-json/agentmate/v1',
+      restUrl: 'http://staging.bakery.example/wp-json/runova/v1',
       ajaxUrl: 'http://staging.bakery.example/wp-admin/admin-ajax.php',
     });
 
@@ -130,7 +130,7 @@ describe('ConnectSiteDialog plain HTTP', () => {
     paste(
       wpKey({
         siteUrl: 'http://localhost:8080',
-        restUrl: 'http://localhost:8080/wp-json/agentmate/v1',
+        restUrl: 'http://localhost:8080/wp-json/runova/v1',
         ajaxUrl: 'http://localhost:8080/wp-admin/admin-ajax.php',
       }),
     );
@@ -149,7 +149,7 @@ describe('ConnectSiteDialog connecting', () => {
     });
     const key = wpKey();
     paste(`${key}\n`);
-    await user.type(screen.getByLabelText('Name in AgentMate (optional)'), 'Shop');
+    await user.type(screen.getByLabelText('Name in Runova (optional)'), 'Shop');
     await user.click(screen.getByRole('switch', { name: 'The site asks for an HTTP sign-in' }));
     expect(connectButton().disabled).toBe(true);
     await user.type(screen.getByLabelText('User name'), 'staging');
@@ -222,7 +222,7 @@ describe('ConnectSiteDialog connecting', () => {
 
 describe('ConnectSiteDialog failures', () => {
   const cases: Array<[string, RegExp]> = [
-    ['keyInvalid', /isn't a connection key AgentMate can read/],
+    ['keyInvalid', /isn't a connection key Runova can read/],
     ['keyExpired', /This key has expired/],
     ['pairingExpired', /This key has expired/],
     ['pairingInvalid', /didn't accept this key/],

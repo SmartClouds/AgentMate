@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
-import { type FakeBridge, installAgentmatBridge } from '../../../../test/renderer/agentmatBridge';
+import { type FakeBridge, installRunovaBridge } from '../../../../test/renderer/runovaBridge';
 import type { ChipPasteController } from './chipPasteMode';
 import {
   attachTerminalPaste,
@@ -39,7 +39,7 @@ let clockOffset = 0;
 beforeEach(() => {
   clockOffset += 1000;
   vi.spyOn(Date, 'now').mockImplementation(() => realNow() + clockOffset);
-  bridge = installAgentmatBridge({
+  bridge = installRunovaBridge({
     platform: 'win32',
     // The real bridge answers synchronously; the default async stand-in would hand back a
     // promise, which reads as "this file has a path on disk".
@@ -54,7 +54,7 @@ describe('pathsToChips', () => {
   });
 
   it('quotes for the shell that is actually running', () => {
-    installAgentmatBridge({ platform: 'linux', 'shell.pathForFile': () => undefined });
+    installRunovaBridge({ platform: 'linux', 'shell.pathForFile': () => undefined });
     const [chip] = pathsToChips(['/home/me/a file.png'], 'bash');
     expect(chip.realText).toBe("'/home/me/a file.png'");
   });
@@ -75,7 +75,7 @@ describe('pathsToChips', () => {
 
 describe('pasteFilesToChips', () => {
   it('uses the real path of a file dragged from the file manager', async () => {
-    installAgentmatBridge({
+    installRunovaBridge({
       platform: 'win32',
       'shell.pathForFile': () => 'C:\\pics\\a.png',
     });
@@ -88,7 +88,7 @@ describe('pasteFilesToChips', () => {
 
   it('saves a clipboard-only image and uses where it landed', async () => {
     // A screenshot on the clipboard has no path, and an agent CLI attaches an image by path.
-    bridge = installAgentmatBridge({
+    bridge = installRunovaBridge({
       platform: 'win32',
       'shell.pathForFile': () => undefined,
       'terminalClipboard.saveImage': async () => 'C:\\tmp\\pasted.png',
@@ -115,7 +115,7 @@ describe('pasteClipboardIntoTerminal', () => {
   });
 
   it('does nothing when reading the clipboard fails', async () => {
-    installAgentmatBridge({
+    installRunovaBridge({
       platform: 'win32',
       'terminalClipboard.read': async () => {
         throw new Error('no clipboard');
@@ -127,7 +127,7 @@ describe('pasteClipboardIntoTerminal', () => {
   });
 
   it('types clipboard text into the terminal', async () => {
-    installAgentmatBridge({
+    installRunovaBridge({
       platform: 'win32',
       'terminalClipboard.read': async () => ({ kind: 'text', text: 'ls -al' }),
     });
@@ -137,7 +137,7 @@ describe('pasteClipboardIntoTerminal', () => {
   });
 
   it('routes text through chip mode when a chip is already on the line', async () => {
-    installAgentmatBridge({
+    installRunovaBridge({
       platform: 'win32',
       'terminalClipboard.read': async () => ({ kind: 'text', text: 'more' }),
     });
@@ -149,7 +149,7 @@ describe('pasteClipboardIntoTerminal', () => {
   });
 
   it('shows pasted files as chips, with a space after them', async () => {
-    installAgentmatBridge({
+    installRunovaBridge({
       platform: 'win32',
       'terminalClipboard.read': async () => ({ kind: 'files', paths: ['C:\\pics\\a.png'] }),
     });
@@ -164,7 +164,7 @@ describe('pasteClipboardIntoTerminal', () => {
   });
 
   it('falls back to the real quoted paths when chips are not available', async () => {
-    installAgentmatBridge({
+    installRunovaBridge({
       platform: 'win32',
       'terminalClipboard.read': async () => ({
         kind: 'files',
@@ -177,7 +177,7 @@ describe('pasteClipboardIntoTerminal', () => {
   });
 
   it('marks the paste, so the DOM event Chromium fires afterwards is ignored', async () => {
-    installAgentmatBridge({
+    installRunovaBridge({
       platform: 'win32',
       'terminalClipboard.read': async () => ({ kind: 'text', text: 'x' }),
     });
@@ -222,7 +222,7 @@ describe('attachTerminalPaste', () => {
   });
 
   it('turns dropped files into chips', async () => {
-    installAgentmatBridge({ platform: 'win32', 'shell.pathForFile': () => 'C:\\pics\\a.png' });
+    installRunovaBridge({ platform: 'win32', 'shell.pathForFile': () => 'C:\\pics\\a.png' });
     const element = document.createElement('div');
     const mode = chipMode({ insertChips: true });
     const off = attachTerminalPaste(element, target(mode));
@@ -235,7 +235,7 @@ describe('attachTerminalPaste', () => {
   it('asks the main process when the clipboard hands a textarea nothing', async () => {
     // A pasted screenshot arrives empty here; only the main process can see the image.
     const read = vi.fn(async () => ({ kind: 'text', text: 'from main' }));
-    installAgentmatBridge({ platform: 'win32', 'terminalClipboard.read': read });
+    installRunovaBridge({ platform: 'win32', 'terminalClipboard.read': read });
     const element = document.createElement('div');
     const pane = target();
     const off = attachTerminalPaste(element, pane);

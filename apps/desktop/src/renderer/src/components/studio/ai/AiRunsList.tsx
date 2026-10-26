@@ -1,4 +1,4 @@
-import type { GenerationView } from '@agentmat/studio';
+import type { GenerationView } from '@runova/studio';
 import { useState } from 'react';
 import { formatWhen, scriptClass } from '../format';
 import {

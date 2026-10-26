@@ -127,7 +127,7 @@ describe('safeRelativePath', () => {
 
 describe('a download in progress', () => {
   it('writes a file through a .part and renames it when the transfer succeeds', async () => {
-    const folder = tempDir('agentmate-dl-');
+    const folder = tempDir('runova-dl-');
     const ownerId = owner();
     const id = beginDownload(ownerId, folder);
     expect(downloadFolder(id, ownerId)).toBe(folder);
@@ -149,7 +149,7 @@ describe('a download in progress', () => {
   });
 
   it('leaves nothing behind when the transfer fails', async () => {
-    const folder = tempDir('agentmate-dl-');
+    const folder = tempDir('runova-dl-');
     const ownerId = owner();
     const id = beginDownload(ownerId, folder);
     await prepareEntry(id, ownerId, 0, { name: 'broken.bin', isDirectory: false });
@@ -159,7 +159,7 @@ describe('a download in progress', () => {
   });
 
   it('creates a folder entry and the folders above a nested file', async () => {
-    const folder = tempDir('agentmate-dl-');
+    const folder = tempDir('runova-dl-');
     const ownerId = owner();
     const id = beginDownload(ownerId, folder);
 
@@ -181,7 +181,7 @@ describe('a download in progress', () => {
   });
 
   it('keeps a hostile path inside the chosen folder', async () => {
-    const folder = tempDir('agentmate-dl-');
+    const folder = tempDir('runova-dl-');
     const ownerId = owner();
     const id = beginDownload(ownerId, folder);
 
@@ -197,7 +197,7 @@ describe('a download in progress', () => {
   });
 
   it('names a file the server left unnamed', async () => {
-    const folder = tempDir('agentmate-dl-');
+    const folder = tempDir('runova-dl-');
     const ownerId = owner();
     const id = beginDownload(ownerId, folder);
     const finalPath = await prepareEntry(id, ownerId, 0, { name: '..', isDirectory: false });
@@ -205,7 +205,7 @@ describe('a download in progress', () => {
   });
 
   it('numbers a second file with the same name instead of overwriting', async () => {
-    const folder = tempDir('agentmate-dl-');
+    const folder = tempDir('runova-dl-');
     const ownerId = owner();
     const id = beginDownload(ownerId, folder);
 
@@ -221,7 +221,7 @@ describe('a download in progress', () => {
   });
 
   it('numbers around a file that was already in the folder', async () => {
-    const folder = tempDir('agentmate-dl-');
+    const folder = tempDir('runova-dl-');
     await writeFile(join(folder, 'report.pdf'), 'existing', 'utf-8');
     const ownerId = owner();
     const id = beginDownload(ownerId, folder);
@@ -233,7 +233,7 @@ describe('a download in progress', () => {
   });
 
   it('renames only the top folder, so a tree keeps its shape', async () => {
-    const folder = tempDir('agentmate-dl-');
+    const folder = tempDir('runova-dl-');
     await writeFile(join(folder, 'src'), 'in the way', 'utf-8');
     const ownerId = owner();
     const id = beginDownload(ownerId, folder);
@@ -255,7 +255,7 @@ describe('a download in progress', () => {
 
 describe('download ownership', () => {
   it('refuses every call from a window that does not own the download', async () => {
-    const folder = tempDir('agentmate-dl-');
+    const folder = tempDir('runova-dl-');
     const ownerId = owner();
     const other = owner();
     const id = beginDownload(ownerId, folder);
@@ -277,14 +277,14 @@ describe('download ownership', () => {
 
   it('refuses a chunk for a file that was never prepared', async () => {
     const ownerId = owner();
-    const id = beginDownload(ownerId, tempDir('agentmate-dl-'));
+    const id = beginDownload(ownerId, tempDir('runova-dl-'));
     await expect(writeChunk(id, ownerId, 7, Buffer.from('x'))).rejects.toThrow(
       /not prepared for download/,
     );
   });
 
   it('ignores finishing a file twice', async () => {
-    const folder = tempDir('agentmate-dl-');
+    const folder = tempDir('runova-dl-');
     const ownerId = owner();
     const id = beginDownload(ownerId, folder);
     await prepareEntry(id, ownerId, 0, { name: 'notes.txt', isDirectory: false });
@@ -297,7 +297,7 @@ describe('download ownership', () => {
 
 describe('downloadRoots', () => {
   it('lists the top-level files and folders under the names they got', async () => {
-    const folder = tempDir('agentmate-dl-');
+    const folder = tempDir('runova-dl-');
     const ownerId = owner();
     const id = beginDownload(ownerId, folder);
     await prepareEntry(id, ownerId, 0, { name: 'photos', isDirectory: true });
@@ -313,7 +313,7 @@ describe('downloadRoots', () => {
   });
 
   it('uses the collision-free name when the folder already holds one with that name', async () => {
-    const folder = tempDir('agentmate-dl-');
+    const folder = tempDir('runova-dl-');
     await writeFile(join(folder, 'report.txt'), 'older');
     const ownerId = owner();
     const id = beginDownload(ownerId, folder);
@@ -323,14 +323,14 @@ describe('downloadRoots', () => {
   });
 
   it('refuses a download that belongs to another window', () => {
-    const id = beginDownload(owner(), tempDir('agentmate-dl-'));
+    const id = beginDownload(owner(), tempDir('runova-dl-'));
     expect(() => downloadRoots(id, owner())).toThrow(/Unknown download/);
   });
 });
 
 describe('forgetDownload', () => {
   it('drops the bookkeeping and keeps the files', async () => {
-    const folder = tempDir('agentmate-dl-');
+    const folder = tempDir('runova-dl-');
     const ownerId = owner();
     const id = beginDownload(ownerId, folder);
     await prepareEntry(id, ownerId, 0, { name: 'kept.txt', isDirectory: false });
@@ -345,7 +345,7 @@ describe('forgetDownload', () => {
 
   it('refuses a download that belongs to another window', () => {
     const mine = owner();
-    const id = beginDownload(mine, tempDir('agentmate-dl-'));
+    const id = beginDownload(mine, tempDir('runova-dl-'));
     expect(() => forgetDownload(id, owner())).toThrow(/Unknown download/);
     expect(() => downloadFolder(id, mine)).not.toThrow();
   });
@@ -353,7 +353,7 @@ describe('forgetDownload', () => {
 
 describe('abandonDownloads', () => {
   it('closes and deletes the unfinished files of a closed window', async () => {
-    const folder = tempDir('agentmate-dl-');
+    const folder = tempDir('runova-dl-');
     const ownerId = owner();
     const id = beginDownload(ownerId, folder);
     await prepareEntry(id, ownerId, 0, { name: 'done.txt', isDirectory: false });
@@ -369,8 +369,8 @@ describe('abandonDownloads', () => {
   });
 
   it('leaves the downloads of another window alone', async () => {
-    const mine = tempDir('agentmate-dl-');
-    const theirs = tempDir('agentmate-dl-');
+    const mine = tempDir('runova-dl-');
+    const theirs = tempDir('runova-dl-');
     const myOwner = owner();
     const theirOwner = owner();
     const myId = beginDownload(myOwner, mine);

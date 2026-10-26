@@ -82,7 +82,7 @@ describe('voice engines', () => {
       "<speak version='1.0' xml:lang='fa-IR'><voice xml:lang='fa-IR' name='fa-IR-DilaraNeural'>a &lt; b &amp; &quot;c&quot;</voice></speak>",
     );
     expect(request?.headers['x-microsoft-outputformat']).toBe('riff-48khz-16bit-mono-pcm');
-    expect(request?.headers['user-agent']).toBe('AgentMate-Studio');
+    expect(request?.headers['user-agent']).toBe('Runova-Studio');
   });
 
   it('says a missing or refused key plainly, and that is not worth retrying', async () => {

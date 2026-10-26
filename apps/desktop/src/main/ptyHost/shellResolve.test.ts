@@ -72,7 +72,7 @@ describe('resolveShellFile', () => {
   });
 
   it('rejects an absolute path that is not there', () => {
-    expect(resolveShellFile(join(tmpdir(), 'agentmate-no-such-shell-xyz'), 'linux', {})).toBeNull();
+    expect(resolveShellFile(join(tmpdir(), 'runova-no-such-shell-xyz'), 'linux', {})).toBeNull();
   });
 
   it('finds a bare name through PATH', () => {
@@ -82,15 +82,15 @@ describe('resolveShellFile', () => {
   });
 
   it('finds a fake shell in a controlled PATH, on any OS', () => {
-    const dir = tempDir('agentmate-shell-');
+    const dir = tempDir('runova-shell-');
     writeFileSync(join(dir, 'mysh'), '#!/bin/sh\n', 'utf-8');
     expect(resolveShellFile('mysh', 'linux', { PATH: dir })).toBe(join(dir, 'mysh'));
     expect(resolveShellFile('mysh', 'darwin', { PATH: dir })).toBe(join(dir, 'mysh'));
   });
 
   it('returns null for a missing bare name on POSIX, so the chain moves on', () => {
-    expect(resolveShellFile('agentmate-no-such-shell-xyz', 'linux', { PATH: '' })).toBeNull();
-    expect(resolveShellFile('agentmate-no-such-shell-xyz', 'darwin', { PATH: '' })).toBeNull();
+    expect(resolveShellFile('runova-no-such-shell-xyz', 'linux', { PATH: '' })).toBeNull();
+    expect(resolveShellFile('runova-no-such-shell-xyz', 'darwin', { PATH: '' })).toBeNull();
   });
 
   it('prefers a real hit over the bare name on Windows, else the bare name itself', () => {
@@ -99,8 +99,8 @@ describe('resolveShellFile', () => {
     // even those are gone (or on a machine without them, like CI running another OS).
     const hit = resolveShellFile('powershell.exe', 'win32', { PATH: '' });
     expect(hit?.toLowerCase().endsWith('powershell.exe')).toBe(true);
-    expect(resolveShellFile('agentmate-no-such-shell-xyz', 'win32', { PATH: '' })).toBe(
-      'agentmate-no-such-shell-xyz',
+    expect(resolveShellFile('runova-no-such-shell-xyz', 'win32', { PATH: '' })).toBe(
+      'runova-no-such-shell-xyz',
     );
   });
 
@@ -112,12 +112,12 @@ describe('resolveShellFile', () => {
 
 describe('resolveSpawnCwd', () => {
   it('keeps a folder that exists', () => {
-    const dir = tempDir('agentmate-cwd-');
+    const dir = tempDir('runova-cwd-');
     expect(resolveSpawnCwd(dir, { HOME: tmpdir() })).toBe(dir);
   });
 
   it('starts in the home folder when the tab folder was deleted, and says so', () => {
-    const home = tempDir('agentmate-home-');
+    const home = tempDir('runova-home-');
     const notes: string[] = [];
     const cwd = resolveSpawnCwd(join(home, 'deleted-project'), { HOME: home }, notes);
     expect(cwd).toBe(home);
@@ -125,19 +125,19 @@ describe('resolveSpawnCwd', () => {
   });
 
   it('uses HOME when the tab named no folder', () => {
-    const home = tempDir('agentmate-home-');
+    const home = tempDir('runova-home-');
     expect(resolveSpawnCwd(undefined, { HOME: home })).toBe(home);
   });
 
   it('falls back to the temp folder when HOME is unusable too', () => {
     const notes: string[] = [];
-    const cwd = resolveSpawnCwd(join(tmpdir(), 'agentmate-no-such-dir-xyz'), { HOME: '' }, notes);
+    const cwd = resolveSpawnCwd(join(tmpdir(), 'runova-no-such-dir-xyz'), { HOME: '' }, notes);
     expect(cwd).toBe(tmpdir());
     expect(notes.length).toBeGreaterThan(0);
   });
 
   it('rejects a path that is a file, not a folder', () => {
-    const dir = tempDir('agentmate-cwdfile-');
+    const dir = tempDir('runova-cwdfile-');
     const file = join(dir, 'note.txt');
     writeFileSync(file, 'x', 'utf-8');
     expect(resolveSpawnCwd(file, { HOME: dir })).toBe(dir);
@@ -147,7 +147,7 @@ describe('resolveSpawnCwd', () => {
 describe('resolveSpawnTarget', () => {
   /** A controlled world: PATH holds a fake `bash`, HOME is a temp folder. */
   function hermetic() {
-    const dir = tempDir('agentmate-spawn-');
+    const dir = tempDir('runova-spawn-');
     writeFileSync(join(dir, 'bash'), '#!/bin/sh\n', 'utf-8');
     const env = { PATH: dir, HOME: dir };
     return { dir, env };
@@ -163,13 +163,13 @@ describe('resolveSpawnTarget', () => {
   it('falls back to an installed shell when the requested one is gone', () => {
     const { env } = hermetic();
     const target = resolveSpawnTarget({
-      shell: 'agentmate-no-such-shell-xyz',
+      shell: 'runova-no-such-shell-xyz',
       platform: 'linux',
       env,
     });
     expect(target.shell).toBe('bash');
     expect(target.file).toBe(join(env.PATH, 'bash'));
-    expect(target.notes.join('\n')).toContain('agentmate-no-such-shell-xyz');
+    expect(target.notes.join('\n')).toContain('runova-no-such-shell-xyz');
   });
 
   it('never hands a traversal or an empty shell to the pty', () => {
@@ -196,7 +196,7 @@ describe('resolveSpawnTarget', () => {
   it('never throws, even with nothing to go on', () => {
     const target = resolveSpawnTarget({
       shell: '',
-      cwd: join(tmpdir(), 'agentmate-no-such-dir-xyz'),
+      cwd: join(tmpdir(), 'runova-no-such-dir-xyz'),
       platform: 'linux',
       env: { PATH: '', HOME: '' },
     });

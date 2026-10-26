@@ -6,7 +6,7 @@ import {
   type MediaView,
   type StudioDocument,
   secondsToFlicks,
-} from '@agentmat/studio';
+} from '@runova/studio';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';

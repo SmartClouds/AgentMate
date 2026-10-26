@@ -21,7 +21,7 @@ export const MIN_COMPOSE_VERSION_FOR_OVERRIDE = '2.24.4';
 export const LOOPBACK_HOST_IP = '127.0.0.1';
 
 const HEADER = [
-  ' Written by AgentMate: services behind the proxy publish their ports on 127.0.0.1 only.',
+  ' Written by Runova: services behind the proxy publish their ports on 127.0.0.1 only.',
   ' !override replaces their ports rather than adding to them (Docker Compose 2.24.4 or later).',
 ].join('\n');
 

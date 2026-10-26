@@ -1,4 +1,4 @@
-import type { TestResult, TestRunEvent, TestRunSnapshot, TestRunSummary } from '@agentmat/core';
+import type { TestResult, TestRunEvent, TestRunSnapshot, TestRunSummary } from '@runova/core';
 import { create } from 'zustand';
 
 /**
@@ -235,7 +235,7 @@ function queueEvent(event: TestRunEvent): void {
 
 /** Starts listening for run events once for the whole window. */
 export function ensureTestRunSubscription(): void {
-  if (subscribed || !window.agentmat?.tests) return;
+  if (subscribed || !window.runova?.tests) return;
   subscribed = true;
-  window.agentmat.tests.onRunEvent(queueEvent);
+  window.runova.tests.onRunEvent(queueEvent);
 }

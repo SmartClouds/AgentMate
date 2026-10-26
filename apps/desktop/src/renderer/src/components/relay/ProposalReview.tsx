@@ -5,7 +5,7 @@ import {
   parseTokenCount,
   type RelayProposal,
   TIGHT_ESTIMATE_SHARE,
-} from '@agentmat/core';
+} from '@runova/core';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,

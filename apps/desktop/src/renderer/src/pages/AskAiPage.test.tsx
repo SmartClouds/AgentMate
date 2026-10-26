@@ -6,7 +6,7 @@ import { renderWithProviders } from '../../../test/renderer/renderWithProviders'
 /**
  * The Ask AI page is a thin shell around the shared chat, so what is worth pinning down here is
  * the part the page owns (Clear history) plus the round trip a question makes through the
- * bridge. Everything goes through the UI and `window.agentmat`, never the component internals.
+ * bridge. Everything goes through the UI and `window.runova`, never the component internals.
  */
 
 const toast = vi.hoisted(() =>
@@ -90,15 +90,12 @@ describe('AskAiPage with an empty thread', () => {
 describe('AskAiPage with a thread', () => {
   it('shows both sides of the conversation and which model answered', async () => {
     useAskAiStore.setState({
-      messages: [
-        message(),
-        message({ id: 'm2', role: 'assistant', content: 'It builds AgentMate.' }),
-      ],
+      messages: [message(), message({ id: 'm2', role: 'assistant', content: 'It builds Runova.' })],
     });
     renderWithProviders(<AskAiPage />, { bridge: { 'settings.get': settings } });
 
     expect(await screen.findByText('What does this repo do?')).toBeTruthy();
-    expect(screen.getByText('It builds AgentMate.')).toBeTruthy();
+    expect(screen.getByText('It builds Runova.')).toBeTruthy();
     expect(screen.getByText('OpenAI · gpt-4o')).toBeTruthy();
   });
 
@@ -178,13 +175,13 @@ describe('AskAiPage sending', () => {
 
     await screen.findByText('Hi there.');
     await waitForModel();
-    await user.type(askBox(), 'What is AgentMate?{Enter}');
+    await user.type(askBox(), 'What is Runova?{Enter}');
 
     await waitFor(() =>
       expect(bridge.$fn('ai.ask')).toHaveBeenCalledWith({
         provider: 'openai',
         model: 'gpt-4o',
-        prompt: 'What is AgentMate?',
+        prompt: 'What is Runova?',
         history: [
           { role: 'user', content: 'Hello' },
           { role: 'assistant', content: 'Hi there.' },
@@ -193,7 +190,7 @@ describe('AskAiPage sending', () => {
     );
     expect(await screen.findByText('It is an Electron desktop app.')).toBeTruthy();
     // The question stays on screen as a user bubble and the box is emptied for the next one.
-    expect(screen.getByText('What is AgentMate?')).toBeTruthy();
+    expect(screen.getByText('What is Runova?')).toBeTruthy();
     expect((askBox() as HTMLTextAreaElement).value).toBe('');
   });
 

@@ -2,7 +2,7 @@ import { coreErrorMessage } from '@shared/coreErrors';
 import type {
   FirewallChange,
   FirewallChangeSetInfo,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployServer } from '@shared/deployTypes';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -61,10 +61,10 @@ export function DirectTlsFirewall({
     try {
       const input = { serverId, changeSetId: change.id };
       if (kind === 'keep') {
-        await window.agentmat.deployFirewall.confirm(input);
+        await window.runova.deployFirewall.confirm(input);
         toast.success('Firewall change kept.');
       } else {
-        await window.agentmat.deployFirewall.revert(input);
+        await window.runova.deployFirewall.revert(input);
         toast.success('Firewall change reverted. The old rules are back.');
       }
     } catch (error) {

@@ -2,7 +2,7 @@ import type { CreateTerminalOptions, TerminalAttachResult } from '@shared/apiTyp
 import { withHostKeyTrust } from '@/lib/ssh/hostKeyTrust';
 
 // Not exported from apiTypes.ts (they're local to preload/index.ts), so re-declared here to
-// match window.agentmat.terminal's payload shape structurally.
+// match window.runova.terminal's payload shape structurally.
 interface TerminalDataPayload {
   sessionId: string;
   data: string;
@@ -28,7 +28,7 @@ function unwrapIpcError(error: unknown): Error {
 }
 
 /**
- * Wraps `window.agentmat.ssh.*` behind the same shape as `window.agentmat.terminal`, so
+ * Wraps `window.runova.ssh.*` behind the same shape as `window.runova.terminal`, so
  * `TerminalPane` can pick a client by session kind without branching through the rest of its
  * effect (pending-output buffering, resize, dispose). SSH sessions never reattach in v1: there
  * is no snapshot and `create` always starts a fresh connection.
@@ -46,7 +46,7 @@ export function sshTerminalAdapter(sshServerId: string): {
       try {
         // A changed host key asks the user first, then retries once if they trust it.
         const result = await withHostKeyTrust(sshServerId, () =>
-          window.agentmat.ssh.create({
+          window.runova.ssh.create({
             sessionId: options.sessionId,
             savedServerId: sshServerId,
             cols: options.cols,
@@ -59,12 +59,12 @@ export function sshTerminalAdapter(sshServerId: string): {
         throw unwrapIpcError(error);
       }
     },
-    write: (sessionId, data) => window.agentmat.ssh.write(sessionId, data),
-    resize: (sessionId, cols, rows) => window.agentmat.ssh.resize(sessionId, cols, rows),
-    kill: (sessionId) => window.agentmat.ssh.kill(sessionId),
-    onData: (callback) => window.agentmat.ssh.onData(callback),
+    write: (sessionId, data) => window.runova.ssh.write(sessionId, data),
+    resize: (sessionId, cols, rows) => window.runova.ssh.resize(sessionId, cols, rows),
+    kill: (sessionId) => window.runova.ssh.kill(sessionId),
+    onData: (callback) => window.runova.ssh.onData(callback),
     onExit: (callback) =>
-      window.agentmat.ssh.onExit((payload) =>
+      window.runova.ssh.onExit((payload) =>
         callback({ sessionId: payload.sessionId, exitCode: payload.error ? 1 : 0 }),
       ),
   };

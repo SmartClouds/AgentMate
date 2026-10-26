@@ -4,7 +4,7 @@ import {
   parseAdbConnectResult,
   parseAdbPairResult,
   parseDeviceIpFromIpRoute,
-} from '@agentmat/core';
+} from '@runova/core';
 import { runAdb } from './exec';
 import type { ResolvedAndroidSdk } from './sdk';
 

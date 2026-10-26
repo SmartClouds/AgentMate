@@ -4,7 +4,7 @@ import { encodeSshError } from '@shared/sshErrors';
 import type { SshHostKeyStatus } from '@shared/sshHostKey';
 import { describe, expect, it, vi } from 'vitest';
 import { answerHostKeyPrompt, useHostKeyPromptStore } from '@/stores/hostKeyPromptStore';
-import { installAgentmatBridge } from '../../../../../test/renderer/agentmatBridge';
+import { installRunovaBridge } from '../../../../../test/renderer/runovaBridge';
 import { fileSiteHostKeySource, withFileSiteHostKeyTrust } from './hostKey';
 
 /**
@@ -60,7 +60,7 @@ const custom: FileSite['connection'] = {
 describe('fileSiteHostKeySource', () => {
   it("reads and trusts through the site's own channels", async () => {
     const trust = vi.fn(async () => undefined);
-    const bridge = installAgentmatBridge({
+    const bridge = installRunovaBridge({
       'deployFiles.hostKeyStatus': status,
       'deployFiles.trustHostKey': trust,
     });
@@ -77,7 +77,7 @@ describe('fileSiteHostKeySource', () => {
 describe('withFileSiteHostKeyTrust', () => {
   it('asks about a changed key of a login of its own and trusts it for the site', async () => {
     const trust = vi.fn(async () => undefined);
-    installAgentmatBridge({
+    installRunovaBridge({
       'deployFiles.hostKeyStatus': status,
       'deployFiles.trustHostKey': trust,
     });
@@ -96,7 +96,7 @@ describe('withFileSiteHostKeyTrust', () => {
 
   it('goes through the saved server for a site on a server saved in Remote', async () => {
     const trust = vi.fn(async () => undefined);
-    installAgentmatBridge({
+    installRunovaBridge({
       'ssh.hostKeyStatus': { ...status, serverId: 'srv-9' },
       'ssh.trustHostKey': trust,
     });

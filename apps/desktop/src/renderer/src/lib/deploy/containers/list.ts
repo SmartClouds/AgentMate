@@ -5,7 +5,7 @@ import type {
   ContainerPort,
   ContainerState,
   ContainerSummary,
-} from '@shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 
 /**
  * The Containers list as rows of one height (E06 T8): a header per compose project (and one for

@@ -7,8 +7,8 @@ import { type HostKeyTrustSource, withHostKeyTrust } from '@/lib/ssh/hostKeyTrus
  */
 export function fileSiteHostKeySource(siteId: string): HostKeyTrustSource {
   return {
-    status: () => window.agentmat.deployFiles.hostKeyStatus(siteId),
-    trust: (fingerprint) => window.agentmat.deployFiles.trustHostKey(siteId, fingerprint),
+    status: () => window.runova.deployFiles.hostKeyStatus(siteId),
+    trust: (fingerprint) => window.runova.deployFiles.trustHostKey(siteId, fingerprint),
   };
 }
 

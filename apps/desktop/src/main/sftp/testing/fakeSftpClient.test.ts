@@ -32,7 +32,7 @@ describeSftpClientContract('in-memory fake', async () => {
 
 let scratch = '';
 beforeAll(async () => {
-  scratch = await mkdtemp(join(tmpdir(), 'agentmate-fake-sftp-'));
+  scratch = await mkdtemp(join(tmpdir(), 'runova-fake-sftp-'));
 });
 afterAll(async () => {
   await rm(scratch, { recursive: true, force: true });
@@ -216,7 +216,7 @@ describe('uploads', () => {
     });
 
     expect(sent).toEqual([2, 4, 6, 8]);
-    expect(seen[0]).toEqual([expect.stringMatching(/^f\.agentmate-[0-9a-f]{8}\.part$/)]);
+    expect(seen[0]).toEqual([expect.stringMatching(/^f\.runova-[0-9a-f]{8}\.part$/)]);
     expect(server.list('/up')).toEqual(['f']);
   });
 
@@ -276,7 +276,7 @@ describe('downloads', () => {
       [2, 4],
       [4, 4],
     ]);
-    expect(during[0]).toEqual([expect.stringMatching(/^f\.agentmate-[0-9a-f]{8}\.part$/)]);
+    expect(during[0]).toEqual([expect.stringMatching(/^f\.runova-[0-9a-f]{8}\.part$/)]);
     expect(result).toEqual({ size: 4, mtimeMs: 1_700_000_000_000, replaced: false });
     expect(await readdir(dir)).toEqual(['f']);
     expect((await stat(target)).mtimeMs).toBe(1_700_000_000_000);

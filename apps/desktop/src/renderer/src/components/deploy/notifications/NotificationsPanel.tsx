@@ -23,7 +23,7 @@ export function NotificationsPanel({
 }): React.JSX.Element {
   const access = useQuery({
     queryKey: queryKeys.deployAccess(server.id),
-    queryFn: () => window.agentmat.deploy.access(server.id),
+    queryFn: () => window.runova.deploy.access(server.id),
     retry: false,
     staleTime: 30_000,
   });

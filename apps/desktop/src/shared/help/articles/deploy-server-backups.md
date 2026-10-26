@@ -7,7 +7,7 @@ keywords: backup, restore, server backup, schedule, plan, cron, retention, keep 
 route: /deploy
 ---
 
-The **Backups** section of a server's page in Deploy backs up the whole server: the server core's data and keys, its settings, the apps and their files, every Docker volume, images that cannot be pulled again, standalone containers and the firewall rules. Backups are made on the server by the AgentMate server core, so plans keep running when AgentMate is closed.
+The **Backups** section of a server's page in Deploy backs up the whole server: the server core's data and keys, its settings, the apps and their files, every Docker volume, images that cannot be pulled again, standalone containers and the firewall rules. Backups are made on the server by the Runova server core, so plans keep running when Runova is closed.
 
 Only an Owner of the server can use this section. Anyone else sees why it is empty.
 
@@ -22,7 +22,7 @@ Changes that matter (setting the secret key, adding or removing a destination, b
 Every backup is encrypted on the server before it goes anywhere, with a secret key you choose in the **Secret key** tab. It needs at least 12 characters and is typed twice. No backup can be made until it is set, and the **Overview** says so.
 
 > [!WARNING]
-> If you lose the secret key, no backup made with it can be restored, by you or anyone. It is never stored on the server and AgentMate does not keep it. Write it down somewhere safe, away from the server.
+> If you lose the secret key, no backup made with it can be restored, by you or anyone. It is never stored on the server and Runova does not keep it. Write it down somewhere safe, away from the server.
 
 To change it, type the current key and the new one. Backups made before the change still open with the key they were made under. The key alone is enough to restore a backup onto a bare server.
 
@@ -76,7 +76,7 @@ Open **Restore** (or click restore on a backup in the **Backups** tab):
 
 The backup is checked with the secret key before anything changes. Then the server core's state is swapped for the backup, the core restarts, and this computer signs in as that Owner. If the core does not come back, the server goes back to what it had.
 
-Next the wizard shows what the backup brings: volumes, images, containers, apps, firewall rules, and every setting that named the old server's address, marked **Automatic** or **Change by hand**. On a new server, **Move what named the old address** is ticked. Click **Bring the server up**: volumes and images come back and what was running starts again. When the address moves, the server core moves its own settings (sites, Cloudflare DNS, the direct TLS certificate, app files) and AgentMate moves this computer's records: saved servers, health checks, FTP and SFTP sites and WordPress sites that named the old address. A moved record with a trusted host key asks to trust the new server on its next connection.
+Next the wizard shows what the backup brings: volumes, images, containers, apps, firewall rules, and every setting that named the old server's address, marked **Automatic** or **Change by hand**. On a new server, **Move what named the old address** is ticked. Click **Bring the server up**: volumes and images come back and what was running starts again. When the address moves, the server core moves its own settings (sites, Cloudflare DNS, the direct TLS certificate, app files) and Runova moves this computer's records: saved servers, health checks, FTP and SFTP sites and WordPress sites that named the old address. A moved record with a trusted host key asks to trust the new server on its next connection.
 
 DNS that is not on Cloudflare is listed at the end to change by hand. The backup's firewall rules are not applied by the restore: click **Review the firewall rules** to stage them in the Firewall section and apply them the usual way.
 

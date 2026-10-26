@@ -52,7 +52,7 @@ export function ServerRegistriesCard({
     if (!confirmed) return;
     try {
       const done = await proof.run(async (step) => {
-        await window.agentmat.deployRegistry.serverRemove({
+        await window.runova.deployRegistry.serverRemove({
           serverId: server.id,
           credentialId: credential.id,
           ...step,

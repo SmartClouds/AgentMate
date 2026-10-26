@@ -1,4 +1,4 @@
-import { CLI_REGISTRY } from '@agentmat/core';
+import { CLI_REGISTRY } from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { Sparkles } from '@/components/icons';
 import { Combobox } from '@/components/ui/combobox';
@@ -42,7 +42,7 @@ export function SkillDeepReviewOptions({
 }): React.JSX.Element {
   const cliQuery = useQuery({
     queryKey: queryKeys.cliStatus,
-    queryFn: () => window.agentmat.cli.detectAll(),
+    queryFn: () => window.runova.cli.detectAll(),
     meta: { silentLoading: true },
   });
 

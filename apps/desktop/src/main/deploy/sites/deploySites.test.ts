@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { coreErrorCode, encodeCoreError } from '../../../shared/coreErrors';
-import type { SiteSettings } from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+import type { SiteSettings } from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { FAKE_CORE_PASSWORD, FakeCore } from '../../../shared/deploy/testing/fakeCore';
 import { CoreLinks } from '../live/coreLinks';
 import { fakeLiveHubs } from '../testing/fakeLiveHub';

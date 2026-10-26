@@ -4,13 +4,13 @@
  * a restored backup): every connection and unused connection key belonged to the old site, so
  * they all stop working, and the audit log says why.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Auth;
+namespace Runova\Connector\Auth;
 
-use AgentMate\Connector\Audit\AuditLog;
-use AgentMate\Connector\Storage\Storage;
+use Runova\Connector\Audit\AuditLog;
+use Runova\Connector\Storage\Storage;
 
 final class SiteMove
 {

@@ -387,7 +387,7 @@ function FileSiteGroup({
 /**
  * The servers the user chose for Deploy, in the order they arranged them, each with how its core
  * is doing so the one that needs a look stands out. Under them come the WordPress sites connected
- * through the AgentMate Connector plugin and the FTP and SFTP sites.
+ * through the Runova Connector plugin and the FTP and SFTP sites.
  */
 export function ServerRail({
   servers,

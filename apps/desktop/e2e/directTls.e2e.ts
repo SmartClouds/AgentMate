@@ -15,7 +15,7 @@ test.skip(!dotnetAvailable(), 'needs the .NET SDK to build the server core DevHo
 // run on Linux, where the core tests and the system test cover it.
 test.skip(process.platform === 'darwin', 'the DevHost cannot serve TLS 1.3 on macOS');
 
-const DEV_PASSWORD = 'agentmate-local-password';
+const DEV_PASSWORD = 'runova-local-password';
 
 let devHost: DevHost | undefined;
 let launched: LaunchedApp | undefined;
@@ -78,7 +78,7 @@ test('turns direct TLS on, connects over it with the device key, and turns it of
   if (!devHost) throw new Error('DevHost did not start');
   launched = await launchApp({
     settings: {},
-    env: { AGENTMATE_DEPLOY_DEV_CORE: String(devHost.port) },
+    env: { RUNOVA_DEPLOY_DEV_CORE: String(devHost.port) },
   });
   const { page } = launched;
   await page.getByRole('link', { name: 'Deploy' }).click();

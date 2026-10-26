@@ -3,7 +3,7 @@ import type {
   ContainerLogLine,
   ContainerStatsBatch,
   DockerEvent,
-} from '../../../shared/deploy/protocol/generated/AgentMate.ServerCore.Contracts';
+} from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { FakeCore } from '../../../shared/deploy/testing/fakeCore';
 import { fakeLiveHubs } from '../testing/fakeLiveHub';
 import { CoreLinks } from './coreLinks';

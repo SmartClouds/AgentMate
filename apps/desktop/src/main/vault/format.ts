@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { type VaultPayload, VaultPayloadSchema } from '@agentmat/core';
+import { type VaultPayload, VaultPayloadSchema } from '@runova/core';
 import { decryptWithKey, encryptWithKey } from '../crypto/aesGcm';
 import {
   DEFAULT_VAULT_KDF_COST,
@@ -23,7 +23,7 @@ export interface VaultCipherBlock {
  * unlock method later.
  */
 export interface VaultFileV1 {
-  format: 'agentmate-vault';
+  format: 'agentmate-vault'; // legacy-name, see FORMAT
   version: 1;
   kdf: VaultKdfParams;
   keyWrap: VaultCipherBlock;
@@ -35,7 +35,9 @@ export type OpenVaultResult =
   | 'wrong-password'
   | 'corrupt';
 
-const FORMAT = 'agentmate-vault';
+// Part of the authenticated data of every block, so it keeps the name it had when vaults were
+// first written (before the app was renamed to Runova). Changing it would lock every vault.
+const FORMAT = 'agentmate-vault'; // legacy-name
 const DATA_KEY_BYTES = 32;
 
 // Both blocks authenticate the header they were written under, so editing the KDF params or

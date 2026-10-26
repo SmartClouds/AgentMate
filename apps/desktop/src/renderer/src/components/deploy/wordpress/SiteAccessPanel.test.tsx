@@ -104,7 +104,7 @@ describe('SiteAccessPanel', () => {
       'deployWordPress.updateSettings': async () => wpSite({ label: 'Shop' }),
     });
 
-    const field = screen.getByLabelText('Name in AgentMate');
+    const field = screen.getByLabelText('Name in Runova');
     await user.clear(field);
     await user.type(field, 'Shop');
     await user.click(screen.getByRole('button', { name: 'Save' }));

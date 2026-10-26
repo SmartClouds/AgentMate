@@ -1,5 +1,5 @@
-import type { Project } from '@agentmat/core';
-import { AGENT_TYPE_LABELS } from '@agentmat/core';
+import type { Project } from '@runova/core';
+import { AGENT_TYPE_LABELS } from '@runova/core';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { useLocation } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -475,7 +475,7 @@ describe('ProjectsPage drag to reorder', () => {
     // A finished drag swallows the next click for 300 ms. Use that up here, so it cannot eat the
     // first click of whichever test runs after this one.
     window.dispatchEvent(new MouseEvent('click'));
-    localStorage.removeItem('agentmate.projects.view');
+    localStorage.removeItem('runova.projects.view');
     vi.restoreAllMocks();
   });
 

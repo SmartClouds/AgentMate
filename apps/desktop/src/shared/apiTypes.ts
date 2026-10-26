@@ -38,7 +38,7 @@ import type {
   VaultEntryType,
   VaultImportFormat,
   WorktreeInfo,
-} from '@agentmat/core';
+} from '@runova/core';
 import type { GuestShortcut } from './browserGuest';
 
 export type { AiProvider };
@@ -661,7 +661,7 @@ export interface InstalledMcpServerRecord {
 
 /**
  * A run command an AI agent in a project asked to add. It stays pending until the user approves
- * it in AgentMate, and nothing is saved or run before that.
+ * it in Runova, and nothing is saved or run before that.
  */
 export interface RunProposal {
   id: string;
@@ -691,9 +691,9 @@ export type RunProposalDecisionResult =
   | { ok: false; error: string };
 
 /**
- * What an agent needs to be started from AgentMate with the run suggestion tools: an MCP config
+ * What an agent needs to be started from Runova with the run suggestion tools: an MCP config
  * file to pass to its CLI, and the tool names that are safe to allow without asking, because every
- * suggestion is approved in AgentMate anyway.
+ * suggestion is approved in Runova anyway.
  */
 export type RunSetupSession =
   | { ok: true; mcpConfigPath: string; allowedTools: string[] }
@@ -744,7 +744,7 @@ export type SkillAuditSourceKind = 'repository' | 'installed' | 'github' | 'fold
 
 /**
  * What to audit. A repository skill is read from its index and an installed one straight off
- * disk; the last three need nothing added to AgentMate at all, so any folder or GitHub address
+ * disk; the last three need nothing added to Runova at all, so any folder or GitHub address
  * can be checked before it is trusted.
  */
 export type SkillAuditTarget =
@@ -841,7 +841,7 @@ export type FavoriteSkillInput = Omit<FavoriteSkillRecord, 'addedAt'>;
 export interface SkillUsageProject {
   /** Absolute folder path the session ran in. */
   path: string;
-  /** Folder name, or the matching AgentMate project's name when there is one. */
+  /** Folder name, or the matching Runova project's name when there is one. */
   label: string;
   count: number;
 }
@@ -899,7 +899,7 @@ export interface UsedSkillInspection {
     /** The project folder, `~/.claude`, or the plugin's name. */
     label: string;
   } | null;
-  /** AgentMate projects that already have a folder of this name in one of their skills dirs. */
+  /** Runova projects that already have a folder of this name in one of their skills dirs. */
   presentInProjectIds: string[];
 }
 
@@ -2782,7 +2782,7 @@ export interface SshAgentProgress {
   /** A question (needs-input), a summary (finished), or an error/stop reason. */
   message?: string;
   /**
-   * Only on `needs-password`: whether this server has a saved login password AgentMate can type
+   * Only on `needs-password`: whether this server has a saved login password Runova can type
    * into the prompt. The password itself never leaves the main process.
    */
   hasSavedPassword?: boolean;

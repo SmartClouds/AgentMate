@@ -1,4 +1,4 @@
-import type { Project } from '@agentmat/core';
+import type { Project } from '@runova/core';
 import type { PromptHistoryEntry } from '@shared/apiTypes';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';

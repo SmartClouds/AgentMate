@@ -8,9 +8,9 @@ import { generateHealthPassword, generateHealthToken, sha256Hex } from './token'
  */
 
 describe('generateHealthToken', () => {
-  it('is amh_ followed by 32 random bytes in base64url', () => {
+  it('is rnh_ followed by 32 random bytes in base64url', () => {
     const token = generateHealthToken();
-    expect(token).toMatch(/^amh_[A-Za-z0-9_-]{43}$/);
+    expect(token).toMatch(/^rnh_[A-Za-z0-9_-]{43}$/);
     expect(Buffer.from(token.slice(4), 'base64url')).toHaveLength(32);
   });
 
@@ -24,7 +24,7 @@ describe('generateHealthPassword', () => {
   it('is 32 base64url characters with no prefix and no colon', () => {
     const password = generateHealthPassword();
     expect(password).toMatch(/^[A-Za-z0-9_-]{32}$/);
-    expect(password.startsWith('amh_')).toBe(false);
+    expect(password.startsWith('rnh_')).toBe(false);
   });
 
   it('is different every time', () => {

@@ -1,4 +1,4 @@
-import type { PostmanCollection, PostmanItem } from '@agentmat/core';
+import type { PostmanCollection, PostmanItem } from '@runova/core';
 import sdk, { type SdkRequest, type SdkResponse, type SdkVariable } from 'postman-collection';
 import runtime from 'postman-runtime';
 import type {

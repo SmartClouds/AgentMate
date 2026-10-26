@@ -1,8 +1,8 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import type { FakeBridge } from '../../../../../test/renderer/agentmatBridge';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
+import type { FakeBridge } from '../../../../../test/renderer/runovaBridge';
 
 /** Which sign-in goes with an app's deploys (E08 T6), in words, and the per-app choice. */
 

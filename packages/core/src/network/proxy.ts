@@ -1,5 +1,5 @@
 /**
- * How AgentMate reaches the internet. Everything the app sends out (AI
+ * How Runova reaches the internet. Everything the app sends out (AI
  * providers, skill and package registries, Telegram, update checks, and the
  * CLIs it spawns) goes through whatever is configured here.
  */
@@ -102,7 +102,7 @@ export function isProxyActive(settings: ProxySettings): boolean {
 
 /**
  * "http://10.0.0.1:8080" for Chromium's proxy rules and for the child
- * processes AgentMate spawns. Credentials are left out on purpose: Chromium
+ * processes Runova spawns. Credentials are left out on purpose: Chromium
  * ignores them in a proxy rule and asks through its login event instead.
  */
 export function proxyServerUrl(settings: ProxySettings): string | null {

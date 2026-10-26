@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { AppSettings } from '@agentmat/core';
+import type { AppSettings } from '@runova/core';
 import type { PromptHistoryEntry } from '@shared/apiTypes';
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';

@@ -2,10 +2,10 @@
 /**
  * Where an item's file lives under the fake wp-content.
  *
- * @package AgentMate\Connector
+ * @package Runova\Connector
  */
 
-namespace AgentMate\Connector\Tests\Support;
+namespace Runova\Connector\Tests\Support;
 
 final class PathJoin
 {

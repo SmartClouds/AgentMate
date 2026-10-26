@@ -1,4 +1,4 @@
-import type { DevDetection } from '@agentmat/core';
+import type { DevDetection } from '@runova/core';
 import { describe, expect, it, vi } from 'vitest';
 import { addToolToPath } from './addToPath';
 
