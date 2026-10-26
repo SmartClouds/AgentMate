@@ -294,7 +294,9 @@ function audioGraphLines(
   let tail = `[amix]apad,atrim=0:${secs(plan.totalFrames / plan.fps)},asetpts=PTS-STARTPTS`;
   if (loudnorm === 'measure') tail += `,loudnorm=I=${target}:TP=-1.5:LRA=11:print_format=json`;
   else if (loudnorm !== 'none') {
-    tail += `,loudnorm=I=${target}:TP=-1.5:LRA=11:measured_I=${loudnorm.inputI}:measured_TP=${loudnorm.inputTp}:measured_LRA=${loudnorm.inputLra}:measured_thresh=${loudnorm.inputThresh}:offset=${loudnorm.targetOffset}:linear=true,aresample=48000`;
+    // The closing aformat pins the layout: ffmpeg 4.4 rebuilds the graph when a mono WAV with no
+    // channel layout starts sending, and the rebuilt graph could not pick one after loudnorm.
+    tail += `,loudnorm=I=${target}:TP=-1.5:LRA=11:measured_I=${loudnorm.inputI}:measured_TP=${loudnorm.inputTp}:measured_LRA=${loudnorm.inputLra}:measured_thresh=${loudnorm.inputThresh}:offset=${loudnorm.targetOffset}:linear=true,aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo`;
   }
   lines.push(`${tail}[aout]`);
   return lines;

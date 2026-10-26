@@ -39,28 +39,35 @@ Studio.scene({
     g.lineWidth = 1;
     for (let x = 0; x < W; x += 60) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
     for (let y = 0; y < H; y += 60) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
-    g.shadowColor = '#00E5FF'; g.shadowBlur = 12;
+    // The glow is a wide see-through stroke under each line rather than shadowBlur, which some
+    // GPUs draw a little differently each time (the frame check then sees a changed frame).
+    const glow = (color, haze, width) => {
+      g.strokeStyle = haze; g.lineWidth = width * 3; g.stroke();
+      g.strokeStyle = color; g.lineWidth = width; g.stroke();
+    };
     [[1, 0.9, 1], [0.78, -1.4, 0.6], [0.56, 2.1, 0.35]].forEach(([k, speed, arc]) => {
-      g.strokeStyle = '#00E5FF'; g.lineWidth = 3;
       const a0 = t * speed;
-      g.beginPath(); g.arc(cx, cy, R * k, a0, a0 + Math.PI * 2 * arc * (0.3 + 0.7 * ctx.ease.out(ctx.between(0, 1.5)))); g.stroke();
+      g.beginPath(); g.arc(cx, cy, R * k, a0, a0 + Math.PI * 2 * arc * (0.3 + 0.7 * ctx.ease.out(ctx.between(0, 1.5))));
+      glow('#00E5FF', 'rgba(0,229,255,0.22)', 3);
+      g.beginPath();
       for (let i = 0; i < 48; i++) {
         const a = a0 + (i / 48) * Math.PI * 2;
         const l = i % 4 === 0 ? 14 : 6;
-        g.beginPath(); g.moveTo(cx + Math.cos(a) * (R * k + 6), cy + Math.sin(a) * (R * k + 6));
-        g.lineTo(cx + Math.cos(a) * (R * k + 6 + l), cy + Math.sin(a) * (R * k + 6 + l)); g.stroke();
+        g.moveTo(cx + Math.cos(a) * (R * k + 6), cy + Math.sin(a) * (R * k + 6));
+        g.lineTo(cx + Math.cos(a) * (R * k + 6 + l), cy + Math.sin(a) * (R * k + 6 + l));
       }
+      glow('#00E5FF', 'rgba(0,229,255,0.22)', 3);
     });
     const scan = (t * 0.45) % 1;
-    g.strokeStyle = 'rgba(124,255,203,0.7)'; g.lineWidth = 2;
-    g.beginPath(); g.moveTo(0, scan * H); g.lineTo(W, scan * H); g.stroke();
+    g.beginPath(); g.moveTo(0, scan * H); g.lineTo(W, scan * H);
+    glow('rgba(124,255,203,0.7)', 'rgba(124,255,203,0.18)', 2);
     const lock = ctx.ease.outBack(ctx.between(ctx.duration * 0.5, ctx.duration * 0.7));
-    g.strokeStyle = '#FF3864'; g.lineWidth = 4;
     const b = R * 0.25 * (2 - lock);
+    g.beginPath();
     [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([sx, sy]) => {
-      g.beginPath(); g.moveTo(cx + sx * b, cy + sy * b * 0.4); g.lineTo(cx + sx * b, cy + sy * b); g.lineTo(cx + sx * b * 0.6, cy + sy * b); g.stroke();
+      g.moveTo(cx + sx * b, cy + sy * b * 0.4); g.lineTo(cx + sx * b, cy + sy * b); g.lineTo(cx + sx * b * 0.6, cy + sy * b);
     });
-    g.shadowBlur = 0;
+    glow('#FF3864', 'rgba(255,56,100,0.22)', 4);
     num.textContent = `${Math.round(99.7 * ctx.ease.outCubic(ctx.between(0.3, ctx.duration * 0.8)) * 10) / 10}%`;
   },
 });

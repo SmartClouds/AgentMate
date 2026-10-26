@@ -42,15 +42,18 @@ Studio.scene({
     for (let i = 0; i < 6; i++) { const y = hy - r * 0.08 - i * r * 0.15; g.fillRect(W / 2 - r, y, r * 2, 2 + i * 1.5); }
     g.restore();
     g.fillStyle = '#0B0014'; g.fillRect(0, hy, W, H - hy);
-    g.strokeStyle = '#FF2A6D'; g.lineWidth = 2; g.shadowColor = '#FF2A6D'; g.shadowBlur = 10;
-    for (let i = -20; i <= 20; i++) { g.beginPath(); g.moveTo(W / 2 + i * W * 0.02, hy); g.lineTo(W / 2 + i * W * 0.25, H); g.stroke(); }
+    // One path for the whole grid, stroked wide and faint for the glow, then thin: shadowBlur is
+    // drawn a little differently from one time to the next on some GPUs.
+    g.beginPath();
+    for (let i = -20; i <= 20; i++) { g.moveTo(W / 2 + i * W * 0.02, hy); g.lineTo(W / 2 + i * W * 0.25, H); }
     const scroll = (t * 0.6) % 1;
     for (let k = 0; k < 14; k++) {
       const d = (k + scroll) / 14;
       const y = hy + (H - hy) * d * d;
-      g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
+      g.moveTo(0, y); g.lineTo(W, y);
     }
-    g.shadowBlur = 0;
+    g.strokeStyle = 'rgba(255,42,109,0.25)'; g.lineWidth = 6; g.stroke();
+    g.strokeStyle = '#FF2A6D'; g.lineWidth = 2; g.stroke();
     for (let y = 0; y < H; y += 4) { g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(0, y, W, 1); }
     const on = ctx.between(0.4, 1.6);
     const flicker = on < 1 ? (ctx.random() > on ? 0.15 : 1) : 1;

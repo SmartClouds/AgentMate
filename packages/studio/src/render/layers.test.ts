@@ -185,7 +185,7 @@ describe('the graph for clips and sound', () => {
         '[3:a]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.200000,afade=t=out:st=0.800000:d=0.200000,volume=1.0000,adelay=1000:all=1[a0];',
         '[4:a]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.500000,afade=t=out:st=1.500000:d=0.500000,volume=1.0000,adelay=0:all=1[a1];',
         '[a0][a1]amix=inputs=2:normalize=0:duration=longest:dropout_transition=0[amix];',
-        '[amix]apad,atrim=0:4.000000,asetpts=PTS-STARTPTS,loudnorm=I=-14:TP=-1.5:LRA=11:measured_I=-30.1:measured_TP=-20.0:measured_LRA=1.0:measured_thresh=-40.1:offset=0.2:linear=true,aresample=48000[aout]',
+        '[amix]apad,atrim=0:4.000000,asetpts=PTS-STARTPTS,loudnorm=I=-14:TP=-1.5:LRA=11:measured_I=-30.1:measured_TP=-20.0:measured_LRA=1.0:measured_thresh=-40.1:offset=0.2:linear=true,aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo[aout]',
         '',
       ].join('\n'),
     );
