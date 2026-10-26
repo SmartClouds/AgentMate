@@ -47,8 +47,10 @@ function docker(args, { allowFail = false, input } = {}) {
   });
   if (result.error) throw new Error(`docker could not run: ${result.error.message}`);
   if (result.status !== 0 && !allowFail) {
+    // Exit status and signal too: a container killed for memory says nothing on stderr.
+    const how = result.signal ? `signal ${result.signal}` : `exit ${result.status}`;
     throw new Error(
-      `docker ${args.slice(0, 3).join(' ')} failed: ${(result.stderr || result.stdout).trim()}`,
+      `docker ${args.slice(0, 3).join(' ')} failed (${how}): ${(result.stderr || result.stdout).trim()}`,
     );
   }
   return result;
