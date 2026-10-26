@@ -100,6 +100,7 @@ internal static class WebOperations
         // After the recovery above: a server from before the rename moves nginx and the sshd
         // drop-in to the new names once the core runs in the Runova layout.
         services.AddSingleton(provider => new NameMovesFile(Path.Combine(provider.GetRequiredService<CoreDirectories>().Data, "name-moves.json")));
+        services.TryAddSingleton(LegacyNamesMoveOptions.Default);
         services.AddHostedService<LegacyNamesMove>();
         services.AddHostedService(provider => provider.GetRequiredService<CertificateRenewals>());
         return services;

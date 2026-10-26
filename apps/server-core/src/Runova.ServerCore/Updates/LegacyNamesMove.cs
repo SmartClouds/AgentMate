@@ -11,6 +11,15 @@ using Runova.ServerCore.Web;
 
 namespace Runova.ServerCore.Updates;
 
+/// <summary>
+/// Whether the move runs at start. The test core and the DevHost turn it off: they run on machines
+/// the core does not manage, and the move would read and rename that machine's sshd drop-in.
+/// </summary>
+internal sealed record LegacyNamesMoveOptions(bool RunInBackground = true)
+{
+    public static LegacyNamesMoveOptions Default { get; } = new();
+}
+
 /// <summary>How the moves of nginx and the sshd drop-in to the new names went, as last recorded.</summary>
 internal sealed record NameMoves(NameMoveStatus? Nginx = null, NameMoveStatus? Sshd = null);
 
@@ -134,6 +143,7 @@ internal sealed partial class LegacyNamesMove(
     CoreDirectories directories,
     IDbContextFactory<CoreDbContext> contexts,
     NameMovesFile record,
+    LegacyNamesMoveOptions options,
     ILogger<NginxNameMove> moveLogger,
     ILogger<LegacyNamesMove> logger) : BackgroundService
 {
@@ -141,7 +151,7 @@ internal sealed partial class LegacyNamesMove(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (layout.Kind != CoreLayoutKind.Runova)
+        if (layout.Kind != CoreLayoutKind.Runova || !options.RunInBackground)
         {
             return;
         }

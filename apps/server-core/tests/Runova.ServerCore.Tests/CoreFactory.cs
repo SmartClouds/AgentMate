@@ -18,6 +18,7 @@ using Runova.ServerCore.Tests.Cloudflare;
 using Runova.ServerCore.Tests.Docker;
 using Runova.ServerCore.Tests.ErrorReporting;
 using Runova.ServerCore.Tests.Notifications;
+using Runova.ServerCore.Updates;
 
 namespace Runova.ServerCore.Tests;
 
@@ -108,6 +109,9 @@ public sealed class CoreFactory : WebApplicationFactory<Program>
 
             // Crash loops (E30): tests stop and kill containers all the time, so nothing watches for them.
             services.AddSingleton(new ContainerWatchOptions(RunInBackground: false));
+
+            // The move to the Runova names: it would look at this machine's sshd drop-in.
+            services.AddSingleton(new LegacyNamesMoveOptions(RunInBackground: false));
 
             // Telegram notifications (E30): a fake Bot API, so no alert a test raises reaches a chat.
             services.AddSingleton<FakeTelegramApi>();

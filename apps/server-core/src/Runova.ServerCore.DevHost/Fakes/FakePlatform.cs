@@ -8,6 +8,7 @@ using Runova.ServerCore.Hardening;
 using Runova.ServerCore.Nginx;
 using Runova.ServerCore.Platform;
 using Runova.ServerCore.Stacks;
+using Runova.ServerCore.Updates;
 
 namespace Runova.ServerCore.DevHost.Fakes;
 
@@ -67,6 +68,8 @@ internal static class FakePlatform
         // a pretend CA, and upstream names that all resolve to a documentation address.
         services.AddSingleton(_ => new SimulatedNginxMachine(installed: true));
         services.AddSingleton<INginxMachine>(provider => provider.GetRequiredService<SimulatedNginxMachine>());
+        // Nothing here was set up before the rename, and the move would look at this machine's sshd drop-in.
+        services.AddSingleton(new LegacyNamesMoveOptions(RunInBackground: false));
         services.AddSingleton<ICertificateAuthorities, FakeCertificateAuthorities>();
         services.AddSingleton<IUpstreamResolver, FakeResolver>();
 
