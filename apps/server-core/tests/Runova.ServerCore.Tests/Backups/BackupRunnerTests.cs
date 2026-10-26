@@ -47,7 +47,7 @@ public sealed class BackupRunnerTests : IAsyncLifetime
         _downloads = new BackupService(directories, _clock);
         _queue = new InlineBackupQueue();
         _alerts = new AlertCenter(_database.Contexts, _clock, new Redactor(), NullLogger<AlertCenter>.Instance);
-        _runner = new BackupRunner(_database.Contexts, _center, composer, _destinations, _queue, new AuditLog(_database.Contexts, _clock, new Redactor()), directories, _downloads, _alerts, _clock);
+        _runner = new BackupRunner(_database.Contexts, _center, composer, _destinations, _queue, new AuditLog(_database.Contexts, _clock, new Redactor()), directories, _downloads, _alerts, new BackupRunGate(), _clock);
         _queue.Runner = _runner;
         await _center.SetSecretAsync(new SetBackupSecretRequest(null, Secret), Cancel);
         _docker.AddVolume("shop_db", new() { ["base.sql"] = "insert into orders"u8.ToArray() }, project: "shop");

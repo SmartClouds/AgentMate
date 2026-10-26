@@ -93,6 +93,7 @@ internal static class BackupRegistration
         services.AddSingleton(FullBackupOptions.Default);
         services.AddSingleton<FullBackupComposer>();
         services.AddSingleton<IBackupJobQueue, HangfireBackupQueue>();
+        services.AddSingleton<BackupRunGate>();
         services.AddTransient<BackupRunner>();
         services.AddSingleton<StoredBackups>();
         services.AddSingleton<BackupFetcher>();

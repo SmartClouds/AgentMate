@@ -32,13 +32,28 @@ internal sealed class HangfireBackupQueue(IBackgroundJobClient jobs) : IBackupJo
 }
 
 /// <summary>
+/// Lets one backup be made at a time. One per core rather than a static: the tests run many cores
+/// side by side in one process, and a static gate made each wait for the others' backups.
+/// </summary>
+internal sealed class BackupRunGate : IDisposable
+{
+    private readonly SemaphoreSlim _gate = new(1, 1);
+
+    public Task WaitAsync(CancellationToken cancellationToken) => _gate.WaitAsync(cancellationToken);
+
+    public void Release() => _gate.Release();
+
+    public void Dispose() => _gate.Dispose();
+}
+
+/// <summary>
 /// The Hangfire jobs a backup is made of (E28). A run makes one file: the whole server, encrypted
 /// to the key ring as it is written (no plaintext copy on disk), in the state folder's
 /// backup-runs/. Each destination then gets its own upload job, retried on its own up to
 /// <see cref="MaxAttempts"/> times, so one that fails never holds up another. After an upload a
 /// plan's retention runs on that destination. When every destination is done the run is closed:
 /// the file is deleted, or handed to the E15 download store for an hour when the app asked for it.
-/// Runs go one at a time; a restore waits for <see cref="Busy"/> to clear. A run that fails, or
+/// Runs go one at a time on a core (<see cref="BackupRunGate"/>). A run that fails, or
 /// that not every destination took, raises an alert for its plan (E30); the plan's next good run
 /// resolves it.
 /// </summary>
@@ -52,15 +67,11 @@ internal sealed class BackupRunner(
     CoreDirectories directories,
     BackupService downloads,
     AlertCenter alerts,
+    BackupRunGate gate,
     TimeProvider time)
 {
     public const int MaxAttempts = 3;
     public const string RunsFolder = "backup-runs";
-
-    private static readonly SemaphoreSlim _gate = new(1, 1);
-
-    /// <summary>Whether a backup is being made right now.</summary>
-    public static bool Busy => _gate.CurrentCount == 0;
 
     private long Now => time.GetUtcNow().ToUnixTimeMilliseconds();
 
@@ -110,7 +121,7 @@ internal sealed class BackupRunner(
     [AutomaticRetry(Attempts = 0)]
     public async Task RunAsync(Guid runId, CancellationToken cancellationToken)
     {
-        await _gate.WaitAsync(cancellationToken);
+        await gate.WaitAsync(cancellationToken);
         Guid[] targets;
         try
         {
@@ -118,7 +129,7 @@ internal sealed class BackupRunner(
         }
         finally
         {
-            _gate.Release();
+            gate.Release();
         }
 
         foreach (var destination in targets)
