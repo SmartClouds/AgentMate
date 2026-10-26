@@ -46,6 +46,9 @@ export default defineConfig({
         'src/node/voice/**': { lines: 95, branches: 78 },
         // E37: the lock files Studio's local voices install from.
         'src/tools/**': { lines: 98, branches: 85 },
+        // E38: generated pictures and clips, their prices and the provider calls.
+        'src/gen/**': { lines: 98, branches: 90 },
+        'src/node/gen/**': { lines: 95, branches: 78 },
       },
     },
   },

@@ -23,15 +23,20 @@ export async function shutdownStudio(): Promise<void> {
 }
 
 /**
- * Picks up renders the app stopped in the middle of (a crash, a quit mid-render). Only makes the
- * service when there is a render list to look at, so startup stays free for users who never render.
+ * Picks up renders and generated clips the app stopped in the middle of (a crash, a quit). Only
+ * makes the service when there is a list to look at, so startup stays free for users who never
+ * render or generate.
  */
 export async function resumeStudioRenders(dataDir: string): Promise<void> {
-  try {
-    await access(join(dataDir, 'renders.json'));
-  } catch {
-    return;
-  }
+  const lists = await Promise.all(
+    ['renders.json', 'generations.json'].map((name) =>
+      access(join(dataDir, name)).then(
+        () => true,
+        () => false,
+      ),
+    ),
+  );
+  if (!lists.some(Boolean)) return;
   try {
     await studioService().resumeRenders();
   } catch {

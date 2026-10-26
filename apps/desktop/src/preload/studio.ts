@@ -3,8 +3,11 @@ import type {
   CreateVideoInput,
   EditOp,
   EditResponse,
+  GenEstimateView,
   GenerationDetail,
   GenerationView,
+  GenJobView,
+  GenRequest,
   HistoryEntryView,
   ImportResult,
   MediaView,
@@ -194,6 +197,19 @@ export function createStudioAudio() {
       ipcRenderer.invoke(IPC.studioAudio.cloneProfile, { profileId, acknowledgeUpload: true }),
     removeProfile: (profileId: string): Promise<void> =>
       ipcRenderer.invoke(IPC.studioAudio.removeProfile, { profileId }),
+  };
+}
+
+/** Studio generated media (E38): estimates, generations that bill after a confirmation, the list. */
+export function createStudioGen() {
+  return {
+    estimate: (input: GenRequest & { videoId: string }): Promise<GenEstimateView> =>
+      ipcRenderer.invoke(IPC.studioGen.estimate, input),
+    start: (input: GenRequest & { videoId: string; confirmedUsd: number }): Promise<GenJobView> =>
+      ipcRenderer.invoke(IPC.studioGen.start, input),
+    jobs: (videoId: string): Promise<GenJobView[]> =>
+      ipcRenderer.invoke(IPC.studioGen.jobs, { videoId }),
+    cancel: (jobId: string): Promise<void> => ipcRenderer.invoke(IPC.studioGen.cancel, { jobId }),
   };
 }
 

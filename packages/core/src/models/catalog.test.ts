@@ -22,6 +22,7 @@ import {
   OPENAI_API_MODELS,
   resolveSpeechLanguage,
   SPEECH_LANGUAGES,
+  STUDIO_GEN,
   STUDIO_OMNIVOICE,
   STUDIO_PIPER,
   STUDIO_TTS,
@@ -273,5 +274,20 @@ describe('Studio local voices', () => {
     pinned(STUDIO_OMNIVOICE.files);
     expect(STUDIO_OMNIVOICE.weightsLicense).toBe('CC BY-NC 4.0');
     expect(STUDIO_OMNIVOICE.files.map((f) => f.path)).toContain('model.safetensors');
+  });
+});
+
+describe('Studio generated media', () => {
+  it('names one model per kind and provider, priced, and no Sora or Veo preview', () => {
+    expect(STUDIO_GEN.image.openai.model).toBe('gpt-image-2.5-flare');
+    expect(STUDIO_GEN.image.gemini.model).toBe('gemini-nano-banana-2.1');
+    expect(STUDIO_GEN.video.gemini.model).toBe('gemini-omni-1.1-flash');
+    expect(JSON.stringify(STUDIO_GEN)).not.toMatch(/sora|veo-3\.1-.*preview/i);
+    for (const price of Object.values(STUDIO_GEN.image.openai.estimatePerImage)) {
+      expect(price).toBeGreaterThan(0);
+    }
+    expect(
+      STUDIO_GEN.video.gemini.pricePerSecond * STUDIO_GEN.video.gemini.expectedSeconds,
+    ).toBeCloseTo(0.8);
   });
 });

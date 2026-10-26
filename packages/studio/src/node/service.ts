@@ -7,8 +7,11 @@ import type {
   ApplyResult,
   CreateVideoInput,
   EditResponse,
+  GenEstimateView,
   GenerationDetail,
   GenerationView,
+  GenJobView,
+  GenRequest,
   HistoryEntryView,
   ImportResult,
   MediaVariant,
@@ -56,6 +59,7 @@ import {
 } from './ai/studioAi.js';
 import { BlobStore } from './blobs/blobStore.js';
 import type { OpenSqlDriver } from './db/sqlDriver.js';
+import { createGenJobs } from './gen/genJobs.js';
 import { createMediaLibrary } from './media/mediaLibrary.js';
 import { acquireVideoLock, type HeldLock, LOCK_FILE, type LockOptions } from './project/lock.js';
 import { checkStorageRoot } from './project/storageRoot.js';
@@ -276,6 +280,12 @@ export interface StudioService {
   }): Promise<VoiceProfileView>;
   /** Removes a profile, and its clone in ElevenLabs first when there is one. */
   removeVoiceProfile(input: { profileId: string }): Promise<void>;
+  /** What a generated picture or clip will cost, before anything is sent. */
+  genEstimate(input: GenRequest & { videoId: string }): Promise<GenEstimateView>;
+  /** Starts one the person confirmed at `confirmedUsd`; it bills their account. */
+  startGen(input: GenRequest & { videoId: string; confirmedUsd: number }): Promise<GenJobView>;
+  genJobs(input: { videoId: string }): Promise<GenJobView[]>;
+  cancelGen(input: { jobId: string }): Promise<void>;
   renderTools(): Promise<RenderToolsView>;
   renderEstimate(input: { videoId: string }): Promise<RenderEstimateView>;
   startRender(input: StartRenderInput): Promise<RenderJobView>;
@@ -555,6 +565,8 @@ export function createStudioService(host: StudioHost): StudioService {
     }
     sessions.set(videoId, { store, lock: locked.lock });
     media.prepare(videoId, store);
+    // Pictures and clips that finished while the video was closed come in now.
+    void gen.importPending(videoId).catch(() => undefined);
     await putEntry({ ...found, title: store.manifest.title, lastOpenedAt: now() });
     return { state: 'open', session: await sessionView(videoId, store) };
   }
@@ -712,6 +724,28 @@ export function createStudioService(host: StudioHost): StudioService {
     newId,
     now,
     local: () => localVoices.speakers(),
+  });
+
+  const gen = createGenJobs({
+    dataDir: host.dataDir,
+    keys: async () => (await host.voice?.appKeys()) ?? {},
+    fetch: host.voice?.fetch ?? fetch,
+    baseUrl: host.voice?.baseUrl,
+    async cacheDir(videoId) {
+      const file = await settingsStore.read();
+      return join(file.cacheDir ?? host.defaultCacheDir, videoId);
+    },
+    async importFile(videoId, file) {
+      const open = sessions.get(videoId);
+      if (!open) return null;
+      const result = await media.importFiles(videoId, open.store, [file]);
+      const made = result.imported[0];
+      if (!made) throw new Error(result.skipped[0]?.reason ?? 'Studio could not take that file.');
+      return { hash: made.hash, name: made.name };
+    },
+    notify: host.notify,
+    newId,
+    now,
   });
 
   async function closeSession(videoId: string): Promise<void> {
@@ -1302,11 +1336,30 @@ export function createStudioService(host: StudioHost): StudioService {
       await render.remove(jobId);
     },
 
+    async genEstimate(input) {
+      return gen.estimate(input);
+    },
+
+    async startGen(input) {
+      session(input.videoId);
+      return gen.start(input);
+    },
+
+    async genJobs({ videoId }) {
+      return gen.jobs(videoId);
+    },
+
+    async cancelGen({ jobId }) {
+      await gen.cancel(jobId);
+    },
+
     async resumeRenders() {
+      await gen.resumeAfterStart();
       await render.resumeAfterStart();
     },
 
     async shutdown() {
+      await gen.shutdown();
       await narrator.shutdown();
       await localVoices.stop();
       await media.shutdown();

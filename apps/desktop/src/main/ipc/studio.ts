@@ -1,6 +1,7 @@
 import {
   studioAiInputs,
   studioAudioInputs,
+  studioGenInputs,
   studioInputs,
   studioMediaInputs,
   studioRenderInputs,
@@ -240,6 +241,14 @@ export function registerStudioHandlers(
   );
   handle(IPC.studioAudio.removeProfile, (value) =>
     service().removeVoiceProfile(parse(studioAudioInputs.profileRef, value)),
+  );
+  handle(IPC.studioGen.estimate, (value) =>
+    service().genEstimate(parse(studioGenInputs.estimate, value)),
+  );
+  handle(IPC.studioGen.start, (value) => service().startGen(parse(studioGenInputs.start, value)));
+  handle(IPC.studioGen.jobs, (value) => service().genJobs(parse(studioGenInputs.jobs, value)));
+  handle(IPC.studioGen.cancel, (value) =>
+    service().cancelGen(parse(studioGenInputs.jobRef, value)),
   );
   handle(IPC.studioRender.tools, () => service().renderTools());
   handle(IPC.studioRender.estimate, (value) =>

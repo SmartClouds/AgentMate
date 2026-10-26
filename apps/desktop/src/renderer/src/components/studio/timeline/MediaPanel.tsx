@@ -1,4 +1,10 @@
-import { FLICKS_PER_SECOND, type ImportResult, type MediaView, mediaUrl } from '@agentmat/studio';
+import {
+  type Aspect,
+  FLICKS_PER_SECOND,
+  type ImportResult,
+  type MediaView,
+  mediaUrl,
+} from '@agentmat/studio';
 import { useState } from 'react';
 import { pathForFile, studioMediaClient } from '../client';
 import { errorMessage } from '../format';
@@ -12,10 +18,12 @@ import {
   Plus,
   SimpleTooltip,
   Skeleton,
+  Sparkles,
   TriangleAlert,
   toast,
   Video,
 } from '../kit';
+import { GenerateDialog } from './GenerateDialog';
 import { TIMELINE_MEDIA } from './Timeline';
 
 /**
@@ -29,6 +37,8 @@ export interface MediaPanelProps {
   media: MediaView[] | undefined;
   loading: boolean;
   onAdd: (file: MediaView) => void;
+  /** The video's shape, for generated pictures and clips. */
+  aspect: Aspect;
 }
 
 const KIND_LABEL: Record<MediaView['kind'], string> = {
@@ -59,8 +69,15 @@ export function reportImport(result: ImportResult | null): void {
   }
 }
 
-export function MediaPanel({ videoId, media, loading, onAdd }: MediaPanelProps): React.JSX.Element {
+export function MediaPanel({
+  videoId,
+  media,
+  loading,
+  onAdd,
+  aspect,
+}: MediaPanelProps): React.JSX.Element {
   const [over, setOver] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [importing, setImporting] = useState(false);
   const run = async (task: () => Promise<ImportResult | null>) => {
     setImporting(true);
@@ -101,7 +118,14 @@ export function MediaPanel({ videoId, media, loading, onAdd }: MediaPanelProps):
         >
           <FolderPlus /> {importing ? 'Importing...' : 'Import'}
         </Button>
+        <Button size="xs" variant="soft" onClick={() => setGenerating(true)}>
+          <Sparkles /> Generate
+        </Button>
       </div>
+      {/* Mounted only while open: the timeline redraws this panel as it scrolls. */}
+      {generating && (
+        <GenerateDialog videoId={videoId} open onOpenChange={setGenerating} aspect={aspect} />
+      )}
       {loading ? (
         <div className="space-y-1.5" aria-busy="true" aria-label="Loading media">
           <Skeleton className="h-10 w-full" />

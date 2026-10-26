@@ -629,6 +629,46 @@ export const STUDIO_OMNIVOICE = {
   ].map((file) => ({ ...file, url: `${OMNIVOICE_AT}/${file.path}` })) as readonly StudioModelFile[],
 } as const;
 
+/**
+ * Studio's generated pictures and clips (E38), as the providers' docs and price pages stood in
+ * October 2026. Veo 3.1's preview models were shut down on the Gemini API, which now makes video
+ * with Gemini Omni Flash; OpenAI's Sora API was shut down on 2026-09-24.
+ */
+export const STUDIO_GEN = {
+  image: {
+    openai: {
+      label: 'OpenAI',
+      model: 'gpt-image-2.5-flare',
+      sizes: ['1024x1024', '1536x1024', '1024x1536'] as const,
+      qualities: ['low', 'medium', 'high'] as const,
+      /**
+       * OpenAI prices GPT Image 2.5 by token ($30 per 1M image output tokens) and publishes
+       * per-image figures only for GPT Image 2, so these are those figures, used as an estimate.
+       * The largest size's figure is used for every size.
+       */
+      estimatePerImage: { low: 0.006, medium: 0.053, high: 0.211 },
+    },
+    gemini: {
+      label: 'Google Gemini',
+      model: 'gemini-nano-banana-2.1',
+      sizes: ['1K', '2K', '4K'] as const,
+      aspectRatios: ['1:1', '3:2', '2:3', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9'] as const,
+      pricePerImage: { '1K': 0.0336, '2K': 0.0504, '4K': 0.113 },
+    },
+  },
+  video: {
+    gemini: {
+      label: 'Google Gemini Omni',
+      model: 'gemini-omni-1.1-flash',
+      aspectRatios: ['16:9', '9:16'] as const,
+      /** At 720p, the resolution it makes (1080p and 4K are upscaled from it). */
+      pricePerSecond: 0.1,
+      /** The model picks a clip's length; this is what an estimate assumes. */
+      expectedSeconds: 8,
+    },
+  },
+} as const;
+
 // Prices
 
 export interface ModelPrice {

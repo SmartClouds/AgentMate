@@ -540,6 +540,70 @@ export interface VoiceProfileView {
   elevenlabsVoiceId: string | null;
 }
 
+const genRequest = {
+  kind: z.enum(['image', 'video']),
+  engine: z.enum(['openai', 'gemini']),
+  prompt: z.string().trim().min(3, 'Describe what to make.').max(4000),
+  /** OpenAI: 1024x1024 and so on; Gemini images: 1K, 2K or 4K. */
+  size: z.string().max(20).optional(),
+  quality: z.enum(['low', 'medium', 'high']).optional(),
+  aspectRatio: z.string().max(10).optional(),
+};
+
+export const studioGenInputs = {
+  estimate: z.object({ videoId: id, ...genRequest }),
+  /**
+   * Starts a generation that bills the person's account. `confirmedUsd` is the estimate they were
+   * shown and agreed to; the service refuses to start unless it is the estimate it works out now.
+   */
+  start: z.object({ videoId: id, ...genRequest, confirmedUsd: z.number().nonnegative() }),
+  jobs: z.object({ videoId: id }),
+  jobRef: z.object({ jobId: id }),
+};
+
+export interface GenRequest {
+  kind: 'image' | 'video';
+  engine: 'openai' | 'gemini';
+  prompt: string;
+  size?: string;
+  quality?: 'low' | 'medium' | 'high';
+  aspectRatio?: string;
+}
+
+export interface GenEstimateView {
+  /** What the provider's list price comes to, in US dollars. */
+  usd: number;
+  model: string;
+  label: string;
+  /** How the figure was reached, in a sentence, for the confirmation. */
+  basis: string;
+}
+
+export type GenStatus = 'running' | 'done' | 'failed' | 'refused' | 'interrupted' | 'cancelled';
+
+/** A picture or clip made by an online model, from the request to the media library. */
+export interface GenJobView {
+  id: string;
+  videoId: string;
+  kind: 'image' | 'video';
+  engine: 'openai' | 'gemini';
+  model: string;
+  prompt: string;
+  status: GenStatus;
+  /** What a running one is doing. */
+  stage: 'request' | 'waiting' | 'download' | 'import' | null;
+  estimateUsd: number;
+  /** In the video's media once imported; null before, or while the video is closed. */
+  mediaHash: string | null;
+  mediaName: string | null;
+  /** Why it failed, or what the provider said when it declined the prompt. */
+  error: string | null;
+  createdAt: number;
+  endedAt: number | null;
+  /** Picked up again after the app restarted while it was waiting or downloading. */
+  resumed: boolean;
+}
+
 export const studioRenderInputs = {
   videoRef: z.object({ videoId: id }),
   start: z.object({
@@ -641,6 +705,8 @@ export type StudioEvent =
     }
   /** A narration run moved on: a piece spoken, a scene placed, or the run ended. */
   | { type: 'narration-changed'; videoId: string; jobId: string }
+  /** A generated picture or clip moved on: waiting, downloading, imported, failed. */
+  | { type: 'gen-changed'; videoId: string; jobId: string }
   /** A video's media changed: a file imported, or its preview files made. */
   | { type: 'media-changed'; videoId: string }
   /** A render the app stopped in the middle of was picked up again at startup. */

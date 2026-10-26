@@ -229,5 +229,5 @@ upload extraction, tunnel, installer verification, firewall guard) get coverage 
 | [E35](epics/35-studio-timeline-editor.md) | Studio timeline editor: media, tracks, captions and timeline edits by typing | Standalone (Studio) | E34 |
 | [E36](epics/36-studio-voice.md) | Studio voice: recording, online voices, narration-first timing, voice-timed captions | Standalone (Studio) | E35 |
 | [E37](epics/37-studio-local-voices-cloning.md) | Studio local voices and cloning: Piper, OmniVoice (optional), voice profiles with consent | Standalone (Studio) | E36 |
-| [E38](epics/38-studio-generated-media.md) | Studio generated images and video: OpenAI and Gemini images, Veo 3.1 clips | Standalone (Studio) | E35, E36 |
+| [E38](epics/38-studio-generated-media.md) | Studio generated images and video: OpenAI and Gemini pictures, Gemini Omni clips | Standalone (Studio) | E35, E36 |
 | [E39](epics/39-studio-recipes-history-hardening.md) | Studio recipes, history browser and hardening | Standalone (Studio) | E31 to E38 |

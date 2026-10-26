@@ -3,7 +3,7 @@ title: Studio
 category: Build
 order: 40
 summary: Studio makes videos for your projects, or on their own. An AI CLI on your computer writes the scenario from your brief, you edit it by hand or by asking AI, and every video keeps its edits and full history in a folder you choose, always outside the project's source. Nothing in the history is ever deleted, and you can go back to any earlier version.
-keywords: studio, video, videos, film, movie, scenario, script, brief, animate, animation, motion graphics, style, styles, preview, scene code, code, versions, check, network, ai, write with ai, ask ai, edit by typing, proposal, recipe, recipes, cli, model, effort, claude code, codex, gemini, grok, cursor, opencode, scene, scenes, narration, voice over, voice, voices, text to speech, tts, record, microphone, openai, elevenlabs, azure speech, captions, ducking, piper, omnivoice, local voices, offline, clone, cloning, voice profile, my voice, consent, non-commercial, history, undo, redo, restore, version, versions, storage, folder, location, library, standalone, project videos, lock, another agentmate, take over, move, locate, persian, rtl
+keywords: studio, video, videos, film, movie, scenario, script, brief, animate, animation, motion graphics, style, styles, preview, scene code, code, versions, check, network, ai, write with ai, ask ai, edit by typing, proposal, recipe, recipes, cli, model, effort, claude code, codex, gemini, grok, cursor, opencode, scene, scenes, narration, voice over, voice, voices, text to speech, tts, record, microphone, openai, elevenlabs, azure speech, captions, ducking, piper, omnivoice, local voices, offline, clone, cloning, voice profile, my voice, consent, non-commercial, generate, generated, image, picture, clip, gemini omni, gpt image, nano banana, cost, history, undo, redo, restore, version, versions, storage, folder, location, library, standalone, project videos, lock, another agentmate, take over, move, locate, persian, rtl
 route: /studio
 ---
 
@@ -88,6 +88,10 @@ Two engines run on your computer instead of online. Install them from **Agent To
 - **OmniVoice** speaks in a voice it clones from a few seconds of recording. Its model is licensed for **non-commercial use only**, and Studio says so wherever it is offered and on every render that uses it. It is quick with an NVIDIA graphics card or a Mac with Apple silicon and slow without one. The model is about 3.3 GB.
 
 **Voices** in the Voice view keeps voice profiles: a short recording of your voice, or of someone who gave you permission. Read the text shown for six to ten seconds. Studio trims the silence, fills in what you said (correct it if needed), and saves the profile only after you confirm the voice is yours or that you may use it. OmniVoice speaks with any profile; **Upload to ElevenLabs** sends the recording to your ElevenLabs account, after asking, where it becomes a voice to pick. Deleting a profile also removes it from ElevenLabs.
+
+## Generate pictures and clips
+
+**Generate** in the Media list makes a picture (OpenAI or Google Gemini) or a short clip (Google Gemini Omni) from a description, billed to your own account with the keys in **Settings > AI**. The price is shown before anything is sent, and Studio asks once more with it before it sends the request; what you spent on the video is summed up below. A finished one lands in Media as **Generated picture** or **Generated clip**, ready to add to the timeline. A clip takes a while: it carries on even if AgentMate restarts, and one cut off before the provider answered is marked so, never sent again (it may already have been billed). If a provider declines a description, its reason is shown.
 
 ## The timeline
 

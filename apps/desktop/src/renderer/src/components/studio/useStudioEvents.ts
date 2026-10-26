@@ -15,6 +15,9 @@ export function useStudioEvents(): void {
         void queryClient.invalidateQueries({ queryKey: studioKeys.history(event.videoId) });
       } else if (event.type === 'generation-changed') {
         void queryClient.invalidateQueries({ queryKey: studioKeys.generations(event.videoId) });
+      } else if (event.type === 'gen-changed') {
+        void queryClient.invalidateQueries({ queryKey: studioKeys.genJobs(event.videoId) });
+        void queryClient.invalidateQueries({ queryKey: studioKeys.media(event.videoId) });
       } else if (event.type === 'narration-changed') {
         void queryClient.invalidateQueries({ queryKey: studioKeys.narrationJobs(event.videoId) });
       } else if (event.type === 'media-changed') {

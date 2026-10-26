@@ -208,6 +208,7 @@ export function TimelineView({
             media={media.data}
             loading={media.isLoading}
             onAdd={(file) => addFile(file)}
+            aspect={doc.renderSettings.aspect}
           />
         </ErrorBoundary>
         <div className="min-w-0 space-y-1.5">

@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CONSENT_STATEMENT } from '../../api.js';
 import { useTempDirs } from '../../test/tempDir.js';
 import { encodeWav, parseWav } from '../../voice/wav.js';
@@ -101,6 +101,8 @@ describe('OmniVoice through its sidecar', () => {
   it('fails only the piece in flight when the sidecar dies, and starts it again for the next (AC3)', async () => {
     const { speaker } = await setup();
     const crashed = speaker({ voice: 'p1', text: 'CRASH now', lang: 'fa' });
+    // Each piece looks its profile up first; queue the next one only once the crash owns the sidecar.
+    await vi.waitFor(() => expect(speaker.host.starts).toBe(1));
     const next = speaker({ voice: 'p1', text: 'بعدی', lang: 'fa' });
     await expect(crashed).rejects.toMatchObject({
       message: 'OmniVoice stopped unexpectedly (exit code 3).',

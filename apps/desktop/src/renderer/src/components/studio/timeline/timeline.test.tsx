@@ -356,7 +356,7 @@ describe('ProgramPreview', () => {
 describe('MediaPanel', () => {
   it('imports through the dialog and reports what was skipped', async () => {
     const { user, bridge } = renderWithProviders(
-      <MediaPanel videoId={VIDEO_ID} media={[]} loading={false} onAdd={vi.fn()} />,
+      <MediaPanel videoId={VIDEO_ID} media={[]} loading={false} onAdd={vi.fn()} aspect="16:9" />,
       {
         bridge: {
           'studioMedia.pickAndImport': async () => ({
@@ -379,7 +379,7 @@ describe('MediaPanel', () => {
 
   it('imports files dropped onto it', async () => {
     const { bridge } = renderWithProviders(
-      <MediaPanel videoId={VIDEO_ID} media={[]} loading={false} onAdd={vi.fn()} />,
+      <MediaPanel videoId={VIDEO_ID} media={[]} loading={false} onAdd={vi.fn()} aspect="16:9" />,
       {
         bridge: {
           'shell.pathForFile': (f: File) => `C:\\drop\\${f.name}`,
@@ -411,6 +411,7 @@ describe('MediaPanel', () => {
         media={[preparing, MEDIA[1]!]}
         loading={false}
         onAdd={onAdd}
+        aspect="16:9"
       />,
       {
         bridge: {},
@@ -431,7 +432,7 @@ describe('MediaPanel', () => {
 
   it('shimmers while it loads', () => {
     renderWithProviders(
-      <MediaPanel videoId={VIDEO_ID} media={undefined} loading onAdd={vi.fn()} />,
+      <MediaPanel videoId={VIDEO_ID} media={undefined} loading onAdd={vi.fn()} aspect="16:9" />,
       { bridge: {} },
     );
     expect(screen.getByLabelText('Loading media').getAttribute('aria-busy')).toBe('true');

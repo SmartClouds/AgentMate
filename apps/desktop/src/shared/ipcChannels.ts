@@ -822,6 +822,17 @@ export const IPC = {
     // ({ profileId }) -> void, its ElevenLabs copy removed first
     removeProfile: 'studioAudio:removeProfile',
   },
+  /** Studio generated media (E38): pictures and clips made by online models, after a confirmation. */
+  studioGen: {
+    // ({ videoId, kind, engine, prompt, size?, quality?, aspectRatio? }) -> GenEstimateView
+    estimate: 'studioGen:estimate',
+    // (the same, plus confirmedUsd) -> GenJobView; refused unless confirmedUsd is the estimate
+    start: 'studioGen:start',
+    // ({ videoId }) -> GenJobView[]
+    jobs: 'studioGen:jobs',
+    // ({ jobId }) -> void
+    cancel: 'studioGen:cancel',
+  },
   /** Studio rendering (E34): finished video files, one render at a time, resumed after a crash. */
   studioRender: {
     // () -> RenderToolsView, whether ffmpeg is here and which codecs it can write

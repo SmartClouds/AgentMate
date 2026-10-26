@@ -486,6 +486,7 @@ import {
   createStudio,
   createStudioAi,
   createStudioAudio,
+  createStudioGen,
   createStudioMedia,
   createStudioRender,
   createStudioScenes,
@@ -1964,6 +1965,7 @@ const studioScenes = createStudioScenes();
 const studioRender = createStudioRender();
 const studioMedia = createStudioMedia();
 const studioAudio = createStudioAudio();
+const studioGen = createStudioGen();
 const relay = createRelay();
 const errorTracking = createErrorTracking();
 
@@ -2806,6 +2808,7 @@ const agentmatApi = {
   studioRender,
   studioMedia,
   studioAudio,
+  studioGen,
   relay,
   errorTracking,
   cloudflare,
