@@ -1,4 +1,5 @@
 import type { GenerationView } from '@agentmat/studio';
+import { useState } from 'react';
 import { formatWhen, scriptClass } from '../format';
 import {
   Bookmark,
@@ -20,6 +21,8 @@ export interface AiRunsListProps {
   onDetails: (generationId: string) => void;
   onRetry: (generationId: string) => void;
   onSaveRecipe: (generation: GenerationView) => void;
+  /** Two runs picked to compare, older first (E39). */
+  onCompare?: (ids: [string, string]) => void;
 }
 
 const RETRYABLE = new Set<GenerationView['status']>(['failed', 'interrupted', 'cancelled']);
@@ -31,7 +34,21 @@ export function AiRunsList({
   onDetails,
   onRetry,
   onSaveRecipe,
+  onCompare,
 }: AiRunsListProps): React.JSX.Element {
+  const [picked, setPicked] = useState<string | null>(null);
+  const pick = (id: string) => {
+    if (!onCompare) return;
+    if (picked === null || picked === id) {
+      setPicked(picked === id ? null : id);
+      return;
+    }
+    const first = generations.find((g) => g.id === picked);
+    const second = generations.find((g) => g.id === id);
+    setPicked(null);
+    if (!first || !second) return;
+    onCompare(first.startedAt <= second.startedAt ? [first.id, second.id] : [second.id, first.id]);
+  };
   if (loading) {
     return (
       <div className="space-y-2 p-1" aria-busy="true">
@@ -81,6 +98,16 @@ export function AiRunsList({
               {g.stage === 'scenario' && g.status === 'done' && (
                 <Button size="xs" variant="ghost" onClick={() => onSaveRecipe(g)}>
                   <Bookmark /> Save as recipe
+                </Button>
+              )}
+              {onCompare && generations.length > 1 && (
+                <Button
+                  size="xs"
+                  variant={picked === g.id ? 'tint' : 'ghost'}
+                  aria-pressed={picked === g.id}
+                  onClick={() => pick(g.id)}
+                >
+                  {picked === null || picked === g.id ? 'Compare' : 'Compare with this'}
                 </Button>
               )}
             </div>

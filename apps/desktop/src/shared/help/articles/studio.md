@@ -3,7 +3,7 @@ title: Studio
 category: Build
 order: 40
 summary: Studio makes videos for your projects, or on their own. An AI CLI on your computer writes the scenario from your brief, you edit it by hand or by asking AI, and every video keeps its edits and full history in a folder you choose, always outside the project's source. Nothing in the history is ever deleted, and you can go back to any earlier version.
-keywords: studio, video, videos, film, movie, scenario, script, brief, animate, animation, motion graphics, style, styles, preview, scene code, code, versions, check, network, ai, write with ai, ask ai, edit by typing, proposal, recipe, recipes, cli, model, effort, claude code, codex, gemini, grok, cursor, opencode, scene, scenes, narration, voice over, voice, voices, text to speech, tts, record, microphone, openai, elevenlabs, azure speech, captions, ducking, piper, omnivoice, local voices, offline, clone, cloning, voice profile, my voice, consent, non-commercial, generate, generated, image, picture, clip, gemini omni, gpt image, nano banana, cost, history, undo, redo, restore, version, versions, storage, folder, location, library, standalone, project videos, lock, another agentmate, take over, move, locate, persian, rtl
+keywords: studio, video, videos, film, movie, scenario, script, brief, animate, animation, motion graphics, style, styles, preview, scene code, code, versions, check, network, ai, write with ai, ask ai, edit by typing, proposal, recipe, recipes, cli, model, effort, claude code, codex, gemini, grok, cursor, opencode, scene, scenes, narration, voice over, voice, voices, text to speech, tts, record, microphone, openai, elevenlabs, azure speech, captions, ducking, piper, omnivoice, local voices, offline, clone, cloning, voice profile, my voice, consent, non-commercial, generate, generated, image, picture, clip, gemini omni, gpt image, nano banana, cost, compare, diff, branch, export recipe, import recipe, amrecipe, recipe versions, backup, history, undo, redo, restore, version, versions, storage, folder, location, library, standalone, project videos, lock, another agentmate, take over, move, locate, persian, rtl
 route: /studio
 ---
 
@@ -126,7 +126,9 @@ Rendering needs **ffmpeg**. If it is missing, Studio says so and **Open Dev Setu
 
 The History panel has two tabs. **Changes** lists every change to the video. **AI runs** lists every scenario and edit the AI was asked for, including the ones that failed or were discarded, with the CLI, model and effort used. **Details** on a run shows what you asked, the exact request sent to the CLI, its answer and its log, for the first try and each repair round.
 
-**Save as recipe** on a scenario run keeps how that video was made: the brief, style, language, format, length and AI picks. **Recipes** on the Studio page lists them; **Use** starts a new video from one, and **Start from** in New video does the same.
+**Compare** on one run and **Compare with this** on another shows the two side by side: the stage, CLI, model and effort each ran with, and a diff of what each was asked and of the full request.
+
+**Save as recipe** on a scenario run keeps how that video was made: the brief, style, language, format, length, the CLI, model and effort of each AI stage, the voice and the render choices. Saving again as **A new version of** a recipe keeps every earlier version too. **Recipes** on the Studio page lists them; **Use** starts a new video from one with all of those choices, and **Versions** starts from an earlier save. **Export** writes a recipe, with its versions, to a `.amrecipe.json` file to share; **Import a recipe file** adds one. AgentMate's own backup includes Studio's settings and recipes (your videos and media stay in their folders).
 
 ## History, undo and restore
 
@@ -134,7 +136,9 @@ Every change is saved the moment you make it, so closing AgentMate, a crash or a
 
 - **Undo** and **Redo** in the toolbar (or Ctrl+Z and Ctrl+Shift+Z outside a text field) step back and forward. They keep working after AgentMate restarts.
 - **History** lists every change ever made to the video, newest first, with who made it (You, AI or Studio) and when.
+- **Compare** on any entry shows what changed between that version and now: the scenario, each scene (with a diff of its animation code), the clips and the tracks.
 - **Restore** on any entry takes the video back to how it was after that change. A restore is itself a new entry, so nothing after it is lost and you can undo the restore too.
+- **Start a new video from version N** (in Compare) makes a separate video from that version, next to this one, with only the files it uses. This video keeps all of its history.
 
 Nothing is ever removed from a video's history.
 

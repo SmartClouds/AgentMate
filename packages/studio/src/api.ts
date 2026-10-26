@@ -5,7 +5,10 @@ import { editOpSchema } from './document/ops.js';
 import {
   ASPECTS,
   type Aspect,
+  CODECS,
   type Codec,
+  QUALITIES,
+  RESOLUTIONS,
   type RenderSettings,
   type StudioDocument,
 } from './document/schema.js';
@@ -28,6 +31,11 @@ const projectId = z.string().min(1).max(200);
 
 export const studioInputs = {
   videoRef: z.object({ videoId: id }),
+  /** Two versions of a video to compare (E39). */
+  compare: z.object({ videoId: id, from: z.number().int().min(1), to: z.number().int().min(1) }),
+  treeFiles: z.object({ videoId: id, treeHash: z.string().regex(/^[0-9a-f]{64}$/) }),
+  /** A version of a video to start a new video from. */
+  branch: z.object({ videoId: id, seq: z.number().int().min(1) }),
   projectRef: z.object({ projectId }),
   list: z.object({ projectId: projectId.nullable().optional() }).optional(),
   create: z.object({
@@ -130,8 +138,30 @@ export const studioAiInputs = {
     aspect: z.enum(ASPECTS),
     targetSeconds,
     scenario: runSettingsSchema,
+    /** The other AI stages' picks (E39): edits by typing and scene animation. */
+    stages: z
+      .object({ edit: runSettingsSchema.optional(), scene: runSettingsSchema.optional() })
+      .optional(),
+    /** The voice the narration starts from. */
+    voiceRef: z
+      .string()
+      .max(200)
+      .regex(/^(openai|gemini|elevenlabs|azure|piper|omnivoice):[A-Za-z0-9_.-]{1,100}$/)
+      .nullable()
+      .optional(),
+    /** The render choices a new video starts with. */
+    render: z
+      .object({
+        resolution: z.enum(RESOLUTIONS),
+        fps: z.union([z.literal(24), z.literal(30), z.literal(60)]),
+        quality: z.enum(QUALITIES),
+        codec: z.enum(CODECS),
+      })
+      .nullable()
+      .optional(),
   }),
   recipeRef: z.object({ recipeId: id }),
+  recipeVersion: z.object({ recipeId: id, version: z.number().int().min(1) }),
   sceneRef: z.object({ videoId: id, sceneId: id }),
   saveSceneFiles: z.object({
     videoId: id,
@@ -200,6 +230,18 @@ export interface RecipeView {
   aspect: Aspect;
   targetSeconds: number;
   scenario: RunSettingsInput;
+  stages?: { edit?: RunSettingsInput; scene?: RunSettingsInput };
+  voiceRef?: string | null;
+  render?: {
+    resolution: RenderSettings['resolution'];
+    fps: RenderSettings['fps'];
+    quality: RenderSettings['quality'];
+    codec: RenderSettings['codec'];
+  } | null;
+  /** Which save of the recipe this is: every save is kept, numbered from 1. */
+  version: number;
+  /** How many saves the recipe has. */
+  versions: number;
   createdAt: number;
   updatedAt: number;
 }

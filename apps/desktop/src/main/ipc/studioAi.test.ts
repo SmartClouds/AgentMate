@@ -1,3 +1,4 @@
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type {
   EditResponse,
@@ -9,7 +10,7 @@ import type {
 } from '@agentmat/studio';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IPC } from '../../shared/ipcChannels';
-import { setElectronPath } from '../../test/main/electronMock';
+import { queueDialog, setElectronPath } from '../../test/main/electronMock';
 import {
   expectChannelsCovered,
   fakeWebContents,
@@ -240,4 +241,55 @@ describe('recipes', () => {
 it('answers only the main window', async () => {
   allowed.value = false;
   await expect(invokeFrom(fakeWebContents(), IPC.studioAi.recipes)).rejects.toThrow(/main window/);
+});
+
+describe('recipe versions and files (E39)', () => {
+  it('keeps each save as a version, exports it to a file and imports it back', async () => {
+    const recipe = {
+      name: 'Explainer',
+      brief: 'Explain {topic}',
+      styleId: null,
+      language: 'en',
+      aspect: '16:9',
+      targetSeconds: 45,
+      scenario: run,
+    };
+    const first = await invoke<RecipeView>(IPC.studioAi.saveRecipe, recipe);
+    const second = await invoke<RecipeView>(IPC.studioAi.saveRecipe, {
+      ...recipe,
+      id: first.id,
+      targetSeconds: 60,
+      voiceRef: 'openai:marin',
+      render: { resolution: '720p', fps: 24, quality: 'draft', codec: 'h264' },
+    });
+    expect(second).toMatchObject({ version: 2, versions: 2, voiceRef: 'openai:marin' });
+    const versions = await invoke<RecipeView[]>(IPC.studioAi.recipeVersions, {
+      recipeId: first.id,
+    });
+    expect(versions.map((v) => v.version)).toEqual([2, 1]);
+    expect(
+      await invoke(IPC.studioAi.recipeVersion, { recipeId: first.id, version: 1 }),
+    ).toMatchObject({ targetSeconds: 45 });
+
+    const file = join(userData.dir, 'Explainer.amrecipe.json');
+    queueDialog('showSaveDialog', { canceled: true });
+    expect(await invoke(IPC.studioAi.exportRecipe, { recipeId: first.id })).toBeNull();
+    queueDialog('showSaveDialog', { canceled: false, filePath: file });
+    expect(await invoke(IPC.studioAi.exportRecipe, { recipeId: first.id })).toBe(file);
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toMatchObject({
+      format: 'agentmate-studio-recipe',
+    });
+
+    queueDialog('showOpenDialog', { canceled: true, filePaths: [] });
+    expect(await invoke(IPC.studioAi.importRecipe)).toBeNull();
+    queueDialog('showOpenDialog', { canceled: false, filePaths: [file] });
+    const imported = await invoke<RecipeView>(IPC.studioAi.importRecipe);
+    expect(imported).toMatchObject({ name: 'Explainer', versions: 2 });
+    expect(imported.id).not.toBe(first.id);
+    writeFileSync(file, 'not a recipe');
+    queueDialog('showOpenDialog', { canceled: false, filePaths: [file] });
+    await expect(invoke(IPC.studioAi.importRecipe)).rejects.toThrow(
+      'That is not a Studio recipe file, or it is damaged.',
+    );
+  });
 });

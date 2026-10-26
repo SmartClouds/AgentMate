@@ -1,10 +1,11 @@
 import type { GenerationView, StudioDocument } from '@agentmat/studio';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { studioAiClient } from '../client';
 import { errorMessage } from '../format';
 import {
   Button,
+  Combobox,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -17,7 +18,9 @@ import {
   toast,
 } from '../kit';
 import { studioKeys } from '../queryKeys';
-import { runLabel } from './runSettings';
+import { runLabel, savedStageRuns } from './runSettings';
+
+const NEW = '__new__';
 
 export interface SaveRecipeDialogProps {
   /** The scenario run to save the method of; null keeps the dialog closed. */
@@ -38,13 +41,22 @@ export function SaveRecipeDialog({
   const queryClient = useQueryClient();
   const nameId = useId();
   const [name, setName] = useState('');
+  const [target, setTarget] = useState(NEW);
   useEffect(() => {
-    if (generation) setName(document.title);
+    if (!generation) return;
+    setName(document.title);
+    setTarget(NEW);
   }, [generation, document.title]);
+  const recipes = useQuery({
+    queryKey: studioKeys.recipes,
+    queryFn: () => studioAiClient().recipes(),
+    enabled: generation !== null,
+  });
 
   const save = useMutation({
     mutationFn: (g: GenerationView) =>
       studioAiClient().saveRecipe({
+        ...(target === NEW ? {} : { id: target }),
         name: name.trim(),
         brief: g.instruction,
         styleId: g.params.styleId ?? null,
@@ -52,10 +64,25 @@ export function SaveRecipeDialog({
         aspect: document.renderSettings.aspect,
         targetSeconds: g.params.targetSeconds ?? 60,
         scenario: { cliId: g.cliId, model: g.model, effort: g.effort },
+        // The rest of the method (E39): the other stages' picks, the voice and the render.
+        stages: savedStageRuns(),
+        voiceRef:
+          document.scenario.scenes.find((s) => s.voiceRef && s.voiceRef !== 'recording')
+            ?.voiceRef ?? null,
+        render: {
+          resolution: document.renderSettings.resolution,
+          fps: document.renderSettings.fps,
+          quality: document.renderSettings.quality,
+          codec: document.renderSettings.codec,
+        },
       }),
     onSuccess: (recipe) => {
       void queryClient.invalidateQueries({ queryKey: studioKeys.recipes });
-      toast.success(`Saved "${recipe.name}". Pick it in New video to start from it.`);
+      toast.success(
+        recipe.version > 1
+          ? `Saved version ${recipe.version} of "${recipe.name}". Earlier versions are kept.`
+          : `Saved "${recipe.name}". Pick it in New video to start from it.`,
+      );
       onOpenChange(false);
     },
   });
@@ -66,9 +93,9 @@ export function SaveRecipeDialog({
         <DialogHeader>
           <DialogTitle>Save as recipe</DialogTitle>
           <DialogDescription>
-            The brief, style, language, format, length and{' '}
-            {generation ? runLabel(generation) : 'AI'} are kept, so a new video can start the same
-            way.
+            The brief, style, language, format, length, voice, render choices and{' '}
+            {generation ? runLabel(generation) : 'AI'} (with the other stages' picks) are kept, so a
+            new video can start the same way.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -89,6 +116,29 @@ export function SaveRecipeDialog({
               onChange={(event) => setName(event.target.value)}
             />
           </div>
+          {(recipes.data?.length ?? 0) > 0 && (
+            <div className="space-y-1.5">
+              <Label htmlFor={`${nameId}-as`}>Save as</Label>
+              <Combobox
+                id={`${nameId}-as`}
+                ariaLabel="Save as"
+                searchable={false}
+                value={target}
+                onChange={(value) => {
+                  setTarget(value);
+                  const existing = recipes.data?.find((r) => r.id === value);
+                  if (existing) setName(existing.name);
+                }}
+                options={[
+                  { value: NEW, label: 'A new recipe' },
+                  ...(recipes.data ?? []).map((r) => ({
+                    value: r.id,
+                    label: `A new version of ${r.name}`,
+                  })),
+                ]}
+              />
+            </div>
+          )}
           {save.error && (
             <Notice tone="destructive" size="sm">
               {errorMessage(save.error)}

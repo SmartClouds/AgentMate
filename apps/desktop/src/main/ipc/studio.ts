@@ -1,3 +1,4 @@
+import { readFile, stat, writeFile } from 'node:fs/promises';
 import {
   studioAiInputs,
   studioAudioInputs,
@@ -97,6 +98,13 @@ export function registerStudioHandlers(
   handle(IPC.studio.history, (value) => service().history(parse(studioInputs.history, value)));
   handle(IPC.studio.version, (value) => service().version(parse(studioInputs.version, value)));
   handle(IPC.studio.restore, (value) => service().restore(parse(studioInputs.version, value)));
+  handle(IPC.studio.compareVersions, (value) =>
+    service().compareVersions(parse(studioInputs.compare, value)),
+  );
+  handle(IPC.studio.treeFiles, (value) =>
+    service().treeFiles(parse(studioInputs.treeFiles, value)),
+  );
+  handle(IPC.studio.branch, (value) => service().branchVideo(parse(studioInputs.branch, value)));
   handle(IPC.studio.addExisting, (value) =>
     service().addExisting(parse(studioInputs.folder, value)),
   );
@@ -148,6 +156,44 @@ export function registerStudioHandlers(
   handle(IPC.studioAi.deleteRecipe, (value) =>
     service().deleteRecipe(parse(studioAiInputs.recipeRef, value)),
   );
+  handle(IPC.studioAi.recipeVersions, (value) =>
+    service().recipeVersions(parse(studioAiInputs.recipeRef, value)),
+  );
+  handle(IPC.studioAi.recipeVersion, (value) =>
+    service().recipeVersion(parse(studioAiInputs.recipeVersion, value)),
+  );
+  handle(IPC.studioAi.exportRecipe, async (value, event) => {
+    const { recipeId } = parse(studioAiInputs.recipeRef, value);
+    const { name, text } = await service().exportRecipe({ recipeId });
+    const owner = BrowserWindow.fromWebContents(event.sender);
+    const options = {
+      title: 'Export recipe',
+      defaultPath: `${name.replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'Recipe'}.amrecipe.json`,
+      filters: [{ name: 'Studio recipe', extensions: ['amrecipe.json', 'json'] }],
+    };
+    const picked = owner
+      ? await dialog.showSaveDialog(owner, options)
+      : await dialog.showSaveDialog(options);
+    if (picked.canceled || !picked.filePath) return null;
+    await writeFile(picked.filePath, text, 'utf8');
+    return picked.filePath;
+  });
+  handle(IPC.studioAi.importRecipe, async (_value, event) => {
+    const owner = BrowserWindow.fromWebContents(event.sender);
+    const options = {
+      title: 'Import recipe',
+      properties: ['openFile'] as 'openFile'[],
+      filters: [{ name: 'Studio recipe', extensions: ['json'] }],
+    };
+    const picked = owner
+      ? await dialog.showOpenDialog(owner, options)
+      : await dialog.showOpenDialog(options);
+    const file = picked.filePaths[0];
+    if (picked.canceled || !file) return null;
+    const info = await stat(file);
+    if (info.size > 5 * 1024 * 1024) throw new Error('That file is too large to be a recipe.');
+    return service().importRecipe({ text: await readFile(file, 'utf8') });
+  });
   handle(IPC.studioScenes.animate, (value) =>
     service().startScene(parse(studioAiInputs.startScene, value)),
   );

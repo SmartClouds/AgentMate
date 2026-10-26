@@ -692,6 +692,12 @@ export const IPC = {
    * input is checked against the schemas in @agentmat/studio before the service sees it.
    */
   studio: {
+    // ({ videoId, from, to }) -> ProposalChange[], what changed between two versions (E39)
+    compareVersions: 'studio:compareVersions',
+    // ({ videoId, treeHash }) -> { path, text }[], a scene code tree's files
+    treeFiles: 'studio:treeFiles',
+    // ({ videoId, seq }) -> VideoSummary, a new video started from a version
+    branch: 'studio:branch',
     // () -> StudioSettingsView
     settings: 'studio:settings',
     // (StudioSettingsPatch) -> StudioSettingsView
@@ -762,6 +768,14 @@ export const IPC = {
     saveRecipe: 'studioAi:saveRecipe',
     // ({ recipeId }) -> void
     deleteRecipe: 'studioAi:deleteRecipe',
+    // ({ recipeId }) -> RecipeView[], every save of it, newest first (E39)
+    recipeVersions: 'studioAi:recipeVersions',
+    // ({ recipeId, version }) -> RecipeView
+    recipeVersion: 'studioAi:recipeVersion',
+    // ({ recipeId }) -> string | null, the file it was saved to; null when the user cancels
+    exportRecipe: 'studioAi:exportRecipe',
+    // () -> RecipeView | null, from a .amrecipe.json the user picks; null when they cancel
+    importRecipe: 'studioAi:importRecipe',
   },
   /** Studio scene code (E33): motion graphics written by AI or by hand, checked and versioned. */
   studioScenes: {

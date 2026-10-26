@@ -330,3 +330,30 @@ describe('StudioEditor views', () => {
     expect(screen.queryByRole('region', { name: 'Timeline' })).toBeNull();
   });
 });
+
+describe('StudioEditor and recipes', () => {
+  it("sets a recipe's render choices as one edit and remembers its voice once the video opens", async () => {
+    const { usePendingRecipe, rememberedVoice } = await import('../ai/runSettings');
+    usePendingRecipe.getState().set(ID, {
+      name: 'Explainer',
+      render: { resolution: '720p', fps: 24, quality: 'high', codec: 'h265' },
+      voiceRef: 'piper:fa_IR-amir-medium',
+    });
+    const { bridge } = renderEditor({ 'studio.applyEdits': applying((d) => d) });
+    await waitFor(() =>
+      expect(bridge.$fn('studio.applyEdits')).toHaveBeenCalledWith({
+        videoId: ID,
+        baseSeq: 1,
+        ops: [
+          {
+            op: 'render.set',
+            patch: { resolution: '720p', fps: 24, quality: 'high', codec: 'h265' },
+          },
+        ],
+        label: 'Render choices from Explainer',
+      }),
+    );
+    expect(rememberedVoice(ID)).toBe('piper:fa_IR-amir-medium');
+    expect(usePendingRecipe.getState().pending).toBeNull();
+  });
+});

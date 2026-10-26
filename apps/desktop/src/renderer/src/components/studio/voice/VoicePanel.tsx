@@ -10,6 +10,7 @@ import {
 } from '@agentmat/studio';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useMemo, useState } from 'react';
+import { rememberedVoice } from '../ai/runSettings';
 import { studioAudioClient } from '../client';
 import { errorMessage } from '../format';
 import {
@@ -70,7 +71,11 @@ export function VoicePanel({
     queryKey: studioKeys.voiceEngines,
     queryFn: () => studioAudioClient().engines(),
   });
-  const firstRef = parseVoiceRef(document.scenario.scenes.find((s) => s.voiceRef)?.voiceRef);
+  // The voice a scene was last spoken with, else the one the video's recipe chose.
+  const firstRef = parseVoiceRef(
+    document.scenario.scenes.find((s) => s.voiceRef && s.voiceRef !== RECORDED_VOICE)?.voiceRef ??
+      rememberedVoice(videoId),
+  );
   const [engineId, setEngineId] = useState<VoiceEngineView['id'] | null>(firstRef?.engine ?? null);
   const [voiceId, setVoiceId] = useState<string>(firstRef?.voice ?? '');
   const [unlocking, setUnlocking] = useState(false);

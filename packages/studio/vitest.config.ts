@@ -49,6 +49,9 @@ export default defineConfig({
         // E38: generated pictures and clips, their prices and the provider calls.
         'src/gen/**': { lines: 98, branches: 90 },
         'src/node/gen/**': { lines: 95, branches: 78 },
+        // E39: comparing versions and starting a video from one.
+        'src/history/**': { lines: 98, branches: 90 },
+        'src/node/history/**': { lines: 95, branches: 80 },
       },
     },
   },

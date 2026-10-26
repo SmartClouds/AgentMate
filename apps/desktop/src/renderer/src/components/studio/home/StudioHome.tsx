@@ -43,6 +43,7 @@ export function StudioHome({
   const [creating, setCreating] = useState(false);
   const [showRecipes, setShowRecipes] = useState(false);
   const [recipeId, setRecipeId] = useState<string | null>(null);
+  const [recipeVersion, setRecipeVersion] = useState<number | null>(null);
   const startNew = (fromRecipe: string | null) => {
     setRecipeId(fromRecipe);
     setCreating(true);
@@ -131,13 +132,15 @@ export function StudioHome({
         onOpenChange={setCreating}
         projectId={filter === 'project' && projectId ? projectId : null}
         recipeId={recipeId}
+        recipeVersion={recipeVersion}
         onCreated={onOpen}
       />
       <RecipesDialog
         open={showRecipes}
         onOpenChange={setShowRecipes}
-        onUse={(id) => {
+        onUse={(id, version) => {
           setShowRecipes(false);
+          setRecipeVersion(version ?? null);
           startNew(id);
         }}
       />

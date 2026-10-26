@@ -55,6 +55,10 @@ import { lazy } from 'react';
 export const MonacoEditor = lazy(() =>
   import('@/components/editor/MonacoEditor').then((m) => ({ default: m.MonacoEditor })),
 );
+/** Monaco's side-by-side diff, for comparing two revisions of a scene's code or two AI runs. */
+export const MonacoDiffEditor = lazy(() =>
+  import('@/components/editor/MonacoDiffEditor').then((m) => ({ default: m.MonacoDiffEditor })),
+);
 export {
   CARD_GRID,
   CatalogCardShimmer,

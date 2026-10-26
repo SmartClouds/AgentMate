@@ -15,6 +15,8 @@ export interface FakeTtsApis {
   url: string;
   /** Every request, as `METHOD path`, with the text it was asked to say. */
   requests: { path: string; text: string }[];
+  /** Each speech answer waits this long first, so a test can stop the app in the middle. */
+  setDelay: (ms: number) => void;
   stop: () => Promise<void>;
 }
 
@@ -47,6 +49,7 @@ function wav(pcm: Buffer, rate: number): Buffer {
 
 export async function startFakeTtsApis(): Promise<FakeTtsApis> {
   const requests: FakeTtsApis['requests'] = [];
+  let delay = 0;
   const server: Server = createServer((request, response) => {
     const chunks: Buffer[] = [];
     request.on('data', (chunk: Buffer) => chunks.push(chunk));
@@ -87,8 +90,10 @@ export async function startFakeTtsApis(): Promise<FakeTtsApis> {
       requests.push({ path: `${request.method} ${path}`, text });
       const seconds = [...text].length * SECONDS_PER_CHAR;
       if (path === '/v1/audio/speech') {
-        response.writeHead(200, { 'Content-Type': 'audio/wav' });
-        response.end(wav(tone(seconds, 24_000), 24_000));
+        setTimeout(() => {
+          response.writeHead(200, { 'Content-Type': 'audio/wav' });
+          response.end(wav(tone(seconds, 24_000), 24_000));
+        }, delay);
         return;
       }
       if (path.startsWith('/v1/text-to-speech/')) {
@@ -115,6 +120,9 @@ export async function startFakeTtsApis(): Promise<FakeTtsApis> {
   return {
     url: `http://127.0.0.1:${port}`,
     requests,
+    setDelay: (ms) => {
+      delay = ms;
+    },
     stop: () => new Promise((resolve) => server.close(() => resolve())),
   };
 }

@@ -2,6 +2,7 @@ import type { HistoryEntryView } from '@agentmat/studio';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { AiRunsList, type AiRunsListProps } from '../ai/AiRunsList';
+import { CompareRunsDialog } from '../ai/CompareRunsDialog';
 import { studioClient } from '../client';
 import { errorMessage, formatWhen } from '../format';
 import {
@@ -20,6 +21,7 @@ import {
   segmentClass,
 } from '../kit';
 import { studioKeys } from '../queryKeys';
+import { CompareVersionsDialog } from './CompareVersionsDialog';
 
 const PAGE = 50;
 
@@ -38,6 +40,8 @@ export interface HistoryPanelProps {
   onRestore: (seq: number) => void;
   /** The video's AI runs, for the second tab. */
   ai?: AiRunsListProps;
+  /** Opens a video: one started from a version of this one. */
+  onOpenVideo?: (videoId: string) => void;
 }
 
 /**
@@ -49,8 +53,11 @@ export function HistoryPanel({
   currentSeq,
   onRestore,
   ai,
+  onOpenVideo,
 }: HistoryPanelProps): React.JSX.Element {
   const [tab, setTab] = useState<'changes' | 'ai'>('changes');
+  const [compareFrom, setCompareFrom] = useState<number | null>(null);
+  const [runs, setRuns] = useState<[string, string] | null>(null);
   const history = useInfiniteQuery({
     queryKey: studioKeys.history(videoId),
     queryFn: ({ pageParam }) => studioClient().history({ videoId, before: pageParam, limit: PAGE }),
@@ -97,7 +104,7 @@ export function HistoryPanel({
       </div>
       {ai && tab === 'ai' ? (
         <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
-          <AiRunsList {...ai} />
+          <AiRunsList {...ai} onCompare={setRuns} />
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
@@ -151,6 +158,17 @@ export function HistoryPanel({
                     <Button
                       size="xs"
                       variant="ghost"
+                      aria-label={`Compare version ${entry.seq} with now`}
+                      className="opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                      onClick={() => setCompareFrom(entry.seq)}
+                    >
+                      Compare
+                    </Button>
+                  )}
+                  {!current && (
+                    <Button
+                      size="xs"
+                      variant="ghost"
                       className="opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
                       onClick={() => void restore(entry)}
                     >
@@ -174,6 +192,19 @@ export function HistoryPanel({
           )}
         </div>
       )}
+      <CompareVersionsDialog
+        videoId={videoId}
+        from={compareFrom}
+        to={currentSeq}
+        onOpenChange={(open) => !open && setCompareFrom(null)}
+        onRestore={onRestore}
+        onOpenVideo={onOpenVideo}
+      />
+      <CompareRunsDialog
+        videoId={videoId}
+        ids={runs}
+        onOpenChange={(open) => !open && setRuns(null)}
+      />
     </aside>
   );
 }

@@ -36,6 +36,7 @@ import { petManager } from '../pet/petWindow';
 import { promptHistoryDb } from '../promptHistoryDb';
 import { skillAuditDb } from '../skillAuditDb';
 import { store } from '../store';
+import { studioService } from '../studio';
 import { electronVaultFiles, getVaultService } from '../vault';
 import type { VaultFileV1 } from '../vault/format';
 
@@ -76,6 +77,7 @@ async function readCurrentData(): Promise<Required<BackupData>> {
     // Blueprint attachments are files rather than inline data, so unlike project
     // icons they have to be read in on purpose to ride along.
     blueprintAttachments: await exportAttachments(referencedAttachmentFiles(blueprints)),
+    studio: await studioService().backupData(),
   };
 }
 
@@ -103,6 +105,7 @@ async function writeData(data: BackupData): Promise<void> {
   if (data.blueprints) await store.setBlueprints(data.blueprints);
   if (data.blueprintPresets) await store.setBlueprintPresets(data.blueprintPresets);
   if (data.blueprintRevisions) blueprintRevisionDb.importAll(data.blueprintRevisions);
+  if (data.studio) await studioService().restoreBackup(data.studio);
 }
 
 export function registerBackupHandlers(): void {
@@ -196,6 +199,15 @@ export function registerBackupHandlers(): void {
     // restored, and no error to show for it.
     const backup = parseBackup(parsed);
     if (!backup.ok) return { ok: false, error: backup.error };
+
+    // Studio checks its own section; a damaged one is left out rather than failing the restore.
+    if (backup.data.studio) {
+      const problem = studioService().checkBackup(backup.data.studio);
+      if (problem) {
+        delete backup.data.studio;
+        backup.warnings.push(`${problem} It was skipped.`);
+      }
+    }
 
     const rawData = (parsed as { data: Record<string, unknown> }).data;
     const environments = readEnvironmentsSection(rawData.projectEnvironments);

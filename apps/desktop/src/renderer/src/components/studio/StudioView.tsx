@@ -22,6 +22,7 @@ export function StudioView({ videoId, navigate }: StudioViewProps): React.JSX.El
         videoId={videoId}
         onBack={() => navigate('/studio')}
         onOpenDevSetup={openDevSetup}
+        onOpenVideo={(id) => navigate(`/studio/${id}`)}
       />
     );
   return (

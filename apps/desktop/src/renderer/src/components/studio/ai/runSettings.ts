@@ -1,4 +1,4 @@
-import type { RunSettingsInput, StartScenarioInput } from '@agentmat/studio';
+import type { RecipeView, RunSettingsInput, StartScenarioInput } from '@agentmat/studio';
 import { useCallback, useState } from 'react';
 import { create } from 'zustand';
 import { getCliDefinition, launchPickLabel, type RunSettings } from '../kit';
@@ -86,5 +86,74 @@ export const usePendingScenario = create<PendingScenarioState>((set, get) => ({
     if (pending?.videoId !== videoId) return null;
     set({ pending: null });
     return pending.request;
+  },
+}));
+
+/** Sets a stage's CLI, model and effort outside a component, as a recipe does for a new video. */
+export function writeRunSettings(stage: Stage, settings: RunSettings): void {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...readAll(), [stage]: settings }));
+  } catch {
+    // Not remembered this time.
+  }
+}
+
+/** The stages' picks as a recipe keeps them. */
+export function savedStageRuns(): { edit?: RunSettingsInput; scene?: RunSettingsInput } {
+  const all = readAll();
+  return {
+    ...(all.edit ? { edit: toRunInput(all.edit) } : {}),
+    ...(all.scene ? { scene: toRunInput(all.scene) } : {}),
+  };
+}
+
+const VOICE_KEY = 'studio.voice';
+
+/** The voice a video's narration starts from, chosen by the recipe it was made from. */
+export function rememberVoice(videoId: string, voiceRef: string): void {
+  try {
+    const all = JSON.parse(window.localStorage.getItem(VOICE_KEY) ?? '{}') as Record<
+      string,
+      string
+    >;
+    window.localStorage.setItem(VOICE_KEY, JSON.stringify({ ...all, [videoId]: voiceRef }));
+  } catch {
+    // Not remembered this time; the Voice view starts from its own default.
+  }
+}
+
+export function rememberedVoice(videoId: string): string | null {
+  try {
+    const all = JSON.parse(window.localStorage.getItem(VOICE_KEY) ?? '{}') as Record<
+      string,
+      string
+    >;
+    return typeof all[videoId] === 'string' ? all[videoId] : null;
+  } catch {
+    return null;
+  }
+}
+
+/** What a recipe sets on a new video once it is open: its render choices and its voice. */
+export interface PendingRecipe {
+  name: string;
+  render: RecipeView['render'];
+  voiceRef: string | null;
+}
+
+interface PendingRecipeState {
+  pending: { videoId: string; recipe: PendingRecipe } | null;
+  set: (videoId: string, recipe: PendingRecipe) => void;
+  take: (videoId: string) => PendingRecipe | null;
+}
+
+export const usePendingRecipe = create<PendingRecipeState>((set, get) => ({
+  pending: null,
+  set: (videoId, recipe) => set({ pending: { videoId, recipe } }),
+  take: (videoId) => {
+    const pending = get().pending;
+    if (pending?.videoId !== videoId) return null;
+    set({ pending: null });
+    return pending.recipe;
   },
 }));

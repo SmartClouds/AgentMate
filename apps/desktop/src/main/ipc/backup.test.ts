@@ -233,6 +233,47 @@ describe('backup:open and backup:restore', () => {
     expect(dbRows.promptHistory).toHaveLength(1);
   });
 
+  it("carries Studio's settings and recipes, and skips a damaged Studio section (E39)", async () => {
+    seedProject();
+    const { studioService } = await import('../studio');
+    await studioService().updateSettings({ cacheCapGb: 33 });
+    await studioService().saveRecipe({
+      name: 'Explainer',
+      brief: 'Explain it',
+      styleId: null,
+      language: 'en',
+      aspect: '16:9',
+      targetSeconds: 30,
+      scenario: { cliId: null },
+    });
+    const { path } = await exportTo('studio.json');
+    const envelope = readEnvelope(path);
+    expect(envelope.data.studio).toMatchObject({ settings: { cacheCapGb: 33 } });
+
+    await studioService().updateSettings({ cacheCapGb: 5 });
+    for (const recipe of await studioService().recipes()) {
+      await studioService().deleteRecipe({ recipeId: recipe.id });
+    }
+    const opened = await open(path);
+    await invoke(IPC.backup.restore, opened.token, { environmentsPassword: null });
+    expect((await studioService().settings()).cacheCapGb).toBe(33);
+    expect((await studioService().recipes()).map((r) => r.name)).toEqual(['Explainer']);
+
+    const damaged = { ...envelope, data: { ...envelope.data, studio: { recipes: 'nope' } } };
+    writeFileSync(path, JSON.stringify(damaged));
+    const again = await open(path);
+    const restored = await invoke<BackupImportResult>(IPC.backup.restore, again.token, {
+      environmentsPassword: null,
+    });
+    expect(restored.ok).toBe(true);
+    expect(JSON.stringify(restored)).toContain(
+      "The backup's Studio recipes could not be read. It was skipped.",
+    );
+    expect((await studioService().recipes()).map((r) => r.name)).toEqual(['Explainer']);
+    const { shutdownStudio } = await import('../studio');
+    await shutdownStudio();
+  });
+
   it('spends the token, so a second restore has to pick the file again', async () => {
     seedProject();
     const { path } = await exportTo('once.json');

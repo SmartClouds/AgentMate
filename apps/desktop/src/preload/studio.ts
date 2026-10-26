@@ -15,6 +15,7 @@ import type {
   NarrationJobView,
   OpenVideoResult,
   ProjectStorageView,
+  ProposalChange,
   RecipeView,
   RenderEstimateView,
   RenderJobView,
@@ -85,6 +86,15 @@ export function createStudio() {
       ipcRenderer.invoke(IPC.studio.version, { videoId, seq }),
     restore: (videoId: string, seq: number): Promise<EditResponse> =>
       ipcRenderer.invoke(IPC.studio.restore, { videoId, seq }),
+    compareVersions: (videoId: string, from: number, to: number): Promise<ProposalChange[]> =>
+      ipcRenderer.invoke(IPC.studio.compareVersions, { videoId, from, to }),
+    treeFiles: (
+      videoId: string,
+      treeHash: string,
+    ): Promise<{ path: string; text: string | null }[]> =>
+      ipcRenderer.invoke(IPC.studio.treeFiles, { videoId, treeHash }),
+    branch: (videoId: string, seq: number): Promise<VideoSummary> =>
+      ipcRenderer.invoke(IPC.studio.branch, { videoId, seq }),
     addExisting: (folder: string): Promise<VideoSummary> =>
       ipcRenderer.invoke(IPC.studio.addExisting, { folder }),
     locate: (videoId: string, folder: string): Promise<VideoSummary> =>
@@ -262,5 +272,12 @@ export function createStudioAi() {
       ipcRenderer.invoke(IPC.studioAi.saveRecipe, input),
     deleteRecipe: (recipeId: string): Promise<void> =>
       ipcRenderer.invoke(IPC.studioAi.deleteRecipe, { recipeId }),
+    recipeVersions: (recipeId: string): Promise<RecipeView[]> =>
+      ipcRenderer.invoke(IPC.studioAi.recipeVersions, { recipeId }),
+    recipeVersion: (recipeId: string, version: number): Promise<RecipeView> =>
+      ipcRenderer.invoke(IPC.studioAi.recipeVersion, { recipeId, version }),
+    exportRecipe: (recipeId: string): Promise<string | null> =>
+      ipcRenderer.invoke(IPC.studioAi.exportRecipe, { recipeId }),
+    importRecipe: (): Promise<RecipeView | null> => ipcRenderer.invoke(IPC.studioAi.importRecipe),
   };
 }

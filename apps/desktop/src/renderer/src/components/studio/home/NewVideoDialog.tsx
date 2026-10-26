@@ -9,7 +9,14 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { BriefFields, type BriefValue } from '../ai/BriefFields';
-import { fromRunInput, toRunInput, usePendingScenario, useRunSettings } from '../ai/runSettings';
+import {
+  fromRunInput,
+  toRunInput,
+  usePendingRecipe,
+  usePendingScenario,
+  useRunSettings,
+  writeRunSettings,
+} from '../ai/runSettings';
 import { listProjects, studioAiClient, studioClient } from '../client';
 import { errorMessage } from '../format';
 import {
@@ -49,6 +56,8 @@ export interface NewVideoDialogProps {
   projectId?: string | null;
   /** Starts from a saved recipe. */
   recipeId?: string | null;
+  /** One of the recipe's earlier saves; its latest when left out. */
+  recipeVersion?: number | null;
   onCreated: (video: VideoSummary) => void;
 }
 
@@ -62,6 +71,7 @@ export function NewVideoDialog({
   onOpenChange,
   projectId = null,
   recipeId = null,
+  recipeVersion = null,
   onCreated,
 }: NewVideoDialogProps): React.JSX.Element {
   const queryClient = useQueryClient();
@@ -73,6 +83,7 @@ export function NewVideoDialog({
   const [language, setLanguage] = useState('fa');
   const [aspect, setAspect] = useState<Aspect>('16:9');
   const [recipe, setRecipe] = useState(BLANK);
+  const [picked, setPicked] = useState<RecipeView | null>(null);
   const [useAi, setUseAi] = useState(true);
   const [brief, setBrief] = useState<BriefValue>({
     brief: '',
@@ -89,6 +100,7 @@ export function NewVideoDialog({
 
   const applyRecipe = (picked: RecipeView | undefined) => {
     setRecipe(picked?.id ?? BLANK);
+    setPicked(picked ?? null);
     if (!picked) return;
     setLanguage(picked.language);
     setAspect(picked.aspect);
@@ -113,8 +125,16 @@ export function NewVideoDialog({
   // A recipe chosen from the Recipes list arrives once the saved recipes have loaded.
   // biome-ignore lint/correctness/useExhaustiveDependencies: applyRecipe only sets state
   useEffect(() => {
-    if (open && recipeId) applyRecipe(recipes.data?.find((r) => r.id === recipeId));
-  }, [open, recipeId, recipes.data]);
+    if (!open || !recipeId) return;
+    if (recipeVersion === null) {
+      applyRecipe(recipes.data?.find((r) => r.id === recipeId));
+      return;
+    }
+    void studioAiClient()
+      .recipeVersion(recipeId, recipeVersion)
+      .then(applyRecipe)
+      .catch(() => undefined);
+  }, [open, recipeId, recipeVersion, recipes.data]);
 
   const projects = useQuery({
     queryKey: appQueryKeys.projects,
@@ -143,6 +163,16 @@ export function NewVideoDialog({
       }),
     onSuccess: (video) => {
       void queryClient.invalidateQueries({ queryKey: studioKeys.videos });
+      // Every stage choice the recipe kept, not only the scenario's (E39).
+      if (picked && recipe === picked.id) {
+        if (picked.stages?.edit) writeRunSettings('edit', fromRunInput(picked.stages.edit));
+        if (picked.stages?.scene) writeRunSettings('scene', fromRunInput(picked.stages.scene));
+        usePendingRecipe.getState().set(video.id, {
+          name: picked.name,
+          render: picked.render ?? null,
+          voiceRef: picked.voiceRef ?? null,
+        });
+      }
       if (useAi) {
         setSavedRun(brief.run);
         usePendingScenario.getState().set(video.id, {

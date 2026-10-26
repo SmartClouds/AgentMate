@@ -1,11 +1,13 @@
 import { styleById } from '@agentmat/studio';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { runLabel } from '../ai/runSettings';
 import { studioAiClient } from '../client';
 import { errorMessage, formatWhen, scriptClass } from '../format';
 import {
   Bookmark,
   Button,
+  Chip,
   cn,
   confirmDialog,
   Dialog,
@@ -26,8 +28,8 @@ import { ASPECT_LABELS } from './NewVideoDialog';
 export interface RecipesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Starts a new video from the recipe. */
-  onUse: (recipeId: string) => void;
+  /** Starts a new video from the recipe, at one of its saves when `version` is given. */
+  onUse: (recipeId: string, version?: number) => void;
 }
 
 /** The saved recipes: how earlier videos were made, ready to start the next one the same way. */
@@ -37,11 +39,37 @@ export function RecipesDialog({
   onUse,
 }: RecipesDialogProps): React.JSX.Element {
   const queryClient = useQueryClient();
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const versions = useQuery({
+    queryKey: ['studio', 'recipe-versions', expanded],
+    queryFn: () => studioAiClient().recipeVersions(expanded as string),
+    enabled: open && expanded !== null,
+  });
   const recipes = useQuery({
     queryKey: studioKeys.recipes,
     queryFn: () => studioAiClient().recipes(),
     enabled: open,
   });
+
+  async function exportRecipe(id: string) {
+    try {
+      const file = await studioAiClient().exportRecipe(id);
+      if (file) toast.success(`Saved the recipe to ${file}.`);
+    } catch (error) {
+      toast.error(errorMessage(error));
+    }
+  }
+
+  async function importRecipe() {
+    try {
+      const recipe = await studioAiClient().importRecipe();
+      if (!recipe) return;
+      await queryClient.invalidateQueries({ queryKey: studioKeys.recipes });
+      toast.success(`Added "${recipe.name}" with its ${recipe.versions} saved versions.`);
+    } catch (error) {
+      toast.error(errorMessage(error));
+    }
+  }
 
   async function remove(id: string, name: string) {
     const ok = await confirmDialog({
@@ -66,9 +94,14 @@ export function RecipesDialog({
           <DialogTitle>Recipes</DialogTitle>
           <DialogDescription>
             Save one from a video's AI runs in its History panel. A new video can start from any of
-            them.
+            them, at any of their saves.
           </DialogDescription>
         </DialogHeader>
+        <div className="flex justify-end">
+          <Button size="sm" variant="soft" onClick={() => void importRecipe()}>
+            Import a recipe file
+          </Button>
+        </div>
         {recipes.isPending && (
           <div className="space-y-2" aria-busy="true">
             <Skeleton className="h-14 w-full" />
@@ -93,11 +126,13 @@ export function RecipesDialog({
           {recipes.data?.map((recipe) => (
             <li
               key={recipe.id}
-              className="flex items-start gap-2 rounded-lg px-2 py-2 hover:bg-foreground/[0.04]"
+              aria-label={recipe.name}
+              className="flex flex-wrap items-start gap-2 rounded-lg px-2 py-2 hover:bg-foreground/[0.04]"
             >
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium" dir="auto">
+                <p className="flex items-center gap-2 text-sm font-medium" dir="auto">
                   {recipe.name}
+                  {recipe.versions > 1 && <Chip tone="neutral">Version {recipe.version}</Chip>}
                 </p>
                 <p
                   className={cn(
@@ -123,6 +158,19 @@ export function RecipesDialog({
               <Button size="sm" variant="outline" onClick={() => onUse(recipe.id)}>
                 Use
               </Button>
+              {recipe.versions > 1 && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-expanded={expanded === recipe.id}
+                  onClick={() => setExpanded((id) => (id === recipe.id ? null : recipe.id))}
+                >
+                  Versions
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" onClick={() => void exportRecipe(recipe.id)}>
+                Export
+              </Button>
               <SimpleTooltip label="Delete this recipe">
                 <Button
                   size="icon-sm"
@@ -133,6 +181,27 @@ export function RecipesDialog({
                   <Trash2 />
                 </Button>
               </SimpleTooltip>
+              {expanded === recipe.id && (
+                <ul aria-label={`Versions of ${recipe.name}`} className="w-full space-y-1 pl-2">
+                  {(versions.data ?? []).map((v) => (
+                    <li key={v.version} className="flex items-center gap-2 text-xs">
+                      <span className="min-w-0 flex-1 text-muted-foreground">
+                        Version {v.version}, saved {formatWhen(v.updatedAt)}: {v.targetSeconds} s,{' '}
+                        {runLabel(v.scenario)}
+                        {v.voiceRef ? `, voice ${v.voiceRef}` : ''}
+                      </span>
+                      <Button
+                        size="xs"
+                        variant="soft"
+                        aria-label={`Use version ${v.version}`}
+                        onClick={() => onUse(recipe.id, v.version)}
+                      >
+                        Use
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </li>
           ))}
         </ul>

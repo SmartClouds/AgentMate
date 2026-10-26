@@ -62,6 +62,11 @@ export interface BackupData {
   blueprintRevisions?: BlueprintRevision[];
   /** The bytes behind every attachment the blueprints above still point at. */
   blueprintAttachments?: BackupAttachmentBlob[];
+  /**
+   * Studio's settings and recipes (E39), as its own files hold them. Studio checks them with its
+   * own rules before anything is restored; its videos and media are the user's files, not in here.
+   */
+  studio?: { settings?: unknown; recipes?: unknown };
 }
 
 export interface BackupEnvelope {
@@ -496,6 +501,13 @@ export function parseBackup(value: unknown): ParsedBackup {
     'blueprint attachments',
     buildAttachmentBlob,
   );
+
+  if (isRecord(raw.studio)) {
+    data.studio = {
+      ...(raw.studio.settings !== undefined ? { settings: raw.studio.settings } : {}),
+      ...(raw.studio.recipes !== undefined ? { recipes: raw.studio.recipes } : {}),
+    };
+  }
 
   const warnings: string[] = [];
   if (isRecord(raw.settings)) {

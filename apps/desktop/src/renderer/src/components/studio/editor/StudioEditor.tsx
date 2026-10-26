@@ -6,7 +6,13 @@ import type { BriefValue } from '../ai/BriefFields';
 import { GenerationCard } from '../ai/GenerationCard';
 import { GenerationDetailsDialog } from '../ai/GenerationDetailsDialog';
 import { ProposalCard } from '../ai/ProposalCard';
-import { fromRunInput, usePendingScenario, useRunSettings } from '../ai/runSettings';
+import {
+  fromRunInput,
+  rememberVoice,
+  usePendingRecipe,
+  usePendingScenario,
+  useRunSettings,
+} from '../ai/runSettings';
 import { SaveRecipeDialog } from '../ai/SaveRecipeDialog';
 import { useStudioAi } from '../ai/useStudioAi';
 import { studioClient } from '../client';
@@ -47,6 +53,8 @@ export interface StudioEditorProps {
   videoId: string;
   onBack: () => void;
   onOpenDevSetup: () => void;
+  /** Opens another video: one started from a version of this one. */
+  onOpenVideo?: (videoId: string) => void;
 }
 
 /** True when a key press belongs to a text field, which keeps its own undo. */
@@ -69,6 +77,7 @@ export function StudioEditor({
   videoId,
   onBack,
   onOpenDevSetup,
+  onOpenVideo,
 }: StudioEditorProps): React.JSX.Element {
   const video = useStudioVideo(videoId);
   const { view } = video;
@@ -97,6 +106,22 @@ export function StudioEditor({
     const request = takePending(videoId);
     if (request) void startScenario(request);
   }, [isOpen, takePending, videoId, startScenario]);
+
+  // A recipe's render choices and voice reach the new video once it is open (E39).
+  const takeRecipe = usePendingRecipe((state) => state.take);
+  const applyEdit = video.apply;
+  useEffect(() => {
+    if (!isOpen) return;
+    const recipe = takeRecipe(videoId);
+    if (!recipe) return;
+    if (recipe.voiceRef) rememberVoice(videoId, recipe.voiceRef);
+    if (recipe.render) {
+      void applyEdit(
+        [{ op: 'render.set', patch: recipe.render }],
+        `Render choices from ${recipe.name}`,
+      );
+    }
+  }, [isOpen, takeRecipe, videoId, applyEdit]);
 
   const status = view.state === 'open' ? view.status : null;
   useEffect(() => {
@@ -393,6 +418,7 @@ export function StudioEditor({
               videoId={videoId}
               currentSeq={view.status.seq}
               onRestore={(seq) => void video.restore(seq)}
+              onOpenVideo={onOpenVideo}
               ai={{
                 generations: ai.generations,
                 loading: ai.loading,

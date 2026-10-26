@@ -3,6 +3,7 @@ import { access, cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:
 import { hostname as osHostname, totalmem } from 'node:os';
 import { basename, join, relative } from 'node:path';
 import { z } from 'zod';
+import type { ProposalChange } from '../ai/edit/answer.js';
 import type {
   ApplyResult,
   CreateVideoInput,
@@ -46,6 +47,7 @@ import type {
 import type { EditOp } from '../document/ops.js';
 import type { StudioDocument } from '../document/schema.js';
 import { type Aspect, DESIGN_SIZES } from '../document/schema.js';
+import { compareDocuments } from '../history/compare.js';
 import { sceneUrl } from '../scenes/url.js';
 import { directionOf } from '../text/languages.js';
 import { newId, safeFolderName } from '../text/names.js';
@@ -60,6 +62,7 @@ import {
 import { BlobStore } from './blobs/blobStore.js';
 import type { OpenSqlDriver } from './db/sqlDriver.js';
 import { createGenJobs } from './gen/genJobs.js';
+import { seedBranch } from './history/branch.js';
 import { createMediaLibrary } from './media/mediaLibrary.js';
 import { acquireVideoLock, type HeldLock, LOCK_FILE, type LockOptions } from './project/lock.js';
 import { checkStorageRoot } from './project/storageRoot.js';
@@ -159,6 +162,12 @@ interface Session {
   lock: HeldLock;
 }
 
+/** Studio's part of the app's backup: its settings and recipes files, as they are on disk. */
+export interface StudioBackup {
+  settings?: unknown;
+  recipes?: unknown;
+}
+
 export interface StudioService {
   settings(): Promise<StudioSettingsView>;
   updateSettings(patch: StudioSettingsPatch): Promise<StudioSettingsView>;
@@ -200,6 +209,13 @@ export interface StudioService {
   recipes(): Promise<RecipeView[]>;
   saveRecipe(input: SaveRecipeInput): Promise<RecipeView>;
   deleteRecipe(input: { recipeId: string }): Promise<void>;
+  /** Every save of a recipe, newest first (E39). */
+  recipeVersions(input: { recipeId: string }): Promise<RecipeView[]>;
+  recipeVersion(input: { recipeId: string; version: number }): Promise<RecipeView>;
+  /** The recipe with its versions, as the text of a `.amrecipe.json` file. */
+  exportRecipe(input: { recipeId: string }): Promise<{ name: string; text: string }>;
+  /** Adds the recipe in a `.amrecipe.json` file's text as a new recipe. */
+  importRecipe(input: { text: string }): Promise<RecipeView>;
   startScene(input: StartSceneInput): Promise<GenerationView>;
   sceneCode(input: { videoId: string; sceneId: string }): Promise<SceneCodeView>;
   saveSceneFiles(input: SaveSceneFilesInput): Promise<EditResponse>;
@@ -280,6 +296,21 @@ export interface StudioService {
   }): Promise<VoiceProfileView>;
   /** Removes a profile, and its clone in ElevenLabs first when there is one. */
   removeVoiceProfile(input: { profileId: string }): Promise<void>;
+  /** What changed between two versions of a video, as an AI proposal shows it (E39). */
+  compareVersions(input: { videoId: string; from: number; to: number }): Promise<ProposalChange[]>;
+  /** The text files of a scene's code tree, for comparing two revisions of it. */
+  treeFiles(input: {
+    videoId: string;
+    treeHash: string;
+  }): Promise<{ path: string; text: string | null }[]>;
+  /** Studio's settings and recipes for the app's backup (E39); videos and media are not in it. */
+  backupData(): Promise<StudioBackup>;
+  /** Why a backup's Studio section cannot be restored, or null when it can. */
+  checkBackup(data: StudioBackup): string | null;
+  /** Puts back a backup's Studio settings and recipes; check it first. */
+  restoreBackup(data: StudioBackup): Promise<void>;
+  /** Starts a new video from a version of this one, next to it, with only the files it uses. */
+  branchVideo(input: { videoId: string; seq: number }): Promise<VideoSummary>;
   /** What a generated picture or clip will cost, before anything is sent. */
   genEstimate(input: GenRequest & { videoId: string }): Promise<GenEstimateView>;
   /** Starts one the person confirmed at `confirmedUsd`; it bills their account. */
@@ -748,6 +779,41 @@ export function createStudioService(host: StudioHost): StudioService {
     now,
   });
 
+  async function createVideo(input: CreateVideoInput): Promise<VideoSummary> {
+    let root: string;
+    let projectFolder: string | null = null;
+    if (input.projectId) {
+      const resolved = await projectRoot(input.projectId);
+      root = resolved.root;
+      projectFolder = resolved.project.folderPath;
+    } else {
+      root = view(await settingsStore.read()).standaloneRoot;
+    }
+    const result = await check(root, projectFolder);
+    if (!result.ok) throw new Error(firstError(result));
+    const { folder, manifest } = await createVideoFolder(
+      root,
+      {
+        id: newId(),
+        title: input.title,
+        language: input.language,
+        aspect: input.aspect,
+        linkedProjectId: input.projectId,
+      },
+      storeDeps(root),
+    );
+    const value: RegistryEntry = {
+      id: manifest.id,
+      title: manifest.title,
+      folder,
+      linkedProjectId: manifest.linkedProjectId,
+      createdAt: manifest.createdAt,
+      lastOpenedAt: null,
+    };
+    await putEntry(value);
+    return summarize(value);
+  }
+
   async function closeSession(videoId: string): Promise<void> {
     const open = sessions.get(videoId);
     if (!open) return;
@@ -841,39 +907,62 @@ export function createStudioService(host: StudioHost): StudioService {
       return Promise.all(sorted.map(summarize));
     },
 
-    async create(input) {
-      let root: string;
-      let projectFolder: string | null = null;
-      if (input.projectId) {
-        const resolved = await projectRoot(input.projectId);
-        root = resolved.root;
-        projectFolder = resolved.project.folderPath;
-      } else {
-        root = view(await settingsStore.read()).standaloneRoot;
+    create: createVideo,
+
+    async backupData() {
+      return { settings: await settingsStore.read(), recipes: await recipeStore.backup() };
+    },
+
+    checkBackup(data) {
+      if (data.settings !== undefined && !settingsSchema.safeParse(data.settings).success) {
+        return "The backup's Studio settings could not be read.";
       }
-      const result = await check(root, projectFolder);
-      if (!result.ok) throw new Error(firstError(result));
-      const { folder, manifest } = await createVideoFolder(
-        root,
-        {
-          id: newId(),
-          title: input.title,
-          language: input.language,
-          aspect: input.aspect,
-          linkedProjectId: input.projectId,
-        },
-        storeDeps(root),
-      );
-      const value: RegistryEntry = {
-        id: manifest.id,
-        title: manifest.title,
-        folder,
-        linkedProjectId: manifest.linkedProjectId,
-        createdAt: manifest.createdAt,
-        lastOpenedAt: null,
-      };
-      await putEntry(value);
-      return summarize(value);
+      return data.recipes === undefined ? null : RecipeStore.checkBackup(data.recipes);
+    },
+
+    async restoreBackup(data) {
+      if (data.settings !== undefined) {
+        const settings = settingsSchema.parse(data.settings);
+        await settingsStore.mutate(() => settings);
+      }
+      if (data.recipes !== undefined) await recipeStore.restore(data.recipes);
+    },
+
+    async compareVersions({ videoId, from, to }) {
+      const { store } = session(videoId);
+      const names = new Map(store.mediaList().map((m) => [m.hash, m.name] as const));
+      return compareDocuments(store.documentAt(from), store.documentAt(to), names);
+    },
+
+    async treeFiles({ videoId, treeHash }) {
+      const { store } = session(videoId);
+      const files = [];
+      for (const file of (await readTree(store.blobs, treeHash)).files) {
+        files.push({
+          path: file.path,
+          text: TEXT_FILE.test(file.path) ? await store.blobs.text(file.hash) : null,
+        });
+      }
+      return files;
+    },
+
+    async branchVideo({ videoId, seq }) {
+      const { store } = session(videoId);
+      const document = store.documentAt(seq);
+      const title = `${document.title} (from version ${seq})`.slice(0, 200);
+      const made = await createVideo({
+        title,
+        projectId: store.manifest.linkedProjectId,
+        language: document.language,
+        aspect: document.renderSettings.aspect,
+      });
+      const target = await VideoStore.open(made.folder, storeDeps(made.folder));
+      try {
+        await seedBranch({ source: store, document, target, id: made.id, title });
+      } finally {
+        await target.close();
+      }
+      return summarize(await entry(made.id));
     },
 
     open: ({ videoId }) => openWith(videoId, false),
@@ -1029,6 +1118,10 @@ export function createStudioService(host: StudioHost): StudioService {
     recipes: () => recipeStore.list(),
     saveRecipe: (input) => recipeStore.save(input),
     deleteRecipe: ({ recipeId }) => recipeStore.remove(recipeId),
+    recipeVersions: ({ recipeId }) => recipeStore.versions(recipeId),
+    recipeVersion: ({ recipeId, version }) => recipeStore.version(recipeId, version),
+    exportRecipe: ({ recipeId }) => recipeStore.exportText(recipeId),
+    importRecipe: ({ text }) => recipeStore.importText(text),
 
     libraryBlobs,
     assets,

@@ -2,7 +2,7 @@ import type { RecipeView } from '@agentmat/studio';
 import { screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
-import { usePendingScenario } from '../ai/runSettings';
+import { usePendingRecipe, usePendingScenario } from '../ai/runSettings';
 import { INSIDE_PROJECT, NOW, ok, PROJECT, settings, storage, video } from '../testing/fixtures';
 import { NewVideoDialog } from './NewVideoDialog';
 
@@ -15,6 +15,8 @@ const RECIPE: RecipeView = {
   aspect: '9:16',
   targetSeconds: 30,
   scenario: { cliId: 'claude-code', model: 'opus', effort: 'high' },
+  version: 1,
+  versions: 1,
   createdAt: NOW,
   updatedAt: NOW,
 };
@@ -126,6 +128,55 @@ describe('NewVideoDialog', () => {
     await waitFor(() =>
       expect(screen.getByLabelText('What is the video about?')).toHaveValue(RECIPE.brief),
     );
+  });
+
+  it('starts from an earlier version of a recipe with every stage choice it kept (E39 AC1)', async () => {
+    const older: RecipeView = {
+      ...RECIPE,
+      version: 1,
+      versions: 2,
+      brief: 'The first brief',
+      stages: {
+        edit: { cliId: 'codex', model: 'gpt-6-luna', effort: 'medium' },
+        scene: { cliId: 'gemini', model: null, effort: null },
+      },
+      voiceRef: 'azure:fa-IR-FaridNeural',
+      render: { resolution: '720p', fps: 24, quality: 'high', codec: 'h265' },
+    };
+    const { user } = renderWithProviders(
+      <NewVideoDialog
+        open
+        onOpenChange={vi.fn()}
+        recipeId="r1"
+        recipeVersion={1}
+        onCreated={vi.fn()}
+      />,
+      {
+        bridge: {
+          'projects.list': async () => [PROJECT],
+          'studio.settings': async () => settings(),
+          'studio.projectStorage': async () => storage(),
+          'studio.create': async () => video(),
+          'studioAi.recipes': async () => [{ ...RECIPE, version: 2, versions: 2 }],
+          'studioAi.recipeVersion': async () => older,
+        },
+      },
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText('What is the video about?')).toHaveValue('The first brief'),
+    );
+    await user.click(screen.getByRole('button', { name: 'Create and write' }));
+    await waitFor(() =>
+      expect(usePendingScenario.getState().pending?.request.brief).toBe('The first brief'),
+    );
+    expect(usePendingRecipe.getState().pending?.recipe).toEqual({
+      name: RECIPE.name,
+      render: older.render,
+      voiceRef: 'azure:fa-IR-FaridNeural',
+    });
+    const runs = JSON.parse(window.localStorage.getItem('studio.runSettings') ?? '{}');
+    expect(runs.edit).toEqual({ cliId: 'codex', model: 'gpt-6-luna', effort: 'medium' });
+    expect(runs.scene).toEqual({ cliId: 'gemini', model: undefined, effort: undefined });
   });
 
   it("uses the project's folder when opened from a project", async () => {

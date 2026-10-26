@@ -250,3 +250,33 @@ describe('scene network', () => {
     ).rejects.toThrow(/host name/);
   });
 });
+
+describe('the history browser (E39)', () => {
+  it('compares two versions, reads a code tree and starts a new video from a version', async () => {
+    const video = await create();
+    const session = await openVideo(video.id);
+    const first = await invoke<{ seq: number }>(IPC.studio.apply, {
+      videoId: video.id,
+      baseSeq: session.status.seq,
+      ops: [{ op: 'doc.set', field: 'title', value: 'Launch day' }],
+      label: 'Renamed',
+    });
+    const changes = await invoke<{ kind: string }[]>(IPC.studio.compareVersions, {
+      videoId: video.id,
+      from: session.status.seq,
+      to: first.seq,
+    });
+    expect(changes).toEqual([{ kind: 'title', before: 'Launch film', after: 'Launch day' }]);
+    await expect(
+      invoke(IPC.studio.treeFiles, { videoId: video.id, treeHash: 'f'.repeat(64) }),
+    ).rejects.toThrow();
+    const branch = await invoke<VideoSummary>(IPC.studio.branch, {
+      videoId: video.id,
+      seq: first.seq,
+    });
+    expect(branch.title).toBe(`Launch day (from version ${first.seq})`);
+    await expect(invoke(IPC.studio.branch, { videoId: video.id, seq: 0 })).rejects.toThrow(
+      'That Studio request is not valid (seq)',
+    );
+  });
+});

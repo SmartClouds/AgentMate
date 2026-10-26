@@ -43,7 +43,7 @@ function FieldRows({ changes }: { changes: FieldChange[] }): React.JSX.Element {
   );
 }
 
-function ChangeItem({ change }: { change: ProposalChange }): React.JSX.Element {
+export function ChangeItem({ change }: { change: ProposalChange }): React.JSX.Element {
   switch (change.kind) {
     case 'title':
       return (
