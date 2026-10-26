@@ -189,7 +189,8 @@ describe.skipIf(!tools)('clips over the scenes, with the real ffmpeg', () => {
         '-map',
         '0:a',
         '-af',
-        'ebur128=framelog=quiet',
+        // Plain ebur128: ffmpeg 4.4 has no framelog=quiet and reports 0 LUFS with it.
+        'ebur128',
         '-f',
         'null',
         '-',

@@ -247,22 +247,20 @@ test('narrates Persian scenes, captions one by its voice, records another and re
     const render = page.getByRole('dialog', { name: 'Render the video' });
     await render.getByRole('button', { name: 'Render', exact: true }).click();
     await page.keyboard.press('Escape');
+    const renderJobs = () =>
+      page.evaluate((id) => (window as unknown as Bridge).agentmat.studioRender.jobs(id), videoId);
+    // Waits for the render to end either way, then names what went wrong if it failed.
     await expect
       .poll(
-        async () =>
-          (
-            await page.evaluate(
-              (id) => (window as unknown as Bridge).agentmat.studioRender.jobs(id),
-              videoId,
-            )
-          )[0]?.status,
-        { timeout: 180_000 },
+        async () => ['done', 'failed', 'cancelled'].includes((await renderJobs())[0]?.status ?? ''),
+        {
+          timeout: 180_000,
+        },
       )
-      .toBe('done');
-    const [job] = await page.evaluate(
-      (id) => (window as unknown as Bridge).agentmat.studioRender.jobs(id),
-      videoId,
-    );
+      .toBe(true);
+    const [job] = await renderJobs();
+    expect(job?.error ?? null).toBeNull();
+    expect(job?.status).toBe('done');
     const probe = JSON.parse(
       spawnSync(
         'ffprobe',
