@@ -14,7 +14,7 @@ const SETTINGS = {
   speechModel: 'large-v3-turbo',
 };
 
-type Overrides = Partial<Omit<AgentPromptFieldProps, 'value' | 'onChange'>>;
+type Overrides = Partial<Omit<AgentPromptFieldProps, 'value' | 'onChange' | 'buildRequest'>>;
 
 /** The field with its text in state, the way every composer holds it. */
 function Harness({ initial, ...props }: Overrides & { initial: string }): React.JSX.Element {

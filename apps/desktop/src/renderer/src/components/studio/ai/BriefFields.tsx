@@ -1,7 +1,7 @@
-import { type Aspect, STYLE_PRESETS, styleById } from '@runova/studio';
+import { type Aspect, buildBriefRewriteRequest, STYLE_PRESETS, styleById } from '@runova/studio';
 import { useId, useState } from 'react';
-import { scriptClass } from '../format';
 import {
+  AgentPromptField,
   Button,
   Combobox,
   Label,
@@ -9,7 +9,6 @@ import {
   RunSettingsFields,
   SEGMENT_TRACK,
   segmentClass,
-  Textarea,
 } from '../kit';
 import { StylesDialog } from '../scenes/StylesDialog';
 
@@ -41,6 +40,7 @@ export function BriefFields({
   aspect,
   language,
   autoFocus,
+  onSubmit,
 }: {
   value: BriefValue;
   onChange: (next: BriefValue) => void;
@@ -49,6 +49,8 @@ export function BriefFields({
   /** The video's language, for the style examples. */
   language: string;
   autoFocus?: boolean;
+  /** Ctrl+Enter in the brief, to start without reaching for the button. */
+  onSubmit?: () => void;
 }): React.JSX.Element {
   const id = useId();
   const [browsing, setBrowsing] = useState(false);
@@ -69,16 +71,23 @@ export function BriefFields({
     <div className="space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor={`${id}-brief`}>What is the video about?</Label>
-        <Textarea
+        {/* The same box as Ask AI elsewhere: Persian, dictation in Persian or English, a
+            translation to English, and an AI rewrite of a rough note into a brief. */}
+        <AgentPromptField
           id={`${id}-brief`}
           value={value.brief}
-          dir="auto"
+          onChange={(brief) => onChange({ ...value, brief })}
+          buildRequest={(note) => buildBriefRewriteRequest(note, language)}
+          rewriteHint="The AI turns your note into a clear brief"
+          ariaLabel="What is the video about?"
           autoFocus={autoFocus}
-          rows={5}
           maxLength={100_000}
-          className={scriptClass(value.brief)}
+          minHeight={120}
+          maxHeight={320}
+          textClassName="text-sm leading-6"
           placeholder="Who it is for, what they should feel or do, and anything it must say. Paste notes, a product description or a draft script if you have one."
-          onChange={(event) => onChange({ ...value, brief: event.target.value })}
+          submitOn="mod-enter"
+          onSubmit={() => onSubmit?.()}
         />
       </div>
       <div className="grid gap-x-3 gap-y-4 sm:grid-cols-2">

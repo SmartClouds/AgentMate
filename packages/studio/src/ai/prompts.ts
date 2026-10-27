@@ -245,3 +245,26 @@ export function buildRepairRequest(original: string, answer: string, issues: str
     original,
   ].join('\n\n');
 }
+
+/**
+ * What "Write it for me" in the brief box sends to the user's prompt AI: their rough note, typed or
+ * dictated, becomes a clear brief for the scenario writer. It stays in the note's own language, so
+ * a Persian note comes back as a Persian brief; the box's English button translates it if wanted.
+ */
+export function buildBriefRewriteRequest(note: string, language: string): string {
+  const { name, native } = languageName(language);
+  return [
+    `You help a user brief an AI that writes the scenario of a short video. The video will be in ${name} (${native}). The user wrote a rough note, possibly incomplete.`,
+    "## The user's note",
+    quoted(note.trim()),
+    [
+      'Rewrite it as a clear brief: what the video is about, who it is for, what they should feel or do afterwards, and anything it must say or show.',
+      'Write it in the same language as the note.',
+      'Keep names, numbers, product details and any wording the user wants said exactly as they are.',
+      'Do not invent facts, claims or requirements the note does not give.',
+      'Keep it short: a few sentences, or a short list when the note lists things.',
+      'Never use Chinese characters.',
+      'Output ONLY the brief, with no preamble, quotes or commentary.',
+    ].join(' '),
+  ].join('\n\n');
+}

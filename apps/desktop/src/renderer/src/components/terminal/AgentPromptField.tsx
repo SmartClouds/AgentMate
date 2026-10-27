@@ -1,4 +1,3 @@
-import type { AgentInstructionPurpose, AgentInstructionTarget } from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef } from 'react';
 import { toast } from 'sonner';
@@ -19,18 +18,18 @@ import { queryKeys } from '@/lib/queryKeys';
 import { containsPersian } from '@/lib/rtl';
 import { cn } from '@/lib/utils';
 import { commandForEvent, useShortcutLabel, useShortcutStore } from '@/stores/shortcutStore';
-import { useComposerAssist } from './useComposerAssist';
+import { type ComposerRewrite, useComposerAssist } from './useComposerAssist';
 
 /** The count shows once the text is this close to the cap, so a short note stays uncluttered. */
 const COUNT_FROM_SHARE = 0.8;
 
-export interface AgentPromptFieldProps {
+export type AgentPromptFieldProps = AgentPromptFieldOptions & ComposerRewrite;
+
+interface AgentPromptFieldOptions {
   value: string;
   onChange: (value: string) => void;
-  purpose: AgentInstructionPurpose;
-  target: AgentInstructionTarget;
-  /** The AI's question, when the text answers one. "Write it for me" answers it. */
-  question?: string;
+  /** For a label's htmlFor, in a form. */
+  id?: string;
   ariaLabel: string;
   placeholder: string;
   maxLength?: number;
@@ -47,25 +46,27 @@ export interface AgentPromptFieldProps {
   maxHeight?: number;
   /** What sits at the end of the toolbar, usually Send. */
   trailing?: React.ReactNode;
+  /** What "Write it for me" does, in its tooltip; an agent box turns the note into an instruction. */
+  rewriteHint?: string;
   className?: string;
+  /** Classes for the text itself, such as a form's larger type. */
+  textClassName?: string;
 }
 
 const JOB_LABELS = { translate: 'Translating…', rewrite: 'Writing…' } as const;
 
 /**
  * The box for anything the user tells an AI task: the task itself, a message mid-run, or an answer
- * to its question. Like Build Prompt it takes Persian, dictation, a translation to English, and an
+ * to its question (and Studio's video brief, which builds its own rewrite). Like Build Prompt it takes Persian, dictation, a translation to English, and an
  * AI rewrite of a rough note, and each of those can be undone or cancelled. The text box grows
  * with the text, and the toolbar under it keeps the tools and the caller's Send together.
  */
 export const AgentPromptField = forwardRef<HTMLTextAreaElement, AgentPromptFieldProps>(
-  function AgentPromptField(
-    {
+  function AgentPromptField(props, forwardedRef) {
+    const {
       value,
       onChange,
-      purpose,
-      target,
-      question,
+      id,
       ariaLabel,
       placeholder,
       maxLength,
@@ -77,10 +78,10 @@ export const AgentPromptField = forwardRef<HTMLTextAreaElement, AgentPromptField
       minHeight = 36,
       maxHeight = 112,
       trailing,
+      rewriteHint = 'The AI turns your note into a clear instruction',
       className,
-    },
-    forwardedRef,
-  ) {
+      textClassName,
+    } = props;
     const fieldRef = useRef<HTMLTextAreaElement>(null);
     useImperativeHandle(forwardedRef, () => fieldRef.current as HTMLTextAreaElement);
 
@@ -89,7 +90,7 @@ export const AgentPromptField = forwardRef<HTMLTextAreaElement, AgentPromptField
       queryFn: () => window.runova.settings.get(),
       meta: { silentLoading: true },
     });
-    const assist = useComposerAssist({ value, onChange, purpose, target, question });
+    const assist = useComposerAssist(props);
     const overrides = useShortcutStore((s) => s.overrides);
     const translateKey = useShortcutLabel('prompt.translate');
     const rewriteKey = useShortcutLabel('prompt.generate');
@@ -193,6 +194,7 @@ export const AgentPromptField = forwardRef<HTMLTextAreaElement, AgentPromptField
         <div className={cn('rounded-t-[inherit]', busy && 'shimmer-sweep')}>
           <Textarea
             ref={fieldRef}
+            id={id}
             variant="bare"
             autoFocus={autoFocus}
             rows={1}
@@ -204,7 +206,7 @@ export const AgentPromptField = forwardRef<HTMLTextAreaElement, AgentPromptField
             placeholder={placeholder}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="resize-none px-3.5 pb-1 pt-2 text-xs leading-5"
+            className={cn('resize-none px-3.5 pb-1 pt-2 text-xs leading-5', textClassName)}
             style={{ minHeight, maxHeight }}
           />
         </div>
@@ -284,7 +286,7 @@ export const AgentPromptField = forwardRef<HTMLTextAreaElement, AgentPromptField
                   <SimpleTooltip
                     label={
                       hasText
-                        ? `The AI turns your note into a clear instruction${rewriteKey ? ` (${rewriteKey})` : ''}`
+                        ? `${rewriteHint}${rewriteKey ? ` (${rewriteKey})` : ''}`
                         : 'Type or dictate a rough note first'
                     }
                     wrapTrigger={!hasText || readOnly}

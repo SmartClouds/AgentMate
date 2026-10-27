@@ -207,6 +207,9 @@ export function NewVideoDialog({
   const blocked = chosenProject !== null && storage.data?.check.ok === false;
   const ready = useAi ? brief.brief.trim().length > 0 : title.trim().length > 0;
   const error = create.error ? errorMessage(create.error) : null;
+  const submit = () => {
+    if (ready && !blocked && !create.isPending) create.mutate();
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -224,7 +227,7 @@ export function NewVideoDialog({
           className="contents"
           onSubmit={(event) => {
             event.preventDefault();
-            if (ready && !blocked) create.mutate();
+            submit();
           }}
         >
           <div className={cn(DIALOG_BODY, 'space-y-4')}>
@@ -293,7 +296,13 @@ export function NewVideoDialog({
               <Label htmlFor={aiId}>Write the scenario with AI</Label>
             </div>
             {useAi && (
-              <BriefFields value={brief} onChange={setBrief} aspect={aspect} language={language} />
+              <BriefFields
+                value={brief}
+                onChange={setBrief}
+                aspect={aspect}
+                language={language}
+                onSubmit={submit}
+              />
             )}
             {where && (
               <p className="text-xs text-muted-foreground">

@@ -13,7 +13,7 @@ const SETTINGS = { promptBuilderProvider: 'openai', openaiModel: 'gpt-test' };
 /** The hook with its text kept in state, the way a composer holds it. */
 function renderAssist(
   initial: string,
-  options: Partial<Omit<ComposerAssistOptions, 'value' | 'onChange'>> = {},
+  options: Partial<Omit<ComposerAssistOptions, 'value' | 'onChange' | 'buildRequest'>> = {},
   bridge: Record<string, unknown> = {},
 ) {
   return renderHookWithProviders(
@@ -107,6 +107,29 @@ describe('rewrite', () => {
     );
     await act(() => result.current.assist.rewrite());
     expect(bridge.$fn('ai.ask').mock.calls[0]?.[0].prompt).toContain('Which site?');
+  });
+
+  it("sends the caller's own request when the box is not an agent task", async () => {
+    const { result, bridge } = renderHookWithProviders(
+      () => {
+        const [value, setValue] = useState('ویدیو برای اپ');
+        const assist = useComposerAssist({
+          value,
+          onChange: setValue,
+          buildRequest: (note) => `Brief this: ${note}`,
+        });
+        return { value, assist };
+      },
+      {
+        bridge: {
+          'settings.get': SETTINGS,
+          'ai.ask': async () => ({ ok: true, text: 'یک ویدیو برای معرفی اپ.' }),
+        },
+      },
+    );
+    await act(() => result.current.assist.rewrite());
+    expect(bridge.$fn('ai.ask').mock.calls[0]?.[0].prompt).toBe('Brief this: ویدیو برای اپ');
+    expect(result.current.value).toBe('یک ویدیو برای معرفی اپ.');
   });
 
   it('points at Settings when no model is set, without asking anything', async () => {

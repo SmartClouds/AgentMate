@@ -84,6 +84,7 @@ export function BriefCard({
           aspect={aspect}
           language={language}
           autoFocus={!rewriting}
+          onSubmit={() => void submit()}
         />
         <div className="flex flex-wrap items-center gap-2">
           <Button type="submit" disabled={!ready}>

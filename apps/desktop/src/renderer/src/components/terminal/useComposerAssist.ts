@@ -9,13 +9,34 @@ import { toast } from 'sonner';
 import { promptProviderModel } from '@/lib/promptProvider';
 import { queryKeys } from '@/lib/queryKeys';
 
-export interface ComposerAssistOptions {
+/**
+ * What "Write it for me" turns the note into: an instruction for an AI agent, or, for a box that
+ * is not an agent task (Studio's video brief), whatever request the caller builds.
+ */
+export type ComposerRewrite =
+  | {
+      purpose: AgentInstructionPurpose;
+      target: AgentInstructionTarget;
+      /** The AI's question, when the text answers one. */
+      question?: string;
+      buildRequest?: undefined;
+    }
+  | {
+      buildRequest: (note: string) => string;
+      purpose?: undefined;
+      target?: undefined;
+      question?: undefined;
+    };
+
+export type ComposerAssistOptions = {
   value: string;
   onChange: (value: string) => void;
-  purpose: AgentInstructionPurpose;
-  target: AgentInstructionTarget;
-  /** The AI's question, when the text answers one. */
-  question?: string;
+} & ComposerRewrite;
+
+function rewriteRequest(rewrite: ComposerRewrite, text: string): string {
+  if (rewrite.buildRequest) return rewrite.buildRequest(text);
+  const { purpose, target, question } = rewrite;
+  return buildAgentInstructionRequest({ text, purpose, target, question });
 }
 
 export type ComposerAssistJob = 'translate' | 'rewrite';
@@ -30,13 +51,8 @@ interface RunningJob {
  * what was typed until the user edits the result. Cancel stops the request in main as well, and a
  * result that lands after it is dropped.
  */
-export function useComposerAssist({
-  value,
-  onChange,
-  purpose,
-  target,
-  question,
-}: ComposerAssistOptions) {
+export function useComposerAssist(options: ComposerAssistOptions) {
+  const { value, onChange } = options;
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
     queryFn: () => window.runova.settings.get(),
@@ -101,7 +117,7 @@ export function useComposerAssist({
       const result = await window.runova.ai.ask({
         provider,
         model,
-        prompt: buildAgentInstructionRequest({ text: before, purpose, target, question }),
+        prompt: rewriteRequest(options, before),
         requestId: job.requestId,
       });
       if (!finish(job) || result.cancelled) return;
