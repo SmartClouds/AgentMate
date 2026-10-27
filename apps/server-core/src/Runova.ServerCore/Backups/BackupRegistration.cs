@@ -1,4 +1,5 @@
 using Hangfire;
+using Hangfire.AspNetCore;
 using Hangfire.Storage.SQLite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -93,6 +94,10 @@ internal static class BackupRegistration
             // Polled every two seconds, so "back up now" starts at once; one small query on a local file.
             return new SQLiteStorage(Path.Combine(directories.Data, StorageFile), new SQLiteStorageOptions { QueuePollInterval = TimeSpan.FromSeconds(2) });
         });
+        // AddHangfire's own activator is JobActivator.Current, a static each core's configuration
+        // overwrites. With many cores in one process (the tests) a server could build its jobs from
+        // another core's services, and fail once that core was disposed. This one is the core's own.
+        services.AddSingleton<JobActivator>(provider => new AspNetCoreJobActivator(provider.GetRequiredService<IServiceScopeFactory>()));
         services.AddHangfire((provider, configuration) => configuration
             .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
             .UseSimpleAssemblyNameTypeSerializer()

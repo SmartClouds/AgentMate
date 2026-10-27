@@ -300,6 +300,20 @@ public sealed class HubServerBackupTests
     }
 
     [Fact]
+    public async Task Hangfire_builds_a_cores_jobs_from_that_cores_services_when_another_core_started_later()
+    {
+        // Hangfire's default activator is a process-wide static the last core to configure it owns.
+        // On CI a backup job took a core's provider that was already disposed and failed with it.
+        await using var first = await AuthHarness.CreateAsync();
+        await using var second = await AuthHarness.CreateAsync();
+        _ = second.Services.GetRequiredService<IGlobalConfiguration>();
+
+        using var scope = first.Services.GetRequiredService<JobActivator>().BeginScope((JobActivatorContext)null!);
+
+        Assert.Same(first.Services.GetRequiredService<BackupRunGate>(), scope.Resolve(typeof(BackupRunGate)));
+    }
+
+    [Fact]
     public async Task A_telegram_account_signed_in_through_the_hub_becomes_a_destination_with_its_session_sealed()
     {
         var destinations = new FakeDestinations();
