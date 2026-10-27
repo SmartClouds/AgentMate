@@ -11,7 +11,7 @@ import {
   widgetPeriod,
 } from '@runova/core';
 import { BrowserWindow } from 'electron';
-import icon from '../../../resources/icon.ico?asset';
+import { appIcon } from '../appIcon';
 import { sendToWindow } from '../ipc/send';
 import { store } from '../store';
 import { keepWindowsHidden } from '../testMode';
@@ -108,7 +108,7 @@ function createWidgetWindow(instance: DesktopWidgetInstance): BrowserWindow {
     hasShadow: false,
     backgroundColor: '#00000000',
     show: false,
-    icon,
+    icon: appIcon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,

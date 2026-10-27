@@ -1,7 +1,6 @@
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { BrowserWindow, shell, type WebContents } from 'electron';
-import icon from '../../../resources/icon.ico?asset';
 import { IPC } from '../../shared/ipcChannels';
 import type {
   SftpPopOutView,
@@ -9,6 +8,7 @@ import type {
   SftpWindowAction,
   SftpWindowState,
 } from '../../shared/sftpTypes';
+import { appIcon } from '../appIcon';
 import { sendToWindow } from '../ipc/send';
 import { focusMainWindow, getMainWindow } from '../mainWindow';
 import { themeBackground } from '../splashWindow';
@@ -123,7 +123,7 @@ export function openSftpWindow(
     autoHideMenuBar: true,
     backgroundColor: themeBackground(theme),
     title: `${info.nickname} - Files`,
-    icon,
+    icon: appIcon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import type { DesktopPromptBuildWidgetInstance } from '@runova/core';
 import { BrowserWindow } from 'electron';
-import icon from '../../../resources/icon.ico?asset';
+import { appIcon } from '../appIcon';
 import { store } from '../store';
 import { keepWindowsHidden } from '../testMode';
 
@@ -59,7 +59,7 @@ function createWidgetWindow(instance: DesktopPromptBuildWidgetInstance): Browser
     hasShadow: false,
     backgroundColor: '#00000000',
     show: false,
-    icon,
+    icon: appIcon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,

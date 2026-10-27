@@ -64,6 +64,10 @@ export interface ElectronState {
   registeredSchemes: unknown[];
   quitCalls: number;
   relaunchCalls: number;
+  /** What app.dock.setIcon was given, in order. */
+  dockIcons: string[];
+  /** What shell.readShortcutLink finds, by path; any other path throws like a missing file. */
+  shortcuts: Map<string, Electron.ShortcutDetails>;
   encryptionAvailable: boolean;
   clipboardText: string;
   powerBlockers: { id: number; type: string; stopped: boolean }[];
@@ -95,6 +99,8 @@ function freshState(): ElectronState {
     registeredSchemes: [],
     quitCalls: 0,
     relaunchCalls: 0,
+    dockIcons: [],
+    shortcuts: new Map(),
     encryptionAvailable: true,
     clipboardText: '',
     powerBlockers: [],
@@ -355,7 +361,13 @@ export const app = {
   getLoginItemSettings: () => ({ openAtLogin: false }),
   setAsDefaultProtocolClient: (): boolean => true,
   commandLine: { appendSwitch: (): void => undefined, hasSwitch: (): boolean => false },
-  dock: { show: (): void => undefined, hide: (): void => undefined },
+  dock: {
+    show: (): void => undefined,
+    hide: (): void => undefined,
+    setIcon: (image: string): void => {
+      electronState.dockIcons.push(image);
+    },
+  },
   focus: (): void => undefined,
 };
 
@@ -432,6 +444,11 @@ export const shell = {
   },
   trashItem: async (): Promise<void> => undefined,
   beep: (): void => undefined,
+  readShortcutLink: (path: string): Electron.ShortcutDetails => {
+    const details = electronState.shortcuts.get(path);
+    if (!details) throw new Error(`Failed to read shortcut link: ${path}`);
+    return details;
+  },
 };
 
 /**
@@ -644,6 +661,8 @@ export function resetElectronMock(): void {
   electronState.registeredSchemes = [];
   electronState.quitCalls = 0;
   electronState.relaunchCalls = 0;
+  electronState.dockIcons = [];
+  electronState.shortcuts = new Map();
   electronState.encryptionAvailable = true;
   electronState.clipboardText = '';
   electronState.powerBlockers = [];

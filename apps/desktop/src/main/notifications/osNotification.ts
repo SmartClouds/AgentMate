@@ -3,7 +3,7 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { app, Notification, nativeImage } from 'electron';
-import icon from '../../../resources/icon.ico?asset';
+import { appIcon } from '../appIcon';
 import { focusMainWindow } from '../mainWindow';
 
 /**
@@ -74,7 +74,7 @@ function escapeXml(text: string): string {
 function iconForToast(): string | null {
   if (toastIconUrl !== undefined) return toastIconUrl;
   try {
-    const png = nativeImage.createFromPath(icon).toPNG();
+    const png = nativeImage.createFromPath(appIcon).toPNG();
     const path = join(app.getPath('temp'), 'runova-notification-icon.png');
     writeFileSync(path, png);
     toastIconUrl = png.length > 0 ? pathToFileURL(path).href : null;
@@ -122,7 +122,7 @@ export function showOsNotification(input: OsNotificationInput): boolean {
           id,
           title: input.title,
           body: input.body,
-          icon,
+          icon: appIcon,
           silent: input.silent ?? false,
         });
 

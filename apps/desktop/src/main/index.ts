@@ -5,12 +5,12 @@ import './rebrand/startup';
 import { join } from 'node:path';
 import { BLUEPRINT_FILE_SCHEME } from '@runova/core';
 import { app, BrowserWindow, desktopCapturer, protocol, session, shell } from 'electron';
-import icon from '../../resources/icon.ico?asset';
 import { BROWSER_PARTITION } from '../shared/browserGuest';
 import { stopAllRdpTasks } from './agents/rdpTaskRunner';
 import { flushSshTaskHistory, stopAllSshTasks } from './agents/sshTaskRunner';
 import { stopEmulatorsOnQuit } from './android/runtime';
 import { appCsp, keepsOwnCsp } from './appCsp';
+import { APP_ID, appIcon, showAppIconInDev } from './appIcon';
 import { registerBlueprintFileProtocol } from './blueprintFileStore';
 import { configureBrowserSession, setupBrowserGuests } from './browser/guestSession';
 import { registerDeployIpc } from './deploy';
@@ -194,7 +194,8 @@ if (!isLegacyDecryptHelper) app.setName(app.isPackaged ? APP_NAME : DEV_APP_NAME
 // name, so without it toasts show up as "Electron" with the Electron icon.
 // Must match electron-builder.yml's `appId` so the packaged install (which
 // registers that id via its shortcut) and dev runs agree on identity.
-if (process.platform === 'win32' && !isLegacyDecryptHelper) app.setAppUserModelId('com.runova.app');
+if (process.platform === 'win32' && !isLegacyDecryptHelper) app.setAppUserModelId(APP_ID);
+if (!isLegacyDecryptHelper) showAppIconInDev();
 
 // Both are safe before the app is ready and before the settings file has been
 // read: the fetch shim passes everything through to Node until a proxy is
@@ -251,7 +252,7 @@ function createMainWindow(): BrowserWindow {
     ...titleBarFrameOptions(),
     autoHideMenuBar: true,
     ...glassWindowOptions(glass, windowBackground),
-    icon,
+    icon: appIcon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,

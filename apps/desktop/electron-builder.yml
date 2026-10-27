@@ -15,10 +15,13 @@ npmRebuild: false
 # bit is still missing afterwards, so a broken helper can never ship again.
 afterPack: ./scripts/after-pack-spawn-helper.cjs
 
+# Window and notification icons: the .ico on Windows, the PNG on Linux (Electron reads no .ico
+# there). macOS takes the bundle's .icns and needs neither.
 files:
   - out/**/*
   - package.json
   - resources/icon.ico
+  - resources/icon.png
 
 extraResources:
   - from: resources/example-skill-repo
@@ -77,8 +80,11 @@ asarUnpack:
   - 'out/main/codeqlExtractWorker.mjs'
   - 'out/main/chunks/**'
 
+# Each OS gets icons drawn for it: Windows a multi-size .ico whose small sizes have bolder
+# strokes, macOS Apple's icon grid (824 px body on 1024, with its shadow), Linux the hicolor
+# PNG set.
 win:
-  icon: build/icon.png
+  icon: resources/icon.ico
   target:
     - target: nsis
       arch: [x64]
@@ -99,7 +105,7 @@ nsis:
   guid: 76b8d710-e984-550c-8238-6729e4607618
 
 mac:
-  icon: build/icon.png
+  icon: resources/icon-mac.png
   # There is no Apple Developer ID, so sign ad-hoc ("-"). Left unsigned, the arm64 build
   # won't open on Apple Silicon at all ("Runova is damaged"), because arm64 code must
   # carry a valid signature; the x64 build only got away with it by running under Rosetta.
@@ -121,7 +127,7 @@ mac:
   category: public.app-category.developer-tools
 
 linux:
-  icon: build/icon.png
+  icon: build/icons
   target:
     - target: AppImage
       arch: [x64]

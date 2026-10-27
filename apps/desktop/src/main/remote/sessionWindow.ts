@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { BrowserWindow, ipcMain } from 'electron';
-import icon from '../../../resources/icon.ico?asset';
 import { IPC } from '../../shared/ipcChannels';
+import { appIcon } from '../appIcon';
 import { sendToWindow } from '../ipc/send';
 import { keepWindowsHidden } from '../testMode';
 import { titleBarFrameOptions } from '../windowChrome';
@@ -54,7 +54,7 @@ function createSessionWindow(): BrowserWindow {
     ...titleBarFrameOptions(),
     autoHideMenuBar: true,
     backgroundColor: '#050807',
-    icon,
+    icon: appIcon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,

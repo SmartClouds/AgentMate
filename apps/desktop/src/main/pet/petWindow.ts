@@ -1,6 +1,5 @@
 import { join } from 'node:path';
 import { BrowserWindow, powerMonitor, screen } from 'electron';
-import icon from '../../../resources/icon.ico?asset';
 import { IPC } from '../../shared/ipcChannels';
 import {
   PET_SNOOZE_MAX_MINUTES,
@@ -8,6 +7,7 @@ import {
   type PetSnoozeState,
   type PetWorkArea,
 } from '../../shared/pet';
+import { appIcon } from '../appIcon';
 import { broadcastToWindows, sendToWindow } from '../ipc/send';
 import { store } from '../store';
 
@@ -148,7 +148,7 @@ function createPetWindow(): BrowserWindow {
     alwaysOnTop: true,
     backgroundColor: '#00000000',
     show: false,
-    icon,
+    icon: appIcon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,

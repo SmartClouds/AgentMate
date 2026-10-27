@@ -1,8 +1,8 @@
 import { join } from 'node:path';
 import type { ThemeMode } from '@runova/core';
 import { app, BrowserWindow, ipcMain, nativeTheme } from 'electron';
-import icon from '../../resources/icon.ico?asset';
 import { IPC } from '../shared/ipcChannels';
+import { appIcon } from './appIcon';
 import { sendToWindow } from './ipc/send';
 import { supportsBackgroundMaterial } from './windowGlass';
 
@@ -73,7 +73,7 @@ export function showSplash(theme: ThemeMode): Promise<void> {
     ...(mac ? { vibrancy: 'under-window' as const, visualEffectState: 'active' as const } : {}),
     // Acrylic draws nothing on a transparent window, so only the fallback path uses it.
     transparent: !acrylic,
-    icon,
+    icon: appIcon,
     title: app.getName(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
