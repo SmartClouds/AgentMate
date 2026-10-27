@@ -12,6 +12,7 @@ import {
   scriptedMachine,
 } from './bootstrap/testing/scriptedServer';
 import type { CoreTransport } from './connection/transport';
+import { LEGACY_CORE } from './coreLayout';
 import { DEV_SERVER_ID, DeployService, type DeployServiceDeps } from './service';
 import { DeployState } from './state';
 
@@ -363,6 +364,31 @@ describe('DeployService.health', () => {
     expect((await state.get('srv-1'))?.transport).toBe('bridge');
   });
 
+  it('follows a core that another computer moved to the Runova names', async () => {
+    const { service, state } = setup(
+      {},
+      {
+        healthOf: async () => ({
+          status: 'ok',
+          version: '1.64.0',
+          apiVersion: 1,
+          startedAtUnixMs: 99,
+          layout: 'runova',
+        }),
+      },
+    );
+    await state.set('srv-1', {
+      ...RECORD,
+      release: `${LEGACY_CORE.root}/releases/1.52.0-cdcdcdcdcdcd`,
+    });
+
+    expect((await service.health('srv-1')).layout).toBe('runova');
+    expect(await state.get('srv-1')).toMatchObject({
+      layout: 'runova',
+      release: '/opt/runova-core/releases/1.52.0-cdcdcdcdcdcd',
+    });
+  });
+
   it('says so for a server without a core', async () => {
     const { service } = setup();
 
@@ -391,5 +417,42 @@ describe('DeployService.health', () => {
 
     await expect(service.health('srv-1')).rejects.toThrow(/did not answer/);
     expect(released).toHaveBeenCalled();
+  });
+});
+
+describe('DeployService.updateCore', () => {
+  it('hands a core with no build for its processor over to SSH', async () => {
+    const { service, state } = setup();
+    await state.set('srv-1', { ...RECORD, architecture: 'riscv64' });
+
+    expect(await service.updateCore({ serverId: 'srv-1' })).toEqual({
+      outcome: 'needs-ssh',
+      reason: expect.stringMatching(/riscv64/),
+    });
+  });
+
+  it('refuses the DevHost', async () => {
+    const { service } = setup({}, { devCorePort: 7810 });
+
+    await expect(service.updateCore({ serverId: DEV_SERVER_ID })).rejects.toThrow(/DevHost/);
+  });
+});
+
+describe('DeployService.coreRelease', () => {
+  it('says whether servers can download the release themselves', async () => {
+    expect(await setup().service.coreRelease()).toEqual({
+      version: '1.53.0',
+      serverDownload: false,
+    });
+    expect(await setup({}, { releases: publicReleases() }).service.coreRelease()).toEqual({
+      version: '1.53.0',
+      serverDownload: true,
+    });
+  });
+
+  it('has none when this build carries no core', async () => {
+    const { service } = setup({}, { availableVersion: async () => null });
+
+    expect(await service.coreRelease()).toBeNull();
   });
 });

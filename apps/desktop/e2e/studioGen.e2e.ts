@@ -193,8 +193,12 @@ test('makes a picture after confirming its price, and finishes a clip after a re
       { timeout: 60_000 },
     )
     .toEqual(['Generated clip 1.mp4:video', 'Generated picture 1.png:image']);
-  const clip = (await jobs(second.page, videoId)).find((j) => j.kind === 'video');
-  expect(clip).toMatchObject({ resumed: true, mediaName: 'Generated clip 1.mp4' });
+  // The job is marked imported just after the media item is saved, so it can trail the list.
+  await expect
+    .poll(async () => (await jobs(second.page, videoId)).find((j) => j.kind === 'video'), {
+      timeout: 10_000,
+    })
+    .toMatchObject({ resumed: true, mediaName: 'Generated clip 1.mp4' });
   const files = await second.page.evaluate(
     (id) => (window as unknown as Bridge).runova.studioMedia.list(id),
     videoId,
