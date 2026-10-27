@@ -389,7 +389,9 @@ jobs:
 
       - name: Unit and integration tests
         working-directory: apps/server-core
-        run: dotnet test --project tests/Runova.ServerCore.Tests --no-build --configuration Release
+        # A line per finished test: the runner is otherwise silent until the end, and a job cancelled
+        # at its time limit could not tell a stuck test from a busy machine.
+        run: dotnet test --project tests/Runova.ServerCore.Tests --no-build --configuration Release --output Detailed
 
       # The desktop's TypeScript contracts are generated from the C# ones. Regenerating must not
       # change anything, or someone changed a contract without committing the new TypeScript.
