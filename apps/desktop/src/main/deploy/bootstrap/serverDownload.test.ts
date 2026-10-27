@@ -121,9 +121,14 @@ describe('downloadCommand', () => {
   });
 });
 
+// The command is written for Linux servers, so this needs a sha256sum that checks a list the way
+// GNU coreutils does. The one macOS has is not that, so the run below would only test the Mac.
+const EMPTY_SHA256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 const hasShell =
-  spawnSync('sh', ['-c', 'command -v sha256sum >/dev/null && command -v printf >/dev/null'])
-    .status === 0;
+  spawnSync('sh', [
+    '-c',
+    `cd "$(mktemp -d)" && : > empty && printf '%s  %s\\n' ${EMPTY_SHA256} empty | sha256sum -c --status`,
+  ]).status === 0;
 
 /**
  * The command in a real shell, with a stand-in `curl` or `wget` first on the path: it saves what

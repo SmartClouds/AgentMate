@@ -273,10 +273,13 @@ describe('closing a pop-out', () => {
     expect(next).not.toBe(window);
   });
 
-  it('closes with the main window, and then its sessions just end', () => {
+  it('closes with the main window, and then its sessions just end', async () => {
     const service = owners();
-    const first = popOut('sess-7', service).window;
-    const second = popOut('sess-8', service).window;
+    // Off macOS: there the app keeps running and the pop-outs stay (the next test).
+    const [first, second] = await withPlatform('linux', () => [
+      popOut('sess-7', service).window,
+      popOut('sess-8', service).window,
+    ]);
 
     (main.window as FakeBrowserWindow).close();
 

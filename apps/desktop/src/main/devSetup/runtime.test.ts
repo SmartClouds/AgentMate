@@ -11,6 +11,17 @@ vi.mock('../windowsPath', () => ({
     Object.keys(env).find((key) => key.toUpperCase() === 'PATH') ?? 'PATH',
 }));
 
+// The folders native installers use (Homebrew's on macOS, ~/.local/bin and the like) are added to
+// every probe's PATH; on a machine with pnpm in one of them the "absent" test would find it.
+vi.mock('../toolPaths', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../toolPaths')>();
+  return {
+    ...actual,
+    getExtraToolPathDirs: async () => [],
+    withToolPath: async (env?: NodeJS.ProcessEnv) => ({ ...(env ?? process.env) }),
+  };
+});
+
 // Whatever these tests do, nothing may reach the real registry or a real shell startup file.
 const userPath = vi.hoisted(() => ({
   readRegistryPath: vi.fn(async () => null),
