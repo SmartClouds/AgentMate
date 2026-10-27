@@ -78,6 +78,44 @@ function writeFakeClaude(version = '9.9.9', dir = binDir): void {
   chmodSync(script, 0o755);
 }
 
+/** On Windows the probe goes through cmd.exe, so System32 joins the fake PATH for it to start. */
+function letCmdStart(): void {
+  if (process.platform !== 'win32') return;
+  const key = Object.keys(process.env).find((one) => one.toUpperCase() === 'PATH') ?? 'PATH';
+  const system32 = join(process.env.SystemRoot ?? 'C:\\Windows', 'System32');
+  vi.stubEnv(key, [binDir, system32].join(delimiter));
+}
+
+/** A `claude` on PATH whose version command exits non-zero, printing `message` to stderr. */
+function writeFailingClaude(message: string, alsoPrint = ''): void {
+  letCmdStart();
+  if (process.platform === 'win32') {
+    writeFileSync(
+      join(binDir, 'claude.cmd'),
+      [
+        '@echo off',
+        ...(alsoPrint ? [`echo ${alsoPrint}`] : []),
+        `echo ${message} 1>&2`,
+        'exit /b 1',
+        '',
+      ].join('\r\n'),
+    );
+    return;
+  }
+  const script = join(binDir, 'claude');
+  writeFileSync(
+    script,
+    [
+      '#!/bin/sh',
+      ...(alsoPrint ? [`echo "${alsoPrint}"`] : []),
+      `echo "${message}" >&2`,
+      'exit 1',
+      '',
+    ].join('\n'),
+  );
+  chmodSync(script, 0o755);
+}
+
 function claude(list: InstalledCli[]): InstalledCli | undefined {
   return list.find((one) => one.id === 'claude-code');
 }
@@ -179,6 +217,50 @@ describe('detecting installed CLIs', () => {
     },
   );
 
+  it('flags a CLI that is found but fails to start, and says what it printed', async () => {
+    // What an npm copy with a broken claude.exe looked like: on PATH, so "installed", while
+    // every terminal got "not a valid application for this OS platform".
+    writeFailingClaude('The system cannot execute the specified program.');
+
+    const found = claude(await invoke<InstalledCli[]>(IPC.cli.detectAll, true));
+
+    expect(found?.installed).toBe(true);
+    expect(found?.version).toBeNull();
+    expect(found?.runError).toBe('The system cannot execute the specified program.');
+  });
+
+  it('does not flag a CLI that prints its version and still exits non-zero', async () => {
+    writeFailingClaude('some warning', '9.9.9 (Claude Code)');
+
+    const found = claude(await invoke<InstalledCli[]>(IPC.cli.detectAll, true));
+
+    expect(found?.installed).toBe(true);
+    expect(found?.runError).toBeUndefined();
+  });
+
+  it('does not flag a CLI that answers normally', async () => {
+    letCmdStart();
+    writeFakeClaude();
+
+    const found = claude(await invoke<InstalledCli[]>(IPC.cli.detectAll, true));
+
+    expect(found?.version).toContain('9.9.9');
+    expect(found?.runError).toBeUndefined();
+  });
+
+  it.runIf(process.platform === 'win32')(
+    'does not blame the CLI when cmd.exe itself cannot start',
+    async () => {
+      // PATH here holds only the fake folder, so cmd.exe is nowhere to be found.
+      writeFakeClaude();
+
+      const found = claude(await invoke<InstalledCli[]>(IPC.cli.detectAll, true));
+
+      expect(found?.installed).toBe(true);
+      expect(found?.runError).toBeUndefined();
+    },
+  );
+
   it('reports one that is nowhere on PATH as missing', async () => {
     const found = claude(await invoke<InstalledCli[]>(IPC.cli.detectAll, true));
 
@@ -275,6 +357,33 @@ describe('install and update commands', () => {
     await expect(invoke(IPC.cli.getUpdateCommand, cli.id)).resolves.toBe(
       `npm install -g ${pkg}@latest`,
     );
+  });
+
+  it('reinstalls a broken npm copy with npm rather than the vendor installer', async () => {
+    const pkg = '@anthropic-ai/claude-code';
+    writeTree(binDir, {
+      [`node_modules/${pkg}/bin/claude.exe`]: '',
+      [process.platform === 'win32' ? 'claude.cmd' : 'claude']:
+        process.platform === 'win32'
+          ? '@echo off\r\n"%dp0%\\node_modules\\@anthropic-ai\\claude-code\\bin\\claude.exe" %*\r\nexit /b 1\r\n'
+          : `#!/bin/sh\n# "$basedir/node_modules/${pkg}/bin/claude.exe"\nexit 1\n`,
+    });
+    if (process.platform !== 'win32') chmodSync(join(binDir, 'claude'), 0o755);
+    await invoke(IPC.cli.detectAll, true);
+
+    await expect(invoke(IPC.cli.getReinstallCommand, 'claude-code')).resolves.toBe(
+      `npm install -g ${pkg}@latest`,
+    );
+  });
+
+  it('reinstalls a copy no package manager owns with the install command', async () => {
+    writeFailingClaude('cannot execute binary file');
+    await invoke(IPC.cli.detectAll, true);
+
+    await expect(invoke(IPC.cli.getReinstallCommand, 'claude-code')).resolves.toBe(
+      await invoke(IPC.cli.getInstallCommand, 'claude-code'),
+    );
+    await expect(invoke(IPC.cli.getReinstallCommand, 'not-a-cli')).resolves.toBeNull();
   });
 
   it("keeps the catalog's update for a copy no package manager owns", async () => {

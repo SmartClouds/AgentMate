@@ -17,6 +17,7 @@ import {
   EmptyState,
   GLASS_CARD,
   NoMatches,
+  Notice,
   SearchPill,
   TOOLBAR,
   UpdateSummary,
@@ -85,6 +86,15 @@ export default function CliManagerPage(): React.JSX.Element {
     await openCommandTerminal({ command, name: cliName, verb: 'install' });
   }
 
+  async function handleReinstall(cliId: string, cliName: string): Promise<void> {
+    const command = await window.runova.cli.getReinstallCommand(cliId);
+    if (!command) {
+      toast.error(`No install command available for ${cliName} on this OS.`);
+      return;
+    }
+    await openCommandTerminal({ command, name: cliName, verb: 'reinstall' });
+  }
+
   async function handleCheckForUpdate(
     cli: CliDefinition,
     currentVersion: string | null,
@@ -132,9 +142,11 @@ export default function CliManagerPage(): React.JSX.Element {
   }
 
   async function handleCheckAllForUpdates(): Promise<void> {
-    const installedClis = CLI_REGISTRY.filter(
-      (cli) => cliQuery.data?.find((c) => c.id === cli.id)?.installed,
-    );
+    // One that will not start has no version to compare, and its card already offers a reinstall.
+    const installedClis = CLI_REGISTRY.filter((cli) => {
+      const status = cliQuery.data?.find((c) => c.id === cli.id);
+      return status?.installed && !status.runError;
+    });
     if (installedClis.length === 0) {
       toast.info('No installed CLIs to check.');
       return;
@@ -281,9 +293,15 @@ export default function CliManagerPage(): React.JSX.Element {
                       ) : (
                         title
                       )}
-                      <Chip className="ml-auto" tone={status?.installed ? 'success' : 'neutral'}>
-                        {status?.installed ? (status.version ?? 'Installed') : 'Not installed'}
-                      </Chip>
+                      {status?.runError ? (
+                        <Chip className="ml-auto" tone="warning">
+                          Won't run
+                        </Chip>
+                      ) : (
+                        <Chip className="ml-auto" tone={status?.installed ? 'success' : 'neutral'}>
+                          {status?.installed ? (status.version ?? 'Installed') : 'Not installed'}
+                        </Chip>
+                      )}
                     </div>
                     <p className="text-xs leading-relaxed text-muted-foreground">
                       {cli.description}
@@ -291,8 +309,22 @@ export default function CliManagerPage(): React.JSX.Element {
                   </div>
                 </div>
 
+                {status?.runError && (
+                  <Notice tone="warning" size="sm" className="mx-4 mb-3">
+                    <p>
+                      Found at <span className="break-all font-mono">{status.executablePath}</span>{' '}
+                      but it fails to start. Reinstalling it usually fixes this.
+                    </p>
+                    <p className="mt-1 break-words text-muted-foreground">{status.runError}</p>
+                  </Notice>
+                )}
+
                 <div className="mt-auto flex flex-wrap items-center gap-1.5 px-4 pb-4">
-                  {status?.installed ? (
+                  {status?.runError ? (
+                    <Button size="sm" onClick={() => void handleReinstall(cli.id, cli.name)}>
+                      <TerminalSquare /> Reinstall
+                    </Button>
+                  ) : status?.installed ? (
                     <>
                       <Button
                         variant={isDefault ? 'tint' : 'soft'}

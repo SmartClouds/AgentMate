@@ -222,6 +222,59 @@ describe('CliManagerPage install', () => {
   });
 });
 
+describe('CliManagerPage broken install', () => {
+  const claudeBroken = detected({
+    id: 'claude-code',
+    version: null,
+    executablePath: 'C:\\Users\\me\\AppData\\Roaming\\npm\\claude.cmd',
+    runError: 'The system cannot execute the specified program.',
+  });
+
+  it("says a CLI that is found but won't start can't run, and why", async () => {
+    renderPage({ 'cli.detectAll': [claudeBroken] });
+
+    await screen.findByRole('heading', { name: 'Claude Code CLI' });
+    const card = cliCard('Claude Code CLI');
+    expect(within(card).getByText("Won't run")).toBeTruthy();
+    expect(within(card).getByText(/fails to start/)).toBeTruthy();
+    expect(within(card).getByText(claudeBroken.executablePath!)).toBeTruthy();
+    expect(within(card).getByText('The system cannot execute the specified program.')).toBeTruthy();
+    expect(within(card).queryByRole('button', { name: 'Set as default' })).toBeNull();
+  });
+
+  it('puts the reinstall command in a terminal for the user to confirm', async () => {
+    const { user, bridge } = renderPage({
+      'cli.detectAll': [claudeBroken],
+      'cli.getReinstallCommand': async () => 'npm install -g @anthropic-ai/claude-code@latest',
+      'cli.checkCommandPrerequisite': async () => null,
+    });
+    await screen.findByRole('heading', { name: 'Claude Code CLI' });
+
+    await user.click(within(cliCard('Claude Code CLI')).getByRole('button', { name: /Reinstall/ }));
+
+    await waitFor(() =>
+      expect(toast.info).toHaveBeenCalledWith(
+        'Press Enter in the terminal to reinstall Claude Code CLI.',
+      ),
+    );
+    expect(bridge.$fn('cli.getReinstallCommand')).toHaveBeenCalledWith('claude-code');
+    const session = useTerminalStore
+      .getState()
+      .sessions.find((one) => one.title === 'Reinstall Claude Code CLI');
+    expect(session?.initialInput).toBe('npm install -g @anthropic-ai/claude-code@latest');
+  });
+
+  it('leaves a CLI that will not start out of the update check', async () => {
+    const { user, bridge } = renderPage({ 'cli.detectAll': [claudeBroken] });
+    await screen.findByRole('heading', { name: 'Claude Code CLI' });
+
+    await user.click(screen.getByRole('button', { name: /Check all for updates/ }));
+
+    await waitFor(() => expect(toast.info).toHaveBeenCalledWith('No installed CLIs to check.'));
+    expect(() => bridge.$fn('cli.checkForUpdate')).toThrow();
+  });
+});
+
 describe('CliManagerPage settings', () => {
   it('saves the arguments typed for a CLI and previews the command they build', async () => {
     const { user, bridge } = renderPage({ 'cli.detectAll': [claudeInstalled] });

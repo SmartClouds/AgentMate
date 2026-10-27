@@ -555,6 +555,9 @@ const cli = {
     ipcRenderer.invoke(IPC.cli.checkForUpdate, cliId, currentVersion),
   getUpdateCommand: (cliId: string): Promise<string | null> =>
     ipcRenderer.invoke(IPC.cli.getUpdateCommand, cliId),
+  /** Puts a fresh copy over one that is found but will not start, through whoever installed it. */
+  getReinstallCommand: (cliId: string): Promise<string | null> =>
+    ipcRenderer.invoke(IPC.cli.getReinstallCommand, cliId),
   /** What `command` needs that this machine lacks (Node.js for npm, say), or null. */
   checkCommandPrerequisite: (command: string): Promise<CommandPrerequisite | null> =>
     ipcRenderer.invoke(IPC.cli.checkCommandPrerequisite, command),

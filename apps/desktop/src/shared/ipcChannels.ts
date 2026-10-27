@@ -50,6 +50,7 @@ export const IPC = {
     getInstallCommand: 'cli:getInstallCommand',
     checkForUpdate: 'cli:checkForUpdate',
     getUpdateCommand: 'cli:getUpdateCommand',
+    getReinstallCommand: 'cli:getReinstallCommand',
     checkCommandPrerequisite: 'cli:checkCommandPrerequisite',
   },
   terminal: {

@@ -985,6 +985,11 @@ export interface InstalledCli {
   version: string | null;
   executablePath: string | null;
   lastCheckedAt: string;
+  /**
+   * Set when the executable was found but its version command failed outright, which is what a
+   * half-finished update or a wrong-platform binary looks like. Holds the first line it printed.
+   */
+  runError?: string;
 }
 
 export interface CliUpdateCheckResult {

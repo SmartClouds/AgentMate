@@ -235,6 +235,23 @@ export function updateCommandFor({
   return catalogCommand;
 }
 
+/**
+ * The command that puts a fresh copy over one that is found but will not start. The CLI's own
+ * updater is no use there, since it is the thing that cannot run, so a package manager copy is
+ * reinstalled through that manager and anything else gets the catalog's install command again.
+ */
+export function reinstallCommandFor({
+  catalogCommand,
+  manager,
+  pypiPackage,
+}: ManagedCommandInput): string | null {
+  if (!manager) return catalogCommand;
+  if (manager.kind === 'brew') return `brew reinstall ${manager.name}`;
+  if (manager.kind === 'npm') return `npm install -g ${manager.pkg}@latest`;
+  if (pypiPackage) return `python -m pip install --force-reinstall ${pypiPackage}`;
+  return catalogCommand;
+}
+
 /** Same idea as updateCommandFor, for the uninstall button. */
 export function uninstallCommandFor({
   catalogCommand,

@@ -79,12 +79,39 @@ export class FakeSession {
   }
 }
 
+/** Stands in for the engine's `ClipboardData`: a list of MIME type and value pairs. */
+export class FakeClipboardData {
+  entries: { mimeType: string; value: string | Uint8Array }[] = [];
+  addText(mimeType: string, text: string): void {
+    this.entries.push({ mimeType, value: text });
+  }
+  addBinary(mimeType: string, binary: Uint8Array): void {
+    this.entries.push({ mimeType, value: binary });
+  }
+  isEmpty(): boolean {
+    return this.entries.length === 0;
+  }
+  items(): { mimeType: () => string; value: () => string | Uint8Array }[] {
+    return this.entries.map((entry) => ({
+      mimeType: () => entry.mimeType,
+      value: () => entry.value,
+    }));
+  }
+}
+
 /** Stands in for the engine's `SessionBuilder`. Builder calls chain; connect hands back a session. */
 export class FakeSessionBuilder {
   calls: string[] = [];
   session = new FakeSession();
+  /** What the engine would call when the server's clipboard changes. */
+  remoteClipboardChanged: ((data: FakeClipboardData) => void) | null = null;
   renderCanvas(): this {
     this.calls.push('renderCanvas');
+    return this;
+  }
+  remoteClipboardChangedCallback(callback: (data: FakeClipboardData) => void): this {
+    this.calls.push('remoteClipboardChangedCallback');
+    this.remoteClipboardChanged = callback;
     return this;
   }
   async connect(): Promise<FakeSession> {
@@ -122,6 +149,6 @@ export const Backend = {
   },
   InputTransaction: FakeInputTransaction,
   SessionBuilder: FakeSessionBuilder,
-  ClipboardData: class {},
+  ClipboardData: FakeClipboardData,
   DeviceEvent: FakeDeviceEvent,
 };

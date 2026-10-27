@@ -2,7 +2,7 @@ import type { CommandPrerequisite } from '@shared/apiTypes';
 import { toast } from 'sonner';
 import { useTerminalStore } from '@/stores/terminalStore';
 
-export type CommandVerb = 'install' | 'update' | 'uninstall';
+export type CommandVerb = 'install' | 'reinstall' | 'update' | 'uninstall';
 
 /**
  * Types an install, update or uninstall command into a new terminal session for the user to

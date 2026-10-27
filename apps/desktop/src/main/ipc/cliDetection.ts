@@ -13,6 +13,7 @@ import { checkCommandPrerequisite } from '../commandPrerequisite';
 import {
   grokInstalledWithNpm,
   installManagerOf,
+  reinstallCommandFor,
   resolveExecutable,
   updateCommandFor,
 } from '../installMethod';
@@ -34,6 +35,31 @@ const PROBE_CONCURRENCY = 4;
 interface VersionProbe {
   stdout: string;
   ok: boolean;
+  /** Why the command failed when it ended on its own, as opposed to running past the timeout. */
+  failure?: string;
+}
+
+const VERSION_PATTERN = /\d+\.\d+\.\d+[\w.-]*/;
+
+/**
+ * The first line a failed version command printed, or its exit code when it printed nothing.
+ * Undefined when nothing ran at all (cmd.exe itself missing from PATH, say), which says nothing
+ * about the CLI.
+ */
+function failureOf(
+  error: Error & { code?: unknown },
+  stdout: string,
+  stderr: string,
+): string | undefined {
+  if (typeof error.code !== 'number') return undefined;
+  // A CLI that prints its version and still exits non-zero runs fine.
+  if (VERSION_PATTERN.test(`${stdout}\n${stderr}`)) return undefined;
+  const line = `${stderr}\n${stdout}`
+    .split(/\r?\n/)
+    .map((one) => one.trim())
+    .find(Boolean);
+  // Windows' "not compatible with the version of Windows" line runs past 250 with the path in it.
+  return line ? line.slice(0, 400) : `Exited with code ${error.code}`;
 }
 
 /**
@@ -68,8 +94,12 @@ async function probeVersion(
       clearTimeout(timer);
       resolve(probe);
     };
-    const callback = (error: Error | null, stdout: string): void => {
-      finish({ stdout: stdout ?? '', ok: !error });
+    const callback = (error: Error | null, stdout: string, stderr: string): void => {
+      if (!error) {
+        finish({ stdout: stdout ?? '', ok: true });
+        return;
+      }
+      finish({ stdout: '', ok: false, failure: failureOf(error, stdout ?? '', stderr ?? '') });
     };
     const child: ChildProcess =
       process.platform === 'win32'
@@ -104,7 +134,7 @@ async function detectCli(cli: CliDefinition): Promise<InstalledCli> {
   // middle of updating itself, a slow cold start). Otherwise the check answering at all is proof.
   const installed = executablePath !== null || probe.ok;
   const stdout = probe.ok ? probe.stdout : '';
-  const versionMatch = stdout.match(/\d+\.\d+\.\d+[\w.-]*/);
+  const versionMatch = stdout.match(VERSION_PATTERN);
   return {
     id: cli.id,
     installed,
@@ -115,6 +145,10 @@ async function detectCli(cli: CliDefinition): Promise<InstalledCli> {
       : null,
     executablePath,
     lastCheckedAt,
+    // Still counted as installed, since it is there, but the CLI Manager offers a reinstall: an
+    // npm copy whose binary an interrupted update left behind looked fine here and failed in
+    // every terminal with "not a valid application for this OS platform".
+    ...(executablePath !== null && probe.failure ? { runError: probe.failure } : {}),
   };
 }
 
@@ -217,6 +251,32 @@ export function registerCliDetectionHandlers(): void {
       const detected = (await detectAllClis(false)).find((one) => one.id === cli.id);
       if (!detected?.executablePath) return catalogCommand;
       return updateCommandFor({
+        catalogCommand,
+        manager: await installManagerOf(detected.executablePath),
+        pypiPackage: cli.updateCheck?.type === 'pypi' ? cli.updateCheck.package : undefined,
+      });
+    },
+  );
+
+  ipcMain.handle(
+    IPC.cli.getReinstallCommand,
+    async (_event, cliId: string): Promise<string | null> => {
+      const cli = getCliDefinition(cliId);
+      if (!cli) return null;
+      const catalogCommand = getInstallCommandForCurrentOS(cli, process.platform as SupportedOS);
+      if (
+        cli.id === 'grok-cli' &&
+        process.platform === 'win32' &&
+        cli.updateCheck?.type === 'npm' &&
+        (await grokInstalledWithNpm())
+      ) {
+        return `npm install -g ${cli.updateCheck.package}@latest`;
+      }
+      // The broken copy is the one first on PATH, so a vendor installer run over an npm copy would
+      // add a working second copy that the shell still never reaches.
+      const detected = (await detectAllClis(false)).find((one) => one.id === cli.id);
+      if (!detected?.executablePath) return catalogCommand;
+      return reinstallCommandFor({
         catalogCommand,
         manager: await installManagerOf(detected.executablePath),
         pypiPackage: cli.updateCheck?.type === 'pypi' ? cli.updateCheck.package : undefined,

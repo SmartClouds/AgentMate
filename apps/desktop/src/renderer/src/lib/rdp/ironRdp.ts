@@ -10,6 +10,7 @@ import {
   RdpFileTransferProvider,
 } from '@devolutions/iron-remote-desktop-rdp';
 import type { RdpProxyErrorPayload } from '@shared/apiTypes';
+import { repairRemoteClipboard } from './clipboardHtml';
 import { describeFailure, describeProxyFailure, type RdpFailure } from './failure';
 
 /**
@@ -62,12 +63,15 @@ export type RdpSession = Awaited<ReturnType<InstanceType<RdpBackend['SessionBuil
  * Returns `backend` with a SessionBuilder that reports the session it connects. `UserInteraction`
  * has no input API, but the element builds its session through `module.SessionBuilder`, so this
  * is where the session can be picked up. The builder is the engine's own object with only
- * `connect` patched, because the WebAssembly classes don't support being subclassed.
+ * `connect` and the server clipboard callback patched, because the WebAssembly classes don't
+ * support being subclassed.
  */
 export function wrapBackend(
   backend: RdpBackend,
   onSession: (session: RdpSession) => void,
 ): RdpBackend {
+  type ClipboardData = InstanceType<RdpBackend['ClipboardData']>;
+
   function SessionBuilder(): InstanceType<RdpBackend['SessionBuilder']> {
     const builder = new backend.SessionBuilder();
     const connect = builder.connect.bind(builder);
@@ -76,6 +80,12 @@ export function wrapBackend(
       onSession(session);
       return session;
     };
+    // A link copied on the server can arrive as garbled text (see clipboardHtml.ts).
+    const onRemoteClipboard = builder.remoteClipboardChangedCallback.bind(builder);
+    builder.remoteClipboardChangedCallback = (callback: (data: ClipboardData) => void) =>
+      onRemoteClipboard((data: ClipboardData) =>
+        callback(repairRemoteClipboard(data, () => new backend.ClipboardData())),
+      );
     return builder;
   }
   return {

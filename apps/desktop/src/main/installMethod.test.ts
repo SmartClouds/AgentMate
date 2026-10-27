@@ -5,6 +5,7 @@ import { tempDir, writeTree } from '../test/main/fixtures';
 import {
   grokInstalledWithNpm,
   installManagerOf,
+  reinstallCommandFor,
   resolveExecutable,
   uninstallCommandFor,
   updateCommandFor,
@@ -329,6 +330,48 @@ describe('updateCommandFor', () => {
         manager: { kind: 'pip' },
       }),
     ).toBe('curl -LsSf https://x.sh | sh');
+  });
+});
+
+describe('reinstallCommandFor', () => {
+  it('reinstalls an npm copy with npm, since its own updater is what fails to start', () => {
+    // The copy that broke on a real machine: `claude.ps1` from npm, whose claude.exe Windows
+    // refused as "not a valid application for this OS platform". `claude update` cannot run, and
+    // the vendor installer would add a second copy behind it on PATH.
+    expect(
+      reinstallCommandFor({
+        catalogCommand: 'irm https://claude.ai/install.ps1 | iex',
+        manager: { kind: 'npm', pkg: '@anthropic-ai/claude-code' },
+      }),
+    ).toBe('npm install -g @anthropic-ai/claude-code@latest');
+  });
+
+  it('goes through Homebrew or pip for the copies they own', () => {
+    expect(
+      reinstallCommandFor({
+        catalogCommand: 'curl -fsSL https://claude.ai/install.sh | bash',
+        manager: { kind: 'brew', name: 'claude-code' },
+      }),
+    ).toBe('brew reinstall claude-code');
+    expect(
+      reinstallCommandFor({
+        catalogCommand: 'pipx install semgrep',
+        manager: { kind: 'pip' },
+        pypiPackage: 'semgrep',
+      }),
+    ).toBe('python -m pip install --force-reinstall semgrep');
+  });
+
+  it('runs the catalog install again for a copy no package manager owns', () => {
+    expect(
+      reinstallCommandFor({
+        catalogCommand: 'irm https://claude.ai/install.ps1 | iex',
+        manager: null,
+      }),
+    ).toBe('irm https://claude.ai/install.ps1 | iex');
+    expect(
+      reinstallCommandFor({ catalogCommand: 'pip install aider-chat', manager: { kind: 'pip' } }),
+    ).toBe('pip install aider-chat');
   });
 });
 

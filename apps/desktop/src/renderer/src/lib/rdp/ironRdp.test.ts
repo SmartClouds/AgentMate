@@ -1,6 +1,11 @@
 import type { RdpProxyErrorPayload } from '@shared/apiTypes';
 import { describe, expect, it, vi } from 'vitest';
-import { Backend, FakeSession, FakeSessionBuilder } from '../../../../test/renderer/mocks/ironRdp';
+import {
+  Backend,
+  FakeClipboardData,
+  FakeSession,
+  FakeSessionBuilder,
+} from '../../../../test/renderer/mocks/ironRdp';
 import { cleanEngineText, describeConnectError, mountRemoteDesktop, wrapBackend } from './ironRdp';
 
 describe('wrapBackend', () => {
@@ -25,6 +30,27 @@ describe('wrapBackend', () => {
     expect(session).toBeInstanceOf(FakeSession);
     expect(onSession).toHaveBeenCalledWith(session);
     expect(builder.calls).toEqual(['renderCanvas', 'connect']);
+  });
+
+  it('repairs server clipboard data before the element sees it', () => {
+    const wrapped = wrapBackend(Backend as never, () => undefined) as unknown as typeof Backend;
+    const builder = new wrapped.SessionBuilder();
+    const received: FakeClipboardData[] = [];
+    expect(builder.remoteClipboardChangedCallback((data) => received.push(data))).toBe(builder);
+
+    // "Version:0.9\r\n<!--StartFragment-->..." read as UTF-16, like the engine's race does.
+    const cfHtml =
+      'Version:0.9\r\n<!--StartFragment--><a href="https://example.com/x">Title</a><!--EndFragment-->';
+    const garbled = new TextDecoder('utf-16le').decode(new TextEncoder().encode(`${cfHtml}\0`));
+    const data = new FakeClipboardData();
+    data.addText('text/plain', garbled);
+    builder.remoteClipboardChanged?.(data);
+
+    expect(received).toHaveLength(1);
+    expect(received[0]?.entries).toEqual([
+      { mimeType: 'text/html', value: '<a href="https://example.com/x">Title</a>' },
+      { mimeType: 'text/plain', value: 'https://example.com/x' },
+    ]);
   });
 
   it('passes a failed connect through without calling back', async () => {
