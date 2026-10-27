@@ -18,11 +18,12 @@ import {
   writeRunSettings,
 } from '../ai/runSettings';
 import { listProjects, studioAiClient, studioClient } from '../client';
-import { errorMessage } from '../format';
+import { DIALOG_BODY, errorMessage } from '../format';
 import {
   appQueryKeys,
   Button,
   Combobox,
+  cn,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -217,91 +218,100 @@ export function NewVideoDialog({
             scenario it writes, or write one yourself.
           </DialogDescription>
         </DialogHeader>
+        {/* The form adds no box of its own, so the fields scroll in the dialog's middle row
+            while the buttons stay in view below them. */}
         <form
-          className="max-h-[70vh] space-y-4 overflow-y-auto pr-1"
+          className="contents"
           onSubmit={(event) => {
             event.preventDefault();
             if (ready && !blocked) create.mutate();
           }}
         >
-          {(recipes.data?.length ?? 0) > 0 && (
+          <div className={cn(DIALOG_BODY, 'space-y-4')}>
+            {(recipes.data?.length ?? 0) > 0 && (
+              <div className="space-y-1.5">
+                <Label>Start from</Label>
+                <Combobox
+                  ariaLabel="Start from"
+                  options={recipeOptions}
+                  value={recipe}
+                  onChange={(id) => applyRecipe(recipes.data?.find((r) => r.id === id))}
+                />
+              </div>
+            )}
             <div className="space-y-1.5">
-              <Label>Start from</Label>
-              <Combobox
-                ariaLabel="Start from"
-                options={recipeOptions}
-                value={recipe}
-                onChange={(id) => applyRecipe(recipes.data?.find((r) => r.id === id))}
+              <Label htmlFor={titleId}>Title</Label>
+              <Input
+                id={titleId}
+                value={title}
+                dir="auto"
+                autoFocus
+                maxLength={200}
+                placeholder={useAi ? 'Leave empty and the AI names it' : 'Product launch teaser'}
+                onChange={(event) => setTitle(event.target.value)}
               />
             </div>
-          )}
-          <div className="space-y-1.5">
-            <Label htmlFor={titleId}>Title</Label>
-            <Input
-              id={titleId}
-              value={title}
-              dir="auto"
-              autoFocus
-              maxLength={200}
-              placeholder={useAi ? 'Leave empty and the AI names it' : 'Product launch teaser'}
-              onChange={(event) => setTitle(event.target.value)}
-            />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>Belongs to</Label>
-              <Combobox ariaLabel="Belongs to" options={owners} value={owner} onChange={setOwner} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Belongs to</Label>
+                <Combobox
+                  ariaLabel="Belongs to"
+                  options={owners}
+                  value={owner}
+                  onChange={setOwner}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Language</Label>
+                <Combobox
+                  ariaLabel="Language"
+                  options={languages}
+                  value={language}
+                  onChange={setLanguage}
+                />
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>Language</Label>
-              <Combobox
-                ariaLabel="Language"
-                options={languages}
-                value={language}
-                onChange={setLanguage}
-              />
+            <fieldset className="space-y-1.5">
+              <legend className="text-sm font-medium">Format</legend>
+              <div className={SEGMENT_TRACK} role="radiogroup" aria-label="Format">
+                {ASPECTS.map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={aspect === value}
+                    className={segmentClass(aspect === value)}
+                    onClick={() => setAspect(value)}
+                  >
+                    {ASPECT_LABELS[value]}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            <div className="flex items-center gap-2">
+              <Switch id={aiId} checked={useAi} onCheckedChange={setUseAi} />
+              <Label htmlFor={aiId}>Write the scenario with AI</Label>
             </div>
+            {useAi && (
+              <BriefFields value={brief} onChange={setBrief} aspect={aspect} language={language} />
+            )}
+            {where && (
+              <p className="text-xs text-muted-foreground">
+                Saved in <span className="break-all font-mono">{where}</span>
+              </p>
+            )}
+            {blocked && (
+              <Notice tone="destructive" size="sm">
+                {storage.data?.check.problems.find((p) => p.level === 'error')?.message} Change the
+                folder in the project's Studio tab first.
+              </Notice>
+            )}
+            {error && (
+              <Notice tone="destructive" size="sm">
+                {error}
+              </Notice>
+            )}
           </div>
-          <fieldset className="space-y-1.5">
-            <legend className="text-sm font-medium">Format</legend>
-            <div className={SEGMENT_TRACK} role="radiogroup" aria-label="Format">
-              {ASPECTS.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  role="radio"
-                  aria-checked={aspect === value}
-                  className={segmentClass(aspect === value)}
-                  onClick={() => setAspect(value)}
-                >
-                  {ASPECT_LABELS[value]}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-          <div className="flex items-center gap-2">
-            <Switch id={aiId} checked={useAi} onCheckedChange={setUseAi} />
-            <Label htmlFor={aiId}>Write the scenario with AI</Label>
-          </div>
-          {useAi && (
-            <BriefFields value={brief} onChange={setBrief} aspect={aspect} language={language} />
-          )}
-          {where && (
-            <p className="text-xs text-muted-foreground">
-              Saved in <span className="break-all font-mono">{where}</span>
-            </p>
-          )}
-          {blocked && (
-            <Notice tone="destructive" size="sm">
-              {storage.data?.check.problems.find((p) => p.level === 'error')?.message} Change the
-              folder in the project's Studio tab first.
-            </Notice>
-          )}
-          {error && (
-            <Notice tone="destructive" size="sm">
-              {error}
-            </Notice>
-          )}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel

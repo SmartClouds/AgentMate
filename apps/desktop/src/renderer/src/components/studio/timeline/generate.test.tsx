@@ -69,7 +69,7 @@ function renderDialog(jobs: GenJobView[] = []) {
 describe('GenerateDialog', () => {
   it('shows the price, asks once more, and starts with the price that was agreed (AC3)', async () => {
     const { user, bridge } = renderDialog();
-    expect(await screen.findByText('$0.03. $0.0336 for one 1K picture.')).toBeTruthy();
+    expect(await screen.findByText('Costs about $0.03. $0.0336 for one 1K picture.')).toBeTruthy();
     await user.type(screen.getByLabelText('What to make'), 'A red bicycle');
     confirm.mockResolvedValueOnce(false);
     await user.click(screen.getByRole('button', { name: 'Generate' }));
@@ -102,7 +102,7 @@ describe('GenerateDialog', () => {
     const { user, bridge } = renderDialog();
     await user.click(await screen.findByRole('radio', { name: 'Clip' }));
     expect(screen.getByText('Google Gemini Omni')).toBeTruthy();
-    expect(await screen.findByText('$0.80. About 8 seconds.')).toBeTruthy();
+    expect(await screen.findByText('Costs about $0.80. About 8 seconds.')).toBeTruthy();
     await user.click(screen.getByRole('radio', { name: 'Picture' }));
     await user.click(screen.getByRole('radio', { name: 'OpenAI' }));
     await user.click(screen.getByRole('radio', { name: 'High' }));

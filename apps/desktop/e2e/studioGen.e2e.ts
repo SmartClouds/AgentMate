@@ -128,7 +128,7 @@ test('makes a picture after confirming its price, and finishes a clip after a re
 
   // A picture: priced, confirmed, made, imported, then laid on the timeline.
   await expect(dialog.getByLabel('Estimate')).toHaveText(
-    /^\$0\.03\. \$0\.0336 for one 1K picture\./,
+    /^Costs about \$0\.03\. \$0\.0336 for one 1K picture\./,
   );
   await dialog.getByLabel('What to make').fill('A red bicycle against a blue wall');
   await dialog.getByRole('button', { name: 'Generate' }).click();
@@ -144,7 +144,7 @@ test('makes a picture after confirming its price, and finishes a clip after a re
 
   // A clip: the app is killed while Gemini is still making it.
   await dialog.getByRole('radio', { name: 'Clip' }).click();
-  await expect(dialog.getByLabel('Estimate')).toHaveText(/^\$0\.80\./);
+  await expect(dialog.getByLabel('Estimate')).toHaveText(/^Costs about \$0\.80\./);
   await dialog.getByLabel('What to make').fill('Waves rolling onto a beach');
   await dialog.getByRole('button', { name: 'Generate' }).click();
   await page

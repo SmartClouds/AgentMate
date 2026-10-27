@@ -116,7 +116,7 @@ export function RecordDialog({
             />
           </div>
           <span className="w-20 text-right text-sm tabular-nums text-muted-foreground">
-            {recording || recorder.take ? formatSeconds(recorder.elapsedSeconds) : ''}
+            {formatSeconds(recorder.elapsedSeconds)}
           </span>
         </div>
         {recorder.take && (

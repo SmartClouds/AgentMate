@@ -2,7 +2,7 @@ import { CONSENT_STATEMENT, type VoiceProfileView } from '@runova/studio';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { studioAudioClient } from '../client';
-import { errorMessage, formatSeconds } from '../format';
+import { DIALOG_BODY, errorMessage, formatSeconds } from '../format';
 import {
   Button,
   Checkbox,
@@ -183,7 +183,7 @@ export function VoiceProfilesDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="grid-rows-[auto_minmax(0,1fr)] sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Voices</DialogTitle>
           <DialogDescription>
@@ -191,155 +191,152 @@ export function VoiceProfilesDialog({
             ElevenLabs once you upload it.
           </DialogDescription>
         </DialogHeader>
-
-        <section aria-label="Voice profiles" className="space-y-1.5">
-          {profiles.isLoading ? (
-            <Skeleton className="h-10 w-full" />
-          ) : (profiles.data ?? []).length === 0 ? (
-            <EmptyState
-              icon={Microphone}
-              size="sm"
-              title="No voices yet"
-              description="Record a few seconds below to make the first one."
-            />
-          ) : (
-            <ul className="space-y-1">
-              {(profiles.data ?? []).map((profile) => (
-                <li
-                  key={profile.id}
-                  aria-label={profile.name}
-                  className="flex items-center gap-3 rounded-md px-2 py-1.5 hover:bg-foreground/[0.03]"
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium" dir="auto">
-                      {profile.name}
-                    </span>
-                    <span className="block text-xs text-muted-foreground">
-                      {formatSeconds(profile.seconds)} recorded
-                    </span>
-                  </span>
-                  {profile.elevenlabsVoiceId ? (
-                    <Chip tone="success" dot>
-                      In ElevenLabs
-                    </Chip>
-                  ) : (
-                    <Button size="sm" variant="soft" onClick={() => void upload(profile)}>
-                      Upload to ElevenLabs
-                    </Button>
-                  )}
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    aria-label={`Delete ${profile.name}`}
-                    onClick={() => void remove(profile)}
-                  >
-                    <Trash2 />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section aria-label="New voice" className="space-y-3 border-t pt-3">
-          <div className="space-y-1.5">
-            <Label htmlFor={`${id}-name`}>New voice</Label>
-            <Input
-              id={`${id}-name`}
-              value={name}
-              dir="auto"
-              maxLength={80}
-              placeholder="Name it, such as My voice"
-              onChange={(event) => setName(event.target.value)}
-            />
-          </div>
-          <p
-            aria-label="Text to read"
-            className={cn(
-              'rounded-md bg-muted/40 p-3 text-base leading-relaxed',
-              scriptProps.className,
-            )}
-            dir={scriptProps.dir ?? 'auto'}
-          >
-            {script}
-          </p>
-          <div className="flex items-center gap-3">
-            {recording ? (
-              <Button onClick={recorder.stop}>
-                <StopCircle /> Stop
-              </Button>
+        <div className={cn(DIALOG_BODY, 'space-y-4')}>
+          <section aria-label="Voice profiles" className="space-y-1.5">
+            {profiles.isLoading ? (
+              <Skeleton className="h-10 w-full" />
+            ) : (profiles.data ?? []).length === 0 ? (
+              <EmptyState
+                icon={Microphone}
+                size="sm"
+                title="No voices yet"
+                description="Record a few seconds below to make the first one."
+              />
             ) : (
-              <Button
-                variant={recorder.take ? 'ghost' : 'default'}
-                disabled={!recorder.supported || recorder.state === 'starting' || save.isPending}
-                onClick={() => {
-                  clearTake();
-                  void recorder.start();
-                }}
-              >
-                <Microphone /> {recorder.take ? 'Record again' : 'Record'}
-              </Button>
+              <ul className="space-y-1">
+                {(profiles.data ?? []).map((profile) => (
+                  <li
+                    key={profile.id}
+                    aria-label={profile.name}
+                    className="flex items-center gap-3 rounded-md px-2 py-1.5 hover:bg-foreground/[0.03]"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium" dir="auto">
+                        {profile.name}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {formatSeconds(profile.seconds)} recorded
+                      </span>
+                    </span>
+                    {profile.elevenlabsVoiceId ? (
+                      <Chip tone="success" dot>
+                        In ElevenLabs
+                      </Chip>
+                    ) : (
+                      <Button size="sm" variant="soft" onClick={() => void upload(profile)}>
+                        Upload to ElevenLabs
+                      </Button>
+                    )}
+                    <Button
+                      size="icon-sm"
+                      variant="ghost"
+                      aria-label={`Delete ${profile.name}`}
+                      onClick={() => void remove(profile)}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
             )}
-            <div
-              role="meter"
-              aria-label="Microphone level"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={Math.round(recorder.level * 100)}
-              className="h-2 flex-1 overflow-hidden rounded-full bg-muted"
-            >
-              <div
-                className="h-full rounded-full bg-primary transition-[width] duration-75 motion-reduce:transition-none"
-                style={{ width: `${Math.round(recorder.level * 100)}%` }}
+          </section>
+
+          <section aria-label="New voice" className="space-y-3 border-t pt-3">
+            <div className="space-y-1.5">
+              <Label htmlFor={`${id}-name`}>New voice</Label>
+              <Input
+                id={`${id}-name`}
+                value={name}
+                dir="auto"
+                maxLength={80}
+                placeholder="Name it, such as My voice"
+                onChange={(event) => setName(event.target.value)}
               />
             </div>
-            <span className="w-16 text-right text-sm tabular-nums text-muted-foreground">
-              {recording
-                ? formatSeconds(recorder.elapsedSeconds)
-                : seconds !== null
-                  ? formatSeconds(seconds)
-                  : ''}
-            </span>
-          </div>
-          {recorder.error && (
-            <Notice tone="destructive" size="sm">
-              {recorder.error}
-            </Notice>
-          )}
-          {recorder.take && (
-            <div className="space-y-1.5">
-              <Label htmlFor={`${id}-said`}>What the take says</Label>
-              {listening ? (
-                <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Spinner /> Listening to the take
-                </p>
-              ) : (
-                <Textarea
-                  id={`${id}-said`}
-                  value={transcript}
-                  dir="auto"
-                  rows={2}
-                  className={persianTextProps(transcript).className}
-                  onChange={(event) => setTranscript(event.target.value)}
-                />
+            <p
+              aria-label="Text to read"
+              className={cn(
+                'rounded-md bg-muted/40 p-3 text-base leading-relaxed',
+                scriptProps.className,
               )}
+              dir={scriptProps.dir ?? 'auto'}
+            >
+              {script}
+            </p>
+            <div className="flex items-center gap-3">
+              {recording ? (
+                <Button onClick={recorder.stop}>
+                  <StopCircle /> Stop
+                </Button>
+              ) : (
+                <Button
+                  variant={recorder.take ? 'ghost' : 'default'}
+                  disabled={!recorder.supported || recorder.state === 'starting' || save.isPending}
+                  onClick={() => {
+                    clearTake();
+                    void recorder.start();
+                  }}
+                >
+                  <Microphone /> {recorder.take ? 'Record again' : 'Record'}
+                </Button>
+              )}
+              <div
+                role="meter"
+                aria-label="Microphone level"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(recorder.level * 100)}
+                className="h-2 flex-1 overflow-hidden rounded-full bg-muted"
+              >
+                <div
+                  className="h-full rounded-full bg-primary transition-[width] duration-75 motion-reduce:transition-none"
+                  style={{ width: `${Math.round(recorder.level * 100)}%` }}
+                />
+              </div>
+              <span className="w-16 text-right text-sm tabular-nums text-muted-foreground">
+                {recording ? formatSeconds(recorder.elapsedSeconds) : formatSeconds(seconds ?? 0)}
+              </span>
             </div>
-          )}
-          <label className="flex items-start gap-2 text-sm" htmlFor={`${id}-consent`}>
-            <Checkbox
-              id={`${id}-consent`}
-              checked={consent}
-              onCheckedChange={(checked) => setConsent(checked === true)}
-              className="mt-0.5"
-            />
-            <span>{CONSENT_STATEMENT}</span>
-          </label>
-          <div className="flex justify-end">
-            <Button disabled={!canSave || save.isPending} onClick={() => save.mutate()}>
-              {save.isPending && <Spinner />} Save voice
-            </Button>
-          </div>
-        </section>
+            {recorder.error && (
+              <Notice tone="destructive" size="sm">
+                {recorder.error}
+              </Notice>
+            )}
+            {recorder.take && (
+              <div className="space-y-1.5">
+                <Label htmlFor={`${id}-said`}>What the take says</Label>
+                {listening ? (
+                  <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Spinner /> Listening to the take
+                  </p>
+                ) : (
+                  <Textarea
+                    id={`${id}-said`}
+                    value={transcript}
+                    dir="auto"
+                    rows={2}
+                    className={persianTextProps(transcript).className}
+                    onChange={(event) => setTranscript(event.target.value)}
+                  />
+                )}
+              </div>
+            )}
+            <label className="flex items-start gap-2 text-sm" htmlFor={`${id}-consent`}>
+              <Checkbox
+                id={`${id}-consent`}
+                checked={consent}
+                onCheckedChange={(checked) => setConsent(checked === true)}
+                className="mt-0.5"
+              />
+              <span>{CONSENT_STATEMENT}</span>
+            </label>
+            <div className="flex justify-end">
+              <Button disabled={!canSave || save.isPending} onClick={() => save.mutate()}>
+                {save.isPending && <Spinner />} Save voice
+              </Button>
+            </div>
+          </section>
+        </div>
       </DialogContent>
     </Dialog>
   );

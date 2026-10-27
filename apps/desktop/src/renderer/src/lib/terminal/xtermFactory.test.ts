@@ -7,6 +7,8 @@ const fake = vi.hoisted(() => ({
   paste: vi.fn(async () => undefined),
   hasSelection: false,
   options: null as Record<string, unknown> | null,
+  webLinkOpen: null as ((event: MouseEvent, uri: string) => void) | null,
+  oscHandlers: new Map<number, (payload: string) => boolean>(),
 }));
 
 vi.mock('@xterm/xterm', () => ({
@@ -16,6 +18,12 @@ vi.mock('@xterm/xterm', () => ({
     }
     loadAddon = vi.fn();
     onData = vi.fn();
+    parser = {
+      registerOscHandler: (ident: number, handler: (payload: string) => boolean) => {
+        fake.oscHandlers.set(ident, handler);
+        return { dispose: () => fake.oscHandlers.delete(ident) };
+      },
+    };
     paste = vi.fn();
     input = vi.fn();
     hasSelection(): boolean {
@@ -31,7 +39,13 @@ vi.mock('@xterm/xterm', () => ({
 }));
 vi.mock('@xterm/xterm/css/xterm.css', () => ({}));
 vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
-vi.mock('@xterm/addon-web-links', () => ({ WebLinksAddon: class {} }));
+vi.mock('@xterm/addon-web-links', () => ({
+  WebLinksAddon: class {
+    constructor(open: (event: MouseEvent, uri: string) => void) {
+      fake.webLinkOpen = open;
+    }
+  },
+}));
 vi.mock('@/lib/terminal/chipPasteMode', () => ({ createChipPasteController: () => null }));
 vi.mock('@/lib/terminal/imageChipPreview', () => ({
   createImageChipPreview: () => ({ noteOutgoing: () => undefined }),
@@ -113,5 +127,105 @@ describe('createXterm options', () => {
     createXterm({ sessionId: () => 'session' });
     const family = String(fake.options?.fontFamily);
     expect(family.startsWith(`'${TERMINAL_RTL_FONT}', 'Cascadia Code'`)).toBe(true);
+  });
+});
+
+function click(fields: Partial<MouseEvent> = {}): MouseEvent {
+  return { ctrlKey: false, metaKey: false, ...fields } as MouseEvent;
+}
+
+type LinkHandler = {
+  activate: (event: MouseEvent, uri: string) => void;
+  allowNonHttpProtocols?: boolean;
+};
+
+describe('createXterm links', () => {
+  const openExternal = vi.fn(async () => undefined);
+  const confirm = vi.fn(() => true);
+
+  beforeEach(() => {
+    openExternal.mockClear();
+    confirm.mockClear();
+    vi.stubGlobal('window', {
+      matchMedia: () => ({ matches: false }),
+      runova: {
+        platform: 'darwin',
+        windowsBuild: null,
+        terminal: { write: vi.fn() },
+        shell: { openExternal },
+      },
+    });
+    vi.stubGlobal('confirm', confirm);
+    createXterm({ sessionId: () => 'session' });
+  });
+
+  // Claude Code prints its links with OSC 8. xterm's own handler for those asked "Do you want to
+  // navigate to ...?" and then opened a blank window that the main window turned away.
+  it('opens an OSC 8 link in the browser on Cmd+click, without asking first', () => {
+    const handler = fake.options?.linkHandler as LinkHandler | undefined;
+    expect(handler).toBeDefined();
+    handler?.activate(click({ metaKey: true }), 'https://example.com/docs');
+    expect(openExternal).toHaveBeenCalledWith('https://example.com/docs');
+    expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it('opens an OSC 8 link on Ctrl+click too', () => {
+    const handler = fake.options?.linkHandler as LinkHandler;
+    handler.activate(click({ ctrlKey: true }), 'https://example.com/');
+    expect(openExternal).toHaveBeenCalledWith('https://example.com/');
+  });
+
+  it('leaves a plain click on an OSC 8 link for selecting text', () => {
+    const handler = fake.options?.linkHandler as LinkHandler;
+    handler.activate(click(), 'https://example.com/');
+    expect(openExternal).not.toHaveBeenCalled();
+  });
+
+  it('only lets http and https OSC 8 links through, as the main process does', () => {
+    const handler = fake.options?.linkHandler as LinkHandler;
+    expect(handler.allowNonHttpProtocols).toBe(false);
+  });
+
+  it('opens a plain URL in the output the same way', () => {
+    fake.webLinkOpen?.(click(), 'https://example.com/plain');
+    expect(openExternal).not.toHaveBeenCalled();
+    fake.webLinkOpen?.(click({ metaKey: true }), 'https://example.com/plain');
+    expect(openExternal).toHaveBeenCalledWith('https://example.com/plain');
+  });
+});
+
+describe('createXterm copying', () => {
+  const writeText = vi.fn(async () => undefined);
+
+  beforeEach(() => {
+    writeText.mockClear();
+    fake.hasSelection = false;
+    fake.oscHandlers.clear();
+    vi.stubGlobal('window', {
+      matchMedia: () => ({ matches: false }),
+      runova: { platform: 'darwin', windowsBuild: null, terminal: { write: vi.fn() } },
+    });
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    createXterm({ sessionId: () => 'session' });
+  });
+
+  // With mouse tracking on (Claude Code's full-screen mode) a drag goes to the program. Shift
+  // forces a real selection elsewhere, but on a Mac xterm only honors Option with this set.
+  it('lets Option+drag select on a Mac while a program has the mouse', () => {
+    expect(fake.options?.macOptionClickForcesSelection).toBe(true);
+  });
+
+  it('copies the selection on Cmd+C', () => {
+    fake.hasSelection = true;
+    const event = keydown({ key: 'c', code: 'KeyC', keyCode: 67, metaKey: true });
+    expect(fake.keyHandler?.(event)).toBe(false);
+    expect(writeText).toHaveBeenCalledWith('selected');
+  });
+
+  it('puts text a program copies with OSC 52 on the clipboard', () => {
+    const handler = fake.oscHandlers.get(52);
+    expect(handler).toBeDefined();
+    expect(handler?.(`c;${btoa('copied text')}`)).toBe(true);
+    expect(writeText).toHaveBeenCalledWith('copied text');
   });
 });

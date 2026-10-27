@@ -3,11 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { ChangeItem } from '../ai/ProposalCard';
 import { studioClient } from '../client';
-import { errorMessage } from '../format';
+import { DIALOG_BODY, errorMessage } from '../format';
 import {
   Button,
   Code,
   Combobox,
+  cn,
   confirmDialog,
   Dialog,
   DialogContent,
@@ -197,7 +198,7 @@ export function CompareVersionsDialog({
             <CodeCompare videoId={videoId} change={codeOf} />
           </div>
         ) : (
-          <ul aria-label="Changes" className="max-h-[50vh] space-y-3 overflow-y-auto">
+          <ul aria-label="Changes" className={cn(DIALOG_BODY, 'space-y-3')}>
             {(changes.data ?? []).map((change, k) => (
               <li key={`${change.kind}-${k}`} className="space-y-1">
                 <ChangeItem change={change} />

@@ -36,13 +36,13 @@ export function StudioSettingsSection(): React.JSX.Element {
     onError: (error) => toast.error(errorMessage(error)),
   });
 
-  if (!settings.data) return <Skeleton className="h-40 w-full" />;
+  if (!settings.data) return <Skeleton className="h-40 w-full max-w-2xl" />;
   const data = settings.data;
   const capNumber = Number(cap);
   const capValid = Number.isInteger(capNumber) && capNumber >= 1 && capNumber <= 2000;
 
   return (
-    <div className="space-y-5">
+    <div className="max-w-2xl space-y-5">
       <div className="space-y-2">
         <StorageLocationField
           label="Studio library folder"

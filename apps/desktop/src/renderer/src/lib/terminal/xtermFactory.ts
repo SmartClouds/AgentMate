@@ -1,11 +1,12 @@
 import type { ThemeMode } from '@runova/core';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
-import { type ITerminalOptions, type ITheme, Terminal } from '@xterm/xterm';
+import { type ILinkHandler, type ITerminalOptions, type ITheme, Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import { type ChipPasteController, createChipPasteController } from '@/lib/terminal/chipPasteMode';
 import { addTerminalRtlFont, TERMINAL_RTL_FONT } from '@/lib/terminal/fontReady';
 import { createImageChipPreview, type ImageChipPreview } from '@/lib/terminal/imageChipPreview';
+import { attachOsc52Clipboard } from '@/lib/terminal/osc52';
 import { pasteClipboardIntoTerminal } from '@/lib/terminal/pasteFiles';
 import { isTerminalCopyKey, isTerminalPasteKey } from '@/lib/terminal/terminalKeys';
 import { commandForEvent, useShortcutStore } from '@/stores/shortcutStore';
@@ -254,6 +255,22 @@ function windowsPtyOption(localPty: boolean): ITerminalOptions['windowsPty'] {
   return { backend: 'conpty', buildNumber: windowsBuild ?? undefined };
 }
 
+/** Ctrl/Cmd+click opens a URL, as in VS Code: a plain click is how text gets selected. */
+function openTerminalLink(event: MouseEvent, uri: string): void {
+  if (event.ctrlKey || event.metaKey) void window.runova.shell.openExternal(uri);
+}
+
+/**
+ * Links a program prints with OSC 8 (Claude Code does for URLs and file names). Without this,
+ * xterm's own handler asked "Do you want to navigate to ...?" and then called window.open(),
+ * which the main window turns away, so nothing ever opened. Only http and https get through,
+ * the same as the main process allows.
+ */
+export const TERMINAL_LINK_HANDLER: ILinkHandler = {
+  activate: openTerminalLink,
+  allowNonHttpProtocols: false,
+};
+
 /**
  * Builds an xterm with the app's look and keyboard conventions. The caller opens it into
  * an element and wires it to a pty session.
@@ -291,15 +308,17 @@ export function createXterm({
     scrollSensitivity: 1.2,
     smoothScrollDuration: reduceMotion ? 0 : 140,
     windowsPty: windowsPtyOption(localPty),
+    // REVERTED linkHandler
+    // While a program has mouse tracking on (Claude Code's full-screen mode), a drag goes to the
+    // program instead of selecting. Shift gets a real selection back on Windows and Linux, but on
+    // a Mac xterm only honors Option, and only with this set, so there was no way to select at
+    // all and neither Cmd+C nor right-click had anything to copy.
+    macOptionClickForcesSelection: true,
   });
   const fit = new FitAddon();
   term.loadAddon(fit);
-  // Ctrl/Cmd+click opens a URL, as in VS Code: a plain click is how text gets selected.
-  term.loadAddon(
-    new WebLinksAddon((event, uri) => {
-      if (event.ctrlKey || event.metaKey) void window.runova.shell.openExternal(uri);
-    }),
-  );
+  term.loadAddon(new WebLinksAddon(openTerminalLink));
+  attachOsc52Clipboard(term);
 
   const toPty = (data: string): void => {
     const id = sessionId();

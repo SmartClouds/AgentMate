@@ -66,7 +66,7 @@ export function BriefFields({
   ];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor={`${id}-brief`}>What is the video about?</Label>
         <Textarea
@@ -81,7 +81,7 @@ export function BriefFields({
           onChange={(event) => onChange({ ...value, brief: event.target.value })}
         />
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-x-3 gap-y-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label id={`${id}-length`} className="block">
             Length
@@ -126,7 +126,11 @@ export function BriefFields({
         </div>
       </div>
       {style && <p className="text-xs text-muted-foreground">{style.summary}</p>}
-      <RunSettingsFields value={value.run} onChange={(run) => onChange({ ...value, run })} />
+      <RunSettingsFields
+        labels="form"
+        value={value.run}
+        onChange={(run) => onChange({ ...value, run })}
+      />
     </div>
   );
 }

@@ -2,7 +2,7 @@ import type { GenerationStatus, GenerationView } from '@runova/studio';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { studioAiClient } from '../client';
-import { errorMessage, formatWhen, scriptClass } from '../format';
+import { DIALOG_BODY, errorMessage, formatWhen, scriptClass } from '../format';
 import {
   Button,
   ChevronDown,
@@ -121,7 +121,7 @@ export function GenerationDetailsDialog({
           />
         )}
         {g && status && (
-          <div className="max-h-[65vh] space-y-3 overflow-y-auto pr-1">
+          <div className={cn(DIALOG_BODY, 'space-y-3')}>
             <dl className="grid grid-cols-[7rem_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm">
               <dt className="text-muted-foreground">Stage</dt>
               <dd className="flex items-center gap-2">

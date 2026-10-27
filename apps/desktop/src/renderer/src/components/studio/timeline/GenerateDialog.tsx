@@ -3,7 +3,7 @@ import { type Aspect, formatUsd, type GenJobView, type GenRequest } from '@runov
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { studioGenClient } from '../client';
-import { errorMessage } from '../format';
+import { DIALOG_BODY, errorMessage } from '../format';
 import {
   Button,
   Chip,
@@ -170,7 +170,7 @@ export function GenerateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="grid-rows-[auto_minmax(0,1fr)] sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Generate</DialogTitle>
           <DialogDescription>
@@ -178,141 +178,143 @@ export function GenerateDialog({
             keys in Settings &gt; AI.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-wrap gap-4">
-          <Segments
-            label="Make"
-            value={kind}
-            choices={[
-              { value: 'image', label: 'Picture' },
-              { value: 'video', label: 'Clip' },
-            ]}
-            onChange={setKind}
-          />
-          {kind === 'image' ? (
+        <div className={cn(DIALOG_BODY, 'space-y-4')}>
+          <div className="flex flex-wrap gap-4">
             <Segments
-              label="Model"
-              value={engine}
+              label="Make"
+              value={kind}
               choices={[
-                { value: 'gemini', label: STUDIO_GEN.image.gemini.label },
-                { value: 'openai', label: STUDIO_GEN.image.openai.label },
+                { value: 'image', label: 'Picture' },
+                { value: 'video', label: 'Clip' },
               ]}
-              onChange={setEngine}
+              onChange={setKind}
             />
-          ) : (
-            <div className="space-y-1">
-              <span className="text-xs font-medium text-muted-foreground">Model</span>
-              <p className="py-1.5 text-sm">{STUDIO_GEN.video.gemini.label}</p>
-            </div>
-          )}
-          {kind === 'image' && engine === 'openai' && (
-            <Segments
-              label="Quality"
-              value={quality}
-              choices={STUDIO_GEN.image.openai.qualities.map((q) => ({
-                value: q,
-                label: q[0]?.toUpperCase() + q.slice(1),
-              }))}
-              onChange={setQuality}
-            />
-          )}
-          {kind === 'image' && engine === 'gemini' && (
-            <Segments
-              label="Size"
-              value={geminiSize}
-              choices={STUDIO_GEN.image.gemini.sizes.map((s) => ({ value: s, label: s }))}
-              onChange={setGeminiSize}
-            />
-          )}
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor={`${id}-prompt`}>What to make</Label>
-          <Textarea
-            id={`${id}-prompt`}
-            value={prompt}
-            dir="auto"
-            rows={3}
-            maxLength={4000}
-            className={promptProps.className}
-            placeholder={
-              kind === 'image'
-                ? 'A sunrise over Tehran, flat vector style'
-                : 'A slow pan across a desk at night'
-            }
-            onChange={(event) => setPrompt(event.target.value)}
-          />
-        </div>
-        <div className="flex items-center gap-3">
-          <p aria-label="Estimate" className="min-w-0 flex-1 text-xs text-muted-foreground">
-            {estimate.data
-              ? `${formatUsd(estimate.data.usd)}. ${estimate.data.basis}`
-              : estimate.isError
-                ? errorMessage(estimate.error)
-                : ''}
-          </p>
-          <Button
-            disabled={!estimate.data || prompt.trim().length < 3 || starting}
-            onClick={() => void generate()}
-          >
-            {starting && <Spinner />} Generate
-          </Button>
-        </div>
-
-        <section aria-label="Generated" className="space-y-1.5 border-t pt-3">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Made for this video</span>
-            <span aria-label="Spent">
-              Spent: {spent > 0 ? formatUsd(spent) : '$0'} at list prices
-            </span>
+            {kind === 'image' ? (
+              <Segments
+                label="Model"
+                value={engine}
+                choices={[
+                  { value: 'gemini', label: STUDIO_GEN.image.gemini.label },
+                  { value: 'openai', label: STUDIO_GEN.image.openai.label },
+                ]}
+                onChange={setEngine}
+              />
+            ) : (
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-muted-foreground">Model</span>
+                <p className="py-1.5 text-sm">{STUDIO_GEN.video.gemini.label}</p>
+              </div>
+            )}
+            {kind === 'image' && engine === 'openai' && (
+              <Segments
+                label="Quality"
+                value={quality}
+                choices={STUDIO_GEN.image.openai.qualities.map((q) => ({
+                  value: q,
+                  label: q[0]?.toUpperCase() + q.slice(1),
+                }))}
+                onChange={setQuality}
+              />
+            )}
+            {kind === 'image' && engine === 'gemini' && (
+              <Segments
+                label="Size"
+                value={geminiSize}
+                choices={STUDIO_GEN.image.gemini.sizes.map((s) => ({ value: s, label: s }))}
+                onChange={setGeminiSize}
+              />
+            )}
           </div>
-          {jobs.isLoading ? (
-            <Skeleton className="h-10 w-full" />
-          ) : (
-            <ul className="max-h-56 space-y-1 overflow-y-auto">
-              {(jobs.data ?? []).map((job) => (
-                <li
-                  key={job.id}
-                  aria-label={job.prompt}
-                  className="space-y-0.5 rounded-md px-2 py-1.5 hover:bg-foreground/[0.03]"
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        'min-w-0 flex-1 truncate text-sm',
-                        persianTextProps(job.prompt).className,
-                      )}
-                      dir="auto"
-                    >
-                      {job.prompt}
-                    </span>
-                    <Chip tone={STATUS[job.status].tone} dot pulse={job.status === 'running'}>
-                      {STATUS[job.status].label}
-                    </Chip>
-                    {job.status === 'running' && (
-                      <Button
-                        size="xs"
-                        variant="ghost"
-                        onClick={() =>
-                          void studioGenClient()
-                            .cancel(job.id)
-                            .catch((error: unknown) => toast.error(errorMessage(error)))
-                        }
+          <div className="space-y-1.5">
+            <Label htmlFor={`${id}-prompt`}>What to make</Label>
+            <Textarea
+              id={`${id}-prompt`}
+              value={prompt}
+              dir="auto"
+              rows={3}
+              maxLength={4000}
+              className={promptProps.className}
+              placeholder={
+                kind === 'image'
+                  ? 'A sunrise over Tehran, flat vector style'
+                  : 'A slow pan across a desk at night'
+              }
+              onChange={(event) => setPrompt(event.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <p aria-label="Estimate" className="min-w-0 flex-1 text-xs text-muted-foreground">
+              {estimate.data
+                ? `Costs about ${formatUsd(estimate.data.usd)}. ${estimate.data.basis}`
+                : estimate.isError
+                  ? errorMessage(estimate.error)
+                  : ''}
+            </p>
+            <Button
+              disabled={!estimate.data || prompt.trim().length < 3 || starting}
+              onClick={() => void generate()}
+            >
+              {starting && <Spinner />} Generate
+            </Button>
+          </div>
+
+          <section aria-label="Generated" className="space-y-1.5 border-t pt-3">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Made for this video</span>
+              <span aria-label="Spent">
+                Spent: {spent > 0 ? formatUsd(spent) : '$0'} at list prices
+              </span>
+            </div>
+            {jobs.isLoading ? (
+              <Skeleton className="h-10 w-full" />
+            ) : (
+              <ul className="max-h-56 space-y-1 overflow-y-auto">
+                {(jobs.data ?? []).map((job) => (
+                  <li
+                    key={job.id}
+                    aria-label={job.prompt}
+                    className="space-y-0.5 rounded-md px-2 py-1.5 hover:bg-foreground/[0.03]"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          'min-w-0 flex-1 truncate text-sm',
+                          persianTextProps(job.prompt).className,
+                        )}
+                        dir="auto"
                       >
-                        Cancel
-                      </Button>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {job.status === 'running' && job.stage ? `${STAGE[job.stage]}. ` : ''}
-                    {job.status === 'done' && job.mediaName ? `${job.mediaName}. ` : ''}
-                    {job.status === 'done' && job.stage === 'import' ? `${STAGE.import}. ` : ''}
-                    {job.error ? `${job.error} ` : ''}
-                    {job.model}, {formatUsd(job.estimateUsd)}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+                        {job.prompt}
+                      </span>
+                      <Chip tone={STATUS[job.status].tone} dot pulse={job.status === 'running'}>
+                        {STATUS[job.status].label}
+                      </Chip>
+                      {job.status === 'running' && (
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          onClick={() =>
+                            void studioGenClient()
+                              .cancel(job.id)
+                              .catch((error: unknown) => toast.error(errorMessage(error)))
+                          }
+                        >
+                          Cancel
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {job.status === 'running' && job.stage ? `${STAGE[job.stage]}. ` : ''}
+                      {job.status === 'done' && job.mediaName ? `${job.mediaName}. ` : ''}
+                      {job.status === 'done' && job.stage === 'import' ? `${STAGE.import}. ` : ''}
+                      {job.error ? `${job.error} ` : ''}
+                      {job.model}, {formatUsd(job.estimateUsd)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
       </DialogContent>
     </Dialog>
   );

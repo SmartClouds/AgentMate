@@ -66,17 +66,18 @@ export function StylesDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_22rem]">
+          {/* The margin and padding cancel out, leaving room for a card's focus ring. */}
           <ul
-            className="grid max-h-[60vh] grid-cols-2 gap-2 overflow-y-auto pr-1 lg:grid-cols-3"
+            className="-m-1 grid max-h-[60vh] grid-cols-2 gap-2 overflow-y-auto p-1 lg:grid-cols-3"
             aria-label="Styles"
           >
             {STYLE_PRESETS.map((preset) => (
-              <li key={preset.id}>
+              <li key={preset.id} className="flex">
                 <button
                   type="button"
                   aria-pressed={preset.id === selected}
                   className={cn(
-                    'w-full rounded-xl p-2.5 text-left ring-1 ring-inset transition-colors',
+                    'flex w-full flex-col items-start rounded-xl p-2.5 text-left ring-1 ring-inset transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                     preset.id === selected
                       ? 'bg-primary/10 ring-primary/40'
                       : 'ring-foreground/10 hover:bg-foreground/[0.04]',
@@ -97,9 +98,9 @@ export function StylesDialog({
                     {preset.summary}
                   </span>
                   {preset.formats.includes(aspect) && preset.formats.length < 4 && (
-                    <Chip tone="primary" className="mt-1">
-                      Made for {aspect}
-                    </Chip>
+                    <span className="mt-auto pt-1">
+                      <Chip tone="primary">Made for {aspect}</Chip>
+                    </span>
                   )}
                 </button>
               </li>

@@ -100,8 +100,22 @@ function fitToCli(cliId: string | undefined, settings: RunSettings): RunSettings
   return { cliId, model, effort };
 }
 
-function FieldLabel({ children }: { children: React.ReactNode }): React.JSX.Element {
-  return <p className="text-xs font-medium text-muted-foreground">{children}</p>;
+function FieldLabel({
+  children,
+  form,
+}: {
+  children: React.ReactNode;
+  form: boolean;
+}): React.JSX.Element {
+  return (
+    <p
+      className={
+        form ? 'text-sm font-medium leading-none' : 'text-xs font-medium text-muted-foreground'
+      }
+    >
+      {children}
+    </p>
+  );
 }
 
 /**
@@ -112,11 +126,15 @@ export function RunSettingsFields({
   value,
   onChange,
   defaultCliLabel = 'Default CLI',
+  labels = 'quiet',
 }: {
   value: RunSettings;
   onChange: (next: RunSettings) => void;
   defaultCliLabel?: string;
+  /** `form` labels the fields like the rest of a form around them; `quiet` keeps them small. */
+  labels?: 'quiet' | 'form';
 }): React.JSX.Element {
+  const form = labels === 'form';
   const choices = useAgentChoices(null);
   const options = value.cliId ? cliLaunchOptions(value.cliId) : null;
   const cliOptions = [...choices.installed, ...choices.missing].map(({ cli, installed }) => ({
@@ -134,9 +152,9 @@ export function RunSettingsFields({
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className={cn('grid sm:grid-cols-2', form ? 'gap-x-3 gap-y-4' : 'gap-3')}>
       <div className="space-y-1.5">
-        <FieldLabel>CLI</FieldLabel>
+        <FieldLabel form={form}>CLI</FieldLabel>
         <Combobox
           ariaLabel="CLI"
           value={value.cliId ?? ''}
@@ -149,7 +167,7 @@ export function RunSettingsFields({
         />
       </div>
       <div className="space-y-1.5">
-        <FieldLabel>Model</FieldLabel>
+        <FieldLabel form={form}>Model</FieldLabel>
         <Combobox
           ariaLabel="Model"
           value={value.model ?? ''}
@@ -174,7 +192,7 @@ export function RunSettingsFields({
       </div>
       {options && options.efforts.length > 0 ? (
         <div className="space-y-1.5 sm:col-span-2">
-          <FieldLabel>Effort</FieldLabel>
+          <FieldLabel form={form}>Effort</FieldLabel>
           <EffortPicker
             options={options}
             model={value.model}

@@ -66,3 +66,10 @@ export function formatSeconds(total: number): string {
 export function scriptClass(text: string): string | undefined {
   return /[؀-ۿ]/.test(text) ? 'font-vazirmatn' : undefined;
 }
+
+/**
+ * The middle row of a dialog whose content can run long. It reaches the dialog's edges, so the
+ * scrollbar sits at the edge and a field's 3 px focus glow is never clipped, and the dialog's
+ * footer stays in view below it.
+ */
+export const DIALOG_BODY = '-mx-6 -my-1 min-h-0 overflow-y-auto px-6 py-1';

@@ -13,10 +13,11 @@ import {
 import { type UseQueryResult, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { studioClient, studioRenderClient } from '../client';
-import { errorMessage, formatBytes, formatSeconds } from '../format';
+import { DIALOG_BODY, errorMessage, formatBytes, formatSeconds } from '../format';
 import { ASPECT_LABELS } from '../home/NewVideoDialog';
 import {
   Button,
+  cn,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -118,6 +119,7 @@ export function RenderDialog({
 }: RenderDialogProps): React.JSX.Element {
   const queryClient = useQueryClient();
   const fileId = useId();
+  const formId = useId();
   const hwId = useId();
   const settings = document.renderSettings;
   const nonCommercial = nonCommercialNarration(document.scenario.scenes.map((s) => s.voiceRef));
@@ -183,147 +185,151 @@ export function RenderDialog({
             and you can keep working while it renders.
           </DialogDescription>
         </DialogHeader>
-        <form
-          className="space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (canRender) start.mutate();
-          }}
-        >
-          {missingFfmpeg && (
-            <Notice
-              tone="warning"
-              size="sm"
-              action={
-                <Button type="button" size="sm" variant="soft" onClick={onOpenDevSetup}>
-                  <Wrench /> Open Dev Setup
-                </Button>
-              }
-            >
-              Rendering needs ffmpeg, which is not installed yet. Dev Setup installs it in a click
-              (the Studio stack).
-            </Notice>
-          )}
-          {nonCommercial.length > 0 && (
-            <Notice tone="warning" size="sm">
-              This video is for non-commercial use only: its narration uses{' '}
-              {nonCommercial.join(' and ')}.
-            </Notice>
-          )}
-          <Segments
-            label="Format"
-            value={settings.aspect}
-            choices={ASPECTS.map((value) => ({ value, label: ASPECT_LABELS[value] }))}
-            onChange={(aspect) => set({ aspect }, 'Changed the video format')}
-          />
-          {settings.aspect !== startAspect && (
-            <Notice tone="warning" size="sm">
-              Scenes lay out again at the new shape. Check them in the scene previews before you
-              render.
-            </Notice>
-          )}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Segments
-              label="Size"
-              value={settings.resolution}
-              choices={RESOLUTIONS.map((value) => ({ value, label: RESOLUTION_LABELS[value] }))}
-              onChange={(resolution) => set({ resolution }, 'Changed the render size')}
-            />
-            <Segments
-              label="Frame rate"
-              value={settings.fps}
-              choices={FRAME_RATES.map((value) => ({ value, label: `${value} fps` }))}
-              onChange={(fps) => set({ fps }, 'Changed the frame rate')}
-            />
-            <Segments
-              label="Quality"
-              value={settings.quality}
-              choices={QUALITIES.map((value) => ({
-                value,
-                label: QUALITY_LABELS[value],
-                hint: QUALITY_HINTS[value],
-              }))}
-              onChange={(quality) => set({ quality }, 'Changed the render quality')}
-            />
-            <Segments
-              label="Codec"
-              value={settings.codec}
-              choices={CODECS.map((value) => ({
-                value,
-                label: CODEC_LABELS[value],
-                hint: CODEC_HINTS[value],
-                disabled: missingFfmpeg ? null : (codecs?.[value] ?? null),
-              }))}
-              onChange={(codec) => set({ codec }, 'Changed the codec')}
-            />
-          </div>
-          {codecProblem && !missingFfmpeg && (
-            <Notice tone="destructive" size="sm">
-              {codecProblem}
-            </Notice>
-          )}
-          <div className="flex items-center gap-2">
-            <Switch
-              id={hwId}
-              checked={settings.hwEncode && gpuAllowed}
-              disabled={!gpuAllowed}
-              onCheckedChange={(hwEncode) =>
-                set(
-                  { hwEncode },
-                  hwEncode
-                    ? 'Turned on graphics card encoding'
-                    : 'Turned off graphics card encoding',
-                )
-              }
-            />
-            <Label htmlFor={hwId}>Encode on the graphics card when it can</Label>
-            {!gpuAllowed && (
-              <span className="text-xs text-muted-foreground">
-                Turned off for every video in Settings
-              </span>
+        <div className={cn(DIALOG_BODY, 'space-y-4')}>
+          <form
+            id={formId}
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (canRender) start.mutate();
+            }}
+          >
+            {missingFfmpeg && (
+              <Notice
+                tone="warning"
+                size="sm"
+                action={
+                  <Button type="button" size="sm" variant="soft" onClick={onOpenDevSetup}>
+                    <Wrench /> Open Dev Setup
+                  </Button>
+                }
+              >
+                Rendering needs ffmpeg, which is not installed yet. Dev Setup installs it in a click
+                (the Studio stack).
+              </Notice>
             )}
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor={fileId}>File name</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id={fileId}
-                dir="auto"
-                maxLength={120}
-                value={fileName}
-                placeholder={estimate.data?.ok ? estimate.data.fileName : ''}
-                onChange={(event) => setFileName(event.target.value)}
+            {nonCommercial.length > 0 && (
+              <Notice tone="warning" size="sm">
+                This video is for non-commercial use only: its narration uses{' '}
+                {nonCommercial.join(' and ')}.
+              </Notice>
+            )}
+            <Segments
+              label="Format"
+              value={settings.aspect}
+              choices={ASPECTS.map((value) => ({ value, label: ASPECT_LABELS[value] }))}
+              onChange={(aspect) => set({ aspect }, 'Changed the video format')}
+            />
+            {settings.aspect !== startAspect && (
+              <Notice tone="warning" size="sm">
+                Scenes lay out again at the new shape. Check them in the scene previews before you
+                render.
+              </Notice>
+            )}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Segments
+                label="Size"
+                value={settings.resolution}
+                choices={RESOLUTIONS.map((value) => ({ value, label: RESOLUTION_LABELS[value] }))}
+                onChange={(resolution) => set({ resolution }, 'Changed the render size')}
               />
-              <span className="text-sm text-muted-foreground">
-                .
-                {estimate.data?.ok
-                  ? estimate.data.extension
-                  : settings.codec === 'vp9'
-                    ? 'webm'
-                    : 'mp4'}
-              </span>
+              <Segments
+                label="Frame rate"
+                value={settings.fps}
+                choices={FRAME_RATES.map((value) => ({ value, label: `${value} fps` }))}
+                onChange={(fps) => set({ fps }, 'Changed the frame rate')}
+              />
+              <Segments
+                label="Quality"
+                value={settings.quality}
+                choices={QUALITIES.map((value) => ({
+                  value,
+                  label: QUALITY_LABELS[value],
+                  hint: QUALITY_HINTS[value],
+                }))}
+                onChange={(quality) => set({ quality }, 'Changed the render quality')}
+              />
+              <Segments
+                label="Codec"
+                value={settings.codec}
+                choices={CODECS.map((value) => ({
+                  value,
+                  label: CODEC_LABELS[value],
+                  hint: CODEC_HINTS[value],
+                  disabled: missingFfmpeg ? null : (codecs?.[value] ?? null),
+                }))}
+                onChange={(codec) => set({ codec }, 'Changed the codec')}
+              />
             </div>
-          </div>
-          <RenderSummary estimate={estimate} resolution4k={settings.resolution === '2160p'} />
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Close
-            </Button>
-            <Button type="submit" disabled={!canRender}>
-              <Video /> {start.isPending ? 'Starting...' : 'Render'}
-            </Button>
-          </DialogFooter>
-        </form>
-        {(jobs.data?.length ?? 0) > 0 && (
-          <section aria-label="Renders of this video" className="space-y-2 pt-2">
-            <h3 className="text-sm font-medium">Renders of this video</h3>
-            <ul className="max-h-72 space-y-1.5 overflow-y-auto">
-              {jobs.data?.map((job) => (
-                <RenderJobRow key={job.id} job={job} />
-              ))}
-            </ul>
-          </section>
-        )}
+            {codecProblem && !missingFfmpeg && (
+              <Notice tone="destructive" size="sm">
+                {codecProblem}
+              </Notice>
+            )}
+            <div className="flex items-center gap-2">
+              <Switch
+                id={hwId}
+                checked={settings.hwEncode && gpuAllowed}
+                disabled={!gpuAllowed}
+                onCheckedChange={(hwEncode) =>
+                  set(
+                    { hwEncode },
+                    hwEncode
+                      ? 'Turned on graphics card encoding'
+                      : 'Turned off graphics card encoding',
+                  )
+                }
+              />
+              <Label htmlFor={hwId}>Encode on the graphics card when it can</Label>
+              {!gpuAllowed && (
+                <span className="text-xs text-muted-foreground">
+                  Turned off for every video in Settings
+                </span>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor={fileId}>File name</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id={fileId}
+                  dir="auto"
+                  maxLength={120}
+                  value={fileName}
+                  placeholder={estimate.data?.ok ? estimate.data.fileName : 'Named after the video'}
+                  onChange={(event) => setFileName(event.target.value)}
+                />
+                <span className="text-sm text-muted-foreground">
+                  .
+                  {estimate.data?.ok
+                    ? estimate.data.extension
+                    : settings.codec === 'vp9'
+                      ? 'webm'
+                      : 'mp4'}
+                </span>
+              </div>
+            </div>
+            <RenderSummary estimate={estimate} resolution4k={settings.resolution === '2160p'} />
+          </form>
+          {/* Outside the form, so a job's own buttons never submit it. */}
+          {(jobs.data?.length ?? 0) > 0 && (
+            <section aria-label="Renders of this video" className="space-y-2 border-t pt-3">
+              <h3 className="text-sm font-medium">Renders of this video</h3>
+              <ul className="space-y-1.5">
+                {jobs.data?.map((job) => (
+                  <RenderJobRow key={job.id} job={job} />
+                ))}
+              </ul>
+            </section>
+          )}
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+          <Button type="submit" form={formId} disabled={!canRender}>
+            <Video /> {start.isPending ? 'Starting...' : 'Render'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
