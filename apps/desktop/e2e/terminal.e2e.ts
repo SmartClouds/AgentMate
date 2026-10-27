@@ -380,9 +380,7 @@ test('a link a program prints opens on Ctrl/Cmd+click, and a program can select 
   // was, and Shift+drag on Windows and Linux extends from that anchor.
   const where = async (): Promise<{ left: number; right: number; y: number }> => {
     const box = await link.boundingBox();
-    const screenBox = await page
-      .locator('.terminal-pane:not(.hidden) .xterm-screen')
-      .boundingBox();
+    const screenBox = await page.locator('.terminal-pane:not(.hidden) .xterm-screen').boundingBox();
     if (!box || !screenBox) throw new Error('The link has no layout');
     return { left: screenBox.x + 2, right: box.x + box.width - 2, y: box.y + box.height / 2 };
   };
