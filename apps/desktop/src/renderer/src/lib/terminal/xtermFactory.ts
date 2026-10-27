@@ -308,7 +308,7 @@ export function createXterm({
     scrollSensitivity: 1.2,
     smoothScrollDuration: reduceMotion ? 0 : 140,
     windowsPty: windowsPtyOption(localPty),
-    // REVERTED linkHandler
+    linkHandler: TERMINAL_LINK_HANDLER,
     // While a program has mouse tracking on (Claude Code's full-screen mode), a drag goes to the
     // program instead of selecting. Shift gets a real selection back on Windows and Linux, but on
     // a Mac xterm only honors Option, and only with this set, so there was no way to select at
