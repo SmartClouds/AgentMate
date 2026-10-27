@@ -70,6 +70,10 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
+        with:
+          # One pnpm (and store) per runner: two runners share this machine, and a shared
+          # ~/setup-pnpm let one job's setup delete files the other was using.
+          dest: ${{ runner.tool_cache }}/setup-pnpm
 
       # --frozen-lockfile also fails the build when package.json and
       # pnpm-lock.yaml have drifted apart.
