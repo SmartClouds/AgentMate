@@ -33,6 +33,7 @@ public sealed class HubServerBackupTests
             fakeClock: false,
             services: (services, _) =>
             {
+                services.AddSingleton(new BackupJobServerOptions(RunInBackground: true));
                 if (destinations is not null)
                 {
                     services.AddSingleton<IBackupDestinationFactory>(destinations);
@@ -278,7 +279,8 @@ public sealed class HubServerBackupTests
             }
 
             Assert.Contains("secret key", noSecret.Message, StringComparison.Ordinal);
-            Assert.Equal(BackupRunState.Succeeded, run.State);
+            // It failed on the shared CI machine a few times, Running after a minute; say what Hangfire was doing.
+            Assert.True(run.State == BackupRunState.Succeeded, $"{JsonSerializer.Serialize(run)} {HangfireState(harness)}");
             Assert.Equal("maria", run.RequestedByName);
             var stored = Assert.Single(await CallAsync<StoredBackupInfo[]>(hub, nameof(ICoreHub.ListStoredBackups), folder.Id));
             Assert.Equal(run.Id, stored.BackupId);
@@ -330,6 +332,35 @@ public sealed class HubServerBackupTests
             Assert.Equal(BackupDestinationRules.TelegramPremiumPartBytes, opened.PartBytes);
             Assert.Contains(await AuditAsync(harness), entry => entry.Action == "backup.telegram.signin");
         }
+    }
+
+    [Fact]
+    public async Task Only_a_core_that_runs_backups_starts_hangfire_workers()
+    {
+        await using var quiet = await AuthHarness.CreateAsync(fakeClock: false);
+        var (harness, hub) = await ConnectAsync();
+        await using (harness)
+        await using (hub)
+        {
+            var servers = harness.Services.GetRequiredService<JobStorage>().GetMonitoringApi();
+            for (var wait = 0; wait < 60 && servers.Servers().Count == 0; wait++)
+            {
+                await Task.Delay(500, Cancel);
+            }
+
+            Assert.Equal(2, Assert.Single(servers.Servers()).WorkersCount);
+            Assert.Empty(quiet.Services.GetRequiredService<JobStorage>().GetMonitoringApi().Servers());
+        }
+    }
+
+    private static string HangfireState(AuthHarness harness)
+    {
+        var monitor = harness.Services.GetRequiredService<JobStorage>().GetMonitoringApi();
+        var servers = string.Join(", ", monitor.Servers().Select(s => $"{s.Name} with {s.WorkersCount} workers, last heartbeat {s.Heartbeat:O}"));
+        var queues = string.Join(", ", monitor.Queues().Select(q => $"{q.Name}: {q.Length} waiting, {q.Fetched} fetched"));
+        var processing = string.Join(", ", monitor.ProcessingJobs(0, 10).Select(j => $"{j.Key} {j.Value.Job?.Method.Name} since {j.Value.StartedAt:O}"));
+        var failed = string.Join(" | ", monitor.FailedJobs(0, 10).Select(j => $"{j.Key} {j.Value.Job?.Method.Name}: {j.Value.ExceptionType} {j.Value.ExceptionMessage}"));
+        return $"Hangfire at {DateTime.UtcNow:O}. Servers: [{servers}]. Queues: [{queues}]. Processing: [{processing}]. Failed: [{failed}]. Scheduled: {monitor.ScheduledCount()}. Succeeded: {monitor.SucceededListCount()}.";
     }
 
     private static List<string> RecurringIds(AuthHarness harness)

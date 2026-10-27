@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Runova.ServerCore.Alerts;
 using Runova.ServerCore.Assistant;
+using Runova.ServerCore.Backups;
 using Runova.ServerCore.Cloudflare;
 using Runova.ServerCore.DevHost.Fakes;
 using Runova.ServerCore.DirectTls;
@@ -112,6 +113,9 @@ public sealed class CoreFactory : WebApplicationFactory<Program>
 
             // The move to the Runova names: it would look at this machine's sshd drop-in.
             services.AddSingleton(new LegacyNamesMoveOptions(RunInBackground: false));
+
+            // Hangfire's workers (E28): only the tests that run a backup start them (HubServerBackupTests).
+            services.AddSingleton(new BackupJobServerOptions(RunInBackground: false));
 
             // Telegram notifications (E30): a fake Bot API, so no alert a test raises reaches a chat.
             services.AddSingleton<FakeTelegramApi>();

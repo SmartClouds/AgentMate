@@ -1,6 +1,7 @@
 using Hangfire;
 using Hangfire.Storage.SQLite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Runova.ServerCore.Backups.Destinations;
 using Runova.ServerCore.Contracts;
 using Runova.ServerCore.Data;
@@ -35,6 +36,26 @@ internal sealed partial class BackupScheduleStartup(IServiceProvider services, B
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Backup plans reconciled with the schedule: {Count}.")]
     private static partial void LogScheduled(ILogger logger, int count);
+}
+
+/// <summary>
+/// Whether the core runs Hangfire's workers. Off in tests that never run a backup: they start many
+/// cores in one process, and Hangfire's SQLite storage takes a lock for the whole process each time
+/// a worker looks at a queue, so every core's workers waited on every other core's.
+/// </summary>
+internal sealed record BackupJobServerOptions(bool RunInBackground = true)
+{
+    public static BackupJobServerOptions Default { get; } = new();
+}
+
+/// <summary>Stands in for Hangfire's server when <see cref="BackupJobServerOptions"/> turns it off.</summary>
+internal sealed class NoBackupJobServer : IHostedService
+{
+    public static NoBackupJobServer Instance { get; } = new();
+
+    public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }
 
 /// <summary>What the hub's server backup methods use beyond the settings, in one place.</summary>
@@ -104,6 +125,8 @@ internal static class BackupRegistration
         services.AddSingleton<BackupOperations>();
 
         services.AddHostedService<BackupScheduleStartup>();
+        services.TryAddSingleton(BackupJobServerOptions.Default);
+        var before = services.Count;
         services.AddHangfireServer((provider, options) =>
         {
             options.ServerName = "runova-core";
@@ -112,6 +135,27 @@ internal static class BackupRegistration
             options.ShutdownTimeout = TimeSpan.FromSeconds(5);
             options.StopTimeout = TimeSpan.FromSeconds(5);
         });
+        SwitchableServer(services, before);
         return services;
+    }
+
+    /// <summary>Puts the hosted service AddHangfireServer just added behind <see cref="BackupJobServerOptions"/>, in its place in the start order.</summary>
+    private static void SwitchableServer(IServiceCollection services, int from)
+    {
+        for (var i = from; i < services.Count; i++)
+        {
+            var server = services[i];
+            if (server.ServiceType != typeof(IHostedService))
+            {
+                continue;
+            }
+
+            services[i] = ServiceDescriptor.Describe(
+                typeof(IHostedService),
+                provider => provider.GetRequiredService<BackupJobServerOptions>().RunInBackground
+                    ? server.ImplementationInstance ?? server.ImplementationFactory?.Invoke(provider) ?? ActivatorUtilities.CreateInstance(provider, server.ImplementationType!)
+                    : NoBackupJobServer.Instance,
+                server.Lifetime);
+        }
     }
 }
