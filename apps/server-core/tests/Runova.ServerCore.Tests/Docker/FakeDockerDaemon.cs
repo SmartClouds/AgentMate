@@ -382,7 +382,10 @@ internal sealed partial class FakeDockerDaemon : IAsyncDisposable
     private async Task RouteConnectionAsync(ConnectionContext connection, ConnectionDelegate next)
     {
         var original = connection.Transport;
-        var replay = new Pipe();
+        // Never pauses: nothing reads the copy until the request line is found, and when a busy
+        // machine reads late the first read holds the whole request. A put's 100 KB tar then went
+        // over the default 64 KB pause and the connection hung (the CI server core job timed out).
+        var replay = new Pipe(new PipeOptions(pauseWriterThreshold: 0));
         string? requestLine = null;
         while (requestLine is null)
         {
