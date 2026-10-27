@@ -10,8 +10,11 @@
 // versions setup-dotnet and setup-node have replaced in the tool cache, and dangling Docker images
 // and old build cache. What is still in use stays, so the next job does not download it again.
 //
-// It assumes one job at a time per machine, which is how our runners are set up: a second runner
-// on the same machine would lose its test containers to this one.
+// A machine can have more than one runner (smartvpn has two). The test containers carry no mark
+// of the job that made them, so they are only removed when no other job is running there: one
+// job's cleanup used to delete the containers another job's tests were still using. What a busy
+// machine leaves goes with the next job that ends alone. The daily steps are safe either way: each
+// runner has its own pnpm store and tool cache, and Docker's prune leaves what is in use.
 //
 // Nothing here fails the job. A step that goes wrong prints a warning and the rest still run.
 
@@ -31,6 +34,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import {
   dockerWorks,
+  otherJobs,
   removeTree,
   run,
   skipReason,
@@ -346,7 +350,19 @@ if (skip) {
   console.log(`Nothing to do: ${skip}`);
 } else {
   const before = freeBytes();
-  if (dockerWorks()) step('Test containers, networks and volumes', dockerLeftovers);
+  if (dockerWorks()) {
+    step('Test containers, networks and volumes', () => {
+      const others = otherJobs();
+      if (others === null) {
+        console.log('Could not tell whether other jobs are running here, so test containers stay.');
+      } else if (others > 0) {
+        const who = others === 1 ? 'Another job is' : `${others} other jobs are`;
+        console.log(`${who} running on this machine, so test containers stay.`);
+      } else {
+        dockerLeftovers();
+      }
+    });
+  }
   if (dailyDue()) {
     step('pnpm store', pnpmStore);
     step('Unused NuGet packages and native headers', unusedCaches);

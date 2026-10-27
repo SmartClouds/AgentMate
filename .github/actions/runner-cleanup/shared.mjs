@@ -34,6 +34,34 @@ export function warn(message) {
   console.log(`::warning title=Runner cleanup::${message}`);
 }
 
+/**
+ * How many jobs other than this one `ps -A -o pid=,ppid=,command=` shows running. A runner runs
+ * each job in a Runner.Worker process, and this step is one of its descendants, so any other
+ * worker is another runner's job on the same machine.
+ */
+export function otherJobsIn(psOutput, self) {
+  const processes = new Map();
+  for (const line of psOutput.split('\n')) {
+    const match = /^\s*(\d+)\s+(\d+)\s+(.*)$/.exec(line);
+    if (match) processes.set(Number(match[1]), { ppid: Number(match[2]), command: match[3] });
+  }
+  const ancestors = new Set();
+  for (let pid = self; processes.has(pid) && !ancestors.has(pid); pid = processes.get(pid).ppid) {
+    ancestors.add(pid);
+  }
+  let others = 0;
+  for (const [pid, { command }] of processes) {
+    if (/\bRunner\.Worker\b/.test(command) && !ancestors.has(pid)) others++;
+  }
+  return others;
+}
+
+/** The jobs other runners are running on this machine, or null when `ps` could not tell. */
+export function otherJobs() {
+  const result = run('ps', ['-A', '-o', 'pid=,ppid=,command='], { timeout: 30_000 });
+  return result.status === 0 ? otherJobsIn(result.stdout, process.pid) : null;
+}
+
 let dockerChecked;
 
 /** True on Linux when this user can reach the Docker daemon. The Mac runs no Docker jobs. */

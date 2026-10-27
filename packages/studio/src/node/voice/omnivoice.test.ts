@@ -100,14 +100,18 @@ describe('OmniVoice through its sidecar', () => {
 
   it('fails only the piece in flight when the sidecar dies, and starts it again for the next (AC3)', async () => {
     const { speaker } = await setup();
-    const crashed = speaker({ voice: 'p1', text: 'CRASH now', lang: 'fa' });
-    // Each piece looks its profile up first; queue the next one only once the crash owns the sidecar.
-    await vi.waitFor(() => expect(speaker.host.starts).toBe(1));
-    const next = speaker({ voice: 'p1', text: 'بعدی', lang: 'fa' });
-    await expect(crashed).rejects.toMatchObject({
+    // Expected from the start: the sidecar can die before the wait below is over, and a rejection
+    // nobody is listening for yet counts as an unhandled error.
+    const crashed = expect(
+      speaker({ voice: 'p1', text: 'CRASH now', lang: 'fa' }),
+    ).rejects.toMatchObject({
       message: 'OmniVoice stopped unexpectedly (exit code 3).',
       retryable: true,
     });
+    // Each piece looks its profile up first; queue the next one only once the crash owns the sidecar.
+    await vi.waitFor(() => expect(speaker.host.starts).toBe(1));
+    const next = speaker({ voice: 'p1', text: 'بعدی', lang: 'fa' });
+    await crashed;
     expect(parseWav(await next).frames).toBeGreaterThan(0);
     expect(speaker.host.starts).toBe(2);
   });
