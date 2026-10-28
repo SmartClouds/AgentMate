@@ -127,9 +127,7 @@ export function createDesktopStudioHost(service: () => StudioService): StudioHos
     scenes: {
       async check(input) {
         const treeHash = /^studio-scene:\/\/t-([0-9a-f]{64})\//.exec(input.url)?.[1];
-        const allowedHosts = treeHash
-          ? await service().sceneHosts({ treeHash })
-          : [];
+        const allowedHosts = treeHash ? await service().sceneHosts({ treeHash }) : [];
         const source = createOffscreenSource({
           width: input.width,
           height: input.height,
