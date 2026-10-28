@@ -65,9 +65,15 @@ describe('useSystemStatsHistory', () => {
     );
 
     // Sixty is the cap the hook keeps, so it never grows past that however long it polls.
-    await waitFor(() => expect(result.current.length).toBe(60), { timeout: 10_000 });
-    const oldest = cpuValues(result.current)[0] ?? 0;
-    expect(oldest).toBeGreaterThan(1);
+    // Waits past the 60th sample too: at exactly sixty the first one is still there, and under a
+    // loaded run the check could land in that moment.
+    await waitFor(
+      () => {
+        expect(result.current.length).toBe(60);
+        expect(cpuValues(result.current)[0] ?? 0).toBeGreaterThan(1);
+      },
+      { timeout: 10_000 },
+    );
 
     rerender({ maxSamples: 5 });
     await waitFor(() => expect(result.current.length).toBe(5));

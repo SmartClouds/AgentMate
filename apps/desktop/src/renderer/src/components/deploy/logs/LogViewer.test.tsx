@@ -134,8 +134,14 @@ describe('LogViewer', () => {
     const { user, onAskAi } = render('audit');
     const log = screen.getByRole('log', { name: 'Log: Core audit trail' });
     expect(await within(log).findByText('exec.run denied')).toBeInTheDocument();
+    // jsdom treats following the download link as leaving the page, which it cannot do.
+    const follow = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined);
     await user.click(screen.getByRole('button', { name: 'Download' }));
     expect(created).toHaveBeenCalled();
+    expect(follow).toHaveBeenCalled();
+    follow.mockRestore();
     await user.click(screen.getByRole('button', { name: 'Ask the AI' }));
     expect(onAskAi).toHaveBeenCalledWith({ kind: 'audit', label: 'Core audit trail' });
   });
