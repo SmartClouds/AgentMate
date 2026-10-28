@@ -215,6 +215,7 @@ describe('fetchCopilotUsage', () => {
       updatedAt: new Date(NOW).toISOString(),
     };
     const scanLocal = vi.fn(async () => local);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     const usage = await fetchCopilotUsage(
       { enabled: true, apiKey: 'ghp-test', baseUrl: 'acme' },
@@ -223,6 +224,11 @@ describe('fetchCopilotUsage', () => {
 
     expect(scanLocal).toHaveBeenCalled();
     expect(usage).toBe(local);
+    expect(warn).toHaveBeenCalledWith(
+      '[usage] copilot API failed, falling back to local logs:',
+      expect.any(Error),
+    );
+    warn.mockRestore();
   });
 
   it('scans the local logs directly when no token is configured', async () => {

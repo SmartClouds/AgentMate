@@ -293,8 +293,8 @@ describe.runIf(hasGit())('worktree handlers', () => {
       const worktree = await create('feat');
       writeTree(worktree.path, { 'feature.txt': 'x' });
       const { execFileSync } = await import('node:child_process');
-      execFileSync('git', ['-C', worktree.path, 'add', '.']);
-      execFileSync('git', ['-C', worktree.path, 'commit', '-m', 'feature']);
+      execFileSync('git', ['-C', worktree.path, 'add', '.'], { stdio: 'pipe' });
+      execFileSync('git', ['-C', worktree.path, 'commit', '-m', 'feature'], { stdio: 'pipe' });
 
       expect(
         await invoke<WorktreeMergePreflight>(IPC.worktrees.mergePreflight, PROJECT_ID, worktree.id),

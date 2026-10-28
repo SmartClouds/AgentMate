@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { join, parse } from 'node:path';
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FileSiteConnectionInput, FileSiteInput } from '../../../shared/deployFilesTypes';
 import { setElectronPath } from '../../../test/main/electronMock';
 import { tempDir } from '../../../test/main/fixtures';
@@ -160,7 +160,12 @@ describe('reading and writing', () => {
         'nonsense',
       ],
     });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     expect((await sites.readFileSites()).map((site) => site.id)).toEqual([good.id]);
+    expect(warn).toHaveBeenCalledWith(
+      '[deploy-files] dropped site record bad-protocol: it does not check out',
+    );
+    warn.mockRestore();
   });
 
   it('keeps a site whose local folder is gone, so it can say the folder is missing', async () => {

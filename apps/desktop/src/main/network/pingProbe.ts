@@ -2,17 +2,28 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import type { PingIpVersion, PingMethod } from '@runova/core';
 import type { PingResult } from '../../shared/apiTypes';
+import {
+  DEFAULT_PING_TARGETS_IPV4,
+  DEFAULT_PING_TARGETS_IPV6,
+  DEFAULT_PING_URL,
+  DEFAULT_PING_URL_INTERVAL_SECONDS,
+  MAX_PING_URL_INTERVAL_SECONDS,
+  MAX_PING_URLS,
+  MIN_PING_URL_INTERVAL_SECONDS,
+} from '../../shared/pingDefaults';
+
+export {
+  DEFAULT_PING_TARGETS_IPV4,
+  DEFAULT_PING_TARGETS_IPV6,
+  DEFAULT_PING_URL,
+  DEFAULT_PING_URL_INTERVAL_SECONDS,
+  MAX_PING_URL_INTERVAL_SECONDS,
+  MAX_PING_URLS,
+  MIN_PING_URL_INTERVAL_SECONDS,
+};
 
 const execFileAsync = promisify(execFile);
 
-export const DEFAULT_PING_URL = 'https://www.gstatic.com/generate_204';
-/** Cloudflare and Google public DNS, the same resolvers on both IP families. */
-export const DEFAULT_PING_TARGETS_IPV4 = ['1.1.1.1'];
-export const DEFAULT_PING_TARGETS_IPV6 = ['2606:4700:4700::1111', '2001:4860:4860::8888'];
-export const MAX_PING_URLS = 5;
-export const DEFAULT_PING_URL_INTERVAL_SECONDS = 5;
-export const MIN_PING_URL_INTERVAL_SECONDS = 1;
-export const MAX_PING_URL_INTERVAL_SECONDS = 300;
 const HTTP_TIMEOUT_MS = 3000;
 
 export function isPingMethod(value: unknown): value is PingMethod {

@@ -176,7 +176,11 @@ function withStats(overrides: Record<string, unknown> = {}): Record<string, unkn
 }
 
 function renderPage(bridge: Record<string, unknown> = {}) {
-  return renderWithProviders(<DashboardPage />, { route: '/', bridge });
+  return renderWithProviders(<DashboardPage />, {
+    route: '/',
+    // Offline unless a test says otherwise, so the network tile has an answer to show.
+    bridge: { 'ipGeo.lookup': () => Promise.reject(new Error('offline')), ...bridge },
+  });
 }
 
 /** The glass card a title heads, so one card's controls can be told from another's. */

@@ -195,8 +195,9 @@ describe('AskAiPage sending', () => {
   });
 
   it('refuses to send before a model is chosen', async () => {
-    // No settings answer at all, which is what the page sees before anything is configured.
-    const { user } = renderWithProviders(<AskAiPage />);
+    const { user } = renderWithProviders(<AskAiPage />, {
+      bridge: { 'settings.get': { ...settings, openaiModel: '' } },
+    });
 
     await user.type(askBox(), 'anyone there?{Enter}');
 

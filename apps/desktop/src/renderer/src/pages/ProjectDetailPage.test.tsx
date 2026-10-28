@@ -89,11 +89,27 @@ function project(overrides: Partial<Project> = {}): Project {
 type Overrides = Record<string, unknown>;
 
 /** Renders the page at `/projects/p1` with one project behind the bridge. */
+/**
+ * The tabs that load in the background but that these tests are not about. They fail to load,
+ * which leaves them in the same error state an empty answer would, without React Query logging.
+ */
+const notLoaded = () => Promise.reject(new Error('not loaded in this test'));
+const backgroundTabs: Overrides = {
+  'projects.bootstrapPlan': notLoaded,
+  'blueprints.get': notLoaded,
+  'blueprints.agentFileTarget': notLoaded,
+  'git.status': notLoaded,
+  'security.getConfig': notLoaded,
+  'packages.list': notLoaded,
+  'studio.projectStorage': notLoaded,
+  'deployWordPress.localChanges': notLoaded,
+};
+
 function renderPage(bridge: Overrides = {}, projects: Project[] = [project()]) {
   return renderWithProviders(<ProjectDetailPage />, {
     route: '/projects/p1',
     path: 'projects/:projectId',
-    bridge: { 'projects.list': projects, ...bridge },
+    bridge: { ...backgroundTabs, 'projects.list': projects, ...bridge },
   });
 }
 
@@ -134,7 +150,7 @@ describe('ProjectDetailPage shell', () => {
     renderWithProviders(<ProjectDetailPage />, {
       route: '/projects/ghost',
       path: 'projects/:projectId',
-      bridge: { 'projects.list': [project()] },
+      bridge: { ...backgroundTabs, 'projects.list': [project()] },
     });
 
     expect(await screen.findByText('Project not found')).toBeTruthy();
@@ -149,6 +165,7 @@ describe('ProjectDetailPage shell', () => {
       route: '/projects/p1',
       path: 'projects/:projectId',
       bridge: {
+        ...backgroundTabs,
         'projects.list': async () => {
           throw new Error('database locked');
         },
@@ -276,7 +293,11 @@ describe('ProjectDetailPage sections', () => {
     renderWithProviders(<ProjectDetailPage />, {
       route: '/projects/p1?tab=schedule',
       path: 'projects/:projectId',
-      bridge: { 'projects.list': [project()], 'scheduledTasks.listByProject': [] },
+      bridge: {
+        ...backgroundTabs,
+        'projects.list': [project()],
+        'scheduledTasks.listByProject': [],
+      },
     });
 
     expect(await screen.findByText('Nothing scheduled')).toBeTruthy();
@@ -293,7 +314,11 @@ describe('ProjectDetailPage sections', () => {
     const { bridge } = renderWithProviders(<ProjectDetailPage />, {
       route: '/projects/p1?tab=usage',
       path: 'projects/:projectId',
-      bridge: { 'projects.list': [project()], 'agents.projectUsage': { status: 'unavailable' } },
+      bridge: {
+        ...backgroundTabs,
+        'projects.list': [project()],
+        'agents.projectUsage': { status: 'unavailable' },
+      },
     });
 
     expect(await screen.findByRole('heading', { name: 'Usage and cost' })).toBeTruthy();
@@ -334,7 +359,7 @@ describe('ProjectDetailPage sections', () => {
     const { unmount } = renderWithProviders(<ProjectDetailPage />, {
       route: '/projects/p1?tab=git',
       path: 'projects/:projectId',
-      bridge: { 'projects.list': [project()] },
+      bridge: { ...backgroundTabs, 'projects.list': [project()] },
     });
 
     expect(await screen.findByText("This folder isn't a git repository yet")).toBeTruthy();
@@ -346,7 +371,7 @@ describe('ProjectDetailPage sections', () => {
     renderWithProviders(<ProjectDetailPage />, {
       route: '/projects/p1?tab=nonsense',
       path: 'projects/:projectId',
-      bridge: { 'projects.list': [project()] },
+      bridge: { ...backgroundTabs, 'projects.list': [project()] },
     });
     await screen.findByRole('heading', { name: 'Apollo' });
     expect(
@@ -540,7 +565,7 @@ describe('ProjectDetailPage edit run commands link', () => {
     return renderWithProviders(<ProjectDetailPage />, {
       route,
       path: 'projects/:projectId',
-      bridge: { 'projects.list': [withRun] },
+      bridge: { ...backgroundTabs, 'projects.list': [withRun] },
     });
   }
 
@@ -594,7 +619,7 @@ describe('ProjectDetailPage create a run command with AI', () => {
     return renderWithProviders(<ProjectDetailPage />, {
       route,
       path: 'projects/:projectId',
-      bridge: { ...bridge, 'projects.list': projects },
+      bridge: { ...backgroundTabs, ...bridge, 'projects.list': projects },
     });
   }
 
@@ -681,6 +706,7 @@ describe('ProjectDetailPage create a run command with AI', () => {
       route: '/projects/p1?createRun=ai',
       path: 'projects/:projectId',
       bridge: {
+        ...backgroundTabs,
         ...bridge,
         'projects.list': [project()],
         'runProposals.startGuided': { ok: false, error: 'No.' },
@@ -750,7 +776,7 @@ describe('ProjectDetailPage WordPress section', () => {
     renderWithProviders(<ProjectDetailPage />, {
       route: '/projects/p1?tab=wordpress',
       path: 'projects/:projectId',
-      bridge: { 'projects.list': [linked], 'deployWordPress.listSites': [site] },
+      bridge: { ...backgroundTabs, 'projects.list': [linked], 'deployWordPress.listSites': [site] },
     });
 
     expect(
@@ -766,7 +792,7 @@ describe('ProjectDetailPage WordPress section', () => {
     renderWithProviders(<ProjectDetailPage />, {
       route: '/projects/p1?tab=wordpress',
       path: 'projects/:projectId',
-      bridge: { 'projects.list': [project()] },
+      bridge: { ...backgroundTabs, 'projects.list': [project()] },
     });
 
     // The hop to Overview is a second render that mounts the whole Overview section, which can take
@@ -868,7 +894,7 @@ describe('ProjectDetailPage Deploy section', () => {
     renderWithProviders(<ProjectDetailPage />, {
       route: '/projects/p1?tab=deploy',
       path: 'projects/:projectId',
-      bridge: { 'projects.list': [project()], 'deployFiles.list': [] },
+      bridge: { ...backgroundTabs, 'projects.list': [project()], 'deployFiles.list': [] },
     });
 
     expect(await screen.findByText('No FTP or SFTP site yet')).toBeTruthy();
@@ -900,7 +926,7 @@ describe('ProjectDetailPage Git tab without a repository', () => {
     return renderWithProviders(<ProjectDetailPage />, {
       route: '/projects/p1?tab=git',
       path: 'projects/:projectId',
-      bridge: { 'projects.list': [project(overrides)], ...bridge },
+      bridge: { ...backgroundTabs, 'projects.list': [project(overrides)], ...bridge },
     });
   }
 

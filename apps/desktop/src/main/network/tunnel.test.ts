@@ -58,6 +58,8 @@ function readUntil(socket: Socket, length: number): Promise<Buffer> {
       received = Buffer.concat([received, chunk]);
       if (received.length < length) return;
       socket.off('data', onData);
+      // Called once per handshake step on the same socket, so the listener has to go too.
+      socket.off('error', reject);
       socket.pause();
       if (received.length > length) socket.unshift(received.subarray(length));
       resolve(received.subarray(0, length));

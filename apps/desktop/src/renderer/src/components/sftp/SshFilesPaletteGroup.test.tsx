@@ -48,7 +48,7 @@ function Harness({ onDone }: { onDone: () => void }): React.JSX.Element {
   );
 }
 
-function renderGroup(servers: SshSavedServer[] | undefined) {
+function renderGroup(servers: SshSavedServer[]) {
   const onDone = vi.fn();
   const view = renderWithProviders(<Harness onDone={onDone} />, {
     route: '/remote',
@@ -95,7 +95,7 @@ describe('SshFilesPaletteGroup', () => {
   });
 
   it('shows nothing when there are no saved servers', async () => {
-    const { user, bridge } = renderGroup(undefined);
+    const { user, bridge } = renderGroup([]);
     await user.type(screen.getByLabelText('Search'), 'sftp');
     await vi.waitFor(() => expect(bridge.$fn('ssh.listServers')).toHaveBeenCalled());
     expect(screen.queryByRole('group')).toBeNull();

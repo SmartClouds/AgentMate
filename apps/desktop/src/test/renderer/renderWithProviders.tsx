@@ -66,6 +66,9 @@ export function renderWithProviders(
         <MemoryRouter initialEntries={[route]}>
           <Routes>
             <Route path={path ?? '*'} element={ui} />
+            {/* Somewhere to land when the component navigates away, which otherwise renders the
+                same nothing but logs "No routes matched location". */}
+            {path ? <Route path="*" element={null} /> : null}
           </Routes>
         </MemoryRouter>
       </TooltipProvider>

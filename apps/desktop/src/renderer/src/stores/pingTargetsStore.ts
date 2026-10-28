@@ -1,12 +1,22 @@
 import type { PingIpVersion, PingMethod } from '@runova/core';
 import { create } from 'zustand';
+import {
+  DEFAULT_PING_TARGETS_IPV4,
+  DEFAULT_PING_TARGETS_IPV6,
+  DEFAULT_PING_URL,
+  DEFAULT_PING_URL_INTERVAL_SECONDS,
+  MAX_PING_URL_INTERVAL_SECONDS,
+  MIN_PING_URL_INTERVAL_SECONDS,
+} from '@shared/pingDefaults';
 
-export const DEFAULT_PING_URL = 'https://www.gstatic.com/generate_204';
-export const DEFAULT_PING_URL_INTERVAL_SECONDS = 5;
-export const MIN_PING_URL_INTERVAL_SECONDS = 1;
-export const MAX_PING_URL_INTERVAL_SECONDS = 300;
-export const DEFAULT_PING_TARGETS_IPV4 = ['1.1.1.1'];
-export const DEFAULT_PING_TARGETS_IPV6 = ['2606:4700:4700::1111', '2001:4860:4860::8888'];
+export {
+  DEFAULT_PING_TARGETS_IPV4,
+  DEFAULT_PING_TARGETS_IPV6,
+  DEFAULT_PING_URL,
+  DEFAULT_PING_URL_INTERVAL_SECONDS,
+  MAX_PING_URL_INTERVAL_SECONDS,
+  MIN_PING_URL_INTERVAL_SECONDS,
+};
 
 interface PingTargetsState {
   pingTargets: string[];

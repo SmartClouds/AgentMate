@@ -322,9 +322,15 @@ describe('terminal:create', () => {
     host.state.createOrAttach = () => {
       throw new Error('host went away');
     };
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     await expect(invokeFrom(second, IPC.terminal.create, { sessionId: 'owned' })).rejects.toThrow(
       'host went away',
     );
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('[terminal] could not start'),
+      expect.any(Error),
+    );
+    warn.mockRestore();
 
     // Output still goes to the window that actually has the session on screen.
     host.state.events?.onData('owned', 'still mine');

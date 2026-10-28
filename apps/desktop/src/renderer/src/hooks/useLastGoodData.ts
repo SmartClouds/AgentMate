@@ -24,6 +24,13 @@ const snapshots = new Map<string, Snapshot<unknown>>();
 const failures = new Map<string, RefreshFailure>();
 const handledAt = new Map<string, number>();
 
+/** Forgets every saved list and failure. The tests call it between cases. */
+export function clearLastGoodData(): void {
+  snapshots.clear();
+  failures.clear();
+  handledAt.clear();
+}
+
 function readSnapshot<T>(key: string): Snapshot<T> | null {
   const cached = snapshots.get(key);
   if (cached) return cached as Snapshot<T>;

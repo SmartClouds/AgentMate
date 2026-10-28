@@ -100,10 +100,15 @@ function renderPage(containers: DockerContainer[], extra: Record<string, unknown
 }
 
 describe('DockerPage availability', () => {
-  it('renders without data and treats "no answer yet" as an empty machine, not a crash', async () => {
-    // The blank bridge answers every call with undefined, which is what the page sees between
-    // mount and the first real reply.
-    renderWithProviders(<DockerPage />, { route: '/docker' });
+  it('treats an availability check that gave no answer as an empty machine, not a crash', async () => {
+    renderWithProviders(<DockerPage />, {
+      route: '/docker',
+      bridge: {
+        'docker.availability': async () => {
+          throw new Error('main process went away');
+        },
+      },
+    });
 
     expect(await screen.findByText('No containers on this machine')).toBeTruthy();
     expect(screen.queryByText(/Docker isn't available/)).toBeNull();

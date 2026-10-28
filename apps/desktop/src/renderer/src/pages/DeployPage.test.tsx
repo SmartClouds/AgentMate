@@ -180,6 +180,8 @@ function chosenSettings(initial: string[] | (() => Promise<string[]>)) {
   };
 }
 
+const notLoaded = () => Promise.reject(new Error('not loaded in this test'));
+
 function renderPage(bridge: Record<string, unknown> = {}, route = '/deploy') {
   const listServers = (bridge['deploy.listServers'] ?? (async () => [server()])) as () => Promise<
     DeployServer[]
@@ -194,6 +196,12 @@ function renderPage(bridge: Record<string, unknown> = {}, route = '/deploy') {
     {
       route,
       bridge: {
+        // Overview and Docker panels these tests are not about. They fail to load, the same
+        // error state an empty answer leaves them in, without React Query logging about it.
+        'deploySystem.info': notLoaded,
+        'deploySystem.updates': notLoaded,
+        'deployDocker.listContainers': notLoaded,
+        'deployFirewall.exposure': notLoaded,
         'deploy.listServers': listServers,
         // Deploy lists only the servers the user chose. Unless a test says otherwise, they chose
         // every server it lists, as it lists them when the choice is read.

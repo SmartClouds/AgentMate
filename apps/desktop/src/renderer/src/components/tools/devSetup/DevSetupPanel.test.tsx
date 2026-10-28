@@ -94,7 +94,11 @@ const IDLE: DevJobState = {
 const emit = (
   bridge: { $emit: (path: string, ...args: unknown[]) => void },
   ...events: DevJobEvent[]
-) => act(() => events.forEach((event) => bridge.$emit('devSetup.onEvent', event)));
+) =>
+  // Async, so the act environment stays on until the updates the events cause have settled.
+  act(async () => {
+    for (const event of events) bridge.$emit('devSetup.onEvent', event);
+  });
 
 function renderPanel(bridge = bridgeFor(), route = '/') {
   return renderWithProviders(<DevSetupPanel />, { bridge, route });

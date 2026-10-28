@@ -44,6 +44,9 @@ function git(cwd: string, ...args: string[]): string {
   return execFileSync('git', args, {
     cwd,
     encoding: 'utf-8',
+    // Git reports progress ("Switched to branch", "Cloning into") on stderr, which would otherwise
+    // go straight to the test log. Piped, it ends up in the error when a command fails.
+    stdio: 'pipe',
     env: {
       ...process.env,
       GIT_CONFIG_NOSYSTEM: '1',

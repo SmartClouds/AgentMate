@@ -174,8 +174,10 @@ describe('RunnersPanel before anything has loaded', () => {
     expect(document.querySelectorAll('.shimmer')).toHaveLength(0);
   });
 
-  it('renders nothing when the bridge has no answer', async () => {
-    const view = renderPanel(undefined);
+  it('renders nothing when the runner lookup throws', async () => {
+    const view = renderPanel(async () => {
+      throw new Error('main process went away');
+    });
     await settled(view);
 
     expect(queryPanel()).toBeNull();

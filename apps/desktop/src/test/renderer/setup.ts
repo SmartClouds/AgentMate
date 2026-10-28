@@ -140,6 +140,10 @@ afterEach(async () => {
   if (hasDom) {
     cleanup();
     await resetAllStoresAsync();
+    // Its saved lists live at module level, so one test's good answer would show up in the next.
+    // Imported here rather than at the top so a test file's own mock of sonner still applies.
+    const { clearLastGoodData } = await import('@/hooks/useLastGoodData');
+    clearLastGoodData();
     try {
       localStorage.clear();
       sessionStorage.clear();

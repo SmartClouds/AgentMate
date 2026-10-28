@@ -129,10 +129,11 @@ function filterTab(label: string): HTMLElement {
 }
 
 describe('PipelinesPage when there is nothing to show', () => {
-  it('renders against an empty bridge without a run list', async () => {
-    renderPage();
+  it('asks for a GitHub remote when gh is signed in but no repo is watched', async () => {
+    renderPage({
+      'pipelines.dashboardActivity': async () => activity({ runs: [], repoCount: 0 }),
+    });
 
-    // With no answer at all the page reads it as "no repos are being watched".
     expect(
       await screen.findByText(
         'Add a GitHub remote on a project and its Actions runs show up here.',

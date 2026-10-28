@@ -8,6 +8,8 @@
  * A test's own answers replace these.
  */
 
+import { DEFAULT_SETTINGS } from '@shared/defaultSettings';
+
 type RunovaApi = Window['runova'];
 
 /** What calling a dotted path on the real bridge resolves to. */
@@ -36,7 +38,18 @@ function defaults<M>(
 
 /** A fresh copy per bridge, so one test changing an answer cannot reach the next. */
 export function bridgeDefaults(): Record<string, unknown> {
+  const androidSdk = {
+    status: 'missing',
+    root: null,
+    source: null,
+    checked: [],
+    tools: { adb: false, emulator: false, avdmanager: false, sdkmanager: false },
+    adbVersion: null,
+  } as const;
+  const noGithubCli = { ok: false, cliAvailable: false, authenticated: false } as const;
+
   return defaults({
+    'settings.get': structuredClone(DEFAULT_SETTINGS),
     'app.getVersion': async () => '0.0.0',
     'appNotifications.list': [],
     'appNotifications.unreadCount': async () => 0,
@@ -49,7 +62,11 @@ export function bridgeDefaults(): Record<string, unknown> {
     'cli.detectAll': [],
     'tools.detectAll': [],
     'ssh.listServers': [],
+    'ssh.vaultStatus': { hasPasskey: false, unlocked: false },
+    'remote.listSavedServers': [],
     'skills.listRepositories': [],
+    'skills.checkForUpdates': [],
+    'mcp.listRepositories': [],
     'skills.listInstalled': [],
     'skills.listOnDiskSkills': [],
     'skills.listFavorites': [],
@@ -68,14 +85,25 @@ export function bridgeDefaults(): Record<string, unknown> {
     'usage.list': [],
     'promptHistory.list': [],
     'pipelines.runners': { ok: true, runners: [], waiting: [], hiddenOrgs: [] },
-    'android.sdk': {
-      status: 'missing',
-      root: null,
-      source: null,
-      checked: [],
-      tools: { adb: false, emulator: false, avdmanager: false, sdkmanager: false },
-      adbVersion: null,
+    'pipelines.dashboardActivity': {
+      ...noGithubCli,
+      days: [],
+      runs: [],
+      weekPassed: 0,
+      weekFailed: 0,
+      runningCount: 0,
+      repoCount: 0,
     },
+    'git.githubActivity': { ...noGithubCli, login: null, yearCount: 0, days: [] },
+    'git.githubNotifications': { ...noGithubCli, notifications: [] },
+    'android.sdk': { ...androidSdk, checked: [] },
+    'android.refresh': {
+      sdk: { ...androidSdk, checked: [] },
+      emulators: [],
+      physical: [],
+      broken: [],
+    },
+    'android.availableSystemImages': { images: [], error: null },
     'grammar.localStatus': {
       toolsDir: '',
       installPath: null,
@@ -99,8 +127,58 @@ export function bridgeDefaults(): Record<string, unknown> {
     'pet.getSnooze': { until: null },
     'pet.customDataUrls': {},
     'deploy.coreRelease': async () => null,
+    'studio.settings': {
+      defaultRoot: '',
+      defaultRootIsCustom: false,
+      standaloneRoot: '',
+      cacheDir: '',
+      cacheCapGb: 10,
+      autoResumeRenders: true,
+      hwEncode: false,
+    },
     'studioRender.jobs': [],
     'studioAi.generations': [],
     'studioAudio.engines': [],
+    'studioAi.recipes': [],
+    'studio.list': [],
+    'studioRender.tools': {
+      ffmpeg: { found: false, version: null },
+      ffprobe: { found: false },
+      codecs: { h264: 'ffmpeg not found', h265: 'ffmpeg not found', vp9: 'ffmpeg not found' },
+    },
+    'docker.availability': async () => false,
+    'resourceActivity.snapshot': {
+      generatedAt: 0,
+      watchingSince: 0,
+      idleMinutes: 20,
+      docker: 'unavailable',
+      emulators: 'unavailable',
+      resources: [],
+      history: [],
+    },
+    'fs.listDirectory': [],
+    'projects.listClaudeHooks': [],
+    'environments.list': [],
+    'security.activeScan': async () => null,
+    'security.history': [],
+    'security.preflight': [],
+    'pipelines.runAnnotations': {
+      ok: true,
+      annotations: [],
+      counts: { failure: 0, warning: 0, notice: 0 },
+    },
+    'deploySystem.services': [],
+    'deployRegistry.plan': { sendSignIns: false, entries: [] },
+    'cloudflareServer.dnsTokens': [],
+    'cloudflareServer.originLock': {
+      enabled: false,
+      authenticatedOriginPulls: false,
+      state: 'off',
+      ports: [],
+      missingRules: [],
+      openRules: [],
+      staleRules: [],
+      warnings: [],
+    },
   });
 }

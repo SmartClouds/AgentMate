@@ -22,30 +22,13 @@ import {
   clampDesktopPetClickArea,
   clampDesktopPetScale,
   DASHBOARD_CHART_IDS,
-  DASHBOARD_STAT_IDS,
-  DEFAULT_COMMIT_MESSAGE_SETTINGS,
   DEFAULT_DASHBOARD,
-  DEFAULT_DESKTOP_PET_ACTION_SPEEDS,
-  DEFAULT_GEMINI_API_MODEL,
-  DEFAULT_IDLE_RESOURCE_MINUTES,
-  DEFAULT_OPENAI_API_MODEL,
-  DEFAULT_REVIEW_COMMANDS,
   DEFAULT_TERMINAL_BACKGROUND_COLOR,
-  DEFAULT_VAULT_AUTO_LOCK_MINUTES,
-  DEFAULT_VAULT_CLIPBOARD_CLEAR_SECONDS,
-  DEFAULT_WHISPER_MODEL,
-  DEFAULT_WORKTREE_SETTINGS,
-  defaultGrammarSettings,
-  defaultProxySettings,
-  defaultStatusBarUsage,
-  defaultUsageResetAlerts,
-  defaultUsageThresholdAlerts,
   isMenuPosition,
   isPipelineFailureOpen,
   isRunDockerStopMode,
   isStartupPage,
   isThemeMode,
-  LATE_DASHBOARD_CHART_IDS,
   normalizeCliArgs,
   normalizeCliLaunchDefaults,
   normalizeCommitMessageSettings,
@@ -85,19 +68,20 @@ import type {
   StoredRdpServer,
   StoredSshServer,
 } from '../shared/apiTypes';
+import { DEFAULT_SETTINGS, ORIGINAL_CHART_IDS } from '../shared/defaultSettings';
 import { referencedAttachmentFiles, removeOrphanAttachments } from './blueprintFileStore';
 import { blueprintRevisionDb } from './blueprintRevisionDb';
 import {
-  DEFAULT_PING_TARGETS_IPV4,
   DEFAULT_PING_TARGETS_IPV6,
-  DEFAULT_PING_URL,
-  DEFAULT_PING_URL_INTERVAL_SECONDS,
   isPingIpVersion,
   isPingMethod,
   normalizePingUrlInterval,
   normalizePingUrls,
 } from './network/pingProbe';
 import { hydrateProjectIcons, persistProjectIcons } from './projectIconStore';
+
+/** Backup import reads the defaults from here. */
+export { DEFAULT_SETTINGS };
 
 function dataDir(): string {
   return join(app.getPath('userData'), 'data');
@@ -142,118 +126,9 @@ function inSettingsQueue<T>(work: () => Promise<T>): Promise<T> {
 }
 
 /**
- * The charts that existed before the late additions. A profile with no record of which charts it
- * has been offered is treated as having seen exactly these, so the later ones get introduced.
- */
-const ORIGINAL_CHART_IDS = DASHBOARD_CHART_IDS.filter(
-  (id) => !LATE_DASHBOARD_CHART_IDS.includes(id),
-);
-
-/** Exported so backup import can treat its keys as the allowlist of known settings. */
-export const DEFAULT_SETTINGS: AppSettings = {
-  defaultCliId: null,
-  cliArgs: {},
-  cliLaunchDefaults: {},
-  cliOrder: [],
-  commitMessage: { ...DEFAULT_COMMIT_MESSAGE_SETTINGS },
-  worktrees: { ...DEFAULT_WORKTREE_SETTINGS, copyGlobs: [...DEFAULT_WORKTREE_SETTINGS.copyGlobs] },
-  reviewCommands: [...DEFAULT_REVIEW_COMMANDS],
-  theme: 'system',
-  menuPosition: 'left',
-  startupPage: 'last',
-  projectsRootPath: null,
-  skillRepositoryIds: [],
-  pingTargets: [...DEFAULT_PING_TARGETS_IPV4],
-  pingIpVersion: 'ipv4',
-  pingTargetsIpv6: [...DEFAULT_PING_TARGETS_IPV6],
-  pingMethod: 'icmp',
-  pingUrls: [DEFAULT_PING_URL],
-  pingUrlIntervalSeconds: DEFAULT_PING_URL_INTERVAL_SECONDS,
-  telegramBotToken: null,
-  telegramChatId: null,
-  telegramScheduledTasksChatId: null,
-  openaiApiKey: null,
-  openaiModel: DEFAULT_OPENAI_API_MODEL,
-  ollamaBaseUrl: 'http://localhost:11434',
-  ollamaModel: '',
-  ollamaContextLength: null,
-  ollamaKeepAlive: '5m',
-  geminiApiKey: null,
-  geminiModel: DEFAULT_GEMINI_API_MODEL,
-  helpEmbeddingModels: {},
-  promptBuilderProvider: 'openai',
-  // Sizing right after Generate or Translate is what the dialog always did, so it stays on.
-  promptBuilderAutoSize: true,
-  dashboardChartOrder: [],
-  dashboardChartCards: [...DASHBOARD_CHART_IDS],
-  dashboardUsageCards: [],
-  // Preserves today's always-shown behavior for existing installs; users can
-  // hide any of these from the Dashboard's edit mode once they upgrade.
-  dashboardStatCards: [...DASHBOARD_STAT_IDS],
-  dashboardUsageSummaryCards: [],
-  dashboardLayout: [],
-  dashboardIntroducedCharts: ORIGINAL_CHART_IDS,
-  translateMaxRetries: 3,
-  speechModel: DEFAULT_WHISPER_MODEL,
-  speechLanguage: 'auto',
-  grammar: defaultGrammarSettings(),
-  proxy: defaultProxySettings(),
-  usageProviderConfigs: {},
-  securityScannerConfigs: {},
-  usageWidgets: [],
-  promptBuildWidgets: [],
-  usageCardOrder: [],
-  usageCardModes: {},
-  usageResetAlerts: defaultUsageResetAlerts(),
-  usageThresholdAlerts: defaultUsageThresholdAlerts(),
-  statusBarUsage: defaultStatusBarUsage(),
-  desktopPetEnabled: false,
-  desktopPetCharacterId: 'fandi',
-  desktopPetCustoms: [],
-  desktopPetName: '',
-  // Fandi is drawn facing left, so it starts with its walk mirrored.
-  desktopPetFlippedIds: ['fandi'],
-  desktopPetCanMove: true,
-  desktopPetCanClimb: true,
-  desktopPetCanParachute: false,
-  desktopPetGear3d: true,
-  desktopPetActionSpeeds: { ...DEFAULT_DESKTOP_PET_ACTION_SPEEDS },
-  desktopPetScale: 100,
-  desktopPetClickArea: 100,
-  desktopPetCardView: 'tokens',
-  desktopPetPipelineOnFail: false,
-  desktopPetPipelineOnPass: false,
-  pipelineFailureNotify: true,
-  pipelineFailureOpen: 'pipelines',
-  desktopPetNetworkQuality: false,
-  desktopPetAgentStatus: false,
-  keepTerminalsRunning: true,
-  stopDockerWithRun: 'ask',
-  autoPauseRunsWhileAgentWorks: false,
-  workspaceNotifications: true,
-  terminalAiNotifications: true,
-  keepAwake: 'agent',
-  checkToolUpdatesEnabled: true,
-  workspaceTerminalCustomBackground: false,
-  workspaceTerminalBackgroundColor: DEFAULT_TERMINAL_BACKGROUND_COLOR,
-  vaultAutoLockMinutes: DEFAULT_VAULT_AUTO_LOCK_MINUTES,
-  vaultClipboardClearSeconds: DEFAULT_VAULT_CLIPBOARD_CLEAR_SECONDS,
-  vaultLockOnSystemLock: true,
-  androidSdkPath: null,
-  androidEmulatorLaunchFlags: '',
-  androidStopEmulatorsOnQuit: false,
-  androidCapturePath: null,
-  idleResourceMinutes: DEFAULT_IDLE_RESOURCE_MINUTES,
-  idleResourceNotify: true,
-  devSetupStacks: ['essentials'],
-  deployServerIds: [],
-  runnerMachineLinks: {},
-};
-
-/**
  * A brand new install opens with DEFAULT_DASHBOARD. It only applies while settings.json doesn't
  * exist, so a profile from an older build that is missing some of these keys keeps the plain
- * defaults above (and its legacy card order still migrates) instead of being rearranged.
+ * DEFAULT_SETTINGS (and its legacy card order still migrates) instead of being rearranged.
  */
 const FIRST_RUN_DASHBOARD: Partial<AppSettings> = {
   ...structuredClone(DEFAULT_DASHBOARD),
