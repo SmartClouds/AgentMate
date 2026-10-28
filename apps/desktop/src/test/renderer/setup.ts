@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
-import { afterEach, beforeEach, vi } from 'vitest';
+import { afterEach, beforeEach, expect, vi } from 'vitest';
 import { installRunovaBridge } from './runovaBridge';
 import { resetAllStoresAsync } from './stores';
 
@@ -101,6 +101,15 @@ if (hasDom) {
       read: vi.fn(async () => []),
     },
   });
+}
+
+if (process.env.PROBE_DIR) {
+  const original = console.error;
+  console.error = (...args: unknown[]) => {
+    const m = /Affected query key: (.*)/.exec(String(args[0]));
+    if (m) process.getBuiltinModule('node:fs').appendFileSync(`${process.env.PROBE_DIR}/keys.txt`, `${m[1]}\t${expect.getState().testPath ?? ''}\n`);
+    original(...args);
+  };
 }
 
 beforeEach(async () => {

@@ -99,7 +99,7 @@ export function createRunovaBridge(overrides: BridgeOverrides = {}): FakeBridge 
     } else if (answers.has(path)) {
       fn = vi.fn(async () => answers.get(path));
     } else {
-      fn = vi.fn(async () => undefined);
+      fn = vi.fn(async () => { if (process.env.PROBE_DIR) process.getBuiltinModule('node:fs').appendFileSync(`${process.env.PROBE_DIR}/paths.txt`, `${path}\n`); return undefined; });
     }
 
     mocks.set(path, fn);
