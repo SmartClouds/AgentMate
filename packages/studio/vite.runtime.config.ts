@@ -19,5 +19,10 @@ export default defineConfig({
     minify: false,
     sourcemap: false,
     target: 'chrome130',
+    rollupOptions: {
+      // Rolldown's "time spent in plugins" hint fires on slow CI runners with nothing to act on:
+      // the only plugins here are Vite's own.
+      checks: { pluginTimings: false },
+    },
   },
 });

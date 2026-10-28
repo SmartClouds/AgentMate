@@ -36,6 +36,10 @@ const forcedExternals = [
   /^node:/,
 ];
 
+// Most of each build is Vite's own asset and worker plugins (Monaco's workers above all), so on a
+// slow CI runner Rolldown's "time spent in plugins" hint fires every run without anything to act on.
+const checks = { pluginTimings: false };
+
 export default defineConfig({
   main: {
     resolve: {
@@ -53,6 +57,7 @@ export default defineConfig({
       externalizeDeps: { exclude: ['@xterm/headless', '@xterm/addon-serialize'] },
       rollupOptions: {
         external: forcedExternals,
+        checks,
         input: {
           index: resolve(__dirname, 'src/main/index.ts'),
           // Separate entry: local-log usage scanning runs in a worker thread so
@@ -82,6 +87,7 @@ export default defineConfig({
     build: {
       rollupOptions: {
         external: forcedExternals,
+        checks,
         input: {
           index: resolve(__dirname, 'src/preload/index.ts'),
         },
@@ -103,10 +109,7 @@ export default defineConfig({
           // The startup splash: a separate page with no React so it paints at once.
           splash: resolve(__dirname, 'src/renderer/splash.html'),
         },
-        // Most of this build is Vite's own asset and worker plugins (Monaco's workers above all),
-        // so on a slow CI runner Rolldown's "time spent in plugins" hint fires every run without
-        // anything to act on.
-        checks: { pluginTimings: false },
+        checks,
       },
     },
     resolve: {
