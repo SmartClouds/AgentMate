@@ -76,6 +76,10 @@ async function restart(
       ...env,
     },
   });
+  // The same wait launchApp has. Asking the main process about its windows while it is still
+  // starting up can lose the evaluate ("Resulting promise was garbage collected" on macOS).
+  const page = await relaunched.firstWindow();
+  await page.waitForFunction(() => Boolean((window as { runova?: unknown }).runova));
   return relaunched;
 }
 
