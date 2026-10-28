@@ -1,8 +1,8 @@
 name: Runner cleanup
 description: >-
-  On a self-hosted runner, gives the job a temp folder of its own and, once the job is over (passed,
-  failed or cancelled), removes what it left on the runner's disk. Does nothing on GitHub-hosted
-  runners, which start clean every time.
+  On a self-hosted runner, gives the job a temp folder of its own, keeps pnpm's store where Setup
+  pnpm does not delete it and, once the job is over (passed, failed or cancelled), removes what it
+  left on the runner's disk. Does nothing on GitHub-hosted runners, which start clean every time.
 
 # A post step runs after every other step, even when the job failed or was cancelled, which a last
 # `if: always()` step in each job would only match if nobody forgot it. Composite actions have no
