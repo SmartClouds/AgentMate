@@ -97,11 +97,11 @@ export const promptHistoryDb = {
     const rows = projectId
       ? (getDb()
           .prepare(
-            'SELECT * FROM prompt_history WHERE project_id = ? ORDER BY created_at DESC LIMIT ?',
+            'SELECT * FROM prompt_history WHERE project_id = ? ORDER BY created_at DESC, rowid DESC LIMIT ?',
           )
           .all(projectId, limit) as PromptHistoryRow[])
       : (getDb()
-          .prepare('SELECT * FROM prompt_history ORDER BY created_at DESC LIMIT ?')
+          .prepare('SELECT * FROM prompt_history ORDER BY created_at DESC, rowid DESC LIMIT ?')
           .all(limit) as PromptHistoryRow[]);
     return rows.map(rowToEntry);
   },
@@ -114,7 +114,7 @@ export const promptHistoryDb = {
       .prepare(
         `SELECT * FROM prompt_history
          WHERE ${matches}${projectId ? ' AND project_id = @projectId' : ''}
-         ORDER BY created_at DESC LIMIT @limit`,
+         ORDER BY created_at DESC, rowid DESC LIMIT @limit`,
       )
       .all({ like, limit, ...(projectId ? { projectId } : {}) }) as PromptHistoryRow[];
     return rows.map(rowToEntry);
@@ -140,7 +140,7 @@ export const promptHistoryDb = {
   /** Full table, unlike `list()` which caps at 200. Used for backup export. */
   exportAll(): PromptHistoryEntry[] {
     const rows = getDb()
-      .prepare('SELECT * FROM prompt_history ORDER BY created_at DESC')
+      .prepare('SELECT * FROM prompt_history ORDER BY created_at DESC, rowid DESC')
       .all() as PromptHistoryRow[];
     return rows.map(rowToEntry);
   },

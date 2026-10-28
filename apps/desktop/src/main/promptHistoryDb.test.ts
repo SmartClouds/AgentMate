@@ -164,6 +164,16 @@ describe('list', () => {
     expect(db.list()[0].createdAt).toBe(added[2].createdAt);
   });
 
+  it('keeps the newest first when two entries share a millisecond', async () => {
+    const db = await loadDb();
+    // The clock stays put, as it does for two saves that land in the same millisecond.
+    db.add(input({ rawInput: 'first' }));
+    db.add(input({ rawInput: 'second' }));
+
+    expect(db.list().map((one) => one.rawInput)).toEqual(['second', 'first']);
+    expect(db.search('').map((one) => one.rawInput)).toEqual(['second', 'first']);
+  });
+
   it('honours the limit', async () => {
     const db = await loadDb();
     await addSpaced(db, 5);
