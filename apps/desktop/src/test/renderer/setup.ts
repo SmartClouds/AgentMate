@@ -110,6 +110,7 @@ if (hasDom) {
 const UNDEFINED_QUERY_DATA = /^Query data cannot be undefined\..*Affected query key: (.*)$/s;
 const originalConsoleError = Symbol.for('runova.test.originalConsoleError');
 const consoleSlots = console as unknown as Record<symbol, typeof console.error>;
+// biome-ignore lint/suspicious/noConsole: keeps the real console.error to pass other errors on
 consoleSlots[originalConsoleError] ??= console.error;
 const consoleError = consoleSlots[originalConsoleError];
 const unstubbedQueries = new Set<string>();
@@ -121,6 +122,7 @@ console.error = (...args: unknown[]) => {
 
 afterAll(() => {
   if (unstubbedQueries.size === 0) return;
+  // biome-ignore lint/suspicious/noConsole: the CI log is where a missing stub gets noticed
   console.warn(
     `Queries answered with undefined by the fake bridge (stub them in the test or in bridgeDefaults.ts): ${[...unstubbedQueries].join(' ')}`,
   );

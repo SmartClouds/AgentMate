@@ -28,7 +28,9 @@ type Answer<T, P extends string> = P extends `${infer Head}.${infer Rest}`
 type Default<A> = [A] extends [object] ? A : () => Promise<A>;
 
 /** Checks every path against the real bridge, so a renamed call or a changed shape fails tsc. */
-function defaults<M>(map: { [P in keyof M]: P extends string ? Default<Answer<RunovaApi, P>> : never }) {
+function defaults<M>(
+  map: { [P in keyof M]: P extends string ? Default<Answer<RunovaApi, P>> : never },
+) {
   return map as Record<string, unknown>;
 }
 
@@ -46,7 +48,6 @@ export function bridgeDefaults(): Record<string, unknown> {
     'git.githubAccount': { cliAvailable: false, authenticated: false, login: null, owners: [] },
     'cli.detectAll': [],
     'tools.detectAll': [],
-    'docker.availability': async () => false,
     'ssh.listServers': [],
     'skills.listRepositories': [],
     'skills.listInstalled': [],

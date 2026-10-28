@@ -287,7 +287,7 @@ describe('PromptBuilderPage output actions', () => {
     usePromptBuilderStore.setState({
       generated: '# Login form',
       promptType: 'Frontend',
-      targetAI: 'Claude',
+      targetAI: 'Claude Code',
     });
     const { user, bridge } = renderPage();
 
@@ -304,7 +304,7 @@ describe('PromptBuilderPage output actions', () => {
       expect(bridge.$fn('templates.save')).toHaveBeenCalledWith({
         name: 'Login form',
         promptType: 'Frontend',
-        targetAI: 'Claude',
+        targetAI: 'Claude Code',
         content: '# Login form',
       }),
     );

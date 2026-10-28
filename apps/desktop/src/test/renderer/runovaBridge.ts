@@ -55,9 +55,7 @@ function isSubscription(key: string): boolean {
 }
 
 export function createRunovaBridge(overrides: BridgeOverrides = {}): FakeBridge {
-  const answers = new Map<string, unknown>(
-    Object.entries({ ...bridgeDefaults(), ...overrides }),
-  );
+  const answers = new Map<string, unknown>(Object.entries({ ...bridgeDefaults(), ...overrides }));
   const nodes = new Map<string, unknown>();
   const mocks = new Map<string, Mock>();
   const listeners = new Map<string, Listener[]>();
