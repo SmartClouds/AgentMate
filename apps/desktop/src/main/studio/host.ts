@@ -29,15 +29,6 @@ import { createStudioSecrets } from './secrets';
 const CHECK_SCALE = 0.25;
 
 /**
- * The running service, made by main/studio/index.ts from this host. Imported when needed rather
- * than at load, since index.ts imports this file.
- */
-async function studioServiceForHost(): Promise<StudioService> {
-  const { studioService } = await import('./index');
-  return studioService();
-}
-
-/**
  * Where Studio meets the rest of Runova. This is the one file under main/studio allowed to
  * import the app's own modules (see studioBoundary.test.ts): everything Studio needs from the app
  * comes through the `StudioHost` built here, so Studio could move to an app of its own by
@@ -56,7 +47,12 @@ export function studioPackageRoot(): string {
   return dirname(dirname(dirname(entry)));
 }
 
-export function createDesktopStudioHost(): StudioHost {
+/**
+ * `service` is the running service this host ends up in, which the scene checks ask for the
+ * hosts a scene may load. It is passed in rather than imported, since main/studio/index.ts makes
+ * the service from this host.
+ */
+export function createDesktopStudioHost(service: () => StudioService): StudioHost {
   const dataDir = join(app.getPath('userData'), 'data', 'studio');
   // ElevenLabs and Azure keys are sealed like the Servers secrets, and move with a passkey change.
   const secrets = createStudioSecrets<SecretEnvelope>({
@@ -132,7 +128,7 @@ export function createDesktopStudioHost(): StudioHost {
       async check(input) {
         const treeHash = /^studio-scene:\/\/t-([0-9a-f]{64})\//.exec(input.url)?.[1];
         const allowedHosts = treeHash
-          ? await (await studioServiceForHost()).sceneHosts({ treeHash })
+          ? await service().sceneHosts({ treeHash })
           : [];
         const source = createOffscreenSource({
           width: input.width,

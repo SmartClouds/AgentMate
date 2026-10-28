@@ -1,5 +1,4 @@
 import type { PingIpVersion, PingMethod } from '@runova/core';
-import { create } from 'zustand';
 import {
   DEFAULT_PING_TARGETS_IPV4,
   DEFAULT_PING_TARGETS_IPV6,
@@ -8,6 +7,7 @@ import {
   MAX_PING_URL_INTERVAL_SECONDS,
   MIN_PING_URL_INTERVAL_SECONDS,
 } from '@shared/pingDefaults';
+import { create } from 'zustand';
 
 export {
   DEFAULT_PING_TARGETS_IPV4,

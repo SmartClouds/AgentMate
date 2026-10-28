@@ -11,7 +11,7 @@ import { createDesktopStudioHost, liveProjectIds } from './host';
 let service: StudioService | null = null;
 
 export function studioService(): StudioService {
-  service ??= createStudioService(createDesktopStudioHost());
+  service ??= createStudioService(createDesktopStudioHost(studioService));
   return service;
 }
 

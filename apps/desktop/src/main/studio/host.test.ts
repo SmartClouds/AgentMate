@@ -37,10 +37,15 @@ async function load() {
   return import('./host');
 }
 
+/** None of these tests check a scene, the one place the host asks for its service. */
+const noService = (): never => {
+  throw new Error('the service is not used here');
+};
+
 describe('createDesktopStudioHost', () => {
   it('keeps the library under Videos and its own data under userData', async () => {
     const { createDesktopStudioHost } = await load();
-    const host = createDesktopStudioHost();
+    const host = createDesktopStudioHost(noService);
     expect(host.defaultLibraryRoot).toBe(join(userData.dir, 'Videos', 'Runova Studio'));
     expect(host.dataDir).toBe(join(userData.dir, 'data', 'studio'));
     expect(host.defaultCacheDir).toBe(join(userData.dir, 'studio-cache'));
@@ -49,7 +54,7 @@ describe('createDesktopStudioHost', () => {
 
   it('finds the projects Runova has, and nothing else', async () => {
     const { createDesktopStudioHost, liveProjectIds } = await load();
-    const host = createDesktopStudioHost();
+    const host = createDesktopStudioHost(noService);
     expect(await host.projects.get('p1')).toEqual({
       id: 'p1',
       name: 'Shop',
@@ -62,7 +67,7 @@ describe('createDesktopStudioHost', () => {
   it('passes events on to every window', async () => {
     const { createDesktopStudioHost } = await load();
     const win = new FakeBrowserWindow();
-    createDesktopStudioHost().notify({ type: 'library-changed' });
+    createDesktopStudioHost(noService).notify({ type: 'library-changed' });
     expect(win.webContents.sentOn(IPC.studio.onEvent)).toEqual([[{ type: 'library-changed' }]]);
   });
 });
@@ -71,7 +76,7 @@ describe('render notices', () => {
   it('tells the user when a render ends or is picked up again, and opens the video on click', async () => {
     const { createDesktopStudioHost } = await load();
     notices.length = 0;
-    const host = createDesktopStudioHost();
+    const host = createDesktopStudioHost(noService);
     host.notify({ type: 'render-changed', jobId: 'j1', videoId: 'v1' });
     host.notify({
       type: 'render-finished',
@@ -123,7 +128,7 @@ describe('the render host', () => {
       ffmpeg: [{ state: 'found', path: 'C:/Links/ffmpeg.exe' }],
       ffprobe: [{ state: 'absent' }, { state: 'found', path: null }],
     };
-    const render = createDesktopStudioHost().render;
+    const render = createDesktopStudioHost(noService).render;
     expect(await render?.tools()).toEqual({
       ffmpeg: { file: 'C:/Links/ffmpeg.exe' },
       // Found on PATH without a known location: run it by name.
@@ -171,7 +176,7 @@ describe('the AI port', () => {
     const { createDesktopStudioHost } = await load();
     const signal = new AbortController().signal;
     const onLine = vi.fn();
-    const result = await createDesktopStudioHost().ai?.run(
+    const result = await createDesktopStudioHost(noService).ai?.run(
       {
         cliId: 'claude-code',
         model: 'opus',
@@ -208,7 +213,7 @@ describe('the AI port', () => {
       .spyOn(stream, 'streamHeadlessCliPrompt')
       .mockResolvedValue({ ok: false, text: '', cliName: null, error: 'none' });
     const { createDesktopStudioHost } = await load();
-    await createDesktopStudioHost().ai?.run(
+    await createDesktopStudioHost(noService).ai?.run(
       {
         cliId: null,
         model: null,
@@ -235,7 +240,7 @@ describe('the AI port', () => {
       .spyOn(stream, 'streamHeadlessCliPrompt')
       .mockResolvedValue({ ok: false, text: '', cliName: null, error: 'gone', log: 'x' });
     const { createDesktopStudioHost } = await load();
-    const result = await createDesktopStudioHost().ai?.run(
+    const result = await createDesktopStudioHost(noService).ai?.run(
       {
         cliId: 'codex-cli',
         model: null,

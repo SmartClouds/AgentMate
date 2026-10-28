@@ -230,11 +230,14 @@ describe.skipIf(!ptyLoads)('PtySessionManager', async () => {
         // Spawning a console makes the cached conhost list stale.
         expect(boost.consolesChanged).toHaveBeenCalledTimes(1);
 
+        // Every write ends its line. The shim reads a line at a time, and an unfinished line over
+        // the terminal's limit (1024 bytes on macOS) leaves node-pty retrying a write that fails
+        // with EBADF or EIO once killAll closes the pty.
         boosted.write('s1', 'ls\r');
-        boosted.write('s1', 'x'.repeat(PASTE_BOOST_MIN_CHARS - 1));
+        boosted.write('s1', `${'x'.repeat(PASTE_BOOST_MIN_CHARS - 2)}\r`);
         expect(boost.boost).not.toHaveBeenCalled();
 
-        const paste = `\x1b[200~${'y'.repeat(PASTE_BOOST_MIN_CHARS)}\x1b[201~`;
+        const paste = `\x1b[200~${'y'.repeat(PASTE_BOOST_MIN_CHARS)}\x1b[201~\r`;
         boosted.write('s1', paste);
         expect(boost.boost).toHaveBeenCalledTimes(1);
         const [sessionId, clients, chars] = boost.boost.mock.calls[0];
@@ -242,6 +245,10 @@ describe.skipIf(!ptyLoads)('PtySessionManager', async () => {
         expect(chars).toBe(paste.length);
         // The clients are looked up from the live console, so the shell itself is among them.
         await expect(clients()).resolves.toContain(boosted.list()[0].pid);
+        // The paste has to reach the shell before the session goes, or the kill cuts it off. The
+        // shim exits on Q, and input arrives in order, so once it has gone the paste was read.
+        boosted.write('s1', 'Q\r');
+        await vi.waitFor(() => expect(listener.exits).toEqual([['s1', 9]]), { timeout: 15_000 });
       } finally {
         boosted.killAll();
       }

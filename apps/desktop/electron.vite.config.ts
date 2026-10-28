@@ -103,6 +103,10 @@ export default defineConfig({
           // The startup splash: a separate page with no React so it paints at once.
           splash: resolve(__dirname, 'src/renderer/splash.html'),
         },
+        // Most of this build is Vite's own asset and worker plugins (Monaco's workers above all),
+        // so on a slow CI runner Rolldown's "time spent in plugins" hint fires every run without
+        // anything to act on.
+        checks: { pluginTimings: false },
       },
     },
     resolve: {
