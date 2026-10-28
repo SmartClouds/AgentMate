@@ -12,6 +12,8 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import {
+  cleanWorkspace,
+  keepsDependencies,
   LEGACY_TEMP_PREFIX,
   removeTree,
   skipReason,
@@ -50,6 +52,17 @@ if (!skip) {
     console.log(`pnpm's store is ${store}.`);
   } catch (error) {
     warn(`Could not move pnpm's store out of the setup folder: ${error.message}`);
+  }
+}
+
+// Where node_modules stays between jobs, the checkout leaves the workspace alone, so this clears
+// the rest: an earlier commit's builds, blob reports and test results. Doing it here rather than
+// after the job also covers a job whose runner died before its post step.
+if (!skip && keepsDependencies()) {
+  try {
+    cleanWorkspace({ keepDependencies: true });
+  } catch (error) {
+    warn(`Could not clean the workspace: ${error.message}`);
   }
 }
 

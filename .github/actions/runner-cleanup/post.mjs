@@ -3,7 +3,9 @@
 //
 // Every job: the test containers, networks and volumes a failed or cancelled test never removed,
 // the workspace, node_modules and build output included, and the job's temp folder (main.mjs).
-// The next job's checkout would wipe the workspace anyway, so deleting it now costs nothing.
+// The next job's checkout would wipe the workspace anyway, so deleting it now costs nothing. The
+// Mac is the exception: it keeps node_modules, and main.mjs clears the rest of the workspace at
+// the start of the next job (keepsDependencies in shared.mjs says why).
 //
 // Once a day, since these take longer and only grow slowly: packages nothing uses any more in
 // the pnpm store, NuGet's packages folder and the native-module header caches, the .NET and Node
@@ -33,7 +35,9 @@ import {
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import {
+  cleanWorkspace,
   dockerWorks,
+  keepsDependencies,
   otherJobs,
   removeTree,
   run,
@@ -134,29 +138,6 @@ function jobTemp() {
   const root = realpathSync(TEMP_ROOT);
   if (!tmp.startsWith(join(root, TEMP_PREFIX))) throw new Error(`Refusing to delete ${tmp}.`);
   if (removeTree(tmp)) console.log(`Deleted ${tmp}.`);
-}
-
-function cleanWorkspace() {
-  if (!workspace || !existsSync(join(workspace, '.git'))) {
-    console.log('No checkout here.');
-    return;
-  }
-  // Untracked and ignored files: node_modules, builds, reports, caches. Tracked files stay, and
-  // so does .git, which the next checkout fetches into.
-  const result = run('git', ['-C', workspace, 'clean', '-ffdx', '--quiet']);
-  if (result.status === 0) {
-    console.log(`Cleaned ${workspace}.`);
-    return;
-  }
-  // Files a container wrote as root. git cannot delete them, removeTree can.
-  const left = run('git', ['-C', workspace, 'clean', '-ffdxn']).stdout.split('\n');
-  for (const line of left) {
-    const path = line.replace(/^Would remove /, '').trim();
-    if (path && path !== line.trim()) removeTree(join(workspace, path));
-  }
-  const after = run('git', ['-C', workspace, 'clean', '-ffdxn']).stdout.trim();
-  if (after) throw new Error(`Still in the workspace:\n${after}`);
-  console.log(`Cleaned ${workspace}.`);
 }
 
 function pnpmStore() {
@@ -368,7 +349,13 @@ if (skip) {
     step('Replaced .NET and Node versions', toolCacheVersions);
     if (dockerWorks()) step('Dangling Docker images and old build cache', dockerImages);
   }
-  step('Workspace', cleanWorkspace);
+  if (keepsDependencies()) {
+    console.log(
+      "The workspace stays: this runner keeps node_modules, and the next job's start clears the rest.",
+    );
+  } else {
+    step('Workspace', cleanWorkspace);
+  }
   // Last, since TMPDIR still points into it for everything above.
   step("The job's temp folder", jobTemp);
   const after = freeBytes();

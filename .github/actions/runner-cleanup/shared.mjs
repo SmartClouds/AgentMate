@@ -2,8 +2,8 @@
 // own Node before (and after) anything is installed.
 
 import { spawnSync } from 'node:child_process';
-import { rmSync } from 'node:fs';
-import { basename, dirname } from 'node:path';
+import { existsSync, rmSync } from 'node:fs';
+import { basename, dirname, join } from 'node:path';
 
 /** Every job's temp folder is <TEMP_ROOT>/runova-ci-XXXXXX. */
 export const TEMP_PREFIX = 'runova-ci-';
@@ -24,6 +24,55 @@ export function skipReason() {
   }
   if (process.platform === 'win32') return 'There is no Windows version of this cleanup.';
   return null;
+}
+
+/**
+ * Whether node_modules stays in the workspace between jobs. The Mac mini runs on a hard disk,
+ * where deleting node_modules after every job and linking ~1,400 packages back in at the start of
+ * the next took minutes. Its checkouts set `clean: false` for the same reason, and main.mjs
+ * clears everything else at the start of the job instead. better-sqlite3 loads its prebuilt
+ * binary before the one the end-to-end jobs rebuild for Electron, so a node_modules an e2e job
+ * left behind still works under Node.
+ */
+export function keepsDependencies() {
+  return process.platform === 'darwin';
+}
+
+/**
+ * Deletes the untracked and ignored files in the workspace: builds, reports, caches, and
+ * node_modules unless `keepDependencies`. Tracked files stay, and so does .git, which the next
+ * checkout fetches into.
+ */
+export function cleanWorkspace({ keepDependencies = false } = {}) {
+  const workspace = process.env.GITHUB_WORKSPACE;
+  if (!workspace || !existsSync(join(workspace, '.git'))) {
+    console.log('No checkout here.');
+    return;
+  }
+  // -x ignores .gitignore, but still honours an -e pattern. One without a slash matches the
+  // node_modules of every package, not only the root's.
+  const args = [
+    '-C',
+    workspace,
+    'clean',
+    '-ffdx',
+    ...(keepDependencies ? ['-e', 'node_modules'] : []),
+  ];
+  const kept = keepDependencies ? ', node_modules kept' : '';
+  const result = run('git', [...args, '--quiet']);
+  if (result.status === 0) {
+    console.log(`Cleaned ${workspace}${kept}.`);
+    return;
+  }
+  // Files a container wrote as root. git cannot delete them, removeTree can.
+  const left = run('git', [...args, '-n']).stdout.split('\n');
+  for (const line of left) {
+    const path = line.replace(/^Would remove /, '').trim();
+    if (path && path !== line.trim()) removeTree(join(workspace, path));
+  }
+  const after = run('git', [...args, '-n']).stdout.trim();
+  if (after) throw new Error(`Still in the workspace:\n${after}`);
+  console.log(`Cleaned ${workspace}${kept}.`);
 }
 
 export function run(command, args, options = {}) {

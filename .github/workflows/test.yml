@@ -64,6 +64,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # The Mac keeps node_modules between jobs, and Runner cleanup clears the rest (see
+          # keepsDependencies in .github/actions/runner-cleanup/shared.mjs).
+          clean: ${{ runner.os != 'macOS' }}
 
       - name: Runner cleanup
         uses: ./.github/actions/runner-cleanup
@@ -136,6 +140,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # The Mac keeps node_modules between jobs, and Runner cleanup clears the rest (see
+          # keepsDependencies in .github/actions/runner-cleanup/shared.mjs).
+          clean: ${{ runner.os != 'macOS' }}
 
       - name: Runner cleanup
         uses: ./.github/actions/runner-cleanup
@@ -197,6 +205,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # The Mac keeps node_modules between jobs, and Runner cleanup clears the rest (see
+          # keepsDependencies in .github/actions/runner-cleanup/shared.mjs).
+          clean: ${{ runner.os != 'macOS' }}
 
       - name: Runner cleanup
         uses: ./.github/actions/runner-cleanup
@@ -265,6 +277,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # The Mac keeps node_modules between jobs, and Runner cleanup clears the rest (see
+          # keepsDependencies in .github/actions/runner-cleanup/shared.mjs).
+          clean: ${{ runner.os != 'macOS' }}
 
       - name: Runner cleanup
         uses: ./.github/actions/runner-cleanup
@@ -302,6 +318,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # The Mac keeps node_modules between jobs, and Runner cleanup clears the rest (see
+          # keepsDependencies in .github/actions/runner-cleanup/shared.mjs).
+          clean: ${{ runner.os != 'macOS' }}
 
       - name: Runner cleanup
         uses: ./.github/actions/runner-cleanup
@@ -357,6 +377,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # The Mac keeps node_modules between jobs, and Runner cleanup clears the rest (see
+          # keepsDependencies in .github/actions/runner-cleanup/shared.mjs).
+          clean: ${{ runner.os != 'macOS' }}
 
       - name: Runner cleanup
         uses: ./.github/actions/runner-cleanup
@@ -425,6 +449,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # The Mac keeps node_modules between jobs, and Runner cleanup clears the rest (see
+          # keepsDependencies in .github/actions/runner-cleanup/shared.mjs).
+          clean: ${{ runner.os != 'macOS' }}
 
       - name: Runner cleanup
         uses: ./.github/actions/runner-cleanup
@@ -526,6 +554,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # The Mac keeps node_modules between jobs, and Runner cleanup clears the rest (see
+          # keepsDependencies in .github/actions/runner-cleanup/shared.mjs).
+          clean: ${{ runner.os != 'macOS' }}
 
       - name: Runner cleanup
         uses: ./.github/actions/runner-cleanup
@@ -587,6 +619,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # The Mac keeps node_modules between jobs, and Runner cleanup clears the rest (see
+          # keepsDependencies in .github/actions/runner-cleanup/shared.mjs).
+          clean: ${{ runner.os != 'macOS' }}
 
       - name: Runner cleanup
         uses: ./.github/actions/runner-cleanup

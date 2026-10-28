@@ -16,7 +16,9 @@ name: CI
 # the Runner cleanup step (.github/actions/runner-cleanup). It gives the job a temp folder of its
 # own, and its post step, which runs even when the job fails or is cancelled, deletes what the job
 # left behind: test containers, temp folders and the workspace, and once a day the cache entries
-# and tool versions nothing uses any more.
+# and tool versions nothing uses any more. It also keeps each runner's pnpm store between jobs.
+# The Mac mini runs on a hard disk, so it keeps node_modules too and only clears the rest of the
+# workspace, at the start of each job.
 #
 # The jobs do not wait for each other, and the desktop unit and end-to-end
 # suites are split into shards, so a run is only as fast as the number of
@@ -55,6 +57,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # The Mac keeps node_modules between jobs, and Runner cleanup clears the rest (see
+          # keepsDependencies in .github/actions/runner-cleanup/shared.mjs).
+          clean: ${{ runner.os != 'macOS' }}
 
       - name: Runner cleanup
         uses: ./.github/actions/runner-cleanup
