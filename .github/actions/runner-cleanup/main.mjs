@@ -15,8 +15,28 @@ import {
 
 const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 
+const skip = skipReason();
+
+// pnpm's store has to live somewhere that survives the job. pnpm/action-setup sets PNPM_HOME to
+// <dest>/node_modules/.bin, which puts pnpm's default store inside <dest>, and it deletes <dest>
+// before every install. So every job started with an empty store and downloaded all ~1,400
+// packages again (about 1 GB on the Mac), and one slow registry response stalled the whole job.
+// The tool cache is per runner, so two runners on one machine never share a store. The extra
+// fetch retries are for the cold store after a runner is set up again, when everything downloads.
+if (!skip) {
+  try {
+    const store = join(process.env.RUNNER_TOOL_CACHE, 'pnpm-store');
+    appendFileSync(
+      process.env.GITHUB_ENV,
+      `pnpm_config_store_dir=${store}\npnpm_config_fetch_retries=5\n`,
+    );
+    console.log(`pnpm's store is ${store}.`);
+  } catch (error) {
+    warn(`Could not move pnpm's store out of the setup folder: ${error.message}`);
+  }
+}
+
 try {
-  const skip = skipReason();
   if (skip) {
     console.log(`Nothing to do: ${skip}`);
   } else {

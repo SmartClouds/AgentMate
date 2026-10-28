@@ -62,8 +62,9 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          # One pnpm (and store) per runner: two runners share this machine, and a shared
-          # ~/setup-pnpm let one job's setup delete files the other was using.
+          # One pnpm per runner: two runners share this machine, and a shared ~/setup-pnpm let
+          # one job's setup delete files the other was using. The store is not in here: setup
+          # deletes this folder every time, so Runner cleanup points pnpm at its own store.
           dest: ${{ runner.tool_cache }}/setup-pnpm
 
       - name: Install dependencies
@@ -181,8 +182,9 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          # One pnpm (and store) per runner: two runners share this machine, and a shared
-          # ~/setup-pnpm let one job's setup delete files the other was using.
+          # One pnpm per runner: two runners share this machine, and a shared ~/setup-pnpm let
+          # one job's setup delete files the other was using. The store is not in here: setup
+          # deletes this folder every time, so Runner cleanup points pnpm at its own store.
           dest: ${{ runner.tool_cache }}/setup-pnpm
 
       - name: Cache Electron binary
@@ -311,8 +313,9 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          # One pnpm (and store) per runner: two runners share this machine, and a shared
-          # ~/setup-pnpm let one job's setup delete files the other was using.
+          # One pnpm per runner: two runners share this machine, and a shared ~/setup-pnpm let
+          # one job's setup delete files the other was using. The store is not in here: setup
+          # deletes this folder every time, so Runner cleanup points pnpm at its own store.
           dest: ${{ runner.tool_cache }}/setup-pnpm
 
       - name: Cache Electron binary

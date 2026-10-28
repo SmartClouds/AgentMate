@@ -62,7 +62,7 @@ jobs:
       # Node first: pnpm's installer runs npm from PATH, and without one it falls back to the
       # runner's own npm, which a runner self-update leaves broken (actions/runner#2094).
       # No cache: pnpm here. The self-hosted runner keeps its pnpm store between
-      # jobs, and a round trip through GitHub's cache only cost time.
+      # jobs (Runner cleanup sets where), and a round trip through GitHub's cache only cost time.
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
@@ -71,8 +71,9 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          # One pnpm (and store) per runner: two runners share this machine, and a shared
-          # ~/setup-pnpm let one job's setup delete files the other was using.
+          # One pnpm per runner: two runners share this machine, and a shared ~/setup-pnpm let
+          # one job's setup delete files the other was using. The store is not in here: setup
+          # deletes this folder every time, so Runner cleanup points pnpm at its own store.
           dest: ${{ runner.tool_cache }}/setup-pnpm
 
       # --frozen-lockfile also fails the build when package.json and

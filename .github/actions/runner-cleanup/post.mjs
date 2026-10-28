@@ -160,9 +160,8 @@ function cleanWorkspace() {
 }
 
 function pnpmStore() {
-  // pnpm keeps every package any project on this machine links to. Pruning while this job's
-  // node_modules is still there keeps what this commit uses, and the Mac user's own projects keep
-  // theirs.
+  // The runner's own store (main.mjs sets pnpm_config_store_dir), apart from the Mac user's.
+  // Pruning while this job's node_modules is still there keeps what this commit uses.
   if (!workspace || !existsSync(join(workspace, 'node_modules'))) {
     console.log('This job installed no packages.');
     return;

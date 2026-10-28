@@ -23,8 +23,8 @@ name: Tests
 # into shards for the same reason.
 #
 # The pnpm and NuGet caches only go through GitHub's cache on hosted runners. A self-hosted runner
-# keeps its pnpm store and ~/.nuget between jobs, and uploading and downloading them through
-# GitHub took about a minute and a half per job there.
+# keeps its pnpm store (Runner cleanup sets where) and ~/.nuget between jobs, and uploading and
+# downloading them through GitHub took about a minute and a half per job there.
 
 on:
   workflow_call:
@@ -78,8 +78,9 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          # One pnpm (and store) per runner: two runners share this machine, and a shared
-          # ~/setup-pnpm let one job's setup delete files the other was using.
+          # One pnpm per runner: two runners share this machine, and a shared ~/setup-pnpm let
+          # one job's setup delete files the other was using. The store is not in here: setup
+          # deletes this folder every time, so Runner cleanup points pnpm at its own store.
           dest: ${{ runner.tool_cache }}/setup-pnpm
           cache: ${{ inputs.github-hosted }}
 
@@ -149,8 +150,9 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          # One pnpm (and store) per runner: two runners share this machine, and a shared
-          # ~/setup-pnpm let one job's setup delete files the other was using.
+          # One pnpm per runner: two runners share this machine, and a shared ~/setup-pnpm let
+          # one job's setup delete files the other was using. The store is not in here: setup
+          # deletes this folder every time, so Runner cleanup points pnpm at its own store.
           dest: ${{ runner.tool_cache }}/setup-pnpm
           cache: ${{ inputs.github-hosted }}
 
@@ -209,8 +211,9 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          # One pnpm (and store) per runner: two runners share this machine, and a shared
-          # ~/setup-pnpm let one job's setup delete files the other was using.
+          # One pnpm per runner: two runners share this machine, and a shared ~/setup-pnpm let
+          # one job's setup delete files the other was using. The store is not in here: setup
+          # deletes this folder every time, so Runner cleanup points pnpm at its own store.
           dest: ${{ runner.tool_cache }}/setup-pnpm
           cache: ${{ inputs.github-hosted }}
 
@@ -313,8 +316,9 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          # One pnpm (and store) per runner: two runners share this machine, and a shared
-          # ~/setup-pnpm let one job's setup delete files the other was using.
+          # One pnpm per runner: two runners share this machine, and a shared ~/setup-pnpm let
+          # one job's setup delete files the other was using. The store is not in here: setup
+          # deletes this folder every time, so Runner cleanup points pnpm at its own store.
           dest: ${{ runner.tool_cache }}/setup-pnpm
           cache: ${{ inputs.github-hosted }}
 
@@ -445,8 +449,9 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          # One pnpm (and store) per runner: two runners share this machine, and a shared
-          # ~/setup-pnpm let one job's setup delete files the other was using.
+          # One pnpm per runner: two runners share this machine, and a shared ~/setup-pnpm let
+          # one job's setup delete files the other was using. The store is not in here: setup
+          # deletes this folder every time, so Runner cleanup points pnpm at its own store.
           dest: ${{ runner.tool_cache }}/setup-pnpm
           cache: ${{ inputs.github-hosted }}
 
@@ -535,8 +540,9 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          # One pnpm (and store) per runner: two runners share this machine, and a shared
-          # ~/setup-pnpm let one job's setup delete files the other was using.
+          # One pnpm per runner: two runners share this machine, and a shared ~/setup-pnpm let
+          # one job's setup delete files the other was using. The store is not in here: setup
+          # deletes this folder every time, so Runner cleanup points pnpm at its own store.
           dest: ${{ runner.tool_cache }}/setup-pnpm
           cache: ${{ inputs.github-hosted }}
 
@@ -646,8 +652,9 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          # One pnpm (and store) per runner: two runners share this machine, and a shared
-          # ~/setup-pnpm let one job's setup delete files the other was using.
+          # One pnpm per runner: two runners share this machine, and a shared ~/setup-pnpm let
+          # one job's setup delete files the other was using. The store is not in here: setup
+          # deletes this folder every time, so Runner cleanup points pnpm at its own store.
           dest: ${{ runner.tool_cache }}/setup-pnpm
           cache: ${{ inputs.github-hosted }}
 
