@@ -81,10 +81,14 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
+        # pnpm installs itself into its store's links folder and reuses an entry there without
+        # checking it is whole, so its own install gets a store inside dest, which setup wipes
+        # every time. The workspace's packages go in the store Runner cleanup sets.
+        env:
+          pnpm_config_store_dir: ${{ runner.environment == 'self-hosted' && format('{0}/setup-pnpm/store', runner.tool_cache) || '' }}
         with:
           # One pnpm per runner: two runners share this machine, and a shared ~/setup-pnpm let
-          # one job's setup delete files the other was using. The store is not in here: setup
-          # deletes this folder every time, so Runner cleanup points pnpm at its own store.
+          # one job's setup delete files the other was using.
           dest: ${{ runner.tool_cache }}/setup-pnpm
           cache: ${{ inputs.github-hosted }}
 
@@ -157,10 +161,14 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
+        # pnpm installs itself into its store's links folder and reuses an entry there without
+        # checking it is whole, so its own install gets a store inside dest, which setup wipes
+        # every time. The workspace's packages go in the store Runner cleanup sets.
+        env:
+          pnpm_config_store_dir: ${{ runner.environment == 'self-hosted' && format('{0}/setup-pnpm/store', runner.tool_cache) || '' }}
         with:
           # One pnpm per runner: two runners share this machine, and a shared ~/setup-pnpm let
-          # one job's setup delete files the other was using. The store is not in here: setup
-          # deletes this folder every time, so Runner cleanup points pnpm at its own store.
+          # one job's setup delete files the other was using.
           dest: ${{ runner.tool_cache }}/setup-pnpm
           cache: ${{ inputs.github-hosted }}
 
@@ -222,10 +230,14 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
+        # pnpm installs itself into its store's links folder and reuses an entry there without
+        # checking it is whole, so its own install gets a store inside dest, which setup wipes
+        # every time. The workspace's packages go in the store Runner cleanup sets.
+        env:
+          pnpm_config_store_dir: ${{ runner.environment == 'self-hosted' && format('{0}/setup-pnpm/store', runner.tool_cache) || '' }}
         with:
           # One pnpm per runner: two runners share this machine, and a shared ~/setup-pnpm let
-          # one job's setup delete files the other was using. The store is not in here: setup
-          # deletes this folder every time, so Runner cleanup points pnpm at its own store.
+          # one job's setup delete files the other was using.
           dest: ${{ runner.tool_cache }}/setup-pnpm
           cache: ${{ inputs.github-hosted }}
 
@@ -335,10 +347,14 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
+        # pnpm installs itself into its store's links folder and reuses an entry there without
+        # checking it is whole, so its own install gets a store inside dest, which setup wipes
+        # every time. The workspace's packages go in the store Runner cleanup sets.
+        env:
+          pnpm_config_store_dir: ${{ runner.environment == 'self-hosted' && format('{0}/setup-pnpm/store', runner.tool_cache) || '' }}
         with:
           # One pnpm per runner: two runners share this machine, and a shared ~/setup-pnpm let
-          # one job's setup delete files the other was using. The store is not in here: setup
-          # deletes this folder every time, so Runner cleanup points pnpm at its own store.
+          # one job's setup delete files the other was using.
           dest: ${{ runner.tool_cache }}/setup-pnpm
           cache: ${{ inputs.github-hosted }}
 
@@ -476,10 +492,14 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
+        # pnpm installs itself into its store's links folder and reuses an entry there without
+        # checking it is whole, so its own install gets a store inside dest, which setup wipes
+        # every time. The workspace's packages go in the store Runner cleanup sets.
+        env:
+          pnpm_config_store_dir: ${{ runner.environment == 'self-hosted' && format('{0}/setup-pnpm/store', runner.tool_cache) || '' }}
         with:
           # One pnpm per runner: two runners share this machine, and a shared ~/setup-pnpm let
-          # one job's setup delete files the other was using. The store is not in here: setup
-          # deletes this folder every time, so Runner cleanup points pnpm at its own store.
+          # one job's setup delete files the other was using.
           dest: ${{ runner.tool_cache }}/setup-pnpm
           cache: ${{ inputs.github-hosted }}
 
@@ -571,10 +591,14 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
+        # pnpm installs itself into its store's links folder and reuses an entry there without
+        # checking it is whole, so its own install gets a store inside dest, which setup wipes
+        # every time. The workspace's packages go in the store Runner cleanup sets.
+        env:
+          pnpm_config_store_dir: ${{ runner.environment == 'self-hosted' && format('{0}/setup-pnpm/store', runner.tool_cache) || '' }}
         with:
           # One pnpm per runner: two runners share this machine, and a shared ~/setup-pnpm let
-          # one job's setup delete files the other was using. The store is not in here: setup
-          # deletes this folder every time, so Runner cleanup points pnpm at its own store.
+          # one job's setup delete files the other was using.
           dest: ${{ runner.tool_cache }}/setup-pnpm
           cache: ${{ inputs.github-hosted }}
 
@@ -687,10 +711,14 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
+        # pnpm installs itself into its store's links folder and reuses an entry there without
+        # checking it is whole, so its own install gets a store inside dest, which setup wipes
+        # every time. The workspace's packages go in the store Runner cleanup sets.
+        env:
+          pnpm_config_store_dir: ${{ runner.environment == 'self-hosted' && format('{0}/setup-pnpm/store', runner.tool_cache) || '' }}
         with:
           # One pnpm per runner: two runners share this machine, and a shared ~/setup-pnpm let
-          # one job's setup delete files the other was using. The store is not in here: setup
-          # deletes this folder every time, so Runner cleanup points pnpm at its own store.
+          # one job's setup delete files the other was using.
           dest: ${{ runner.tool_cache }}/setup-pnpm
           cache: ${{ inputs.github-hosted }}
 

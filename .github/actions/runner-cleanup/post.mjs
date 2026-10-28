@@ -344,7 +344,9 @@ if (skip) {
     });
   }
   if (dailyDue()) {
-    step('pnpm store', pnpmStore);
+    // Not on the Mac: a prune reads the whole store, slow on its hard disk, and deleting the
+    // store's links folder there once took 12 minutes.
+    if (!keepsDependencies()) step('pnpm store', pnpmStore);
     step('Unused NuGet packages and native headers', unusedCaches);
     step('Replaced .NET and Node versions', toolCacheVersions);
     if (dockerWorks()) step('Dangling Docker images and old build cache', dockerImages);

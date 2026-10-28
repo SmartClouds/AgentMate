@@ -2,14 +2,7 @@
 // ends. Tests make temp folders all the time, and a test that fails, times out or is cancelled
 // leaves its folders behind. On the Mac this also keeps them out of its user's own temp folder.
 
-import {
-  appendFileSync,
-  existsSync,
-  mkdtempSync,
-  readdirSync,
-  realpathSync,
-  statSync,
-} from 'node:fs';
+import { appendFileSync, mkdtempSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   cleanWorkspace,
@@ -32,19 +25,10 @@ const skip = skipReason();
 // packages again (about 1 GB on the Mac), and one slow registry response stalled the whole job.
 // The tool cache is per runner, so two runners on one machine never share a store. The extra
 // fetch retries are for the cold store after a runner is set up again, when everything downloads.
-//
-// The setup action installs pnpm itself into the store's links folder (pnpm's global virtual
-// store), and the next job's setup reuses an entry there without checking it is whole. One that
-// lost a file left the Linux runner with a pnpm that could not start
-// (ERR_PNPM_BROKEN_PNPM_INSTALL), job after job. The workspace's install does not use links (its
-// packages go in node_modules/.pnpm), so it goes every job and pnpm rebuilds it from the store's
-// files, without downloading anything.
+// pnpm's own install keeps a store of its own (the Setup pnpm steps say why).
 if (!skip) {
   try {
     const store = join(process.env.RUNNER_TOOL_CACHE, 'pnpm-store');
-    // One folder per store layout version (v11).
-    const layouts = existsSync(store) ? readdirSync(store) : [];
-    for (const layout of layouts) removeTree(join(store, layout, 'links'));
     appendFileSync(
       process.env.GITHUB_ENV,
       `pnpm_config_store_dir=${store}\npnpm_config_fetch_retries=5\n`,
@@ -60,7 +44,9 @@ if (!skip) {
 // after the job also covers a job whose runner died before its post step.
 if (!skip && keepsDependencies()) {
   try {
+    const started = Date.now();
     cleanWorkspace({ keepDependencies: true });
+    console.log(`That took ${((Date.now() - started) / 1000).toFixed(1)} s.`);
   } catch (error) {
     warn(`Could not clean the workspace: ${error.message}`);
   }
