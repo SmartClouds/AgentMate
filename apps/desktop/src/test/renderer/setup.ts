@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
-import { afterEach, beforeEach, expect, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, vi } from 'vitest';
 import { installRunovaBridge } from './runovaBridge';
 import { resetAllStoresAsync } from './stores';
 
@@ -103,14 +103,28 @@ if (hasDom) {
   });
 }
 
-if (process.env.PROBE_DIR) {
-  const original = console.error;
-  console.error = (...args: unknown[]) => {
-    const m = /Affected query key: (.*)/.exec(String(args[0]));
-    if (m) process.getBuiltinModule('node:fs').appendFileSync(`${process.env.PROBE_DIR}/keys.txt`, `${m[1]}\t${expect.getState().testPath ?? ''}\n`);
-    original(...args);
-  };
-}
+// React Query logs "Query data cannot be undefined" for every query a test left unstubbed, on
+// every render, which buried the rest of the CI log. They are collected instead and listed once
+// per file. This file runs again for each test file in a worker, so the wrapper always sits on
+// the original console.error rather than on the previous file's wrapper.
+const UNDEFINED_QUERY_DATA = /^Query data cannot be undefined\..*Affected query key: (.*)$/s;
+const originalConsoleError = Symbol.for('runova.test.originalConsoleError');
+const consoleSlots = console as unknown as Record<symbol, typeof console.error>;
+consoleSlots[originalConsoleError] ??= console.error;
+const consoleError = consoleSlots[originalConsoleError];
+const unstubbedQueries = new Set<string>();
+console.error = (...args: unknown[]) => {
+  const match = typeof args[0] === 'string' ? UNDEFINED_QUERY_DATA.exec(args[0]) : null;
+  if (match) unstubbedQueries.add(match[1]);
+  else consoleError(...args);
+};
+
+afterAll(() => {
+  if (unstubbedQueries.size === 0) return;
+  console.warn(
+    `Queries answered with undefined by the fake bridge (stub them in the test or in bridgeDefaults.ts): ${[...unstubbedQueries].join(' ')}`,
+  );
+});
 
 beforeEach(async () => {
   if (!hasDom) return;

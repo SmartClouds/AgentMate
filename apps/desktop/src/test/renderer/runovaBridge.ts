@@ -1,4 +1,5 @@
 import { vi } from 'vitest';
+import { bridgeDefaults } from './bridgeDefaults';
 
 /** The preload bridge's own type, taken from the global declaration rather than the module, so
  * this file stays inside the renderer's TypeScript program. */
@@ -9,8 +10,9 @@ type RunovaApi = Window['runova'];
  * so component and store tests need one that answers without a main process.
  *
  * Every path is created on first access and is both callable and further navigable, so
- * `runova.projects.list()` works with nothing configured: unmentioned calls resolve to
- * undefined rather than throwing, which matches the bridge's shape before data arrives.
+ * `runova.projects.list()` works with nothing configured. The background calls in
+ * bridgeDefaults.ts answer with an empty install; any other unmentioned call resolves to
+ * undefined rather than throwing.
  * Subscriptions (`onSomething`) record their callback and hand back an unsubscribe.
  */
 
@@ -53,7 +55,9 @@ function isSubscription(key: string): boolean {
 }
 
 export function createRunovaBridge(overrides: BridgeOverrides = {}): FakeBridge {
-  const answers = new Map<string, unknown>(Object.entries(overrides));
+  const answers = new Map<string, unknown>(
+    Object.entries({ ...bridgeDefaults(), ...overrides }),
+  );
   const nodes = new Map<string, unknown>();
   const mocks = new Map<string, Mock>();
   const listeners = new Map<string, Listener[]>();
@@ -99,7 +103,7 @@ export function createRunovaBridge(overrides: BridgeOverrides = {}): FakeBridge 
     } else if (answers.has(path)) {
       fn = vi.fn(async () => answers.get(path));
     } else {
-      fn = vi.fn(async () => { if (process.env.PROBE_DIR) process.getBuiltinModule('node:fs').appendFileSync(`${process.env.PROBE_DIR}/paths.txt`, `${path}\n`); return undefined; });
+      fn = vi.fn(async () => undefined);
     }
 
     mocks.set(path, fn);
