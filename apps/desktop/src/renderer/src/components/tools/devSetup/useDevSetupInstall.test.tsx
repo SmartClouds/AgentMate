@@ -63,7 +63,10 @@ function bridgeFor(
 }
 
 const emit = (bridge: { $emit: (path: string, ...args: unknown[]) => void }, event: DevJobEvent) =>
-  act(() => bridge.$emit('devSetup.onEvent', event));
+  // Async, so the act environment stays on until the updates the event causes have settled.
+  act(async () => {
+    bridge.$emit('devSetup.onEvent', event);
+  });
 
 const stateOf = (result: { current: ReturnType<typeof useDevSetup> }, id: string) =>
   result.current.checklist?.rows.find((row) => row.item.id === id)?.state;
