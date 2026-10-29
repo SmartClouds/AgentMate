@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FolderOpen, Workspace } from '@/components/icons';
 import { EmptyState, GLASS_CARD } from '@/components/pageKit';
+import { useAutoFixTabs } from '@/components/pipelines/autoFix/useAutoFix';
 import { ProjectIcon } from '@/components/projects/ProjectIcon';
 import { ProjectPromptBuildDialog } from '@/components/projects/ProjectPromptBuildDialog';
 import { useRelayLegTabs } from '@/components/relay/useRelayLegTabs';
@@ -184,6 +185,7 @@ export function WorkspaceHost({ visible }: { visible: boolean }): React.JSX.Elem
 
   useAutoCloseFinishedShells();
   useRelayLegTabs();
+  useAutoFixTabs();
   useReportViewing(visible);
 
   // Browser tabs keep up with their pages, and new tabs can offer the workspace's dev servers,

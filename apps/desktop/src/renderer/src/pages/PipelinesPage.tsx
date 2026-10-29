@@ -21,6 +21,9 @@ import {
   X,
 } from '@/components/icons';
 import { Chip, type ChipTone, SECTION_HEADING } from '@/components/pageKit';
+import { AutoFixControl } from '@/components/pipelines/autoFix/AutoFixControl';
+import { isAutoFixActive } from '@/components/pipelines/autoFix/autoFixView';
+import { useAutoFixSessions } from '@/components/pipelines/autoFix/useAutoFix';
 import { CopyRunErrorButton } from '@/components/pipelines/CopyRunErrorButton';
 import {
   RunAnnotations,
@@ -331,6 +334,20 @@ function RunRow({
               }}
             />
           ) : null}
+          {item.projectId && item.workflowId && item.headBranch ? (
+            <AutoFixControl
+              target={{
+                projectId: item.projectId,
+                repo: item.repo,
+                workflowId: item.workflowId,
+                workflowName: item.workflowName,
+                branch: item.headBranch,
+                runId: item.id,
+                runNumber: item.runNumber,
+              }}
+              live={item.status !== 'completed'}
+            />
+          ) : null}
           {item.status !== 'completed' ? <StopRunButton item={item} /> : null}
           {item.projectId ? (
             <SimpleTooltip label={`Open ${item.projectName}`}>
@@ -447,6 +464,7 @@ export default function PipelinesPage(): React.JSX.Element {
   const [searchParams, setSearchParams] = useSearchParams();
   const openSession = useTerminalStore((s) => s.openSession);
   usePageHeader('Pipelines', 'Every GitHub Actions run across your projects.');
+  const autoFixing = useAutoFixSessions().sessions.filter(isAutoFixActive).length;
 
   const [filter, setFilter] = useState<FilterKey>('all');
   const [repo, setRepo] = useState('');
@@ -721,6 +739,11 @@ export default function PipelinesPage(): React.JSX.Element {
         <span className="rounded-full bg-foreground/[0.06] px-2 text-[11px] font-medium leading-5 tabular-nums text-muted-foreground">
           {visible.length}
         </span>
+      ) : null}
+      {autoFixing > 0 ? (
+        <Chip tone="primary" dot pulse>
+          {`${autoFixing} auto-fix${autoFixing === 1 ? '' : 'es'} on`}
+        </Chip>
       ) : null}
       <div className="ml-auto flex items-center gap-1">
         {unreadCount > 0 ? (

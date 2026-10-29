@@ -20,6 +20,7 @@ import {
   defaultUsageThresholdAlerts,
   LATE_DASHBOARD_CHART_IDS,
 } from '@runova/core';
+import { AUTO_FIX_DEFAULT_ATTEMPTS } from './ciAutoFixTypes';
 import {
   DEFAULT_PING_TARGETS_IPV4,
   DEFAULT_PING_TARGETS_IPV6,
@@ -115,6 +116,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   desktopPetPipelineOnPass: false,
   pipelineFailureNotify: true,
   pipelineFailureOpen: 'pipelines',
+  ciAutoFixCliId: null,
+  ciAutoFixModel: null,
+  ciAutoFixEffort: null,
+  ciAutoFixMaxAttempts: AUTO_FIX_DEFAULT_ATTEMPTS,
   desktopPetNetworkQuality: false,
   desktopPetAgentStatus: false,
   keepTerminalsRunning: true,

@@ -291,6 +291,7 @@ export async function fetchDashboardActionsActivity(): Promise<GithubActionsActi
         createdAt: mapped.createdAt,
         updatedAt: mapped.updatedAt,
         checkSuiteId: run.check_suite_id,
+        workflowId: mapped.workflowId,
       });
 
       if (mapped.status !== 'completed') {
@@ -349,6 +350,20 @@ export async function listWorkflowRuns(
     `repos/${owner}/${repo}/actions/workflows/${workflowId}/runs?per_page=${perPage}`,
   );
   return (payload.workflow_runs ?? []).map(toWorkflowRun);
+}
+
+/** One run, read fresh. Auto-fix polls the run it follows with this. */
+export async function fetchWorkflowRun(
+  repo: string,
+  runId: number,
+): Promise<GithubWorkflowRunInfo> {
+  const parsed = parseOwnerRepo(repo);
+  if (!parsed || !Number.isInteger(runId) || runId <= 0) {
+    throw new Error('That workflow run could not be identified.');
+  }
+  return toWorkflowRun(
+    await ghApi<GhRun>(`repos/${parsed.owner}/${parsed.repo}/actions/runs/${runId}`),
+  );
 }
 
 const WORKFLOW_LIST_TTL_MS = 5 * 60_000;

@@ -1079,6 +1079,23 @@ export const IPC = {
     /** (RunnerMachineLink) -> RunnerMachineStatsResult: CPU, memory and disk of a runner's machine. */
     runnerMachineStats: 'pipelines:runnerMachineStats',
   },
+  /** CI auto-fix: an agent fixes a failed run, Runova commits, pushes and follows the next run. */
+  ciAutoFix: {
+    /** () -> AutoFixSession[], newest first. */
+    list: 'ciAutoFix:list',
+    /** (AutoFixStartInput) -> AutoFixStartResult. */
+    start: 'ciAutoFix:start',
+    /** (sessionId) -> AutoFixSession | null, for each of stop, commitNow and retry. */
+    stop: 'ciAutoFix:stop',
+    commitNow: 'ciAutoFix:commitNow',
+    retry: 'ciAutoFix:retry',
+    /** (sessionId) -> boolean: clears a finished session from the list. */
+    dismiss: 'ciAutoFix:dismiss',
+    /** main -> every renderer: AutoFixSession[] whenever a session changes. */
+    onChanged: 'ciAutoFix:onChanged',
+    /** main -> every renderer: AutoFixTabEvent when an attempt opens its agent tab. */
+    onTab: 'ciAutoFix:onTab',
+  },
   /** The Deploy section: saved servers, installing the server core, and its health. */
   deploy: {
     listServers: 'deploy:listServers',

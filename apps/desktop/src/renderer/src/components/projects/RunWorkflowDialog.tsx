@@ -3,6 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { GitBranch, Spinner, Tag } from '@/components/icons';
+import { useAutoFixActions } from '@/components/pipelines/autoFix/useAutoFix';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
@@ -110,15 +111,20 @@ export function RunWorkflowDialog({
   onOpenChange,
   repo,
   workflow,
+  projectId,
   onStarted,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   repo: string;
   workflow: GithubWorkflowInfo;
+  /** The project the repo is checked out in. Without it, auto-fix has nowhere to fix the run. */
+  projectId?: string;
   onStarted: () => void;
 }): React.JSX.Element {
   const [ref, setRef] = useState('');
+  const [autoFix, setAutoFix] = useState(false);
+  const autoFixActions = useAutoFixActions();
   const [values, setValues] = useState<Record<string, string>>(() =>
     defaultValues(workflow.dispatchInputs),
   );
@@ -166,6 +172,9 @@ export function RunWorkflowDialog({
     return [...branches, ...tags];
   }, [refs]);
 
+  // A fix is pushed to the branch the run was on, which a tag is not.
+  const canAutoFix = Boolean(projectId) && Boolean(refs?.branches.includes(ref));
+
   const missing = workflow.dispatchInputs.filter(
     (field) => field.required && !(values[field.name] ?? '').trim(),
   );
@@ -184,6 +193,16 @@ export function RunWorkflowDialog({
         return;
       }
       toast.success(`${workflow.name} started on ${ref}.`);
+      // GitHub has not created the run yet, so auto-fix waits for the first one dispatched now.
+      if (autoFix && canAutoFix && projectId) {
+        void autoFixActions.start({
+          projectId,
+          repo,
+          workflowId: workflow.id,
+          workflowName: workflow.name,
+          branch: ref,
+        });
+      }
       onOpenChange(false);
       onStarted();
     },
@@ -233,6 +252,26 @@ export function RunWorkflowDialog({
                 />
               )}
             </div>
+
+            {canAutoFix ? (
+              <div className="flex items-start gap-2.5 rounded-lg bg-foreground/[0.03] p-2.5 ring-1 ring-inset ring-foreground/[0.06]">
+                <Checkbox
+                  id="run-workflow-auto-fix"
+                  checked={autoFix}
+                  onCheckedChange={(checked) => setAutoFix(checked === true)}
+                  aria-describedby="run-workflow-auto-fix-hint"
+                  className="mt-0.5"
+                />
+                <div className="space-y-0.5">
+                  <Label htmlFor="run-workflow-auto-fix" className="cursor-pointer text-xs">
+                    Auto-fix if it fails
+                  </Label>
+                  <p id="run-workflow-auto-fix-hint" className="text-[11px] text-muted-foreground">
+                    {`An agent fixes the failure and Runova pushes the fix to ${ref}, using the CLI from Settings.`}
+                  </p>
+                </div>
+              </div>
+            ) : null}
 
             {workflow.dispatchInputs.map((field) => (
               <InputField

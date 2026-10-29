@@ -3133,6 +3133,8 @@ export interface GithubActionsHistoryItem {
   updatedAt: string;
   /** Lets the annotations lookup list the run's check runs in one call. */
   checkSuiteId?: number;
+  /** The workflow the run belongs to, which auto-fix is switched on for. */
+  workflowId?: number;
 }
 
 export type GithubRunAnnotationLevel = 'failure' | 'warning' | 'notice';

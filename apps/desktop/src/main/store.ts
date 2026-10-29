@@ -68,6 +68,7 @@ import type {
   StoredRdpServer,
   StoredSshServer,
 } from '../shared/apiTypes';
+import type { AutoFixSession } from '../shared/ciAutoFixTypes';
 import { DEFAULT_SETTINGS, ORIGINAL_CHART_IDS } from '../shared/defaultSettings';
 import { referencedAttachmentFiles, removeOrphanAttachments } from './blueprintFileStore';
 import { blueprintRevisionDb } from './blueprintRevisionDb';
@@ -438,6 +439,9 @@ export const store = {
     readJsonFile('pipeline-watch.json', { lastCompletedRunId: {} }),
   setPipelineWatch: (state: PipelineWatchState): Promise<void> =>
     writeJsonFile('pipeline-watch.json', state),
+  getAutoFixSessions: (): Promise<AutoFixSession[]> => readJsonFile('ci-autofix.json', []),
+  setAutoFixSessions: (sessions: AutoFixSession[]): Promise<void> =>
+    writeJsonFile('ci-autofix.json', sessions),
 
   getToolUpdateWatch: (): Promise<ToolUpdateWatchState> =>
     readJsonFile('tool-update-watch.json', { lastCheckedAt: null }),

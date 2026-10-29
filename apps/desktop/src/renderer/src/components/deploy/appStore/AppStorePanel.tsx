@@ -8,14 +8,19 @@ import { Problem } from '@/components/cloudflare/fields';
 import { Lock } from '@/components/icons';
 import { GLASS_CARD } from '@/components/pageKit';
 import { Skeleton } from '@/components/ui/skeleton';
-import { suggestId } from '@/lib/deploy/sites/draft';
+import {
+  type ExposeStep,
+  exposeOnDomain,
+  initialExposeSteps,
+  withStep,
+} from '@/lib/deploy/sites/expose';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { useAppsAccess } from '../apps/hooks';
 import { Notice } from '../deployKit';
 import { CatalogGrid } from './CatalogGrid';
 import { useInstalledApps } from './hooks';
-import { type ExposeStep, InstalledAppView } from './InstalledAppView';
+import { InstalledAppView } from './InstalledAppView';
 import { InstalledList } from './InstalledList';
 import { type InstallRequest, InstallSheet } from './InstallSheet';
 
@@ -71,12 +76,7 @@ export function AppStorePanel({ server }: { server: DeployServer }): React.JSX.E
       current?.stackId === stackId && current.expose
         ? {
             ...current,
-            expose: {
-              ...current.expose,
-              steps: current.expose.steps.map((item) =>
-                item.id === id ? { ...item, ...next } : item,
-              ),
-            },
+            expose: { ...current.expose, steps: withStep(current.expose.steps, id, next) },
           }
         : current,
     );
@@ -92,63 +92,18 @@ export function AppStorePanel({ server }: { server: DeployServer }): React.JSX.E
       step(stackId, 'site', { state: 'failed', detail: 'The app has no web port to point at.' });
       return;
     }
-    const siteId = suggestId(domain);
-    let at: ExposeStep['id'] = 'site';
-    try {
-      const saved = await window.runova.deploySites.save(serverId, {
-        id: siteId,
-        domains: [domain],
-        upstream: {
-          kind: 'servicePort',
-          // A label the core takes (letters, digits, '.', '_', '-', at most 63).
-          service: `${request.draft.name}-${web.service}`.slice(0, 63),
-          port: port.published,
-          verifyCertificate: true,
-          sendUpstreamHost: false,
-        },
-        websocket: true,
-        gzip: true,
-        http2: true,
-        redirectToHttps: false,
-      });
-      if (!saved.site) {
-        throw new Error(
-          saved.problems.map((item) => item.message).join(' ') || 'nginx refused the site.',
-        );
-      }
-      step(stackId, 'site', {
-        state: 'done',
-        detail: `Site ${siteId} forwards to 127.0.0.1:${port.published}.`,
-      });
-      at = 'apply';
-      step(stackId, 'apply', { state: 'running' });
-      const applied = await window.runova.deploySites.applyChanges(serverId);
-      if (!applied.applied) throw new Error(applied.error ?? 'nginx kept its old configuration.');
-      step(stackId, 'apply', { state: 'done' });
-      if (!request.draft.certificate) {
-        step(stackId, 'certificate', {
-          state: 'skipped',
-          detail: "Add one later from the site's SSL tab in Websites.",
-        });
-        return;
-      }
-      at = 'certificate';
-      step(stackId, 'certificate', { state: 'running' });
-      await window.runova.deployCerts.issue({
+    await exposeOnDomain(
+      {
         serverId,
-        siteId,
-        acceptTermsOfService: true,
-        staging: false,
-      });
-      step(stackId, 'certificate', {
-        state: 'done',
-        detail: "Let's Encrypt is checking the domain. The site's SSL tab shows when it arrives.",
-      });
-    } catch (failure) {
-      step(stackId, at, { state: 'failed', detail: coreErrorMessage(failure) });
-    } finally {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.deployWeb(serverId) });
-    }
+        domain,
+        service: `${request.draft.name}-${web.service}`,
+        port: port.published,
+        certificate: request.draft.certificate,
+        websocket: true,
+      },
+      (id, next) => step(stackId, id, next),
+    );
+    void queryClient.invalidateQueries({ queryKey: queryKeys.deployWeb(serverId) });
   }
 
   async function install(request: InstallRequest): Promise<void> {
@@ -172,11 +127,7 @@ export function AppStorePanel({ server }: { server: DeployServer }): React.JSX.E
         expose: domain
           ? {
               domain,
-              steps: [
-                { id: 'site', label: 'Add the site in Websites', state: 'running' },
-                { id: 'apply', label: 'Apply nginx', state: 'skipped' },
-                { id: 'certificate', label: 'Ask for a certificate', state: 'skipped' },
-              ],
+              steps: initialExposeSteps(),
             }
           : null,
         notice: result.job

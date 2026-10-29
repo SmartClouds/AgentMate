@@ -3,7 +3,7 @@ title: Pipelines
 category: Ship
 order: 10
 summary: See every GitHub Actions run across all your projects in one list, stop or copy failures, and watch your self-hosted runners.
-keywords: pipelines, github actions, ci, cd, workflow, runs, build, failed, passed, runner, self-hosted, notifications, unread, gh cli, annotations
+keywords: pipelines, github actions, ci, cd, workflow, runs, build, failed, passed, runner, self-hosted, notifications, unread, gh cli, annotations, auto-fix, autofix, fix with ai, agent, commit, push
 route: /pipelines
 ---
 
@@ -76,6 +76,46 @@ When you scroll a finished run into view, Runova looks up its annotations (the e
 - **Copy all** copies every annotation of the run with a header.
 
 A run that passed but left warnings is shown as **Passed with warnings** in yellow. It still counts under the **Passed** tab. Failed runs keep their red color whatever else they left.
+
+## Auto-fix a run
+
+Auto-fix hands a failing run to an agent CLI and takes care of the rest: when the run fails, the agent fixes it in a workspace tab, Runova commits the fix and pushes it to the same branch, then follows the run the push starts. If that run fails too, it tries again, up to the number of tries you picked.
+
+### Switch it on
+
+You switch auto-fix on for one run while it is still going.
+
+- On this page, click **Auto-fix** on a run that is queued or running.
+- In a project's Workspace, the same button sits under a running pipeline in the Git panel's **Pipelines** section, and in the pipeline's details.
+- When you start a workflow by hand with **Run workflow**, tick **Auto-fix if it fails**.
+
+A small panel asks which agent fixes it and how many tries it gets (1 to 5), and says in one sentence what will happen. Click **Turn on auto-fix**. The run now shows an auto-fix chip, such as **Auto-fix on**, **Fixing 1/3**, **Pushing** or **Checking fix 1/3**. Click the chip to see the session.
+
+> [!IMPORTANT]
+> Auto-fix commits everything in the working tree, so keep the project on the run's branch with nothing uncommitted. If it is on another branch or has changes, auto-fix stops before the agent starts and asks you to sort it out first, then press **Retry**.
+
+### What happens when the run fails
+
+1. Runova reads the failure from GitHub, the same text **Copy error** copies.
+2. It opens a tab in the project's Workspace, starts the agent in a mode that edits and runs checks without asking, and submits the fix prompt. You can watch the tab and type in it at any time.
+3. When the agent finishes, Runova commits with a message like `fix(ci): repair CI failure from run #42 (auto-fix 1/3)` and pushes the branch. If the agent already committed, that commit is pushed as it is.
+4. Runova follows the run of the pushed commit. If it passes, you get a **CI fixed** message. If it fails, the next try starts.
+
+Claude Code tells Runova exactly when it is done. For other CLIs, Runova waits until the tab has been quiet for 45 seconds, so a slow test run is not mistaken for the end. **Commit & push now** in the session panel skips the wait.
+
+### When it needs you
+
+The chip turns into **Needs you** and a message says why, with the one action that unblocks it:
+
+- **Answer in tab** when the agent asked a question. Once it carries on, so does auto-fix.
+- **Retry** after you switched branch, committed or stashed your changes, pulled, or fixed a refused push.
+- **Commit & push now** when Runova lost track of the agent tab, for example after a restart, and you want to keep its work.
+
+Auto-fix gives up, and tells you, when the run still fails after the last try or when the agent finished without changing any file. **Stop auto-fix** ends a session at any time. The agent tab stays open and nothing more is committed or pushed. A run auto-fix took on does not raise a second failure alarm: its failure is filed as read, with "Auto-fix is on it".
+
+### Pick the agent
+
+Open **Settings** > **Notifications** > **CI auto-fix** to choose the agent CLI, its model and effort, and how many tries a run gets. Leave the agent on **Each project's CLI** to use the CLI each project is set to.
 
 ## Self-hosted runners panel
 

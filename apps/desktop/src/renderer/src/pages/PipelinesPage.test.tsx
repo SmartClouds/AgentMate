@@ -739,3 +739,55 @@ describe('PipelinesPage runner follow-ups', () => {
     }
   });
 });
+
+describe('PipelinesPage auto-fix', () => {
+  const live = { ...running, workflowId: 9 };
+  const withLiveRun = {
+    'pipelines.dashboardActivity': async () => activity({ runs: [passed, failed, live] }),
+  };
+  const session = {
+    id: 'fix-1',
+    projectId: 'p1',
+    projectName: 'Aurora',
+    repo: 'acme/aurora',
+    workflowId: 9,
+    workflowName: 'CI',
+    branch: 'main',
+    cliId: 'claude-code',
+    runArgs: [],
+    runLabel: null,
+    maxAttempts: 3,
+    runId: 3,
+    runNumber: 43,
+    waitFor: null,
+    phase: 'watching',
+    blocker: null,
+    message: null,
+    attempts: [],
+    agent: null,
+    createdAt: 0,
+    updatedAt: 0,
+  };
+
+  it('offers auto-fix on a run that is still going, and only there', async () => {
+    renderPage(withLiveRun);
+    await screen.findByText('Deploy docs');
+    expect(
+      within(runRow('Deploy docs')).getByRole('button', { name: 'Auto-fix this run if it fails' }),
+    ).toBeTruthy();
+    expect(
+      within(runRow('Break the build')).queryByRole('button', {
+        name: 'Auto-fix this run if it fails',
+      }),
+    ).toBeNull();
+  });
+
+  it('shows the auto-fix chip on the run and counts the sessions in progress', async () => {
+    renderPage({ ...withLiveRun, 'ciAutoFix.list': [session] });
+    await screen.findByText('Deploy docs');
+    expect(
+      await within(runRow('Deploy docs')).findByRole('button', { name: /Auto-fix: Auto-fix on/ }),
+    ).toBeTruthy();
+    expect(await screen.findByText('1 auto-fix on')).toBeTruthy();
+  });
+});

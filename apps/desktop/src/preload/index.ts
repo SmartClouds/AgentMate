@@ -478,6 +478,7 @@ import type { PetPipelineMessage, PetSnoozeState, PetWorkArea } from '../shared/
 import type { RemoteInputEvent, RemoteRtcMessage } from '../shared/remoteProtocol';
 import type { EditCommand, SpellcheckMenuPayload } from '../shared/spellcheck';
 import type { SshHostKeyStatus } from '../shared/sshHostKey';
+import { createCiAutoFix } from './ciAutoFix';
 import { cloudflareServer } from './cloudflareServer';
 import { createDeployAssistant, createDeployLogs } from './deployAssistant';
 import { createDeployDirectTls } from './deployDirectTls';
@@ -1999,6 +2000,7 @@ const studioMedia = createStudioMedia();
 const studioAudio = createStudioAudio();
 const studioGen = createStudioGen();
 const relay = createRelay();
+const ciAutoFix = createCiAutoFix();
 const errorTracking = createErrorTracking();
 
 /** A server core's alerts: disk pressure, failed jobs, a reboot waiting. */
@@ -2812,6 +2814,7 @@ const runovaApi = {
   git,
   worktrees,
   pipelines,
+  ciAutoFix,
   deploy,
   deploySecurity,
   deployHardening,

@@ -149,6 +149,8 @@ export const queryKeys = {
   /** One finished job's log, split by step. */
   jobLog: (repo: string, jobId: number) => ['job-log', repo, jobId] as const,
   pipelineStatus: (projectId: string) => ['pipeline-status', projectId] as const,
+  /** Every CI auto-fix session, kept current by main's pushes. */
+  autoFixSessions: ['ci-auto-fix-sessions'] as const,
   /** Test frameworks and tests found in a project, for the workspace Tests panel. */
   testsDiscovery: (projectId: string) => ['tests-discovery', projectId] as const,
   /** Branches and tags of a repo, for picking what a manual workflow run should build. */

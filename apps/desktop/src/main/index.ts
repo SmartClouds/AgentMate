@@ -31,6 +31,7 @@ import { registerAppNotificationHandlers } from './ipc/appNotifications';
 import { registerBackupHandlers } from './ipc/backup';
 import { registerBlueprintHandlers } from './ipc/blueprints';
 import { registerBrowserHandlers } from './ipc/browser';
+import { registerCiAutoFixHandlers } from './ipc/ciAutoFix';
 import { registerCliDetectionHandlers } from './ipc/cliDetection';
 import { registerDevSetupHandlers } from './ipc/devSetup';
 import { registerDockerHandlers } from './ipc/docker';
@@ -103,6 +104,7 @@ import {
 import { startHookServer, stopHookServer } from './notifications/hookServer';
 import { registerNotificationActivation } from './notifications/osNotification';
 import { petManager } from './pet/petWindow';
+import { startCiAutoFix, stopCiAutoFix } from './pipelines/autoFix/wiring';
 import { startPipelineWatcher, stopPipelineWatcher } from './pipelines/watcher';
 import { promptBuildWidgetManager } from './promptBuild/widgetWindows';
 import { allowQuit, guardQuit, registerQuitGuardHandlers } from './quitGuard';
@@ -394,6 +396,7 @@ function registerAllIpcHandlers(): void {
   registerPromptBuildWidgetHandlers();
   registerPetHandlers();
   registerPipelineHandlers();
+  registerCiAutoFixHandlers();
   registerDeployIpc();
   registerPullRequestHandlers();
   registerTestHandlers();
@@ -549,6 +552,7 @@ app.whenReady().then(async () => {
   // Reads Docker and adb in the background, which a test run has no business doing.
   if (!isE2E) startResourceActivityTracker();
   startPipelineWatcher();
+  void startCiAutoFix();
   startToolUpdateWatcher();
   startHealthScheduler();
   startScheduledTaskRunner();
@@ -606,6 +610,7 @@ app.on('before-quit', (event) => {
   stopNetworkQualityAlertWatcher();
   stopResourceActivityTracker();
   stopPipelineWatcher();
+  stopCiAutoFix();
   stopToolUpdateWatcher();
   stopHealthScheduler();
   stopScheduledTaskRunner();

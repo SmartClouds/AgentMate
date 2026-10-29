@@ -270,6 +270,11 @@ function requestThroughChromium(
         method: request.method,
         url: request.url,
         session: target,
+        // Node's fetch has no HTTP cache and this stands in for it, but a ClientRequest
+        // reads and writes Chromium's disk cache that outlives the app. A site sending
+        // `max-age=2678400` would then be answered from a copy weeks old, which is how a
+        // favicon added to a page went unseen until the old copy expired.
+        cache: 'no-store',
         // Off by default so nothing of the app's own browsing state rides
         // along, but a caller that set its own Cookie header (the Cursor usage
         // provider authenticates that way) needs it on or Chromium drops it.

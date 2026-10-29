@@ -272,6 +272,26 @@ describe('announcing a finished run', () => {
     expect(state.watch.lastCompletedRunId['proj-1:100']).toBe(10);
   });
 
+  it('files a failure auto-fix already took on as read, and keeps the pet quiet', async () => {
+    // Auto-fix tells the user itself when it needs them or gives up, so a second alarm for the
+    // same run would only be noise.
+    const { setAutoFixClaimer } = await import('./autoFix/claims');
+    setAutoFixClaimer((projectId, runId) => projectId === 'proj-1' && runId === 10);
+    github.listRepoRunsByWorkflow.mockResolvedValue(
+      new Map([[100, [run({ id: 10, conclusion: 'failure' })]]]),
+    );
+
+    await tickOnce();
+
+    expect(state.notifications[0]).toMatchObject({
+      kind: 'pipeline-failure',
+      title: 'CI failed',
+      body: 'Demo · main · run #42 · Auto-fix is on it',
+      read: true,
+    });
+    expect(pet.messages).toEqual([]);
+  });
+
   it('counts a timed out run as a failure', async () => {
     github.listRepoRunsByWorkflow.mockResolvedValue(
       new Map([[100, [run({ id: 10, conclusion: 'timed_out' })]]]),

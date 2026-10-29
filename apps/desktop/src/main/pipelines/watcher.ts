@@ -7,6 +7,7 @@ import { broadcastToWindows } from '../ipc/send';
 import { petDisplayName } from '../pet/names';
 import { petManager } from '../pet/petWindow';
 import { type PipelineWatchState, store } from '../store';
+import { autoFixClaims } from './autoFix/claims';
 import {
   fetchProjectPipelineStatus,
   githubRepoForFolder,
@@ -48,6 +49,8 @@ async function appendRunNotification(input: {
   workflowName: string;
   run: GithubWorkflowRunInfo;
   passed: boolean;
+  /** Auto-fix already took the failure on and tells the user itself, so this one is a record. */
+  autoFixing?: boolean;
 }): Promise<void> {
   const items = await store.getAppNotifications();
   if (items.some((item) => item.htmlUrl === input.run.htmlUrl)) return;
@@ -55,14 +58,14 @@ async function appendRunNotification(input: {
     id: randomUUID(),
     kind: input.passed ? 'pipeline-success' : 'pipeline-failure',
     title: `${input.workflowName} ${input.passed ? 'passed' : 'failed'}`,
-    body: `${input.project.name} · ${input.run.headBranch || 'unknown branch'} · run #${input.run.runNumber}`,
+    body: `${input.project.name} · ${input.run.headBranch || 'unknown branch'} · run #${input.run.runNumber}${input.autoFixing ? ' · Auto-fix is on it' : ''}`,
     projectId: input.project.id,
     projectName: input.project.name,
     htmlUrl: input.run.htmlUrl,
     createdAt: new Date().toISOString(),
     // A green run is good news to look back on, not something to clear, so it
     // stays out of the unread badge.
-    read: input.passed,
+    read: input.passed || input.autoFixing === true,
   };
   items.unshift(notification);
   await store.setAppNotifications(items.slice(0, MAX_NOTIFICATIONS));
@@ -143,10 +146,18 @@ function processWatchedWorkflow(
       for (const run of fresh) {
         const name = workflowName || run.name;
         if (isFailedConclusion(run.conclusion)) {
+          const autoFixing = autoFixClaims(project.id, run.id);
           // Missing counts as on, so a profile from before the setting existed keeps its notices.
           if (settings.pipelineFailureNotify !== false) {
-            await appendRunNotification({ project, workflowName: name, run, passed: false });
+            await appendRunNotification({
+              project,
+              workflowName: name,
+              run,
+              passed: false,
+              autoFixing,
+            });
           }
+          if (autoFixing) continue;
           // The ref rides along so clicking the bubble opens this run on the
           // Pipelines page instead of just raising the window.
           maybeSpeak(settings, 'fail', project, name, { runId: run.id, repo: `${owner}/${repo}` });

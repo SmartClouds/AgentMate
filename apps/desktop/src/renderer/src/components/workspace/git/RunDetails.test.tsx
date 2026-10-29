@@ -118,7 +118,7 @@ const runDetails = vi.fn();
 const runAnnotations = vi.fn();
 const runError = vi.fn();
 
-function renderDetails(run: GithubWorkflowRunInfo | null) {
+function renderDetails(run: GithubWorkflowRunInfo | null, bridge: Record<string, unknown> = {}) {
   return renderWithProviders(
     <RunDetails project={project} repo="acme/app" workflow={workflow} run={run} />,
     {
@@ -128,6 +128,7 @@ function renderDetails(run: GithubWorkflowRunInfo | null) {
         'pipelines.runAnnotations': runAnnotations,
         'pipelines.runError': runError,
         'pipelines.cancelRun': { ok: true },
+        ...bridge,
       },
     },
   );
@@ -436,5 +437,53 @@ describe('RunDetails for a pipeline that has never run', () => {
 
     await user.click(screen.getByRole('button', { name: 'Open workflow on GitHub' }));
     expect(openExternal).toHaveBeenCalledWith(workflow.htmlUrl);
+  });
+});
+
+describe('RunDetails auto-fix', () => {
+  it('offers auto-fix on a run that is still going', async () => {
+    renderDetails(LIVE_RUN);
+    expect(
+      await screen.findByRole('button', { name: 'Auto-fix this run if it fails' }),
+    ).toBeVisible();
+  });
+
+  it('shows the session in full when auto-fix is handling the run', async () => {
+    renderDetails(LIVE_RUN, {
+      'ciAutoFix.list': [
+        {
+          id: 'fix-1',
+          projectId: 'p1',
+          projectName: 'App',
+          repo: 'acme/app',
+          workflowId: 1,
+          workflowName: 'CD',
+          branch: 'master',
+          cliId: 'claude-code',
+          runArgs: [],
+          runLabel: null,
+          maxAttempts: 3,
+          runId: LIVE_RUN.id,
+          runNumber: LIVE_RUN.runNumber,
+          waitFor: null,
+          phase: 'watching',
+          blocker: null,
+          message: null,
+          attempts: [],
+          agent: null,
+          createdAt: 0,
+          updatedAt: 0,
+        },
+      ],
+    });
+    const panel = await screen.findByRole('region', { name: 'Auto-fix' });
+    expect(within(panel).getByRole('button', { name: 'Stop auto-fix' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Auto-fix this run if it fails' })).toBeNull();
+  });
+
+  it('offers nothing on a finished run auto-fix never handled', async () => {
+    renderDetails(FAILED_RUN);
+    await screen.findByText(FAILED_RUN.displayTitle);
+    expect(screen.queryByRole('button', { name: 'Auto-fix this run if it fails' })).toBeNull();
   });
 });

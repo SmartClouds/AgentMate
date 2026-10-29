@@ -210,3 +210,14 @@ describe('FailedRunActions', () => {
     expect(within(group).getAllByRole('button')).toHaveLength(2);
   });
 });
+
+describe('PipelinesSection auto-fix', () => {
+  it('offers auto-fix under a run that is still going', async () => {
+    renderSection(
+      ready([row(1, 'CI', { status: 'in_progress', conclusion: null }), row(2, 'Lint', PASSED)]),
+    );
+    expect(
+      await screen.findAllByRole('button', { name: 'Auto-fix this run if it fails' }),
+    ).toHaveLength(1);
+  });
+});

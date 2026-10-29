@@ -5,12 +5,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import {
   ArrowLeft,
-  CircleCheck,
-  CircleX,
   FileText,
   Globe,
-  Minus,
-  Spinner,
   Store,
   TerminalSquare,
   TriangleAlert,
@@ -20,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import type { UpdateOffer } from '@/lib/deploy/appStore/format';
+import type { ExposeStep } from '@/lib/deploy/sites/expose';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { confirmDialog } from '@/stores/confirmStore';
@@ -27,6 +24,7 @@ import { DeployTimeline } from '../apps/DeployTimeline';
 import { type AppsAccess, stackIsBusy } from '../apps/hooks';
 import { DeployCard, Notice } from '../deployKit';
 import { useProofStepUp } from '../overview/useProofStepUp';
+import { ExposeStepList } from '../sites/ExposeSteps';
 import {
   type StackToolsRequest,
   StackToolsSheet,
@@ -41,57 +39,10 @@ import { PostInstallCard } from './PostInstallCard';
  * passed in and live only as long as this screen.
  */
 
-export type ExposeStepState = 'running' | 'done' | 'failed' | 'skipped';
-
-export interface ExposeStep {
-  id: 'site' | 'apply' | 'certificate';
-  label: string;
-  state: ExposeStepState;
-  detail?: string;
-}
-
-const STEP_ICON: Record<ExposeStepState, typeof CircleCheck> = {
-  running: Spinner,
-  done: CircleCheck,
-  failed: CircleX,
-  skipped: Minus,
-};
-
-const STEP_WORD: Record<ExposeStepState, string> = {
-  running: 'working',
-  done: 'done',
-  failed: 'failed',
-  skipped: 'skipped',
-};
-
 function ExposeSteps({ domain, steps }: { domain: string; steps: ExposeStep[] }) {
   return (
     <DeployCard aria-label="Domain steps" icon={<Globe />} title={domain}>
-      <ol className="space-y-1 text-sm">
-        {steps.map((step) => {
-          const Icon = STEP_ICON[step.state];
-          return (
-            <li key={step.id} aria-label={step.label} className="flex items-start gap-2">
-              <Icon
-                className={
-                  step.state === 'running'
-                    ? 'mt-0.5 h-3.5 w-3.5 shrink-0 motion-safe:animate-spin'
-                    : step.state === 'failed'
-                      ? 'mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive'
-                      : 'mt-0.5 h-3.5 w-3.5 shrink-0 text-success'
-                }
-              />
-              <span>
-                {step.label}{' '}
-                <span className="text-muted-foreground">({STEP_WORD[step.state]})</span>
-                {step.detail && (
-                  <span className="block text-xs text-muted-foreground">{step.detail}</span>
-                )}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
+      <ExposeStepList steps={steps} />
     </DeployCard>
   );
 }

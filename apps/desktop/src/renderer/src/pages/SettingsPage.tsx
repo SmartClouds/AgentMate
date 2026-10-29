@@ -76,6 +76,7 @@ import { CompanionSettings } from '@/components/pet/CompanionSettings';
 import { AndroidSdkSettings } from '@/components/settings/AndroidSdkSettings';
 import { BackupEnvironmentsPasswordDialog } from '@/components/settings/BackupEnvironmentsPasswordDialog';
 import { BlueprintPresetSettings } from '@/components/settings/BlueprintPresetSettings';
+import { CiAutoFixSettings } from '@/components/settings/CiAutoFixSettings';
 import { CliLaunchDefaultsSettings } from '@/components/settings/CliLaunchDefaultsSettings';
 import { CliOrderSettings } from '@/components/settings/CliOrderSettings';
 import { CommitMessageSettingsForm } from '@/components/settings/CommitMessageSettingsCard';
@@ -449,6 +450,12 @@ const SECTIONS = {
     tab: 'notifications',
     title: 'Pipeline failures',
     keywords: PIPELINE_FAILURE_KEYWORDS,
+  },
+  ciAutoFix: {
+    tab: 'notifications',
+    title: 'CI auto-fix',
+    keywords:
+      'ci cd auto fix autofix pipeline github actions workflow failure agent cli commit push repair tries attempts model effort',
   },
   telegram: {
     tab: 'notifications',
@@ -2585,6 +2592,12 @@ export default function SettingsPage(): React.JSX.Element {
                         />
                       }
                     />
+                  </Card>
+                ) : null}
+
+                {show('ciAutoFix') ? (
+                  <Card className="glass settings-rows">
+                    <CiAutoFixSettings />
                   </Card>
                 ) : null}
 

@@ -387,6 +387,23 @@ describe('listWorkflowRuns', () => {
   });
 });
 
+describe('fetchWorkflowRun', () => {
+  it('reads one run of the repo', async () => {
+    scenario.api['repos/acme/demo/actions/runs/5001'] = ghRun();
+
+    const run = await actions.fetchWorkflowRun('acme/demo', 5001);
+
+    expect(run).toMatchObject({ id: 5001, headBranch: 'main' });
+  });
+
+  it('refuses a repo that is not owner/name before calling GitHub', async () => {
+    await expect(actions.fetchWorkflowRun('demo', 5001)).rejects.toThrow(
+      'That workflow run could not be identified.',
+    );
+    expect(ghCalls()).toEqual([]);
+  });
+});
+
 describe('listRepoRunsByWorkflow', () => {
   it('groups the repo runs by workflow id, newest first within each group', async () => {
     scenario.api['repos/acme/demo/actions/runs?per_page=50'] = {
@@ -610,6 +627,8 @@ describe('fetchDashboardActionsActivity', () => {
       repo: 'acme/demo',
       workflowName: 'CI',
       checkSuiteId: 9001,
+      // Auto-fix is switched on per workflow, so a row has to say which one it ran.
+      workflowId: 100,
     });
   });
 

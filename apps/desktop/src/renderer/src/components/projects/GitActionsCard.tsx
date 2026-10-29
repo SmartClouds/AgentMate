@@ -224,6 +224,7 @@ export function GitActionsCard({
               key={workflow.id}
               workflow={workflow}
               repo={repo}
+              projectId={projectId}
               run={status.runsByWorkflowId[workflow.id]}
               watched={!mutedIds.has(workflow.id)}
               pending={watchMutation.isPending}
@@ -242,6 +243,7 @@ export function GitActionsCard({
 function WorkflowRow({
   workflow,
   repo,
+  projectId,
   run,
   watched,
   pending,
@@ -252,6 +254,7 @@ function WorkflowRow({
 }: {
   workflow: GithubWorkflowInfo;
   repo: string;
+  projectId: string;
   run: GithubWorkflowRunInfo | null | undefined;
   watched: boolean;
   pending: boolean;
@@ -353,6 +356,7 @@ function WorkflowRow({
           onOpenChange={setRunOpen}
           repo={repo}
           workflow={workflow}
+          projectId={projectId}
           onStarted={onStarted}
         />
       ) : null}

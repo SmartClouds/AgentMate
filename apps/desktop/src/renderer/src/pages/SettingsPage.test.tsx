@@ -229,6 +229,14 @@ describe('SettingsPage appearance', () => {
   });
 });
 
+describe('SettingsPage CI auto-fix', () => {
+  it('sits with the pipeline settings on the Notifications tab, and is found by search', async () => {
+    renderSettings({}, '/settings?tab=notifications');
+    expect(await screen.findByRole('heading', { name: 'CI auto-fix' })).toBeVisible();
+    expect(screen.getByRole('combobox', { name: 'Agent CLI for auto-fix' })).toBeVisible();
+  });
+});
+
 describe('SettingsPage pipeline failures', () => {
   const NOTIFY = 'Show failed pipelines in notifications';
   const PET = 'Show failed pipelines on my AI Pet';

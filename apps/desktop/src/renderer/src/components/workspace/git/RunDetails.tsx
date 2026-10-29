@@ -7,6 +7,10 @@ import type {
 import { useEffect, useState } from 'react';
 import { ChevronRight, Copy, ExternalLink, GitBranch, GitCommit } from '@/components/icons';
 import { SECTION_HEADING } from '@/components/pageKit';
+import { AutoFixControl } from '@/components/pipelines/autoFix/AutoFixControl';
+import { AutoFixPanel } from '@/components/pipelines/autoFix/AutoFixPanel';
+import { sessionForRun } from '@/components/pipelines/autoFix/autoFixView';
+import { useAutoFixSessions } from '@/components/pipelines/autoFix/useAutoFix';
 import { InlineProblem } from '@/components/pipelines/InlineProblem';
 import { copyText, RunAnnotations, useRunAnnotations } from '@/components/pipelines/RunAnnotations';
 import {
@@ -253,6 +257,8 @@ export function RunDetails({
 }): React.JSX.Element {
   const live = run ? isLiveRun(run) : false;
   const now = useNow(live);
+  const { sessions } = useAutoFixSessions();
+  const autoFix = run ? sessionForRun(sessions, repo, run.id) : null;
 
   if (!run) {
     return (
@@ -307,6 +313,21 @@ export function RunDetails({
             {tone.outcome === 'failed' ? (
               <FailedRunActions project={project} run={failureInput} className="p-0" />
             ) : null}
+            {live && !autoFix && run.headBranch ? (
+              <AutoFixControl
+                target={{
+                  projectId: project.id,
+                  repo,
+                  workflowId: workflow.id,
+                  workflowName: workflow.name,
+                  branch: run.headBranch,
+                  runId: run.id,
+                  runNumber: run.runNumber,
+                }}
+                live
+                className="h-6 px-2 text-[11px]"
+              />
+            ) : null}
             {live ? (
               <StopRunButton
                 item={{
@@ -331,6 +352,12 @@ export function RunDetails({
           </div>
         </header>
 
+        {autoFix ? (
+          <AutoFixPanel
+            session={autoFix}
+            className="rounded-xl bg-primary/[0.04] p-3.5 ring-1 ring-inset ring-primary/15"
+          />
+        ) : null}
         <JobsSection project={project} repo={repo} workflow={workflow} run={run} now={now} />
         <AnnotationsSection repo={repo} workflow={workflow} run={run} />
         {tone.outcome === 'failed' ? <FailureOutput input={failureInput} /> : null}

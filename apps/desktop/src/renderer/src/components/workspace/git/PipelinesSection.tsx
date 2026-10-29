@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Copy, Spinner, Wand2 } from '@/components/icons';
 import { Chip } from '@/components/pageKit';
+import { AutoFixControl } from '@/components/pipelines/autoFix/AutoFixControl';
+import { sessionForRun } from '@/components/pipelines/autoFix/autoFixView';
+import { useAutoFixSessions } from '@/components/pipelines/autoFix/useAutoFix';
 import { RunStatusIcon, type RunTone } from '@/components/pipelines/runStatus';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -53,6 +56,7 @@ export function PipelinesSection({
   onRetry: () => void;
   onOpenDetails: (workflowId: number) => void;
 }): React.JSX.Element {
+  const { sessions } = useAutoFixSessions();
   if (view.kind === 'loading') {
     return (
       <div data-testid="pipelines-loading" className="space-y-1 px-2 py-1.5">
@@ -70,6 +74,11 @@ export function PipelinesSection({
     <div className="min-h-0 flex-1 space-y-px overflow-y-auto py-1">
       {view.rows.map(({ workflow, run, tone }) => {
         const failed = tone?.outcome === 'failed' && run;
+        const live = tone?.outcome === 'running' || tone?.outcome === 'queued';
+        const autoFix =
+          run && run.headBranch && (live || sessionForRun(sessions, view.repo, run.id))
+            ? run
+            : null;
         return (
           <div
             key={workflow.id}
@@ -113,6 +122,23 @@ export function PipelinesSection({
                   headBranch: run.headBranch,
                 }}
               />
+            ) : null}
+            {autoFix ? (
+              <div className="flex items-center pb-1.5 pl-[2.625rem] pr-2">
+                <AutoFixControl
+                  target={{
+                    projectId: project.id,
+                    repo: view.repo,
+                    workflowId: workflow.id,
+                    workflowName: workflow.name,
+                    branch: autoFix.headBranch,
+                    runId: autoFix.id,
+                    runNumber: autoFix.runNumber,
+                  }}
+                  live={live}
+                  className="h-6 px-2 text-[11px]"
+                />
+              </div>
             ) : null}
           </div>
         );

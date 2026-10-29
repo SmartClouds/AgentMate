@@ -312,7 +312,11 @@ export type AppNotificationKind =
   | 'health-recovered'
   /** A Relay task needs the user (blocked, failing tests, a stalled session), and a relay ended (E26). */
   | 'relay-attention'
-  | 'relay-finished';
+  | 'relay-finished'
+  /** CI auto-fix made a run pass, needs the user, or ran out of attempts. */
+  | 'pipeline-autofix-fixed'
+  | 'pipeline-autofix-attention'
+  | 'pipeline-autofix-gave-up';
 
 /** In-app inbox item: pipeline results from watched GitHub Actions, or a CLI/tool update. */
 export interface AppNotification {
@@ -651,6 +655,16 @@ export interface AppSettings {
    * Pipelines section of that project's Workspace, 'none' leaves the click as a plain dismiss.
    */
   pipelineFailureOpen: PipelineFailureOpen;
+  /**
+   * The agent CLI CI auto-fix runs when a watched run fails. Null falls back to the project's own
+   * CLI, then the default CLI. Each run can still pick another when auto-fix is switched on.
+   */
+  ciAutoFixCliId: string | null;
+  /** Model for `ciAutoFixCliId`. Null leaves it to the CLI's launch defaults. */
+  ciAutoFixModel: string | null;
+  ciAutoFixEffort: EffortLevel | null;
+  /** How many fixes auto-fix pushes for one run before it gives up and tells the user (1 to 5). */
+  ciAutoFixMaxAttempts: number;
   /**
    * When true the desktop pet speaks if internet quality changes (offline,
    * back online, or a clear drop or improvement).

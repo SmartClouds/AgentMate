@@ -279,6 +279,18 @@ export default defineConfig({
             'src/main/ipc/cloudflareServer.ts': { lines: 95, branches: 90 },
             'src/shared/cloudflare/dns01.ts': { lines: 95, branches: 90 },
             'src/renderer/src/components/cloudflare/**': { lines: 85, functions: 75, branches: 75 },
+            // CI auto-fix commits and pushes to the user's branch on its own. The wiring module
+            // only plugs the real ports in, everything that decides is held to these.
+            'src/main/pipelines/autoFix/{machine,service,git,runs,launch}.ts': {
+              lines: 90,
+              branches: 80,
+            },
+            'src/main/ipc/ciAutoFix.ts': { lines: 95, branches: 85 },
+            'src/renderer/src/components/pipelines/autoFix/**': {
+              lines: 90,
+              functions: 85,
+              branches: 80,
+            },
             'src/renderer/src/lib/cloudflare/**': { lines: 95, branches: 90 },
             // Registry sign-ins (E08): sealed here, sent with each deploy, never shown again.
             'src/main/deploy/registry/**': { lines: 95, branches: 85 },

@@ -21,6 +21,7 @@ interface RecordedRequest {
   session: unknown;
   useSessionCookies?: boolean;
   redirect?: string;
+  cache?: string;
 }
 
 const netRequests: RecordedRequest[] = [];
@@ -491,6 +492,23 @@ describe('installProxyFetch', () => {
     // authenticates that way, because Chromium drops the header otherwise.
     expect(netRequests[0].useSessionCookies).toBe(false);
     expect(netRequests[1].useSessionCookies).toBe(true);
+  });
+
+  it('keeps Chromium out of its HTTP cache, which Node fetch has no equivalent of', async () => {
+    server = await startHttpServer((_request, response) => {
+      response.writeHead(200, { 'cache-control': 'public, max-age=2678400' });
+      response.end('ok');
+    });
+    const { applyProxySettings, installProxyFetch } = await loadProxy();
+    await applyProxySettings({ ...defaultProxySettings(), mode: 'system' });
+    installProxyFetch();
+
+    await fetch(`${server.url}/page`);
+    await fetch(`${server.url}/page`, { method: 'POST', body: 'x' });
+
+    // A site that allows caching for a month would otherwise be answered from a stale copy on
+    // disk for the whole month, for every caller of fetch (the favicon lookup, for one).
+    expect(netRequests.map((r) => r.cache)).toEqual(['no-store', 'no-store']);
   });
 
   it('passes manual redirect handling through', async () => {

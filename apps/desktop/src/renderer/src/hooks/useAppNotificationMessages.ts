@@ -18,6 +18,9 @@ const KIND: Record<AppNotification['kind'], { kind: ToastHistoryKind; tag?: stri
   'health-recovered': { kind: 'success', tag: 'Recovered' },
   'relay-attention': { kind: 'warning', tag: 'Relay' },
   'relay-finished': { kind: 'success', tag: 'Relay' },
+  'pipeline-autofix-fixed': { kind: 'success', tag: 'Auto-fix' },
+  'pipeline-autofix-attention': { kind: 'warning', tag: 'Auto-fix' },
+  'pipeline-autofix-gave-up': { kind: 'error', tag: 'Auto-fix' },
 };
 
 /** A page inside the app; anything else in `route` is ignored rather than followed. */

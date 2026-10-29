@@ -1,30 +1,8 @@
 import type { Project } from '@runova/core';
 import type { GithubActionsRunErrorInput } from '@shared/apiTypes';
+import { buildFixRunPrompt } from '@shared/pipelineFixPrompt';
 import { useRunFailure } from '@/components/pipelines/useRunFailure';
 import { FixWithAiDialog } from '../FixWithAiDialog';
-
-/** What an agent is asked to do about a failed run, with the failure pasted underneath. */
-export function buildFixRunPrompt(run: GithubActionsRunErrorInput, failure: string): string {
-  const where = [
-    run.headBranch ? `on ${run.headBranch}` : null,
-    run.runNumber ? `(run #${run.runNumber})` : null,
-  ]
-    .filter(Boolean)
-    .join(' ');
-  return [
-    `The GitHub Actions workflow "${run.workflowName ?? 'CI'}" failed${where ? ` ${where}` : ''}.`,
-    run.displayTitle ? `It ran for the commit "${run.displayTitle}".` : null,
-    '',
-    'Find the root cause and fix it in this repository. Run the same checks the workflow runs to reproduce the failure where you can, keep the change focused on this failure, and confirm the checks pass afterwards. When you are done, explain the cause and what you changed.',
-    '',
-    'Failure output from the run:',
-    '```',
-    failure.trim(),
-    '```',
-  ]
-    .filter((line) => line !== null)
-    .join('\n');
-}
 
 /** Fix with AI for a failed pipeline run: fetches the failure, then hands off to the shared dialog. */
 export function FixRunDialog({
