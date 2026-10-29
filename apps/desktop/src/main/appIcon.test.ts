@@ -167,7 +167,7 @@ describe('removeDevShortcuts', () => {
     const { APP_ID, DEV_APP_ID, removeDevShortcuts } = await load('win32');
     const programs = startMenu({
       'Electron.lnk': {
-        target: 'E:\\AgentMate\\node_modules\\electron\\dist\\Electron.exe',
+        target: 'E:\\OldCheckout\\node_modules\\electron\\dist\\Electron.exe',
         appUserModelId: APP_ID,
       },
       'Runova.lnk': { target: 'C:\\Program Files\\Runova\\Runova.exe', appUserModelId: APP_ID },

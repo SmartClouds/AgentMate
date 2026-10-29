@@ -77,7 +77,7 @@
         width: 320px;
         height: 320px;
         left: -90px;
-        top: -120px;
+        top: -80px;
         background: radial-gradient(closest-side, hsl(var(--primary) / 0.22), transparent);
         pointer-events: none;
       }
@@ -97,18 +97,21 @@
         gap: 18px;
         margin-top: 14px;
       }
+      /* The logo carries its own glow, so it needs no shadow or backing of its own. */
       .brand img {
-        width: 68px;
-        height: 68px;
-        filter: drop-shadow(0 6px 18px hsl(var(--primary) / 0.28));
+        width: 106px;
+        height: 76px;
+        margin: -6px -6px -6px -12px;
       }
       .name {
+        font-family: Unbounded, "Segoe UI Variable Display", "Segoe UI", sans-serif;
         font-size: 30px;
         font-weight: 600;
-        line-height: 1.1;
+        letter-spacing: -0.01em;
+        line-height: 1;
       }
       .tagline {
-        margin-top: 4px;
+        margin-top: 8px;
         font-size: 13px;
         color: hsl(var(--muted));
       }
