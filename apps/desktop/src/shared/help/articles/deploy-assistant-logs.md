@@ -84,7 +84,7 @@ The Deploy AI is a drawer on the right side of the page. It does not cover the p
 
 ### Open it
 
-- Click the **Deploy AI** button in the bottom right corner. If a run is waiting for you, the button says **Waiting for you**.
+- Click the **Deploy AI** button (the robot) in the top bar, next to the terminal button. It shows while a server is open in Deploy. Click it again to close the drawer. If a run is waiting for you, the button has an amber dot.
 - Click **Ask the AI** in the Log viewer.
 - Click **Diagnose with AI** on a problem card.
 

@@ -11,6 +11,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import { useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConfirmDialogHost } from '@/components/ConfirmDialog';
+import { AssistantTopBarButton } from '@/components/deploy/assistant/AssistantLauncher';
 import { useFilesRunEvents } from '@/components/deploy/files/hooks';
 import { fileSite, snapshot } from '@/components/deploy/files/testing/fixtures';
 import { wpSite } from '@/components/deploy/wordpress/testing/fixtures';
@@ -188,6 +189,8 @@ function renderPage(bridge: Record<string, unknown> = {}, route = '/deploy') {
   >;
   return renderWithProviders(
     <>
+      {/* The app shell's top bar, where the Deploy AI button lives. */}
+      <AssistantTopBarButton />
       <FilesRunEvents />
       <DeployPage />
       <ConfirmDialogHost />
@@ -279,13 +282,6 @@ describe('DeployPage states', () => {
     expect(screen.getByText('Ubuntu 24.04.1 LTS')).toBeTruthy();
     const rail = screen.getByRole('navigation', { name: 'Servers' });
     expect(await within(rail).findByText('Online, core 1.53.0')).toBeTruthy();
-  });
-
-  it('leaves room under a server section for the Deploy AI button', async () => {
-    renderPage({ 'deploy.listServers': async () => [server({ core: CORE })] });
-
-    const sections = await screen.findByRole('navigation', { name: 'Server sections' });
-    expect(sections.parentElement?.className).toContain('pb-16');
   });
 
   it('scrolls the section strip in a narrow window instead of cutting sections off', async () => {

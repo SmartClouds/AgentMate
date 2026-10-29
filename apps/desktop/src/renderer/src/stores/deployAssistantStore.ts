@@ -74,6 +74,12 @@ const MAX_MESSAGES = 50;
 
 interface DeployAssistantStoreState {
   openServerId: string | null;
+  /**
+   * The Deploy server whose page is showing, which the top bar's Deploy AI button opens the
+   * drawer on. Null on every other page, where the button is not shown.
+   */
+  pageServerId: string | null;
+  setPageServer: (serverId: string | null) => void;
   /** What "Diagnose with AI" handed over, waiting for the user to start. */
   draft: { serverId: string; context: DeployAssistantContextInput; prompt: string } | null;
   runs: Record<string, AssistantRun>;
@@ -160,6 +166,8 @@ export const useDeployAssistantStore = create<DeployAssistantStoreState>((set) =
           : null,
     })),
   close: () => set({ openServerId: null }),
+  pageServerId: null,
+  setPageServer: (serverId) => set({ pageServerId: serverId }),
   clearDraft: () => set({ draft: null }),
   reset: (serverId, prompt) =>
     set((state) => ({

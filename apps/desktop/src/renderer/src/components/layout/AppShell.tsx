@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AskAiModal } from '@/components/askAi/AskAiModal';
+import { AssistantTopBarButton } from '@/components/deploy/assistant/AssistantLauncher';
 import { useFilesRunEvents } from '@/components/deploy/files/hooks';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AnglesLeft, AnglesRight, Bell, MessageSquare, TerminalSquare } from '@/components/icons';
@@ -115,6 +116,8 @@ function TopBar({ showSidebarToggle }: { showSidebarToggle: boolean }): React.JS
         )}
         <UpdateStatusChip />
         {onWorkspace ? <WorkspaceHeaderActions /> : null}
+        {/* Only on a Deploy server's page, which tells it the server. */}
+        <AssistantTopBarButton />
         {/* The general terminal (for running the app, installs and so on) stays available on
             every page, the Workspace included, where it opens under the panes. */}
         <SimpleTooltip

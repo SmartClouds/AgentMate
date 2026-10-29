@@ -64,11 +64,9 @@ import { PANEL_WIDTHS, usePanelWidth } from '@/stores/panelWidthStore';
  */
 function DeployLayout({
   rail,
-  contentClassName,
   children,
 }: {
   rail: React.ReactNode;
-  contentClassName?: string;
   children: React.ReactNode;
 }): React.JSX.Element {
   const [width, setWidth] = usePanelWidth('deployRail');
@@ -92,12 +90,7 @@ function DeployLayout({
         quiet
         className="hidden w-2 lg:flex"
       />
-      <div
-        className={cn(
-          'rail-scroll flex min-w-0 flex-1 flex-col gap-2 lg:min-h-0 lg:overflow-y-auto',
-          contentClassName,
-        )}
-      >
+      <div className="rail-scroll flex min-w-0 flex-1 flex-col gap-2 lg:min-h-0 lg:overflow-y-auto">
         {children}
       </div>
     </div>
@@ -710,11 +703,7 @@ export default function DeployPage(): React.JSX.Element {
 
   return (
     <>
-      <DeployLayout
-        rail={<ServerRail {...railProps} selectedId={selected.id} />}
-        // Room at the bottom so the Deploy AI button never covers the last controls.
-        contentClassName={sections ? 'pb-16' : undefined}
-      >
+      <DeployLayout rail={<ServerRail {...railProps} selectedId={selected.id} />}>
         {locked && (
           <VaultLockedBanner onUnlock={() => setUnlockOpen(true)}>
             Your saved servers are locked with a passkey. Unlock them to reach their cores.

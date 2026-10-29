@@ -5,7 +5,7 @@ import { renderWithProviders } from '../../../../../test/renderer/renderWithProv
 import { SERVER, STEP_UP_REFUSAL } from '../overview/testing/fixtures';
 import { signedIn } from '../security/testing/fixtures';
 import { CONTINUE_PROMPT } from './AssistantComposer';
-import { AssistantLauncher } from './AssistantLauncher';
+import { AssistantLauncher, AssistantTopBarButton } from './AssistantLauncher';
 
 /**
  * The Deploy AI drawer: opened from the corner button or a problem, it shows the core's mode,
@@ -14,6 +14,16 @@ import { AssistantLauncher } from './AssistantLauncher';
  */
 
 const KEY = `deploy:${SERVER.id}`;
+
+/** A Deploy server page with the top bar's button, as the app shell puts them together. */
+function Page() {
+  return (
+    <>
+      <AssistantTopBarButton />
+      <AssistantLauncher server={SERVER} />
+    </>
+  );
+}
 
 function bridge(extra: Record<string, unknown> = {}) {
   return {
@@ -37,6 +47,7 @@ function progress(phase: string, extra: Record<string, unknown> = {}) {
 beforeEach(() => {
   useDeployAssistantStore.setState({
     openServerId: null,
+    pageServerId: null,
     draft: null,
     runs: {},
     ai: SETTINGS_AI,
@@ -46,7 +57,7 @@ beforeEach(() => {
 
 describe('AssistantDrawer', () => {
   it('opens from the corner button and starts a run with the problem as context', async () => {
-    const { user, bridge: fake } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+    const { user, bridge: fake } = renderWithProviders(<Page />, {
       bridge: bridge(),
     });
     act(() =>
@@ -77,8 +88,43 @@ describe('AssistantDrawer', () => {
     expect(await screen.findByRole('complementary', { name: 'Deploy AI' })).toBeInTheDocument();
   });
 
+  it('puts its button in the top bar only while a server page is open, as a toggle', async () => {
+    const { user, unmount } = renderWithProviders(<Page />, { bridge: bridge() });
+    const button = await screen.findByRole('button', { name: 'Deploy AI' });
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+    expect(useDeployAssistantStore.getState().pageServerId).toBe(SERVER.id);
+
+    await user.click(button);
+    expect(await screen.findByRole('complementary', { name: 'Deploy AI' })).toBeInTheDocument();
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+    // The button stays where it is while the drawer is open, and closes it again.
+    await user.click(button);
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+
+    unmount();
+    expect(useDeployAssistantStore.getState().pageServerId).toBeNull();
+    renderWithProviders(<AssistantTopBarButton />, { bridge: bridge() });
+    expect(screen.queryByRole('button', { name: /Deploy AI/ })).not.toBeInTheDocument();
+  });
+
+  it('opens inside the page area, under the top bar, when the app shell is there', async () => {
+    const island = document.createElement('div');
+    island.setAttribute('data-page-island', '');
+    document.body.append(island);
+    try {
+      renderWithProviders(<Page />, { bridge: bridge() });
+      act(() => useDeployAssistantStore.getState().open(SERVER.id));
+      const drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+      expect(island).toContainElement(drawer);
+      expect(drawer).toHaveClass('absolute');
+      expect(drawer).not.toHaveClass('fixed');
+    } finally {
+      island.remove();
+    }
+  });
+
   it('asks to approve a proposed command, shows its output and the end', async () => {
-    const { user, bridge: fake } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+    const { user, bridge: fake } = renderWithProviders(<Page />, {
       bridge: bridge(),
     });
     act(() => useDeployAssistantStore.getState().open(SERVER.id));
@@ -112,7 +158,7 @@ describe('AssistantDrawer', () => {
   });
 
   it('skips, answers, continues and stops', async () => {
-    const { user, bridge: fake } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+    const { user, bridge: fake } = renderWithProviders(<Page />, {
       bridge: bridge(),
     });
     act(() => useDeployAssistantStore.getState().open(SERVER.id));
@@ -143,7 +189,7 @@ describe('AssistantDrawer', () => {
   });
 
   it('follows new steps and output to the end unless the user scrolled up', async () => {
-    renderWithProviders(<AssistantLauncher server={SERVER} />, { bridge: bridge() });
+    renderWithProviders(<Page />, { bridge: bridge() });
     act(() => useDeployAssistantStore.getState().open(SERVER.id));
     await screen.findByRole('complementary', { name: 'Deploy AI' });
     const body = screen.getByLabelText('Run');
@@ -186,7 +232,7 @@ describe('AssistantDrawer', () => {
   });
 
   it('carries a stopped run on with Continue, keeping what came before', async () => {
-    const { user, bridge: fake } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+    const { user, bridge: fake } = renderWithProviders(<Page />, {
       bridge: bridge(),
     });
     act(() => useDeployAssistantStore.getState().open(SERVER.id));
@@ -234,7 +280,7 @@ describe('AssistantDrawer', () => {
   });
 
   it('starts a new chat that leaves the last one behind', async () => {
-    const { user, bridge: fake } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+    const { user, bridge: fake } = renderWithProviders(<Page />, {
       bridge: bridge(),
     });
     act(() =>
@@ -266,7 +312,7 @@ describe('AssistantDrawer', () => {
   });
 
   it('puts the chat back when a follow-up is refused', async () => {
-    const { user } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+    const { user } = renderWithProviders(<Page />, {
       bridge: bridge({
         'deployAssistant.start': async () => {
           throw new Error('[core:forbidden] Your role cannot do that.');
@@ -287,7 +333,7 @@ describe('AssistantDrawer', () => {
   });
 
   it('takes a message mid-run and shows it between the steps until the AI reads it', async () => {
-    const { user, bridge: fake } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+    const { user, bridge: fake } = renderWithProviders(<Page />, {
       bridge: bridge({ 'deployAssistant.message': async () => true }),
     });
     act(() => {
@@ -331,7 +377,7 @@ describe('AssistantDrawer', () => {
   });
 
   it('says what a message does while a command or a question waits', async () => {
-    const { user } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+    const { user } = renderWithProviders(<Page />, {
       bridge: bridge({ 'deployAssistant.message': async () => false }),
     });
     act(() => useDeployAssistantStore.getState().open(SERVER.id));
@@ -352,26 +398,26 @@ describe('AssistantDrawer', () => {
   });
 
   it('maximizes to fill the window and restores', async () => {
-    const { user } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+    const { user } = renderWithProviders(<Page />, {
       bridge: bridge(),
     });
     act(() => useDeployAssistantStore.getState().open(SERVER.id));
     const drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
-    expect(drawer).toHaveClass('w-[min(28rem,calc(100vw-1rem))]');
+    expect(drawer).toHaveClass('w-[min(28rem,calc(100%-1rem))]');
 
     await user.click(within(drawer).getByRole('button', { name: 'Maximize' }));
-    expect(drawer).toHaveClass('w-[calc(100vw-1rem)]');
+    expect(drawer).toHaveClass('w-[calc(100%-1rem)]');
     const restore = within(drawer).getByRole('button', { name: 'Restore size' });
     expect(restore).toHaveAttribute('aria-pressed', 'true');
 
     await user.click(restore);
-    expect(drawer).toHaveClass('w-[min(28rem,calc(100vw-1rem))]');
+    expect(drawer).toHaveClass('w-[min(28rem,calc(100%-1rem))]');
     expect(within(drawer).getByRole('button', { name: 'Maximize' })).toBeInTheDocument();
   });
 
   it('asks for a step-up before auto-running diagnostics', async () => {
     let calls = 0;
-    const { user, bridge: fake } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+    const { user, bridge: fake } = renderWithProviders(<Page />, {
       bridge: bridge({
         'deployAssistant.setMode': async () => {
           calls += 1;
@@ -397,7 +443,7 @@ describe('AssistantDrawer', () => {
   });
 
   it('explains the role when the core refuses the AI', async () => {
-    renderWithProviders(<AssistantLauncher server={SERVER} />, {
+    renderWithProviders(<Page />, {
       bridge: bridge({
         'deployAssistant.getMode': async () => {
           throw new Error('[core:forbidden] Your role on this server (viewer) cannot do that.');
@@ -412,7 +458,7 @@ describe('AssistantDrawer', () => {
 
 describe('AssistantComposer', () => {
   it('offers installed CLIs, starts with one on Ctrl+Enter and clears the draft', async () => {
-    const { user, bridge: fake } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+    const { user, bridge: fake } = renderWithProviders(<Page />, {
       bridge: bridge({
         'cli.detectAll': [{ id: 'claude-code', installed: true }],
       }),
@@ -439,7 +485,7 @@ describe('AssistantComposer', () => {
   });
 
   it('keeps the task when the start is refused and picks up a run already going', async () => {
-    renderWithProviders(<AssistantLauncher server={SERVER} />, {
+    renderWithProviders(<Page />, {
       bridge: bridge({
         'deployAssistant.start': async () => {
           throw new Error('[core:forbidden] Your role cannot do that.');
@@ -455,13 +501,14 @@ describe('AssistantComposer', () => {
     act(() => useDeployAssistantStore.getState().open(SERVER.id));
     expect(await screen.findByText('Which unit?')).toBeInTheDocument();
     act(() => useDeployAssistantStore.getState().close());
-    expect(screen.getByRole('button', { name: 'Deploy AI, waiting for you' })).toHaveTextContent(
-      'Waiting for you',
+    expect(screen.getByRole('button', { name: 'Deploy AI, waiting for you' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
     );
   });
 
   it('offers the model once a CLI is picked and the effort once a model is', async () => {
-    const { user, bridge: fake } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+    const { user, bridge: fake } = renderWithProviders(<Page />, {
       bridge: bridge({ 'cli.detectAll': [{ id: 'claude-code', installed: true }] }),
     });
     act(() => useDeployAssistantStore.getState().open(SERVER.id));
@@ -508,7 +555,7 @@ describe('AssistantComposer', () => {
   });
 
   it('keeps the AI picked for the next time the drawer opens', async () => {
-    const { user } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+    const { user } = renderWithProviders(<Page />, {
       bridge: bridge({ 'cli.detectAll': [{ id: 'claude-code', installed: true }] }),
     });
     act(() => {
@@ -529,7 +576,7 @@ describe('AssistantComposer', () => {
   });
 
   it('falls back to the Settings provider when the CLI picked last is gone', async () => {
-    const { user, bridge: fake } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+    const { user, bridge: fake } = renderWithProviders(<Page />, {
       bridge: bridge({ 'cli.detectAll': [{ id: 'claude-code', installed: false }] }),
     });
     act(() => {
@@ -554,7 +601,7 @@ describe('AssistantComposer', () => {
   });
 
   it('lets a CLI work in a project, read only unless the user allows edits', async () => {
-    const { user, bridge: fake } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+    const { user, bridge: fake } = renderWithProviders(<Page />, {
       bridge: bridge({
         'cli.detectAll': [{ id: 'claude-code', installed: true }],
         'projects.list': [{ id: 'shop', name: 'Shop', folderPath: 'C:/code/shop' }],
@@ -617,7 +664,7 @@ describe('AssistantComposer', () => {
   });
 
   it('keeps the project per server and drops one Runova no longer has', async () => {
-    const { user, bridge: fake } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+    const { user, bridge: fake } = renderWithProviders(<Page />, {
       bridge: bridge({
         'cli.detectAll': [{ id: 'claude-code', installed: true }],
         'projects.list': [{ id: 'shop', name: 'Shop', folderPath: 'C:/code/shop' }],

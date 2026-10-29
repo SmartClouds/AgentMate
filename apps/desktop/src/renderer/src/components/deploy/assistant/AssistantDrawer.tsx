@@ -1,6 +1,7 @@
 import { coreErrorMessage } from '@shared/coreErrors';
 import type { DeployServer } from '@shared/deployTypes';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { MessageSquarePlus, Robot, WindowMaximize, WindowRestore, X } from '@/components/icons';
 import { Chip, FOOTER_HAIRLINE } from '@/components/pageKit';
@@ -24,6 +25,8 @@ import { ModeSwitch } from './ModeSwitch';
  * the live output, a stop button and follow-up questions. A follow-up, or a Continue after a
  * stop, carries the chat on with what the AI learned so far; New chat starts over. It does not
  * cover the page, so the logs stay readable next to it; Escape closes it and the run carries on.
+ * It sits in the page area, under the top bar, so the Deploy AI button there stays in reach to
+ * close it again.
  */
 
 const ACTIVE = new Set(['thinking', 'proposed', 'running', 'needs-input', 'needs-password']);
@@ -142,7 +145,11 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
     follow.current = true;
   }
 
-  return (
+  // The app shell's page area, there before any page renders. Outside the shell (a test, say)
+  // the drawer sits on the window.
+  const island = document.querySelector<HTMLElement>('[data-page-island]');
+
+  const drawer = (
     <aside
       ref={panel}
       tabIndex={-1}
@@ -152,8 +159,9 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
       }}
       // Near-opaque glass, so the logs it sits beside never show through its text.
       className={cn(
-        'glass-opaque fixed bottom-2 right-2 top-2 z-40 flex flex-col overflow-hidden rounded-[calc(var(--radius)+4px)] transition-[width] focus:outline-none',
-        maximized ? 'w-[calc(100vw-1rem)]' : 'w-[min(28rem,calc(100vw-1rem))]',
+        'glass-opaque bottom-2 right-2 top-2 z-40 flex flex-col overflow-hidden rounded-[calc(var(--radius)+4px)] transition-[width] focus:outline-none',
+        island ? 'absolute' : 'fixed',
+        maximized ? 'w-[calc(100%-1rem)]' : 'w-[min(28rem,calc(100%-1rem))]',
       )}
     >
       <header className="flex items-center gap-3 px-4 py-3">
@@ -269,4 +277,6 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
       </footer>
     </aside>
   );
+
+  return island ? createPortal(drawer, island) : drawer;
 }
