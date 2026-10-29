@@ -19,9 +19,18 @@ const SUBSCRIPTION = '5b0e0f3c-8d6e-4c55-9d0e-3f7a1c2b9e10';
 function harness(trusted = true) {
   const handlers = new Map<string, Listener>();
   const assistant = Object.fromEntries(
-    ['start', 'approve', 'skip', 'answer', 'continue', 'stop', 'state', 'mode', 'setMode'].map(
-      (name) => [name, vi.fn(async () => ({}))],
-    ),
+    [
+      'start',
+      'approve',
+      'skip',
+      'answer',
+      'message',
+      'continue',
+      'stop',
+      'state',
+      'mode',
+      'setMode',
+    ].map((name) => [name, vi.fn(async () => ({}))]),
   ) as unknown as Record<string, ReturnType<typeof vi.fn>>;
   const journals = { watch: vi.fn(() => 'sub'), unwatch: vi.fn(() => true) };
   const owner = { id: 7, send: vi.fn() };
@@ -79,6 +88,12 @@ describe('deployAssistant channels', () => {
     expect(assistant.answer).toHaveBeenCalledWith('srv-1', 'yes');
     await call(IPC.deployAssistant.answer, 'srv-1', '');
     expect(assistant.answer).toHaveBeenLastCalledWith('srv-1', '');
+    await call(IPC.deployAssistant.message, 'srv-1', 'Leave the database alone.');
+    expect(assistant.message).toHaveBeenCalledWith('srv-1', 'Leave the database alone.');
+    await expect(call(IPC.deployAssistant.message, 'srv-1', '   ')).rejects.toThrow('Type a');
+    await expect(call(IPC.deployAssistant.message, 'srv-1', 'a'.repeat(2_001))).rejects.toThrow();
+    await expect(call(IPC.deployAssistant.message, '../x', 'hi')).rejects.toThrow('saved server');
+    expect(assistant.message).toHaveBeenCalledTimes(1);
     await call(IPC.deployAssistant.setMode, {
       serverId: 'srv-1',
       mode: 'autoRunDiagnostics',

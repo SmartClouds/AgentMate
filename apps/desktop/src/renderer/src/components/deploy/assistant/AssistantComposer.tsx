@@ -5,6 +5,8 @@ import {
   type EffortLevel,
   runProfileForTargetAI,
 } from '@runova/core';
+import type { SshAgentPhase } from '@shared/apiTypes';
+import { MAX_SSH_AGENT_MESSAGE_CHARS } from '@shared/sshAgentMessage';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { CliLogo } from '@/components/cliLogos';
@@ -25,9 +27,9 @@ import {
  * Where the user says what the AI should do (E09 T8), and with which AI: the provider set in
  * Settings by default, or an installed agent CLI. A CLI with known models offers them next, and
  * a model with effort levels offers those after it, so the row only grows as far as the choice
- * goes. The pick is kept for the next run. While a run goes, the button stops it; once it is over,
- * the same box asks a follow-up on the same server and context, and a stopped run can be carried
- * on from where it was.
+ * goes. The pick is kept for the next run. While a run goes, the box sends it a message (read at
+ * its next step) and Stop ends it; once it is over, the same box asks a follow-up on the same
+ * server and context, and a stopped run can be carried on from where it was.
  */
 
 /** Picker value for the OpenAI, Gemini or Ollama provider set in Settings. */
@@ -63,14 +65,18 @@ function Field({
 
 export function AssistantComposer({
   running,
+  phase,
   followUp,
   canContinue = false,
   initialPrompt,
   disabled,
   onStart,
+  onMessage,
   onStop,
 }: {
   running: boolean;
+  /** Where the run is, which decides what a message does to it. */
+  phase?: SshAgentPhase;
   /** A run ended, so the next task is a follow-up. */
   followUp: boolean;
   /** A run was stopped or failed before it was done, so it can be carried on. */
@@ -78,6 +84,8 @@ export function AssistantComposer({
   initialPrompt: string;
   disabled?: boolean;
   onStart: (prompt: string, ai: AssistantAiChoice) => Promise<boolean>;
+  /** Resolves true once the run took the message. */
+  onMessage: (text: string) => Promise<boolean>;
   onStop: () => void;
 }): React.JSX.Element {
   const [prompt, setPrompt] = useState(initialPrompt);
@@ -130,29 +138,61 @@ export function AssistantComposer({
     }
   }
 
-  function start(): void {
+  async function send(text: string): Promise<void> {
+    if (starting) return;
+    setStarting(true);
+    try {
+      // On false the text stays in the box, so nothing typed is lost.
+      if (await onMessage(text)) setPrompt('');
+    } finally {
+      setStarting(false);
+    }
+  }
+
+  function submit(): void {
     const trimmed = prompt.trim();
-    if (trimmed) void begin(trimmed, true);
+    if (!trimmed) return;
+    if (running) void send(trimmed);
+    else void begin(trimmed, true);
   }
 
   const locked = running || disabled;
+  // A question waits for its answer in the box above, which a message would not give.
+  const asking = phase === 'needs-input' || phase === 'needs-password';
+  const mod = isMacPlatform() ? 'Cmd' : 'Ctrl';
+  const hint = !running
+    ? `${mod}+Enter to ${followUp ? 'ask' : 'start'}`
+    : asking
+      ? 'Answer the question above to carry on'
+      : phase === 'proposed'
+        ? 'Sending skips the command waiting for you'
+        : `${mod}+Enter to send. The AI reads it at its next step`;
 
   return (
     <div className="space-y-2">
       <Label htmlFor="deploy-assistant-task" className="text-xs">
-        {followUp ? 'Ask a follow-up' : 'What should the AI look into?'}
+        {running
+          ? 'Message the AI'
+          : followUp
+            ? 'Ask a follow-up'
+            : 'What should the AI look into?'}
       </Label>
       <Textarea
         id="deploy-assistant-task"
         value={prompt}
         onChange={(event) => setPrompt(event.target.value)}
-        placeholder="e.g. Find out why the sender keeps restarting"
+        placeholder={
+          running
+            ? 'e.g. Leave the database alone, or check the api container too'
+            : 'e.g. Find out why the sender keeps restarting'
+        }
         className="min-h-20 resize-none text-sm"
-        disabled={locked}
+        disabled={disabled || (running && asking)}
+        maxLength={running ? MAX_SSH_AGENT_MESSAGE_CHARS : undefined}
         onKeyDown={(event) => {
           if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
             event.preventDefault();
-            start();
+            submit();
           }
         }}
       />
@@ -208,15 +248,20 @@ export function AssistantComposer({
         )}
       </div>
       <div className="flex items-center justify-end gap-2">
-        {!running && (
-          <p className="mr-auto truncate text-[11px] text-muted-foreground">
-            {isMacPlatform() ? 'Cmd' : 'Ctrl'}+Enter to {followUp ? 'ask' : 'start'}
-          </p>
-        )}
+        <p className="mr-auto min-w-0 text-[11px] leading-tight text-muted-foreground">{hint}</p>
         {running ? (
-          <Button variant="danger" onClick={onStop}>
-            <StopCircle /> Stop
-          </Button>
+          <>
+            <Button variant="danger" onClick={onStop}>
+              <StopCircle /> Stop
+            </Button>
+            <Button
+              aria-label="Send message"
+              onClick={submit}
+              disabled={!prompt.trim() || starting || asking || disabled}
+            >
+              <Send /> Send
+            </Button>
+          </>
         ) : (
           <>
             {canContinue && (
@@ -228,7 +273,7 @@ export function AssistantComposer({
                 <Play /> Continue
               </Button>
             )}
-            <Button onClick={start} disabled={!prompt.trim() || starting || disabled}>
+            <Button onClick={submit} disabled={!prompt.trim() || starting || disabled}>
               <Send /> {followUp ? 'Ask' : 'Start'}
             </Button>
           </>

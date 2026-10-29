@@ -90,6 +90,7 @@ describe('deployAssistantStore', () => {
         prompt: 'Why does it restart?',
         progress: expect.objectContaining({ phase: 'stopped' }),
         steps: [expect.objectContaining({ command: 'docker ps', status: 'done' })],
+        messages: [],
       },
     ]);
     progress('thinking', 1);
@@ -102,8 +103,29 @@ describe('deployAssistantStore', () => {
     expect(run()).toBe(before);
 
     store.reset(S);
-    expect(run()).toEqual({ progress: null, steps: [], earlier: [] });
+    expect(run()).toEqual({ progress: null, steps: [], messages: [], earlier: [] });
     store.restore(S, undefined);
     expect(run()).toBeUndefined();
+  });
+
+  it('keeps the messages sent mid-run where they fell among the steps', () => {
+    const store = useDeployAssistantStore.getState();
+    const run = () => useDeployAssistantStore.getState().runs[S];
+    store.said(S, 'Too early');
+    expect(run()).toBeUndefined();
+
+    store.reset(S, 'Free some disk');
+    store.said(S, 'Leave the database alone');
+    progress('running', 1, { command: 'df -h' });
+    store.said(S, 'And the logs');
+    expect(run()?.messages).toEqual([
+      { text: 'Leave the database alone', at: 0 },
+      { text: 'And the logs', at: 1 },
+    ]);
+
+    progress('stopped', 1);
+    store.followUp(S, 'Carry on');
+    expect(run()?.messages).toEqual([]);
+    expect(run()?.earlier[0]?.messages).toHaveLength(2);
   });
 });

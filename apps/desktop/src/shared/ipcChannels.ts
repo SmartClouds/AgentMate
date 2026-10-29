@@ -1378,6 +1378,8 @@ export const IPC = {
     approve: 'deployAssistant:approve',
     skip: 'deployAssistant:skip',
     answer: 'deployAssistant:answer',
+    /** (serverId, text) -> boolean: false when the run is over and nothing was sent. */
+    message: 'deployAssistant:message',
     resume: 'deployAssistant:resume',
     stop: 'deployAssistant:stop',
     /** (serverId) -> DeployAssistantState */

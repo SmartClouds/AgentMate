@@ -31,11 +31,19 @@ export interface AssistantStep {
   lines: ExecLine[];
 }
 
+/** What the user told a run while it was going. */
+export interface AssistantMessage {
+  text: string;
+  /** How many steps the run had when it was sent, so it shows between the right ones. */
+  at: number;
+}
+
 /** A run that is over, kept above the one the chat carried on with. */
 export interface AssistantTurn {
   prompt?: string;
   progress: SshAgentProgress | null;
   steps: AssistantStep[];
+  messages: AssistantMessage[];
 }
 
 export interface AssistantRun extends AssistantTurn {
@@ -54,7 +62,9 @@ export interface AssistantAiChoice {
 
 export const SETTINGS_AI: AssistantAiChoice = { cliId: null, modelId: null, effort: null };
 
-const EMPTY_RUN: AssistantRun = { progress: null, steps: [], earlier: [] };
+const EMPTY_RUN: AssistantRun = { progress: null, steps: [], messages: [], earlier: [] };
+/** Messages kept on screen per run. */
+const MAX_MESSAGES = 50;
 
 interface DeployAssistantStoreState {
   openServerId: string | null;
@@ -74,6 +84,8 @@ interface DeployAssistantStoreState {
   reset: (serverId: string, prompt?: string) => void;
   /** A run that carries the chat on: the one before it moves up into the chat's history. */
   followUp: (serverId: string, prompt: string) => void;
+  /** A message the run took while it was going. */
+  said: (serverId: string, text: string) => void;
   /** Puts a run back as it was, when starting the next one was refused. */
   restore: (serverId: string, run: AssistantRun | undefined) => void;
   progress: (event: DeployAssistantProgressEvent) => void;
@@ -142,7 +154,8 @@ export const useDeployAssistantStore = create<DeployAssistantStoreState>((set) =
     set((state) => {
       const run = state.runs[serverId] ?? EMPTY_RUN;
       const { earlier, ...last } = run;
-      const kept = last.steps.length > 0 || last.prompt || last.progress;
+      const kept =
+        last.steps.length > 0 || last.messages.length > 0 || last.prompt || last.progress;
       return {
         runs: {
           ...state.runs,
@@ -151,6 +164,18 @@ export const useDeployAssistantStore = create<DeployAssistantStoreState>((set) =
             prompt,
             earlier: kept ? [...earlier, last].slice(-MAX_TURNS) : earlier,
           },
+        },
+      };
+    }),
+  said: (serverId, text) =>
+    set((state) => {
+      const run = state.runs[serverId];
+      if (!run) return state;
+      const message = { text, at: run.steps.length };
+      return {
+        runs: {
+          ...state.runs,
+          [serverId]: { ...run, messages: [...run.messages, message].slice(-MAX_MESSAGES) },
         },
       };
     }),

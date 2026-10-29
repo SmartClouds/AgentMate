@@ -208,6 +208,22 @@ describe('approve every command (the default)', () => {
     expect(assistant.state(serverId).history[0]?.continuedFromRunId).toBeUndefined();
   });
 
+  it('reads a message sent mid-run at its next step, and refuses one once the run is over', async () => {
+    const { assistant, serverId, progress } = setup();
+    fake.replies.push('RUN: docker ps', 'FINISHED: Left the database alone.');
+    await assistant.start({ serverId, prompt: 'Free some disk' });
+    await until(progress, 'proposed');
+
+    expect(assistant.message(serverId, 'Leave the database alone.')).toBe(true);
+    expect(progress().at(-1)?.queuedMessages).toBe(1);
+    await until(progress, 'finished');
+    expect(fake.prompts.at(-1)).toContain('The user added these while you were working');
+    expect(fake.prompts.at(-1)).toContain('- Leave the database alone.');
+    expect(assistant.state(serverId).history[0]?.entries.map((e) => e.kind)).toContain('message');
+
+    expect(assistant.message(serverId, 'Too late')).toBe(false);
+  });
+
   it('answers a question and carries on', async () => {
     const { assistant, serverId, progress } = setup();
     fake.replies.push('NEEDS_INPUT: Which site?', 'FINISHED: ok');

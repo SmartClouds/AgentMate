@@ -8,6 +8,7 @@ import type {
 } from '../../shared/deployAssistantTypes';
 import { OBJECT_NAME } from '../../shared/dockerNames';
 import { IPC } from '../../shared/ipcChannels';
+import { MAX_SSH_AGENT_MESSAGE_CHARS } from '../../shared/sshAgentMessage';
 import type { DeployAssistant } from '../deploy/assistant/service';
 import type { SubscriptionOwner } from '../deploy/live/subscriptions';
 import type { JournalSubscriptions } from '../deploy/logs/journal';
@@ -30,7 +31,16 @@ export interface DeployAssistantHandlerDeps {
   ipc: DeployIpcRegistry;
   assistant: Pick<
     DeployAssistant,
-    'start' | 'approve' | 'skip' | 'answer' | 'continue' | 'stop' | 'state' | 'mode' | 'setMode'
+    | 'start'
+    | 'approve'
+    | 'skip'
+    | 'answer'
+    | 'message'
+    | 'continue'
+    | 'stop'
+    | 'state'
+    | 'mode'
+    | 'setMode'
   >;
   journals: Pick<JournalSubscriptions, 'watch' | 'unwatch'>;
   guard: (event: IpcMainInvokeEvent) => boolean;
@@ -143,6 +153,11 @@ export function registerDeployAssistantHandlers(deps: DeployAssistantHandlerDeps
   handle(IPC.deployAssistant.answer, (_owner, id, answer) =>
     assistant.answer(serverId(id), optionalText(answer, MAX_ANSWER, 'answer') ?? ''),
   );
+  handle(IPC.deployAssistant.message, (_owner, id, message) => {
+    const said = text(message, MAX_SSH_AGENT_MESSAGE_CHARS, 'message');
+    if (!said.trim()) throw new Error('Type a message first.');
+    return assistant.message(serverId(id), said);
+  });
   handle(IPC.deployAssistant.resume, (_owner, id) => assistant.continue(serverId(id)));
   handle(IPC.deployAssistant.stop, (_owner, id) => assistant.stop(serverId(id)));
   handle(IPC.deployAssistant.state, (_owner, id) => assistant.state(serverId(id)));

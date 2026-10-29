@@ -28,6 +28,9 @@ export function createDeployAssistant(subscribe: Subscribe) {
       ipcRenderer.invoke(IPC.deployAssistant.skip, serverId),
     answer: (serverId: string, answer: string): Promise<void> =>
       ipcRenderer.invoke(IPC.deployAssistant.answer, serverId, answer),
+    /** Tells a run that is going something, read at its next step. False once it is over. */
+    message: (serverId: string, text: string): Promise<boolean> =>
+      ipcRenderer.invoke(IPC.deployAssistant.message, serverId, text),
     /** Picks a paused run back up. */
     resume: (serverId: string): Promise<void> =>
       ipcRenderer.invoke(IPC.deployAssistant.resume, serverId),

@@ -35,6 +35,7 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
   const reset = useDeployAssistantStore((state) => state.reset);
   const followUp = useDeployAssistantStore((state) => state.followUp);
   const restore = useDeployAssistantStore((state) => state.restore);
+  const said = useDeployAssistantStore((state) => state.said);
   const clearDraft = useDeployAssistantStore((state) => state.clearDraft);
   const open = openServerId === server.id;
   const mode = useAssistantMode(server.id, open);
@@ -109,6 +110,18 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
       return true;
     } catch (error) {
       restore(serverId, before);
+      toast.error(coreErrorMessage(error));
+      return false;
+    }
+  }
+
+  async function message(text: string): Promise<boolean> {
+    try {
+      const sent = await window.runova.deployAssistant.message(serverId, text);
+      if (sent) said(serverId, text);
+      else toast.error('The AI has already finished, so nothing was sent.');
+      return sent;
+    } catch (error) {
       toast.error(coreErrorMessage(error));
       return false;
     }
@@ -218,6 +231,7 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
         <AssistantTimeline
           earlier={run?.earlier}
           prompt={run?.prompt}
+          messages={run?.messages}
           steps={run?.steps ?? []}
           progress={progress}
           tall={maximized}
@@ -233,11 +247,13 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
         <AssistantComposer
           key={draft?.serverId === serverId ? draft.prompt : 'free'}
           running={running}
+          phase={progress?.phase}
           followUp={over}
           canContinue={canContinue}
           initialPrompt={draft?.serverId === serverId ? draft.prompt : ''}
           disabled={!mode.info}
           onStart={start}
+          onMessage={message}
           onStop={() => act(window.runova.deployAssistant.stop(serverId))}
         />
       </footer>

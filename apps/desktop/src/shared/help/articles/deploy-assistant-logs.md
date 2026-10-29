@@ -131,6 +131,15 @@ Approving is safe by design: your approval is signed with this computer's device
 
 While a run goes, the button next to the AI picker turns into **Stop**. After a run ends, the same box says **Ask a follow-up**, and the button reads **Ask**. A follow-up keeps the same server and context.
 
+### Talk to the AI while it works
+
+You do not have to wait for a run to end to steer it. While the AI is working, the box at the bottom says **Message the AI**. Type something, such as "Leave the database alone" or "Check the api container too", and click **Send** (or press `Ctrl+Enter`, `Cmd+Enter` on macOS).
+
+- Your message shows in the timeline where you sent it, marked **Not read yet** until the AI gets to it. It reads it before its next step and changes course if you asked it to.
+- If a command is waiting for your approval, sending a message skips that command, since the AI may want something else now. The hint under the box says so.
+- While the AI asks you a question, answer it in the box above instead. The message box waits until then.
+- **Stop** stays next to **Send** the whole time.
+
 ### Stop, continue, or start a new chat
 
 The drawer works like a chat. What you asked shows above each run, and the runs before stay on screen, so you can read back what the AI already did.

@@ -24,6 +24,7 @@ import {
   continueSshTask,
   getSshTaskHistory,
   isSshTaskRunning,
+  sendSshTaskMessage,
   skipSshTaskCommand,
   startAgentTask,
   stopSshTask,
@@ -179,6 +180,11 @@ export class DeployAssistant {
 
   answer(serverId: string, answer: string): void {
     answerSshTaskInput(assistantKey(serverId), answer);
+  }
+
+  /** A message for a run that is still going, read at its next step. False once it is over. */
+  message(serverId: string, text: string): boolean {
+    return sendSshTaskMessage(assistantKey(serverId), text);
   }
 
   continue(serverId: string): void {

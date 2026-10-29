@@ -4,7 +4,7 @@ import { Check, CircleCheck, CircleX, Play, Spinner, TriangleAlert, X } from '@/
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { AssistantStep, AssistantTurn } from '@/stores/deployAssistantStore';
+import type { AssistantMessage, AssistantStep, AssistantTurn } from '@/stores/deployAssistantStore';
 
 /**
  * The run as a list of steps (E09 T8): each command with its state in words, why it waits when
@@ -86,24 +86,69 @@ export function StepItem({
   );
 }
 
+const BUBBLE =
+  'ml-auto w-fit max-w-[85%] whitespace-pre-wrap break-words rounded-xl rounded-br-sm bg-primary/12 px-3 py-2 text-sm text-foreground';
+
 function Asked({ text }: { text: string }) {
   return (
-    <p
-      aria-label="You asked"
-      className="ml-auto w-fit max-w-[85%] whitespace-pre-wrap break-words rounded-xl rounded-br-sm bg-primary/12 px-3 py-2 text-sm text-foreground"
-    >
+    <p aria-label="You asked" className={BUBBLE}>
       {text}
     </p>
   );
 }
 
-function Steps({ steps, tall }: { steps: AssistantStep[]; tall: boolean }) {
-  if (steps.length === 0) return null;
+/** A message the user sent while the run went, and whether the AI has read it yet. */
+function Said({ text, unread }: { text: string; unread: boolean }) {
+  return (
+    <li aria-label="You said" className="flex flex-col items-end gap-1">
+      <p className={cn(BUBBLE, 'ml-0')}>{text}</p>
+      {unread && (
+        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+          <Spinner className="h-3 w-3 animate-spin" /> Not read yet, the AI gets it at its next step
+        </span>
+      )}
+    </li>
+  );
+}
+
+/**
+ * The steps with the user's messages between them, where they were sent. The last `unread`
+ * messages are the ones the AI has not got to yet.
+ */
+function Steps({
+  steps,
+  messages,
+  unread = 0,
+  tall,
+}: {
+  steps: AssistantStep[];
+  messages: AssistantMessage[];
+  unread?: number;
+  tall: boolean;
+}) {
+  if (steps.length === 0 && messages.length === 0) return null;
+  const firstUnread = messages.length - unread;
+  // Sent before step `at`, or after the last one (a step list cut at its cap counts as the end).
+  const saidBefore = (at: number) =>
+    messages.flatMap((message, index) =>
+      message.at === at || (at === steps.length && message.at > at)
+        ? [
+            <Said
+              // A message never changes once sent, so its place is key enough.
+              key={`said-${index}`}
+              text={message.text}
+              unread={index >= firstUnread}
+            />,
+          ]
+        : [],
+    );
   return (
     <ol aria-label="Steps" className="space-y-2">
-      {steps.map((step) => (
-        <StepItem key={`${step.step}-${step.command}`} step={step} tall={tall} />
-      ))}
+      {steps.map((step, index) => [
+        ...saidBefore(index),
+        <StepItem key={`${step.step}-${step.command}`} step={step} tall={tall} />,
+      ])}
+      {saidBefore(steps.length)}
     </ol>
   );
 }
@@ -146,6 +191,7 @@ function Ended({ progress, live }: { progress: SshAgentProgress | null; live: bo
 export function AssistantTimeline({
   earlier = [],
   prompt,
+  messages = [],
   steps,
   progress,
   onApprove,
@@ -159,6 +205,8 @@ export function AssistantTimeline({
   earlier?: AssistantTurn[];
   /** What the user asked this run. */
   prompt?: string;
+  /** What the user told this run while it went. */
+  messages?: AssistantMessage[];
   steps: AssistantStep[];
   progress: SshAgentProgress | null;
   /** The drawer is maximized, so each step's output gets more room. */
@@ -178,13 +226,13 @@ export function AssistantTimeline({
         // A turn never changes once it is in the list, so its place is key enough.
         <section key={index} aria-label="Earlier run" className="space-y-3">
           {turn.prompt && <Asked text={turn.prompt} />}
-          <Steps steps={turn.steps} tall={tall} />
+          <Steps steps={turn.steps} messages={turn.messages ?? []} tall={tall} />
           <Ended progress={turn.progress} live={false} />
         </section>
       ))}
 
       {prompt && <Asked text={prompt} />}
-      <Steps steps={steps} tall={tall} />
+      <Steps steps={steps} messages={messages} unread={progress?.queuedMessages ?? 0} tall={tall} />
 
       {phase === 'thinking' && (
         <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground">

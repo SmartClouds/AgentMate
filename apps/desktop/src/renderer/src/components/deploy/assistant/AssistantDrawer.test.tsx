@@ -280,6 +280,71 @@ describe('AssistantDrawer', () => {
     expect(within(drawer).getByRole('button', { name: 'Continue' })).toBeInTheDocument();
   });
 
+  it('takes a message mid-run and shows it between the steps until the AI reads it', async () => {
+    const { user, bridge: fake } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+      bridge: bridge({ 'deployAssistant.message': async () => true }),
+    });
+    act(() => {
+      useDeployAssistantStore.getState().open(SERVER.id);
+      useDeployAssistantStore.getState().reset(SERVER.id, 'Free some disk');
+    });
+    const drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    await within(drawer).findByRole('radio', { name: /Approve every command/ });
+    progress('running', { command: 'df -h' });
+
+    const box = within(drawer).getByLabelText('Message the AI');
+    expect(box).toBeEnabled();
+    expect(within(drawer).getByRole('button', { name: 'Stop' })).toBeInTheDocument();
+    expect(within(drawer).getByRole('button', { name: 'Send message' })).toBeDisabled();
+    await user.type(box, 'Leave the database alone');
+    await user.click(within(drawer).getByRole('button', { name: 'Send message' }));
+    expect(fake.$fn('deployAssistant.message')).toHaveBeenCalledWith(
+      SERVER.id,
+      'Leave the database alone',
+    );
+    expect(box).toHaveValue('');
+
+    progress('running', { command: 'df -h', queuedMessages: 1 });
+    const said = within(drawer).getByRole('listitem', { name: 'You said' });
+    expect(said).toHaveTextContent('Leave the database alone');
+    expect(said).toHaveTextContent('Not read yet');
+    // It sits after the step that was going when it was sent.
+    const items = within(within(drawer).getByRole('list', { name: 'Steps' })).getAllByRole(
+      'listitem',
+    );
+    expect(items.map((item) => item.getAttribute('aria-label'))).toEqual([
+      'Step 1: df -h',
+      'You said',
+    ]);
+
+    // Read: the note goes. Ctrl+Enter sends too.
+    progress('thinking', { step: 2 });
+    expect(said).not.toHaveTextContent('Not read yet');
+    await user.type(box, 'And the logs{Control>}{Enter}{/Control}');
+    expect(fake.$fn('deployAssistant.message')).toHaveBeenLastCalledWith(SERVER.id, 'And the logs');
+  });
+
+  it('says what a message does while a command or a question waits', async () => {
+    const { user } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+      bridge: bridge({ 'deployAssistant.message': async () => false }),
+    });
+    act(() => useDeployAssistantStore.getState().open(SERVER.id));
+    const drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    await within(drawer).findByRole('radio', { name: /Approve every command/ });
+
+    progress('proposed', { command: 'rm -rf /tmp/cache' });
+    expect(drawer).toHaveTextContent('Sending skips the command waiting for you');
+    // The run ended in between: the text stays and nothing shows as sent.
+    await user.type(within(drawer).getByLabelText('Message the AI'), 'Not that one');
+    await user.click(within(drawer).getByRole('button', { name: 'Send message' }));
+    expect(within(drawer).getByLabelText('Message the AI')).toHaveValue('Not that one');
+    expect(within(drawer).queryByRole('listitem', { name: 'You said' })).not.toBeInTheDocument();
+
+    progress('needs-input', { message: 'Which unit?' });
+    expect(within(drawer).getByLabelText('Message the AI')).toBeDisabled();
+    expect(drawer).toHaveTextContent('Answer the question above to carry on');
+  });
+
   it('maximizes to fill the window and restores', async () => {
     const { user } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
       bridge: bridge(),
