@@ -225,7 +225,7 @@ export default function App(): React.JSX.Element {
                 />
                 <Route
                   path="deploy/cloudflare"
-                  element={<Navigate to="/deploy?dialog=cloudflare" replace />}
+                  element={<Navigate to="/deploy?cloudflare=1" replace />}
                 />
                 <Route
                   path="skills"

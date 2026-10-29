@@ -6,7 +6,8 @@ import { wpSite } from '@/components/deploy/wordpress/testing/fixtures';
 import { resolveSelection, waitForRail } from './railSelection';
 
 /**
- * What the Deploy page shows, read from its address: `?files=` for an FTP or SFTP site, `?site=`
+ * What the Deploy page shows, read from its address: `?cloudflare=1` for the Cloudflare page,
+ * `?files=` for an FTP or SFTP site, `?site=`
  * for a WordPress site, `?server=` for a server. A link to something that is gone falls back to
  * the first server, and with no servers to the first site of either kind.
  */
@@ -23,6 +24,19 @@ function params(query = ''): URLSearchParams {
 }
 
 describe('resolveSelection', () => {
+  it('opens the Cloudflare page ahead of anything else the address names', () => {
+    expect(
+      resolveSelection(params('cloudflare=1&files=fs-1&server=srv-1'), [SERVER], [WP], [FILES]),
+    ).toEqual({ kind: 'cloudflare' });
+    expect(resolveSelection(params('cloudflare=1'), [], [], [])).toEqual({ kind: 'cloudflare' });
+  });
+
+  it('opens the Cloudflare page from an older dialog link', () => {
+    expect(
+      resolveSelection(params('server=srv-1&dialog=cloudflare'), [SERVER], [WP], [FILES]),
+    ).toEqual({ kind: 'cloudflare' });
+  });
+
   it('opens the FTP or SFTP site the address names', () => {
     expect(resolveSelection(params('files=fs-2'), [SERVER], [WP], [FILES, FILES_2])).toEqual({
       kind: 'files',
@@ -96,6 +110,18 @@ describe('waitForRail', () => {
     expect(waitForRail(params(), pending, { servers: 0, wpSites: 0 })).toBe(true);
     expect(waitForRail(params(), pending, { servers: 0, wpSites: 1 })).toBe(false);
     expect(waitForRail(params(), pending, { servers: 1, wpSites: 0 })).toBe(false);
+  });
+
+  it('waits only for the servers on the Cloudflare page', () => {
+    const pending = { servers: false, wpSites: true, fileSites: true };
+    expect(waitForRail(params('cloudflare=1'), pending, { servers: 0, wpSites: 0 })).toBe(false);
+    expect(
+      waitForRail(
+        params('cloudflare=1'),
+        { ...pending, servers: true },
+        { servers: 0, wpSites: 0 },
+      ),
+    ).toBe(true);
   });
 
   it('shows the page once everything it needs is in', () => {

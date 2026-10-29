@@ -7,7 +7,7 @@ import type {
   CloudflareSslMode,
 } from '@shared/cloudflareTypes';
 
-/** The words the Cloudflare dialog uses for Cloudflare's values. */
+/** The words the Cloudflare page uses for Cloudflare's values. */
 
 export const SECURITY_LEVEL_LABELS: Record<CloudflareSecurityLevel, string> = {
   off: 'Off',

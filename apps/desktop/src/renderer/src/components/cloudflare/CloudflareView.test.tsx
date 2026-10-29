@@ -1,8 +1,7 @@
 import type { CloudflareStatus } from '@shared/cloudflareTypes';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { useLocation } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
-import { PANEL_WIDTHS, usePanelWidthStore } from '@/stores/panelWidthStore';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
 import {
   A_RECORD,
@@ -15,29 +14,28 @@ import {
 } from './testing/fixtures';
 
 /**
- * The Cloudflare dialog, opened over the Deploy page: account wide, so it starts from the token,
- * then lists the zones it can see, and for the picked zone its DNS, SSL/TLS, caching and security rules.
+ * The Cloudflare page in Deploy: account wide, so it starts from the token, then offers the zones
+ * it can see in a picker, and for the picked zone its DNS, SSL/TLS, caching and security rules.
  * Every state says what is going on in words, and loading shimmers card by card.
  */
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock('sonner', () => ({ toast }));
 
-const { CloudflareDialog } = await import('./CloudflareDialog');
+const { CloudflareView } = await import('./CloudflareView');
 
 const NOTHING: CloudflareStatus = { configured: false, locked: false, accounts: [] };
 
-/** Shows the address, so a test can check what the dialog left in it. */
+/** Shows the address, so a test can check what the page left in it. */
 function LocationProbe(): React.JSX.Element {
   const location = useLocation();
   return <span data-testid="address">{`${location.pathname}${location.search}`}</span>;
 }
 
-function renderDialog(bridge: Record<string, unknown> = {}, route = '/deploy?dialog=cloudflare') {
-  const onOpenChange = vi.fn();
-  const view = renderWithProviders(
+function renderPage(bridge: Record<string, unknown> = {}, route = '/deploy?cloudflare=1') {
+  return renderWithProviders(
     <>
-      <CloudflareDialog open onOpenChange={onOpenChange} />
+      <CloudflareView />
       <LocationProbe />
     </>,
     {
@@ -55,17 +53,29 @@ function renderDialog(bridge: Record<string, unknown> = {}, route = '/deploy?dia
       },
     },
   );
-  return { ...view, onOpenChange };
 }
 
-describe('CloudflareDialog', () => {
+function address(): URLSearchParams {
+  return new URLSearchParams(screen.getByTestId('address').textContent?.split('?')[1]);
+}
+
+/** Opens the domain picker and gives back the list inside it, once the first domain is in. */
+async function openPicker(user: ReturnType<typeof renderPage>['user']) {
+  await user.click(await screen.findByRole('button', { name: /Choose a domain/ }));
+  const list = await screen.findByRole('navigation', { name: 'Zones' });
+  await within(list).findByText('example.com');
+  return list;
+}
+
+describe('CloudflareView', () => {
   it('shimmers while it asks whether a token is saved', () => {
-    renderDialog({ 'cloudflare.status': () => new Promise(() => undefined) });
+    renderPage({ 'cloudflare.status': () => new Promise(() => undefined) });
     expect(document.querySelector('[aria-busy="true"] .shimmer')).not.toBeNull();
+    expect(screen.getByRole('heading', { name: 'Cloudflare' })).toBeInTheDocument();
   });
 
   it('says what went wrong when the status cannot be read', async () => {
-    renderDialog({
+    renderPage({
       'cloudflare.status': async () => {
         throw ipcError('status', 'Cloudflare is only available in the main window.');
       },
@@ -74,24 +84,30 @@ describe('CloudflareDialog', () => {
   });
 
   it('starts with the token guide when nothing is saved', async () => {
-    const { bridge } = renderDialog({ 'cloudflare.status': async () => NOTHING });
+    const { bridge } = renderPage({ 'cloudflare.status': async () => NOTHING });
 
     expect(await screen.findByText('Connect Cloudflare')).toBeInTheDocument();
     expect(() => bridge.$fn('cloudflare.listZones')).toThrow();
   });
 
-  it('lists the zones and opens the first one on its DNS records', async () => {
-    renderDialog();
+  it('opens the first zone on its DNS records, with the others in the picker', async () => {
+    const { user } = renderPage();
 
-    const rail = await screen.findByRole('navigation', { name: 'Zones' });
-    expect(await within(rail).findByText('example.com')).toBeInTheDocument();
-    expect(within(rail).getByText('Waiting for name servers')).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'example.com' })).toBeInTheDocument();
     expect(await screen.findByText('DNS records')).toBeInTheDocument();
+    const list = await openPicker(user);
+    expect(within(list).getByText('example.org')).toBeInTheDocument();
+    expect(within(list).getByText('Waiting for name servers')).toBeInTheDocument();
+  });
+
+  it('is a page, not a dialog', async () => {
+    renderPage();
+    expect(await screen.findByRole('heading', { name: 'example.com' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('opens the zone in the address and switches between its tabs', async () => {
-    const { user } = renderDialog({}, `/deploy?dialog=cloudflare&zone=${OTHER_ZONE.id}`);
+    const { user } = renderPage({}, `/deploy?cloudflare=1&zone=${OTHER_ZONE.id}`);
 
     expect(await screen.findByRole('heading', { name: 'example.org' })).toBeInTheDocument();
     expect(screen.getByText(/bob\.ns\.cloudflare\.com/)).toBeInTheDocument();
@@ -112,12 +128,11 @@ describe('CloudflareDialog', () => {
     expect(await screen.findByLabelText('Security level')).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'WAF custom rules' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'IP access rules' })).toBeInTheDocument();
-    const address = new URLSearchParams(screen.getByTestId('address').textContent?.split('?')[1]);
-    expect(address.get('tab')).toBe('security');
+    expect(address().get('tab')).toBe('security');
   });
 
   it('opens an old Settings link on the SSL/TLS tab', async () => {
-    renderDialog({}, `/deploy?dialog=cloudflare&zone=${ZONE.id}&tab=settings`);
+    renderPage({}, `/deploy?cloudflare=1&zone=${ZONE.id}&tab=settings`);
     expect(await screen.findByRole('tab', { name: 'SSL/TLS' })).toHaveAttribute(
       'aria-selected',
       'true',
@@ -125,7 +140,7 @@ describe('CloudflareDialog', () => {
   });
 
   it("puts development mode and I'm Under Attack in the zone header, on every tab", async () => {
-    const { user } = renderDialog();
+    const { user } = renderPage();
     const quick = await screen.findByRole('group', { name: 'Quick switches' });
     expect(within(quick).getByRole('switch', { name: 'Development mode' })).toBeInTheDocument();
     expect(within(quick).getByRole('switch', { name: "I'm Under Attack" })).toBeInTheDocument();
@@ -133,66 +148,50 @@ describe('CloudflareDialog', () => {
     expect(screen.getByRole('group', { name: 'Quick switches' })).toBeInTheDocument();
   });
 
-  it('marks the open zone in the rail', async () => {
-    const { user } = renderDialog();
-    const rail = await screen.findByRole('navigation', { name: 'Zones' });
-    const first = await within(rail).findByRole('button', { name: /example\.com/ });
-    const second = within(rail).getByRole('button', { name: /example\.org/ });
+  it('names the open zone on the picker and marks it in the list', async () => {
+    const { user } = renderPage();
+    expect(
+      await screen.findByRole('button', { name: 'Choose a domain, example.com is open' }),
+    ).toBeInTheDocument();
+    const list = await openPicker(user);
+    const first = within(list).getByRole('button', { name: /example\.com/ });
+    const second = within(list).getByRole('button', { name: /example\.org/ });
     expect(first).toHaveAttribute('aria-current', 'true');
     expect(second).not.toHaveAttribute('aria-current');
-    await user.click(second);
-    expect(second).toHaveAttribute('aria-current', 'true');
-    expect(first).not.toHaveAttribute('aria-current');
   });
 
-  it('resizes the domain list from the keyboard and remembers the width', async () => {
-    usePanelWidthStore.setState({ widths: {} });
-    const { user } = renderDialog();
-    await screen.findByRole('navigation', { name: 'Zones' });
-    const handle = screen.getByRole('separator', { name: 'Resize domains' });
-    const rail = screen.getByRole('complementary', { name: 'Cloudflare domains' });
-    expect(rail.style.width).toBe(`${PANEL_WIDTHS.cloudflareRail.default}px`);
-
-    handle.focus();
-    await user.keyboard('{ArrowRight}');
-    const wider = usePanelWidthStore.getState().widths.cloudflareRail ?? 0;
-    expect(wider).toBeGreaterThan(PANEL_WIDTHS.cloudflareRail.default);
-    expect(rail.style.width).toBe(`${wider}px`);
-  });
-
-  it('shows the token guide on its own, without an empty domain list', async () => {
-    renderDialog({ 'cloudflare.status': async () => NOTHING });
+  it('shows the token guide on its own, without a domain picker', async () => {
+    renderPage({ 'cloudflare.status': async () => NOTHING });
     expect(await screen.findByText('Connect Cloudflare')).toBeInTheDocument();
-    expect(screen.queryByRole('complementary', { name: 'Cloudflare domains' })).toBeNull();
-    expect(screen.queryByRole('separator', { name: 'Resize domains' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Choose a domain/ })).toBeNull();
   });
 
-  it('picks another zone from the rail and keeps the rest of the address', async () => {
-    const { user } = renderDialog({}, '/deploy?server=srv-1&dialog=cloudflare');
-    const rail = await screen.findByRole('navigation', { name: 'Zones' });
-    await user.click(await within(rail).findByRole('button', { name: /example\.org/ }));
+  it('picks another zone from the picker, closes it and keeps the rest of the address', async () => {
+    const { user } = renderPage({}, '/deploy?cloudflare=1&view=logs');
+    const list = await openPicker(user);
+    await user.click(within(list).getByRole('button', { name: /example\.org/ }));
 
     expect(await screen.findByRole('heading', { name: 'example.org' })).toBeInTheDocument();
-    const address = new URLSearchParams(screen.getByTestId('address').textContent?.split('?')[1]);
-    expect(address.get('zone')).toBe(OTHER_ZONE.id);
-    expect(address.get('server')).toBe('srv-1');
-    expect(address.get('dialog')).toBe('cloudflare');
+    await waitFor(() => expect(screen.queryByRole('navigation', { name: 'Zones' })).toBeNull());
+    expect(address().get('zone')).toBe(OTHER_ZONE.id);
+    expect(address().get('cloudflare')).toBe('1');
+    expect(address().get('view')).toBe('logs');
   });
 
   it('shimmers while the zones load, and explains when there are none', async () => {
-    const { unmount } = renderDialog({
+    const { unmount } = renderPage({
       'cloudflare.listZones': () => new Promise(() => undefined),
     });
     await screen.findByText('Cloudflare token');
     expect(document.querySelector('nav[aria-busy="true"] .shimmer')).not.toBeNull();
     unmount();
 
-    renderDialog({ 'cloudflare.listZones': async () => [] });
+    renderPage({ 'cloudflare.listZones': async () => [] });
     expect(await screen.findByText(/cannot see any domains yet/)).toBeInTheDocument();
   });
 
   it('says why the zones could not be listed', async () => {
-    renderDialog({
+    renderPage({
       'cloudflare.listZones': async () => {
         throw ipcError('listZones', 'Could not reach Cloudflare.');
       },
@@ -201,7 +200,7 @@ describe('CloudflareDialog', () => {
   });
 
   it('asks to unlock the Servers passkey before reading anything with the token', async () => {
-    const { user, bridge } = renderDialog({
+    const { user, bridge } = renderPage({
       'cloudflare.status': async () => ({ ...CONNECTED, locked: true }),
       'ssh.vaultStatus': async () => ({ hasPasskey: true, unlocked: false }),
     });
@@ -213,7 +212,7 @@ describe('CloudflareDialog', () => {
   });
 
   it('replaces the token from the token card, or keeps it', async () => {
-    const { user } = renderDialog();
+    const { user } = renderPage();
 
     await user.click(await screen.findByRole('button', { name: 'Details' }));
     await user.click(screen.getByRole('button', { name: 'Replace token' }));
@@ -224,7 +223,7 @@ describe('CloudflareDialog', () => {
 
   it('reads the zones once the passkey is unlocked', async () => {
     let locked = true;
-    const { user, bridge } = renderDialog({
+    const { user, bridge } = renderPage({
       'cloudflare.status': async () => ({ ...CONNECTED, locked }),
       'ssh.vaultStatus': async () => ({ hasPasskey: true, unlocked: !locked }),
       'ssh.unlockVault': async () => {
@@ -241,14 +240,14 @@ describe('CloudflareDialog', () => {
       }),
     );
 
-    expect(await screen.findByRole('navigation', { name: 'Zones' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'example.com' })).toBeInTheDocument();
     expect(bridge.$fn('cloudflare.listZones')).toHaveBeenCalled();
   });
 
   it('tries the status and the zones again on request', async () => {
     let failStatus = true;
     let failZones = true;
-    const { user } = renderDialog({
+    const { user } = renderPage({
       'cloudflare.status': async () => {
         if (failStatus) {
           failStatus = false;
@@ -271,16 +270,8 @@ describe('CloudflareDialog', () => {
     expect(await screen.findByRole('heading', { name: 'example.com' })).toBeInTheDocument();
   });
 
-  it('closes from its close button, and reports it', async () => {
-    const { user, onOpenChange } = renderDialog();
-
-    await screen.findByRole('navigation', { name: 'Zones' });
-    await user.click(screen.getByRole('button', { name: 'Close' }));
-    expect(onOpenChange).toHaveBeenCalledWith(false);
-  });
-
   it('keeps the token card to one line while the token is fine, so the zone has the room', async () => {
-    const { user } = renderDialog();
+    const { user } = renderPage();
 
     expect(await screen.findByRole('heading', { name: 'example.com' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Replace token' })).toBeNull();
@@ -295,120 +286,114 @@ describe('CloudflareDialog', () => {
     const SHOP = { ...ZONE, id: '5f0d4f8b3a2c4e6d8f1a2b3c4d5e6f70', name: 'shop.example.net' };
     const three = { 'cloudflare.listZones': async () => [ZONE, OTHER_ZONE, SHOP] };
 
-    async function railOf() {
-      const rail = await screen.findByRole('navigation', { name: 'Zones' });
-      await within(rail).findByText('example.com');
-      return rail;
-    }
+    it('opens with the search box focused', async () => {
+      const { user } = renderPage(three);
+      const list = await openPicker(user);
+      await waitFor(() =>
+        expect(within(list).getByRole('searchbox', { name: 'Search domains' })).toHaveFocus(),
+      );
+    });
 
     it('filters the domains as you type, counts what matches and marks the match', async () => {
-      const { user } = renderDialog(three);
-      const rail = await railOf();
-      expect(within(rail).getByText('3')).toBeInTheDocument();
+      const { user } = renderPage(three);
+      const list = await openPicker(user);
+      expect(within(list).getByText('3')).toBeInTheDocument();
 
-      await user.type(within(rail).getByRole('searchbox', { name: 'Search domains' }), 'ORG');
+      await user.type(within(list).getByRole('searchbox', { name: 'Search domains' }), 'ORG');
 
-      expect(within(rail).getAllByRole('button', { name: /example\./ })).toHaveLength(1);
-      expect(within(rail).getByRole('button', { name: /example\.org/ })).toBeInTheDocument();
-      expect(within(rail).getByText('1 of 3')).toBeInTheDocument();
-      expect(rail.querySelector('mark')).toHaveTextContent(/^org$/);
+      expect(within(list).getAllByRole('button', { name: /example\./ })).toHaveLength(1);
+      expect(within(list).getByRole('button', { name: /example\.org/ })).toBeInTheDocument();
+      expect(within(list).getByText('1 of 3')).toBeInTheDocument();
+      expect(list.querySelector('mark')).toHaveTextContent(/^org$/);
     });
 
     it('reads a pasted address as the domain in it', async () => {
-      const { user } = renderDialog(three);
-      const rail = await railOf();
+      const { user } = renderPage(three);
+      const list = await openPicker(user);
 
-      await user.click(within(rail).getByRole('searchbox', { name: 'Search domains' }));
+      await user.click(within(list).getByRole('searchbox', { name: 'Search domains' }));
       await user.paste('https://www.shop.example.net/cart?id=1');
 
-      expect(within(rail).getAllByRole('button', { name: /example\./ })).toHaveLength(1);
-      expect(within(rail).getByRole('button', { name: /shop\.example\.net/ })).toBeInTheDocument();
+      expect(within(list).getAllByRole('button', { name: /example\./ })).toHaveLength(1);
+      expect(within(list).getByRole('button', { name: /shop\.example\.net/ })).toBeInTheDocument();
     });
 
     it('says when nothing matches, and clears from the box or with Escape', async () => {
-      const { user, onOpenChange } = renderDialog(three);
-      const rail = await railOf();
-      const box = within(rail).getByRole('searchbox', { name: 'Search domains' });
+      const { user } = renderPage(three);
+      const list = await openPicker(user);
+      const box = within(list).getByRole('searchbox', { name: 'Search domains' });
 
       await user.type(box, 'nothing here');
-      expect(within(rail).getByText(/Nothing matches/)).toBeInTheDocument();
-      await user.click(within(rail).getByRole('button', { name: 'Clear filter' }));
-      expect(within(rail).getAllByRole('button', { name: /example\./ })).toHaveLength(3);
+      expect(within(list).getByText(/Nothing matches/)).toBeInTheDocument();
+      await user.click(within(list).getByRole('button', { name: 'Clear filter' }));
+      expect(within(list).getAllByRole('button', { name: /example\./ })).toHaveLength(3);
 
       await user.type(box, 'org');
       await user.keyboard('{Escape}');
       expect(box).toHaveValue('');
-      // Escape in a box with text clears it without closing the whole dialog.
-      expect(onOpenChange).not.toHaveBeenCalled();
-      // An empty box leaves Escape to the dialog again.
+      // Escape in a box with text clears it without closing the list.
+      expect(screen.getByRole('navigation', { name: 'Zones' })).toBeInTheDocument();
+      // An empty box leaves Escape to the list again.
       await user.keyboard('{Escape}');
-      expect(onOpenChange).toHaveBeenCalledWith(false);
+      await waitFor(() => expect(screen.queryByRole('navigation', { name: 'Zones' })).toBeNull());
     });
 
     it('opens the first match with Enter and keeps the rest of the address', async () => {
-      const { user } = renderDialog(three, '/deploy?server=srv-1&dialog=cloudflare');
-      const rail = await railOf();
+      const { user } = renderPage(three, '/deploy?cloudflare=1&view=logs');
+      const list = await openPicker(user);
 
       await user.type(
-        within(rail).getByRole('searchbox', { name: 'Search domains' }),
+        within(list).getByRole('searchbox', { name: 'Search domains' }),
         'shop{Enter}',
       );
 
       expect(await screen.findByRole('heading', { name: 'shop.example.net' })).toBeInTheDocument();
-      const address = new URLSearchParams(screen.getByTestId('address').textContent?.split('?')[1]);
-      expect(address.get('zone')).toBe(SHOP.id);
-      expect(address.get('server')).toBe('srv-1');
+      expect(address().get('zone')).toBe(SHOP.id);
+      expect(address().get('view')).toBe('logs');
     });
 
     it('moves from the box into the list and along it with the arrow keys', async () => {
-      const { user } = renderDialog(three);
-      const rail = await railOf();
-      const box = within(rail).getByRole('searchbox', { name: 'Search domains' });
+      const { user } = renderPage(three);
+      const list = await openPicker(user);
+      const box = within(list).getByRole('searchbox', { name: 'Search domains' });
 
       await user.type(box, 'example');
       await user.keyboard('{ArrowDown}');
-      expect(within(rail).getByRole('button', { name: /example\.com/ })).toHaveFocus();
+      expect(within(list).getByRole('button', { name: /example\.com/ })).toHaveFocus();
       await user.keyboard('{ArrowDown}');
-      expect(within(rail).getByRole('button', { name: /example\.org/ })).toHaveFocus();
+      expect(within(list).getByRole('button', { name: /example\.org/ })).toHaveFocus();
       await user.keyboard('{ArrowUp}{ArrowUp}');
       expect(box).toHaveFocus();
     });
 
-    it('jumps to the box with Ctrl+F', async () => {
-      const { user } = renderDialog(three);
-      const rail = await railOf();
-      await user.click(within(rail).getByRole('button', { name: /example\.org/ }));
+    it('opens the picker on its search with Ctrl+F from anywhere on the page', async () => {
+      const { user } = renderPage(three);
+      await user.click(await screen.findByRole('tab', { name: 'Caching' }));
 
       await user.keyboard('{Control>}f{/Control}');
 
-      expect(within(rail).getByRole('searchbox', { name: 'Search domains' })).toHaveFocus();
+      const list = await screen.findByRole('navigation', { name: 'Zones' });
+      await waitFor(() =>
+        expect(within(list).getByRole('searchbox', { name: 'Search domains' })).toHaveFocus(),
+      );
     });
 
-    it('jumps to the box with Ctrl+F while the dialog itself has focus', async () => {
-      const { user } = renderDialog(three);
-      const rail = await railOf();
-      // Where focus lands once the button that had it goes away, as after saving a token.
-      screen.getByRole('dialog').focus();
+    it('goes back to the search with Ctrl+F while the picker is open', async () => {
+      const { user } = renderPage(three);
+      const list = await openPicker(user);
+      await user.type(within(list).getByRole('searchbox', { name: 'Search domains' }), 'example');
+      await user.keyboard('{ArrowDown}');
+      expect(within(list).getByRole('button', { name: /example\.com/ })).toHaveFocus();
 
       await user.keyboard('{Control>}f{/Control}');
 
-      expect(within(rail).getByRole('searchbox', { name: 'Search domains' })).toHaveFocus();
-    });
-
-    it('keeps the open zone open while the search hides it in the rail', async () => {
-      const { user } = renderDialog(three);
-      const rail = await railOf();
-
-      await user.type(within(rail).getByRole('searchbox', { name: 'Search domains' }), 'shop');
-
-      expect(within(rail).queryByRole('button', { name: /example\.com/ })).toBeNull();
-      expect(screen.getByRole('heading', { name: 'example.com' })).toBeInTheDocument();
+      expect(within(list).getByRole('searchbox', { name: 'Search domains' })).toHaveFocus();
     });
 
     it('leaves the search out while there is only one domain', async () => {
-      renderDialog({ 'cloudflare.listZones': async () => [ZONE] });
-      const rail = await railOf();
-      expect(within(rail).queryByRole('searchbox')).toBeNull();
+      const { user } = renderPage({ 'cloudflare.listZones': async () => [ZONE] });
+      const list = await openPicker(user);
+      expect(within(list).queryByRole('searchbox')).toBeNull();
     });
   });
 
@@ -426,48 +411,48 @@ describe('CloudflareDialog', () => {
     };
 
     it('groups the domains under the account that holds them', async () => {
-      renderDialog(several);
+      const { user } = renderPage(several);
 
-      const rail = await screen.findByRole('navigation', { name: 'Zones' });
-      const work = await within(rail).findByRole('region', { name: 'Cloudflare' });
-      const client = within(rail).getByRole('region', { name: 'Client Co' });
-      expect(await within(work).findByText('example.com')).toBeInTheDocument();
+      const list = await openPicker(user);
+      const work = within(list).getByRole('region', { name: 'Cloudflare' });
+      const client = within(list).getByRole('region', { name: 'Client Co' });
+      expect(within(work).getByText('example.com')).toBeInTheDocument();
       expect(await within(client).findByText('example.org')).toBeInTheDocument();
       expect(within(work).queryByText('example.org')).toBeNull();
     });
 
     it('leaves out an account with nothing that matches while searching', async () => {
-      const { user } = renderDialog(several);
-      const rail = await screen.findByRole('navigation', { name: 'Zones' });
-      await within(rail).findByText('example.org');
+      const { user } = renderPage(several);
+      const list = await openPicker(user);
+      await within(list).findByText('example.org');
 
-      await user.type(within(rail).getByRole('searchbox', { name: 'Search domains' }), '.org');
+      await user.type(within(list).getByRole('searchbox', { name: 'Search domains' }), '.org');
 
-      expect(within(rail).queryByRole('region', { name: 'Cloudflare' })).toBeNull();
-      expect(within(rail).getByRole('region', { name: 'Client Co' })).toBeInTheDocument();
+      expect(within(list).queryByRole('region', { name: 'Cloudflare' })).toBeNull();
+      expect(within(list).getByRole('region', { name: 'Client Co' })).toBeInTheDocument();
     });
 
     it('asks each account for its own zones', async () => {
-      const { bridge } = renderDialog(several);
+      const { bridge } = renderPage(several);
       await screen.findByRole('heading', { name: 'example.com' });
       expect(bridge.$fn('cloudflare.listZones')).toHaveBeenCalledWith('acct-1');
       expect(bridge.$fn('cloudflare.listZones')).toHaveBeenCalledWith('acct-2');
     });
 
     it('shows the token card of the account that holds the open zone', async () => {
-      const { user } = renderDialog(several);
-      const rail = await screen.findByRole('navigation', { name: 'Zones' });
+      const { user } = renderPage(several);
 
       expect(await screen.findByRole('heading', { name: 'example.com' })).toBeInTheDocument();
-      expect(screen.getAllByText('Client Co')).toHaveLength(1);
-      await user.click(await within(rail).findByRole('button', { name: /example.org/ }));
+      expect(screen.queryByText('Client Co')).toBeNull();
+      const list = await openPicker(user);
+      await user.click(await within(list).findByRole('button', { name: /example.org/ }));
 
       expect(await screen.findByRole('heading', { name: 'example.org' })).toBeInTheDocument();
-      expect(screen.getAllByText('Client Co')).toHaveLength(2);
+      await waitFor(() => expect(screen.getAllByText('Client Co')).toHaveLength(1));
     });
 
-    it('keeps the other accounts domains when one account fails', async () => {
-      renderDialog({
+    it('keeps the other accounts domains when one account fails, and says so on the picker', async () => {
+      const { user } = renderPage({
         ...several,
         'cloudflare.listZones': async (accountId: string) => {
           if (accountId === 'acct-2') throw ipcError('listZones', 'Could not reach Cloudflare.');
@@ -475,51 +460,45 @@ describe('CloudflareDialog', () => {
         },
       });
 
-      expect(await screen.findByText('Could not reach Cloudflare.')).toBeInTheDocument();
       expect(await screen.findByRole('heading', { name: 'example.com' })).toBeInTheDocument();
+      expect(await screen.findByText('1 account failed')).toBeInTheDocument();
+      const list = await openPicker(user);
+      expect(await within(list).findByText('Could not reach Cloudflare.')).toBeInTheDocument();
     });
 
-    it('adds another account from the rail, and goes back without saving', async () => {
-      const { user } = renderDialog(several);
+    it('adds another account from the picker, and goes back without saving', async () => {
+      const { user } = renderPage(several);
 
-      await user.click(await screen.findByRole('button', { name: 'Add account' }));
+      await openPicker(user);
+      await user.click(screen.getByRole('button', { name: 'Add account' }));
       expect(await screen.findByText('Connect another Cloudflare account')).toBeInTheDocument();
       expect(screen.getByLabelText('Name (optional)')).toBeInTheDocument();
+      // The steps are drawn on the page, not in a dialog on top.
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
       await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
-      expect(await screen.findByRole('navigation', { name: 'Zones' })).toBeInTheDocument();
-    });
-
-    it('draws the connect steps beside the domains, not in a second dialog on top', async () => {
-      const { user } = renderDialog(several);
-
-      await user.click(await screen.findByRole('button', { name: 'Add account' }));
-
-      expect(await screen.findByText('Connect another Cloudflare account')).toBeInTheDocument();
-      expect(screen.getByRole('navigation', { name: 'Zones' })).toBeInTheDocument();
-      expect(screen.getAllByRole('dialog')).toHaveLength(1);
-      await user.click(screen.getByRole('button', { name: 'Cancel' }));
       expect(await screen.findByRole('heading', { name: 'example.com' })).toBeInTheDocument();
       expect(screen.queryByText('Connect another Cloudflare account')).toBeNull();
     });
 
     it('leaves the connect steps when another domain is picked', async () => {
-      const { user } = renderDialog(several);
+      const { user } = renderPage(several);
 
-      await user.click(await screen.findByRole('button', { name: 'Add account' }));
+      await openPicker(user);
+      await user.click(screen.getByRole('button', { name: 'Add account' }));
       expect(await screen.findByText('Connect another Cloudflare account')).toBeInTheDocument();
-      const rail = screen.getByRole('navigation', { name: 'Zones' });
-      await user.click(await within(rail).findByRole('button', { name: /example\.org/ }));
+      const list = await openPicker(user);
+      await user.click(await within(list).findByRole('button', { name: /example\.org/ }));
 
       expect(await screen.findByRole('heading', { name: 'example.org' })).toBeInTheDocument();
       expect(screen.queryByText('Connect another Cloudflare account')).toBeNull();
     });
 
-    it("opens an account's token details when its name is picked in the rail", async () => {
-      const { user } = renderDialog(several);
-      const rail = await screen.findByRole('navigation', { name: 'Zones' });
+    it("opens an account's token details when its name is picked in the list", async () => {
+      const { user } = renderPage(several);
+      const list = await openPicker(user);
 
-      await user.click(await within(rail).findByRole('button', { name: 'Client Co' }));
+      await user.click(await within(list).findByRole('button', { name: 'Client Co' }));
 
       expect(await screen.findByRole('button', { name: 'Replace token' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Details' })).toHaveAttribute(
@@ -528,8 +507,8 @@ describe('CloudflareDialog', () => {
       );
     });
 
-    it('lets the first account be added from the one-column view too', async () => {
-      const { user } = renderDialog({
+    it('lets another account be added from the one-column view too', async () => {
+      const { user } = renderPage({
         ...several,
         'cloudflare.status': async () => ({ ...TWO, locked: true }),
         'ssh.vaultStatus': async () => ({ hasPasskey: true, unlocked: false }),

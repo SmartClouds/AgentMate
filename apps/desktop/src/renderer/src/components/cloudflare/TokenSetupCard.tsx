@@ -60,8 +60,8 @@ function setupCopy(
  * those permissions chosen; the token pasted back goes to the main process once, to be checked
  * and sealed, and the field is emptied right after.
  *
- * It draws straight onto whatever holds it (the Cloudflare dialog, whole or beside the domain
- * list), with no card of its own. Given room it puts the two steps side by side, so the field to
+ * It draws straight onto whatever holds it (a card on the Cloudflare page), with no card of its
+ * own. Given room it puts the two steps side by side, so the field to
  * paste into is in view without scrolling; in a narrow place they stack.
  */
 export function TokenSetupCard({

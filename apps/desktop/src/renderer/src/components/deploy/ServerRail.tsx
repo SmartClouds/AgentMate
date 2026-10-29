@@ -247,7 +247,7 @@ function GroupHeading({ label, count }: { label: string; count?: number }): Reac
   );
 }
 
-/** A quiet row for the places this rail hands off to: Remote, and the Cloudflare dialog. */
+/** A quiet row for the places this rail hands off to: Remote, and the Cloudflare page. */
 const LINK_ROW =
   'flex h-8 items-center gap-2 rounded-lg px-3 text-[13px] text-muted-foreground outline-none transition-colors hover:bg-foreground/[0.06] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0';
 
@@ -404,6 +404,7 @@ export function ServerRail({
   onRetrySites,
   onConnectSite,
   onOpenCloudflare,
+  cloudflareSelected = false,
   fileSites,
   fileSitesLoading = false,
   fileSitesError = null,
@@ -424,8 +425,10 @@ export function ServerRail({
   onChooseServers?: () => void;
   /** Gets the server ids in their new order after a drag. Left out, the servers can't be moved. */
   onReorderServers?: (orderedIds: string[]) => void;
-  /** Opens the Cloudflare dialog over Deploy. */
+  /** Opens the Cloudflare page in Deploy's content column. */
   onOpenCloudflare: () => void;
+  /** Whether the Cloudflare page is the one on screen. */
+  cloudflareSelected?: boolean;
   /** Left out, the WordPress group is not shown at all. */
   sites?: DeployWordPressSite[];
   sitesLoading?: boolean;
@@ -507,7 +510,19 @@ export function ServerRail({
           <Link to="/remote" className={LINK_ROW}>
             <ExternalLink /> Add or edit servers in Remote
           </Link>
-          <button type="button" onClick={onOpenCloudflare} className={cn(LINK_ROW, 'w-full')}>
+          <button
+            type="button"
+            aria-current={cloudflareSelected ? 'true' : undefined}
+            onClick={onOpenCloudflare}
+            className={cn(
+              LINK_ROW,
+              // `isolate` keeps the shared pill behind the text, as on the other rows.
+              'relative isolate w-full',
+              cloudflareSelected &&
+                'font-medium text-primary hover:bg-transparent hover:text-primary',
+            )}
+          >
+            {cloudflareSelected && <ActivePill />}
             <CloudflareMark /> Cloudflare: domains and DNS
           </button>
         </div>

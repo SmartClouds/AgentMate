@@ -20,6 +20,9 @@ describe('rememberable', () => {
     expect(rememberable(params('server=srv-1&view=containers&tab=images'))).toBe(
       'server=srv-1&view=containers&tab=images',
     );
+    expect(rememberable(params('cloudflare=1&zone=z-1&tab=ssl&account=acc-1'))).toBe(
+      'cloudflare=1&zone=z-1&tab=ssl',
+    );
   });
 
   it('leaves out the one-shot params', () => {
@@ -45,16 +48,21 @@ describe('restoreTarget', () => {
     );
   });
 
-  it('keeps the Cloudflare dialog the address asks for', () => {
-    expect(restoreTarget(params('dialog=cloudflare'), 'site=wp-1')?.toString()).toBe(
-      'site=wp-1&dialog=cloudflare',
+  it('opens the Cloudflare page again', () => {
+    expect(restoreTarget(params(''), 'cloudflare=1&zone=z-1')?.toString()).toBe(
+      'cloudflare=1&zone=z-1',
     );
+  });
+
+  it('leaves an older Cloudflare dialog link alone, since it names the Cloudflare page', () => {
+    expect(restoreTarget(params('dialog=cloudflare'), 'site=wp-1')).toBeNull();
   });
 
   it('leaves an address that names something alone', () => {
     expect(restoreTarget(params('server=srv-1'), 'server=srv-2&view=logs')).toBeNull();
     expect(restoreTarget(params('files=fs-1&view=settings'), 'server=srv-2')).toBeNull();
     expect(restoreTarget(params('site=wp-1'), 'server=srv-2')).toBeNull();
+    expect(restoreTarget(params('cloudflare=1'), 'server=srv-2')).toBeNull();
   });
 
   it('has nothing to restore with nothing remembered', () => {

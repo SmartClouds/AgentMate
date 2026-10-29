@@ -49,11 +49,23 @@ function renderRail(props: Partial<Parameters<typeof ServerRail>[0]> = {}) {
 }
 
 describe('ServerRail Cloudflare', () => {
-  it('opens the Cloudflare dialog from its row', async () => {
+  it('opens the Cloudflare page from its row', async () => {
     const { user, onOpenCloudflare } = renderRail();
 
-    await user.click(screen.getByRole('button', { name: /Cloudflare: domains and DNS/ }));
+    const row = screen.getByRole('button', { name: /Cloudflare: domains and DNS/ });
+    expect(row.getAttribute('aria-current')).toBeNull();
+    await user.click(row);
     expect(onOpenCloudflare).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks its row while the Cloudflare page is on screen', () => {
+    renderRail({ selectedId: null, cloudflareSelected: true });
+
+    expect(
+      screen
+        .getByRole('button', { name: /Cloudflare: domains and DNS/ })
+        .getAttribute('aria-current'),
+    ).toBe('true');
   });
 });
 

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
 
 /**
- * The widths of the resizable side panels (the Deploy and Cloudflare rails, the catalog
+ * The widths of the resizable side panels (the Deploy rail, the catalog
  * sidebars and the list panes laid out like the API Client), remembered between visits. Each
  * panel has its own entry and bounds.
  */
@@ -11,7 +11,6 @@ const CATALOG_SIDEBAR = { min: 180, max: 420, default: 240 } as const;
 
 export const PANEL_WIDTHS = {
   deployRail: { min: 200, max: 380, default: 256 },
-  cloudflareRail: { min: 200, max: 420, default: 260 },
   mcpRepositories: CATALOG_SIDEBAR,
   skillRepositories: CATALOG_SIDEBAR,
   vaultList: { min: 260, max: 520, default: 340 },
@@ -30,7 +29,6 @@ const STORAGE_KEY = 'runova-panel-widths';
  */
 const LEGACY_KEYS: ReadonlyArray<{ key: string; panel?: PanelId }> = [
   { key: 'runova-deploy-rail', panel: 'deployRail' },
-  { key: 'runova-cloudflare-rail', panel: 'cloudflareRail' },
   { key: 'runova-catalog-layout' },
   { key: 'runova-pane-layout' },
 ];

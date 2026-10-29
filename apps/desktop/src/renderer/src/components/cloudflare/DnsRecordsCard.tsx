@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { SimpleTooltip } from '@/components/ui/tooltip';
+import { TruncatedText } from '@/components/ui/truncated-text';
 import { cloudflareFailureText, useCloudflareError } from '@/lib/cloudflare/feedback';
 import { relativeName, ttlLabel } from '@/lib/cloudflare/labels';
 import { queryKeys } from '@/lib/queryKeys';
@@ -20,8 +21,6 @@ import { confirmDialog } from '@/stores/confirmStore';
 import { CardBody, CloudflareCard, Problem } from './fields';
 import { PointDomainDialog } from './PointDomainDialog';
 import { RecordDialog } from './RecordDialog';
-
-const LONG_CONTENT = 40;
 
 /** The hairline under the column headings. It sits on the cells, since a row paints no shadow. */
 const HEADER_LINE = 'shadow-[inset_0_-1px_0_hsl(var(--foreground)/0.08)]';
@@ -120,11 +119,25 @@ export function DnsRecordsCard({ zone }: { zone: CloudflareZone }): React.JSX.El
       />
     );
   } else {
+    // "Edit on Cloudflare" takes more room than the two buttons.
+    const locked = records.data.some((record) => !record.editable);
     body = (
       // Hairline rows like a Settings card. Wider than the card on a narrow window, the table
-      // scrolls sideways on its own instead of squeezing the content column away.
-      <div className={cn(FOOTER_HAIRLINE, 'overflow-x-auto')}>
-        <table className="w-full border-collapse text-sm">
+      // scrolls sideways on its own instead of squeezing the content column away. `relative`
+      // makes it the box the hidden parts of the table (the switches' inputs, the Actions
+      // heading) are placed in, so they are clipped with the rest instead of widening the page.
+      <div className={cn(FOOTER_HAIRLINE, 'relative overflow-x-auto')}>
+        {/* A fixed layout: the short columns keep their width and the name and content share
+            the rest, cut short with the whole value on hover, so every column stays in view. */}
+        <table className="w-full min-w-[46rem] table-fixed border-collapse text-sm">
+          <colgroup>
+            <col className="w-[5.5rem]" />
+            <col />
+            <col />
+            <col className="w-[9.5rem]" />
+            <col className="w-24" />
+            <col className={locked ? 'w-[9rem]' : 'w-[5.5rem]'} />
+          </colgroup>
           <thead>
             <tr className="text-left">
               {['Type', 'Name', 'Content', 'Proxy', 'TTL'].map((heading) => (
@@ -143,11 +156,6 @@ export function DnsRecordsCard({ zone }: { zone: CloudflareZone }): React.JSX.El
           <tbody className="settings-rows">
             {records.data.map((record) => {
               const what = `the ${record.type} record for ${record.name}`;
-              const content = (
-                <span className="block max-w-[18rem] truncate font-mono text-xs">
-                  {record.content}
-                </span>
-              );
               return (
                 <tr key={record.id} className="transition-colors hover:bg-foreground/[0.03]">
                   <td className="py-2 pl-4 pr-3">
@@ -155,15 +163,15 @@ export function DnsRecordsCard({ zone }: { zone: CloudflareZone }): React.JSX.El
                       {record.type}
                     </Chip>
                   </td>
-                  <td className="max-w-[14rem] truncate px-3 py-2 font-mono text-xs">
-                    {relativeName(record.name, zone.name)}
+                  <td className="px-3 py-2">
+                    {/* A long name or content shows in full on hover or keyboard focus. */}
+                    <TruncatedText
+                      text={relativeName(record.name, zone.name)}
+                      className="font-mono text-xs"
+                    />
                   </td>
                   <td className="px-3 py-2">
-                    {record.content.length > LONG_CONTENT ? (
-                      <SimpleTooltip label={record.content}>{content}</SimpleTooltip>
-                    ) : (
-                      content
-                    )}
+                    <TruncatedText text={record.content} className="font-mono text-xs" />
                   </td>
                   <td className="px-3 py-2">
                     <span className="flex items-center gap-2">

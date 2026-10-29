@@ -66,7 +66,9 @@ test('sends the DevHost a DNS token and locks it to Cloudflare', async () => {
   await page.getByRole('button', { name: /Cloudflare: domains and DNS/ }).click();
   await page.getByLabel('API token').fill(E2E_CLOUDFLARE_TOKEN);
   await page.getByRole('button', { name: 'Save and check' }).click();
-  await expect(page.getByRole('button', { name: /example\.com/ })).toBeVisible({ timeout: 30_000 });
+  await expect(
+    page.getByRole('button', { name: 'Choose a domain, example.com is open' }),
+  ).toBeVisible({ timeout: 30_000 });
 
   // A DNS token for the zone, made with the account token and sent to the DevHost.
   await page.getByRole('tab', { name: 'Servers' }).click();
@@ -81,7 +83,10 @@ test('sends the DevHost a DNS token and locks it to Cloudflare', async () => {
   expect(Object.keys(cloudflare.fake.tokens)).toHaveLength(2);
 
   // The origin lock on the DevHost's firewall, kept from the countdown banner.
-  await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
+  await page
+    .getByRole('navigation', { name: 'Servers' })
+    .getByRole('button', { name: /DevHost/ })
+    .click();
   await page
     .getByRole('navigation', { name: 'Server sections' })
     .getByRole('button', { name: 'Firewall' })

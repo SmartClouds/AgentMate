@@ -4,20 +4,20 @@ category: Deploy
 order: 90
 summary: Connect your Cloudflare account with an API token, manage DNS records, zone settings and security rules, point a domain at a server, and use Cloudflare with your servers for DNS-01 certificates, Origin CA certificates and the Cloudflare-only origin lock.
 keywords: cloudflare, dns, domain, zone, api token, records, proxy, orange cloud, waf, firewall rules, cache purge, ssl mode, dns-01, wildcard certificate, origin ca, origin lock, point domain, nameservers
-route: /deploy?dialog=cloudflare
+route: /deploy?cloudflare=1
 ---
 
-The Cloudflare dialog manages your domains on Cloudflare without leaving Runova. You connect each account once with an API token, then pick a domain (a zone) to edit its DNS records, its settings, its cache and its security rules. It also links Cloudflare to your servers in Deploy: you can point a domain at a server in one step, give a server a DNS token for wildcard certificates, install a Cloudflare Origin CA certificate, and lock a server so only Cloudflare can reach it.
+The Cloudflare page manages your domains on Cloudflare without leaving Runova. You connect each account once with an API token, then pick a domain (a zone) to edit its DNS records, its settings, its cache and its security rules. It also links Cloudflare to your servers in Deploy: you can point a domain at a server in one step, give a server a DNS token for wildcard certificates, install a Cloudflare Origin CA certificate, and lock a server so only Cloudflare can reach it.
 
 ## Where to find it
 
-Open **Deploy** in the sidebar under Ship, then click **Cloudflare: domains and DNS** under the server rail. The Cloudflare dialog opens over the Deploy page, the way **Connect a WordPress site** does, so your servers stay where they were. If you have no saved servers yet, the Deploy page offers **Manage Cloudflare** instead. Close the dialog with its X button or the Escape key to go back to your servers. The address is `/deploy?dialog=cloudflare`.
+Open **Deploy** in the sidebar under Ship, then click **Cloudflare: domains and DNS** under the server rail. The Cloudflare page opens in Deploy's main area, the way a server or a site does, and the whole page scrolls so long DNS tables and rule lists are never cut off. If you have no saved servers yet, the Deploy page offers **Manage Cloudflare** instead. Click a server or a site in the rail to go back to it. The address is `/deploy?cloudflare=1`.
 
-Cloudflare accounts are not tied to one server, so the dialog opens from the server rail rather than from a server. The domain and tab you pick are remembered, so opening the dialog again lands you in the same place.
+Cloudflare accounts are not tied to one server, so the page has its own row in the server rail rather than living under a server. The domain and tab you pick are kept, so coming back to Deploy lands you in the same place.
 
 ## Connect Cloudflare with a token
 
-The first time (or after you remove every account), the dialog shows **Connect Cloudflare** with two steps side by side, so the field for the token is in view while you follow the first step.
+The first time (or after you remove every account), the page shows **Connect Cloudflare** with two steps side by side, so the field for the token is in view while you follow the first step.
 
 1. **Create a token on Cloudflare.** Click **Open Cloudflare's token page**. It opens with the permissions below already chosen and the name "Runova". Under Zone Resources, include all zones or just the domains Runova should manage, then create the token and copy it.
 2. **Paste the token here.** Type or paste it into **API token** and click **Save and check**. Runova checks it with Cloudflare, seals it on this computer the way it seals your server passwords, and never shows it again.
@@ -58,8 +58,8 @@ Buttons inside **Details**:
 
 You can connect as many Cloudflare accounts as you like, for example your own and a client's. Each account has its own API token, made on that account.
 
-- Click **Add account** under the Domains rail (or **Add another account** when there is no domain list yet). The setup steps open beside the domain list, with the permissions folded away under **Permissions the token needs**. Paste the token and, if you like, give the account a name such as "Client Co". Left empty, the name is "Account 2" and so on. **Cancel** goes back to your domains.
-- With more than one account, the **Domains** rail groups the domains under the account's name. Click a name to open that account's token card with its details showing. Opening a domain shows the card of the account that holds it.
+- Open the domain picker and click **Add account** at the bottom of it (or **Add another account** when there is no domain list yet). The setup steps open on the page, with the permissions folded away under **Permissions the token needs**. Paste the token and, if you like, give the account a name such as "Client Co". Left empty, the name is "Account 2" and so on. **Cancel** goes back to your domains.
+- With more than one account, the domain picker groups the domains under the account's name. Click a name to open that account's token card with its details showing. Opening a domain shows the card of the account that holds it.
 - **Replace token** and **Remove token** on a card only touch that account. The other accounts keep working. If one account's token stops working, only its group shows the error and **Try again**.
 - The same token can't be added twice.
 - Servers use the right account on their own. An Origin CA certificate is signed by the account that holds the site's domains (a certificate can't mix domains from two accounts), and a DNS token for a server is made in the account that holds the zone.
@@ -68,14 +68,14 @@ If you used Runova before accounts existed, your saved token shows up as one acc
 
 ## Domains (zones)
 
-On the left, the **Domains** rail lists every zone your connected tokens can see with its state: **Active**, **Waiting for name servers**, **Setting up**, **Moved away** or **Paused**. Click one to manage it. If the list is empty, the token cannot see any domains yet: add a domain on Cloudflare, or include it under Zone Resources on the token.
+At the top right of the page, the domain picker shows the domain you have open, with a dot for its state and how many domains there are. Click it to open the list of every zone your connected tokens can see with its state: **Active**, **Waiting for name servers**, **Setting up**, **Moved away** or **Paused**. Click one to manage it. If an account's list failed to load, the picker says so. If the list is empty, the token cannot see any domains yet: add a domain on Cloudflare, or include it under Zone Resources on the token.
 
-With two domains or more, a **Search domains** box sits at the top of the rail. Type part of a name, or paste a whole address such as `https://www.example.com/pricing` (the scheme, `www.` and the path are ignored). The rail keeps only the matching domains, marks the matching part of each name, and the count reads like **2 of 14**. With several accounts, an account with no matches is left out while you search, but one whose list failed to load stays so you can see the problem.
+With two domains or more, a **Search domains** box sits at the top of the list, ready to type into as soon as it opens. Type part of a name, or paste a whole address such as `https://www.example.com/pricing` (the scheme, `www.` and the path are ignored). The list keeps only the matching domains, marks the matching part of each name, and the count reads like **2 of 14**. With several accounts, an account with no matches is left out while you search, but one whose list failed to load stays so you can see the problem.
 
-- `Ctrl+F` (`Cmd+F` on a Mac) jumps to the box from anywhere in the dialog.
+- `Ctrl+F` (`Cmd+F` on a Mac) opens the picker on its search box from anywhere on the page.
 - `Enter` opens the first match.
 - The down arrow moves from the box into the list, and the arrows move along it. Up from the first domain goes back to the box.
-- `Escape` or the **Clear filter** button empties the box. The domain you have open stays open even when the search hides it.
+- `Escape` or the **Clear filter** button empties the box, and `Escape` in an empty box closes the list. The domain you have open stays open even when the search hides it.
 
 At the top of a zone you see its name, its plan and a state badge. For a zone waiting for name servers, a notice shows the name servers your registrar must use. Until then, changes here do not reach visitors.
 
@@ -183,7 +183,7 @@ Once a server has the token, the **Issue a certificate** dialog on a site's SSL 
 
 ## Cloudflare on each server
 
-Besides this dialog, Cloudflare shows up in a server's own sections:
+Besides this page, Cloudflare shows up in a server's own sections:
 
 - **Websites, SSL tab**: the **Cloudflare Origin CA** button has Cloudflare sign a certificate for a key the server makes. Only Cloudflare trusts it, so keep the site's records proxied and set SSL/TLS to Full (strict). It needs the SSL and Certificates permission. See [Websites and certificates](deploy-websites-certificates.md#cloudflare-origin-ca).
 - **Websites, Domains tab**: arriving from **Point domain to a server** starts a new site with the pointed names.

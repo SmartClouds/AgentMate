@@ -238,19 +238,24 @@ describe('DeployPage states', () => {
     expect(screen.getByRole('button', { name: /Open Remote/ })).toBeTruthy();
   });
 
-  it('opens the Cloudflare dialog, with servers or without', async () => {
+  it('opens the Cloudflare page, with servers or without', async () => {
     const { user, unmount } = renderPage({
       'deploy.listServers': async () => [],
       'cloudflare.status': async () => NO_CLOUDFLARE,
     });
     await user.click(await screen.findByRole('button', { name: /Manage Cloudflare/ }));
-    expect(await screen.findByRole('dialog', { name: 'Cloudflare' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Cloudflare' })).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
     unmount();
 
     const again = renderPage({ 'cloudflare.status': async () => NO_CLOUDFLARE });
     const rail = await screen.findByRole('navigation', { name: 'Servers' });
     await again.user.click(within(rail).getByRole('button', { name: /Cloudflare/ }));
-    expect(await screen.findByRole('dialog', { name: 'Cloudflare' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Cloudflare' })).toBeTruthy();
+    expect(within(rail).getByRole('button', { name: /Cloudflare/ })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
   });
 
   it('says why the list failed and offers to try again', async () => {
@@ -1048,7 +1053,7 @@ describe('DeployPage WordPress sites', () => {
     expect(await screen.findByLabelText('Connection key')).toBeTruthy();
   });
 
-  it('opens Remote and the Cloudflare dialog from the empty state', async () => {
+  it('opens Remote and the Cloudflare page from the empty state', async () => {
     const { user, unmount } = renderPage({
       'deploy.listServers': async () => [],
       'deployWordPress.listSites': async () => [],
@@ -1063,11 +1068,13 @@ describe('DeployPage WordPress sites', () => {
       'cloudflare.status': async () => NO_CLOUDFLARE,
     });
     await again.user.click(await screen.findByRole('button', { name: /Manage Cloudflare/ }));
-    expect(await screen.findByRole('dialog', { name: 'Cloudflare' })).toBeTruthy();
-    expect(screen.getByTestId('path').textContent).toBe('/deploy?dialog=cloudflare');
+    expect(await screen.findByRole('heading', { name: 'Cloudflare' })).toBeTruthy();
+    expect(screen.getByTestId('path').textContent).toBe('/deploy?cloudflare=1');
+    // With nothing else to show, the rail is still there to leave the page by.
+    expect(screen.getByRole('navigation', { name: 'Servers' })).toBeTruthy();
   });
 
-  it('closes the Cloudflare dialog and stays on the server it was opened from', async () => {
+  it('opens the Cloudflare page from a server, and leaves it for another', async () => {
     const { user } = renderPage(
       {
         'deploy.listServers': async () => [server(), server({ id: 'srv-2', nickname: 'Staging' })],
@@ -1078,13 +1085,14 @@ describe('DeployPage WordPress sites', () => {
     expect(await screen.findByRole('heading', { name: 'Staging' })).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: /Cloudflare: domains and DNS/ }));
-    expect(await screen.findByRole('dialog', { name: 'Cloudflare' })).toBeTruthy();
-    expect(screen.getByTestId('path').textContent).toBe('/deploy?server=srv-2&dialog=cloudflare');
+    expect(await screen.findByRole('heading', { name: 'Cloudflare' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Staging' })).toBeNull();
+    expect(screen.getByTestId('path').textContent).toBe('/deploy?cloudflare=1');
 
-    await user.click(screen.getByRole('button', { name: 'Close' }));
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Cloudflare' })).toBeNull());
+    await user.click(screen.getByRole('button', { name: /Staging/ }));
+    expect(await screen.findByRole('heading', { name: 'Staging' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Cloudflare' })).toBeNull();
     expect(screen.getByTestId('path').textContent).toBe('/deploy?server=srv-2');
-    expect(screen.getByRole('heading', { name: 'Staging' })).toBeTruthy();
   });
 
   it('says why the sites did not load when there are no servers, and tries again', async () => {
@@ -1762,19 +1770,28 @@ describe('DeployPage coming back', () => {
     expect(screen.getByTestId('path').textContent).toBe('/deploy?server=srv-1');
   });
 
-  it('opens the Cloudflare dialog over what was open', async () => {
+  it('opens the Cloudflare page that was open', async () => {
+    await visit('/deploy?cloudflare=1', 'Cloudflare', {
+      'cloudflare.status': async () => NO_CLOUDFLARE,
+    });
+
+    renderPage({ ...SIGNED_OUT, 'cloudflare.status': async () => NO_CLOUDFLARE });
+    expect(await screen.findByRole('heading', { name: 'Cloudflare' })).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByTestId('path').textContent).toBe('/deploy?cloudflare=1'),
+    );
+  });
+
+  it('opens the Cloudflare page from an older dialog link, not what was open', async () => {
     await visit('/deploy?server=srv-2', 'Staging');
 
     renderPage(
       { ...SIGNED_OUT, 'cloudflare.status': async () => NO_CLOUDFLARE },
       '/deploy?dialog=cloudflare',
     );
-    expect(await screen.findByRole('dialog', { name: 'Cloudflare' })).toBeTruthy();
-    await waitFor(() =>
-      expect(screen.getByTestId('path').textContent).toBe('/deploy?server=srv-2&dialog=cloudflare'),
-    );
-    // The dialog is modal, so the page behind it is hidden from the accessibility tree.
-    expect(screen.getByRole('heading', { name: 'Staging', hidden: true })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Cloudflare' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Staging' })).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('does not bring back a site that was removed', async () => {

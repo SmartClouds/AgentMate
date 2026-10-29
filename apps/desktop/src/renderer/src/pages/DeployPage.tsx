@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { type SetURLSearchParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { CloudflareDialog } from '@/components/cloudflare/CloudflareDialog';
+import { CloudflareView } from '@/components/cloudflare/CloudflareView';
 import { CloudflareMark } from '@/components/cloudflare/CloudflareMark';
 import { AppStorePanel } from '@/components/deploy/appStore/AppStorePanel';
 import { AppsPanel } from '@/components/deploy/apps/AppsPanel';
@@ -351,20 +351,8 @@ export default function DeployPage(): React.JSX.Element {
     setUpdating((current) => (current === serverId ? null : current));
     setCoreUpdating((current) => (current === serverId ? null : current));
   });
-  // The Cloudflare dialog lives in the address. A link out of Deploy (point a domain, then add its
-  // website) takes the dialog away with the rest of it, and closing it keeps the server selected.
-  const cloudflareOpen = params.get('dialog') === 'cloudflare';
-  function setCloudflareOpen(open: boolean): void {
-    setParams(
-      (previous) => {
-        const next = new URLSearchParams(previous);
-        if (open) next.set('dialog', 'cloudflare');
-        else next.delete('dialog');
-        return next;
-      },
-      { replace: true },
-    );
-  }
+  // The Cloudflare page is picked like a server, so the address names it and nothing else.
+  const openCloudflare = () => setParams({ cloudflare: '1' }, { replace: true });
 
   // The servers and which of them were chosen both have to be in before the rail can list any. A
   // site asked for by the address, or no servers to fall back on: wait for the sites rather
@@ -439,9 +427,6 @@ export default function DeployPage(): React.JSX.Element {
       }}
     />
   );
-  const cloudflareDialog = (
-    <CloudflareDialog open={cloudflareOpen} onOpenChange={setCloudflareOpen} />
-  );
   const chooseDialog = (
     <ChooseServersDialog
       open={chooseOpen}
@@ -452,10 +437,14 @@ export default function DeployPage(): React.JSX.Element {
     />
   );
 
+  const selection = resolveSelection(params, servers, sites, fileSites);
+  // The Cloudflare page needs no server or site, and the rail shows the lists' failures itself.
+  const cloudflare = selection.kind === 'cloudflare';
+
   // A failure only stands in for the page when there is no server to pick either. With saved
   // servers still to choose from, the empty state below is the more useful way out.
   const noneSaved = saved.length === 0;
-  if (noneSaved && sitesQuery.isError && fileSites.length === 0) {
+  if (!cloudflare && noneSaved && sitesQuery.isError && fileSites.length === 0) {
     return (
       <PageFailure message={wpProblem(sitesQuery.error)} onRetry={() => void sitesQuery.refetch()}>
         {unlockDialog}
@@ -463,7 +452,7 @@ export default function DeployPage(): React.JSX.Element {
     );
   }
 
-  if (noneSaved && sites.length === 0 && fileSitesQuery.isError) {
+  if (!cloudflare && noneSaved && sites.length === 0 && fileSitesQuery.isError) {
     return (
       <PageFailure
         message={filesProblem(fileSitesQuery.error)}
@@ -474,7 +463,7 @@ export default function DeployPage(): React.JSX.Element {
     );
   }
 
-  if (servers.length === 0 && sites.length === 0 && fileSites.length === 0) {
+  if (!cloudflare && servers.length === 0 && sites.length === 0 && fileSites.length === 0) {
     return (
       <div className="flex flex-1 flex-col gap-2 p-2">
         <EmptyState
@@ -504,7 +493,7 @@ export default function DeployPage(): React.JSX.Element {
               <Button variant="soft" onClick={openAddFileSite}>
                 <CloudUpload className="h-3.5 w-3.5" /> Add an FTP or SFTP site
               </Button>
-              <Button variant="soft" onClick={() => setCloudflareOpen(true)}>
+              <Button variant="soft" onClick={openCloudflare}>
                 <CloudflareMark className="h-3.5 w-3.5" /> Manage Cloudflare
               </Button>
             </div>
@@ -512,7 +501,6 @@ export default function DeployPage(): React.JSX.Element {
         />
         <ConnectorDownloadCard />
         {connectDialog}
-        {cloudflareDialog}
         {fileFormDialog}
         {chooseDialog}
       </div>
@@ -520,7 +508,6 @@ export default function DeployPage(): React.JSX.Element {
   }
 
   const locked = vaultQuery.data?.hasPasskey === true && !vaultQuery.data.unlocked;
-  const selection = resolveSelection(params, servers, sites, fileSites);
   /**
    * With no server in the address the page shows the first one in the rail, so a drag that moves
    * that server would switch the page to another. Pinning the one on screen keeps it where it is.
@@ -544,7 +531,7 @@ export default function DeployPage(): React.JSX.Element {
     onSelectSite: (siteId: string) => setParams({ site: siteId }, { replace: true }),
     onRetrySites: () => void sitesQuery.refetch(),
     onConnectSite: () => setConnectOpen(true),
-    onOpenCloudflare: () => setCloudflareOpen(true),
+    onOpenCloudflare: openCloudflare,
     fileSites,
     fileSitesLoading: fileSitesQuery.isPending,
     fileSitesError: fileSitesQuery.isError ? filesProblem(fileSitesQuery.error) : null,
@@ -552,6 +539,19 @@ export default function DeployPage(): React.JSX.Element {
     onRetryFileSites: () => void fileSitesQuery.refetch(),
     onAddFileSite: openAddFileSite,
   };
+
+  if (selection.kind === 'cloudflare') {
+    // No Deploy AI here: Cloudflare is account wide, not one server's core.
+    return (
+      <DeployLayout rail={<ServerRail {...railProps} selectedId={null} cloudflareSelected />}>
+        <CloudflareView />
+        {connectDialog}
+        {unlockDialog}
+        {fileFormDialog}
+        {chooseDialog}
+      </DeployLayout>
+    );
+  }
 
   if (selection.kind === 'files') {
     const fileSite = selection.site;
@@ -581,7 +581,6 @@ export default function DeployPage(): React.JSX.Element {
         />
         {connectDialog}
         {unlockDialog}
-        {cloudflareDialog}
         {fileFormDialog}
         {chooseDialog}
       </DeployLayout>
@@ -617,7 +616,6 @@ export default function DeployPage(): React.JSX.Element {
         />
         {connectDialog}
         {unlockDialog}
-        {cloudflareDialog}
         {fileFormDialog}
         {chooseDialog}
       </DeployLayout>
@@ -739,7 +737,6 @@ export default function DeployPage(): React.JSX.Element {
       {sections && <AssistantLauncher server={selected} />}
       {connectDialog}
       {unlockDialog}
-      {cloudflareDialog}
       {fileFormDialog}
       {chooseDialog}
     </>

@@ -6,7 +6,7 @@ import type {
   CloudflareZoneSettings,
 } from '@shared/cloudflareTypes';
 
-/** Sample data for the Cloudflare dialog's component tests. */
+/** Sample data for the Cloudflare page's component tests. */
 
 export const ZONE: CloudflareZone = {
   id: '023e105f4ecef8ad9ca31a8372d0c353',

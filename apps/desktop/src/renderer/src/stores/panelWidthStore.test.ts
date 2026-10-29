@@ -27,7 +27,6 @@ describe('panelWidthStore', () => {
 
   it('picks up the widths saved under the old keys', async () => {
     localStorage.setItem('runova-deploy-rail', JSON.stringify({ state: { width: 300 } }));
-    localStorage.setItem('runova-cloudflare-rail', JSON.stringify({ state: { width: 310 } }));
     localStorage.setItem(
       'runova-catalog-layout',
       JSON.stringify({ state: { widths: { mcpRepositories: 280, unknownPanel: 999 } } }),
@@ -40,7 +39,6 @@ describe('panelWidthStore', () => {
     const { usePanelWidthStore } = await freshStore();
     expect(usePanelWidthStore.getState().widths).toEqual({
       deployRail: 300,
-      cloudflareRail: 310,
       mcpRepositories: 280,
       vaultList: 400,
       remoteFilesPlaces: 250,
@@ -67,8 +65,11 @@ describe('panelWidthStore', () => {
 
   it('skips an old value that no longer parses', async () => {
     localStorage.setItem('runova-deploy-rail', '{not json');
-    localStorage.setItem('runova-cloudflare-rail', JSON.stringify({ state: { width: 310 } }));
+    localStorage.setItem(
+      'runova-pane-layout',
+      JSON.stringify({ state: { widths: { vaultList: 400 } } }),
+    );
     const { usePanelWidthStore } = await freshStore();
-    expect(usePanelWidthStore.getState().widths).toEqual({ cloudflareRail: 310 });
+    expect(usePanelWidthStore.getState().widths).toEqual({ vaultList: 400 });
   });
 });

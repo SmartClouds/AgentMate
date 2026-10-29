@@ -1,9 +1,10 @@
-import type { ParamReader } from './railSelection';
+import { isCloudflare, type ParamReader } from './railSelection';
 
 /**
  * What the Deploy page had open, kept so that coming back to a bare `/deploy` (the sidebar link)
- * opens it again rather than the first server's Overview. An address that names a server or a
- * site always wins, and one-shot params (a dialog, a site to add, a fix to offer) are not kept.
+ * opens it again rather than the first server's Overview. An address that names a server, a site
+ * or the Cloudflare page always wins, and one-shot params (a Cloudflare account to show, a site to
+ * add, a fix to offer) are not kept.
  */
 
 /** The params that say what is open: the selection, its section and what is open inside it. */
@@ -11,6 +12,8 @@ const KEPT = [
   'server',
   'site',
   'files',
+  'cloudflare',
+  'zone',
   'view',
   'tab',
   'app',
@@ -21,7 +24,7 @@ const KEPT = [
   'target',
 ] as const;
 
-const SELECTION = ['server', 'site', 'files'] as const;
+const SELECTION = ['server', 'site', 'files', 'cloudflare'] as const;
 
 function named(params: ParamReader): boolean {
   return SELECTION.some((name) => params.get(name) !== null);
@@ -38,18 +41,14 @@ export function rememberable(params: URLSearchParams): string | null {
 }
 
 /**
- * The address to open in place of one that names nothing, or null to leave it. A Cloudflare
- * dialog the address asks for stays open over what comes back.
+ * The address to open in place of one that names nothing, or null to leave it. An older
+ * `?dialog=cloudflare` link names the Cloudflare page, so it is left alone too.
  */
 export function restoreTarget(
   params: URLSearchParams,
   remembered: string | null,
 ): URLSearchParams | null {
-  if (!remembered || named(params)) return null;
+  if (!remembered || named(params) || isCloudflare(params)) return null;
   const kept = rememberable(new URLSearchParams(remembered));
-  if (!kept) return null;
-  const target = new URLSearchParams(kept);
-  const dialog = params.get('dialog');
-  if (dialog !== null) target.set('dialog', dialog);
-  return target;
+  return kept ? new URLSearchParams(kept) : null;
 }
