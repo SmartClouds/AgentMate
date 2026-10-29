@@ -138,7 +138,7 @@ export function PurgeCard({ zone }: { zone: CloudflareZone }): React.JSX.Element
   return (
     <CloudflareCard
       icon={<Bolt />}
-      title="Cache"
+      title="Purge cache"
       description="Cloudflare keeps copies of your files close to visitors. Purge them when a change does not show up."
     >
       <CardBody className="space-y-3">

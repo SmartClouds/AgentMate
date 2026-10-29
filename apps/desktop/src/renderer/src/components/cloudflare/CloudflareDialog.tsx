@@ -1,6 +1,6 @@
 import { cloudflareErrorMessage } from '@shared/cloudflareErrors';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Lock, Plus } from '@/components/icons';
 import { FOOTER_HAIRLINE, GLASS_CARD, GLASS_PANEL } from '@/components/pageKit';
@@ -23,7 +23,7 @@ import { CloudflareMark } from './CloudflareMark';
 import { Notice, Problem } from './fields';
 import { TokenSetupCard } from './TokenSetupCard';
 import { TokenStatusCard } from './TokenStatusCard';
-import { isZoneTab, ZonePanel, type ZoneTab } from './ZonePanel';
+import { ZonePanel, zoneTab } from './ZonePanel';
 import { type ZoneGroup, ZoneRail } from './ZoneRail';
 
 /**
@@ -64,7 +64,11 @@ function CloudflareSkeleton(): React.JSX.Element {
  * Connecting an account is drawn here too, never in a second dialog on top: beside the domain
  * list when there is one, and on its own when there is not.
  */
-function CloudflareContent(): React.JSX.Element {
+function CloudflareContent({
+  searchRef,
+}: {
+  searchRef: React.RefObject<HTMLInputElement | null>;
+}): React.JSX.Element {
   const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
   // The account whose token is being replaced, or `true` while another account is being added.
@@ -110,8 +114,7 @@ function CloudflareContent(): React.JSX.Element {
   }));
   const allZones = groups.flatMap((group) => group.zones ?? []);
   const selected = allZones.find((zone) => zone.id === params.get('zone')) ?? allZones[0];
-  const requestedTab = params.get('tab');
-  const tab: ZoneTab = isZoneTab(requestedTab) ? requestedTab : 'dns';
+  const tab = zoneTab(params.get('tab'));
   // The token card shown above the zone: the one asked for, else the selected zone's account.
   const requestedAccount = params.get('account');
   const managed =
@@ -215,6 +218,7 @@ function CloudflareContent(): React.JSX.Element {
       >
         <ZoneRail
           groups={groups}
+          searchRef={searchRef}
           selectedId={selected?.id ?? null}
           onSelect={(zone) => {
             setSetup(null);
@@ -296,20 +300,45 @@ export function CloudflareDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }): React.JSX.Element {
+  const searchRef = useRef<HTMLInputElement>(null);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* Two rows (title, then the content), so no empty third row leaves a gap at the bottom. */}
-      <DialogContent className="h-[min(85vh,48rem)] w-[calc(100vw-2rem)] max-w-5xl grid-rows-[auto_minmax(0,1fr)]">
+      <DialogContent
+        className="h-[min(85vh,48rem)] w-[calc(100vw-2rem)] max-w-5xl grid-rows-[auto_minmax(0,1fr)]"
+        onEscapeKeyDown={(event) => {
+          // Escape in the domain search with text in it clears the search, not the dialog.
+          // Radix hears Escape before the box does, so the box cannot stop it on its own.
+          const search = searchRef.current;
+          if (search && event.target === search && search.value) event.preventDefault();
+        }}
+        onKeyDown={(event) => {
+          // Ctrl+F (Cmd+F on a Mac) finds a domain, wherever focus is in the dialog. A dialog
+          // opened on top is portaled outside this one, so its keys are left to it.
+          const search = searchRef.current;
+          if (
+            search &&
+            event.key.toLowerCase() === 'f' &&
+            (event.ctrlKey || event.metaKey) &&
+            !event.altKey &&
+            event.currentTarget.contains(event.target as Node)
+          ) {
+            event.preventDefault();
+            search.focus();
+            search.select();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CloudflareMark className="h-5 w-5" /> Cloudflare
           </DialogTitle>
           <DialogDescription>
-            Your domains on Cloudflare: DNS, settings and security rules.
+            Your domains on Cloudflare: DNS, SSL/TLS, caching and security rules.
           </DialogDescription>
         </DialogHeader>
         <div className="flex min-h-0 flex-col">
-          <CloudflareContent />
+          <CloudflareContent searchRef={searchRef} />
         </div>
       </DialogContent>
     </Dialog>

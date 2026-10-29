@@ -30,7 +30,7 @@ The permissions the token should have:
 | --- | --- |
 | Zone > Zone > Read | See your domains |
 | Zone > DNS > Edit | Add, change and remove DNS records |
-| Zone > Zone Settings > Edit | Development mode, security level, SSL/TLS mode and Always Use HTTPS |
+| Zone > Zone Settings > Edit | Development mode, security level, SSL/TLS and caching settings |
 | Zone > Cache Purge > Purge | Purge cached files |
 | Zone > Zone WAF > Edit | WAF custom rules |
 | Zone > Firewall Services > Edit | IP access rules |
@@ -70,9 +70,21 @@ If you used Runova before accounts existed, your saved token shows up as one acc
 
 On the left, the **Domains** rail lists every zone your connected tokens can see with its state: **Active**, **Waiting for name servers**, **Setting up**, **Moved away** or **Paused**. Click one to manage it. If the list is empty, the token cannot see any domains yet: add a domain on Cloudflare, or include it under Zone Resources on the token.
 
+With two domains or more, a **Search domains** box sits at the top of the rail. Type part of a name, or paste a whole address such as `https://www.example.com/pricing` (the scheme, `www.` and the path are ignored). The rail keeps only the matching domains, marks the matching part of each name, and the count reads like **2 of 14**. With several accounts, an account with no matches is left out while you search, but one whose list failed to load stays so you can see the problem.
+
+- `Ctrl+F` (`Cmd+F` on a Mac) jumps to the box from anywhere in the dialog.
+- `Enter` opens the first match.
+- The down arrow moves from the box into the list, and the arrows move along it. Up from the first domain goes back to the box.
+- `Escape` or the **Clear filter** button empties the box. The domain you have open stays open even when the search hides it.
+
 At the top of a zone you see its name, its plan and a state badge. For a zone waiting for name servers, a notice shows the name servers your registrar must use. Until then, changes here do not reach visitors.
 
-A zone has four tabs: **DNS**, **Settings**, **Security** and **Servers**.
+Two quick switches sit on the right of the zone's header, so they are one click away from every tab:
+
+- **Development mode** shows **Off**, or **On** with the time left.
+- **I'm Under Attack** turns Cloudflare's strongest check on for every visitor. Turning it off puts the security level back where it was before (Medium if Runova does not know).
+
+A zone has five tabs: **DNS**, **SSL/TLS**, **Caching**, **Security** and **Servers**. An older link to the Settings tab opens SSL/TLS.
 
 ## DNS tab
 
@@ -102,25 +114,38 @@ The **DNS records** card lists every record in the zone with its **Type**, **Nam
 5. Click **Apply N changes**. Everything runs as one batch on Cloudflare, and running it again finds nothing to change.
 6. A final screen offers **Add a website on <server>**. It closes this dialog and opens that server's Websites section with a new site already filled in with those names. See [Websites and certificates](deploy-websites-certificates.md).
 
-If you proxy the records and Cloudflare's SSL/TLS mode is weak (Off or Flexible, or Full without strict), the preview adds a warning that you can fix under **Settings**.
+If you proxy the records and Cloudflare's SSL/TLS mode is weak (Off or Flexible, or Full without strict), the preview adds a warning that you can fix on the **SSL/TLS** tab.
 
-## Settings tab
+## SSL/TLS tab
 
-The **Settings** card applies to everything in the zone, and changes apply within seconds.
+These settings apply to everything in the zone, and changes apply within seconds. A setting your plan cannot change is shown but locked.
+
+- **Encryption mode** sets how Cloudflare connects to your server for proxied records. Each of the four cards (Off (no HTTPS), Flexible, Full and Full (strict)) draws the trip from the visitor through Cloudflare to your server, with a closed lock on each leg that is encrypted and an open one on each leg that is not. Click a card, or move between them with the arrow keys and press `Enter`. Advice under the cards explains the risk of the current mode, and **Use Full (strict)** switches in one click. Full (strict) needs a trusted certificate on the server, such as one from Let's Encrypt. A zone on Strict (SSL-only origin pull), which only Cloudflare can set, says so.
+- **Always Use HTTPS** sends visitors who ask for `http://` to the `https://` address.
+- **Automatic HTTPS Rewrites** fixes mixed content by loading `http://` links on your pages over `https://`.
+- **Minimum TLS version** is the oldest version a browser may connect with (TLS 1.0 to 1.3). At 1.0 or 1.1 a note suggests 1.2, with **Use TLS 1.2** to switch.
+- **TLS 1.3** turns the newest version on or off. If Cloudflare has 0-RTT on, a **0-RTT** badge shows next to it.
+
+## Caching tab
+
+The **Caching** card:
 
 - **Development mode** skips the cache for three hours so changes show at once. It shows the time left.
-- **Security level** sets how suspicious a visitor has to look before Cloudflare checks them: Off, Essentially off, Low, Medium, High or I'm Under Attack. Under Attack shows every visitor a short check, with a reminder to turn it down afterwards.
-- **SSL/TLS mode** sets how Cloudflare connects to your server for proxied records: Off (no HTTPS), Flexible, Full or Full (strict). Advice under it explains the risk of the current mode. **Use Full (strict)** switches in one click. Full (strict) needs a trusted certificate on the server, such as one from Let's Encrypt.
-- **Always Use HTTPS** sends visitors who ask for `http://` to the `https://` address.
+- **Caching level** decides which addresses count as the same cached file: **Standard** (a separate copy for every query string), **Ignore query string** (one copy whatever the query string) or **No query string** (only addresses without one are cached).
+- **Browser cache TTL** is how long a visitor's browser keeps files before asking again, from 30 seconds to 1 year. **Respect existing headers** follows your server's own cache headers. Some short values need a paid plan, and Cloudflare says so if yours cannot use them.
 
-The **Cache** card below it purges Cloudflare's cached copies.
+The **Purge cache** card below it purges Cloudflare's cached copies.
 
 - **Purge these URLs**: paste one full URL per line (up to 30) and click the button.
 - **Purge everything**: removes every cached file at once, so the next visits all reach your server. You must type the domain's name to confirm.
 
 ## Security tab
 
-Two cards manage who can reach the zone.
+Three cards manage who can reach the zone.
+
+### Protection
+
+**Security level** sets how suspicious a visitor has to look before Cloudflare checks them: Off, Essentially off, Low, Medium, High or I'm Under Attack. Under Attack shows every visitor a short check, with a reminder to turn it down afterwards. The header's **I'm Under Attack** switch changes the same setting.
 
 ### WAF custom rules
 

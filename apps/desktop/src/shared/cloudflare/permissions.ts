@@ -49,7 +49,7 @@ export const CLOUDFLARE_PERMISSIONS: readonly CloudflarePermission[] = [
   {
     id: 'zoneSettings',
     label: 'Zone > Zone Settings > Edit',
-    purpose: 'Development mode, security level, SSL/TLS mode and Always Use HTTPS',
+    purpose: 'Development mode, security level, SSL/TLS and caching settings',
     action: 'change zone settings',
     template: { key: 'zone_settings', type: 'edit' },
     apiNames: ['Zone Settings Write'],

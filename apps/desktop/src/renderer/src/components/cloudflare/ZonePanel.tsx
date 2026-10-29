@@ -5,33 +5,42 @@ import { Chip, FOOTER_HAIRLINE, GLASS_CARD } from '@/components/pageKit';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { AccessRulesCard } from './AccessRulesCard';
+import { CachingCard } from './CachingCard';
 import { CustomRulesCard } from './CustomRulesCard';
 import { DnsRecordsCard } from './DnsRecordsCard';
 import { Notice } from './fields';
 import { PurgeCard } from './PurgeCard';
+import { SecurityLevelCard } from './SecurityLevelCard';
+import { SslTlsCard } from './SslTlsCard';
 import { DnsTokensCard } from './server/DnsTokensCard';
+import { ZoneQuickToggles } from './ZoneQuickToggles';
 import { zoneStateText } from './ZoneRail';
-import { ZoneSettingsCard } from './ZoneSettingsCard';
 
-export type ZoneTab = 'dns' | 'settings' | 'security' | 'servers';
-
-export function isZoneTab(value: string | null): value is ZoneTab {
-  return value === 'dns' || value === 'settings' || value === 'security' || value === 'servers';
-}
+export type ZoneTab = 'dns' | 'ssl' | 'caching' | 'security' | 'servers';
 
 const TABS: { value: ZoneTab; label: string }[] = [
   { value: 'dns', label: 'DNS' },
-  { value: 'settings', label: 'Settings' },
+  { value: 'ssl', label: 'SSL/TLS' },
+  { value: 'caching', label: 'Caching' },
   { value: 'security', label: 'Security' },
   { value: 'servers', label: 'Servers' },
 ];
+
+/**
+ * The tab an address asks for, else DNS. Settings was split into SSL/TLS and Caching, so an older
+ * link to it opens SSL/TLS, where the SSL/TLS mode it used to show still is.
+ */
+export function zoneTab(value: string | null): ZoneTab {
+  if (value === 'settings') return 'ssl';
+  return TABS.find((tab) => tab.value === value)?.value ?? 'dns';
+}
 
 /** The tab content sits straight under the header card, spaced like every other card. */
 const CONTENT = 'mt-0 flex flex-col gap-2 focus-visible:ring-offset-0';
 
 /**
- * One zone: its state and, by tab, its DNS records, its settings and cache, its rules, and the
- * DNS tokens its servers hold for DNS-01.
+ * One zone: its state with the two switches an emergency needs, and by tab its DNS records, its
+ * SSL/TLS, its caching, its rules, and the DNS tokens its servers hold for DNS-01.
  */
 export function ZonePanel({
   zone,
@@ -68,6 +77,7 @@ export function ZonePanel({
               {zone.plan || 'Cloudflare zone'}
             </p>
           </div>
+          <ZoneQuickToggles zone={zone} />
         </div>
         {zone.status === 'pending' && (
           <div className="px-4 pb-3">
@@ -121,11 +131,15 @@ export function ZonePanel({
       <TabsContent value="dns" className={CONTENT}>
         <DnsRecordsCard zone={zone} />
       </TabsContent>
-      <TabsContent value="settings" className={CONTENT}>
-        <ZoneSettingsCard zone={zone} />
+      <TabsContent value="ssl" className={CONTENT}>
+        <SslTlsCard zone={zone} />
+      </TabsContent>
+      <TabsContent value="caching" className={CONTENT}>
+        <CachingCard zone={zone} />
         <PurgeCard zone={zone} />
       </TabsContent>
       <TabsContent value="security" className={CONTENT}>
+        <SecurityLevelCard zone={zone} />
         <CustomRulesCard zone={zone} />
         <AccessRulesCard zone={zone} />
       </TabsContent>

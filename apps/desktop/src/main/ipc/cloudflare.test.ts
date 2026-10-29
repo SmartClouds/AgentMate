@@ -134,6 +134,20 @@ describe('registerCloudflareHandlers', () => {
     for (const name of Object.keys(IPC.cloudflare)) expect(service[name], name).toHaveBeenCalled();
   });
 
+  it('passes the SSL/TLS and caching settings through with their values', async () => {
+    const { service, call } = harness();
+    const changes = [
+      { setting: 'automaticHttpsRewrites', value: 'on' },
+      { setting: 'minTlsVersion', value: '1.2' },
+      { setting: 'tls13', value: 'off' },
+      { setting: 'cacheLevel', value: 'basic' },
+      { setting: 'browserCacheTtl', value: 14400 },
+      { setting: 'browserCacheTtl', value: 0 },
+    ];
+    for (const change of changes) await call(IPC.cloudflare.changeSetting, ZONE, change);
+    expect(service.changeSetting.mock.calls).toEqual(changes.map((change) => [ZONE, change]));
+  });
+
   it('refuses ids that are not Cloudflare ids', async () => {
     const { service, call } = harness();
     for (const id of [42, '', 'x'.repeat(32), '../zones', `${ZONE}/dns_records`, null]) {
@@ -207,6 +221,19 @@ describe('registerCloudflareHandlers', () => {
     await expect(
       call(IPC.cloudflare.changeSetting, ZONE, { setting: 'minify', value: 'on' }),
     ).rejects.toThrow(/setting/);
+    for (const change of [
+      { setting: 'browserCacheTtl', value: 12345 },
+      { setting: 'browserCacheTtl', value: '14400' },
+      { setting: 'cacheLevel', value: 'cache_everything' },
+      { setting: 'tls13', value: 'zrt' },
+      { setting: 'minTlsVersion', value: 1.2 },
+      { setting: 'developmentMode', value: 1 },
+    ]) {
+      await expect(
+        call(IPC.cloudflare.changeSetting, ZONE, change),
+        change.setting,
+      ).rejects.toThrow(/setting/);
+    }
     await expect(call(IPC.cloudflare.purgeCache, ZONE, { everything: 'yes' })).rejects.toThrow(
       /purge/,
     );

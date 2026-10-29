@@ -139,18 +139,35 @@ export type CloudflareSecurityLevel =
 /** `origin_pull` is Enterprise's "Strict (SSL-Only Origin Pull)"; the page only shows it. */
 export type CloudflareSslMode = 'off' | 'flexible' | 'full' | 'strict' | 'origin_pull';
 
+/** Cloudflare's dashboard calls these No query string, Ignore query string and Standard. */
+export type CloudflareCacheLevel = 'basic' | 'simplified' | 'aggressive';
+
+export type CloudflareMinTlsVersion = '1.0' | '1.1' | '1.2' | '1.3';
+
 export interface CloudflareZoneSettings {
   developmentMode: { value: 'on' | 'off'; secondsRemaining: number; editable: boolean };
   securityLevel: { value: CloudflareSecurityLevel; editable: boolean };
   ssl: { value: CloudflareSslMode; editable: boolean };
   alwaysUseHttps: { value: 'on' | 'off'; editable: boolean };
+  automaticHttpsRewrites: { value: 'on' | 'off'; editable: boolean };
+  minTlsVersion: { value: CloudflareMinTlsVersion; editable: boolean };
+  /** `zrt` is TLS 1.3 with 0-RTT, which only Cloudflare turns on; the page sets on or off. */
+  tls13: { value: 'on' | 'off' | 'zrt'; editable: boolean };
+  cacheLevel: { value: CloudflareCacheLevel; editable: boolean };
+  /** Seconds a browser keeps a file; 0 respects the server's own headers. */
+  browserCacheTtl: { value: number; editable: boolean };
 }
 
 export type CloudflareSettingChange =
   | { setting: 'developmentMode'; value: 'on' | 'off' }
   | { setting: 'securityLevel'; value: CloudflareSecurityLevel }
   | { setting: 'ssl'; value: Exclude<CloudflareSslMode, 'origin_pull'> }
-  | { setting: 'alwaysUseHttps'; value: 'on' | 'off' };
+  | { setting: 'alwaysUseHttps'; value: 'on' | 'off' }
+  | { setting: 'automaticHttpsRewrites'; value: 'on' | 'off' }
+  | { setting: 'minTlsVersion'; value: CloudflareMinTlsVersion }
+  | { setting: 'tls13'; value: 'on' | 'off' }
+  | { setting: 'cacheLevel'; value: CloudflareCacheLevel }
+  | { setting: 'browserCacheTtl'; value: number };
 
 export type CloudflarePurgeRequest = { everything: true } | { urls: string[] };
 

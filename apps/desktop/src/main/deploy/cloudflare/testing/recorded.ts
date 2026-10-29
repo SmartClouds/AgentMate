@@ -101,7 +101,7 @@ export const dnsRecord = {
   modified_on: STAMP,
 };
 
-/** GET /zones/:id/settings/:setting, for the four settings the page manages. */
+/** GET /zones/:id/settings/:setting, for the settings the page manages. */
 export const settings = {
   development_mode: {
     id: 'development_mode',
@@ -114,6 +114,16 @@ export const settings = {
   ssl: { id: 'ssl', value: 'full', editable: true, modified_on: null },
   always_use_https: { id: 'always_use_https', value: 'off', editable: true, modified_on: null },
   tls_client_auth: { id: 'tls_client_auth', value: 'off', editable: true, modified_on: null },
+  automatic_https_rewrites: {
+    id: 'automatic_https_rewrites',
+    value: 'off',
+    editable: true,
+    modified_on: null,
+  },
+  min_tls_version: { id: 'min_tls_version', value: '1.0', editable: true, modified_on: null },
+  tls_1_3: { id: 'tls_1_3', value: 'on', editable: true, modified_on: null },
+  cache_level: { id: 'cache_level', value: 'aggressive', editable: true, modified_on: null },
+  browser_cache_ttl: { id: 'browser_cache_ttl', value: 14400, editable: true, modified_on: null },
 };
 
 /** Cloudflare's ids for the permission groups the app names (GET /user/tokens/permission_groups). */

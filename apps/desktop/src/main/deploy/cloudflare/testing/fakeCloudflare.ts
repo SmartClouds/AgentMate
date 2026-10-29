@@ -1,3 +1,4 @@
+import { BROWSER_CACHE_TTLS } from '../../../../shared/cloudflare/zone';
 import type {
   CloudflareAnyPermissionId,
   CloudflarePermissionId,
@@ -90,6 +91,11 @@ const SETTING_VALUES: Record<string, readonly string[]> = {
   ssl: ['off', 'flexible', 'full', 'strict'],
   always_use_https: ['on', 'off'],
   tls_client_auth: ['on', 'off'],
+  automatic_https_rewrites: ['on', 'off'],
+  min_tls_version: ['1.0', '1.1', '1.2', '1.3'],
+  tls_1_3: ['on', 'off', 'zrt'],
+  cache_level: ['bypass', 'basic', 'simplified', 'aggressive', 'cache_everything'],
+  browser_cache_ttl: BROWSER_CACHE_TTLS.map(String),
 };
 const ADDRESS_TYPES = new Set(['A', 'AAAA', 'CNAME']);
 
@@ -451,13 +457,14 @@ export function createFakeCloudflare(options: {
     }
     if (rest === '') return ok(state.zone);
 
-    const setting = rest.match(/^\/settings\/([a-z_]+)$/);
+    const setting = rest.match(/^\/settings\/([a-z0-9_]+)$/);
     if (setting) {
       const current = state.settings[setting[1]];
       if (!current) return fail(404, 1006, 'Unrecognized zone setting name');
       if (method === 'GET') return ok(current);
-      const value = String(body.value);
-      if (!SETTING_VALUES[setting[1]].includes(value)) {
+      // Cloudflare takes the TTL as a number and the rest as text, and answers the same way.
+      const value = body.value;
+      if (!SETTING_VALUES[setting[1]].includes(String(value))) {
         return fail(400, 1007, `Invalid value for zone setting ${setting[1]}`);
       }
       state.settings[setting[1]] = {

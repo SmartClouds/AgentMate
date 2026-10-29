@@ -70,6 +70,11 @@ describe('sparse answers', () => {
       security_level: { id: 'security_level', value: 7 },
       ssl: { id: 'ssl' },
       always_use_https: { id: 'always_use_https', value: 'on', editable: false },
+      automatic_https_rewrites: { id: 'automatic_https_rewrites' },
+      min_tls_version: { id: 'min_tls_version', value: 12 },
+      tls_1_3: { id: 'tls_1_3' },
+      cache_level: { id: 'cache_level' },
+      browser_cache_ttl: { id: 'browser_cache_ttl', value: '14400' },
     };
     for (const key of ['status', 'paused', 'plan', 'name_servers']) delete state.zone[key];
 
@@ -78,6 +83,11 @@ describe('sparse answers', () => {
       securityLevel: { value: 'medium', editable: true },
       ssl: { value: 'off', editable: true },
       alwaysUseHttps: { value: 'on', editable: false },
+      automaticHttpsRewrites: { value: 'off', editable: true },
+      minTlsVersion: { value: '1.0', editable: true },
+      tls13: { value: 'off', editable: true },
+      cacheLevel: { value: 'aggressive', editable: true },
+      browserCacheTtl: { value: 0, editable: true },
     });
     expect(await service.listZones(ACCOUNT)).toEqual([
       {

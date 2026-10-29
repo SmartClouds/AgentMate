@@ -93,10 +93,10 @@ async function deployFromHeader(user: ReturnType<typeof renderButton>['user']) {
 }
 
 describe('WorkspaceDeployButton', () => {
-  it('reads Deploy and names the project and the site in its tooltip', async () => {
+  it('is an icon alone and names the project and the site in its tooltip', async () => {
     const { user } = renderButton();
     const button = await readyButton();
-    expect(button).toHaveTextContent('Deploy');
+    expect(button).toHaveTextContent(/^$/);
     expect(button).toBeEnabled();
     expect(button).toHaveAttribute('aria-haspopup', 'dialog');
     expect(await tooltipFor(user, button)).toHaveTextContent(
@@ -133,7 +133,7 @@ describe('WorkspaceDeployButton', () => {
     );
     // The open dialog hides the rest of the window from the accessibility tree.
     const running = screen.getByRole('button', { name: 'Deploying to Acme Live', hidden: true });
-    expect(running).toHaveTextContent('Deploying');
+    expect(running).toHaveTextContent(/^$/);
     // Nothing reported yet, so the bar is there and empty.
     expect(screen.getByTestId('deploy-progress')).toHaveAttribute('data-progress', '0');
 
@@ -143,7 +143,7 @@ describe('WorkspaceDeployButton', () => {
       name: 'Deploy to Acme Live. Last deploy: Deployed',
       hidden: true,
     });
-    expect(after).toHaveTextContent(/^Deploy$/);
+    expect(after).toHaveTextContent(/^$/);
     expect(screen.queryByTestId('deploy-progress')).toBeNull();
   });
 
@@ -169,8 +169,8 @@ describe('WorkspaceDeployButton', () => {
     const running = screen.getByRole('button', { name: 'Deploying to Acme Live' });
     // Upload is the third of seven steps, two fifths through: (2 + 0.4) / 7.
     expect(screen.getByTestId('deploy-progress')).toHaveAttribute('data-progress', '34');
-    // No count on the pill, so its width holds while the numbers change.
-    expect(running).toHaveTextContent(/^Deploying$/);
+    // No count on the button, so its size holds while the numbers change.
+    expect(running).toHaveTextContent(/^$/);
     expect(await focusTooltip(running)).toHaveTextContent(
       'Deploying to Acme Live: Uploading the changes (2 of 5). Click to see progress',
     );

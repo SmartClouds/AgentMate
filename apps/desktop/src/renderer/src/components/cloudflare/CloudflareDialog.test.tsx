@@ -16,7 +16,7 @@ import {
 
 /**
  * The Cloudflare dialog, opened over the Deploy page: account wide, so it starts from the token,
- * then lists the zones it can see, and for the picked zone its DNS, settings and security rules.
+ * then lists the zones it can see, and for the picked zone its DNS, SSL/TLS, caching and security rules.
  * Every state says what is going on in words, and loading shimmers card by card.
  */
 
@@ -95,12 +95,42 @@ describe('CloudflareDialog', () => {
 
     expect(await screen.findByRole('heading', { name: 'example.org' })).toBeInTheDocument();
     expect(screen.getByText(/bob\.ns\.cloudflare\.com/)).toBeInTheDocument();
-    await user.click(screen.getByRole('tab', { name: 'Settings' }));
-    expect(await screen.findByLabelText('Security level')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Cache' })).toBeInTheDocument();
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'DNS',
+      'SSL/TLS',
+      'Caching',
+      'Security',
+      'Servers',
+    ]);
+    await user.click(screen.getByRole('tab', { name: 'SSL/TLS' }));
+    expect(await screen.findByRole('radiogroup', { name: 'Encryption mode' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Minimum TLS version')).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'Caching' }));
+    expect(await screen.findByRole('radiogroup', { name: 'Caching level' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Purge cache' })).toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: 'Security' }));
+    expect(await screen.findByLabelText('Security level')).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'WAF custom rules' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'IP access rules' })).toBeInTheDocument();
+    const address = new URLSearchParams(screen.getByTestId('address').textContent?.split('?')[1]);
+    expect(address.get('tab')).toBe('security');
+  });
+
+  it('opens an old Settings link on the SSL/TLS tab', async () => {
+    renderDialog({}, `/deploy?dialog=cloudflare&zone=${ZONE.id}&tab=settings`);
+    expect(await screen.findByRole('tab', { name: 'SSL/TLS' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+
+  it("puts development mode and I'm Under Attack in the zone header, on every tab", async () => {
+    const { user } = renderDialog();
+    const quick = await screen.findByRole('group', { name: 'Quick switches' });
+    expect(within(quick).getByRole('switch', { name: 'Development mode' })).toBeInTheDocument();
+    expect(within(quick).getByRole('switch', { name: "I'm Under Attack" })).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'Security' }));
+    expect(screen.getByRole('group', { name: 'Quick switches' })).toBeInTheDocument();
   });
 
   it('marks the open zone in the rail', async () => {
@@ -261,6 +291,127 @@ describe('CloudflareDialog', () => {
     expect(screen.getByRole('button', { name: 'Replace token' })).toBeInTheDocument();
   });
 
+  describe('searching the domains', () => {
+    const SHOP = { ...ZONE, id: '5f0d4f8b3a2c4e6d8f1a2b3c4d5e6f70', name: 'shop.example.net' };
+    const three = { 'cloudflare.listZones': async () => [ZONE, OTHER_ZONE, SHOP] };
+
+    async function railOf() {
+      const rail = await screen.findByRole('navigation', { name: 'Zones' });
+      await within(rail).findByText('example.com');
+      return rail;
+    }
+
+    it('filters the domains as you type, counts what matches and marks the match', async () => {
+      const { user } = renderDialog(three);
+      const rail = await railOf();
+      expect(within(rail).getByText('3')).toBeInTheDocument();
+
+      await user.type(within(rail).getByRole('searchbox', { name: 'Search domains' }), 'ORG');
+
+      expect(within(rail).getAllByRole('button', { name: /example\./ })).toHaveLength(1);
+      expect(within(rail).getByRole('button', { name: /example\.org/ })).toBeInTheDocument();
+      expect(within(rail).getByText('1 of 3')).toBeInTheDocument();
+      expect(rail.querySelector('mark')).toHaveTextContent(/^org$/);
+    });
+
+    it('reads a pasted address as the domain in it', async () => {
+      const { user } = renderDialog(three);
+      const rail = await railOf();
+
+      await user.click(within(rail).getByRole('searchbox', { name: 'Search domains' }));
+      await user.paste('https://www.shop.example.net/cart?id=1');
+
+      expect(within(rail).getAllByRole('button', { name: /example\./ })).toHaveLength(1);
+      expect(within(rail).getByRole('button', { name: /shop\.example\.net/ })).toBeInTheDocument();
+    });
+
+    it('says when nothing matches, and clears from the box or with Escape', async () => {
+      const { user, onOpenChange } = renderDialog(three);
+      const rail = await railOf();
+      const box = within(rail).getByRole('searchbox', { name: 'Search domains' });
+
+      await user.type(box, 'nothing here');
+      expect(within(rail).getByText(/Nothing matches/)).toBeInTheDocument();
+      await user.click(within(rail).getByRole('button', { name: 'Clear filter' }));
+      expect(within(rail).getAllByRole('button', { name: /example\./ })).toHaveLength(3);
+
+      await user.type(box, 'org');
+      await user.keyboard('{Escape}');
+      expect(box).toHaveValue('');
+      // Escape in a box with text clears it without closing the whole dialog.
+      expect(onOpenChange).not.toHaveBeenCalled();
+      // An empty box leaves Escape to the dialog again.
+      await user.keyboard('{Escape}');
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+
+    it('opens the first match with Enter and keeps the rest of the address', async () => {
+      const { user } = renderDialog(three, '/deploy?server=srv-1&dialog=cloudflare');
+      const rail = await railOf();
+
+      await user.type(
+        within(rail).getByRole('searchbox', { name: 'Search domains' }),
+        'shop{Enter}',
+      );
+
+      expect(await screen.findByRole('heading', { name: 'shop.example.net' })).toBeInTheDocument();
+      const address = new URLSearchParams(screen.getByTestId('address').textContent?.split('?')[1]);
+      expect(address.get('zone')).toBe(SHOP.id);
+      expect(address.get('server')).toBe('srv-1');
+    });
+
+    it('moves from the box into the list and along it with the arrow keys', async () => {
+      const { user } = renderDialog(three);
+      const rail = await railOf();
+      const box = within(rail).getByRole('searchbox', { name: 'Search domains' });
+
+      await user.type(box, 'example');
+      await user.keyboard('{ArrowDown}');
+      expect(within(rail).getByRole('button', { name: /example\.com/ })).toHaveFocus();
+      await user.keyboard('{ArrowDown}');
+      expect(within(rail).getByRole('button', { name: /example\.org/ })).toHaveFocus();
+      await user.keyboard('{ArrowUp}{ArrowUp}');
+      expect(box).toHaveFocus();
+    });
+
+    it('jumps to the box with Ctrl+F', async () => {
+      const { user } = renderDialog(three);
+      const rail = await railOf();
+      await user.click(within(rail).getByRole('button', { name: /example\.org/ }));
+
+      await user.keyboard('{Control>}f{/Control}');
+
+      expect(within(rail).getByRole('searchbox', { name: 'Search domains' })).toHaveFocus();
+    });
+
+    it('jumps to the box with Ctrl+F while the dialog itself has focus', async () => {
+      const { user } = renderDialog(three);
+      const rail = await railOf();
+      // Where focus lands once the button that had it goes away, as after saving a token.
+      screen.getByRole('dialog').focus();
+
+      await user.keyboard('{Control>}f{/Control}');
+
+      expect(within(rail).getByRole('searchbox', { name: 'Search domains' })).toHaveFocus();
+    });
+
+    it('keeps the open zone open while the search hides it in the rail', async () => {
+      const { user } = renderDialog(three);
+      const rail = await railOf();
+
+      await user.type(within(rail).getByRole('searchbox', { name: 'Search domains' }), 'shop');
+
+      expect(within(rail).queryByRole('button', { name: /example\.com/ })).toBeNull();
+      expect(screen.getByRole('heading', { name: 'example.com' })).toBeInTheDocument();
+    });
+
+    it('leaves the search out while there is only one domain', async () => {
+      renderDialog({ 'cloudflare.listZones': async () => [ZONE] });
+      const rail = await railOf();
+      expect(within(rail).queryByRole('searchbox')).toBeNull();
+    });
+  });
+
   describe('with several accounts', () => {
     const SECOND_ZONE = { ...OTHER_ZONE, accountId: 'acct-2' };
     const TWO: CloudflareStatus = {
@@ -283,6 +434,17 @@ describe('CloudflareDialog', () => {
       expect(await within(work).findByText('example.com')).toBeInTheDocument();
       expect(await within(client).findByText('example.org')).toBeInTheDocument();
       expect(within(work).queryByText('example.org')).toBeNull();
+    });
+
+    it('leaves out an account with nothing that matches while searching', async () => {
+      const { user } = renderDialog(several);
+      const rail = await screen.findByRole('navigation', { name: 'Zones' });
+      await within(rail).findByText('example.org');
+
+      await user.type(within(rail).getByRole('searchbox', { name: 'Search domains' }), '.org');
+
+      expect(within(rail).queryByRole('region', { name: 'Cloudflare' })).toBeNull();
+      expect(within(rail).getByRole('region', { name: 'Client Co' })).toBeInTheDocument();
     });
 
     it('asks each account for its own zones', async () => {

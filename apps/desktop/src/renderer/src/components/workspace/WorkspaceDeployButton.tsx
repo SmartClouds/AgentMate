@@ -80,9 +80,9 @@ export function WorkspaceDeployButton({
     <>
       <SimpleTooltip label={tip} wrapTrigger={blocked} className="max-w-xs">
         <Button
-          variant="tint"
-          size="sm"
-          className="relative h-8 gap-1.5 px-3"
+          variant={open ? 'soft' : 'ghost'}
+          size="icon"
+          className="relative"
           aria-label={
             running
               ? `Deploying to ${siteName}`
@@ -93,18 +93,17 @@ export function WorkspaceDeployButton({
           onClick={() => setOpen(true)}
         >
           {running ? (
-            <Spinner className="h-3.5 w-3.5 motion-safe:animate-spin" />
+            <Spinner className="h-4 w-4 motion-safe:animate-spin" />
           ) : (
-            <CloudUpload className="h-3.5 w-3.5" />
+            <CloudUpload className="h-4 w-4" />
           )}
-          <span className="text-xs">{running ? 'Deploying' : 'Deploy'}</span>
           {running ? (
-            // A bar, not a count, so the pill keeps its width while the numbers change and the
-            // header buttons beside it stay where they are. The tooltip has the count.
+            // A bar under the icon, not a count, so the button keeps its size while the numbers
+            // change. The tooltip has the count.
             <span
               data-testid="deploy-progress"
               data-progress={progress?.percent ?? 0}
-              className="absolute inset-x-3 bottom-1 h-0.5 overflow-hidden rounded-full bg-primary/15"
+              className="absolute inset-x-1.5 bottom-0.5 h-0.5 overflow-hidden rounded-full bg-primary/15"
               aria-hidden
             >
               <span

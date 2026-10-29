@@ -18,9 +18,11 @@ import type {
   CloudflareAccessRuleInput,
   CloudflareAccessTarget,
   CloudflareAnyPermissionId,
+  CloudflareCacheLevel,
   CloudflareCustomRule,
   CloudflareCustomRuleInput,
   CloudflareDnsRecord,
+  CloudflareMinTlsVersion,
   CloudflarePermissionId,
   CloudflarePointDomainInput,
   CloudflarePointDomainPlan,
@@ -88,7 +90,13 @@ const SETTING_IDS = {
   securityLevel: 'security_level',
   ssl: 'ssl',
   alwaysUseHttps: 'always_use_https',
+  automaticHttpsRewrites: 'automatic_https_rewrites',
+  minTlsVersion: 'min_tls_version',
+  tls13: 'tls_1_3',
+  cacheLevel: 'cache_level',
+  browserCacheTtl: 'browser_cache_ttl',
 } as const;
+type SettingKey = keyof typeof SETTING_IDS;
 const NO_TOKEN = 'Connect Cloudflare first: paste an API token in Cloudflare: domains and DNS.';
 const NO_ZONE = 'That domain is not in any of the connected Cloudflare accounts.';
 const UNKNOWN_ACCOUNT = 'That Cloudflare account is not connected any more.';
@@ -241,6 +249,10 @@ function toAccessRule(rule: {
 
 function settingValue<T extends string>(setting: ApiSetting, fallback: T): T {
   return typeof setting.value === 'string' ? (setting.value as T) : fallback;
+}
+
+function settingNumber(setting: ApiSetting, fallback: number): number {
+  return typeof setting.value === 'number' ? setting.value : fallback;
 }
 
 /**
@@ -649,23 +661,49 @@ export class CloudflareService {
   }
 
   private async readSettings(api: CloudflareApi, zoneId: string): Promise<CloudflareZoneSettings> {
-    const [development, security, ssl, https] = (await Promise.all(
-      Object.values(SETTING_IDS).map((id) => api.zones.settings.get(id, { zone_id: zoneId })),
+    const keys = Object.keys(SETTING_IDS) as SettingKey[];
+    const read = (await Promise.all(
+      keys.map((key) => api.zones.settings.get(SETTING_IDS[key], { zone_id: zoneId })),
     )) as ApiSetting[];
+    const got = Object.fromEntries(keys.map((key, index) => [key, read[index]])) as Record<
+      SettingKey,
+      ApiSetting
+    >;
+    const editable = (key: SettingKey): boolean => got[key].editable ?? true;
     return {
       developmentMode: {
-        value: settingValue<'on' | 'off'>(development, 'off'),
-        secondsRemaining: development.time_remaining ?? 0,
-        editable: development.editable ?? true,
+        value: settingValue<'on' | 'off'>(got.developmentMode, 'off'),
+        secondsRemaining: got.developmentMode.time_remaining ?? 0,
+        editable: editable('developmentMode'),
       },
       securityLevel: {
-        value: settingValue<CloudflareSecurityLevel>(security, 'medium'),
-        editable: security.editable ?? true,
+        value: settingValue<CloudflareSecurityLevel>(got.securityLevel, 'medium'),
+        editable: editable('securityLevel'),
       },
-      ssl: { value: settingValue<CloudflareSslMode>(ssl, 'off'), editable: ssl.editable ?? true },
+      ssl: { value: settingValue<CloudflareSslMode>(got.ssl, 'off'), editable: editable('ssl') },
       alwaysUseHttps: {
-        value: settingValue<'on' | 'off'>(https, 'off'),
-        editable: https.editable ?? true,
+        value: settingValue<'on' | 'off'>(got.alwaysUseHttps, 'off'),
+        editable: editable('alwaysUseHttps'),
+      },
+      automaticHttpsRewrites: {
+        value: settingValue<'on' | 'off'>(got.automaticHttpsRewrites, 'off'),
+        editable: editable('automaticHttpsRewrites'),
+      },
+      minTlsVersion: {
+        value: settingValue<CloudflareMinTlsVersion>(got.minTlsVersion, '1.0'),
+        editable: editable('minTlsVersion'),
+      },
+      tls13: {
+        value: settingValue<'on' | 'off' | 'zrt'>(got.tls13, 'off'),
+        editable: editable('tls13'),
+      },
+      cacheLevel: {
+        value: settingValue<CloudflareCacheLevel>(got.cacheLevel, 'aggressive'),
+        editable: editable('cacheLevel'),
+      },
+      browserCacheTtl: {
+        value: settingNumber(got.browserCacheTtl, 0),
+        editable: editable('browserCacheTtl'),
       },
     };
   }

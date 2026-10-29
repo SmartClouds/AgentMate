@@ -41,6 +41,11 @@ export const SETTINGS: CloudflareZoneSettings = {
   securityLevel: { value: 'medium', editable: true },
   ssl: { value: 'full', editable: true },
   alwaysUseHttps: { value: 'off', editable: true },
+  automaticHttpsRewrites: { value: 'off', editable: true },
+  minTlsVersion: { value: '1.0', editable: true },
+  tls13: { value: 'on', editable: true },
+  cacheLevel: { value: 'aggressive', editable: true },
+  browserCacheTtl: { value: 14400, editable: true },
 };
 
 export const ACCOUNT: CloudflareAccountStatus = {

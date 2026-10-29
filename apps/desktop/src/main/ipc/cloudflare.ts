@@ -5,7 +5,7 @@ import {
   recordProblem,
 } from '../../shared/cloudflare/dns';
 import { accessRuleTarget, buildRule } from '../../shared/cloudflare/rules';
-import { checkPurgeUrls, PURGE_URL_LIMIT } from '../../shared/cloudflare/zone';
+import { BROWSER_CACHE_TTLS, checkPurgeUrls, PURGE_URL_LIMIT } from '../../shared/cloudflare/zone';
 import type {
   CloudflareAccessMode,
   CloudflareAccessRuleInput,
@@ -49,11 +49,16 @@ const MAX_NAME = 253;
 const MAX_TEXT = 4096;
 const MAX_NOTES = 500;
 const MAX_LIST = 250;
-const SETTING_VALUES: Record<CloudflareSettingChange['setting'], readonly string[]> = {
+const SETTING_VALUES: Record<CloudflareSettingChange['setting'], readonly (string | number)[]> = {
   developmentMode: ['on', 'off'],
   securityLevel: ['off', 'essentially_off', 'low', 'medium', 'high', 'under_attack'],
   ssl: ['off', 'flexible', 'full', 'strict'],
   alwaysUseHttps: ['on', 'off'],
+  automaticHttpsRewrites: ['on', 'off'],
+  minTlsVersion: ['1.0', '1.1', '1.2', '1.3'],
+  tls13: ['on', 'off'],
+  cacheLevel: ['basic', 'simplified', 'aggressive'],
+  browserCacheTtl: BROWSER_CACHE_TTLS,
 };
 const ACCESS_MODES: ReadonlySet<string> = new Set<CloudflareAccessMode>([
   'block',
@@ -176,10 +181,16 @@ function recordInput(value: unknown): CloudflareRecordInput {
 function settingChange(value: unknown): CloudflareSettingChange {
   const input = object(value, 'a setting');
   const allowed = SETTING_VALUES[input.setting as CloudflareSettingChange['setting']];
-  if (!allowed || typeof input.value !== 'string' || !allowed.includes(input.value)) {
+  const next = input.value;
+  // The allow-list holds each value with its type, so '14400' is not taken for 14400.
+  if (
+    !allowed ||
+    (typeof next !== 'string' && typeof next !== 'number') ||
+    !allowed.includes(next)
+  ) {
     throw new Error('That is not a setting the page changes, or not one of its values.');
   }
-  return { setting: input.setting, value: input.value } as CloudflareSettingChange;
+  return { setting: input.setting, value: next } as CloudflareSettingChange;
 }
 
 function purgeRequest(value: unknown): CloudflarePurgeRequest {

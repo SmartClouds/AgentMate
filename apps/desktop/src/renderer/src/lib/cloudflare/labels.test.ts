@@ -1,8 +1,13 @@
+import { BROWSER_CACHE_TTLS } from '@shared/cloudflare/zone';
 import { describe, expect, it } from 'vitest';
 import {
   accessModeLabel,
   accessTargetLabel,
+  browserCacheTtlLabel,
+  CACHE_LEVEL_LABELS,
+  CACHE_LEVELS,
   formatRemaining,
+  MIN_TLS_LABELS,
   relativeName,
   ruleActionLabel,
   splitList,
@@ -10,6 +15,33 @@ import {
 } from './labels';
 
 describe('Cloudflare labels', () => {
+  it('writes browser cache TTLs in words', () => {
+    expect(browserCacheTtlLabel(0)).toBe('Respect existing headers');
+    expect(browserCacheTtlLabel(30)).toBe('30 seconds');
+    expect(browserCacheTtlLabel(60)).toBe('1 minute');
+    expect(browserCacheTtlLabel(1200)).toBe('20 minutes');
+    expect(browserCacheTtlLabel(3600)).toBe('1 hour');
+    expect(browserCacheTtlLabel(7200)).toBe('2 hours');
+    expect(browserCacheTtlLabel(86400)).toBe('1 day');
+    expect(browserCacheTtlLabel(691200)).toBe('8 days');
+    expect(browserCacheTtlLabel(2678400)).toBe('1 month');
+    expect(browserCacheTtlLabel(5356800)).toBe('2 months');
+    expect(browserCacheTtlLabel(16070400)).toBe('6 months');
+    expect(browserCacheTtlLabel(31536000)).toBe('1 year');
+    expect(browserCacheTtlLabel(90)).toBe('90 seconds');
+    // Every value Cloudflare offers has its own words.
+    const labels = BROWSER_CACHE_TTLS.map(browserCacheTtlLabel);
+    expect(new Set(labels).size).toBe(BROWSER_CACHE_TTLS.length);
+  });
+
+  it("names cache levels and TLS versions the way Cloudflare's dashboard does", () => {
+    expect(CACHE_LEVELS).toEqual(['aggressive', 'simplified', 'basic']);
+    expect(CACHE_LEVEL_LABELS.basic).toBe('No query string');
+    expect(CACHE_LEVEL_LABELS.simplified).toBe('Ignore query string');
+    expect(CACHE_LEVEL_LABELS.aggressive).toBe('Standard');
+    expect(MIN_TLS_LABELS['1.2']).toBe('TLS 1.2');
+  });
+
   it('writes TTLs the way people say them', () => {
     expect(ttlLabel(1)).toBe('Auto');
     expect(ttlLabel(60)).toBe('1 min');

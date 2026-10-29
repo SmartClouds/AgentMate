@@ -403,14 +403,57 @@ describe('zones and DNS records (T2)', () => {
 });
 
 describe('zone settings and the cache (T3)', () => {
-  it('reads the four settings the page manages', async () => {
+  it('reads the settings the page manages', async () => {
     const { service } = await connectedService();
     expect(await service.zoneSettings(ZONE_ID)).toEqual({
       developmentMode: { value: 'off', secondsRemaining: 0, editable: true },
       securityLevel: { value: 'medium', editable: true },
       ssl: { value: 'full', editable: true },
       alwaysUseHttps: { value: 'off', editable: true },
+      automaticHttpsRewrites: { value: 'off', editable: true },
+      minTlsVersion: { value: '1.0', editable: true },
+      tls13: { value: 'on', editable: true },
+      cacheLevel: { value: 'aggressive', editable: true },
+      browserCacheTtl: { value: 14400, editable: true },
     });
+  });
+
+  it('changes the SSL/TLS and caching settings, keeping the TTL a number', async () => {
+    const { service, fake } = await connectedService();
+
+    await service.changeSetting(ZONE_ID, { setting: 'automaticHttpsRewrites', value: 'on' });
+    await service.changeSetting(ZONE_ID, { setting: 'minTlsVersion', value: '1.2' });
+    await service.changeSetting(ZONE_ID, { setting: 'tls13', value: 'off' });
+    await service.changeSetting(ZONE_ID, { setting: 'cacheLevel', value: 'basic' });
+    const settings = await service.changeSetting(ZONE_ID, {
+      setting: 'browserCacheTtl',
+      value: 7200,
+    });
+
+    expect(fake.writes().map((request) => [request.method, request.path, request.body])).toEqual([
+      ['PATCH', `/zones/${ZONE_ID}/settings/automatic_https_rewrites`, { value: 'on' }],
+      ['PATCH', `/zones/${ZONE_ID}/settings/min_tls_version`, { value: '1.2' }],
+      ['PATCH', `/zones/${ZONE_ID}/settings/tls_1_3`, { value: 'off' }],
+      ['PATCH', `/zones/${ZONE_ID}/settings/cache_level`, { value: 'basic' }],
+      ['PATCH', `/zones/${ZONE_ID}/settings/browser_cache_ttl`, { value: 7200 }],
+    ]);
+    expect(settings).toMatchObject({
+      automaticHttpsRewrites: { value: 'on' },
+      minTlsVersion: { value: '1.2' },
+      tls13: { value: 'off' },
+      cacheLevel: { value: 'basic' },
+      browserCacheTtl: { value: 7200 },
+    });
+  });
+
+  it('names Zone Settings when the token cannot change them', async () => {
+    const { service } = await connectedService({
+      token: { grants: { ...ALL_GRANTS, zoneSettings: 'read' } },
+    });
+    const error = await rejection(
+      service.changeSetting(ZONE_ID, { setting: 'cacheLevel', value: 'basic' }),
+    );
+    expect(cloudflareErrorPermission(error)).toBe('zoneSettings');
   });
 
   it("turns on I'm Under Attack and development mode, and changes the SSL mode", async () => {
