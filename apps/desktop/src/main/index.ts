@@ -10,7 +10,7 @@ import { stopAllRdpTasks } from './agents/rdpTaskRunner';
 import { flushSshTaskHistory, stopAllSshTasks } from './agents/sshTaskRunner';
 import { stopEmulatorsOnQuit } from './android/runtime';
 import { appCsp, keepsOwnCsp } from './appCsp';
-import { APP_ID, appIcon, showAppIconInDev } from './appIcon';
+import { appIcon, appUserModelId, removeDevShortcuts, showAppIconInDev } from './appIcon';
 import { registerBlueprintFileProtocol } from './blueprintFileStore';
 import { configureBrowserSession, setupBrowserGuests } from './browser/guestSession';
 import { registerDeployIpc } from './deploy';
@@ -192,10 +192,13 @@ app.commandLine.appendSwitch('disable-renderer-backgrounding');
 if (!isLegacyDecryptHelper) app.setName(app.isPackaged ? APP_NAME : DEV_APP_NAME);
 // Windows groups notifications/taskbar entries by this id rather than the exe
 // name, so without it toasts show up as "Electron" with the Electron icon.
-// Must match electron-builder.yml's `appId` so the packaged install (which
-// registers that id via its shortcut) and dev runs agree on identity.
-if (process.platform === 'win32' && !isLegacyDecryptHelper) app.setAppUserModelId(APP_ID);
-if (!isLegacyDecryptHelper) showAppIconInDev();
+// The packaged build uses electron-builder.yml's `appId`, which its installer's
+// shortcut registers. Dev runs use their own (see DEV_APP_ID).
+if (process.platform === 'win32' && !isLegacyDecryptHelper) app.setAppUserModelId(appUserModelId());
+if (!isLegacyDecryptHelper) {
+  showAppIconInDev();
+  void app.whenReady().then(removeDevShortcuts);
+}
 
 // Both are safe before the app is ready and before the settings file has been
 // read: the fetch shim passes everything through to Node until a proxy is

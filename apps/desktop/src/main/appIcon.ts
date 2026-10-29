@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
-import { readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { readdir, unlink } from 'node:fs/promises';
+import { basename, join } from 'node:path';
 import { promisify } from 'node:util';
 import { app, type BrowserWindow, type ShortcutDetails, shell } from 'electron';
 import windowsIcon from '../../resources/icon.ico?asset';
@@ -11,6 +11,19 @@ const execFileAsync = promisify(execFile);
 
 /** electron-builder.yml's `appId`. Windows groups taskbar buttons and toasts by it. */
 export const APP_ID = 'com.runova.app';
+
+/**
+ * Dev runs get an id of their own. Electron leaves a Start menu shortcut named "Electron" for
+ * whatever id a dev run uses, pointing at the checkout's electron.exe, and Windows shows the
+ * name and icon of any shortcut carrying the id on the taskbar. Had dev runs used APP_ID, the
+ * installed app would show up as "Electron" with a blank icon once that checkout moved.
+ */
+export const DEV_APP_ID = 'com.runova.app.dev';
+
+/** The id this run registers with Windows: APP_ID in a packaged build, DEV_APP_ID in dev. */
+export function appUserModelId(): string {
+  return app.isPackaged ? APP_ID : DEV_APP_ID;
+}
 
 /**
  * The icon windows and notifications carry: the multi-size .ico on Windows, a PNG elsewhere
@@ -37,7 +50,7 @@ export function showAppIconInDev(): void {
 function setRelaunchIcon(window: BrowserWindow): void {
   // Windows ignores the icon unless the relaunch command and name are set too.
   window.setAppDetails({
-    appId: APP_ID,
+    appId: DEV_APP_ID,
     appIconPath: windowsIcon,
     appIconIndex: 0,
     relaunchCommand: `"${process.execPath}" "${app.getAppPath()}"`,
@@ -54,23 +67,8 @@ function setRelaunchIcon(window: BrowserWindow): void {
  * shell.writeShortcutLink drops the icon (Electron 43), hence PowerShell.
  */
 export async function brandToastShortcut(): Promise<void> {
-  const programs = join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs');
-  let names: string[];
-  try {
-    names = await readdir(programs);
-  } catch {
-    return;
-  }
-  for (const name of names) {
-    if (!name.toLowerCase().endsWith('.lnk')) continue;
-    const path = join(programs, name);
-    let link: ShortcutDetails;
-    try {
-      link = shell.readShortcutLink(path);
-    } catch {
-      continue;
-    }
-    if (link.appUserModelId !== APP_ID || !samePath(link.target, process.execPath)) continue;
+  for (const { path, link } of await startMenuShortcuts()) {
+    if (link.appUserModelId !== DEV_APP_ID || !samePath(link.target, process.execPath)) continue;
     if (link.icon && samePath(link.icon, windowsIcon)) continue;
     try {
       await execFileAsync(
@@ -91,6 +89,47 @@ export async function brandToastShortcut(): Promise<void> {
       // The taskbar keeps Electron's icon this run; the next start tries again.
     }
   }
+}
+
+/**
+ * Dev runs once used APP_ID too, so a machine that ran one has an "Electron" shortcut
+ * claiming the installed app's id, and the taskbar shows the installed app under that name with
+ * the icon of an electron.exe that may no longer exist. The installed app deletes those. Its own
+ * shortcut points at Runova.exe, never at electron.exe, so it stays.
+ */
+export async function removeDevShortcuts(): Promise<void> {
+  if (process.platform !== 'win32' || !app.isPackaged) return;
+  for (const { path, link } of await startMenuShortcuts()) {
+    if (link.appUserModelId !== APP_ID) continue;
+    if (basename(link.target.replaceAll('\\', '/')).toLowerCase() !== 'electron.exe') continue;
+    try {
+      await unlink(path);
+    } catch {
+      // Left for the next start to try again.
+    }
+  }
+}
+
+/** The shortcuts in the user's Start menu folder that can be read. */
+async function startMenuShortcuts(): Promise<{ path: string; link: ShortcutDetails }[]> {
+  const programs = join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs');
+  let names: string[];
+  try {
+    names = await readdir(programs);
+  } catch {
+    return [];
+  }
+  const shortcuts: { path: string; link: ShortcutDetails }[] = [];
+  for (const name of names) {
+    if (!name.toLowerCase().endsWith('.lnk')) continue;
+    const path = join(programs, name);
+    try {
+      shortcuts.push({ path, link: shell.readShortcutLink(path) });
+    } catch {
+      // Not a shortcut Windows can read.
+    }
+  }
+  return shortcuts;
 }
 
 function samePath(a: string, b: string): boolean {

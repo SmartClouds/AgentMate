@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { app } from 'electron';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -50,14 +50,14 @@ describe('appIcon', () => {
 
 describe('showAppIconInDev', () => {
   it('gives every Windows window the Runova icon on the taskbar in place of the Electron one', async () => {
-    const { APP_ID, showAppIconInDev } = await load('win32');
+    const { DEV_APP_ID, showAppIconInDev } = await load('win32');
     showAppIconInDev();
 
     const setAppDetails = openWindow();
 
     expect(setAppDetails).toHaveBeenCalledWith(
       expect.objectContaining({
-        appId: APP_ID,
+        appId: DEV_APP_ID,
         appIconPath: expect.stringMatching(/icon\.ico/),
         appIconIndex: 0,
         relaunchCommand: expect.stringContaining(process.execPath),
@@ -95,33 +95,49 @@ describe('showAppIconInDev', () => {
   });
 });
 
-describe('brandToastShortcut', () => {
-  /** The Start menu folder under the mock's appData, with these shortcut files in it. */
-  function startMenu(links: Record<string, Partial<Electron.ShortcutDetails> | null>): string {
-    const programs = join(
-      electronTempRoot(),
-      'appData',
-      'Microsoft',
-      'Windows',
-      'Start Menu',
-      'Programs',
-    );
-    mkdirSync(programs, { recursive: true });
-    for (const [name, details] of Object.entries(links)) {
-      const path = join(programs, name);
-      writeFileSync(path, '');
-      if (details) electronState.shortcuts.set(path, { target: '', ...details });
-    }
-    return programs;
+/** The Start menu folder under the mock's appData, with these shortcut files in it. */
+function startMenu(links: Record<string, Partial<Electron.ShortcutDetails> | null>): string {
+  const programs = join(
+    electronTempRoot(),
+    'appData',
+    'Microsoft',
+    'Windows',
+    'Start Menu',
+    'Programs',
+  );
+  mkdirSync(programs, { recursive: true });
+  for (const [name, details] of Object.entries(links)) {
+    const path = join(programs, name);
+    writeFileSync(path, '');
+    if (details) electronState.shortcuts.set(path, { target: '', ...details });
   }
+  return programs;
+}
 
-  it('puts the Runova icon on the shortcut Electron made for the app id, and only on that one', async () => {
-    const { APP_ID, appIcon, brandToastShortcut } = await load('win32');
+describe('appUserModelId', () => {
+  it('is the builder appId when packaged and a separate dev id otherwise', async () => {
+    const { APP_ID, DEV_APP_ID, appUserModelId } = await load('win32');
+
+    expect(appUserModelId()).toBe(DEV_APP_ID);
+    expect(DEV_APP_ID).not.toBe(APP_ID);
+    electronState.isPackaged = true;
+    expect(appUserModelId()).toBe(APP_ID);
+  });
+});
+
+describe('brandToastShortcut', () => {
+  it('puts the Runova icon on the shortcut Electron made for the dev id, and only on that one', async () => {
+    const { APP_ID, DEV_APP_ID, appIcon, brandToastShortcut } = await load('win32');
     const programs = startMenu({
-      'Electron.lnk': { target: process.execPath.toUpperCase(), appUserModelId: APP_ID, icon: '' },
+      'Electron.lnk': {
+        target: process.execPath.toUpperCase(),
+        appUserModelId: DEV_APP_ID,
+        icon: '',
+      },
       'Runova.lnk': { target: 'C:\\Program Files\\Runova\\Runova.exe', appUserModelId: APP_ID },
+      'Old.lnk': { target: process.execPath, appUserModelId: APP_ID, icon: '' },
       'Other.lnk': { target: process.execPath, appUserModelId: 'com.other.app' },
-      'Done.lnk': { target: process.execPath, appUserModelId: APP_ID, icon: appIcon },
+      'Done.lnk': { target: process.execPath, appUserModelId: DEV_APP_ID, icon: appIcon },
       'Unreadable.lnk': null,
       'notes.txt': null,
     });
@@ -142,5 +158,38 @@ describe('brandToastShortcut', () => {
 
     await expect(brandToastShortcut()).resolves.toBeUndefined();
     expect(powershell.calls).toEqual([]);
+  });
+});
+
+describe('removeDevShortcuts', () => {
+  it("deletes the dev runs' electron.exe shortcuts that claim the installed app's id", async () => {
+    electronState.isPackaged = true;
+    const { APP_ID, DEV_APP_ID, removeDevShortcuts } = await load('win32');
+    const programs = startMenu({
+      'Electron.lnk': {
+        target: 'E:\\AgentMate\\node_modules\\electron\\dist\\Electron.exe',
+        appUserModelId: APP_ID,
+      },
+      'Runova.lnk': { target: 'C:\\Program Files\\Runova\\Runova.exe', appUserModelId: APP_ID },
+      'Dev.lnk': { target: 'E:\\Runova\\electron\\dist\\electron.exe', appUserModelId: DEV_APP_ID },
+    });
+
+    await removeDevShortcuts();
+
+    expect(existsSync(join(programs, 'Electron.lnk'))).toBe(false);
+    expect(existsSync(join(programs, 'Runova.lnk'))).toBe(true);
+    expect(existsSync(join(programs, 'Dev.lnk'))).toBe(true);
+  });
+
+  it('leaves the Start menu alone in dev and off Windows', async () => {
+    const shortcut = (id: string) => ({ target: 'C:\\electron.exe', appUserModelId: id });
+    const { APP_ID, removeDevShortcuts } = await load('win32');
+    const programs = startMenu({ 'Electron.lnk': shortcut(APP_ID) });
+    await removeDevShortcuts();
+
+    electronState.isPackaged = true;
+    await (await load('linux')).removeDevShortcuts();
+
+    expect(existsSync(join(programs, 'Electron.lnk'))).toBe(true);
   });
 });
