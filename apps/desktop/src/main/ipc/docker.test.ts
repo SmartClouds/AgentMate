@@ -21,6 +21,8 @@ const cli = vi.hoisted(() => ({
   stopContainer: vi.fn(),
   restartContainer: vi.fn(),
   removeContainer: vi.fn(),
+  listImages: vi.fn(),
+  removeImages: vi.fn(),
 }));
 
 // A process boundary: the real module spawns the docker binary.
@@ -94,5 +96,30 @@ describe('container lifecycle', () => {
 
     await expect(invoke(IPC.docker.remove, 'abc123', options)).resolves.toEqual({ ok: true });
     expect(cli.removeContainer).toHaveBeenCalledWith('abc123', options);
+  });
+});
+
+describe('docker:listImages', () => {
+  it('returns every image', async () => {
+    cli.listImages.mockResolvedValue([{ id: 'sha256:a' }]);
+
+    await expect(invoke(IPC.docker.listImages)).resolves.toEqual([{ id: 'sha256:a' }]);
+  });
+});
+
+describe('docker:removeImages', () => {
+  it('hands the targets over and returns what was removed', async () => {
+    const result = { removed: ['sha256:a'], failed: [] };
+    cli.removeImages.mockResolvedValue(result);
+    const targets = [{ id: 'sha256:a', tags: ['nginx:1.27'] }];
+
+    await expect(invoke(IPC.docker.removeImages, targets)).resolves.toEqual(result);
+    expect(cli.removeImages).toHaveBeenCalledWith(targets);
+  });
+
+  it('refuses anything that is not a list of image targets', async () => {
+    await expect(invoke(IPC.docker.removeImages, [{ id: 7, tags: 'x' }])).rejects.toThrow();
+    await expect(invoke(IPC.docker.removeImages, 'sha256:a')).rejects.toThrow();
+    expect(cli.removeImages).not.toHaveBeenCalled();
   });
 });

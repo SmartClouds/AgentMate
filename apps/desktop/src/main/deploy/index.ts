@@ -14,6 +14,7 @@ import { registerDeployDockerHandlers } from '../ipc/deployDocker';
 import { registerDeployErrorReportingHandlers } from '../ipc/deployErrorReporting';
 import { registerDeployFirewallHandlers } from '../ipc/deployFirewall';
 import { registerDeployHardeningHandlers } from '../ipc/deployHardening';
+import { dockerHubSignIn, registerDockerHubHandlers } from '../ipc/dockerHub';
 import { registerDeploySecurityHandlers } from '../ipc/deploySecurity';
 import { registerDeployServerBackupsHandlers } from '../ipc/deployServerBackups';
 import { registerDeploySitesHandlers } from '../ipc/deploySites';
@@ -54,6 +55,8 @@ import { DeployErrorReporting } from './errorReporting/service';
 import { registerDeployFilesIpc } from './files';
 import { mutateFileSites } from './files/store';
 import { DeployFirewall } from './firewall';
+import { pullImage } from '../docker/dockerCli';
+import { DockerHubClient } from '../docker/dockerHub';
 import { DeployHardening } from './hardening';
 import { DockerLinks } from './live/dockerLinks';
 import { DockerSubscriptions } from './live/dockerSubscriptions';
@@ -274,6 +277,14 @@ export function registerDeployIpc(): void {
     registryAuths: (serverId, stackId, hosts) => registries.authsFor(serverId, stackId, hosts),
   });
   registerDeployStacksHandlers({ ipc: ipcMain, stacks, guard });
+  // The Docker page's Hub view reads the same Docker Hub sign-in deploys send.
+  registerDockerHubHandlers({
+    ipc: ipcMain,
+    registries,
+    hub: new DockerHubClient({ signIn: dockerHubSignIn(registries) }),
+    pull: pullImage,
+    guard,
+  });
   registerDeployRegistryIpc({
     registries,
     core: { links: service.links, roles: (id) => service.roles(id) },

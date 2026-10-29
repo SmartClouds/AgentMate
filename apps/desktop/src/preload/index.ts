@@ -147,6 +147,13 @@ import type {
   DirectoryEntry,
   DockerActionResult,
   DockerContainer,
+  DockerHubPullInput,
+  DockerHubRepository,
+  DockerHubStatus,
+  DockerHubTag,
+  DockerImage,
+  DockerImageRemoveResult,
+  DockerImageTarget,
   DockerRemoveOptions,
   EnvCredentialSecrets,
   EnvFolderFile,
@@ -1040,6 +1047,19 @@ const docker = {
     ipcRenderer.invoke(IPC.docker.remove, id, options),
 };
 
+  listImages: (): Promise<DockerImage[]> => ipcRenderer.invoke(IPC.docker.listImages),
+  removeImages: (targets: DockerImageTarget[]): Promise<DockerImageRemoveResult> =>
+    ipcRenderer.invoke(IPC.docker.removeImages, targets),
+};
+
+const dockerHub = {
+  status: (): Promise<DockerHubStatus> => ipcRenderer.invoke(IPC.dockerHub.status),
+  repositories: (): Promise<DockerHubRepository[]> =>
+    ipcRenderer.invoke(IPC.dockerHub.repositories),
+  tags: (namespace: string, name: string): Promise<DockerHubTag[]> =>
+    ipcRenderer.invoke(IPC.dockerHub.tags, namespace, name),
+  pull: (input: DockerHubPullInput): Promise<DockerActionResult> =>
+    ipcRenderer.invoke(IPC.dockerHub.pull, input),
 const resourceActivity = {
   snapshot: (options?: { fresh?: boolean }): Promise<ResourceActivitySnapshot> =>
     ipcRenderer.invoke(IPC.resourceActivity.snapshot, options),
@@ -2756,6 +2776,7 @@ const runovaApi = {
   explorer,
   workspaceSearch,
   settings,
+  dockerHub,
   templates,
   activity,
   shell: shellApi,

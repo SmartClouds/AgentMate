@@ -638,6 +638,15 @@ export const IPC = {
     stop: 'docker:stop',
     restart: 'docker:restart',
     remove: 'docker:remove',
+    listImages: 'docker:listImages',
+    removeImages: 'docker:removeImages',
+  },
+  /** The Docker page's Hub view, signed in with the Docker Hub sign-in deploys use. */
+  dockerHub: {
+    status: 'dockerHub:status',
+    repositories: 'dockerHub:repositories',
+    tags: 'dockerHub:tags',
+    pull: 'dockerHub:pull',
   },
   /** The Dashboard's Docker and emulator usage chart, and the list of idle ones. */
   resourceActivity: {

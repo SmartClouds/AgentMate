@@ -185,6 +185,12 @@ export const queryKeys = {
   resourceActivity: ['resource-activity'] as const,
   /** Saved servers with the server core each one runs, for the Deploy rail. */
   deployServers: ['deploy', 'servers'] as const,
+  dockerImages: ['docker-images'] as const,
+  /** The Docker page's Hub view: whether a Docker Hub sign-in is saved, then what it can see. */
+  dockerHubStatus: ['docker-hub', 'status'] as const,
+  dockerHubRepositories: ['docker-hub', 'repositories'] as const,
+  dockerHubTags: (namespace: string, name: string) =>
+    ['docker-hub', 'tags', namespace, name] as const,
   /** A core's live health, shared by its rail entry and its health card. */
   deployHealth: (serverId: string) => ['deploy', 'health', serverId] as const,
   /** The install wizard's read-only look at a server. */

@@ -334,3 +334,80 @@ describe('DockerPage actions', () => {
     expect(screen.getByRole('dialog')).toBeTruthy();
   });
 });
+
+describe('DockerPage views', () => {
+  const nginxImage = {
+    id: 'sha256:aaaaaaaaaaaa01',
+    tags: ['nginx:1.27'],
+    dangling: false,
+    createdAt: null,
+    createdSince: '2 weeks ago',
+    sizeBytes: 1024 ** 2,
+    containers: 1,
+  };
+
+  function renderAt(route: string) {
+    return renderWithProviders(<DockerPage />, {
+      route,
+      bridge: {
+        'docker.availability': async () => true,
+        'docker.list': [web],
+        'docker.listImages': [nginxImage],
+        'dockerHub.status': { state: 'signedOut', username: null },
+      },
+    });
+  }
+
+  it('opens on the containers, and switches to the images on this machine', async () => {
+    const { user } = renderAt('/docker');
+    await screen.findByText('web');
+    const views = screen.getByRole('navigation', { name: 'Docker views' });
+
+    await user.click(within(views).getByRole('button', { name: 'Images' }));
+
+    expect(await screen.findByRole('listitem', { name: 'nginx:1.27' })).toBeInTheDocument();
+    expect(screen.queryByText('web')).not.toBeInTheDocument();
+    expect(within(views).getByRole('button', { name: 'Images' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+  });
+
+  it('switches the images between this machine and Docker Hub', async () => {
+    const { user } = renderAt('/docker?view=images');
+    await screen.findByRole('listitem', { name: 'nginx:1.27' });
+    const source = screen.getByRole('group', { name: 'Image source' });
+
+    await user.click(within(source).getByRole('button', { name: 'Docker Hub' }));
+
+    expect(
+      await screen.findByRole('button', { name: 'Sign in to Docker Hub' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('listitem', { name: 'nginx:1.27' })).not.toBeInTheDocument();
+  });
+
+  it('opens straight on Docker Hub from its link', async () => {
+    renderAt('/docker?view=hub');
+
+    expect(
+      await screen.findByRole('button', { name: 'Sign in to Docker Hub' }),
+    ).toBeInTheDocument();
+  });
+
+  it('brings a container deep link back to the containers view', async () => {
+    renderAt('/docker?view=images&container=web-id');
+
+    expect(await screen.findByText('web')).toBeInTheDocument();
+    expect(screen.queryByRole('listitem', { name: 'nginx:1.27' })).not.toBeInTheDocument();
+  });
+
+  it('shows no views at all when Docker is missing', async () => {
+    renderWithProviders(<DockerPage />, {
+      route: '/docker?view=images',
+      bridge: { 'docker.availability': async () => false },
+    });
+
+    expect(await screen.findByText("Docker isn't available")).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Docker views' })).not.toBeInTheDocument();
+  });
+});

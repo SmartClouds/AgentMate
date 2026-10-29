@@ -1,10 +1,15 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   isDockerAvailable,
   listContainers,
   listContainersForProject,
+  listImages,
   listRunningContainersForProject,
+  pullImage,
   removeContainer,
+  removeImages,
   restartContainer,
   sampleDockerActivity,
   startContainer,
@@ -32,6 +37,8 @@ const execState = vi.hoisted(() => ({
   calls: [] as ExecCall[],
   /** Answers keyed by the docker subcommand, so a test only spells out what it cares about. */
   byCommand: new Map<string, ExecOutcome>(),
+  /** Answers by the whole argument list, for calls that share a subcommand or lead with a flag. */
+  respond: null as ((args: string[]) => ExecOutcome | undefined) | null,
 }));
 
 // The real execFile exposes a promisify implementation resolving to { stdout, stderr }; the
@@ -41,7 +48,7 @@ vi.mock('node:child_process', () => {
   const execFile = Object.assign(() => undefined, {
     [custom]: (file: string, args: string[], options: Record<string, unknown>) => {
       execState.calls.push({ file, args, options });
-      const outcome = execState.byCommand.get(args[0]) ?? {};
+      const outcome = execState.respond?.(args) ?? execState.byCommand.get(args[0]) ?? {};
       if (outcome.error) {
         return Promise.reject(Object.assign(new Error(outcome.error.message), outcome.error));
       }
@@ -98,6 +105,7 @@ const STATS_OUTPUT = [
 beforeEach(() => {
   execState.calls = [];
   execState.byCommand = new Map();
+  execState.respond = null;
 });
 
 function argsFor(subcommand: string): string[] | undefined {
@@ -594,5 +602,257 @@ describe('sampleDockerActivity', () => {
     const sample = await sampleDockerActivity();
 
     expect(sample.containers.map((one) => one.name)).toEqual(['db']);
+  });
+});
+
+describe('listImages', () => {
+  const NGINX_ID = `sha256:${'a'.repeat(64)}`;
+  const NODE_ID = `sha256:${'b'.repeat(64)}`;
+  const DANGLING_ID = `sha256:${'c'.repeat(64)}`;
+
+  function imageLine(overrides: Record<string, string>): string {
+    return JSON.stringify({
+      Containers: 'N/A',
+      CreatedAt: '2024-05-01 10:00:00 +0200 CEST',
+      CreatedSince: '5 months ago',
+      Digest: '<none>',
+      ID: NGINX_ID,
+      Repository: 'nginx',
+      SharedSize: 'N/A',
+      Size: '187MB',
+      Tag: '1.27',
+      UniqueSize: 'N/A',
+      VirtualSize: '187MB',
+      ...overrides,
+    });
+  }
+
+  const IMAGE_LS = [
+    imageLine({}),
+    // A second tag on the same image is its own line in `docker image ls`.
+    imageLine({ Tag: 'latest' }),
+    imageLine({
+      ID: NODE_ID,
+      Repository: 'node',
+      Tag: '22',
+      Size: '1.1GB',
+      CreatedAt: '2024-06-10 08:30:00 -0500 CDT',
+      CreatedSince: '4 months ago',
+    }),
+    imageLine({
+      ID: DANGLING_ID,
+      Repository: '<none>',
+      Tag: '<none>',
+      Size: '12.5kB',
+      CreatedSince: '2 days ago',
+    }),
+  ].join('\n');
+
+  function answer(containerImages: string[] | null): void {
+    execState.respond = (args) => {
+      if (args[0] === 'image' && args[1] === 'ls') return { stdout: `${IMAGE_LS}\n` };
+      if (args[0] === 'ps') {
+        return {
+          stdout: containerImages ? containerImages.map((_, i) => `container-${i}`).join('\n') : '',
+        };
+      }
+      if (args[0] === 'container' && args[1] === 'inspect') {
+        return { stdout: `${(containerImages ?? []).join('\n')}\n` };
+      }
+      return undefined;
+    };
+  }
+
+  it('asks for untruncated image ids so they match what containers point at', async () => {
+    answer(['x']);
+
+    await listImages();
+
+    expect(argsFor('image')).toEqual(['image', 'ls', '--no-trunc', '--format', '{{json .}}']);
+    expect(argsFor('ps')).toEqual(['ps', '-a', '-q', '--no-trunc']);
+    expect(argsFor('container')).toEqual([
+      'container',
+      'inspect',
+      '--format',
+      '{{.Image}}',
+      'container-0',
+    ]);
+  });
+
+  it('folds every tag of one image into a single entry', async () => {
+    answer(null);
+
+    const images = await listImages();
+
+    expect(images).toHaveLength(3);
+    expect(images[0]).toEqual({
+      id: NGINX_ID,
+      tags: ['nginx:1.27', 'nginx:latest'],
+      dangling: false,
+      createdAt: Date.parse('2024-05-01T10:00:00+02:00'),
+      createdSince: '5 months ago',
+      sizeBytes: 187 * 1000 ** 2,
+      containers: 0,
+    });
+    expect(images[1]).toMatchObject({
+      id: NODE_ID,
+      tags: ['node:22'],
+      createdAt: Date.parse('2024-06-10T08:30:00-05:00'),
+      sizeBytes: 1.1 * 1000 ** 3,
+    });
+  });
+
+  it('marks <none>:<none> images as dangling, with no tags', async () => {
+    answer(null);
+
+    const dangling = (await listImages()).find((image) => image.id === DANGLING_ID);
+
+    expect(dangling).toMatchObject({ tags: [], dangling: true, sizeBytes: 12.5 * 1000 });
+  });
+
+  it('counts the containers, running or not, that use each image', async () => {
+    answer([NGINX_ID, NGINX_ID, NODE_ID]);
+
+    const images = await listImages();
+
+    expect(images.map((image) => image.containers)).toEqual([2, 1, 0]);
+  });
+
+  it('skips the inspect call when there are no containers at all', async () => {
+    answer(null);
+
+    await listImages();
+
+    expect(argsFor('container')).toBeUndefined();
+  });
+
+  it('leaves a date or size it cannot read as null instead of guessing', async () => {
+    execState.respond = (args) =>
+      args[0] === 'image'
+        ? { stdout: imageLine({ CreatedAt: 'sometime', Size: 'N/A' }) }
+        : { stdout: '' };
+
+    const [image] = await listImages();
+
+    expect(image.createdAt).toBeNull();
+    expect(image.sizeBytes).toBeNull();
+  });
+
+  it('throws the docker error when the image list itself fails', async () => {
+    execState.respond = (args) =>
+      args[0] === 'image'
+        ? { error: { message: 'exit 1', stderr: 'Cannot connect to the Docker daemon' } }
+        : undefined;
+
+    await expect(listImages()).rejects.toThrow('Cannot connect to the Docker daemon');
+  });
+});
+
+describe('removeImages', () => {
+  it('removes a tagged image by its tags and a dangling one by id, never forcing', async () => {
+    const result = await removeImages([
+      { id: 'sha256:aaa', tags: ['nginx:1.27', 'nginx:latest'] },
+      { id: 'sha256:ccc', tags: [] },
+    ]);
+
+    const rmiCalls = execState.calls.filter((call) => call.args[0] === 'rmi');
+    expect(rmiCalls.map((call) => call.args)).toEqual([
+      ['rmi', 'nginx:1.27', 'nginx:latest'],
+      ['rmi', 'sha256:ccc'],
+    ]);
+    expect(result).toEqual({ removed: ['sha256:aaa', 'sha256:ccc'], failed: [] });
+  });
+
+  it('keeps going past a failure and reports it with the docker message', async () => {
+    execState.respond = (args) =>
+      args[1] === 'base:1'
+        ? {
+            error: {
+              message: 'exit 1',
+              stderr: 'Error response from daemon: conflict: image has dependent child images',
+            },
+          }
+        : undefined;
+
+    const result = await removeImages([
+      { id: 'sha256:base', tags: ['base:1'] },
+      { id: 'sha256:other', tags: ['other:2'] },
+    ]);
+
+    expect(result).toEqual({
+      removed: ['sha256:other'],
+      failed: [
+        {
+          id: 'sha256:base',
+          error: 'Error response from daemon: conflict: image has dependent child images',
+        },
+      ],
+    });
+  });
+
+  it('refuses a reference that docker would read as a flag', async () => {
+    const result = await removeImages([{ id: 'sha256:aaa', tags: ['-f'] }]);
+
+    expect(execState.calls).toHaveLength(0);
+    expect(result.removed).toEqual([]);
+    expect(result.failed[0]?.id).toBe('sha256:aaa');
+  });
+});
+
+describe('pullImage', () => {
+  it("pulls with the user's own docker setup when no sign-in is given", async () => {
+    const result = await pullImage('hubber/api:1.4');
+
+    expect(result).toEqual({ ok: true });
+    expect(execState.calls[0].args).toEqual(['pull', 'hubber/api:1.4']);
+    // Pulls of big images take minutes, far past the ten seconds other commands get.
+    expect(execState.calls[0].options.timeout).toBe(10 * 60_000);
+  });
+
+  it('signs in through a throwaway config so ~/.docker is never touched', async () => {
+    let seenConfig: unknown = null;
+    let configDir = '';
+    execState.respond = (args) => {
+      if (args[0] !== '--config') return undefined;
+      configDir = args[1];
+      seenConfig = JSON.parse(readFileSync(join(configDir, 'config.json'), 'utf8'));
+      return { stdout: '' };
+    };
+
+    const result = await pullImage('hubber/private:2', {
+      username: 'hubber',
+      secret: 'dckr_pat_x',
+    });
+
+    expect(result).toEqual({ ok: true });
+    expect(execState.calls[0].args).toEqual(['--config', configDir, 'pull', 'hubber/private:2']);
+    expect(seenConfig).toEqual({
+      auths: {
+        'https://index.docker.io/v1/': {
+          auth: Buffer.from('hubber:dckr_pat_x').toString('base64'),
+        },
+      },
+    });
+    expect(existsSync(configDir)).toBe(false);
+  });
+
+  it('cleans the throwaway config up when the pull fails too', async () => {
+    let configDir = '';
+    execState.respond = (args) => {
+      configDir = args[1];
+      return { error: { message: 'exit 1', stderr: 'pull access denied' } };
+    };
+
+    const result = await pullImage('hubber/private:2', { username: 'hubber', secret: 'x' });
+
+    expect(result).toEqual({ ok: false, error: 'pull access denied' });
+    expect(existsSync(configDir)).toBe(false);
+  });
+
+  it('refuses a reference that docker would read as a flag', async () => {
+    const result = await pullImage('--help');
+
+    expect(result.ok).toBe(false);
+    expect(execState.calls).toHaveLength(0);
   });
 });

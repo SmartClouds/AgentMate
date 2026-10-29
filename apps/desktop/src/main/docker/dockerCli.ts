@@ -1,10 +1,17 @@
 import { execFile } from 'node:child_process';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { promisify } from 'node:util';
 import type { DockerObservation } from '@runova/core';
 import type {
   DockerActionResult,
   DockerContainer,
   DockerContainerState,
+  DockerImage,
+  DockerImageRemoveResult,
+  DockerImageTarget,
+  DockerPullAuth,
   DockerRemoveOptions,
 } from '../../shared/apiTypes';
 
@@ -14,6 +21,10 @@ const EXEC_TIMEOUT_MS = 10_000;
 const STATS_TIMEOUT_MS = 15_000;
 /** For checks someone is waiting on, where a slow answer is as good as none. */
 const QUICK_EXEC_TIMEOUT_MS = 4_000;
+/** A pull downloads every layer, which takes minutes for a big image on a slow line. */
+const PULL_TIMEOUT_MS = 10 * 60_000;
+/** The key Docker Hub sign-ins live under in a docker config.json. */
+const DOCKER_HUB_AUTH_KEY = 'https://index.docker.io/v1/';
 
 const KNOWN_STATES: DockerContainerState[] = [
   'running',
@@ -43,6 +54,15 @@ interface RawPsEntry {
   State: string;
   Status: string;
   Labels: string;
+}
+
+interface RawImageEntry {
+  ID: string;
+  Repository: string;
+  Tag: string;
+  CreatedAt: string;
+  CreatedSince: string;
+  Size: string;
 }
 
 interface RawStatsEntry {
@@ -346,4 +366,115 @@ export async function removeContainer(
   }
 
   return { ok: true };
+}
+
+/** execFile never goes through a shell, but docker itself would still read "-f" as a flag. */
+function isSafeRef(ref: string): boolean {
+  return ref.length > 0 && !ref.startsWith('-');
+}
+
+/** "2024-05-01 10:00:00 +0200 CEST", docker's CreatedAt, as epoch ms. The zone name is dropped. */
+function parseCreatedAt(value: string): number | null {
+  const match = value.match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) ([+-]\d{2})(\d{2})/);
+  if (!match) return null;
+  const parsed = Date.parse(`${match[1]}T${match[2]}${match[3]}:${match[4]}`);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+/** How many containers, stopped ones included, were made from each image id. */
+async function containersPerImage(): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  const ids = (await run(['ps', '-a', '-q', '--no-trunc']))
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (ids.length === 0) return counts;
+  const output = await run(['container', 'inspect', '--format', '{{.Image}}', ...ids]);
+  for (const imageId of output.split('\n').map((line) => line.trim())) {
+    if (imageId) counts.set(imageId, (counts.get(imageId) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/**
+ * Every image on this machine. `docker image ls` prints one line per tag, so lines sharing an id
+ * fold into one image. Docker's own "Containers" column is "N/A" outside `system df`, so usage is
+ * counted from the containers instead.
+ */
+export async function listImages(): Promise<DockerImage[]> {
+  const [output, usage] = await Promise.all([
+    run(['image', 'ls', '--no-trunc', '--format', '{{json .}}']).catch((error: unknown) => {
+      throw new Error(errorMessage(error));
+    }),
+    containersPerImage().catch(() => new Map<string, number>()),
+  ]);
+  const byId = new Map<string, DockerImage>();
+  for (const entry of parseNdjson<RawImageEntry>(output)) {
+    const dangling = entry.Repository === '<none>';
+    const tag = !dangling && entry.Tag !== '<none>' ? `${entry.Repository}:${entry.Tag}` : null;
+    const existing = byId.get(entry.ID);
+    if (existing) {
+      if (tag) existing.tags.push(tag);
+      continue;
+    }
+    byId.set(entry.ID, {
+      id: entry.ID,
+      tags: tag ? [tag] : [],
+      dangling,
+      createdAt: parseCreatedAt(entry.CreatedAt),
+      createdSince: entry.CreatedSince,
+      sizeBytes: parseDockerSize(entry.Size),
+      containers: usage.get(entry.ID) ?? 0,
+    });
+  }
+  return [...byId.values()];
+}
+
+/**
+ * Removes each image by its tags (or its id when it has none) and never with -f, so docker
+ * itself refuses one a container started using after the list was read. One failure, such as
+ * an image other images are built on, does not stop the rest.
+ */
+export async function removeImages(targets: DockerImageTarget[]): Promise<DockerImageRemoveResult> {
+  const result: DockerImageRemoveResult = { removed: [], failed: [] };
+  for (const target of targets) {
+    const refs = target.tags.length > 0 ? target.tags : [target.id];
+    if (!refs.every(isSafeRef)) {
+      result.failed.push({ id: target.id, error: 'That image reference is not valid.' });
+      continue;
+    }
+    try {
+      await run(['rmi', ...refs]);
+      result.removed.push(target.id);
+    } catch (error) {
+      result.failed.push({ id: target.id, error: errorMessage(error) });
+    }
+  }
+  return result;
+}
+
+/**
+ * Pulls an image. With a sign-in, docker reads it from a throwaway config folder that is
+ * deleted afterwards, so the user's own ~/.docker config and credential store stay untouched.
+ */
+export async function pullImage(ref: string, auth?: DockerPullAuth): Promise<DockerActionResult> {
+  if (!isSafeRef(ref)) return { ok: false, error: 'That image reference is not valid.' };
+  let configDir: string | null = null;
+  try {
+    if (auth) {
+      configDir = await mkdtemp(join(tmpdir(), 'runova-docker-'));
+      const token = Buffer.from(`${auth.username}:${auth.secret}`).toString('base64');
+      await writeFile(
+        join(configDir, 'config.json'),
+        JSON.stringify({ auths: { [DOCKER_HUB_AUTH_KEY]: { auth: token } } }),
+        { mode: 0o600 },
+      );
+    }
+    await run([...(configDir ? ['--config', configDir] : []), 'pull', ref], PULL_TIMEOUT_MS);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error) };
+  } finally {
+    if (configDir) await rm(configDir, { recursive: true, force: true });
+  }
 }

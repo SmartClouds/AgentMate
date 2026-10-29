@@ -3434,6 +3434,71 @@ export interface VaultCopyResult {
 export interface VaultClipboardEvent {
   cleared: boolean;
 }
+/** One image on this machine, with every tag that points at it folded together. */
+export interface DockerImage {
+  /** The full "sha256:..." id. */
+  id: string;
+  /** "repo:tag" references. Empty for a dangling image. */
+  tags: string[];
+  /** Docker's `<none>:<none>`: an image a newer build or pull left without a name. */
+  dangling: boolean;
+  createdAt: number | null;
+  /** Docker's own human string, e.g. "3 weeks ago". */
+  createdSince: string;
+  sizeBytes: number | null;
+  /** Containers of any state built from this image. Zero means unused. */
+  containers: number;
+}
+
+/** What `docker rmi` needs to remove one image: its tags, or its id when it has none. */
+export interface DockerImageTarget {
+  id: string;
+  tags: string[];
+}
+
+export interface DockerImageRemoveResult {
+  removed: string[];
+  failed: { id: string; error: string }[];
+}
+
+export interface DockerPullAuth {
+  username: string;
+  secret: string;
+}
+
+/** Whether Runova holds a Docker Hub sign-in it can use, from the same store deploys use. */
+export interface DockerHubStatus {
+  state: 'signedOut' | 'locked' | 'signedIn';
+  username: string | null;
+}
+
+export interface DockerHubRepository {
+  namespace: string;
+  name: string;
+  description: string;
+  isPrivate: boolean;
+  starCount: number;
+  pullCount: number;
+  lastUpdated: number | null;
+}
+
+export interface DockerHubTag {
+  name: string;
+  sizeBytes: number | null;
+  lastPushed: number | null;
+  digest: string | null;
+  /** "linux/amd64", "linux/arm64/v8", ... */
+  platforms: string[];
+}
+
+export interface DockerHubPullInput {
+  namespace: string;
+  name: string;
+  tag: string;
+  /** Only a private repository's pull carries the sign-in. */
+  isPrivate: boolean;
+}
+
 
 export interface VaultImportSampleRow {
   type: VaultEntryType;
