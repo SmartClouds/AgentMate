@@ -3,7 +3,8 @@ name: CD
 # Builds the Runova desktop app for Windows, macOS, and Linux plus the
 # Android mobile app (a universal APK and one per CPU architecture), and the
 # server core the desktop installs on users' servers (linux-x64 and
-# linux-arm64), and publishes all of it to a GitHub Release.
+# linux-arm64), and publishes all of it to a GitHub Release. Once the release
+# is out, the Windows installer goes to winget as a PR on microsoft/winget-pkgs.
 #
 # Triggers:
 #   - Pushing a tag like "v1.2.3" builds and releases automatically.
@@ -502,3 +503,35 @@ jobs:
           name: Runova ${{ steps.tag.outputs.tag }}
           draft: false
           files: dist-release/**/*
+
+  # Opens a PR on microsoft/winget-pkgs for the new version, so `winget upgrade` finds it once
+  # it's merged. The PR comes from the Cyrus-Sushiant fork of winget-pkgs and copies everything
+  # but the version, URL and hash from the last published SmartClouds.Runova manifest.
+  # WINGET_TOKEN is a classic PAT on that account with the public_repo scope (a fine-grained
+  # token can't open a PR on a repo the account doesn't own). This runs after the release is
+  # out, so a failure here never holds the release back; re-run the job once it's fixed.
+  # Tags with a "-" (v1.2.3-beta.1) are prereleases and stay off winget.
+  winget:
+    name: Submit to winget
+    needs: release
+    if: ${{ !contains(github.ref_type == 'tag' && github.ref_name || inputs.tag, '-') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine release tag
+        id: tag
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open the winget-pkgs PR
+        uses: vedantmgoyal9/winget-releaser@b7370d4d152efdce803a26cc6ca9eee58cb2ad54 # v2
+        with:
+          identifier: SmartClouds.Runova
+          release-tag: ${{ steps.tag.outputs.tag }}
+          installers-regex: 'Runova-Setup-.*\.exe$'
+          release-notes-url: https://github.com/${{ github.repository }}/releases/tag/${{ steps.tag.outputs.tag }}
+          fork-user: Cyrus-Sushiant
+          token: ${{ secrets.WINGET_TOKEN }}

@@ -9,6 +9,8 @@
 
   [Website](https://runovahq.com) · [Download](https://github.com/SmartClouds/Runova/releases/latest) · [Source](https://github.com/SmartClouds/Runova)
 
+  On Windows: `winget install SmartClouds.Runova`
+
   [![CI](https://github.com/SmartClouds/Runova/actions/workflows/ci.yml/badge.svg)](https://github.com/SmartClouds/Runova/actions/workflows/ci.yml)
   ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-informational)
   ![Built with Electron](https://img.shields.io/badge/built%20with-Electron-47848F)
