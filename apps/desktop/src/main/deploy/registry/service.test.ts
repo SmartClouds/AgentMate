@@ -197,6 +197,28 @@ describe('DeployRegistries', () => {
     expect(unseal).toHaveBeenCalledTimes(1);
   });
 
+  it('with no registry named, unseals every sign-in for the server to pick from', async () => {
+    const { registries, unseal } = setup();
+    await registries.saveGithubToken({ token: PACKAGES, acceptBroaderScopes: false });
+    await registries.saveCredential({
+      kind: 'dockerhub',
+      username: 'hubber',
+      secret: 'dckr_pat_hub',
+    });
+
+    const auths = await registries.authsFor('srv', STACK, null);
+    const plan = await registries.plan('srv', STACK, ['docker.io'], [], true);
+
+    expect([...auths].sort((a, b) => a.registry.localeCompare(b.registry))).toEqual([
+      { registry: 'docker.io', username: 'hubber', secret: 'dckr_pat_hub' },
+      { registry: 'ghcr.io', username: 'octocat', secret: PACKAGES },
+    ]);
+    expect(unseal).toHaveBeenCalledTimes(2);
+    expect(plan.unresolved).toBe(true);
+    await registries.setSendSignIns('srv', STACK, false);
+    expect(await registries.authsFor('srv', STACK, null)).toEqual([]);
+  });
+
   it('an app whose choice is not to send them gets none, and the plan says so', async () => {
     const { registries } = setup();
     const saved = await registries.saveGithubToken({ token: PACKAGES, acceptBroaderScopes: false });

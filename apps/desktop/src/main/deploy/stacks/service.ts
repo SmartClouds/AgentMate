@@ -34,7 +34,7 @@ import type {
 import { type CoreHttpClient, CoreHttpError } from '../connection/coreHttp';
 import { ADMIN_ROLES, callCore } from '../coreCalls';
 import type { CoreLinks } from '../live/coreLinks';
-import { registriesOfCompose } from '../registry/images';
+import { type ComposeRegistries, registriesOfCompose } from '../registry/images';
 import { explainCoreRefusal } from '../system';
 import type { BuildContextOptions, BuildContextResult } from './buildContext';
 import {
@@ -73,13 +73,15 @@ export interface DeployStacksDeps {
   /** Where packed contexts wait for their upload. */
   tempRoot?: () => string;
   /**
-   * The registry sign-ins a deploy of this app sends for these registries (E08). They go with
-   * the deploy request only; the core keeps them in memory and a tmpfs DOCKER_CONFIG for the job.
+   * The registry sign-ins a deploy of this app sends for these registries (E08), or for every
+   * registry when null (an image's host is only known on the server). They go with the deploy
+   * request only; the core keeps the ones its images need in memory and a tmpfs DOCKER_CONFIG
+   * for the job.
    */
   registryAuths?: (
     serverId: string,
     stackId: string,
-    registries: string[],
+    registries: string[] | null,
   ) => Promise<RegistryAuth[]>;
 }
 
@@ -164,9 +166,13 @@ export class DeployStacks {
   }
 
   /** The registries a revision pulls from, read from its compose file on the server. */
-  async registriesOf(serverId: string, stackId: string, revision: number): Promise<string[]> {
+  async registriesOf(
+    serverId: string,
+    stackId: string,
+    revision: number,
+  ): Promise<ComposeRegistries> {
     const files = await this.files(serverId, stackId, revision);
-    return registriesOfCompose(files.compose);
+    return registriesOfCompose(files.compose, files.envKeys);
   }
 
   /**
@@ -175,7 +181,8 @@ export class DeployStacks {
    */
   private async signInsFor(serverId: string, stackId: string, revision: number) {
     if (!this.deps.registryAuths) return [];
-    const registries = await this.registriesOf(serverId, stackId, revision);
+    const { registries, unresolved } = await this.registriesOf(serverId, stackId, revision);
+    if (unresolved) return this.deps.registryAuths(serverId, stackId, null);
     if (registries.length === 0) return [];
     return this.deps.registryAuths(serverId, stackId, registries);
   }

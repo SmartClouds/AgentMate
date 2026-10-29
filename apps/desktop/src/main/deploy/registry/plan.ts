@@ -12,14 +12,20 @@ export async function planFor(
   servers: DeployServerRegistries,
   stacks: Pick<DeployStacks, 'registriesOf'>,
 ): Promise<DeployRegistryPlan> {
-  const pulledFrom =
+  const pulled =
     request.images !== null
-      ? [...new Set(request.images.map(registryOfImage))]
+      ? { registries: [...new Set(request.images.map(registryOfImage))], unresolved: false }
       : await stacks.registriesOf(request.serverId, request.stackId ?? '', request.revision ?? 1);
   // A Viewer may not list them; the plan then just does not know.
   const stored = await servers
     .list(request.serverId)
     .then((list) => list.map((credential) => credential.registry))
     .catch(() => [] as string[]);
-  return registries.plan(request.serverId, request.stackId, pulledFrom, stored);
+  return registries.plan(
+    request.serverId,
+    request.stackId,
+    pulled.registries,
+    stored,
+    pulled.unresolved,
+  );
 }

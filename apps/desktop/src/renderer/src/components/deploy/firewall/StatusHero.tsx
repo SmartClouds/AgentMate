@@ -18,9 +18,10 @@ import { SECURITY_CARD } from '../security/SecurityCard';
  * and change the incoming default from here; both go through the preview like any change.
  */
 
+// The heading already says "default", so the values stay one word and the dropdown never clips.
 const INCOMING_OPTIONS = FIREWALL_POLICIES.map((policy) => ({
   value: policy,
-  label: `${POLICY_LABEL[policy]} by default`,
+  label: POLICY_LABEL[policy],
 }));
 
 /** A label over its value. Values wrap rather than cut off, so a narrow window loses no words. */
@@ -28,7 +29,9 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
   return (
     <div className="min-w-0">
       <dt className={SECTION_HEADING}>{label}</dt>
-      <dd className="mt-1 text-sm text-foreground [overflow-wrap:anywhere]">{children}</dd>
+      <dd className="mt-1.5 text-sm font-medium text-foreground [overflow-wrap:anywhere]">
+        {children}
+      </dd>
     </div>
   );
 }
@@ -116,21 +119,26 @@ export function StatusHero({
             {BACKEND_LABEL[status.backend]}
             {status.zone ? ` (zone ${status.zone})` : ''}
           </Fact>
-          <Fact label="Incoming">
+          <Fact label="Incoming default">
             {canAdmin && !none && !busy ? (
-              <Combobox
-                ariaLabel="Incoming by default"
-                className="h-7 w-44 max-w-full pl-3 pr-2"
-                searchable={false}
-                options={INCOMING_OPTIONS}
-                value={stagedIncoming ?? status.defaultIncoming}
-                onChange={(policy) => onDefaultIncoming(policy as FirewallPolicy)}
-              />
+              <div className="-mt-0.5 flex flex-wrap items-center gap-2">
+                <Combobox
+                  ariaLabel="Incoming by default"
+                  className="h-8 w-fit min-w-28 max-w-full pl-3.5 pr-2.5 font-medium"
+                  searchable={false}
+                  options={INCOMING_OPTIONS}
+                  value={stagedIncoming ?? status.defaultIncoming}
+                  onChange={(policy) => onDefaultIncoming(policy as FirewallPolicy)}
+                />
+                {stagedIncoming && (
+                  <span className="text-xs font-normal text-muted-foreground">Not applied yet</span>
+                )}
+              </div>
             ) : (
-              `${POLICY_LABEL[status.defaultIncoming]} by default`
+              POLICY_LABEL[status.defaultIncoming]
             )}
           </Fact>
-          <Fact label="Outgoing">{POLICY_LABEL[status.defaultOutgoing]} by default</Fact>
+          <Fact label="Outgoing default">{POLICY_LABEL[status.defaultOutgoing]}</Fact>
           <Fact label="IPv6">{status.ipv6 ? 'Filtered too' : 'Not filtered'}</Fact>
           <Fact label="SSH ports">
             {status.ssh.ports.length > 0 ? (

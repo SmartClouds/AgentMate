@@ -118,6 +118,22 @@ describe('RegistryPlanCard', () => {
     ).toBeVisible();
   });
 
+  it('says when an image takes its registry from the .env, which only the server reads', async () => {
+    renderWithProviders(
+      <RegistryPlanCard
+        input={{ serverId: 'srv-1', stackId: STACK, revision: 2 }}
+        stackId={STACK}
+      />,
+      {
+        bridge: {
+          'deployRegistry.plan': { sendSignIns: true, entries: [], unresolved: true },
+        },
+      },
+    );
+    expect(await screen.findByText(/Every sign-in from this computer goes/)).toBeVisible();
+    expect(screen.queryByText(/nothing pulls/)).toBeNull();
+  });
+
   it('an app that only builds says nothing pulls', async () => {
     const user = userEvent.setup();
     const open = vi.fn();

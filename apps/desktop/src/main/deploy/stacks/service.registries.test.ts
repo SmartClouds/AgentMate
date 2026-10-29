@@ -13,11 +13,18 @@ const PRIVATE = `services:
     build: ./worker
     image: ghcr.io/acme/worker
 `;
+/** The registry host comes from a variable, with a default, as many production files have it. */
+const PREFIXED = `services:
+  web:
+    image: \${IMAGE_PREFIX:-ghcr.io/acme/shop}-web:\${TAG:-latest}
+  cache:
+    image: redis:7-alpine
+`;
 const AUTH = { registry: 'ghcr.io', username: 'octocat', secret: 'ghp_deploySecret0123' };
 
-function setup(compose: string, auths = [AUTH]) {
+function setup(compose: string, auths = [AUTH], envKeys: string[] = []) {
   const hub = {
-    getStackRevisionFiles: vi.fn(async () => ({ number: 2, compose, envKeys: [] })),
+    getStackRevisionFiles: vi.fn(async () => ({ number: 2, compose, envKeys })),
     deployStack: vi.fn(async () => ({ id: 'plain' })),
     rollbackStack: vi.fn(async () => ({ id: 'plain-rollback' })),
     deployStackWithRegistries: vi.fn(async () => ({ id: 'signed' })),
@@ -45,6 +52,33 @@ describe('DeployStacks with registry sign-ins (E08)', () => {
     expect(hub.getStackRevisionFiles).toHaveBeenCalledWith({ stackId: STACK, revision: 2 });
     // The built worker is skipped, as docker compose pull skips it.
     expect(registryAuths).toHaveBeenCalledWith(SERVER, STACK, ['docker.io', 'ghcr.io']);
+    expect(hub.deployStackWithRegistries).toHaveBeenCalledWith({
+      stackId: STACK,
+      revision: 2,
+      registries: [AUTH],
+    });
+    expect(hub.deployStack).not.toHaveBeenCalled();
+  });
+
+  it('a host with a default in a variable the .env leaves unset is read from the default', async () => {
+    const { stacks, hub, registryAuths } = setup(PREFIXED, [AUTH], ['TAG']);
+
+    expect(await stacks.deploy(SERVER, STACK, 2)).toEqual({ id: 'signed' });
+    expect(registryAuths).toHaveBeenCalledWith(SERVER, STACK, ['docker.io', 'ghcr.io']);
+    expect(hub.deployStackWithRegistries).toHaveBeenCalledWith({
+      stackId: STACK,
+      revision: 2,
+      registries: [AUTH],
+    });
+  });
+
+  it('a host the .env sets is only known on the server, so every sign-in goes along', async () => {
+    const { stacks, hub, registryAuths } = setup(PREFIXED, [AUTH], ['IMAGE_PREFIX', 'TAG']);
+
+    expect(await stacks.deploy(SERVER, STACK, 2)).toEqual({ id: 'signed' });
+    expect(await stacks.rollback(SERVER, STACK, 1)).toEqual({ id: 'signed-rollback' });
+    expect(registryAuths).toHaveBeenCalledWith(SERVER, STACK, null);
+    expect(registryAuths).not.toHaveBeenCalledWith(SERVER, STACK, expect.any(Array));
     expect(hub.deployStackWithRegistries).toHaveBeenCalledWith({
       stackId: STACK,
       revision: 2,

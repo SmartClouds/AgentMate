@@ -80,6 +80,8 @@ Each app has a **Registry sign-in** card (on the Review step of the New app wiza
 - "no sign-in, which is fine for public images" (Docker Hub only), or
 - a warning that there is no sign-in and the pull fails unless the images are public.
 
+An image can take its registry from a variable, such as `image: ${IMAGE_PREFIX:-ghcr.io/acme/shop}-web:${TAG}`. When the app's .env leaves that variable unset, the default names the registry and the card lists it as usual. When the .env sets it, only the server reads the value, so the card says so instead. Every sign-in from this computer then goes with the deploy, and the server signs in only to the registries the images actually pull from.
+
 On an existing app's page, the card has a switch **Send this computer's sign-ins with this app's deploys**. Turn it off to stop sending your local sign-ins with that app. The card also has a **Manage registries** button. If an app builds from the project, every stored credential is used, since base images can come from anywhere.
 
 Image pulls on the **Images** tab of Containers use your saved sign-in for that image's registry too. If you have none, the credential stored on the server for that registry is used. See [Containers, apps and stacks](deploy-containers-stacks.md).

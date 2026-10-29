@@ -99,6 +99,11 @@ export interface DeployRegistryPlanInput {
 export interface DeployRegistryPlan {
   sendSignIns: boolean;
   entries: DeployRegistryPlanEntry[];
+  /**
+   * Some image takes its registry host from a variable in the app's .env, which only the server
+   * reads. Every sign-in from this computer then goes along, and the server uses the ones it needs.
+   */
+  unresolved?: boolean;
 }
 
 /** The password or authenticator code a step-up needs, when the core asked for one. */

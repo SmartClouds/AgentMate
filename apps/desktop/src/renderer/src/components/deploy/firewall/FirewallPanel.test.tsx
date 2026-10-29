@@ -79,7 +79,7 @@ describe('FirewallPanel', () => {
     renderPanel({}, ['viewer']);
 
     expect(await screen.findByText('Firewall on')).toBeTruthy();
-    expect(screen.getByText('Deny by default')).toBeTruthy();
+    expect(screen.getByText('Incoming default').nextElementSibling?.textContent).toBe('Deny');
     expect(await screen.findByRole('row', { name: 'Rule 22 Anywhere' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Add rule' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Turn off' })).toBeNull();

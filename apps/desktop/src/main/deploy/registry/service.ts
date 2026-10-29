@@ -117,18 +117,23 @@ export class DeployRegistries {
     return this.deps.state.setSendSignIns(serverId, stackId, sendSignIns);
   }
 
-  /** For each registry an app pulls from, the sign-in from this computer that goes along. */
+  /**
+   * For each registry an app pulls from, the sign-in from this computer that goes along. With
+   * `unresolved`, some image's host is only known on the server, so every sign-in goes.
+   */
   async plan(
     serverId: string,
     stackId: string | null,
     pulledFrom: readonly string[],
     storedOnServer: readonly string[],
+    unresolved = false,
   ): Promise<DeployRegistryPlan> {
     const sendSignIns = stackId ? await this.deps.state.sendSignIns(serverId, stackId) : true;
     const credentials = await this.deps.state.credentials();
     const registries = [...new Set(pulledFrom)].sort();
     return {
       sendSignIns,
+      ...(unresolved ? { unresolved } : {}),
       entries: registries.map((registry) => ({
         registry,
         credentialId: sendSignIns
@@ -140,23 +145,24 @@ export class DeployRegistries {
   }
 
   /**
-   * The sign-ins a deploy of this app sends, unsealed, for the registries it pulls from. None
-   * when the app's choice is not to send them. A locked passkey stops the deploy with the reason
-   * rather than letting the pull fail later on the server.
+   * The sign-ins a deploy of this app sends, unsealed, for the registries it pulls from (all of
+   * them when null: the server keeps only the ones its images need). None when the app's choice
+   * is not to send them. A locked passkey stops the deploy with the reason rather than letting
+   * the pull fail later on the server.
    */
   async authsFor(
     serverId: string,
     stackId: string,
-    registries: readonly string[],
+    registries: readonly string[] | null,
   ): Promise<RegistryAuth[]> {
     if (!(await this.deps.state.sendSignIns(serverId, stackId))) return [];
     return this.authsForRegistries(registries);
   }
 
-  async authsForRegistries(registries: readonly string[]): Promise<RegistryAuth[]> {
-    const wanted = new Set(registries);
-    const credentials = (await this.deps.state.credentials()).filter((item) =>
-      wanted.has(item.registry),
+  async authsForRegistries(registries: readonly string[] | null): Promise<RegistryAuth[]> {
+    const wanted = registries && new Set(registries);
+    const credentials = (await this.deps.state.credentials()).filter(
+      (item) => !wanted || wanted.has(item.registry),
     );
     const auths: RegistryAuth[] = [];
     for (const credential of credentials) {

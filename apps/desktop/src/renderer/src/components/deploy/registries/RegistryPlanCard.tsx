@@ -68,10 +68,12 @@ export function RegistryPlanCard({
       </p>
     ) : null;
   }
-  const { entries, sendSignIns } = plan.data;
-  const worthShowing = entries.some(
-    (entry) => entry.registry !== DOCKER_HUB || entry.credentialId || entry.storedOnServer,
-  );
+  const { entries, sendSignIns, unresolved = false } = plan.data;
+  const worthShowing =
+    unresolved ||
+    entries.some(
+      (entry) => entry.registry !== DOCKER_HUB || entry.credentialId || entry.storedOnServer,
+    );
   if (!worthShowing && !stackId) return null;
 
   async function toggle(next: boolean): Promise<void> {
@@ -102,8 +104,17 @@ export function RegistryPlanCard({
           </Button>
         )}
       </div>
+      {unresolved && (
+        <p className="text-xs text-muted-foreground">
+          {sendSignIns
+            ? "Some images take their registry from the app's .env, which only the server reads. Every sign-in from this computer goes with the deploy, and the server uses the ones those images need."
+            : "Some images take their registry from the app's .env, which only the server reads. Only credentials stored on the server sign in to it."}
+        </p>
+      )}
       {entries.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Every image is built here; nothing pulls.</p>
+        unresolved ? null : (
+          <p className="text-xs text-muted-foreground">Every image is built here; nothing pulls.</p>
+        )
       ) : (
         <ul aria-label="Registries this app pulls from" className="space-y-1">
           {entries.map((entry) => (

@@ -8,7 +8,9 @@ const STACK = '0f8fad5b-d9cb-469f-a165-70867728950e';
 function setup(listed: () => Promise<Array<{ registry: string }>>) {
   const registries = { plan: vi.fn(async () => ({ sendSignIns: true, entries: [] })) };
   const servers = { list: vi.fn(listed) };
-  const stacks = { registriesOf: vi.fn(async () => ['ghcr.io']) };
+  const stacks = {
+    registriesOf: vi.fn(async () => ({ registries: ['ghcr.io'], unresolved: false })),
+  };
   return {
     run: (request: Parameters<typeof planFor>[0]) =>
       planFor(
@@ -39,6 +41,7 @@ describe('planFor', () => {
       null,
       ['ghcr.io', 'docker.io'],
       ['docker.io'],
+      false,
     );
   });
 
@@ -50,6 +53,15 @@ describe('planFor', () => {
     await run({ serverId: 'srv', stackId: STACK, revision: 3, images: null });
 
     expect(stacks.registriesOf).toHaveBeenCalledWith('srv', STACK, 3);
-    expect(registries.plan).toHaveBeenCalledWith('srv', STACK, ['ghcr.io'], []);
+    expect(registries.plan).toHaveBeenCalledWith('srv', STACK, ['ghcr.io'], [], false);
+  });
+
+  it('passes on that an image host is only known on the server', async () => {
+    const { run, registries, stacks } = setup(async () => []);
+    stacks.registriesOf.mockResolvedValueOnce({ registries: ['docker.io'], unresolved: true });
+
+    await run({ serverId: 'srv', stackId: STACK, revision: 3, images: null });
+
+    expect(registries.plan).toHaveBeenCalledWith('srv', STACK, ['docker.io'], [], true);
   });
 });

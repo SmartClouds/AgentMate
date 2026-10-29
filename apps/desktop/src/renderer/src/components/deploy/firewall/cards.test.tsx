@@ -57,8 +57,21 @@ describe('StatusHero', () => {
     const { user } = hero({ onDefaultIncoming });
 
     await user.click(screen.getByRole('combobox', { name: 'Incoming by default' }));
-    await user.click(await screen.findByRole('option', { name: 'Reject by default' }));
+    await user.click(await screen.findByRole('option', { name: 'Reject' }));
     expect(onDefaultIncoming).toHaveBeenCalledWith('reject');
+  });
+
+  it('marks an incoming default that is staged but not applied', () => {
+    const view = hero({ stagedIncoming: 'reject' });
+
+    expect(screen.getByRole('combobox', { name: 'Incoming by default' }).textContent).toBe(
+      'Reject',
+    );
+    expect(screen.getByText('Not applied yet')).toBeTruthy();
+    view.unmount();
+
+    hero();
+    expect(screen.queryByText('Not applied yet')).toBeNull();
   });
 
   it('says when no firewall is installed, when SSH ports are unknown, and when it failed', () => {

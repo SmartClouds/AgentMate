@@ -5,9 +5,10 @@ namespace Runova.ServerCore.Stacks;
 
 /// <summary>
 /// Registry sign-ins for a deploy (E08). The ones the app sent come in with the request; once the
-/// validate step knows which registries the images come from, stored credentials fill in for the
-/// rest. Then they go into the job's tmpfs DOCKER_CONFIG, which the pull, build and up steps use
-/// and the end of the job wipes, however it ends.
+/// validate step knows which registries the images come from, the sent ones for those registries
+/// are kept and stored credentials fill in for the rest. Then they go into the job's tmpfs
+/// DOCKER_CONFIG, which the pull, build and up steps use and the end of the job wipes, however it
+/// ends.
 /// </summary>
 internal sealed partial class StackOperations
 {
@@ -40,11 +41,16 @@ internal sealed partial class StackOperations
         }
 
         // A build's base images can come from anywhere, so a stack that builds gets every stored credential.
+        // Otherwise only the registries the images pull from are signed in to. The app may bring more
+        // than that: it cannot tell a host the .env sets, so it sends every sign-in it has.
+        var requested = config.Builds
+            ? signIns.Requested
+            : [.. signIns.Requested.Where(login => config.Registries.Contains(login.Registry, StringComparer.Ordinal))];
         var wanted = config.Builds
             ? null
-            : config.Registries.Where(host => !signIns.Requested.Any(login => login.Registry == host)).ToList();
+            : config.Registries.Where(host => !requested.Any(login => login.Registry == host)).ToList();
         var stored = wanted is { Count: 0 } ? [] : await registries.UnsealAsync(wanted, token);
-        var logins = RegistryCredentials.Merge(signIns.Requested, stored);
+        var logins = RegistryCredentials.Merge(requested, stored);
         if (logins.Count == 0)
         {
             return;

@@ -141,6 +141,30 @@ public sealed class RegistryDeployTests
     }
 
     [Fact]
+    public async Task A_host_from_the_env_file_signs_in_with_only_the_sign_ins_its_images_need()
+    {
+        // The app cannot tell a host the .env sets, so it sends every sign-in it has.
+        const string other = "registry.example.com";
+        const string otherToken = "otherRegistryToken0123456789";
+        await using var kit = await KitAsync();
+        var stack = await kit.CreateStackAsync();
+        var revision = await kit.UploadAsync(stack.Id, StackKit.Upload(
+            Compose.Replace("ghcr.io/acme/private-web:1.0", "${WEB_PREFIX:-docker.io/acme}/private-web:${WEB_TAG:-1.0}", StringComparison.Ordinal),
+            env: $"{StackKit.Env}WEB_PREFIX=\"ghcr.io/acme\"\n"));
+
+        var (job, log) = await kit.RunAsync(await DeployAsync(kit, stack.Id, revision.Number, [.. _signIn, new RegistryAuth(other, User, otherToken)]));
+
+        Assert.Equal(JobState.Succeeded, job.State);
+        var pull = Assert.Single(kit.Simulated.DockerConfigs, entry => entry.Command == "pull");
+        Assert.Contains(Forms[1], pull.Config, StringComparison.Ordinal);
+        Assert.DoesNotContain(other, pull.Config, StringComparison.Ordinal);
+        Assert.Contains(log, line => line.Text.Contains("Signing in to ghcr.io as octocat", StringComparison.Ordinal));
+        Assert.DoesNotContain(log, line => line.Text.Contains(other, StringComparison.Ordinal));
+        Assert.All(log, line => Assert.DoesNotContain(otherToken, line.Text, StringComparison.Ordinal));
+        Assert.Empty(FilesHoldingTheToken(kit));
+    }
+
+    [Fact]
     public async Task A_failed_deploy_leaves_no_token_either()
     {
         await using var kit = await KitAsync();

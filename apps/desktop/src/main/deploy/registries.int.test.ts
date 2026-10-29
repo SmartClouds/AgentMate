@@ -260,7 +260,7 @@ describe.skipIf(!enabled)('Private registries through the server core on a real 
           writeFileSync(join(folder, 'compose.yaml'), text);
         };
         write(compose(IMAGE));
-        const sent: string[][] = [];
+        const sent: Array<string[] | null> = [];
         const stacks = new DeployStacks({
           links: { call: (_serverId, work) => work(hub) },
           roles: () => ['owner'],
@@ -274,7 +274,7 @@ describe.skipIf(!enabled)('Private registries through the server core on a real 
           pack: buildContextTarball,
           registryAuths: async (_serverId, _stackId, registries) => {
             sent.push(registries);
-            return registries.includes(REGISTRY)
+            return (registries ?? [REGISTRY]).includes(REGISTRY)
               ? [{ registry: REGISTRY, username: PULLER, secret: TOKEN }]
               : [];
           },
