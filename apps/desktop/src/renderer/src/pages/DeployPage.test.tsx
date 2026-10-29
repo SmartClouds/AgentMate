@@ -1675,3 +1675,125 @@ describe('DeployPage chosen servers', () => {
     });
   });
 });
+
+describe('DeployPage coming back', () => {
+  const SERVERS = [
+    server({ id: 'srv-1', nickname: 'Production', core: CORE, enrolled: true }),
+    server({ id: 'srv-2', nickname: 'Staging', core: CORE, enrolled: true }),
+  ];
+  const SIGNED_OUT = {
+    'deploy.listServers': async () => SERVERS,
+    'deploy.access': async (): Promise<DeployAccess> => ({ state: 'needs-sign-in' }),
+  };
+
+  /** Opens the page at `route`, then leaves it, the way going to another page does. */
+  async function visit(route: string, heading: string, bridge: Record<string, unknown> = {}) {
+    const { unmount } = renderPage({ ...SIGNED_OUT, ...bridge }, route);
+    expect(await screen.findByRole('heading', { name: heading })).toBeTruthy();
+    unmount();
+  }
+
+  it('opens the server and the section that were open when the page was left', async () => {
+    await visit('/deploy?server=srv-2&view=logs', 'Staging');
+
+    renderPage(SIGNED_OUT);
+    expect(await screen.findByRole('heading', { name: 'Staging' })).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByTestId('path').textContent).toBe('/deploy?server=srv-2&view=logs'),
+    );
+    const sections = screen.getByRole('navigation', { name: 'Server sections' });
+    expect(
+      within(sections).getByRole('button', { name: /Logs/ }).getAttribute('aria-current'),
+    ).toBe('page');
+    expect(screen.queryByRole('heading', { name: 'Production' })).toBeNull();
+  });
+
+  it('remembers a section picked on the page, not only one from a link', async () => {
+    const { user, unmount } = renderPage(SIGNED_OUT, '/deploy?server=srv-2');
+    const sections = await screen.findByRole('navigation', { name: 'Server sections' });
+    await user.click(within(sections).getByRole('button', { name: /Logs/ }));
+    await waitFor(() =>
+      expect(screen.getByTestId('path').textContent).toBe('/deploy?server=srv-2&view=logs'),
+    );
+    unmount();
+
+    renderPage(SIGNED_OUT);
+    await waitFor(() =>
+      expect(screen.getByTestId('path').textContent).toBe('/deploy?server=srv-2&view=logs'),
+    );
+  });
+
+  it('keeps the memory on this computer, for the next start', async () => {
+    await visit('/deploy?server=srv-2&view=logs', 'Staging');
+
+    expect(localStorage.getItem('runova-deploy-selection')).toContain('server=srv-2&view=logs');
+  });
+
+  it('opens the FTP or SFTP site that was open', async () => {
+    await visit('/deploy?files=fs-1&view=settings', 'Bakery static', {
+      'deployFiles.list': async () => [fileSite()],
+      'deployFiles.subscribe': snapshot(),
+        'deployFiles.changes': snapshot(),
+    });
+
+    renderPage({
+      ...SIGNED_OUT,
+      'deployFiles.list': async () => [fileSite()],
+      'deployFiles.subscribe': snapshot(),
+        'deployFiles.changes': snapshot(),
+    });
+    expect(await screen.findByRole('heading', { name: 'Bakery static' })).toBeTruthy();
+    expect(screen.getByTestId('path').textContent).toBe('/deploy?files=fs-1&view=settings');
+  });
+
+  it('follows an address that names a server, not the memory', async () => {
+    await visit('/deploy?server=srv-2&view=logs', 'Staging');
+
+    renderPage(SIGNED_OUT, '/deploy?server=srv-1');
+    expect(await screen.findByRole('heading', { name: 'Production' })).toBeTruthy();
+    expect(screen.getByTestId('path').textContent).toBe('/deploy?server=srv-1');
+  });
+
+  it('opens the Cloudflare dialog over what was open', async () => {
+    await visit('/deploy?server=srv-2', 'Staging');
+
+    renderPage(
+      { ...SIGNED_OUT, 'cloudflare.status': async () => NO_CLOUDFLARE },
+      '/deploy?dialog=cloudflare',
+    );
+    expect(await screen.findByRole('dialog', { name: 'Cloudflare' })).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByTestId('path').textContent).toBe('/deploy?server=srv-2&dialog=cloudflare'),
+    );
+    expect(screen.getByRole('heading', { name: 'Staging' })).toBeTruthy();
+  });
+
+  it('does not bring back a site that was removed', async () => {
+    const { user, bridge, unmount } = renderPage(
+      {
+        ...SIGNED_OUT,
+        'deployFiles.list': async () => [fileSite()],
+        'deployFiles.subscribe': snapshot(),
+        'deployFiles.changes': snapshot(),
+      },
+      '/deploy?files=fs-1&view=settings',
+    );
+    await user.click(await screen.findByRole('button', { name: 'Remove site' }));
+    bridge.$set('deployFiles.list', async () => []);
+    const dialog = await screen.findByRole('dialog', { name: 'Remove Bakery static?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Remove site' }));
+    await waitFor(() => expect(screen.getByTestId('path').textContent).toBe('/deploy'));
+    unmount();
+
+    renderPage({ ...SIGNED_OUT, 'deployFiles.list': async () => [] });
+    expect(await screen.findByRole('heading', { name: 'Production' })).toBeTruthy();
+    expect(screen.getByTestId('path').textContent).toBe('/deploy');
+  });
+
+  it('falls back to the first server when the one remembered is gone', async () => {
+    await visit('/deploy?server=srv-2&view=logs', 'Staging');
+
+    renderPage({ ...SIGNED_OUT, 'deploy.listServers': async () => [SERVERS[0]] });
+    expect(await screen.findByRole('heading', { name: 'Production' })).toBeTruthy();
+  });
+});

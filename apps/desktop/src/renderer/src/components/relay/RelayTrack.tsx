@@ -27,10 +27,10 @@ import { SimpleTooltip } from '@/components/ui/tooltip';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { useRelayBoardStore } from '@/stores/relayBoardStore';
+import { useRelayPlanDialogStore } from '@/stores/relayPlanDialogStore';
 import { FuelRing } from './FuelRing';
 import { RelayLiveStrip } from './RelayLiveStrip';
 import { RelayRunSettings } from './RelayRunSettings';
-import { ReviseWithAiDialog } from './ReviseWithAiDialog';
 import { RunRelayButton } from './RunRelayButton';
 import {
   choiceFor,
@@ -351,7 +351,6 @@ export function RelayTrack({ project }: { project: Project }): React.JSX.Element
   const query = useRelayBoard(project.id);
   const openBoard = useRelayBoardStore((s) => s.open);
   const [starting, setStarting] = useState(false);
-  const [catchingUp, setCatchingUp] = useState(false);
 
   if (query.isPending) return <TrackSkeleton />;
   if (query.isError || !query.data) {
@@ -402,7 +401,15 @@ export function RelayTrack({ project }: { project: Project }): React.JSX.Element
           }
           action={
             <div className="flex flex-wrap justify-center gap-2">
-              <Button type="button" size="sm" onClick={() => setCatchingUp(true)}>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() =>
+                  useRelayPlanDialogStore
+                    .getState()
+                    .show({ kind: 'catch-up', projectId: project.id })
+                }
+              >
                 <Route /> Plan the rest with AI
               </Button>
               {board.guidePresent ? null : (
@@ -418,12 +425,6 @@ export function RelayTrack({ project }: { project: Project }): React.JSX.Element
               )}
             </div>
           }
-        />
-        <ReviseWithAiDialog
-          projectId={project.id}
-          mode="catch-up"
-          open={catchingUp}
-          onOpenChange={setCatchingUp}
         />
       </div>
     );

@@ -1,4 +1,4 @@
-import { DEFAULT_RELAY_BUDGET, type RelayProposal, taskIdFromFileName } from '@runova/core';
+import { DEFAULT_RELAY_BUDGET, taskIdFromFileName } from '@runova/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { queryKeys } from '@/lib/queryKeys';
 import { useRelayBoardStore } from '@/stores/relayBoardStore';
+import { planJobKey, useRelayPlanJobsStore } from '@/stores/relayPlanJobsStore';
 import { BudgetPicker } from './BudgetPicker';
 import { PlannerProgress } from './PlannerProgress';
 import { ProposalReview } from './ProposalReview';
@@ -29,7 +30,7 @@ import {
   type StartChoice,
   triggerFor,
 } from './RelayStartChoice';
-import { usePlannerRun } from './usePlannerRun';
+import { announceBackgroundPlanning, usePlanJob } from './usePlanJob';
 
 /** "T014", "T014 and T015", "T014, T015 and T016". */
 export function joinIds(ids: readonly string[]): string {
@@ -62,7 +63,8 @@ interface Added {
  * Breaks a request into tasks that each fit one AI session, for the Relay board. A planner CLI
  * reads the project (without changing it) and proposes the tasks; the user trims and corrects
  * them, then adds them to the board and chooses when they run: now, at a time, or once another
- * task or agent session is finished.
+ * task or agent session is finished. The planner runs in the background: closing the dialog
+ * leaves it going, and its result is waiting here when the dialog opens again.
  */
 export function SplitIntoTasksDialog({
   open,
@@ -75,12 +77,10 @@ export function SplitIntoTasksDialog({
   const [text, setText] = useState(request);
   const [pickedProjectId, setPickedProjectId] = useState(projectId ?? defaultProjectId ?? '');
   const [budget, setBudget] = useState<number>(DEFAULT_RELAY_BUDGET);
-  const [proposal, setProposal] = useState<RelayProposal | null>(null);
   const [start, setStart] = useState<StartChoice>(ADD_ONLY);
   const [planFirst, setPlanFirst] = useState(false);
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState<Added | null>(null);
-  const run = usePlannerRun();
 
   const projectsQuery = useQuery({
     queryKey: queryKeys.projects,
@@ -90,21 +90,24 @@ export function SplitIntoTasksDialog({
   const targetId = projectId ?? pickedProjectId;
   const project = projectsQuery.data?.find((entry) => entry.id === targetId) ?? null;
   const planner = useRelayPlanner(project?.cliId);
+  const run = usePlanJob(targetId ? planJobKey('split', targetId) : null, open);
 
-  // Every opening starts from the request it was opened with.
+  // Every opening starts from the request it was opened with, or from the plan still waiting.
   useEffect(() => {
     if (!open) return;
-    setText(request);
-    setPickedProjectId(projectId ?? defaultProjectId ?? '');
-    setProposal(null);
+    const initial = projectId ?? defaultProjectId ?? '';
+    const job = initial
+      ? useRelayPlanJobsStore.getState().jobs[planJobKey('split', initial)]
+      : undefined;
+    setText(job?.text ?? request);
+    if (job) setBudget(job.budget);
+    setPickedProjectId(initial);
     setStart(ADD_ONLY);
     setAdded(null);
   }, [open, request, projectId, defaultProjectId]);
 
   const planned = run.state.status === 'done' ? run.state.result : null;
-  useEffect(() => {
-    if (planned) setProposal(planned.proposal);
-  }, [planned]);
+  const proposal = planned ? (run.job?.proposal ?? planned.proposal) : null;
 
   const running = run.state.status === 'running';
   const canPlan =
@@ -112,15 +115,22 @@ export function SplitIntoTasksDialog({
 
   async function plan(): Promise<void> {
     if (!canPlan) return;
-    setProposal(null);
-    await run.start((requestId) =>
-      window.runova.relay.decompose({
-        requestId,
+    await run.start(
+      {
+        kind: 'split',
         projectId: targetId,
-        request: text.trim(),
+        projectName: project?.name ?? '',
+        text: text.trim(),
         budget,
-        ...planner.input,
-      }),
+      },
+      (requestId) =>
+        window.runova.relay.decompose({
+          requestId,
+          projectId: targetId,
+          request: text.trim(),
+          budget,
+          ...planner.input,
+        }),
     );
   }
 
@@ -155,6 +165,7 @@ export function SplitIntoTasksDialog({
           });
       }
       for (const warning of result.warnings) toast.warning(warning);
+      run.cancel();
       setAdded({ projectId: targetId, ids, started });
     } catch (error) {
       toast.error('Could not add the tasks', {
@@ -172,7 +183,13 @@ export function SplitIntoTasksDialog({
   }));
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && running) announceBackgroundPlanning();
+        onOpenChange(next);
+      }}
+    >
       <DialogContent className="flex max-h-[88vh] max-w-2xl flex-col gap-0 overflow-hidden p-0">
         <DialogHeader className="border-b border-border/70 px-6 py-5">
           <p className="flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.12em] text-primary uppercase">
@@ -266,7 +283,7 @@ export function SplitIntoTasksDialog({
                     proposal={planned.proposal}
                     entries={planned.entries}
                     budget={budget}
-                    onChange={setProposal}
+                    onChange={run.setProposal}
                   />
                   <RelayStartChoice
                     projectId={targetId}
@@ -287,9 +304,31 @@ export function SplitIntoTasksDialog({
             {added ? '' : `Planned by ${planner.label}`}
           </p>
           <div className="flex items-center gap-2">
-            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-              {added ? 'Close' : 'Cancel'}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (running) announceBackgroundPlanning();
+                onOpenChange(false);
+              }}
+            >
+              {added || running ? 'Close' : 'Cancel'}
             </Button>
+            {!added && (proposal || run.state.status === 'failed') ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={adding}
+                onClick={() => {
+                  run.cancel();
+                  setText(request);
+                }}
+              >
+                Discard
+              </Button>
+            ) : null}
             {added ? null : proposal ? (
               <>
                 <Button

@@ -19,10 +19,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { useRelayBoardStore } from '@/stores/relayBoardStore';
+import { planJobKey, useRelayPlanJobsStore } from '@/stores/relayPlanJobsStore';
 import { PlannerProgress } from './PlannerProgress';
 import { ProposalReview, proposalSize } from './ProposalReview';
 import { RelayPlannerFields, useRelayPlanner } from './RelayPlannerPicker';
-import { usePlannerRun } from './usePlannerRun';
+import { announceBackgroundPlanning, usePlanJob } from './usePlanJob';
 
 /**
  * `revise` brings an existing board in line with the docs. `catch-up` is for a project already
@@ -149,9 +150,8 @@ export function ReviseWithAiDialog({
   const openBoard = useRelayBoardStore((s) => s.open);
   const [note, setNote] = useState('');
   const [recordDone, setRecordDone] = useState(true);
-  const [proposal, setProposal] = useState<RelayProposal | null>(null);
   const [applying, setApplying] = useState(false);
-  const run = usePlannerRun();
+  const run = usePlanJob(planJobKey(mode, projectId), open);
   const copy = COPY[mode];
   const catchingUp = mode === 'catch-up';
 
@@ -170,25 +170,31 @@ export function ReviseWithAiDialog({
   const docsFolder = boardQuery.data?.docsFolder ?? 'docs';
   const budget = boardQuery.data?.settings?.options?.defaultBudget ?? DEFAULT_RELAY_BUDGET;
 
+  // A plan still waiting from an earlier opening comes back with the form it was started from.
   useEffect(() => {
     if (!open) return;
-    setNote('');
-    setRecordDone(true);
-    setProposal(null);
-  }, [open]);
+    const job = useRelayPlanJobsStore.getState().jobs[planJobKey(mode, projectId)];
+    setNote(job?.text ?? '');
+    setRecordDone(job?.recordDone ?? true);
+  }, [open, mode, projectId]);
 
   const planned = run.state.status === 'done' ? run.state.result : null;
-  useEffect(() => {
-    if (planned) setProposal(planned.proposal);
-  }, [planned]);
+  const proposal = planned ? (run.job?.proposal ?? planned.proposal) : null;
 
   const running = run.state.status === 'running';
 
   async function review(): Promise<void> {
     if (running || !planner.input.cliId) return;
-    setProposal(null);
     const fields = { projectId, note: note.trim() || undefined, budget, ...planner.input };
-    await run.start((requestId) =>
+    const start = {
+      kind: mode,
+      projectId,
+      projectName: project?.name ?? '',
+      text: note.trim(),
+      budget,
+      recordDone: catchingUp ? recordDone : undefined,
+    };
+    await run.start(start, (requestId) =>
       catchingUp
         ? window.runova.relay.catchUp({ requestId, recordDone, ...fields })
         : window.runova.relay.revise({ requestId, ...fields }),
@@ -209,6 +215,7 @@ export function ReviseWithAiDialog({
           : {}),
       });
       for (const warning of result.warnings) toast.warning(warning);
+      run.cancel();
       onOpenChange(false);
     } catch (error) {
       toast.error('Could not update the board', {
@@ -225,7 +232,13 @@ export function ReviseWithAiDialog({
   const recordDoneId = `relay-${mode}-record-done`;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && running) announceBackgroundPlanning();
+        onOpenChange(next);
+      }}
+    >
       <DialogContent className="flex max-h-[88vh] max-w-2xl flex-col gap-0 overflow-hidden p-0">
         <DialogHeader className="border-b border-border/70 px-6 py-5">
           <p className="flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.12em] text-primary uppercase">
@@ -312,7 +325,7 @@ export function ReviseWithAiDialog({
                 proposal={planned.proposal}
                 entries={planned.entries}
                 budget={budget}
-                onChange={setProposal}
+                onChange={run.setProposal}
               />
             </div>
           ) : null}
@@ -321,9 +334,31 @@ export function ReviseWithAiDialog({
         <DialogFooter className="items-center gap-2 border-t border-border/70 bg-muted/20 px-6 py-3.5 sm:justify-between">
           <p className="text-[11px] text-muted-foreground">Planned by {planner.label}</p>
           <div className="flex items-center gap-2">
-            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-              Cancel
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (running) announceBackgroundPlanning();
+                onOpenChange(false);
+              }}
+            >
+              {running ? 'Close' : 'Cancel'}
             </Button>
+            {planned || run.state.status === 'failed' ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={applying}
+                onClick={() => {
+                  run.cancel();
+                  setNote('');
+                }}
+              >
+                Discard
+              </Button>
+            ) : null}
             {planned && !nothingToDo ? (
               <>
                 <Button

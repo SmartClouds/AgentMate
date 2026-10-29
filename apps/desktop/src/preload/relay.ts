@@ -87,5 +87,7 @@ export function createRelay() {
       subscribe(IPC.relay.onCloseTab, callback),
     onProposal: (callback: (proposal: RelayMcpProposal) => void): (() => void) =>
       subscribe(IPC.relay.onProposal, callback),
+    onPlannerOpen: (callback: (requestId: string) => void): (() => void) =>
+      subscribe(IPC.relay.onPlannerOpen, callback),
   };
 }

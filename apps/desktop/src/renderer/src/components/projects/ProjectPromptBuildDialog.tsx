@@ -47,7 +47,6 @@ import {
   VoiceRecordButton,
   VoiceRecordingStrip,
 } from '@/components/promptBuilder/VoiceControls';
-import { SplitIntoTasksDialog } from '@/components/relay/SplitIntoTasksDialog';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
 import {
@@ -76,6 +75,7 @@ import { containsPersian } from '@/lib/rtl';
 import { cn } from '@/lib/utils';
 import { launchPromptTab, projectCliId } from '@/lib/workspace/launch';
 import { projectPromptJobKey, usePromptJobsStore } from '@/stores/promptJobsStore';
+import { useRelayPlanDialogStore } from '@/stores/relayPlanDialogStore';
 import {
   commandForEvent,
   useShortcutLabel,
@@ -288,7 +288,6 @@ export function ProjectPromptBuildDialog({
   const suggestionCli = suggestion ? getCliDefinition(suggestion.cliId) : undefined;
 
   const [scheduling, setScheduling] = useState(false);
-  const [splitting, setSplitting] = useState(false);
   const scheduleMutation = useMutation({
     mutationFn: (values: ComposerValues) =>
       window.runova.scheduledTasks.createMany({
@@ -691,7 +690,13 @@ export function ProjectPromptBuildDialog({
               <Button
                 variant="outline"
                 disabled={(!rawInput.trim() && !generated.trim()) || isBusy}
-                onClick={() => setSplitting(true)}
+                onClick={() =>
+                  useRelayPlanDialogStore.getState().show({
+                    kind: 'split',
+                    request: generated.trim() || rawInput.trim(),
+                    projectId,
+                  })
+                }
               >
                 <ListTodo /> Split into tasks
               </Button>
@@ -826,12 +831,6 @@ export function ProjectPromptBuildDialog({
           </div>
         </DialogFooter>
       </DialogContent>
-      <SplitIntoTasksDialog
-        open={splitting}
-        onOpenChange={setSplitting}
-        request={generated.trim() || rawInput.trim()}
-        projectId={projectId}
-      />
       {scheduling ? (
         <PromptComposerDialog
           open

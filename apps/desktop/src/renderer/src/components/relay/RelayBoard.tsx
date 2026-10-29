@@ -12,11 +12,11 @@ import { SimpleTooltip } from '@/components/ui/tooltip';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { useRelayBoardStore } from '@/stores/relayBoardStore';
+import { useRelayPlanDialogStore } from '@/stores/relayPlanDialogStore';
 import { RelayLiveStrip } from './RelayLiveStrip';
 import { RelayRunSettings } from './RelayRunSettings';
 import { CARD_DRAG_TYPE, type CardMove, RelayTaskCard } from './RelayTaskCard';
 import { RelayTaskDetail } from './RelayTaskDetail';
-import { ReviseWithAiDialog } from './ReviseWithAiDialog';
 import { RunRelayButton } from './RunRelayButton';
 import { boardColumns, epicHue, neighbourStatus, relaySummary, withColumnOrder } from './relayView';
 import { useRelayActions, useRelayBoard, useRelayContextFeed } from './useRelay';
@@ -218,8 +218,7 @@ export function RelayBoard({
   const move = useBoardMoves(projectId);
   const [selected, setSelected] = useState<string | null>(focusTaskId);
   const [epic, setEpic] = useState<string | null>(null);
-  const [revising, setRevising] = useState(false);
-  const [catchingUp, setCatchingUp] = useState(false);
+  const showPlan = useRelayPlanDialogStore((s) => s.show);
 
   useEffect(() => setSelected(focusTaskId), [focusTaskId]);
 
@@ -318,12 +317,22 @@ export function RelayBoard({
             </RelayRunSettings>
           ) : null}
           <SimpleTooltip label="See what the code already does, mark it done and plan what is left">
-            <Button type="button" variant="soft" size="sm" onClick={() => setCatchingUp(true)}>
+            <Button
+              type="button"
+              variant="soft"
+              size="sm"
+              onClick={() => showPlan({ kind: 'catch-up', projectId })}
+            >
               <Route /> Catch up
             </Button>
           </SimpleTooltip>
           <SimpleTooltip label="Compare the tasks with the docs and propose changes">
-            <Button type="button" variant="soft" size="sm" onClick={() => setRevising(true)}>
+            <Button
+              type="button"
+              variant="soft"
+              size="sm"
+              onClick={() => showPlan({ kind: 'revise', projectId })}
+            >
               <Wand2 /> Revise with AI
             </Button>
           </SimpleTooltip>
@@ -359,7 +368,11 @@ export function RelayBoard({
                 </p>
               }
               action={
-                <Button type="button" size="sm" onClick={() => setCatchingUp(true)}>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => showPlan({ kind: 'catch-up', projectId })}
+                >
                   <Route /> Plan the rest with AI
                 </Button>
               }
@@ -383,14 +396,6 @@ export function RelayBoard({
           />
         ) : null}
       </div>
-
-      <ReviseWithAiDialog projectId={projectId} open={revising} onOpenChange={setRevising} />
-      <ReviseWithAiDialog
-        projectId={projectId}
-        mode="catch-up"
-        open={catchingUp}
-        onOpenChange={setCatchingUp}
-      />
     </div>
   );
 }

@@ -26,10 +26,14 @@ import { readBoardFiles, relayFolder } from './taskFiles';
  * written until the user applies the proposal.
  */
 
-/** Reading a repository and its docs before answering can take a while on a high effort. */
-export const PLANNER_TIMEOUT_MS = 10 * 60_000;
+/**
+ * Reading a repository and its docs before answering can take well over ten minutes on a high
+ * effort. The run goes on in the background and the user can cancel it, so this is only a guard
+ * against a CLI that hangs.
+ */
+export const PLANNER_TIMEOUT_MS = 60 * 60_000;
 /** Catching up reads the whole project and its history, not just the docs. */
-export const CATCH_UP_TIMEOUT_MS = 20 * 60_000;
+export const CATCH_UP_TIMEOUT_MS = 90 * 60_000;
 
 async function context(projectId: string) {
   const project = await findProjectScope(projectId);

@@ -52,6 +52,21 @@ const ANSWER = JSON.stringify({
   add: [{ id: 'T002', title: 'Search', depends: ['T001'], estimate: '90k' }],
 });
 
+describe('timeouts', () => {
+  it('gives a long plan an hour, and a catch-up longer, before it is stopped', async () => {
+    const { CATCH_UP_TIMEOUT_MS, PLANNER_TIMEOUT_MS } = await import('./planner');
+    expect(PLANNER_TIMEOUT_MS).toBe(60 * 60_000);
+    expect(CATCH_UP_TIMEOUT_MS).toBe(90 * 60_000);
+  });
+
+  it('runs a split with the planner timeout', async () => {
+    cli.run.mockResolvedValue({ ok: true, text: ANSWER, cliName: 'Claude Code' });
+    const { decomposeRequest, PLANNER_TIMEOUT_MS } = await import('./planner');
+    await decomposeRequest({ requestId: 'r0', projectId: 'p1', request: 'x' });
+    expect(cli.run.mock.calls[0][2]).toMatchObject({ timeoutMs: PLANNER_TIMEOUT_MS });
+  });
+});
+
 describe('decomposeRequest', () => {
   it('runs the planner in the project, read-only, with the chosen model', async () => {
     cli.run.mockResolvedValue({ ok: true, text: `Plan:\n${ANSWER}`, cliName: 'Claude Code' });

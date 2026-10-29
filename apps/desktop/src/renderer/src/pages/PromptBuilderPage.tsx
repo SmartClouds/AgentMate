@@ -54,7 +54,6 @@ import {
   VoiceRecordButton,
   VoiceRecordingStrip,
 } from '@/components/promptBuilder/VoiceControls';
-import { SplitIntoTasksDialog } from '@/components/relay/SplitIntoTasksDialog';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
 import {
@@ -77,6 +76,7 @@ import { cn } from '@/lib/utils';
 import { useCliStore } from '@/stores/cliStore';
 import { usePageHeader } from '@/stores/pageHeaderStore';
 import { type PromptBuilderStatus, usePromptBuilderStore } from '@/stores/promptBuilderStore';
+import { useRelayPlanDialogStore } from '@/stores/relayPlanDialogStore';
 import { useTerminalStore } from '@/stores/terminalStore';
 import type { PromptHistoryEntry } from '../../../shared/apiTypes';
 
@@ -154,7 +154,6 @@ export default function PromptBuilderPage(): React.JSX.Element {
   const [seriesRunMode, setSeriesRunMode] = useState<ScheduledTaskRunMode>('auto');
   const [seriesRun, setSeriesRun] = useState<RunSettings>({});
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [splitOpen, setSplitOpen] = useState(false);
   const [historySearch, setHistorySearch] = useState('');
 
   const navigate = useNavigate();
@@ -915,7 +914,14 @@ export default function PromptBuilderPage(): React.JSX.Element {
                 aria-label="Split into tasks"
                 className="px-2.5 @[34rem]/output:px-3"
                 disabled={!generated.trim() && !rawInput.trim()}
-                onClick={() => setSplitOpen(true)}
+                onClick={() =>
+                  useRelayPlanDialogStore.getState().show({
+                    kind: 'split',
+                    request: generated.trim() || rawInput.trim(),
+                    projectId: null,
+                    defaultProjectId: projectId,
+                  })
+                }
               >
                 <ListTodo /> <span className="hidden @[34rem]/output:inline">Split into tasks</span>
               </Button>
@@ -1107,13 +1113,6 @@ export default function PromptBuilderPage(): React.JSX.Element {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <SplitIntoTasksDialog
-        open={splitOpen}
-        onOpenChange={setSplitOpen}
-        request={generated.trim() || rawInput.trim()}
-        projectId={null}
-        defaultProjectId={projectId}
-      />
     </div>
   );
 }

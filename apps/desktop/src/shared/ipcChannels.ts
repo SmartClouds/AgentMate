@@ -936,6 +936,8 @@ export const IPC = {
     onCloseTab: 'relay:closeTab',
     // main -> renderer: RelayMcpProposal
     onProposal: 'relay:proposal',
+    // main -> renderer: requestId, the planner run whose OS notification was clicked
+    onPlannerOpen: 'relay:plannerOpen',
   },
   /** Error tracking (E24): Sentry connections, project links and issues. Tokens stay in main. */
   errorTracking: {

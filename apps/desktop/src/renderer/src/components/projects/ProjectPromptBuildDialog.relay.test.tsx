@@ -1,6 +1,7 @@
 import type { AppSettings, Project } from '@runova/core';
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { RelayPlanHost } from '@/components/relay/RelayPlanHost';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
 import { ProjectPromptBuildDialog } from './ProjectPromptBuildDialog';
 
@@ -18,7 +19,15 @@ const GENERATED = 'Build the login form with email and password validation.';
 
 function renderDialog() {
   return renderWithProviders(
-    <ProjectPromptBuildDialog open onOpenChange={vi.fn()} projectId="p-relay" projectName="Demo" />,
+    <>
+      <ProjectPromptBuildDialog
+        open
+        onOpenChange={vi.fn()}
+        projectId="p-relay"
+        projectName="Demo"
+      />
+      <RelayPlanHost />
+    </>,
     {
       bridge: {
         'settings.get': {

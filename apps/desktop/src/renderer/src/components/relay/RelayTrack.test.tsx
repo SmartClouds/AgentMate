@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useRelayBoardStore } from '@/stores/relayBoardStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
+import { RelayPlanHost } from './RelayPlanHost';
 import { RelayTrack } from './RelayTrack';
 import { board, card, leg, run } from './testing/fixtures';
 import { useRelayContextStore } from './useRelay';
@@ -164,13 +165,19 @@ describe('RelayTrack', () => {
   });
 
   it('offers to plan the rest of a project that is already under way', async () => {
-    const { user } = renderWithProviders(<RelayTrack project={project} />, {
-      bridge: {
-        'relay.board': board({ tasks: [], exists: false, guidePresent: false }),
-        'projects.list': [project],
-        'cli.detectAll': [{ id: 'claude-code', installed: true }],
+    const { user } = renderWithProviders(
+      <>
+        <RelayTrack project={project} />
+        <RelayPlanHost />
+      </>,
+      {
+        bridge: {
+          'relay.board': board({ tasks: [], exists: false, guidePresent: false }),
+          'projects.list': [project],
+          'cli.detectAll': [{ id: 'claude-code', installed: true }],
+        },
       },
-    });
+    );
     await user.click(await screen.findByRole('button', { name: 'Plan the rest with AI' }));
     expect(
       await screen.findByRole('heading', { name: 'Pick up a project in progress' }),

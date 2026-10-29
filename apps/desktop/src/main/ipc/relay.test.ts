@@ -10,6 +10,7 @@ import type {
   RelaySingleRun,
   RelayTaskDetail,
 } from '../../shared/relayTypes';
+import { electronState } from '../../test/main/electronMock';
 import {
   expectChannelsCovered,
   invoke,
@@ -267,6 +268,20 @@ describe('planning', () => {
     );
     expect(applied.written).toEqual(['T003-export.md']);
     expect(taskText('T003-export.md')).toContain('depends: [T002]');
+  });
+
+  it('tells a user who has moved to another app that the plan is ready', async () => {
+    await load();
+    electronState.notifications.length = 0;
+    cli.run.mockResolvedValue({
+      ok: true,
+      text: JSON.stringify({ summary: 'x', add: [{ title: 'Export' }] }),
+      cliName: 'Claude Code',
+    });
+    await invoke(IPC.relay.decompose, { requestId: 'q9', projectId: 'p1', request: 'Export' });
+    await vi.waitFor(() =>
+      expect(JSON.stringify(electronState.notifications)).toContain('Tasks are ready to review'),
+    );
   });
 
   it('catches up a project in progress, and refuses a request without the done choice', async () => {

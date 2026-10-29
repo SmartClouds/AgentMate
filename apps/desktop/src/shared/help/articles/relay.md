@@ -20,6 +20,12 @@ Tasks are Markdown files in your project, in `docs/tasks/` (or the docs folder y
 - **Plan the rest with AI.** For a project that is already under way. Click **Plan the rest with AI** in an empty Tasks tab or board, or **Catch up** on the board's toolbar. The AI reads the code, your plans (README, roadmap, backlog, epics, status notes) and the git history, and works out what is finished, half done and left. Finished work can go on the board as done tasks (turn off **Put finished work on the board** if you only want what is left). Half-done work gets a handoff that says what exists and what comes next, so its first session carries on instead of starting over. A strip shows how the project stands before you apply anything, and a handoff a session already wrote is never replaced.
 - **Revise with AI.** On the board, **Revise with AI** compares the tasks with your docs (the docs are the source of truth) and proposes tasks to add, change, split or remove. You see every change before you apply it, and a task that is done is never touched.
 
+### Planning in the background
+
+A planner on a strong model and a high effort can read a project for a long time. You don't have to wait for it. Once it has started, close the dialog and carry on anywhere in the app: the planner keeps going, and the status bar shows it (**Splitting**, **Revising** or **Planning** with the time so far). When it finishes you get a notification, in the app, or from Windows (or your OS) if you are in another app. Click **Review** on it, or the **Tasks ready** item in the status bar, to open the dialog on the result. Your edits to the proposal are kept if you close it again.
+
+**Cancel planning** stops the planner. **Discard** drops a finished plan and takes you back to the form. A planner is stopped if it is still working after 60 minutes (90 for **Plan the rest with AI**). A plan lives until you add it, discard it or restart the app.
+
 Each task file has a goal, a scope, acceptance criteria and a test plan, plus an estimate of the context it needs. `docs/tasks/RELAY.md` describes the format for any agent that reads it.
 
 ## The Tasks tab

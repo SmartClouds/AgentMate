@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useRelayBoardStore } from '@/stores/relayBoardStore';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
 import { RelayBoardHost } from './RelayBoard';
+import { RelayPlanHost } from './RelayPlanHost';
 import { CARD_DRAG_TYPE } from './RelayTaskCard';
 import { board, card, leg, run } from './testing/fixtures';
 
@@ -66,14 +67,20 @@ const detail = {
 
 function open(overrides: Record<string, unknown> = {}) {
   useRelayBoardStore.getState().open('p1');
-  return renderWithProviders(<RelayBoardHost />, {
-    bridge: {
-      'relay.board': board({ tasks }),
-      'projects.list': [{ id: 'p1', name: 'CuraLink', folderPath: 'E:/c' }],
-      'relay.task': detail,
-      ...overrides,
+  return renderWithProviders(
+    <>
+      <RelayBoardHost />
+      <RelayPlanHost />
+    </>,
+    {
+      bridge: {
+        'relay.board': board({ tasks }),
+        'projects.list': [{ id: 'p1', name: 'CuraLink', folderPath: 'E:/c' }],
+        'relay.task': detail,
+        ...overrides,
+      },
     },
-  });
+  );
 }
 
 function column(name: string): HTMLElement {

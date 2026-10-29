@@ -12,6 +12,7 @@ import PromptBuildWidgetRoute from './components/projects/PromptBuildWidgetRoute
 import { RunProposalHost } from './components/projects/RunProposalHost';
 import { QuitConfirmation } from './components/QuitConfirmation';
 import { RelayBoardHost } from './components/relay/RelayBoard';
+import { RelayPlanHost } from './components/relay/RelayPlanHost';
 import { RelayProposalHost } from './components/relay/RelayProposalHost';
 import { HostKeyChangedDialogHost } from './components/remote/HostKeyChangedDialog';
 import RemoteSessionRoute from './components/remote/RemoteSessionRoute';
@@ -101,6 +102,7 @@ function AppChrome(): React.JSX.Element | null {
       <ConfirmDialogHost />
       <RunProposalHost />
       <RelayBoardHost />
+      <RelayPlanHost />
       <RelayProposalHost />
       <StopContainersDialogHost />
       <HostKeyChangedDialogHost />

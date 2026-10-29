@@ -2,6 +2,7 @@ import type { AppSettings } from '@runova/core';
 import { screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MonacoEditorProps } from '@/components/editor/MonacoEditor';
+import { RelayPlanHost } from '@/components/relay/RelayPlanHost';
 import { usePromptBuilderStore } from '@/stores/promptBuilderStore';
 import { renderWithProviders } from '../../../test/renderer/renderWithProviders';
 
@@ -30,13 +31,20 @@ const settings = {
 } as AppSettings;
 
 function renderPage() {
-  return renderWithProviders(<PromptBuilderPage />, {
-    route: '/prompt-builder',
-    bridge: {
-      'settings.get': settings,
-      'projects.list': [{ id: 'p1', name: 'Apollo', folderPath: '/w', agentType: 'claude-code' }],
+  // The split dialog is mounted once in the app, so it renders next to the page here.
+  return renderWithProviders(
+    <>
+      <PromptBuilderPage />
+      <RelayPlanHost />
+    </>,
+    {
+      route: '/prompt-builder',
+      bridge: {
+        'settings.get': settings,
+        'projects.list': [{ id: 'p1', name: 'Apollo', folderPath: '/w', agentType: 'claude-code' }],
+      },
     },
-  });
+  );
 }
 
 beforeEach(() => {

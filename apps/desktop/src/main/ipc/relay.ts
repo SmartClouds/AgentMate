@@ -20,6 +20,7 @@ import type {
 } from '../../shared/relayTypes';
 import { buildRelayBoard, projectRelayFolder, relayTaskDetail } from '../relay/board';
 import { cancelPlanner, catchUpBoard, decomposeRequest, reviseBoard } from '../relay/planner';
+import { announcePlannerResult, type PlannerKind } from '../relay/plannerNotice';
 import { getRelayRuntime } from '../relay/runtime';
 import { legRecords, saveRelaySettings, settingsPatchSchema } from '../relay/store';
 import {
@@ -100,6 +101,17 @@ function runtime() {
 
 function changed(projectId: string, reason: 'files' | 'settings'): void {
   broadcastToWindows(IPC.relay.onChanged, { projectId, reason });
+}
+
+/** Runs a planner and, once it answers, tells a user who has moved to another app. */
+async function announced<T extends { requestId: string; projectId: string }>(
+  kind: PlannerKind,
+  input: T,
+  run: (input: T) => Promise<RelayPlannerResult>,
+): Promise<RelayPlannerResult> {
+  const result = await run(input);
+  void announcePlannerResult(kind, input, result).catch(() => undefined);
+  return result;
 }
 
 /** A task run by hand in a new session: the files in place, the status set, the prompt built. */
@@ -228,16 +240,17 @@ export function registerRelayHandlers(): void {
   ipcMain.handle(
     IPC.relay.decompose,
     (_event, input: unknown): Promise<RelayPlannerResult> =>
-      decomposeRequest(decomposeSchema.parse(input)),
+      announced('split', decomposeSchema.parse(input), decomposeRequest),
   );
   ipcMain.handle(
     IPC.relay.revise,
-    (_event, input: unknown): Promise<RelayPlannerResult> => reviseBoard(reviseSchema.parse(input)),
+    (_event, input: unknown): Promise<RelayPlannerResult> =>
+      announced('revise', reviseSchema.parse(input), reviseBoard),
   );
   ipcMain.handle(
     IPC.relay.catchUp,
     (_event, input: unknown): Promise<RelayPlannerResult> =>
-      catchUpBoard(catchUpSchema.parse(input)),
+      announced('catch-up', catchUpSchema.parse(input), catchUpBoard),
   );
   ipcMain.handle(IPC.relay.cancelPlanner, (_event, request: unknown): void => {
     cancelPlanner(requestId.parse(request));

@@ -2,12 +2,12 @@ import { useReducedMotion } from 'framer-motion';
 import { StopCircle } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { formatElapsed } from './usePlannerRun';
+import { formatElapsed } from './usePlanJob';
 
 /**
  * The planner at work: a baton running down a track while the CLI reads the project, with the
  * time it has taken so far and a way to stop it. It sits where the result will appear, so the
- * dialog never goes dark behind an overlay.
+ * dialog never goes dark behind an overlay. Closing the dialog does not stop it.
  */
 export function PlannerProgress({
   cliName,
@@ -51,7 +51,8 @@ export function PlannerProgress({
         </Button>
       </div>
       <p className="text-[11px] leading-snug text-muted-foreground">
-        It only reads. Nothing is written until you add the tasks.
+        It only reads. Nothing is written until you add the tasks. You can close this and keep
+        working; you will get a notification when it is ready.
       </p>
     </div>
   );
