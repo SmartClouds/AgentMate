@@ -16,7 +16,7 @@ const container: DockerContainer = {
   memLimitBytes: null,
 };
 
-function renderRow(variant?: 'card' | 'row') {
+function renderRow(variant?: 'card' | 'row', onLogs?: () => void) {
   const handlers = {
     onStart: vi.fn(),
     onStop: vi.fn(),
@@ -25,7 +25,13 @@ function renderRow(variant?: 'card' | 'row') {
   };
   const view = render(
     <TooltipProvider>
-      <DockerContainerRow container={container} pending={false} variant={variant} {...handlers} />
+      <DockerContainerRow
+        container={container}
+        pending={false}
+        variant={variant}
+        onLogs={onLogs}
+        {...handlers}
+      />
     </TooltipProvider>,
   );
   return { ...view, handlers };
@@ -51,5 +57,33 @@ describe('DockerContainerRow', () => {
     expect(handlers.onStop).toHaveBeenCalledTimes(1);
     expect(handlers.onRestart).toHaveBeenCalledTimes(1);
     expect(handlers.onRemove).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the logs from their own button, even while an action is under way', () => {
+    const onLogs = vi.fn();
+    render(
+      <TooltipProvider>
+        <DockerContainerRow
+          container={container}
+          pending
+          onStart={vi.fn()}
+          onStop={vi.fn()}
+          onRestart={vi.fn()}
+          onRemove={vi.fn()}
+          onLogs={onLogs}
+        />
+      </TooltipProvider>,
+    );
+
+    const button = screen.getByRole('button', { name: 'Show logs of web' });
+    expect(button).not.toBeDisabled();
+    fireEvent.click(button);
+    expect(onLogs).toHaveBeenCalledTimes(1);
+  });
+
+  it('has no logs button where nothing would open them', () => {
+    renderRow('row');
+
+    expect(screen.queryByRole('button', { name: 'Show logs of web' })).toBeNull();
   });
 });

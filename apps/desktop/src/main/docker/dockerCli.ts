@@ -11,6 +11,8 @@ import type {
   DockerImage,
   DockerImageRemoveResult,
   DockerImageTarget,
+  DockerLogLine,
+  DockerLogsOptions,
   DockerPullAuth,
   DockerRemoveOptions,
 } from '../../shared/apiTypes';
@@ -23,6 +25,10 @@ const STATS_TIMEOUT_MS = 15_000;
 const QUICK_EXEC_TIMEOUT_MS = 4_000;
 /** A pull downloads every layer, which takes minutes for a big image on a slow line. */
 const PULL_TIMEOUT_MS = 10 * 60_000;
+/** A few thousand long log lines run past execFile's 1 MB default and fail the whole read. */
+const LOGS_MAX_BUFFER = 64 * 1024 ** 2;
+/** The most log lines one read returns, the largest choice the viewer offers. */
+const MAX_LOG_TAIL = 5_000;
 /** The key Docker Hub sign-ins live under in a docker config.json. */
 const DOCKER_HUB_AUTH_KEY = 'https://index.docker.io/v1/';
 
@@ -371,6 +377,82 @@ export async function removeContainer(
 /** execFile never goes through a shell, but docker itself would still read "-f" as a flag. */
 function isSafeRef(ref: string): boolean {
   return ref.length > 0 && !ref.startsWith('-');
+}
+
+/** "2024-05-01T10:00:00.123456789Z", what `docker logs --timestamps` puts before each line. */
+const LOG_TIMESTAMP = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,9}))?Z$/;
+
+/** The time with all nine fraction digits, so two times compare correctly as text. */
+function fixedTimestamp(value: string): { timestamp: string; atUnixMs: number } | null {
+  const match = value.match(LOG_TIMESTAMP);
+  if (!match) return null;
+  const fraction = (match[2] ?? '').padEnd(9, '0');
+  return {
+    timestamp: `${match[1]}.${fraction}Z`,
+    atUnixMs: Date.parse(`${match[1]}.${fraction.slice(0, 3)}Z`),
+  };
+}
+
+function parseLogLines(output: string, stream: DockerLogLine['stream']): DockerLogLine[] {
+  const lines = output.split('\n');
+  // The output ends with a newline, which would otherwise read as one more empty line.
+  if (lines.at(-1) === '') lines.pop();
+  const result: DockerLogLine[] = [];
+  let previous = { timestamp: '', atUnixMs: 0 };
+  for (const raw of lines) {
+    const line = raw.endsWith('\r') ? raw.slice(0, -1) : raw;
+    const space = line.indexOf(' ');
+    const time = fixedTimestamp(space === -1 ? line : line.slice(0, space));
+    if (time) {
+      previous = time;
+      result.push({ stream, ...time, text: space === -1 ? '' : line.slice(space + 1) });
+    } else {
+      result.push({ stream, ...previous, text: line });
+    }
+  }
+  return result;
+}
+
+/** Both streams are in time order already, so one pass interleaves them. Ties go to stdout. */
+function mergeByTime(stdout: DockerLogLine[], stderr: DockerLogLine[]): DockerLogLine[] {
+  const merged: DockerLogLine[] = [];
+  let out = 0;
+  let err = 0;
+  while (out < stdout.length || err < stderr.length) {
+    if (
+      err >= stderr.length ||
+      (out < stdout.length && stdout[out].timestamp <= stderr[err].timestamp)
+    ) {
+      merged.push(stdout[out++]);
+    } else {
+      merged.push(stderr[err++]);
+    }
+  }
+  return merged;
+}
+
+/**
+ * A container's log, its last `tail` lines or only those since a time. `docker logs` writes what
+ * the container printed to stderr on its own stderr, so the two streams arrive apart and are put
+ * back in order by the time docker stamped on every line.
+ */
+export async function readContainerLogs(
+  id: string,
+  { tail, since }: DockerLogsOptions,
+): Promise<DockerLogLine[]> {
+  if (!isSafeRef(id)) throw new Error('That container id is not valid.');
+  if (since !== undefined && !fixedTimestamp(since)) throw new Error('That time is not valid.');
+  const lines = Math.min(MAX_LOG_TAIL, Math.max(1, Math.floor(tail)));
+  try {
+    const { stdout, stderr } = await execFileAsync(
+      'docker',
+      ['logs', '--timestamps', ...(since ? ['--since', since] : []), '--tail', String(lines), id],
+      { timeout: EXEC_TIMEOUT_MS, windowsHide: true, maxBuffer: LOGS_MAX_BUFFER },
+    );
+    return mergeByTime(parseLogLines(stdout, 'stdout'), parseLogLines(stderr, 'stderr'));
+  } catch (error) {
+    throw new Error(errorMessage(error));
+  }
 }
 
 /** "2024-05-01 10:00:00 +0200 CEST", docker's CreatedAt, as epoch ms. The zone name is dropped. */

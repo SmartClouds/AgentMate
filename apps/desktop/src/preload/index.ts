@@ -154,6 +154,8 @@ import type {
   DockerImage,
   DockerImageRemoveResult,
   DockerImageTarget,
+  DockerLogLine,
+  DockerLogsOptions,
   DockerRemoveOptions,
   EnvCredentialSecrets,
   EnvFolderFile,
@@ -177,14 +179,14 @@ import type {
   GithubActionsRunErrorInput,
   GithubActionsRunErrorResult,
   GithubActivity,
+  GithubJobLogInput,
+  GithubJobLogResult,
   GithubNotifications,
   GithubPipelineActionResult,
   GithubRepoLookup,
   GithubRunAnnotationsInput,
   GithubRunAnnotationsResult,
   GithubRunCancelRequest,
-  GithubJobLogInput,
-  GithubJobLogResult,
   GithubRunDetailsInput,
   GithubRunDetailsResult,
   GithubRunnersInput,
@@ -1050,6 +1052,8 @@ const docker = {
   listImages: (): Promise<DockerImage[]> => ipcRenderer.invoke(IPC.docker.listImages),
   removeImages: (targets: DockerImageTarget[]): Promise<DockerImageRemoveResult> =>
     ipcRenderer.invoke(IPC.docker.removeImages, targets),
+  logs: (id: string, options?: DockerLogsOptions): Promise<DockerLogLine[]> =>
+    ipcRenderer.invoke(IPC.docker.logs, id, options),
 };
 
 const dockerHub = {

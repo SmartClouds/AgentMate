@@ -640,6 +640,7 @@ export const IPC = {
     remove: 'docker:remove',
     listImages: 'docker:listImages',
     removeImages: 'docker:removeImages',
+    logs: 'docker:logs',
   },
   /** The Docker page's Hub view, signed in with the Docker Hub sign-in deploys use. */
   dockerHub: {

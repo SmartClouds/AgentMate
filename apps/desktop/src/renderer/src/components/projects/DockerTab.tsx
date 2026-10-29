@@ -1,5 +1,8 @@
 import type { Project } from '@runova/core';
+import type { DockerContainer } from '@shared/apiTypes';
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { ContainerLogsDialog } from '@/components/docker/ContainerLogsDialog';
 import { DockerContainerRow } from '@/components/docker/DockerContainerRow';
 import { RemoveContainerDialog } from '@/components/docker/RemoveContainerDialog';
 import { useDockerContainerActions } from '@/components/docker/useDockerContainerActions';
@@ -35,6 +38,7 @@ export function DockerTab({ project }: { project: Project }): React.JSX.Element 
     meta: { silentLoading: true },
   });
   const actions = useDockerContainerActions(queryKey);
+  const [logsTarget, setLogsTarget] = useState<DockerContainer | null>(null);
 
   if (availabilityQuery.isLoading) return <DockerTabSkeleton />;
 
@@ -63,6 +67,9 @@ export function DockerTab({ project }: { project: Project }): React.JSX.Element 
   }
 
   const runningContainers = containers.filter((c) => c.state === 'running');
+  const logsContainer = logsTarget
+    ? (containers.find((c) => c.id === logsTarget.id) ?? logsTarget)
+    : null;
 
   return (
     <div className="space-y-2">
@@ -88,8 +95,15 @@ export function DockerTab({ project }: { project: Project }): React.JSX.Element 
           onStop={() => actions.stop(container)}
           onRestart={() => actions.restart(container.id)}
           onRemove={() => actions.openRemoveDialog(container)}
+          onLogs={() => setLogsTarget(container)}
         />
       ))}
+      <ContainerLogsDialog
+        container={logsContainer}
+        onOpenChange={(open) => {
+          if (!open) setLogsTarget(null);
+        }}
+      />
       <RemoveContainerDialog
         containerName={actions.removeTarget?.name ?? null}
         open={actions.removeTarget !== null}

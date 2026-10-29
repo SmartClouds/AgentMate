@@ -3450,6 +3450,25 @@ export interface DockerImage {
   containers: number;
 }
 
+/**
+ * One line of a container's log, shaped like a server container's log line so the two share
+ * their search and display helpers.
+ */
+export interface DockerLogLine {
+  stream: 'stdout' | 'stderr';
+  /** Docker's RFC 3339 time with all nine fraction digits, so times sort as plain text. */
+  timestamp: string;
+  atUnixMs: number;
+  text: string;
+}
+
+export interface DockerLogsOptions {
+  /** How many of the last lines to read. Kept between 1 and 5000. */
+  tail: number;
+  /** Only lines from this time on (inclusive), a timestamp from an earlier read. */
+  since?: string;
+}
+
 /** What `docker rmi` needs to remove one image: its tags, or its id when it has none. */
 export interface DockerImageTarget {
   id: string;

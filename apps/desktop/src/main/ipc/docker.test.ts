@@ -23,6 +23,7 @@ const cli = vi.hoisted(() => ({
   removeContainer: vi.fn(),
   listImages: vi.fn(),
   removeImages: vi.fn(),
+  readContainerLogs: vi.fn(),
 }));
 
 // A process boundary: the real module spawns the docker binary.
@@ -121,5 +122,35 @@ describe('docker:removeImages', () => {
     await expect(invoke(IPC.docker.removeImages, [{ id: 7, tags: 'x' }])).rejects.toThrow();
     await expect(invoke(IPC.docker.removeImages, 'sha256:a')).rejects.toThrow();
     expect(cli.removeImages).not.toHaveBeenCalled();
+  });
+});
+
+describe('docker:logs', () => {
+  it('hands the id and the read options over and returns the lines', async () => {
+    const lines = [{ stream: 'stdout', timestamp: 't', atUnixMs: 0, text: 'ready' }];
+    cli.readContainerLogs.mockResolvedValue(lines);
+
+    await expect(
+      invoke(IPC.docker.logs, 'abc123', { tail: 500, since: '2024-05-01T10:00:00.000000000Z' }),
+    ).resolves.toEqual(lines);
+    expect(cli.readContainerLogs).toHaveBeenCalledWith('abc123', {
+      tail: 500,
+      since: '2024-05-01T10:00:00.000000000Z',
+    });
+  });
+
+  it('reads the default tail when no options come along', async () => {
+    cli.readContainerLogs.mockResolvedValue([]);
+
+    await invoke(IPC.docker.logs, 'abc123');
+
+    expect(cli.readContainerLogs).toHaveBeenCalledWith('abc123', { tail: 500 });
+  });
+
+  it('refuses an id or options of the wrong shape', async () => {
+    await expect(invoke(IPC.docker.logs, 42)).rejects.toThrow();
+    await expect(invoke(IPC.docker.logs, 'abc123', { tail: 'all' })).rejects.toThrow();
+    await expect(invoke(IPC.docker.logs, 'abc123', { tail: 10, since: 7 })).rejects.toThrow();
+    expect(cli.readContainerLogs).not.toHaveBeenCalled();
   });
 });

@@ -1,11 +1,18 @@
 import type { DockerContainer } from '@shared/apiTypes';
-import { Docker as DockerIcon, Play, RefreshCw, StopCircle, Trash2 } from '@/components/icons';
+import {
+  Docker as DockerIcon,
+  FileText,
+  Play,
+  RefreshCw,
+  StopCircle,
+  Trash2,
+} from '@/components/icons';
 import { Chip, type ChipTone, SECTION_WELL } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
-const STATE_TONE: Record<DockerContainer['state'], ChipTone> = {
+export const STATE_TONE: Record<DockerContainer['state'], ChipTone> = {
   running: 'success',
   restarting: 'warning',
   exited: 'neutral',
@@ -14,7 +21,7 @@ const STATE_TONE: Record<DockerContainer['state'], ChipTone> = {
   created: 'neutral',
 };
 
-const STATE_LABEL: Record<DockerContainer['state'], string> = {
+export const STATE_LABEL: Record<DockerContainer['state'], string> = {
   running: 'Running',
   restarting: 'Restarting',
   exited: 'Exited',
@@ -56,6 +63,7 @@ export function DockerContainerRow({
   onStop,
   onRestart,
   onRemove,
+  onLogs,
 }: {
   container: DockerContainer;
   pending: boolean;
@@ -67,6 +75,8 @@ export function DockerContainerRow({
   onStop: () => void;
   onRestart: () => void;
   onRemove: () => void;
+  /** Opens the container's log. Left out where there is nowhere to show it. */
+  onLogs?: () => void;
 }): React.JSX.Element {
   const running = container.state === 'running';
   const memPercent =
@@ -129,6 +139,19 @@ export function DockerContainerRow({
         )}
       </div>
       <div className="flex shrink-0 items-center gap-1">
+        {/* Reading the log changes nothing, so it stays open while an action is under way. */}
+        {onLogs && (
+          <SimpleTooltip label="Logs">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Show logs of ${container.name}`}
+              onClick={onLogs}
+            >
+              <FileText className="h-3.5 w-3.5" />
+            </Button>
+          </SimpleTooltip>
+        )}
         {running ? (
           <SimpleTooltip label="Stop">
             <Button

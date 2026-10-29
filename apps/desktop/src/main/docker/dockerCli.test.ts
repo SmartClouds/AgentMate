@@ -8,6 +8,7 @@ import {
   listImages,
   listRunningContainersForProject,
   pullImage,
+  readContainerLogs,
   removeContainer,
   removeImages,
   restartContainer,
@@ -30,6 +31,8 @@ interface ExecCall {
 
 interface ExecOutcome {
   stdout?: string;
+  /** What a successful command still wrote to stderr, as `docker logs` does for stderr lines. */
+  stderr?: string;
   error?: { message: string; stderr?: string };
 }
 
@@ -52,7 +55,7 @@ vi.mock('node:child_process', () => {
       if (outcome.error) {
         return Promise.reject(Object.assign(new Error(outcome.error.message), outcome.error));
       }
-      return Promise.resolve({ stdout: outcome.stdout ?? '', stderr: '' });
+      return Promise.resolve({ stdout: outcome.stdout ?? '', stderr: outcome.stderr ?? '' });
     },
   });
   return { execFile };
@@ -853,6 +856,143 @@ describe('pullImage', () => {
     const result = await pullImage('--help');
 
     expect(result.ok).toBe(false);
+    expect(execState.calls).toHaveLength(0);
+  });
+});
+
+describe('readContainerLogs', () => {
+  it('reads the last lines with docker timestamps, with room for a long log', async () => {
+    execState.byCommand.set('logs', { stdout: '' });
+
+    await readContainerLogs('abc123', { tail: 500 });
+
+    expect(argsFor('logs')).toEqual(['logs', '--timestamps', '--tail', '500', 'abc123']);
+    // execFile's 1 MB default would cut a few thousand long lines off with an error.
+    expect(execState.calls[0].options.maxBuffer).toBeGreaterThanOrEqual(32 * 1024 ** 2);
+  });
+
+  it('splits each line into its time and text, and drops a Windows line ending', async () => {
+    execState.byCommand.set('logs', {
+      stdout:
+        '2024-05-01T10:00:00.123456789Z listening on :8080\r\n2024-05-01T10:00:01.000000000Z ready\n',
+    });
+
+    const lines = await readContainerLogs('abc123', { tail: 100 });
+
+    expect(lines).toEqual([
+      {
+        stream: 'stdout',
+        timestamp: '2024-05-01T10:00:00.123456789Z',
+        atUnixMs: Date.parse('2024-05-01T10:00:00.123Z'),
+        text: 'listening on :8080',
+      },
+      {
+        stream: 'stdout',
+        timestamp: '2024-05-01T10:00:01.000000000Z',
+        atUnixMs: Date.parse('2024-05-01T10:00:01.000Z'),
+        text: 'ready',
+      },
+    ]);
+  });
+
+  it('puts stderr lines back between the stdout ones by their time', async () => {
+    execState.byCommand.set('logs', {
+      stdout: [
+        '2024-05-01T10:00:00.000000001Z starting',
+        '2024-05-01T10:00:00.000000003Z retrying',
+        '2024-05-01T10:00:00.000000005Z connected',
+      ].join('\n'),
+      stderr: [
+        '2024-05-01T10:00:00.000000002Z db refused the connection',
+        '2024-05-01T10:00:00.000000004Z db refused again',
+      ].join('\n'),
+    });
+
+    const lines = await readContainerLogs('abc123', { tail: 100 });
+
+    expect(lines.map((line) => [line.stream, line.text])).toEqual([
+      ['stdout', 'starting'],
+      ['stderr', 'db refused the connection'],
+      ['stdout', 'retrying'],
+      ['stderr', 'db refused again'],
+      ['stdout', 'connected'],
+    ]);
+  });
+
+  it('pads a shortened fraction so times still sort as text', async () => {
+    execState.byCommand.set('logs', {
+      stdout: '2024-05-01T10:00:00.12Z later\n',
+      stderr: '2024-05-01T10:00:00.100000000Z sooner\n',
+    });
+
+    const lines = await readContainerLogs('abc123', { tail: 100 });
+
+    expect(lines.map((line) => line.text)).toEqual(['sooner', 'later']);
+    expect(lines[1].timestamp).toBe('2024-05-01T10:00:00.120000000Z');
+  });
+
+  it('keeps an empty line, which is still part of what the program printed', async () => {
+    execState.byCommand.set('logs', {
+      stdout: '2024-05-01T10:00:00.000000000Z first\n2024-05-01T10:00:01.000000000Z \n',
+    });
+
+    const lines = await readContainerLogs('abc123', { tail: 100 });
+
+    expect(lines.map((line) => line.text)).toEqual(['first', '']);
+  });
+
+  it('gives a line without a time the time of the line before it', async () => {
+    execState.byCommand.set('logs', {
+      stdout: '2024-05-01T10:00:00.000000000Z first\nno time here\n',
+    });
+
+    const lines = await readContainerLogs('abc123', { tail: 100 });
+
+    expect(lines[1]).toMatchObject({
+      text: 'no time here',
+      timestamp: '2024-05-01T10:00:00.000000000Z',
+    });
+  });
+
+  it('asks only for what came since a time when following', async () => {
+    execState.byCommand.set('logs', { stdout: '' });
+
+    await readContainerLogs('abc123', { tail: 500, since: '2024-05-01T10:00:00.000000000Z' });
+
+    expect(argsFor('logs')).toEqual([
+      'logs',
+      '--timestamps',
+      '--since',
+      '2024-05-01T10:00:00.000000000Z',
+      '--tail',
+      '500',
+      'abc123',
+    ]);
+  });
+
+  it('keeps the tail between one line and the most a viewer offers', async () => {
+    execState.byCommand.set('logs', { stdout: '' });
+
+    await readContainerLogs('abc123', { tail: 1_000_000 });
+    await readContainerLogs('abc123', { tail: 0 });
+
+    expect(execState.calls[0].args).toContain('5000');
+    expect(execState.calls[1].args).toContain('1');
+  });
+
+  it("throws docker's own reason when the log can't be read", async () => {
+    execState.byCommand.set('logs', {
+      error: { message: 'exit 1', stderr: 'Error response from daemon: No such container: gone' },
+    });
+
+    await expect(readContainerLogs('gone', { tail: 100 })).rejects.toThrow(
+      'Error response from daemon: No such container: gone',
+    );
+  });
+
+  it('refuses an id or a time docker would read as a flag', async () => {
+    await expect(readContainerLogs('--help', { tail: 100 })).rejects.toThrow();
+    await expect(readContainerLogs('abc123', { tail: 100, since: '-1h' })).rejects.toThrow();
     expect(execState.calls).toHaveLength(0);
   });
 });

@@ -411,3 +411,26 @@ describe('DockerPage views', () => {
     expect(screen.queryByRole('navigation', { name: 'Docker views' })).not.toBeInTheDocument();
   });
 });
+
+describe('DockerPage logs', () => {
+  it("opens a container's log from its row and closes it again", async () => {
+    const logs = vi.fn().mockResolvedValue([
+      {
+        stream: 'stdout',
+        timestamp: '2024-05-01T10:00:00.000000000Z',
+        atUnixMs: Date.parse('2024-05-01T10:00:00.000Z'),
+        text: 'server started',
+      },
+    ]);
+    const { user } = renderPage([web, api], { 'docker.logs': logs });
+
+    await user.click(await screen.findByRole('button', { name: 'Show logs of api' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'api' });
+    expect(await within(dialog).findByText('server started')).toBeInTheDocument();
+    expect(logs).toHaveBeenCalledWith('api-id', { tail: 500 });
+
+    await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+});

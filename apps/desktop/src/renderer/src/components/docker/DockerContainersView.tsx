@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
+import { ContainerLogsDialog } from './ContainerLogsDialog';
 import { DockerContainerRow } from './DockerContainerRow';
 import { RemoveContainerDialog } from './RemoveContainerDialog';
 import { useDockerContainerActions } from './useDockerContainerActions';
@@ -75,6 +76,7 @@ export function DockerContainersView(): React.JSX.Element {
   /** A container asked for by a deep link (the status bar popover), waiting for the list to load. */
   const [pendingFocus, setPendingFocus] = useState<string | null>(null);
   const [focusedContainerId, setFocusedContainerId] = useState<string | null>(null);
+  const [logsTarget, setLogsTarget] = useState<DockerContainer | null>(null);
   const rowNodes = useRef(new Map<string, HTMLDivElement>());
   const bindRow = useCallback((id: string) => {
     return (node: HTMLDivElement | null): void => {
@@ -132,6 +134,10 @@ export function DockerContainersView(): React.JSX.Element {
     return () => clearTimeout(timer);
   }, [focusedContainerId]);
 
+  // The dialog gets the freshest copy, so its state chip and follow switch track the list.
+  const logsContainer = logsTarget
+    ? (containers.find((c) => c.id === logsTarget.id) ?? logsTarget)
+    : null;
   const runningCount = containers.filter((c) => c.state === 'running').length;
   const search = query.trim();
   const visible = containers.filter((c) => matchesQuery(c, search));
@@ -247,6 +253,7 @@ export function DockerContainersView(): React.JSX.Element {
                     onStop={() => actions.stop(container)}
                     onRestart={() => actions.restart(container.id)}
                     onRemove={() => actions.openRemoveDialog(container)}
+                    onLogs={() => setLogsTarget(container)}
                   />
                 ))}
               </div>
@@ -254,6 +261,13 @@ export function DockerContainersView(): React.JSX.Element {
           );
         })
       )}
+
+      <ContainerLogsDialog
+        container={logsContainer}
+        onOpenChange={(open) => {
+          if (!open) setLogsTarget(null);
+        }}
+      />
 
       <RemoveContainerDialog
         containerName={actions.removeTarget?.name ?? null}
