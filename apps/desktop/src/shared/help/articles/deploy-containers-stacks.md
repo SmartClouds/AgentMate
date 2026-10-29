@@ -178,7 +178,7 @@ Below the toolbar:
 - The **timeline** of the shown revision.
 - **Services**: each service with its image, ports and containers (with state and health). Each container has a log button, and a running one a console button.
 - **Revisions**: every upload is kept, with its number, state (Waiting for files, Ready, Invalid, Deploying, Live, Failed or Replaced), date and who made it. Click one to see its timeline. **Roll back** (or **Roll back to this revision** in the timeline) deploys an older revision's files again as a new revision, after a confirmation. Only revisions that ran once can be rolled back to.
-- **Route map**: where each published port leads, with a note that domains are added under Websites.
+- **Route map**: where each published port leads, starting with the domains whose sites in Websites forward to it (or **No domain**). **Add domain** (Admins only) puts a port on the internet through nginx. Enter the domain, choose whether to get an HTTPS certificate from Let's Encrypt and whether to let WebSocket connections through, then **Add the domain**. It adds the site in Websites, applies nginx and asks for the certificate, showing each step as it runs. If a step fails, it says why, and **Try again** keeps what you typed. Point the domain's DNS at the server first. The button is off for UDP ports, for ports bound to another address than this server or every address, and until nginx is set up under [Websites](deploy-websites-certificates.md).
 - **Registry sign-in**: see [Registries](deploy-registries.md). It has a switch to send this computer's sign-ins with this app's deploys.
 - **Files of revision N**: click to see the compose file as uploaded, the env key names and the loopback override file. Env values stay on the server.
 

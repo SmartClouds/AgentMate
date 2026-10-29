@@ -70,6 +70,8 @@ export function TextField({
   className,
   inputMode,
   mono,
+  autoFocus,
+  onBlur,
 }: {
   label: string;
   value: string;
@@ -83,6 +85,8 @@ export function TextField({
   className?: string;
   inputMode?: 'numeric' | 'text' | 'email' | 'url';
   mono?: boolean;
+  autoFocus?: boolean;
+  onBlur?: () => void;
 }): React.JSX.Element {
   const id = useId();
   return (
@@ -93,6 +97,8 @@ export function TextField({
           id={id}
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          onBlur={onBlur}
+          autoFocus={autoFocus}
           placeholder={placeholder}
           disabled={disabled}
           inputMode={inputMode}

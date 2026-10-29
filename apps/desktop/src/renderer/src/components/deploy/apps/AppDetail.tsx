@@ -18,9 +18,11 @@ import {
   Docker,
   FileCode,
   FileText,
+  Globe,
   History,
   Pause,
   Play,
+  Plus,
   Power,
   Rocket,
   RotateCw,
@@ -48,12 +50,14 @@ import {
   STATUS_TEXT,
   STATUS_TONE,
 } from '@/lib/deploy/apps/format';
+import { domainsForPort, proxyBlockReason, publishedPort } from '@/lib/deploy/apps/routes';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { confirmDialog } from '@/stores/confirmStore';
 import { JobLogDialog } from '../overview/JobLogDialog';
 import { RegistryPlanCard } from '../registries/RegistryPlanCard';
 import { dateTime } from '../security/format';
+import { useNginxStatus, useSites } from '../sites/hooks';
 import {
   type StackToolsRequest,
   StackToolsSheet,
@@ -63,6 +67,7 @@ import { OPERATOR_ONLY } from './AppsList';
 import { DeployTimeline } from './DeployTimeline';
 import type { AppsAccess } from './hooks';
 import { stackIsBusy, useStack } from './hooks';
+import { type ProxyRoute, ProxyRouteDialog } from './ProxyRouteDialog';
 import { StatusPill } from './StatusPill';
 
 /**
@@ -244,47 +249,130 @@ function ServicesCard({
   );
 }
 
-function RouteMap({ services }: { services: StackServiceInfo[] }): React.JSX.Element {
+const ADD_DOMAIN_ADMIN_ONLY = 'Adding a domain needs the Admin role or higher.';
+const NGINX_UNMANAGED = 'Set up nginx under Websites first, so it can serve a domain.';
+
+function RouteMap({
+  serverId,
+  stackName,
+  services,
+  signedIn,
+  canAdmin,
+  onOpenWebsites,
+}: {
+  serverId: string;
+  stackName: string;
+  services: StackServiceInfo[];
+  signedIn: boolean;
+  canAdmin: boolean;
+  onOpenWebsites?: () => void;
+}): React.JSX.Element {
   const routes = services.flatMap((service) => service.ports.map((port) => ({ service, port })));
+  const sites = useSites(serverId, signedIn && routes.length > 0);
+  const nginx = useNginxStatus(serverId, signedIn && routes.length > 0);
+  const [adding, setAdding] = useState<ProxyRoute | null>(null);
   return (
     <section className={cn(GLASS_CARD, 'space-y-3 p-4')}>
       <div className="space-y-1">
         <TileHeader icon={<Route />} title="Route map" />
         <p className="text-xs text-muted-foreground">
-          Where each published port leads. Domains are added under Websites, which proxies to these
-          ports.
+          Where each published port leads. Add a domain to put a port on the internet: nginx answers
+          for it and forwards to the port on this server.
         </p>
       </div>
       {routes.length === 0 ? (
         <p className="text-sm text-muted-foreground">No service publishes a port.</p>
       ) : (
         <ul aria-label="Routes" className="space-y-2">
-          {routes.map(({ service, port }) => (
-            <li
-              key={`${service.name}-${port.hostIp}-${port.published}-${port.target}-${port.protocol}`}
-              className="flex flex-wrap items-center gap-2 text-xs"
-            >
-              <span className="rounded-lg px-2 py-1 text-muted-foreground ring-1 ring-inset ring-foreground/[0.1]">
-                Domain, via Websites
-              </span>
-              <ArrowRight className="h-3 w-3 text-muted-foreground" />
-              <span className={cn(ROUTE_STOP, 'font-mono text-foreground')}>
-                {bindingAddress(port) === 'This server only' ? '127.0.0.1' : (port.hostIp ?? '*')}:
-                {port.published ?? 'any'}
-              </span>
-              <ArrowRight className="h-3 w-3 text-muted-foreground" />
-              <span className={cn(ROUTE_STOP, 'font-mono text-foreground')}>
-                {service.name}:{port.target}/{port.protocol}
-              </span>
-              <ArrowRight className="h-3 w-3 text-muted-foreground" />
-              <span className="text-muted-foreground">
-                {service.containers.length === 1
-                  ? '1 container'
-                  : `${service.containers.length} containers`}
-              </span>
-            </li>
-          ))}
+          {routes.map(({ service, port }) => {
+            const name = `${service.name}:${port.target}`;
+            const published = publishedPort(port);
+            const domains =
+              published !== null && sites.data ? domainsForPort(sites.data, published) : [];
+            const blocked =
+              proxyBlockReason(port) ??
+              (!canAdmin ? ADD_DOMAIN_ADMIN_ONLY : null) ??
+              (nginx.data && !nginx.data.managed ? NGINX_UNMANAGED : null);
+            const label = domains.length > 0 ? 'Add another domain' : 'Add domain';
+            return (
+              <li
+                key={`${service.name}-${port.hostIp}-${port.published}-${port.target}-${port.protocol}`}
+                aria-label={`${name}/${port.protocol}`}
+                className="flex flex-wrap items-center gap-2 text-xs"
+              >
+                {sites.isPending && signedIn ? (
+                  <Skeleton className="h-6 w-28 rounded-lg" />
+                ) : sites.isError || !signedIn ? (
+                  <span className="rounded-lg px-2 py-1 text-muted-foreground ring-1 ring-inset ring-foreground/[0.1]">
+                    Domain, via Websites
+                  </span>
+                ) : domains.length === 0 ? (
+                  <span className="rounded-lg border border-dashed border-foreground/15 px-2 py-1 text-muted-foreground">
+                    No domain
+                  </span>
+                ) : (
+                  domains.map((domain) => (
+                    <span
+                      key={domain}
+                      className={cn(
+                        ROUTE_STOP,
+                        'inline-flex min-w-0 items-center gap-1.5 font-mono text-foreground [overflow-wrap:anywhere]',
+                      )}
+                    >
+                      <Globe className="h-3 w-3 shrink-0 text-primary" />
+                      {domain}
+                    </span>
+                  ))
+                )}
+                <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                <span className={cn(ROUTE_STOP, 'font-mono text-foreground')}>
+                  {bindingAddress(port) === 'This server only' ? '127.0.0.1' : (port.hostIp ?? '*')}
+                  :{port.published ?? 'any'}
+                </span>
+                <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                <span className={cn(ROUTE_STOP, 'font-mono text-foreground')}>
+                  {service.name}:{port.target}/{port.protocol}
+                </span>
+                <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                <span className="text-muted-foreground">
+                  {service.containers.length === 1
+                    ? '1 container'
+                    : `${service.containers.length} containers`}
+                </span>
+                <span className="ml-auto">
+                  <Gate allowed={blocked === null} reason={blocked ?? ''}>
+                    <Button
+                      size="sm"
+                      variant="soft"
+                      aria-label={`${label} for ${name}`}
+                      disabled={blocked !== null || nginx.isPending || published === null}
+                      onClick={() =>
+                        published !== null &&
+                        setAdding({
+                          stack: stackName,
+                          service: service.name,
+                          target: port.target,
+                          port: published,
+                        })
+                      }
+                    >
+                      <Plus className="h-3.5 w-3.5" /> {label}
+                    </Button>
+                  </Gate>
+                </span>
+              </li>
+            );
+          })}
         </ul>
+      )}
+      {adding && (
+        <ProxyRouteDialog
+          serverId={serverId}
+          route={adding}
+          open
+          onClose={() => setAdding(null)}
+          onOpenWebsites={onOpenWebsites}
+        />
       )}
     </section>
   );
@@ -486,6 +574,7 @@ export function AppDetail({
   onDeployAgain,
   onDeleted,
   onOpenRegistries,
+  onOpenWebsites,
 }: {
   serverId: string;
   stackId: string;
@@ -495,6 +584,8 @@ export function AppDetail({
   onDeleted: () => void;
   /** The registry sign-ins for private images (E08). */
   onOpenRegistries?: () => void;
+  /** The server's Websites section, where the sites behind the route map live. */
+  onOpenWebsites?: () => void;
 }): React.JSX.Element {
   const queryClient = useQueryClient();
   const [busyJob, setBusyJob] = useState<string | null>(null);
@@ -776,7 +867,14 @@ export function AppDetail({
           onRollback={(revision) => void rollback(revision)}
         />
       </div>
-      <RouteMap services={data.services} />
+      <RouteMap
+        serverId={serverId}
+        stackName={stack.name}
+        services={data.services}
+        signedIn={access.signedIn}
+        canAdmin={access.canAdmin}
+        onOpenWebsites={onOpenWebsites}
+      />
       {latest !== null && (
         <RegistryPlanCard
           input={{ serverId, stackId, revision: latest }}

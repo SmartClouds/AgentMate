@@ -30,13 +30,15 @@ const STEP_TONE: Record<ExposeStepState, string> = {
 
 export function ExposeStepList({
   steps,
+  label,
   className,
 }: {
   steps: ExposeStep[];
+  label?: string;
   className?: string;
 }): React.JSX.Element {
   return (
-    <ol className={cn('space-y-1 text-sm', className)}>
+    <ol aria-label={label} className={cn('space-y-1 text-sm', className)}>
       {steps.map((step) => {
         const Icon = STEP_ICON[step.state];
         return (

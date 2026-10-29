@@ -2,6 +2,7 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { ConfirmDialogHost } from '@/components/ConfirmDialog';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
+import { nginxStatus, site } from '../sites/testing/fixtures';
 import type { AppsAccess } from './hooks';
 import {
   appsBridge,
@@ -33,6 +34,7 @@ function renderDetail(bridge: Record<string, unknown> = {}, roles = ['owner']) {
   const onBack = vi.fn();
   const onDeployAgain = vi.fn();
   const onDeleted = vi.fn();
+  const onOpenWebsites = vi.fn();
   const view = renderWithProviders(
     <>
       <AppDetail
@@ -42,12 +44,13 @@ function renderDetail(bridge: Record<string, unknown> = {}, roles = ['owner']) {
         onBack={onBack}
         onDeployAgain={onDeployAgain}
         onDeleted={onDeleted}
+        onOpenWebsites={onOpenWebsites}
       />
       <ConfirmDialogHost />
     </>,
     { bridge: { ...appsBridge(roles), ...bridge } },
   );
-  return { ...view, onBack, onDeployAgain, onDeleted };
+  return { ...view, onBack, onDeployAgain, onDeleted, onOpenWebsites };
 }
 
 function finishJob(
@@ -342,5 +345,169 @@ describe('AppDetail', () => {
     await screen.findByRole('heading', { name: 'shop' });
     await user.click(screen.getByRole('button', { name: /Files of revision 2/ }));
     expect(await screen.findByText('The files did not load: gone')).toBeInTheDocument();
+  });
+
+  describe('route map', () => {
+    /** nginx managed, and one site on the web port next to one elsewhere. */
+    const WEB = {
+      'deploySites.status': nginxStatus(),
+      'deploySites.list': [
+        site(
+          {},
+          {
+            id: 'shop',
+            domains: ['shop.example.com'],
+            upstream: {
+              kind: 'servicePort',
+              service: 'shop-web',
+              port: 8080,
+              verifyCertificate: true,
+              sendUpstreamHost: false,
+            },
+          },
+        ),
+        site({}, { id: 'blog', domains: ['blog.example.com'] }),
+      ],
+    };
+
+    function withPort(port: Record<string, unknown>) {
+      const details = sampleDetails();
+      return sampleDetails({
+        services: details.services.map((service) =>
+          service.name === 'web'
+            ? { ...service, ports: [{ ...service.ports[0], ...port }] }
+            : service,
+        ),
+      });
+    }
+
+    async function routeRow() {
+      const routes = await screen.findByRole('list', { name: 'Routes' });
+      return within(routes).getByRole('listitem', { name: /^web:80\// });
+    }
+
+    it('shows the domains that already forward to a port, and only those', async () => {
+      renderDetail(WEB);
+      const row = await routeRow();
+      expect(await within(row).findByText('shop.example.com')).toBeInTheDocument();
+      expect(row).not.toHaveTextContent('blog.example.com');
+      expect(
+        within(row).getByRole('button', { name: 'Add another domain for web:80' }),
+      ).toBeEnabled();
+    });
+
+    it('matches a site that forwards to the port by its address too', async () => {
+      renderDetail({
+        ...WEB,
+        'deploySites.list': [
+          site(
+            {},
+            {
+              id: 'api',
+              domains: ['api.example.com'],
+              upstream: {
+                kind: 'url',
+                address: 'http://127.0.0.1:8080',
+                verifyCertificate: true,
+                sendUpstreamHost: false,
+              },
+            },
+          ),
+        ],
+      });
+      const row = await routeRow();
+      expect(await within(row).findByText('api.example.com')).toBeInTheDocument();
+    });
+
+    it('says when no domain leads to a port yet', async () => {
+      renderDetail({ ...WEB, 'deploySites.list': [] });
+      const row = await routeRow();
+      expect(await within(row).findByText('No domain')).toBeInTheDocument();
+      expect(within(row).getByRole('button', { name: 'Add domain for web:80' })).toBeEnabled();
+    });
+
+    it('leaves adding a domain to Admins', async () => {
+      renderDetail(WEB, ['operator']);
+      const row = await routeRow();
+      await within(row).findByText('shop.example.com');
+      expect(within(row).getByRole('button', { name: /domain for web:80/ })).toBeDisabled();
+    });
+
+    it('cannot add a domain before nginx is managed under Websites', async () => {
+      renderDetail({ ...WEB, 'deploySites.status': nginxStatus({ managed: false }) });
+      const row = await routeRow();
+      await within(row).findByText('shop.example.com');
+      expect(within(row).getByRole('button', { name: /domain for web:80/ })).toBeDisabled();
+    });
+
+    it('cannot put a UDP port or one on another address behind a domain', async () => {
+      const first = renderDetail({ ...WEB, 'deployStacks.get': withPort({ protocol: 'udp' }) });
+      let row = await routeRow();
+      await within(row).findByText('shop.example.com');
+      expect(within(row).getByRole('button', { name: /domain for web:80/ })).toBeDisabled();
+      first.unmount();
+
+      renderDetail({ ...WEB, 'deployStacks.get': withPort({ hostIp: '10.0.0.5' }) });
+      row = await routeRow();
+      await within(row).findByText('shop.example.com');
+      expect(within(row).getByRole('button', { name: /domain for web:80/ })).toBeDisabled();
+    });
+
+    it('puts a port on a domain: the site, nginx, the certificate, then shows the domain', async () => {
+      let sites = [...WEB['deploySites.list']];
+      const { user, bridge, onOpenWebsites } = renderDetail({
+        ...WEB,
+        'deploySites.list': async () => sites,
+        'deploySites.save': async () => {
+          sites = [
+            ...sites,
+            site(
+              {},
+              {
+                id: 'www-example-com',
+                domains: ['www.example.com'],
+                upstream: {
+                  kind: 'servicePort',
+                  service: 'shop-web',
+                  port: 8080,
+                  verifyCertificate: true,
+                  sendUpstreamHost: false,
+                },
+              },
+            ),
+          ];
+          return { problems: [], site: sites[sites.length - 1] };
+        },
+        'deploySites.applyChanges': { applied: true, problems: [], warnings: [] },
+        'deployCerts.issue': { id: 'job-cert' },
+      });
+      const row = await routeRow();
+      await within(row).findByText('shop.example.com');
+      await user.click(within(row).getByRole('button', { name: 'Add another domain for web:80' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Put web:80 on a domain' });
+      await user.type(within(dialog).getByLabelText('Domain'), 'WWW.Example.com');
+      await user.click(within(dialog).getByRole('button', { name: 'Add the domain' }));
+
+      expect(await within(dialog).findByText(/www\.example\.com is set up/)).toBeInTheDocument();
+      expect(bridge.$fn('deploySites.save')).toHaveBeenCalledWith(
+        SERVER.id,
+        expect.objectContaining({
+          id: 'www-example-com',
+          domains: ['www.example.com'],
+          upstream: expect.objectContaining({
+            kind: 'servicePort',
+            service: 'shop-web',
+            port: 8080,
+          }),
+        }),
+      );
+      expect(bridge.$fn('deployCerts.issue')).toHaveBeenCalledWith(
+        expect.objectContaining({ serverId: SERVER.id, siteId: 'www-example-com' }),
+      );
+      expect(await within(row).findByText('www.example.com')).toBeInTheDocument();
+
+      await user.click(within(dialog).getByRole('button', { name: 'Open in Websites' }));
+      expect(onOpenWebsites).toHaveBeenCalled();
+    });
   });
 });

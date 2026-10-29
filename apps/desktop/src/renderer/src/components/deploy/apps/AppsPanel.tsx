@@ -114,6 +114,7 @@ export function AppsPanel({ server }: { server: DeployServer }): React.JSX.Eleme
         onDeployAgain={(details) => show({ app: details.stack.id, new: '1' })}
         onDeleted={() => show({})}
         onOpenRegistries={() => show({ app: appId, registries: '1' })}
+        onOpenWebsites={() => setParams({ server: serverId, view: 'websites' })}
       />
     );
   }
