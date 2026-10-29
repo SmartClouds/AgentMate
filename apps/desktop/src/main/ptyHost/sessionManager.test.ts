@@ -34,7 +34,17 @@ if (mode === 'exit7') {
   process.exit(7);
 }
 if (mode === 'interactive') {
-  process.stdin.on('data', (chunk) => {
+  // Node with no script also opens its REPL on the console. Two readers race for the input, and
+  // once something attaches to the console (the paste boost's process lookup) keystrokes go to
+  // the REPL. The REPL gets an idle stream, so the shim reads the console alone, as a shell would,
+  // and in raw mode like one, so a key arrives without waiting for Enter.
+  const input = process.stdin;
+  Object.defineProperty(process, 'stdin', {
+    value: new (require('node:stream').PassThrough)(),
+    configurable: true,
+  });
+  if (input.isTTY) input.setRawMode(true);
+  input.on('data', (chunk) => {
     const text = String(chunk);
     if (text.includes('Q')) process.exit(9);
     process.stdout.write('GOT:' + text.trim() + '\\n');
