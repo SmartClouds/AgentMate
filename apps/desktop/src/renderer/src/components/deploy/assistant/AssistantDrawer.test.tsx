@@ -1,4 +1,4 @@
-import { act, screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useDeployAssistantStore } from '@/stores/deployAssistantStore';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
@@ -133,6 +133,67 @@ describe('AssistantDrawer', () => {
     expect(fake.$fn('deployAssistant.resume')).toHaveBeenCalledWith(SERVER.id);
     await user.click(screen.getAllByRole('button', { name: 'Stop' })[0] as HTMLElement);
     expect(fake.$fn('deployAssistant.stop')).toHaveBeenCalledWith(SERVER.id);
+  });
+
+  it('follows new steps and output to the end unless the user scrolled up', async () => {
+    renderWithProviders(<AssistantLauncher server={SERVER} />, { bridge: bridge() });
+    act(() => useDeployAssistantStore.getState().open(SERVER.id));
+    await screen.findByRole('complementary', { name: 'Deploy AI' });
+    const body = screen.getByLabelText('Run');
+    Object.defineProperty(body, 'scrollHeight', { value: 2000, configurable: true });
+    Object.defineProperty(body, 'clientHeight', { value: 400, configurable: true });
+
+    progress('running', { command: 'docker ps' });
+    expect(body.scrollTop).toBe(2000);
+
+    const output = (text: string) =>
+      act(() =>
+        useDeployAssistantStore.getState().output({
+          serverId: SERVER.id,
+          command: 'docker ps',
+          lines: [{ stream: 'out', text }],
+        }),
+      );
+    output('first');
+    const pre = screen.getByLabelText('Output of step 1');
+    Object.defineProperty(pre, 'scrollHeight', { value: 900, configurable: true });
+    Object.defineProperty(pre, 'clientHeight', { value: 190, configurable: true });
+    output('second');
+    expect(pre.scrollTop).toBe(900);
+
+    // Scrolled up to read: new content leaves the view where it is.
+    body.scrollTop = 300;
+    fireEvent.scroll(body);
+    pre.scrollTop = 100;
+    fireEvent.scroll(pre);
+    output('third');
+    progress('thinking');
+    expect(body.scrollTop).toBe(300);
+    expect(pre.scrollTop).toBe(100);
+
+    // Back at the end, it follows again.
+    body.scrollTop = 1600;
+    fireEvent.scroll(body);
+    progress('proposed', { command: 'docker logs api' });
+    expect(body.scrollTop).toBe(2000);
+  });
+
+  it('maximizes to fill the window and restores', async () => {
+    const { user } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+      bridge: bridge(),
+    });
+    act(() => useDeployAssistantStore.getState().open(SERVER.id));
+    const drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    expect(drawer).toHaveClass('w-[min(28rem,calc(100vw-1rem))]');
+
+    await user.click(within(drawer).getByRole('button', { name: 'Maximize' }));
+    expect(drawer).toHaveClass('w-[calc(100vw-1rem)]');
+    const restore = within(drawer).getByRole('button', { name: 'Restore size' });
+    expect(restore).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(restore);
+    expect(drawer).toHaveClass('w-[min(28rem,calc(100vw-1rem))]');
+    expect(within(drawer).getByRole('button', { name: 'Maximize' })).toBeInTheDocument();
   });
 
   it('asks for a step-up before auto-running diagnostics', async () => {

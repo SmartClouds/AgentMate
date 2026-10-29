@@ -1,8 +1,8 @@
 import { coreErrorMessage } from '@shared/coreErrors';
 import type { DeployServer } from '@shared/deployTypes';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Robot, X } from '@/components/icons';
+import { Robot, WindowMaximize, WindowRestore, X } from '@/components/icons';
 import { Chip, FOOTER_HAIRLINE } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -23,6 +23,9 @@ import { ModeSwitch } from './ModeSwitch';
 
 const ACTIVE = new Set(['thinking', 'proposed', 'running', 'needs-input', 'needs-password']);
 
+/** How close to the end still counts as being at the end, in pixels. */
+const BOTTOM_SLACK = 24;
+
 export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX.Element | null {
   const openServerId = useDeployAssistantStore((state) => state.openServerId);
   const draft = useDeployAssistantStore((state) => state.draft);
@@ -33,6 +36,9 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
   const open = openServerId === server.id;
   const mode = useAssistantMode(server.id, open);
   const panel = useRef<HTMLElement | null>(null);
+  const body = useRef<HTMLDivElement | null>(null);
+  const follow = useRef(true);
+  const [maximized, setMaximized] = useState(false);
   const context = draft?.serverId === server.id ? draft.context : null;
   const progress = run?.progress ?? null;
   const running =
@@ -41,8 +47,18 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
   const finished = progress?.phase === 'finished' || progress?.phase === 'stopped';
 
   useEffect(() => {
-    if (open) panel.current?.focus();
+    if (!open) return;
+    follow.current = true;
+    panel.current?.focus();
   }, [open]);
+
+  // New steps, output and questions land at the end, so the view follows them there unless the
+  // user scrolled up to read something.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: new content is the trigger
+  useEffect(() => {
+    const element = body.current;
+    if (element && follow.current) element.scrollTop = element.scrollHeight;
+  }, [open, run?.steps, progress, maximized]);
 
   // A window opened (or reloaded) while a run goes on picks up where it is.
   useEffect(() => {
@@ -71,6 +87,7 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
 
   async function start(prompt: string, cliId: string | null): Promise<boolean> {
     try {
+      follow.current = true;
       reset(serverId);
       await window.runova.deployAssistant.start({
         serverId,
@@ -94,7 +111,10 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
         if (event.key === 'Escape') close();
       }}
       // Near-opaque glass, so the logs it sits beside never show through its text.
-      className="glass-opaque fixed bottom-2 right-2 top-2 z-40 flex w-[min(28rem,calc(100vw-1rem))] flex-col overflow-hidden rounded-[calc(var(--radius)+4px)] focus:outline-none"
+      className={cn(
+        'glass-opaque fixed bottom-2 right-2 top-2 z-40 flex flex-col overflow-hidden rounded-[calc(var(--radius)+4px)] transition-[width] focus:outline-none',
+        maximized ? 'w-[calc(100vw-1rem)]' : 'w-[min(28rem,calc(100vw-1rem))]',
+      )}
     >
       <header className="flex items-center gap-3 px-4 py-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary shadow-[0_0_28px_-12px_hsl(var(--primary)/0.7)]">
@@ -104,6 +124,17 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
           <h2 className="text-sm font-semibold leading-tight text-foreground">Deploy AI</h2>
           <p className="truncate text-xs text-muted-foreground">on {server.nickname}</p>
         </div>
+        <SimpleTooltip label={maximized ? 'Restore size' : 'Maximize'}>
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label={maximized ? 'Restore size' : 'Maximize'}
+            aria-pressed={maximized}
+            onClick={() => setMaximized((value) => !value)}
+          >
+            {maximized ? <WindowRestore /> : <WindowMaximize />}
+          </Button>
+        </SimpleTooltip>
         <SimpleTooltip label="Close">
           <Button size="icon-sm" variant="ghost" aria-label="Close" onClick={close}>
             <X />
@@ -112,6 +143,13 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
       </header>
 
       <div
+        ref={body}
+        aria-label="Run"
+        onScroll={(event) => {
+          const element = event.currentTarget;
+          follow.current =
+            element.scrollHeight - element.scrollTop - element.clientHeight < BOTTOM_SLACK;
+        }}
         className={cn('rail-scroll flex-1 space-y-4 overflow-y-auto px-4 py-3', FOOTER_HAIRLINE)}
       >
         {mode.loading ? (
@@ -149,6 +187,7 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
         <AssistantTimeline
           steps={run?.steps ?? []}
           progress={progress}
+          tall={maximized}
           onApprove={() => act(window.runova.deployAssistant.approve(serverId))}
           onSkip={() => act(window.runova.deployAssistant.skip(serverId))}
           onAnswer={(answer) => act(window.runova.deployAssistant.answer(serverId, answer))}

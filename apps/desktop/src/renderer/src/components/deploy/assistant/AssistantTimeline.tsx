@@ -1,5 +1,5 @@
 import type { SshAgentProgress } from '@shared/apiTypes';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, CircleCheck, CircleX, Play, Spinner, TriangleAlert, X } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +26,26 @@ function StepIcon({ status }: { status: AssistantStep['status'] }) {
   return <TriangleAlert className="h-3.5 w-3.5 text-warning" />;
 }
 
-export function StepItem({ step }: { step: AssistantStep }): React.JSX.Element {
+/** How close to the end still counts as being at the end, in pixels. */
+const BOTTOM_SLACK = 16;
+
+export function StepItem({
+  step,
+  tall = false,
+}: {
+  step: AssistantStep;
+  tall?: boolean;
+}): React.JSX.Element {
+  const output = useRef<HTMLPreElement | null>(null);
+  const follow = useRef(true);
+
+  // The output reads from the end, like a terminal, unless the user scrolled up in it.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: each new line is the trigger
+  useEffect(() => {
+    const element = output.current;
+    if (element && follow.current) element.scrollTop = element.scrollHeight;
+  }, [step.lines, tall]);
+
   return (
     <li
       className="space-y-1.5 rounded-xl bg-foreground/[0.03] p-2.5 ring-1 ring-inset ring-foreground/[0.07]"
@@ -47,7 +66,16 @@ export function StepItem({ step }: { step: AssistantStep }): React.JSX.Element {
       )}
       {step.lines.length > 0 && (
         <pre
-          className="max-h-48 overflow-auto whitespace-pre-wrap break-all rounded-md bg-background/70 px-2 py-1 font-mono text-[11px] leading-4 text-foreground"
+          ref={output}
+          onScroll={(event) => {
+            const element = event.currentTarget;
+            follow.current =
+              element.scrollHeight - element.scrollTop - element.clientHeight < BOTTOM_SLACK;
+          }}
+          className={cn(
+            'overflow-auto whitespace-pre-wrap break-all rounded-md bg-background/70 px-2 py-1 font-mono text-[11px] leading-4 text-foreground',
+            tall ? 'max-h-[28rem]' : 'max-h-48',
+          )}
           aria-label={`Output of step ${step.step}`}
         >
           {step.lines.map((line) => line.text).join('\n')}
@@ -65,9 +93,12 @@ export function AssistantTimeline({
   onAnswer,
   onResume,
   onStop,
+  tall = false,
 }: {
   steps: AssistantStep[];
   progress: SshAgentProgress | null;
+  /** The drawer is maximized, so each step's output gets more room. */
+  tall?: boolean;
   onApprove: () => void;
   onSkip: () => void;
   onAnswer: (answer: string) => void;
@@ -82,7 +113,7 @@ export function AssistantTimeline({
       {steps.length > 0 && (
         <ol aria-label="Steps" className="space-y-2">
           {steps.map((step) => (
-            <StepItem key={`${step.step}-${step.command}`} step={step} />
+            <StepItem key={`${step.step}-${step.command}`} step={step} tall={tall} />
           ))}
         </ol>
       )}
