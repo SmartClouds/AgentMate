@@ -365,6 +365,8 @@ function registerDeployAssistantIpc(
       serverName: async (serverId) =>
         (await service.listServers()).find((server) => server.id === serverId)?.nickname ??
         serverId,
+      project: async (projectId) =>
+        (await store.getProjects()).find((project) => project.id === projectId) ?? null,
       docker: new DeployDocker({ links: service.links, roles }),
       send: (channel, payload) => sendToWindow(getMainWindow(), channel, payload),
     }),

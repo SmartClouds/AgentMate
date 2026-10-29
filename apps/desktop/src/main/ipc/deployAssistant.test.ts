@@ -131,6 +131,27 @@ describe('argument checks', () => {
     expect(
       startInput({ serverId: 'srv-1', prompt: 'x', continuePrevious: 'yes' }),
     ).not.toHaveProperty('continuePrevious');
+    expect(
+      startInput({
+        serverId: 'srv-1',
+        prompt: 'x',
+        project: { projectId: 'p_1-a', allowEdits: true, folderPath: 'C:/elsewhere' },
+      }).project,
+    ).toEqual({ projectId: 'p_1-a', allowEdits: true });
+    expect(() =>
+      startInput({
+        serverId: 'srv-1',
+        prompt: 'x',
+        project: { projectId: '../x', allowEdits: true },
+      }),
+    ).toThrow('not a project');
+    expect(() =>
+      startInput({
+        serverId: 'srv-1',
+        prompt: 'x',
+        project: { projectId: 'p1', allowEdits: 'yes' },
+      }),
+    ).toThrow('may edit files');
     expect(() => startInput({ serverId: 'srv-1', prompt: '   ' })).toThrow('Describe what');
     expect(() => startInput({ serverId: 'srv-1', prompt: 'a'.repeat(4_001) })).toThrow();
     expect(() => startInput({ serverId: '../x', prompt: 'x' })).toThrow('saved server');

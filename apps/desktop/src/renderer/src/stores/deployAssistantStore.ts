@@ -60,6 +60,12 @@ export interface AssistantAiChoice {
   effort: EffortLevel | null;
 }
 
+/** A project a CLI works in on this server's runs, and whether it may change the code. */
+export interface AssistantProjectChoice {
+  projectId: string;
+  allowEdits: boolean;
+}
+
 export const SETTINGS_AI: AssistantAiChoice = { cliId: null, modelId: null, effort: null };
 
 const EMPTY_RUN: AssistantRun = { progress: null, steps: [], messages: [], earlier: [] };
@@ -74,6 +80,9 @@ interface DeployAssistantStoreState {
   /** The last AI picked in the drawer, kept for the next run and the next time it opens. */
   ai: AssistantAiChoice;
   setAi: (ai: AssistantAiChoice) => void;
+  /** Per server, since each one runs its own app's code. */
+  projects: Record<string, AssistantProjectChoice>;
+  setProject: (serverId: string, project: AssistantProjectChoice | null) => void;
   open: (
     serverId: string,
     draft?: { context: DeployAssistantContextInput; prompt: string },
@@ -135,6 +144,12 @@ export const useDeployAssistantStore = create<DeployAssistantStoreState>((set) =
   runs: {},
   ai: SETTINGS_AI,
   setAi: (ai) => set({ ai }),
+  projects: {},
+  setProject: (serverId, project) =>
+    set((state) => {
+      const { [serverId]: _old, ...others } = state.projects;
+      return { projects: project ? { ...others, [serverId]: project } : others };
+    }),
   open: (serverId, draft) =>
     set((state) => ({
       openServerId: serverId,

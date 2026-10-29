@@ -35,7 +35,13 @@ function progress(phase: string, extra: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  useDeployAssistantStore.setState({ openServerId: null, draft: null, runs: {}, ai: SETTINGS_AI });
+  useDeployAssistantStore.setState({
+    openServerId: null,
+    draft: null,
+    runs: {},
+    ai: SETTINGS_AI,
+    projects: {},
+  });
 });
 
 describe('AssistantDrawer', () => {
@@ -544,6 +550,93 @@ describe('AssistantComposer', () => {
     );
     expect(fake.$fn('deployAssistant.start')).toHaveBeenLastCalledWith(
       expect.objectContaining({ cliId: null }),
+    );
+  });
+
+  it('lets a CLI work in a project, read only unless the user allows edits', async () => {
+    const { user, bridge: fake } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+      bridge: bridge({
+        'cli.detectAll': [{ id: 'claude-code', installed: true }],
+        'projects.list': [{ id: 'shop', name: 'Shop', folderPath: 'C:/code/shop' }],
+      }),
+    });
+    act(() => useDeployAssistantStore.getState().open(SERVER.id));
+    const drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    await within(drawer).findByRole('radio', { name: /Approve every command/ });
+
+    // The Settings provider cannot open files, so there is no project to pick.
+    expect(within(drawer).queryByLabelText('Project for the code')).not.toBeInTheDocument();
+    await user.click(within(drawer).getByLabelText('Which AI'));
+    await user.click(await screen.findByRole('option', { name: /Claude/ }));
+
+    const picker = within(drawer).getByLabelText('Project for the code');
+    expect(picker).toHaveTextContent('None');
+    expect(within(drawer).queryByRole('radiogroup', { name: /may do with the code/ })).toBeNull();
+    await user.click(picker);
+    await user.click(await screen.findByRole('option', { name: 'Shop' }));
+
+    const access = within(drawer).getByRole('radiogroup', {
+      name: 'What the AI may do with the code',
+    });
+    expect(within(access).getByRole('radio', { name: 'Read only' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    expect(drawer).toHaveTextContent('The AI can read C:/code/shop but not change it.');
+    await user.click(within(access).getByRole('radio', { name: 'Read and edit' }));
+    expect(drawer).toHaveTextContent('Edits go straight into C:/code/shop. Commit first');
+
+    await user.type(within(drawer).getByLabelText('What should the AI look into?'), 'Fix mail');
+    await user.click(within(drawer).getByRole('button', { name: 'Start' }));
+    expect(fake.$fn('deployAssistant.start')).toHaveBeenLastCalledWith({
+      serverId: SERVER.id,
+      prompt: 'Fix mail',
+      cliId: 'claude-code',
+      project: { projectId: 'shop', allowEdits: true },
+    });
+
+    // Locked while the run goes.
+    progress('running', { command: 'docker ps' });
+    expect(within(drawer).getByLabelText('Project for the code')).toBeDisabled();
+    expect(within(access).getByRole('radio', { name: 'Read only' })).toBeDisabled();
+
+    // Back on the Settings provider, the project stays chosen but is not sent.
+    progress('finished', { message: 'Done.' });
+    await user.click(within(drawer).getByLabelText('Which AI'));
+    await user.click(await screen.findByRole('option', { name: 'AI provider (Settings)' }));
+    expect(within(drawer).queryByLabelText('Project for the code')).not.toBeInTheDocument();
+    await user.type(within(drawer).getByLabelText('Ask a follow-up'), 'And now?');
+    await user.click(within(drawer).getByRole('button', { name: 'Ask' }));
+    expect(fake.$fn('deployAssistant.start')).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ project: expect.anything() }),
+    );
+    expect(useDeployAssistantStore.getState().projects[SERVER.id]).toEqual({
+      projectId: 'shop',
+      allowEdits: true,
+    });
+  });
+
+  it('keeps the project per server and drops one Runova no longer has', async () => {
+    const { user, bridge: fake } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+      bridge: bridge({
+        'cli.detectAll': [{ id: 'claude-code', installed: true }],
+        'projects.list': [{ id: 'shop', name: 'Shop', folderPath: 'C:/code/shop' }],
+      }),
+    });
+    act(() => {
+      const store = useDeployAssistantStore.getState();
+      store.setAi({ cliId: 'claude-code', modelId: null, effort: null });
+      store.setProject('other-server', { projectId: 'shop', allowEdits: true });
+      store.setProject(SERVER.id, { projectId: 'deleted', allowEdits: true });
+      store.open(SERVER.id, { prompt: 'Look.', context: { title: 'x' } });
+    });
+    const drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    await within(drawer).findByRole('radio', { name: /Approve every command/ });
+    expect(await within(drawer).findByLabelText('Project for the code')).toHaveTextContent('None');
+    expect(drawer).not.toHaveTextContent('Edits go straight into');
+    await user.click(within(drawer).getByRole('button', { name: 'Start' }));
+    expect(fake.$fn('deployAssistant.start')).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ project: expect.anything() }),
     );
   });
 });

@@ -283,6 +283,7 @@ interface RunState {
   cliId: string | null;
   /** Model and effort flags for that CLI. */
   runArgs: string[];
+  cliWorkspace: CliWorkspace | null;
   /** Set while a CLI is working out the next step, so Stop can kill it. */
   cliRequestId: string | null;
   prompt: string;
@@ -666,20 +667,24 @@ function cleanupRun(run: RunState): void {
 
 /** A CLI starts fresh each step and reads the whole prompt, so it gets longer than an API call. */
 const CLI_STEP_TIMEOUT_MS = 5 * 60 * 1000;
+/** A CLI working in a project may read around the code and edit it within one step. */
+const CLI_WORKSPACE_STEP_TIMEOUT_MS = 15 * 60 * 1000;
 
 /** Asks the CLI the run was started with for its next step. */
 async function askCli(run: RunState, prompt: string): Promise<string> {
   const requestId = `ssh-agent:${run.sessionId}:${run.step}`;
   run.cliRequestId = requestId;
   try {
-    // The temp dir, not a project folder: the CLI only needs the prompt, and one started inside
-    // a repo tends to go reading files first.
-    const result = await runHeadlessCliPrompt(prompt, tmpdir(), {
+    // The temp dir unless the user gave the run a project: the CLI only needs the prompt, and
+    // one started inside a repo tends to go reading files first.
+    const workspace = run.cliWorkspace;
+    const result = await runHeadlessCliPrompt(prompt, workspace?.cwd ?? tmpdir(), {
       requestId,
       preferredCliId: run.cliId,
       strictCli: true,
       runArgs: run.runArgs,
-      timeoutMs: CLI_STEP_TIMEOUT_MS,
+      ...(workspace ? { allowWrites: workspace.allowWrites } : {}),
+      timeoutMs: workspace ? CLI_WORKSPACE_STEP_TIMEOUT_MS : CLI_STEP_TIMEOUT_MS,
     });
     if (!result.ok) throw new Error(result.error || `${result.cliName ?? 'The CLI'} failed.`);
     return result.text;
@@ -880,6 +885,16 @@ export function startSshTask(
   );
 }
 
+/**
+ * A folder of the user's that an agent CLI works in for every step, such as the project whose
+ * code runs on the server. Without one the CLI runs in the temp dir and touches no files.
+ */
+export interface CliWorkspace {
+  cwd: string;
+  /** Adds the CLI's write flags, so it can edit files there without a TTY to approve them. */
+  allowWrites: boolean;
+}
+
 /** Everything a run needs besides the user's answers. `key` names it, as a session id does. */
 export interface AgentTaskSpec {
   key: string;
@@ -891,6 +906,8 @@ export interface AgentTaskSpec {
   buildPrompt?: (input: PromptInput) => string;
   cliId: string | null;
   runArgs: string[];
+  /** Where the CLI works, when the user gave the run a folder of theirs. */
+  cliWorkspace?: CliWorkspace;
   /** What it says when it is not connected; the SSH and local wording otherwise. */
   notConnectedMessage?: string;
   /** How a terminal task was started, kept in its history so it can be run again. */
@@ -925,6 +942,7 @@ export function startAgentTask(
     buildPrompt: spec.buildPrompt ?? null,
     cliId: spec.cliId,
     runArgs: spec.runArgs,
+    cliWorkspace: spec.cliWorkspace ?? null,
     cliRequestId: null,
     prompt: prompt.trim(),
     previousContext: spec.previousContext ?? '',

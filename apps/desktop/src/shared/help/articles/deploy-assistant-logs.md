@@ -131,6 +131,20 @@ Approving is safe by design: your approval is signed with this computer's device
 
 While a run goes, the button next to the AI picker turns into **Stop**. After a run ends, the same box says **Ask a follow-up**, and the button reads **Ask**. A follow-up keeps the same server and context.
 
+### Let a CLI work in your project's code
+
+When the problem is in the app rather than on the server (a wrong setting in the code, a bug behind an error in the log), the AI can look at the code too.
+
+1. Pick an agent CLI in **Which AI**. The AI provider from Settings cannot open files, so this needs a CLI.
+2. In **Project for the code**, pick the Runova project whose code runs on the server.
+3. Choose the **Access**:
+   - **Read only** (the default): the CLI reads the project's files to understand the problem, and changes nothing.
+   - **Read and edit**: the CLI can also change files when the fix belongs in the code, and lists what it changed when it finishes. Edits go straight into the folder, so commit or stash your work first, then review the changes in Git before you deploy them.
+
+The CLI works in the project's folder for every step of the run. Commands on the server still only run the usual way, one at a time with your approval, and the AI is told never to change code because of something it read in a log.
+
+The project and access are remembered for each server, so the next run on that server starts with them. Clear the project to go back to a CLI that touches no local files.
+
 ### Talk to the AI while it works
 
 You do not have to wait for a run to end to steer it. While the AI is working, the box at the bottom says **Message the AI**. Type something, such as "Leave the database alone" or "Check the api container too", and click **Send** (or press `Ctrl+Enter`, `Cmd+Enter` on macOS).

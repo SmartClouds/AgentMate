@@ -10,15 +10,17 @@ import { MAX_SSH_AGENT_MESSAGE_CHARS } from '@shared/sshAgentMessage';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { CliLogo } from '@/components/cliLogos';
-import { Play, Send, StopCircle } from '@/components/icons';
+import { Play, Send, StopCircle, TriangleAlert } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { queryKeys } from '@/lib/queryKeys';
 import { isMacPlatform } from '@/lib/shortcuts';
+import { cn } from '@/lib/utils';
 import {
   type AssistantAiChoice,
+  type AssistantProjectChoice,
   SETTINGS_AI,
   useDeployAssistantStore,
 } from '@/stores/deployAssistantStore';
@@ -27,7 +29,9 @@ import {
  * Where the user says what the AI should do (E09 T8), and with which AI: the provider set in
  * Settings by default, or an installed agent CLI. A CLI with known models offers them next, and
  * a model with effort levels offers those after it, so the row only grows as far as the choice
- * goes. The pick is kept for the next run. While a run goes, the box sends it a message (read at
+ * goes. The pick is kept for the next run. A CLI can also work in one of the user's projects (the
+ * code that runs on the server), reading it or, when they say so, editing it; that choice is kept
+ * per server. While a run goes, the box sends it a message (read at
  * its next step) and Stop ends it; once it is over, the same box asks a follow-up on the same
  * server and context, and a stopped run can be carried on from where it was.
  */
@@ -63,7 +67,53 @@ function Field({
   );
 }
 
+/** Read only, or read and edit: what a CLI may do with the attached project's code. */
+function AccessSwitch({
+  allowEdits,
+  disabled,
+  onChange,
+}: {
+  allowEdits: boolean;
+  disabled?: boolean;
+  onChange: (allowEdits: boolean) => void;
+}): React.JSX.Element {
+  const choices = [
+    { edits: false, label: 'Read only' },
+    { edits: true, label: 'Read and edit' },
+  ];
+  return (
+    <div
+      role="radiogroup"
+      aria-label="What the AI may do with the code"
+      className="field-surface flex h-8 w-full items-stretch gap-0.5 rounded-full p-0.5"
+    >
+      {choices.map((choice) => {
+        const selected = allowEdits === choice.edits;
+        return (
+          <button
+            key={choice.label}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            disabled={disabled}
+            onClick={() => onChange(choice.edits)}
+            className={cn(
+              'min-w-0 flex-1 cursor-pointer truncate rounded-full px-2 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+              selected
+                ? 'bg-primary/15 font-medium text-foreground shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.35)]'
+                : 'text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground',
+            )}
+          >
+            {choice.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function AssistantComposer({
+  serverId,
   running,
   phase,
   followUp,
@@ -74,6 +124,7 @@ export function AssistantComposer({
   onMessage,
   onStop,
 }: {
+  serverId: string;
   running: boolean;
   /** Where the run is, which decides what a message does to it. */
   phase?: SshAgentPhase;
@@ -83,7 +134,12 @@ export function AssistantComposer({
   canContinue?: boolean;
   initialPrompt: string;
   disabled?: boolean;
-  onStart: (prompt: string, ai: AssistantAiChoice) => Promise<boolean>;
+  /** `project` is only ever set with a CLI, since the Settings provider cannot open files. */
+  onStart: (
+    prompt: string,
+    ai: AssistantAiChoice,
+    project: AssistantProjectChoice | null,
+  ) => Promise<boolean>;
   /** Resolves true once the run took the message. */
   onMessage: (text: string) => Promise<boolean>;
   onStop: () => void;
@@ -92,6 +148,8 @@ export function AssistantComposer({
   const [starting, setStarting] = useState(false);
   const picked = useDeployAssistantStore((state) => state.ai);
   const setAi = useDeployAssistantStore((state) => state.setAi);
+  const attached = useDeployAssistantStore((state) => state.projects[serverId]);
+  const setProject = useDeployAssistantStore((state) => state.setProject);
   const cliQuery = useQuery({
     queryKey: queryKeys.cliStatus,
     queryFn: () => window.runova.cli.detectAll(),
@@ -113,6 +171,17 @@ export function AssistantComposer({
     ? { cliId, modelId: model?.id ?? null, effort: model ? effort : null }
     : SETTINGS_AI;
 
+  const projectsQuery = useQuery({
+    queryKey: queryKeys.projects,
+    queryFn: () => window.runova.projects.list(),
+    enabled: cliId !== null,
+    meta: { silentLoading: true },
+  });
+  const projects = projectsQuery.data ?? [];
+  // A project removed from Runova since it was attached counts as none.
+  const projectInfo = projects.find((p) => p.id === attached?.projectId);
+  const project: AssistantProjectChoice | null = cliId && attached && projectInfo ? attached : null;
+
   function selectCli(value: string): void {
     setAi(
       value === SETTINGS_PROVIDER ? SETTINGS_AI : { cliId: value, modelId: null, effort: null },
@@ -132,7 +201,7 @@ export function AssistantComposer({
     if (starting) return;
     setStarting(true);
     try {
-      if ((await onStart(text, ai)) && clearAfter) setPrompt('');
+      if ((await onStart(text, ai, project)) && clearAfter) setPrompt('');
     } finally {
       setStarting(false);
     }
@@ -247,6 +316,62 @@ export function AssistantComposer({
           </Field>
         )}
       </div>
+      {cliId && (
+        <div className="space-y-1.5">
+          <div role="group" aria-label="Project" className="flex flex-wrap gap-2">
+            <Field id="deploy-assistant-project" label="Project for the code">
+              <Combobox
+                id="deploy-assistant-project"
+                className={PICKER}
+                value={project?.projectId ?? ''}
+                onChange={(value) =>
+                  setProject(
+                    serverId,
+                    value ? { projectId: value, allowEdits: attached?.allowEdits ?? false } : null,
+                  )
+                }
+                disabled={locked}
+                clearable
+                placeholder={
+                  projectsQuery.isFetched && projects.length === 0 ? 'No projects' : 'None'
+                }
+                searchPlaceholder="Search projects…"
+                emptyText="No matching project."
+                options={projects.map((p) => ({
+                  value: p.id,
+                  label: p.name,
+                  keywords: [p.folderPath],
+                }))}
+              />
+            </Field>
+            {project && (
+              <div className="flex min-w-0 max-w-64 flex-[1_1_9rem] flex-col gap-1">
+                <span className="text-[11px] text-muted-foreground">Access</span>
+                <AccessSwitch
+                  allowEdits={project.allowEdits}
+                  disabled={locked}
+                  onChange={(allowEdits) => setProject(serverId, { ...project, allowEdits })}
+                />
+              </div>
+            )}
+          </div>
+          {project && projectInfo && (
+            <p
+              className={cn(
+                'flex items-start gap-1.5 text-[11px] leading-tight',
+                project.allowEdits ? 'text-warning' : 'text-muted-foreground',
+              )}
+            >
+              {project.allowEdits && <TriangleAlert className="mt-px h-3 w-3 shrink-0" />}
+              <span className="min-w-0 break-all">
+                {project.allowEdits
+                  ? `Edits go straight into ${projectInfo.folderPath}. Commit first so you can undo them.`
+                  : `The AI can read ${projectInfo.folderPath} but not change it.`}
+              </span>
+            </p>
+          )}
+        </div>
+      )}
       <div className="flex items-center justify-end gap-2">
         <p className="mr-auto min-w-0 text-[11px] leading-tight text-muted-foreground">{hint}</p>
         {running ? (

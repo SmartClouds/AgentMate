@@ -3,6 +3,7 @@ import type { IpcMainInvokeEvent } from 'electron';
 import type {
   DeployAssistantContextInput,
   DeployAssistantModeInput,
+  DeployAssistantProjectInput,
   DeployAssistantStartInput,
   DeployJournalWatchInput,
 } from '../../shared/deployAssistantTypes';
@@ -55,6 +56,7 @@ const MAX_FACTS = 20;
 const CLI_ID = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 const EFFORTS: ReadonlySet<string> = new Set(['low', 'medium', 'high', 'xhigh', 'max']);
 const UNIT = /^[A-Za-z0-9][A-Za-z0-9@_.:\\-]{0,127}$/;
+const PROJECT_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function optionalId(value: unknown, pattern: RegExp, what: string): string | null {
@@ -83,6 +85,16 @@ function context(value: unknown): DeployAssistantContextInput | undefined {
   };
 }
 
+function projectInput(value: unknown): DeployAssistantProjectInput | undefined {
+  if (value === undefined || value === null) return undefined;
+  const input = object(value, 'a project');
+  if (typeof input.projectId !== 'string' || !PROJECT_ID.test(input.projectId)) {
+    throw new Error('That is not a project.');
+  }
+  if (typeof input.allowEdits !== 'boolean') throw new Error('Say whether the AI may edit files.');
+  return { projectId: input.projectId, allowEdits: input.allowEdits };
+}
+
 export function startInput(value: unknown): DeployAssistantStartInput {
   const input = object(value, 'a task for the AI');
   const prompt = text(input.prompt, MAX_PROMPT, 'task');
@@ -90,6 +102,7 @@ export function startInput(value: unknown): DeployAssistantStartInput {
   const effort = optionalId(input.effort, /^[a-z]+$/, 'reasoning effort');
   if (effort && !EFFORTS.has(effort)) throw new Error('That is not a reasoning effort.');
   const found = context(input.context);
+  const project = projectInput(input.project);
   return {
     serverId: serverId(input.serverId),
     prompt,
@@ -98,6 +111,7 @@ export function startInput(value: unknown): DeployAssistantStartInput {
     effort: effort as EffortLevel | null,
     ...(found ? { context: found } : {}),
     ...(input.continuePrevious === true ? { continuePrevious: true } : {}),
+    ...(project ? { project } : {}),
   };
 }
 

@@ -8,7 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { type AssistantAiChoice, useDeployAssistantStore } from '@/stores/deployAssistantStore';
+import {
+  type AssistantAiChoice,
+  type AssistantProjectChoice,
+  useDeployAssistantStore,
+} from '@/stores/deployAssistantStore';
 import { AssistantComposer } from './AssistantComposer';
 import { AssistantTimeline } from './AssistantTimeline';
 import { useAssistantMode } from './hooks';
@@ -92,7 +96,11 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
   const act = (work: Promise<unknown>) =>
     void work.catch((error: unknown) => toast.error(coreErrorMessage(error)));
 
-  async function start(prompt: string, ai: AssistantAiChoice): Promise<boolean> {
+  async function start(
+    prompt: string,
+    ai: AssistantAiChoice,
+    project: AssistantProjectChoice | null,
+  ): Promise<boolean> {
     const before = useDeployAssistantStore.getState().runs[serverId];
     follow.current = true;
     if (over) followUp(serverId, prompt);
@@ -104,6 +112,7 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
         cliId: ai.cliId,
         ...(ai.modelId ? { modelId: ai.modelId } : {}),
         ...(ai.effort ? { effort: ai.effort } : {}),
+        ...(project ? { project } : {}),
         ...(context ? { context } : {}),
         ...(over ? { continuePrevious: true } : {}),
       });
@@ -246,6 +255,7 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
       <footer className={cn('px-4 py-3', FOOTER_HAIRLINE)}>
         <AssistantComposer
           key={draft?.serverId === serverId ? draft.prompt : 'free'}
+          serverId={serverId}
           running={running}
           phase={progress?.phase}
           followUp={over}

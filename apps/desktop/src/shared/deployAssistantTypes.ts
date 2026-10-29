@@ -23,6 +23,16 @@ export interface DeployAssistantContextInput {
   containerId?: string;
 }
 
+/**
+ * A Runova project whose code runs on the server, for an agent CLI to work in. The main process
+ * looks its folder up by id; a path from the window is never used.
+ */
+export interface DeployAssistantProjectInput {
+  projectId: string;
+  /** Lets the CLI edit files in the folder, not only read them. */
+  allowEdits: boolean;
+}
+
 export interface DeployAssistantStartInput {
   serverId: string;
   prompt: string;
@@ -36,6 +46,8 @@ export interface DeployAssistantStartInput {
    * happened in it. Without it the run starts a new chat.
    */
   continuePrevious?: boolean;
+  /** Only with a CLI: the provider from Settings cannot open files. */
+  project?: DeployAssistantProjectInput;
 }
 
 /** The run's state, as the SSH AI reports it. `progress.sessionId` is the run's key. */
