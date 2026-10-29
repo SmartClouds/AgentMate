@@ -21,7 +21,7 @@ export const WP_PROTOCOL_VERSION = 1;
  * The connector release bundled with this app (the plugin header's Version). A site running an
  * older one still works while its protocol matches; the app just offers the newer zip.
  */
-export const WP_CONNECTOR_VERSION = '2.0.0';
+export const WP_CONNECTOR_VERSION = '2.1.0';
 /** Every time on the wire, and every time the plugin reports, is whole Unix seconds. */
 export type WpUnixSeconds = number;
 /** First line of every canonical string. */
