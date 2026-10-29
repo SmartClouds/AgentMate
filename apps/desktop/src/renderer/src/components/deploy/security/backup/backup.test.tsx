@@ -137,6 +137,43 @@ describe('BackupCard', () => {
     expect(within(dialog).getByText('/var/lib/runova-core-restore/previous')).toBeTruthy();
   });
 
+  it('keeps restoring when the page is left, and shows the steps and outcome on return', async () => {
+    let finish!: (value: unknown) => void;
+    const bridge = {
+      'deployHardening.restore': () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    };
+    const first = renderCard(bridge);
+    await first.user.click(screen.getByRole('button', { name: 'Restore a backup' }));
+    const dialog = await screen.findByRole('dialog', { name: /Restore a backup onto Production/ });
+    await first.user.click(within(dialog).getByRole('button', { name: 'Pick the backup file' }));
+    await first.user.type(within(dialog).getByLabelText('Backup passphrase'), PASSPHRASE);
+    await first.user.type(within(dialog).getByLabelText('Their password'), 'correct horse');
+    await first.user.click(within(dialog).getByRole('button', { name: 'Restore' }));
+    act(() => {
+      first.bridge.$emit('deployHardening.onRestoreProgress', {
+        serverId: 'srv-1',
+        progress: { phase: 'stage', title: 'Decrypt and check the backup', status: 'done' },
+      });
+    });
+    first.unmount();
+
+    renderCard(bridge);
+    const again = await screen.findByRole('dialog', { name: /Restore a backup onto Production/ });
+    expect(within(again).getByText(/Decrypt and check the backup/)).toBeTruthy();
+    await act(async () =>
+      finish({
+        backupCoreVersion: '1.52.0',
+        backupHostName: 'old-web',
+        backupCreatedAtUnixMs: Date.UTC(2026, 8, 30),
+        previousStateFolder: '/var/lib/runova-core-restore/previous',
+      }),
+    );
+    expect(await within(again).findByText(/Restored the backup of old-web/)).toBeTruthy();
+  });
+
   it('says why a restore stopped', async () => {
     const { user } = renderCard({
       'deployHardening.restore': async () => {

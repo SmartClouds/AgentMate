@@ -54,6 +54,7 @@ import { domainsForPort, proxyBlockReason, publishedPort } from '@/lib/deploy/ap
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { confirmDialog } from '@/stores/confirmStore';
+import { useFinishedOnce, useFollowedJob } from '@/stores/deployFollowedJobStore';
 import { JobLogDialog } from '../overview/JobLogDialog';
 import { RegistryPlanCard } from '../registries/RegistryPlanCard';
 import { dateTime } from '../security/format';
@@ -593,7 +594,7 @@ export function AppDetail({
   const deleting = useRef(false);
   const [shownRevision, setShownRevision] = useState<number | null>(null);
   const [followJob, setFollowJob] = useState<string | null>(null);
-  const [logJob, setLogJob] = useState<JobInfo | null>(null);
+  const [logJob, setLogJob] = useFollowedJob(serverId, `app:${stackId}:log`);
   const [working, setWorking] = useState<string | null>(null);
   const [tools, setTools] = useState<StackToolsRequest | null>(null);
 
@@ -619,6 +620,17 @@ export function AppDetail({
     setBusyJob(null);
     refresh();
   }, [refresh]);
+  const logFinished = useFinishedOnce(serverId, (job) => {
+    settled();
+    if (job.state === 'failed') {
+      toast.error(`${job.title} failed${job.error ? `: ${job.error}` : '.'}`);
+      deleting.current = false;
+    } else if (job.state === 'succeeded' && deleting.current) {
+      toast.success(`Deleted ${stack?.name ?? 'the app'}.`);
+      setLogJob(null);
+      onDeleted();
+    }
+  });
 
   async function run(
     label: string,
@@ -899,17 +911,7 @@ export function AppDetail({
           setLogJob(null);
           if (deleting.current) onDeleted();
         }}
-        onFinished={(job) => {
-          settled();
-          if (job.state === 'failed') {
-            toast.error(`${job.title} failed${job.error ? `: ${job.error}` : '.'}`);
-            deleting.current = false;
-          } else if (job.state === 'succeeded' && deleting.current) {
-            toast.success(`Deleted ${stack.name}.`);
-            setLogJob(null);
-            onDeleted();
-          }
-        }}
+        onFinished={logFinished}
       />
     </div>
   );

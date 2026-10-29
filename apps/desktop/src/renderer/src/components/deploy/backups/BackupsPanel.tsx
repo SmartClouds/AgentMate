@@ -10,6 +10,7 @@ import { CoreAccessCard } from '../CoreAccessCard';
 import { hasRole, roleLabel } from '../security/format';
 import { CARD_BODY, SECURITY_CARD, SecurityCard } from '../security/SecurityCard';
 import { useStepUp } from '../security/useStepUp';
+import { useTabParam } from '../useTabParam';
 import { DestinationsTab } from './DestinationsTab';
 import { OverviewTab } from './OverviewTab';
 import { PlansTab } from './PlansTab';
@@ -21,7 +22,8 @@ import { StoredTab } from './StoredTab';
 const TAB =
   'h-7 rounded-full border-none px-3 text-xs data-[state=active]:bg-primary/12 data-[state=active]:text-primary data-[state=active]:shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.2)] data-[state=inactive]:hover:bg-foreground/[0.06] focus-visible:ring-inset';
 
-export type BackupsTab = 'overview' | 'stored' | 'plans' | 'destinations' | 'secret' | 'restore';
+const BACKUPS_TABS = ['overview', 'stored', 'plans', 'destinations', 'secret', 'restore'] as const;
+export type BackupsTab = (typeof BACKUPS_TABS)[number];
 
 /**
  * A server's Backups section (E28). The core makes the backups, on a schedule that runs with the
@@ -30,7 +32,7 @@ export type BackupsTab = 'overview' | 'stored' | 'plans' | 'destinations' | 'sec
  * like the Security area's backups, and the core checks every call again.
  */
 export function BackupsPanel({ server }: { server: DeployServer }): React.JSX.Element {
-  const [tab, setTab] = useState<BackupsTab>('overview');
+  const [tab, setTab] = useTabParam(BACKUPS_TABS, 'overview');
   const [restoreChoice, setRestoreChoice] = useState<RestoreChoice | null>(null);
   const stepUp = useStepUp(server);
   const access = useQuery({

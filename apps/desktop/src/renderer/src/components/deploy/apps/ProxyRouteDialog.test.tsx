@@ -100,4 +100,38 @@ describe('ProxyRouteDialog', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Done' }));
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('keeps the steps when the page is left mid-way, and shows them on return', async () => {
+    let finishApply!: (value: unknown) => void;
+    const bridge = {
+      'deploySites.save': SAVED,
+      'deploySites.applyChanges': () =>
+        new Promise((resolve) => {
+          finishApply = resolve;
+        }),
+    };
+    const first = renderDialog(bridge);
+    await first.user.type(within(first.dialog).getByLabelText('Domain'), 'api.example.com');
+    await first.user.click(
+      within(first.dialog).getByRole('switch', { name: 'Get an HTTPS certificate' }),
+    );
+    await first.user.click(within(first.dialog).getByRole('button', { name: 'Add the domain' }));
+    const apply = await within(first.dialog).findByRole('listitem', { name: 'Apply nginx' });
+    expect(apply).toHaveTextContent('(working)');
+    first.unmount();
+
+    finishApply(APPLIED);
+    const again = renderDialog(bridge);
+    expect(
+      await within(again.dialog).findByText(/api\.example\.com is set up/),
+    ).toBeInTheDocument();
+    expect(within(again.dialog).queryByLabelText('Domain')).toBeNull();
+    await again.user.click(within(again.dialog).getByRole('button', { name: 'Done' }));
+    expect(again.onClose).toHaveBeenCalled();
+    again.unmount();
+
+    // Done with it, the next time starts at the form.
+    const third = renderDialog(bridge);
+    expect(within(third.dialog).getByLabelText('Domain')).toHaveValue('');
+  });
 });

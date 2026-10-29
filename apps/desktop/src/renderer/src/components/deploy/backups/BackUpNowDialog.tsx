@@ -1,10 +1,7 @@
 import { coreErrorMessage } from '@shared/coreErrors';
 import { backupSize } from '@shared/deploy/backupSchedule';
-import type { BackupRunInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
-import type { DeployBackupDownload } from '@shared/deployServerBackupsTypes';
 import type { DeployServer } from '@shared/deployTypes';
 import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
 import { Archive, CircleCheck, Spinner, TriangleAlert } from '@/components/icons';
 import { Chip, Notice } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
@@ -19,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { type BackupNow, useDeployBackupRunStore } from '@/stores/deployBackupRunStore';
 import type { StepUp } from '../security/useStepUp';
 import { KIND_LABEL, RUN_STATE } from './format';
 import { useBackupDestinations, useRefreshBackups } from './hooks';
@@ -44,62 +42,36 @@ export function BackUpNowDialog({
   const refresh = useRefreshBackups(server.id);
   const [picked, setPicked] = useState<string[]>([]);
   const [download, setDownload] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [run, setRun] = useState<BackupRunInfo | null>(null);
-  const [downloaded, setDownloaded] = useState<number | null>(null);
-  const [saved, setSaved] = useState<DeployBackupDownload | null>(null);
-  const [problem, setProblem] = useState<string | null>(null);
+  // The run is followed in the store, so it goes on, and shows again, when the page is left.
+  const kept = useDeployBackupRunStore((state): BackupNow | undefined => state.backups[server.id]);
+  const busy = kept?.busy ?? false;
+  const run = kept?.run ?? null;
+  const downloaded = kept?.downloaded ?? null;
+  const saved = kept?.saved ?? null;
+  const problem = kept?.problem ?? null;
 
   useEffect(() => {
     if (!open) return;
     setPicked([]);
     setDownload(false);
-    setRun(null);
-    setDownloaded(null);
-    setSaved(null);
-    setProblem(null);
   }, [open]);
-
-  useEffect(
-    () =>
-      window.runova.deployServerBackups.onRunProgress((event) => {
-        if (event.serverId !== server.id) return;
-        setRun((current) => (current && current.id === event.run.id ? event.run : current));
-        if (event.downloadedBytes !== undefined) setDownloaded(event.downloadedBytes);
-      }),
-    [server.id],
-  );
 
   const ready = (picked.length > 0 || download) && !busy && run === null;
 
-  async function start(): Promise<void> {
+  function start(): void {
     if (!ready) return;
-    setBusy(true);
-    setProblem(null);
-    try {
-      const started = await stepUp.run(() =>
-        window.runova.deployServerBackups.runNow({
-          serverId: server.id,
-          destinationIds: picked,
-          download,
-        }),
-      );
-      if (!started?.started || !started.run) return;
-      setRun(started.run);
-      refresh();
-      const watched = await window.runova.deployServerBackups.watchRun({
-        serverId: server.id,
-        runId: started.run.id,
-      });
-      setRun(watched.run);
-      if (watched.download) setSaved(watched.download);
-      if (watched.download?.saved) toast.success(`Backup saved to ${watched.download.path}`);
-    } catch (error) {
-      setProblem(coreErrorMessage(error));
-    } finally {
-      setBusy(false);
-      refresh();
-    }
+    void useDeployBackupRunStore.getState().backUp(
+      server.id,
+      () =>
+        stepUp.run(() =>
+          window.runova.deployServerBackups.runNow({
+            serverId: server.id,
+            destinationIds: picked,
+            download,
+          }),
+        ),
+      refresh,
+    );
   }
 
   const toggle = (id: string, on: boolean) =>
@@ -217,7 +189,7 @@ export function BackUpNowDialog({
             {run ? 'Close' : 'Cancel'}
           </Button>
           {run === null && (
-            <Button disabled={!ready} onClick={() => void start()}>
+            <Button disabled={!ready} onClick={start}>
               {busy && <Spinner className="h-3.5 w-3.5 motion-safe:animate-spin" />}
               Start the backup
             </Button>

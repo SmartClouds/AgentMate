@@ -2,7 +2,6 @@ import { coreErrorMessage } from '@shared/coreErrors';
 import type {
   ContainerEnvVariable,
   ContainerSummary,
-  JobInfo,
 } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployContainerAction } from '@shared/deployDockerTypes';
 import type { DeployServer } from '@shared/deployTypes';
@@ -17,11 +16,13 @@ import { allContainers } from '@/lib/deploy/containers/list';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { confirmDialog } from '@/stores/confirmStore';
+import { useFinishedOnce, useFollowedJob } from '@/stores/deployFollowedJobStore';
 import { useDeployConnection } from '../overview/hooks';
 import { JobLogDialog } from '../overview/JobLogDialog';
 import { useProofStepUp } from '../overview/useProofStepUp';
 import { hasRole } from '../security/format';
 import { StackToolsSheet } from '../stackTools/StackToolsSheet';
+import { useTabParam } from '../useTabParam';
 import { ContainerDrawer, type DrawerTab } from './ContainerDrawer';
 import { type ContainerActions, ContainerList } from './ContainerList';
 import { DockerInstallCard } from './DockerInstallCard';
@@ -86,7 +87,10 @@ export function ContainersPanel({ server }: { server: DeployServer }): React.JSX
   const serverId = server.id;
   const queryClient = useQueryClient();
   const stepUp = useProofStepUp(server);
-  const [tab, setTab] = useState<ResourceTab>('containers');
+  const [tab, setTab] = useTabParam(
+    RESOURCE_TABS.map((one) => one.value),
+    'containers',
+  );
   const [openId, setOpenId] = useState<string | null>(null);
   const [drawerTab, setDrawerTab] = useState<DrawerTab>('overview');
   const [removing, setRemoving] = useState<ContainerSummary | null>(null);
@@ -95,7 +99,11 @@ export function ContainersPanel({ server }: { server: DeployServer }): React.JSX
     revealed: ContainerEnvVariable[] | null;
   } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [job, setJob] = useState<JobInfo | null>(null);
+  const [job, setJob] = useFollowedJob(serverId, 'containers');
+  const jobFinished = useFinishedOnce(serverId, (finished) => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.deployDocker(serverId) });
+    if (finished.state === 'succeeded') toast.success(`${finished.title}: done.`);
+  });
   const [stackLogs, setStackLogs] = useState<string | null>(null);
 
   const access = useQuery({
@@ -204,10 +212,7 @@ export function ContainersPanel({ server }: { server: DeployServer }): React.JSX
       job={job}
       canCancel={canOperate}
       onClose={() => setJob(null)}
-      onFinished={(finished) => {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.deployDocker(serverId) });
-        if (finished.state === 'succeeded') toast.success(`${finished.title}: done.`);
-      }}
+      onFinished={jobFinished}
     />
   );
 

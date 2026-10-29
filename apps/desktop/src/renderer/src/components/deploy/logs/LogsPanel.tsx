@@ -1,10 +1,10 @@
 import type { DeployServer } from '@shared/deployTypes';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
 import { GLASS_CARD } from '@/components/pageKit';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
+import { useTabParam } from '../useTabParam';
 import { LogViewer } from './LogViewer';
 import { ProblemsFeed } from './ProblemsFeed';
 import { useAskAboutLog } from './useAskAboutLog';
@@ -21,8 +21,10 @@ const TAB = cn(
  * one viewer. "Ask the AI" from the viewer opens the Deploy AI on what is shown.
  */
 
+const LOGS_TABS = ['problems', 'logs'] as const;
+
 export function LogsPanel({ server }: { server: DeployServer }): React.JSX.Element {
-  const [tab, setTab] = useState<'problems' | 'logs'>('problems');
+  const [tab, setTab] = useTabParam(LOGS_TABS, 'problems');
   const containers = useQuery({
     queryKey: queryKeys.deployContainers(server.id),
     queryFn: () => window.runova.deployDocker.listContainers(server.id),
@@ -43,7 +45,7 @@ export function LogsPanel({ server }: { server: DeployServer }): React.JSX.Eleme
   return (
     <Tabs
       value={tab}
-      onValueChange={(next) => setTab(next as 'problems' | 'logs')}
+      onValueChange={(next) => setTab(next as (typeof LOGS_TABS)[number])}
       className="flex flex-col gap-2"
     >
       <TabsList containerClassName="self-start border-b-0" className={TAB_LIST}>

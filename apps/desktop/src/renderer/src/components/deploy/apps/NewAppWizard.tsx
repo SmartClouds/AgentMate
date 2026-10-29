@@ -7,7 +7,7 @@ import type {
 } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployStackUploadProgress, DeployStackUploadResult } from '@shared/deployStacksTypes';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { Problem } from '@/components/cloudflare/fields';
 import { ArrowLeft, ArrowRight, Check, Rocket, Spinner, Upload } from '@/components/icons';
 import { FOOTER_HAIRLINE, GLASS_CARD, SECTION_HEADING } from '@/components/pageKit';
@@ -16,6 +16,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { folderName, needsAcknowledgment, suggestAppName } from '@/lib/deploy/apps/format';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
+import {
+  type AppRun,
+  type AppWizard,
+  type AppWizardDraft,
+  emptyDraft,
+  isAppRunBusy,
+  useDeployAppRunStore,
+  wizardKey,
+} from '@/stores/deployAppRunStore';
 import { RegistryPlanCard } from '../registries/RegistryPlanCard';
 import { DeployTimeline } from './DeployTimeline';
 import { type AppsAccess, useStack, useStacks } from './hooks';
@@ -31,14 +40,7 @@ import { WIZARD_STEPS, type WizardSource, type WizardStep } from './wizard/types
  * same wizard deploys an existing app again from where it came from, as a new revision.
  */
 
-type Run =
-  | { phase: 'idle' }
-  | { phase: 'uploading' }
-  | { phase: 'invalid'; result: DeployStackUploadResult }
-  | { phase: 'confirm'; result: DeployStackUploadResult }
-  | { phase: 'starting'; result: DeployStackUploadResult }
-  | { phase: 'running'; result: DeployStackUploadResult; job: JobInfo }
-  | { phase: 'error'; message: string; result?: DeployStackUploadResult };
+const IDLE: AppRun = { phase: 'idle' };
 
 const UPLOAD_TEXT: Record<DeployStackUploadProgress['phase'], string> = {
   reading: 'Reading the compose file and the environment',
@@ -169,27 +171,37 @@ export function NewAppWizard({
   onOpenApp: (stackId: string) => void;
 }): React.JSX.Element {
   const queryClient = useQueryClient();
-  const [step, setStep] = useState<WizardStep>('source');
-  const [reached, setReached] = useState(0);
-  const [source, setSource] = useState<WizardSource>(() => initialSource(existing));
-  const [nameTouched, setNameTouched] = useState(existing !== undefined);
-  // Deploying again starts from what the app runs now; a new app from the preview's default.
-  const [proxied, setProxied] = useState<string[] | undefined>(
-    existing?.revisions[0]?.proxiedServices,
+  const key = wizardKey(serverId, existing?.stack.id ?? null);
+  // The draft and the deploy are kept in the store, so leaving the page loses neither. Until
+  // something is picked, the wizard shows a fresh draft without keeping it.
+  const fresh = useMemo(
+    () =>
+      emptyDraft({
+        source: initialSource(existing),
+        nameTouched: existing !== undefined,
+        // Deploying again starts from what the app runs now; a new app from the preview's default.
+        proxied: existing?.revisions[0]?.proxiedServices,
+      }),
+    [existing],
   );
-  const [acknowledged, setAcknowledged] = useState<ReadonlySet<string>>(new Set());
-  const [serverAcknowledged, setServerAcknowledged] = useState<ReadonlySet<string>>(new Set());
-  const [run, setRun] = useState<Run>({ phase: 'idle' });
-  const [progress, setProgress] = useState<DeployStackUploadProgress | null>(null);
+  const kept = useDeployAppRunStore((state): AppWizard | undefined => state.wizards[key]);
+  const draft = kept?.draft ?? fresh;
+  const run: AppRun = kept?.run ?? IDLE;
+  const progress = kept?.progress ?? null;
+  const { step, reached, source, nameTouched, proxied, acknowledged, serverAcknowledged } = draft;
   const apps = useStacks(serverId, access.signedIn && !existing);
 
-  useEffect(
-    () =>
-      window.runova.deployStacks.onUploadProgress((event) => {
-        if (event.serverId === serverId) setProgress(event);
-      }),
-    [serverId],
+  /** Changes the draft from its latest state, keeping it from here on. */
+  const update = useCallback(
+    (change: (current: AppWizardDraft) => Partial<AppWizardDraft>) => {
+      const store = useDeployAppRunStore.getState();
+      store.open(key, fresh);
+      const current = useDeployAppRunStore.getState().wizards[key]?.draft ?? fresh;
+      store.setDraft(key, change(current));
+    },
+    [key, fresh],
   );
+  const setStep = (next: WizardStep) => update(() => ({ step: next }));
 
   const ready = source.projectId !== '' && source.composePath !== '';
   const previewInput = useMemo(
@@ -212,15 +224,17 @@ export function NewAppWizard({
 
   // The first preview decides which services stay private; later ones follow the switches.
   useEffect(() => {
-    if (data && proxied === undefined) setProxied(data.proxiedServices);
-  }, [data, proxied]);
+    if (data && proxied === undefined) update(() => ({ proxied: data.proxiedServices }));
+  }, [data, proxied, update]);
   // A name from the compose file beats the folder name, until the person types their own.
   useEffect(() => {
     if (!nameTouched && data?.composeName) {
       const suggested = suggestAppName(data.composeName);
-      if (suggested) setSource((current) => ({ ...current, name: suggested }));
+      if (suggested && suggested !== source.name) {
+        update((current) => ({ source: { ...current.source, name: suggested } }));
+      }
     }
-  }, [data?.composeName, nameTouched]);
+  }, [data?.composeName, nameTouched, source.name, update]);
 
   const nameCheck = validateStackName(source.name);
   const taken =
@@ -235,84 +249,57 @@ export function NewAppWizard({
   const allAccepted = requires.every((id) => acknowledged.has(id));
 
   function change(next: Partial<WizardSource>, touchedName = false): void {
-    setSource((current) => {
-      const merged = { ...current, ...next };
-      if (!nameTouched && !touchedName && next.projectId !== undefined) {
+    update((current) => {
+      const merged = { ...current.source, ...next };
+      if (!current.nameTouched && !touchedName && next.projectId !== undefined) {
         merged.name = suggestAppName(merged.projectName || folderName(merged.projectFolder));
       }
-      return merged;
+      const reset = next.projectId !== undefined || next.composePath !== undefined;
+      return {
+        source: merged,
+        ...(touchedName ? { nameTouched: true } : {}),
+        ...(reset ? { proxied: undefined, acknowledged: new Set<string>(), reached: 0 } : {}),
+      };
     });
-    if (touchedName) setNameTouched(true);
-    if (next.projectId !== undefined || next.composePath !== undefined) {
-      setProxied(undefined);
-      setAcknowledged(new Set());
-      setReached(0);
-    }
   }
 
   function go(next: WizardStep): void {
     const index = WIZARD_STEPS.findIndex((item) => item.step === next);
-    setReached((current) => Math.max(current, index));
-    setStep(next);
+    update((current) => ({ step: next, reached: Math.max(current.reached, index) }));
   }
 
   const settled = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.deployApps(serverId) });
   }, [queryClient, serverId]);
 
-  async function launch(result: DeployStackUploadResult, accept: readonly string[] = []) {
-    setRun({ phase: 'starting', result });
-    try {
-      if (accept.length > 0) {
-        await window.runova.deployStacks.acknowledge({
-          serverId,
-          stackId: result.stack.id,
-          revision: result.revision.number,
-          riskIds: [...accept],
-        });
-      }
-      const job = await window.runova.deployStacks.deploy({
-        serverId,
-        stackId: result.stack.id,
-        revision: result.revision.number,
-      });
-      setRun({ phase: 'running', result, job });
-      settled();
-    } catch (error) {
-      setRun({ phase: 'error', message: coreErrorMessage(error), result });
-    }
+  function launch(result: DeployStackUploadResult, accept: readonly string[] = []): void {
+    void useDeployAppRunStore.getState().launch(key, result, accept, settled);
   }
 
-  async function startDeploy(): Promise<void> {
-    go('deploy');
-    setProgress(null);
-    setRun({ phase: 'uploading' });
-    const common = {
-      serverId,
-      projectId: source.projectId,
-      composePath: source.composePath,
-      environmentId: source.environmentId,
-      proxiedServices: proxied ?? data?.proxiedServices ?? [],
-      acknowledgedRisks: requires.filter((id) => acknowledged.has(id)),
-    };
-    let result: DeployStackUploadResult;
-    try {
-      result = existing
-        ? await window.runova.deployStacks.upload({ ...common, stackId: existing.stack.id })
-        : await window.runova.deployStacks.create({ ...common, name: source.name });
-    } catch (error) {
-      setRun({ phase: 'error', message: coreErrorMessage(error) });
-      return;
+  function startDeploy(): void {
+    useDeployAppRunStore.getState().open(key, fresh);
+    void useDeployAppRunStore.getState().startDeploy(
+      key,
+      {
+        serverId,
+        existingStackId: existing?.stack.id ?? null,
+        name: source.name,
+        projectId: source.projectId,
+        composePath: source.composePath,
+        environmentId: source.environmentId,
+        proxiedServices: proxied ?? data?.proxiedServices ?? [],
+        acknowledgedRisks: requires.filter((id) => acknowledged.has(id)),
+      },
+      settled,
+    );
+  }
+
+  /** Leaves the wizard. A deploy still on its way, or waiting for the user, is kept. */
+  function leave(): void {
+    if (!isAppRunBusy(run) && run.phase !== 'confirm') {
+      useDeployAppRunStore.getState().reset(key);
     }
-    settled();
-    if (result.revision.state === 'invalid') {
-      setRun({ phase: 'invalid', result });
-    } else if (result.revision.unacknowledgedRisks.length > 0) {
-      setServerAcknowledged(new Set());
-      setRun({ phase: 'confirm', result });
-    } else {
-      await launch(result);
-    }
+    onCancel();
   }
 
   const title = existing ? `Deploy ${existing.stack.name} again` : 'New app';
@@ -361,11 +348,13 @@ export function NewAppWizard({
         proxied={proxied ?? data.proxiedServices}
         updating={preview.isFetching}
         onToggle={(service, keepPrivate) =>
-          setProxied((current) => {
-            const list = current ?? data.proxiedServices;
-            return keepPrivate
-              ? [...new Set([...list, service])]
-              : list.filter((name) => name !== service);
+          update((current) => {
+            const list = current.proxied ?? data.proxiedServices;
+            return {
+              proxied: keepPrivate
+                ? [...new Set([...list, service])]
+                : list.filter((name) => name !== service),
+            };
           })
         }
       />
@@ -390,11 +379,11 @@ export function NewAppWizard({
           requires={requires}
           acknowledged={acknowledged}
           onAcknowledge={(id, accepted) =>
-            setAcknowledged((current) => {
-              const nextSet = new Set(current);
+            update((current) => {
+              const nextSet = new Set(current.acknowledged);
               if (accepted) nextSet.add(id);
               else nextSet.delete(id);
-              return nextSet;
+              return { acknowledged: nextSet };
             })
           }
         />
@@ -420,7 +409,7 @@ export function NewAppWizard({
     next = (
       <Button
         disabled={!allAccepted || !access.canOperate || data.blocking !== null}
-        onClick={() => void startDeploy()}
+        onClick={startDeploy}
       >
         <Rocket className="h-3.5 w-3.5" /> Deploy {source.name}
       </Button>
@@ -433,14 +422,14 @@ export function NewAppWizard({
         run={run}
         progress={progress}
         serverAcknowledged={serverAcknowledged}
-        setServerAcknowledged={setServerAcknowledged}
-        onLaunch={(result, accept) => void launch(result, accept)}
+        setServerAcknowledged={(next) => update(() => ({ serverAcknowledged: next }))}
+        onLaunch={(result, accept) => launch(result, accept)}
         onRetry={() => {
-          if (run.phase === 'error' && run.result) void launch(run.result);
-          else void startDeploy();
+          if (run.phase === 'error' && run.result) launch(run.result);
+          else startDeploy();
         }}
         onBack={() => {
-          setRun({ phase: 'idle' });
+          useDeployAppRunStore.getState().setRun(key, { phase: 'idle' });
           setStep('review');
         }}
         onSettled={settled}
@@ -453,7 +442,12 @@ export function NewAppWizard({
           ? run.result?.stack.id
           : undefined;
     next = stackId ? (
-      <Button onClick={() => onOpenApp(stackId)}>
+      <Button
+        onClick={() => {
+          useDeployAppRunStore.getState().reset(key);
+          onOpenApp(stackId);
+        }}
+      >
         Open the app <ArrowRight className="h-3.5 w-3.5" />
       </Button>
     ) : null;
@@ -477,11 +471,11 @@ export function NewAppWizard({
         </div>
         <div className={cn('flex flex-wrap items-center gap-2 px-4 py-3', FOOTER_HAIRLINE)}>
           {!deploying || run.phase === 'error' || run.phase === 'invalid' ? (
-            <Button variant="soft" onClick={onCancel}>
+            <Button variant="soft" onClick={leave}>
               {deploying ? 'Close' : 'Cancel'}
             </Button>
           ) : (
-            <Button variant="soft" onClick={onCancel}>
+            <Button variant="soft" onClick={leave}>
               Back to the apps
             </Button>
           )}
@@ -512,7 +506,7 @@ function DeployStepBody({
 }: {
   serverId: string;
   access: AppsAccess;
-  run: Run;
+  run: AppRun;
   progress: DeployStackUploadProgress | null;
   serverAcknowledged: ReadonlySet<string>;
   setServerAcknowledged: (next: ReadonlySet<string>) => void;

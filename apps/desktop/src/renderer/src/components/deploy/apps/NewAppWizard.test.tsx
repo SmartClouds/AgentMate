@@ -467,3 +467,110 @@ describe('NewAppWizard review and deploy', () => {
     expect(screen.getByRole('button', { name: 'Deploy shop' })).toBeDisabled();
   });
 });
+
+describe('NewAppWizard when the page is left', () => {
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((res) => {
+      resolve = res;
+    });
+    return { promise, resolve };
+  }
+
+  it('opens again on the step it was left on, with what was picked', async () => {
+    const first = renderWizard();
+    await pickSource(first.user);
+    await first.user.click(screen.getByRole('button', { name: /Next/ }));
+    await screen.findByRole('list', { name: 'Services to deploy' });
+    first.unmount();
+
+    renderWizard();
+    const steps = screen.getByRole('list', { name: 'New app steps' });
+    expect(within(steps).getByRole('listitem', { current: 'step' })).toHaveTextContent('Configure');
+    expect(await screen.findByRole('list', { name: 'Services to deploy' })).toBeInTheDocument();
+  });
+
+  it('keeps uploading while away, and shows the deploy on return', async () => {
+    const upload = deferred<unknown>();
+    const first = renderWizard({
+      'deployStacks.create': () => upload.promise,
+      'deployStacks.deploy': sampleJob(),
+    });
+    await toReview(first.user);
+    await first.user.click(screen.getByRole('checkbox', { name: 'I accept: db runs privileged.' }));
+    await first.user.click(screen.getByRole('button', { name: 'Deploy shop' }));
+    expect(await screen.findByText(/Getting the files ready/)).toBeInTheDocument();
+    first.unmount();
+
+    // The upload goes on in the main process while nobody looks.
+    act(() =>
+      first.bridge.$emit('deployStacks.onUploadProgress', {
+        serverId: SERVER.id,
+        phase: 'uploading-context',
+        sentBytes: 1024 * 1024,
+        totalBytes: 2 * 1024 * 1024,
+      }),
+    );
+
+    const again = renderWizard({
+      'deployStacks.create': () => upload.promise,
+      'deployStacks.deploy': sampleJob(),
+    });
+    expect(screen.getByRole('progressbar', { name: 'Upload' })).toHaveAttribute(
+      'aria-valuenow',
+      '50',
+    );
+    await act(async () => upload.resolve(uploadResult()));
+    // Coming back installs the app's bridge again; the deploy goes out through it, once.
+    await waitFor(() => expect(again.bridge.$fn('deployStacks.deploy')).toHaveBeenCalledTimes(1));
+    expect(await screen.findByRole('list', { name: 'Deploy steps' })).toBeInTheDocument();
+    expect(first.bridge.$fn('deployStacks.create')).toHaveBeenCalledTimes(1);
+  });
+
+  it('still asks for the server findings after the page was left, and deploys', async () => {
+    const bridge = {
+      'deployStacks.create': uploadResult({
+        findings: [
+          {
+            id: 'public-port:web:*:8443:443/tcp',
+            rule: 'public-port',
+            severity: 'medium',
+            message: 'web publishes 443/tcp on every interface.',
+            service: 'web',
+          },
+        ],
+        unacknowledgedRisks: ['public-port:web:*:8443:443/tcp'],
+      }),
+      'deployStacks.acknowledge': sampleRevision({ number: 1, state: 'ready' }),
+      'deployStacks.deploy': sampleJob(),
+    };
+    const first = renderWizard(bridge);
+    await toReview(first.user);
+    await first.user.click(screen.getByRole('checkbox', { name: 'I accept: db runs privileged.' }));
+    await first.user.click(screen.getByRole('button', { name: 'Deploy shop' }));
+    await screen.findByRole('button', { name: 'Accept and deploy' });
+    first.unmount();
+
+    const again = renderWizard(bridge);
+    const accept = await screen.findByRole('button', { name: 'Accept and deploy' });
+    await again.user.click(
+      screen.getByRole('checkbox', { name: 'I accept: web publishes 443/tcp on every interface.' }),
+    );
+    await again.user.click(accept);
+    await waitFor(() => expect(again.bridge.$fn('deployStacks.deploy')).toHaveBeenCalled());
+  });
+
+  it('starts over once it is cancelled', async () => {
+    const first = renderWizard();
+    await pickSource(first.user);
+    await first.user.click(screen.getByRole('button', { name: /Next/ }));
+    await screen.findByRole('list', { name: 'Services to deploy' });
+    await first.user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(first.onCancel).toHaveBeenCalled();
+    first.unmount();
+
+    renderWizard();
+    const steps = screen.getByRole('list', { name: 'New app steps' });
+    expect(within(steps).getByRole('listitem', { current: 'step' })).toHaveTextContent('Source');
+  });
+});

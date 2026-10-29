@@ -1,9 +1,5 @@
 import { coreErrorMessage } from '@shared/coreErrors';
-import type {
-  DeployBackupFile,
-  DeployRestoreProgress,
-  DeployRestoreResult,
-} from '@shared/deployHardeningTypes';
+import type { DeployBackupFile } from '@shared/deployHardeningTypes';
 import type { DeployServer } from '@shared/deployTypes';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -29,6 +25,7 @@ import { Label } from '@/components/ui/label';
 import { SecretInput } from '@/components/ui/secret-input';
 import { cn } from '@/lib/utils';
 import { confirmDialog } from '@/stores/confirmStore';
+import { type CoreRestore, useDeployBackupRunStore } from '@/stores/deployBackupRunStore';
 import { Notice } from '../../deployKit';
 
 /**
@@ -38,24 +35,7 @@ import { Notice } from '../../deployKit';
  * one of the backup's Owners. A core that does not come back goes back to what it had.
  */
 
-type Step = {
-  phase: DeployRestoreProgress['phase'];
-  title: string;
-  status: DeployRestoreProgress['status'];
-  detail?: string;
-};
-
-function fold(steps: Step[], event: DeployRestoreProgress): Step[] {
-  const key = `${event.phase}:${event.title}`;
-  const at = steps.findIndex((step) => `${step.phase}:${step.title}` === key);
-  const entry = {
-    phase: event.phase,
-    title: event.title,
-    status: event.status,
-    ...(event.detail ? { detail: event.detail } : {}),
-  };
-  return at < 0 ? [...steps, entry] : steps.map((step, index) => (index === at ? entry : step));
-}
+const NO_STEPS: CoreRestore['steps'] = [];
 
 function size(bytes: number): string {
   return bytes >= 1024 * 1024
@@ -80,10 +60,16 @@ export function RestoreDialog({
   const [userName, setUserName] = useState(defaultUserName ?? '');
   const [password, setPassword] = useState('');
   const [sudoPassword, setSudoPassword] = useState('');
-  const [steps, setSteps] = useState<Step[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [problem, setProblem] = useState<string | null>(null);
-  const [result, setResult] = useState<DeployRestoreResult | null>(null);
+  // The restore runs in the backup store, so leaving the page keeps it and its steps.
+  const kept = useDeployBackupRunStore(
+    (state): CoreRestore | undefined => state.coreRestores[server.id],
+  );
+  const steps = kept?.steps ?? NO_STEPS;
+  const busy = kept?.busy ?? false;
+  const problem = kept?.problem ?? null;
+  const result = kept?.result ?? null;
+  const setProblem = (next: string | null) =>
+    useDeployBackupRunStore.getState().setCoreRestoreProblem(server.id, next);
 
   useEffect(() => {
     if (!open) return;
@@ -92,18 +78,7 @@ export function RestoreDialog({
     setUserName(defaultUserName ?? '');
     setPassword('');
     setSudoPassword('');
-    setSteps([]);
-    setProblem(null);
-    setResult(null);
   }, [open, defaultUserName]);
-
-  useEffect(
-    () =>
-      window.runova.deployHardening.onRestoreProgress((event) => {
-        if (event.serverId === server.id) setSteps((current) => fold(current, event.progress));
-      }),
-    [server.id],
-  );
 
   async function pick(): Promise<void> {
     setProblem(null);
@@ -134,25 +109,19 @@ export function RestoreDialog({
       typeToConfirm: server.nickname,
     });
     if (!confirmed) return;
-    setBusy(true);
-    setProblem(null);
-    setSteps([]);
-    try {
-      const restored = await window.runova.deployHardening.restore({
-        serverId: server.id,
-        fileToken: file.token,
-        passphrase,
-        sudoPassword: sudoPassword || null,
-        userName: userName.trim(),
-        password,
-      });
-      setResult(restored);
-    } catch (error) {
-      setProblem(coreErrorMessage(error));
-    } finally {
-      setBusy(false);
-      void queryClient.invalidateQueries({ queryKey: ['deploy'] });
-    }
+    await useDeployBackupRunStore.getState().restoreCore(
+      server.id,
+      () =>
+        window.runova.deployHardening.restore({
+          serverId: server.id,
+          fileToken: file.token,
+          passphrase,
+          sudoPassword: sudoPassword || null,
+          userName: userName.trim(),
+          password,
+        }),
+      () => void queryClient.invalidateQueries({ queryKey: ['deploy'] }),
+    );
   }
 
   const id = (name: string) => `restore-${name}-${server.id}`;

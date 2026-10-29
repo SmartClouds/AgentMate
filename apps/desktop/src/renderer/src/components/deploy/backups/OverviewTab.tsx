@@ -1,11 +1,11 @@
 import { coreErrorMessage } from '@shared/coreErrors';
 import type { DeployServer } from '@shared/deployTypes';
-import { useState } from 'react';
 import { Archive, CalendarDays, Key } from '@/components/icons';
 import { Chip, Notice } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { useDeployBackupRunStore } from '@/stores/deployBackupRunStore';
 import { ago, fromNow } from '../security/format';
 import {
   CARD_BODY,
@@ -36,7 +36,10 @@ export function OverviewTab({
 }): React.JSX.Element {
   const secret = useBackupSecret(server.id);
   const plans = useBackupPlans(server.id);
-  const [backingUp, setBackingUp] = useState(false);
+  // Kept in the store, so a backup still going opens again when the page comes back.
+  const backingUp = useDeployBackupRunStore((state) => state.backups[server.id]?.open ?? false);
+  const setBackingUp = (open: boolean) =>
+    useDeployBackupRunStore.getState().setOpen(server.id, open);
   const noSecret = secret.data !== undefined && !secret.data.isSet;
 
   return (

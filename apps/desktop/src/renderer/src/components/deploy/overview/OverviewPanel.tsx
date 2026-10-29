@@ -18,6 +18,7 @@ import { swapPercent, wholePercent } from '@/lib/deploy/overview/metrics';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { confirmDialog } from '@/stores/confirmStore';
+import { useFinishedOnce, useFollowedJob } from '@/stores/deployFollowedJobStore';
 import { CoreAccessCard } from '../CoreAccessCard';
 import { CoreHealthCard } from '../CoreHealthCard';
 import { Notice } from '../deployKit';
@@ -142,8 +143,9 @@ export function OverviewPanel({
   const live = useLiveSamples(serverId, signedIn);
   const alerts = useLiveAlerts(serverId, signedIn);
 
-  const [logJob, setLogJob] = useState<JobInfo | null>(null);
-  const [quietJob, setQuietJob] = useState<JobInfo | null>(null);
+  // Kept across visits: the job runs on the server whether or not the page is open.
+  const [logJob, setLogJob] = useFollowedJob(serverId, 'overview:log');
+  const [quietJob, setQuietJob] = useFollowedJob(serverId, 'overview:quiet');
   const [restarting, setRestarting] = useState<ManagedService | null>(null);
   const [acknowledging, setAcknowledging] = useState<number | null>(null);
   const [reboot, setReboot] = useState<RebootPhase>(null);
@@ -168,14 +170,11 @@ export function OverviewPanel({
     return () => clearTimeout(timer);
   }, [reboot]);
 
-  const finished = useCallback(
-    (job: JobInfo) => {
-      refresh();
-      if (job.state === 'failed')
-        toast.error(`${job.title} failed${job.error ? `: ${job.error}` : '.'}`);
-    },
-    [refresh],
-  );
+  const finished = useFinishedOnce(serverId, (job: JobInfo) => {
+    refresh();
+    if (job.state === 'failed')
+      toast.error(`${job.title} failed${job.error ? `: ${job.error}` : '.'}`);
+  });
 
   async function start(
     work: () => Promise<JobInfo | undefined>,

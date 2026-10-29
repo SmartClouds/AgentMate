@@ -3,7 +3,7 @@ import type { DeployServer } from '@shared/deployTypes';
 import { sshErrorMessage } from '@shared/sshErrors';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { type SetURLSearchParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { CloudflareDialog } from '@/components/cloudflare/CloudflareDialog';
 import { CloudflareMark } from '@/components/cloudflare/CloudflareMark';
@@ -48,9 +48,11 @@ import { ConnectSiteDialog } from '@/components/wordpress/ConnectSiteDialog';
 import { WordPressMark } from '@/components/wordpress/WordPressMark';
 import { resolveSelection, waitForRail } from '@/lib/deploy/railSelection';
 import { chosenServers } from '@/lib/deploy/railServers';
+import { rememberable, restoreTarget } from '@/lib/deploy/rememberedSelection';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { confirmDialog } from '@/stores/confirmStore';
+import { useDeploySelectionStore } from '@/stores/deploySelectionStore';
 import { useDeploySetupStore } from '@/stores/deploySetupStore';
 import { usePageHeader } from '@/stores/pageHeaderStore';
 import { PANEL_WIDTHS, usePanelWidth } from '@/stores/panelWidthStore';
@@ -243,6 +245,41 @@ function useFinishedRuns(onFinished: (serverId: string) => void): void {
   }, [runs, clear, queryClient]);
 }
 
+/**
+ * Keeps what the page has open, and opens it again when the page comes back with an address that
+ * names nothing (the sidebar link). True for the one render before the remembered address is in,
+ * so the page shimmers rather than flash the first server and start its health checks.
+ */
+function useRememberedSelection(params: URLSearchParams, setParams: SetURLSearchParams): boolean {
+  const remembered = useDeploySelectionStore((state) => state.search);
+  const remember = useDeploySelectionStore((state) => state.remember);
+  const first = useRef(true);
+  const restoring = useRef(false);
+  const target = first.current ? restoreTarget(params, remembered) : null;
+
+  // An effect, not a layout effect: the router ignores a navigation from its first layout pass.
+  useEffect(() => {
+    if (!first.current) return;
+    first.current = false;
+    if (target) {
+      restoring.current = true;
+      setParams(target, { replace: true });
+    }
+  });
+
+  useEffect(() => {
+    const search = rememberable(params);
+    // The address from before the restore landed would clear what is about to come back.
+    if (restoring.current) {
+      if (search === null) return;
+      restoring.current = false;
+    }
+    remember(search);
+  }, [params, remember]);
+
+  return target !== null;
+}
+
 /** Stands in while the settings have not said which servers were chosen. */
 const NO_SERVERS: string[] = [];
 
@@ -253,6 +290,7 @@ export default function DeployPage(): React.JSX.Element {
   );
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
+  const restoring = useRememberedSelection(params, setParams);
   // The SSH installer, for an update or reinstall; and the update through the core itself.
   const [updating, setUpdating] = useState<string | null>(null);
   const [coreUpdating, setCoreUpdating] = useState<string | null>(null);
@@ -332,6 +370,7 @@ export default function DeployPage(): React.JSX.Element {
   // site asked for by the address, or no servers to fall back on: wait for the sites rather
   // than flash a server (and start its health checks) or an empty state.
   if (
+    restoring ||
     serversQuery.isPending ||
     settingsQuery.isPending ||
     waitForRail(

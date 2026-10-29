@@ -63,8 +63,8 @@ describe('restoreTarget', () => {
   });
 
   it('drops one-shot params that got into the memory', () => {
-    expect(restoreTarget(params(''), 'server=srv-1&fix=restore-rules&view=firewall')?.toString()).toBe(
-      'server=srv-1&view=firewall',
-    );
+    expect(
+      restoreTarget(params(''), 'server=srv-1&fix=restore-rules&view=firewall')?.toString(),
+    ).toBe('server=srv-1&view=firewall');
   });
 });

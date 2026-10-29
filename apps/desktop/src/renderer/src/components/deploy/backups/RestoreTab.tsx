@@ -6,9 +6,7 @@ import type {
 } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployBackupFile } from '@shared/deployHardeningTypes';
 import type {
-  DeployBringUpResult,
   DeployMovedRecordArea,
-  DeployServerRestoreProgress,
   DeployServerRestoreSource,
 } from '@shared/deployServerBackupsTypes';
 import type { DeployServer } from '@shared/deployTypes';
@@ -35,6 +33,11 @@ import { offerFirewallRules } from '@/lib/deploy/firewall/restoredRules';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { confirmDialog } from '@/stores/confirmStore';
+import {
+  type RestorePhase,
+  type ServerRestore,
+  useDeployBackupRunStore,
+} from '@/stores/deployBackupRunStore';
 import { CARD_BODY, SecurityCard, TABLE_CELL, TABLE_HEAD } from '../security/SecurityCard';
 import { useStepUp } from '../security/useStepUp';
 import { dateAndTime, TARGET_STATE } from './format';
@@ -63,15 +66,7 @@ export interface RestoreChoice {
   backupId: string;
 }
 
-type Phase = 'form' | 'restoring' | 'pending' | 'bringingUp' | 'done';
-
-interface Step extends DeployServerRestoreProgress {}
-
-function fold(steps: Step[], event: DeployServerRestoreProgress): Step[] {
-  const key = `${event.phase}:${event.title}`;
-  const at = steps.findIndex((step) => `${step.phase}:${step.title}` === key);
-  return at < 0 ? [...steps, event] : steps.map((step, index) => (index === at ? event : step));
-}
+const NO_STEPS: ServerRestore['steps'] = [];
 
 const AREA: Record<DeployMovedRecordArea, string> = {
   server: 'Saved server',
@@ -106,17 +101,28 @@ export function RestoreTab({
   const [destinationId, setDestinationId] = useState<string | null>(initial?.destinationId ?? null);
   const [backupId, setBackupId] = useState<string | null>(initial?.backupId ?? null);
   const [file, setFile] = useState<DeployBackupFile | null>(null);
-  const [targetId, setTargetId] = useState(server.id);
+  // A restore runs in the backup store, so leaving the page mid-way keeps it and its steps.
+  const [targetId, setTargetId] = useState(
+    () => useDeployBackupRunStore.getState().restores[server.id]?.targetId ?? server.id,
+  );
   const [secret, setSecret] = useState('');
   const [owner, setOwner] = useState(userName ?? '');
   const [password, setPassword] = useState('');
   const [sudo, setSudo] = useState('');
-  const [phase, setPhase] = useState<Phase>('form');
-  const [steps, setSteps] = useState<Step[]>([]);
-  const [bringUpStatus, setBringUpStatus] = useState<ServerRestoreStatus | null>(null);
-  const [result, setResult] = useState<DeployBringUpResult | null>(null);
+  const kept = useDeployBackupRunStore((state): ServerRestore | undefined => {
+    const restore = state.restores[server.id];
+    return restore?.targetId === targetId ? restore : undefined;
+  });
+  const phase: RestorePhase = kept?.phase ?? 'form';
+  const steps = kept?.steps ?? NO_STEPS;
+  const bringUpStatus = kept?.bringUpStatus ?? null;
+  const result = kept?.result ?? null;
+  const problem = kept?.problem ?? null;
+  const setPhase = (next: RestorePhase) =>
+    useDeployBackupRunStore.getState().setRestorePhase(server.id, targetId, next);
+  const setProblem = (next: string | null) =>
+    useDeployBackupRunStore.getState().setRestoreProblem(server.id, targetId, next);
   const [move, setMove] = useState<boolean | null>(null);
-  const [problem, setProblem] = useState<string | null>(null);
 
   useEffect(() => {
     if (!initial) return;
@@ -135,15 +141,12 @@ export function RestoreTab({
   const pending = usePendingRestore(targetId);
   const refresh = useRefreshBackups(targetId);
 
-  useEffect(
-    () =>
-      window.runova.deployServerBackups.onRestoreProgress((event) => {
-        if (event.serverId !== targetId) return;
-        if (event.kind === 'step') setSteps((current) => fold(current, event.progress));
-        else setBringUpStatus(event.status);
-      }),
-    [targetId],
-  );
+  // A restored state is read again once the restore is through, even one that finished while the
+  // page was left.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: each new phase reads it again
+  useEffect(() => {
+    if (phase === 'pending' || phase === 'done') void pending.refetch();
+  }, [phase]);
 
   const deployServers = servers.data ?? [server];
   const target = deployServers.find((one) => one.id === targetId) ?? server;
@@ -204,32 +207,26 @@ export function RestoreTab({
       typeToConfirm: target.nickname,
     });
     if (!confirmed) return;
-    setPhase('restoring');
-    setSteps([]);
-    setProblem(null);
-    try {
-      const run = () =>
-        window.runova.deployServerBackups.restore({
-          serverId: target.id,
-          source,
-          secret,
-          sudoPassword: sudo || null,
-          userName: owner.trim(),
-          password,
-        });
-      // A file from this computer goes over SSH alone; a fetch from a destination is a core call.
-      const restored = source.kind === 'destination' ? await sourceStepUp.run(run) : await run();
-      if (!restored) {
-        setPhase('form');
-        return;
-      }
-      void queryClient.invalidateQueries({ queryKey: ['deploy'] });
-      await pending.refetch();
-      setPhase('pending');
-    } catch (error) {
-      setProblem(coreErrorMessage(error));
-      setPhase('form');
-    }
+    const run = () =>
+      window.runova.deployServerBackups.restore({
+        serverId: target.id,
+        source,
+        secret,
+        sudoPassword: sudo || null,
+        userName: owner.trim(),
+        password,
+      });
+    // A file from this computer goes over SSH alone; a fetch from a destination is a core call.
+    await useDeployBackupRunStore
+      .getState()
+      .restore(
+        server.id,
+        target.id,
+        source.kind === 'destination' ? () => sourceStepUp.run(run) : run,
+        async () => {
+          void queryClient.invalidateQueries({ queryKey: ['deploy'] });
+        },
+      );
   }
 
   const waiting = pending.data ?? null;
@@ -237,30 +234,21 @@ export function RestoreTab({
 
   async function bringUp(): Promise<void> {
     if (!waiting) return;
-    setPhase('bringingUp');
-    setProblem(null);
-    setBringUpStatus(null);
-    try {
-      const done = await targetStepUp.run(() =>
-        window.runova.deployServerBackups.bringUp({
-          serverId: target.id,
-          moveAddresses,
-          ...(password ? { password } : {}),
-        }),
-      );
-      if (!done) {
-        setPhase('pending');
-        return;
-      }
-      setResult(done);
-      setBringUpStatus(done.status);
-      setPhase('done');
-      refresh();
-      void queryClient.invalidateQueries({ queryKey: queryKeys.deployServers });
-    } catch (error) {
-      setProblem(coreErrorMessage(error));
-      setPhase('pending');
-    }
+    await useDeployBackupRunStore.getState().bringUp(
+      server.id,
+      () =>
+        targetStepUp.run(() =>
+          window.runova.deployServerBackups.bringUp({
+            serverId: target.id,
+            moveAddresses,
+            ...(password ? { password } : {}),
+          }),
+        ),
+      () => {
+        refresh();
+        void queryClient.invalidateQueries({ queryKey: queryKeys.deployServers });
+      },
+    );
   }
 
   function reviewFirewall(): void {

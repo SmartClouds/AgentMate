@@ -1,8 +1,5 @@
 import { coreErrorMessage } from '@shared/coreErrors';
-import type {
-  JobInfo,
-  NginxApplyResult,
-} from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import type { NginxApplyResult } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { DeployServer } from '@shared/deployTypes';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -14,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { SiteTab } from '@/lib/deploy/sites/problems';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
+import { useFinishedOnce, useFollowedJob } from '@/stores/deployFollowedJobStore';
 import { CoreAccessCard } from '../CoreAccessCard';
 import { JobLogDialog } from '../overview/JobLogDialog';
 import { hasRole } from '../security/format';
@@ -81,7 +79,8 @@ export function SitesPanel({ server }: { server: DeployServer }): React.JSX.Elem
   }, [params, setParams]);
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState<NginxApplyResult | null>(null);
-  const [installJob, setInstallJob] = useState<JobInfo | null>(null);
+  const [installJob, setInstallJob] = useFollowedJob(server.id, 'nginx');
+  const installFinished = useFinishedOnce(server.id, () => void refresh());
   const [installing, setInstalling] = useState(false);
 
   if (access.isPending) {
@@ -219,7 +218,7 @@ export function SitesPanel({ server }: { server: DeployServer }): React.JSX.Elem
         job={installJob}
         canCancel={admin}
         onClose={() => setInstallJob(null)}
-        onFinished={() => void refresh()}
+        onFinished={installFinished}
       />
     </div>
   );

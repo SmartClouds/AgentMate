@@ -140,6 +140,34 @@ describe('Back up now', () => {
     expect(await within(dialog).findByText(/The backup is done/)).toBeTruthy();
   });
 
+  it('keeps following the backup when the page is left, and shows it on return', async () => {
+    const running = {
+      ...RUN,
+      id: '66666666-6666-4666-8666-666666666666',
+      state: 'running' as const,
+    };
+    let finish!: (value: unknown) => void;
+    const bridge = {
+      'deployServerBackups.runNow': async () => ({ started: true, run: running }),
+      'deployServerBackups.watchRun': () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    };
+    const first = renderPanel(bridge);
+    await first.user.click(await screen.findByRole('button', { name: 'Back up now' }));
+    const dialog = await screen.findByRole('dialog', { name: /Back up Production now/ });
+    await first.user.click(within(dialog).getByRole('checkbox', { name: 'Local disk' }));
+    await first.user.click(within(dialog).getByRole('button', { name: 'Start the backup' }));
+    expect(await within(dialog).findByText(/Backing up/)).toBeTruthy();
+    first.unmount();
+
+    finish({ run: { ...running, state: 'succeeded' } });
+    renderPanel(bridge);
+    const again = await screen.findByRole('dialog', { name: /Back up Production now/ });
+    expect(await within(again).findByText(/The backup is done/)).toBeTruthy();
+  });
+
   it('asks for nothing to be made when no destination and no download is picked', async () => {
     const { user } = renderPanel();
     await user.click(await screen.findByRole('button', { name: 'Back up now' }));

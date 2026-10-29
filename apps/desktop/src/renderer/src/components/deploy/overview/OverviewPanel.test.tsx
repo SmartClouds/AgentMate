@@ -199,6 +199,40 @@ describe('OverviewPanel actions', () => {
     await waitFor(() => expect(bridge.$fn('deploySystem.updates')).toHaveBeenCalledTimes(2));
   });
 
+  it('opens the update log again on return, and says it failed only once', async () => {
+    const job = sampleJob();
+    const failed = (bridge: ReturnType<typeof renderPanel>['bridge']) =>
+      act(() =>
+        bridge.$emit('deployJobs.onLog', {
+          subscriptionId: 'log-1',
+          serverId: SERVER.id,
+          jobId: job.id,
+          lines: [],
+          job: { ...job, state: 'failed', error: 'dpkg was interrupted' },
+          ended: {},
+        }),
+      );
+    const first = renderPanel({ 'deploySystem.upgradeSecurity': job });
+    await first.user.click(await screen.findByRole('button', { name: /Install security updates/ }));
+    const preview = screen.getByRole('dialog', { name: 'Install the security updates?' });
+    await first.user.click(within(preview).getByRole('button', { name: 'Install 1 update' }));
+    await screen.findByRole('dialog', { name: 'Install security updates' });
+    first.unmount();
+
+    const again = renderPanel();
+    await screen.findByRole('dialog', { name: 'Install security updates' });
+    await waitFor(() => expect(again.bridge.$listenerCount('deployJobs.onLog')).toBe(1));
+    failed(again.bridge);
+    await waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1));
+    again.unmount();
+
+    const third = renderPanel();
+    await screen.findByRole('dialog', { name: 'Install security updates' });
+    await waitFor(() => expect(third.bridge.$listenerCount('deployJobs.onLog')).toBe(1));
+    failed(third.bridge);
+    expect(toast.error).toHaveBeenCalledTimes(1);
+  });
+
   it('asks for the password when every update needs a step-up, and tries again with it', async () => {
     const upgradeAll = vi
       .fn()

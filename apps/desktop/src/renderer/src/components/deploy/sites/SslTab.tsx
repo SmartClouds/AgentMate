@@ -27,6 +27,7 @@ import {
 } from '@/lib/deploy/sites/certificates';
 import { cn } from '@/lib/utils';
 import { confirmDialog } from '@/stores/confirmStore';
+import { useFinishedOnce, useFollowedJob } from '@/stores/deployFollowedJobStore';
 import { JobLogDialog } from '../overview/JobLogDialog';
 import { useProofStepUp } from '../overview/useProofStepUp';
 import { IssueDialog, UploadDialog } from './CertificateDialogs';
@@ -66,7 +67,8 @@ export function SslTab({
   const [removing, setRemoving] = useState(false);
   const [busy, setBusy] = useState<'renew' | 'remove' | 'log' | 'origin' | null>(null);
   const [originError, setOriginError] = useState<unknown>(null);
-  const [job, setJob] = useState<JobInfo | null>(null);
+  const [job, setJob] = useFollowedJob(server.id, `ssl:${site?.settings.id ?? 'new'}`);
+  const jobFinished = useFinishedOnce(server.id, onChanged);
   const [problem, setProblem] = useState<string | null>(null);
   const proof = useProofStepUp(server);
   const now = Date.now();
@@ -376,7 +378,7 @@ export function SslTab({
         job={job}
         canCancel={admin}
         onClose={() => setJob(null)}
-        onFinished={onChanged}
+        onFinished={jobFinished}
       />
       {proof.dialog}
     </div>

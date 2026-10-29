@@ -100,6 +100,22 @@ describe('ContainersPanel install', () => {
     expect(await screen.findByRole('dialog')).toHaveTextContent('Install Docker');
   });
 
+  it('opens the install log again when the page comes back to it', async () => {
+    const job = sampleJob({ kind: 'dockerInstall', title: 'Install Docker' });
+    const bridge = {
+      'deployDocker.status': sampleDockerStatus({ installed: false, running: false }),
+      'deployDocker.install': async () => job,
+    };
+    const first = renderPanel(bridge);
+    const card = await screen.findByRole('region', { name: 'Docker' });
+    await first.user.click(within(card).getByRole('button', { name: /Install Docker/ }));
+    expect(await screen.findByRole('dialog')).toHaveTextContent('Install Docker');
+    first.unmount();
+
+    renderPanel(bridge);
+    expect(await screen.findByRole('dialog')).toHaveTextContent('Install Docker');
+  });
+
   it('says what went wrong when the install is refused', async () => {
     const { user } = renderPanel({
       'deployDocker.status': sampleDockerStatus({ installed: false, running: false }),

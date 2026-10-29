@@ -1723,6 +1723,14 @@ describe('DeployPage coming back', () => {
     );
   });
 
+  it('opens the tab that was open in the section', async () => {
+    await visit('/deploy?server=srv-2&view=logs&tab=logs', 'Staging');
+
+    renderPage(SIGNED_OUT);
+    const viewer = await screen.findByRole('tab', { name: 'Log viewer' });
+    expect(viewer.getAttribute('aria-selected')).toBe('true');
+  });
+
   it('keeps the memory on this computer, for the next start', async () => {
     await visit('/deploy?server=srv-2&view=logs', 'Staging');
 
@@ -1733,14 +1741,14 @@ describe('DeployPage coming back', () => {
     await visit('/deploy?files=fs-1&view=settings', 'Bakery static', {
       'deployFiles.list': async () => [fileSite()],
       'deployFiles.subscribe': snapshot(),
-        'deployFiles.changes': snapshot(),
+      'deployFiles.changes': snapshot(),
     });
 
     renderPage({
       ...SIGNED_OUT,
       'deployFiles.list': async () => [fileSite()],
       'deployFiles.subscribe': snapshot(),
-        'deployFiles.changes': snapshot(),
+      'deployFiles.changes': snapshot(),
     });
     expect(await screen.findByRole('heading', { name: 'Bakery static' })).toBeTruthy();
     expect(screen.getByTestId('path').textContent).toBe('/deploy?files=fs-1&view=settings');
@@ -1765,7 +1773,8 @@ describe('DeployPage coming back', () => {
     await waitFor(() =>
       expect(screen.getByTestId('path').textContent).toBe('/deploy?server=srv-2&dialog=cloudflare'),
     );
-    expect(screen.getByRole('heading', { name: 'Staging' })).toBeTruthy();
+    // The dialog is modal, so the page behind it is hidden from the accessibility tree.
+    expect(screen.getByRole('heading', { name: 'Staging', hidden: true })).toBeTruthy();
   });
 
   it('does not bring back a site that was removed', async () => {

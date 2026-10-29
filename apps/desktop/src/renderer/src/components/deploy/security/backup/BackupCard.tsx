@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Archive, ArchiveRestore } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { SimpleTooltip } from '@/components/ui/tooltip';
+import { useDeployBackupRunStore } from '@/stores/deployBackupRunStore';
 import { CARD_BODY, SecurityCard } from '../SecurityCard';
 import { useStepUp } from '../useStepUp';
 import { CreateBackupDialog } from './CreateBackupDialog';
@@ -23,7 +24,12 @@ export function BackupCard({
   const stepUp = useStepUp(server);
   const [, setParams] = useSearchParams();
   const [creating, setCreating] = useState(false);
-  const [restoring, setRestoring] = useState(false);
+  // Kept in the store, so a restore still going opens again when the page comes back.
+  const restoring = useDeployBackupRunStore(
+    (state) => state.coreRestores[server.id]?.open ?? false,
+  );
+  const setRestoring = (open: boolean) =>
+    useDeployBackupRunStore.getState().setCoreRestoreOpen(server.id, open);
   return (
     <SecurityCard
       icon={<Archive />}

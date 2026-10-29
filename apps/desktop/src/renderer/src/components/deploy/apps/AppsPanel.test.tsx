@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import { useLocation } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { ConfirmDialogHost } from '@/components/ConfirmDialog';
+import { emptyDraft, useDeployAppRunStore, wizardKey } from '@/stores/deployAppRunStore';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
 import { appsBridge, SERVER, STACK_ID, sampleStack } from './testing/fixtures';
 
@@ -142,5 +143,44 @@ describe('AppsPanel registries', () => {
     await user.click(await screen.findByRole('button', { name: /Registries/ }));
     expect(await screen.findByRole('heading', { name: /Registries/ })).toBeVisible();
     expect(screen.getByTestId('where')).toHaveTextContent('registries=1');
+  });
+});
+
+describe('AppsPanel deploys left running', () => {
+  function keep(existingStackId: string | null, phase: 'uploading' | 'idle') {
+    const key = wizardKey(SERVER.id, existingStackId);
+    useDeployAppRunStore.getState().open(key, emptyDraft({ step: 'deploy' }));
+    useDeployAppRunStore.setState((state) => ({
+      wizards: {
+        ...state.wizards,
+        [key]: { ...state.wizards[key], run: { phase }, name: 'shop', serverId: SERVER.id },
+      },
+    }));
+  }
+
+  it('says a deploy is still on its way, and opens it', async () => {
+    keep(null, 'uploading');
+    const { user } = renderApps();
+    const notice = await screen.findByRole('status', { name: 'Deploy in progress' });
+    expect(notice).toHaveTextContent('Deploying shop');
+    await user.click(within(notice).getByRole('button', { name: 'Show' }));
+    expect(screen.getByTestId('where')).toHaveTextContent('new=1');
+  });
+
+  it('opens a deploy again of an app with that app', async () => {
+    keep(STACK_ID, 'uploading');
+    const { user } = renderApps();
+    const notice = await screen.findByRole('status', { name: 'Deploy in progress' });
+    await user.click(within(notice).getByRole('button', { name: 'Show' }));
+    expect(screen.getByTestId('where')).toHaveTextContent(`app=${STACK_ID}&new=1`);
+  });
+
+  it('starts a new app from scratch when nothing is on its way', async () => {
+    keep(null, 'idle');
+    const { user } = renderApps();
+    expect(screen.queryByRole('status', { name: 'Deploy in progress' })).toBeNull();
+    await user.click(await screen.findByRole('button', { name: 'New app' }));
+    const steps = await screen.findByRole('list', { name: 'New app steps' });
+    expect(within(steps).getByRole('listitem', { current: 'step' })).toHaveTextContent('Source');
   });
 });

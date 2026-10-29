@@ -264,3 +264,47 @@ describe('the install sheet', () => {
     expect(apply).toHaveTextContent('nginx -t failed.');
   });
 });
+
+describe('an install when the page is left', () => {
+  it('keeps installing, and opens the app with its passwords on return', async () => {
+    let finish!: (value: unknown) => void;
+    const install = () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      });
+    const first = renderStore(
+      { 'deployAppStore.install': install },
+      ['owner'],
+      sheetRoute('redis'),
+    );
+    const sheet = await screen.findByRole('dialog', { name: 'Install Redis' });
+    const password = (within(sheet).getByLabelText(/^Password/) as HTMLInputElement).value;
+    await first.user.click(within(sheet).getByRole('button', { name: 'Install Redis' }));
+    await waitFor(() => expect(first.bridge.$fn('deployAppStore.install')).toHaveBeenCalled());
+    first.unmount();
+
+    finish(await (storeBridge()['deployAppStore.install'] as () => Promise<unknown>)());
+    const again = renderStore({}, ['owner'], sheetRoute('redis'));
+    await waitFor(() =>
+      expect(screen.getByTestId('where').textContent).toContain(`app=${STACK_ID}`),
+    );
+    const card = await screen.findByRole('list', { name: 'Connection details' });
+    await again.user.click(screen.getByRole('button', { name: 'Show passwords' }));
+    expect(within(card).getByText(`redis://:${password}@127.0.0.1:16379/0`)).toBeTruthy();
+  });
+
+  it('shows the install still going when the sheet is opened again', async () => {
+    const first = renderStore(
+      { 'deployAppStore.install': () => new Promise(() => undefined) },
+      ['owner'],
+      sheetRoute('redis'),
+    );
+    const sheet = await screen.findByRole('dialog', { name: 'Install Redis' });
+    await first.user.click(within(sheet).getByRole('button', { name: 'Install Redis' }));
+    first.unmount();
+
+    renderStore({}, ['owner'], sheetRoute('redis'));
+    const again = await screen.findByRole('dialog', { name: 'Install Redis' });
+    expect(within(again).getByRole('button', { name: 'Install Redis' })).toBeDisabled();
+  });
+});

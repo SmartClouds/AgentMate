@@ -12,21 +12,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  type ExposeStep,
-  exposeOnDomain,
-  initialExposeSteps,
-  withStep,
-} from '@/lib/deploy/sites/expose';
+import { type ExposeStep, initialExposeSteps } from '@/lib/deploy/sites/expose';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
+import { type ExposeRun, exposeKey, useDeployExposeStore } from '@/stores/deployExposeStore';
 import { ExposeStepList } from '../sites/ExposeSteps';
 import { TextField, ToggleRow } from '../sites/fields';
 
 /**
  * Puts one published port of an app on a domain: a site in Websites that forwards the domain to
  * the port on 127.0.0.1, nginx applied, then a certificate if asked for. The steps show as they
- * run, and a failed one keeps the form so the domain can be fixed and tried again.
+ * run, and a failed one keeps the form so the domain can be fixed and tried again. They run in
+ * the expose store, so closing the dialog or leaving the page mid-way keeps them going.
  */
 
 export interface ProxyRoute {
@@ -40,6 +37,8 @@ export interface ProxyRoute {
 }
 
 type Phase = 'form' | 'working' | 'done' | 'failed';
+
+const NO_STEPS: ExposeStep[] = initialExposeSteps();
 
 const ROUTE_STOP =
   'min-w-0 rounded-md bg-foreground/[0.04] px-1.5 py-0.5 font-mono ring-1 ring-inset ring-foreground/[0.08]';
@@ -58,24 +57,27 @@ export function ProxyRouteDialog({
   onOpenWebsites?: () => void;
 }): React.JSX.Element {
   const queryClient = useQueryClient();
+  const key = exposeKey(serverId, `${route.stack}-${route.service}:${route.target}`);
+  // The steps run in the store, so closing the dialog or leaving the page keeps them going.
+  const kept = useDeployExposeStore((state): ExposeRun | undefined => state.runs[key]);
   const [domain, setDomain] = useState('');
   const [certificate, setCertificate] = useState(true);
   const [websocket, setWebsocket] = useState(true);
   const [error, setError] = useState<string | undefined>();
-  const [phase, setPhase] = useState<Phase>('form');
-  const [steps, setSteps] = useState<ExposeStep[]>(initialExposeSteps);
-  const [live, setLive] = useState('');
+  const phase: Phase = kept?.phase ?? 'form';
+  const steps = kept?.steps ?? NO_STEPS;
+  const live = kept?.domain ?? '';
   const name = `${route.service}:${route.target}`;
   const working = phase === 'working';
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only opening the dialog starts afresh
   useEffect(() => {
     if (!open) return;
-    setDomain('');
-    setCertificate(true);
+    const run = useDeployExposeStore.getState().runs[key];
+    setDomain(run?.domain ?? '');
+    setCertificate(run?.certificate ?? true);
     setWebsocket(true);
     setError(undefined);
-    setPhase('form');
-    setSteps(initialExposeSteps());
   }, [open]);
 
   function check(): string | null {
@@ -84,15 +86,14 @@ export function ProxyRouteDialog({
     return checked.ok ? checked.value : null;
   }
 
-  async function submit(event: React.FormEvent): Promise<void> {
+  function submit(event: React.FormEvent): void {
     event.preventDefault();
     if (working) return;
     const value = check();
     if (!value) return;
     setDomain(value);
-    setSteps(initialExposeSteps());
-    setPhase('working');
-    const outcome = await exposeOnDomain(
+    void useDeployExposeStore.getState().expose(
+      key,
       {
         serverId,
         domain: value,
@@ -101,16 +102,19 @@ export function ProxyRouteDialog({
         certificate,
         websocket,
       },
-      (id, next) => setSteps((current) => withStep(current, id, next)),
+      () => void queryClient.invalidateQueries({ queryKey: queryKeys.deployWeb(serverId) }),
     );
-    setLive(value);
-    setPhase(outcome.ok ? 'done' : 'failed');
-    void queryClient.invalidateQueries({ queryKey: queryKeys.deployWeb(serverId) });
   }
 
-  const url = `${certificate ? 'https' : 'http'}://${live}`;
+  /** Closes the dialog; a run that has ended is done with, so the next time starts at the form. */
+  function close(): void {
+    if (!working) useDeployExposeStore.getState().clear(key);
+    onClose();
+  }
+
+  const url = `${kept?.certificate ? 'https' : 'http'}://${live}`;
   return (
-    <Dialog open={open} onOpenChange={(next) => !next && !working && onClose()}>
+    <Dialog open={open} onOpenChange={(next) => !next && !working && close()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Put {name} on a domain</DialogTitle>
@@ -141,7 +145,7 @@ export function ProxyRouteDialog({
         </p>
 
         {phase === 'form' ? (
-          <form className="space-y-1" onSubmit={(e) => void submit(e)}>
+          <form className="space-y-1" onSubmit={submit}>
             <TextField
               label="Domain"
               value={domain}
@@ -185,7 +189,7 @@ export function ProxyRouteDialog({
                 <CircleCheck className="h-4 w-4 shrink-0 text-success" />
                 <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
                   {live} is set up.
-                  {certificate && (
+                  {kept?.certificate && (
                     <span className="block text-xs text-muted-foreground">
                       HTTPS works once the certificate arrives, usually within a minute.
                     </span>
@@ -213,7 +217,7 @@ export function ProxyRouteDialog({
             )}
             {phase === 'failed' && (
               <>
-                <Button type="button" variant="soft" onClick={onClose}>
+                <Button type="button" variant="soft" onClick={close}>
                   Close
                 </Button>
                 {onOpenWebsites && (
@@ -221,7 +225,7 @@ export function ProxyRouteDialog({
                     Open in Websites
                   </Button>
                 )}
-                <Button type="button" onClick={() => setPhase('form')}>
+                <Button type="button" onClick={() => useDeployExposeStore.getState().clear(key)}>
                   Try again
                 </Button>
               </>
@@ -233,7 +237,7 @@ export function ProxyRouteDialog({
                     Open in Websites
                   </Button>
                 )}
-                <Button type="button" onClick={onClose}>
+                <Button type="button" onClick={close}>
                   Done
                 </Button>
               </>

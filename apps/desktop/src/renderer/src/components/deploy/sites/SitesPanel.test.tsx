@@ -110,6 +110,25 @@ describe('SitesPanel nginx', () => {
     expect(await screen.findByRole('dialog', { name: 'Install nginx' })).toBeInTheDocument();
   });
 
+  it('opens the nginx install log again when the page comes back', async () => {
+    const bridge = {
+      'deploySites.status': nginxStatus({
+        managed: false,
+        currentRelease: undefined,
+        lastAppliedAtUnixMs: undefined,
+      }),
+      'deploySites.list': [],
+      'deploySites.install': job('nginxInstall', 'Install nginx'),
+    };
+    const first = renderPanel(bridge);
+    await first.user.click(await screen.findByRole('button', { name: 'Set up nginx for Runova' }));
+    expect(await screen.findByRole('dialog', { name: 'Install nginx' })).toBeInTheDocument();
+    first.unmount();
+
+    renderPanel(bridge);
+    expect(await screen.findByRole('dialog', { name: 'Install nginx' })).toBeInTheDocument();
+  });
+
   it('offers a fresh install when nginx is missing, and reports a refusal', async () => {
     const { user } = renderPanel({
       'deploySites.status': nginxStatus({

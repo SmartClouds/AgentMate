@@ -2,20 +2,18 @@ import { CATALOG_TEMPLATES, findCatalogTemplate } from '@runova/core';
 import { coreErrorMessage } from '@shared/coreErrors';
 import type { DeployServer } from '@shared/deployTypes';
 import { useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Problem } from '@/components/cloudflare/fields';
 import { Lock } from '@/components/icons';
 import { GLASS_CARD } from '@/components/pageKit';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  type ExposeStep,
-  exposeOnDomain,
-  initialExposeSteps,
-  withStep,
-} from '@/lib/deploy/sites/expose';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
+import {
+  type AppStoreInstall,
+  useDeployAppStoreInstallStore,
+} from '@/stores/deployAppStoreInstallStore';
 import { useAppsAccess } from '../apps/hooks';
 import { Notice } from '../deployKit';
 import { CatalogGrid } from './CatalogGrid';
@@ -27,16 +25,9 @@ import { type InstallRequest, InstallSheet } from './InstallSheet';
 /**
  * A server's App Store section (E12): the apps it installed, the catalog, the install sheet
  * (`&install=<template>`) and one installed app (`&app=<stack>`), each in the page's address.
- * The passwords of an install stay in this component's memory only, for the card right after.
+ * The install itself runs in the install store, so it goes on when the page is left, and the
+ * passwords it made stay in memory there, never on disk, for the card right after.
  */
-
-interface Session {
-  stackId: string;
-  secrets: Record<string, string>;
-  expose: { domain: string; steps: ExposeStep[] } | null;
-  /** Why nothing was deployed, when the server refused the files. */
-  notice: string | null;
-}
 
 export function AppStorePanel({ server }: { server: DeployServer }): React.JSX.Element {
   const serverId = server.id;
@@ -44,15 +35,29 @@ export function AppStorePanel({ server }: { server: DeployServer }): React.JSX.E
   const queryClient = useQueryClient();
   const access = useAppsAccess(serverId);
   const installed = useInstalledApps(serverId, access.signedIn);
-  const [session, setSession] = useState<Session | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const kept = useDeployAppStoreInstallStore(
+    (state): AppStoreInstall | undefined => state.installs[serverId],
+  );
+  const busy = kept?.busy ?? false;
+  const error = kept?.error ?? null;
+  const session = kept?.session ?? null;
   const installing = params.get('install');
   const appId = params.get('app');
   const template = installing ? findCatalogTemplate(installing) : null;
 
-  const show = (extra: Record<string, string>) =>
-    setParams({ server: serverId, view: 'store', ...extra }, { replace: false });
+  const show = useCallback(
+    (extra: Record<string, string>) =>
+      setParams({ server: serverId, view: 'store', ...extra }, { replace: false }),
+    [setParams, serverId],
+  );
+
+  // An install that finished opens its app once, even when it finished while the page was left.
+  const finished = session && !session.opened ? session.stackId : null;
+  useEffect(() => {
+    if (!finished) return;
+    useDeployAppStoreInstallStore.getState().markOpened(serverId);
+    show({ app: finished });
+  }, [finished, serverId, show]);
 
   if (access.pending) {
     return (
@@ -71,76 +76,18 @@ export function AppStorePanel({ server }: { server: DeployServer }): React.JSX.E
 
   const taken = (installed.stacks ?? []).map((stack) => stack.name);
 
-  function step(stackId: string, id: ExposeStep['id'], next: Partial<ExposeStep>): void {
-    setSession((current) =>
-      current?.stackId === stackId && current.expose
-        ? {
-            ...current,
-            expose: { ...current.expose, steps: withStep(current.expose.steps, id, next) },
-          }
-        : current,
-    );
-  }
-
-  /** The site in Websites, nginx applied, then the certificate: each its own step. */
-  async function expose(stackId: string, request: InstallRequest, domain: string): Promise<void> {
-    const render = request.check.render;
-    const web = render?.web;
-    const port =
-      web && render.ports.find((p) => p.service === web.service && p.target === web.port);
-    if (!port) {
-      step(stackId, 'site', { state: 'failed', detail: 'The app has no web port to point at.' });
-      return;
-    }
-    await exposeOnDomain(
-      {
-        serverId,
-        domain,
-        service: `${request.draft.name}-${web.service}`,
-        port: port.published,
-        certificate: request.draft.certificate,
-        websocket: true,
-      },
-      (id, next) => step(stackId, id, next),
-    );
-    void queryClient.invalidateQueries({ queryKey: queryKeys.deployWeb(serverId) });
-  }
-
-  async function install(request: InstallRequest): Promise<void> {
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await window.runova.deployAppStore.install({
-        serverId,
-        templateId: request.template.id,
-        version: request.draft.version,
-        name: request.draft.name,
-        params: request.check.params,
-        secrets: request.check.secrets,
-        domain: request.check.domain,
-      });
-      const stackId = result.stack.id;
-      const domain = request.check.domain;
-      setSession({
-        stackId,
-        secrets: request.check.secrets,
-        expose: domain
-          ? {
-              domain,
-              steps: initialExposeSteps(),
-            }
-          : null,
-        notice: result.job
-          ? null
-          : (result.revision.error ?? 'The server refused the files, so nothing was deployed.'),
-      });
+  function install(request: InstallRequest): void {
+    void useDeployAppStoreInstallStore.getState().install(serverId, request, () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.deployApps(serverId) });
-      show({ app: stackId });
-      if (domain) void expose(stackId, request, domain);
-    } catch (failure) {
-      setError(coreErrorMessage(failure));
-    } finally {
-      setBusy(false);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.deployWeb(serverId) });
+    });
+  }
+
+  /** Forgets the install's passwords once its app is left, unless its domain steps still run. */
+  function leaveInstalled(): void {
+    const steps = session?.expose?.steps ?? [];
+    if (!steps.some((one) => one.state === 'running' || one.state === 'waiting')) {
+      useDeployAppStoreInstallStore.getState().dismiss(serverId);
     }
   }
 
@@ -154,8 +101,14 @@ export function AppStorePanel({ server }: { server: DeployServer }): React.JSX.E
         secrets={session?.stackId === appId ? session.secrets : null}
         expose={session?.stackId === appId ? session.expose : null}
         notice={session?.stackId === appId ? session.notice : null}
-        onBack={() => show({})}
-        onOpenInApps={() => setParams({ server: serverId, view: 'apps', app: appId })}
+        onBack={() => {
+          leaveInstalled();
+          show({});
+        }}
+        onOpenInApps={() => {
+          leaveInstalled();
+          setParams({ server: serverId, view: 'apps', app: appId });
+        }}
       />
     );
   }
@@ -175,7 +128,7 @@ export function AppStorePanel({ server }: { server: DeployServer }): React.JSX.E
         templates={CATALOG_TEMPLATES}
         canInstall={access.canOperate}
         onInstall={(templateId) => {
-          setError(null);
+          useDeployAppStoreInstallStore.getState().clearError(serverId);
           show({ install: templateId });
         }}
       />
@@ -188,7 +141,7 @@ export function AppStorePanel({ server }: { server: DeployServer }): React.JSX.E
           busy={busy}
           error={error}
           onCancel={() => show({})}
-          onInstall={(request) => void install(request)}
+          onInstall={install}
         />
       )}
     </div>

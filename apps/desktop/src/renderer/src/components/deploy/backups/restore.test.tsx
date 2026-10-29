@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
 import { DISK, OTHER_SERVER, PENDING, SERVER, STEPPED_UP, STORED } from './testing/fixtures';
@@ -191,6 +191,51 @@ describe('RestoreTab', () => {
     expect(within(steps).getByText(/Decrypt and check the backup \(failed\)/)).toBeTruthy();
     expect(await screen.findByRole('alert')).toBeTruthy();
     expect(screen.queryByRole('region', { name: 'What the backup brings' })).toBeNull();
+  });
+
+  it('keeps the restore steps when the page is left mid-way, and goes on from them', async () => {
+    let finish!: (value: unknown) => void;
+    let restored = false;
+    const bridge: Record<string, unknown> = {
+      'deployServerBackups.pendingRestore': async () => (restored ? PENDING : null),
+      'deployServerBackups.restore': () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    };
+    const first = renderWizard(bridge, {
+      serverId: SERVER.id,
+      destinationId: DISK.id,
+      backupId: STORED.backupId,
+    });
+    await screen.findByRole('radio', { name: /web-1/ });
+    await fillDetails(first.user);
+    await first.user.click(screen.getByRole('button', { name: 'Restore onto Production' }));
+    await waitFor(() => expect(first.bridge.$fn('deployServerBackups.restore')).toHaveBeenCalled());
+    act(() =>
+      first.bridge.$emit('deployServerBackups.onRestoreProgress', {
+        serverId: 'srv-1',
+        kind: 'step',
+        progress: { phase: 'fetch', title: 'Fetch the backup', status: 'done' },
+      }),
+    );
+    await screen.findByRole('list', { name: 'Restore steps' });
+    first.unmount();
+
+    const again = renderWizard(bridge);
+    const steps = await screen.findByRole('list', { name: 'Restore steps' });
+    expect(within(steps).getByText(/Fetch the backup/)).toBeTruthy();
+    restored = true;
+    await act(async () =>
+      finish({
+        backupCoreVersion: '1.62.0',
+        backupHostName: 'web-1',
+        backupCreatedAtUnixMs: STORED.createdAtUnixMs,
+        previousStateFolder: '/var/lib/runova-core-restore/previous',
+      }),
+    );
+    expect(await screen.findByRole('region', { name: 'What the backup brings' })).toBeTruthy();
+    expect(again.bridge.$fn('deployServerBackups.pendingRestore')).toHaveBeenCalled();
   });
 
   it('picks up a restored state that still waits to be brought up', async () => {
