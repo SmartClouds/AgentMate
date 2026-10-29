@@ -3,8 +3,9 @@ import type {
   SiteInfo,
 } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, Download, RefreshCw, Robot } from '@/components/icons';
+import { ArrowDown, ArrowUp, Copy, Download, RefreshCw, Robot } from '@/components/icons';
 import { SearchPill } from '@/components/pageKit';
+import { copyText } from '@/components/pipelines/RunAnnotations';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -183,6 +184,13 @@ export function LogViewer({
           onClick={() => download(`${label.replace(/[^\w.-]+/g, '-')}.log`, entriesAsText(shown))}
         >
           <Download /> Download
+        </Button>
+        <Button
+          variant="soft"
+          disabled={shown.length === 0}
+          onClick={() => void copyText(entriesAsText(shown), `Log of ${label} copied.`)}
+        >
+          <Copy /> Copy
         </Button>
         {onAskAi && source && (
           <Button onClick={() => onAskAi(source)}>

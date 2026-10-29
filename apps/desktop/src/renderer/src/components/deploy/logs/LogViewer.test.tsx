@@ -127,7 +127,7 @@ describe('LogViewer', () => {
     expect(within(log).getByText(second?.composeService ?? '')).toBeInTheDocument();
   });
 
-  it('reads the audit trail once and offers it to the AI and as a download', async () => {
+  it('reads the audit trail once and offers it to the AI, as a download and to copy', async () => {
     const created = vi.fn(() => 'blob:x');
     URL.createObjectURL = created as never;
     URL.revokeObjectURL = vi.fn();
@@ -142,6 +142,10 @@ describe('LogViewer', () => {
     expect(created).toHaveBeenCalled();
     expect(follow).toHaveBeenCalled();
     follow.mockRestore();
+    const write = vi.spyOn(navigator.clipboard, 'writeText');
+    await user.click(screen.getByRole('button', { name: 'Copy' }));
+    expect(write).toHaveBeenCalledWith(expect.stringContaining('exec.run denied'));
+    write.mockRestore();
     await user.click(screen.getByRole('button', { name: 'Ask the AI' }));
     expect(onAskAi).toHaveBeenCalledWith({ kind: 'audit', label: 'Core audit trail' });
   });

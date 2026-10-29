@@ -70,6 +70,7 @@ The viewer starts on the Docker journal.
 | **Follow** switch | Keeps the view at the bottom as new lines arrive. Scrolling up pauses the auto scroll. |
 | **Read again** | Reads the log again from the server. |
 | **Download** | Saves the lines now shown as a `.log` text file. |
+| **Copy** | Copies the lines now shown to the clipboard. |
 | **Ask the AI** | Opens the Deploy AI on this log (see below). |
 | **Search the log** | Highlights matches. `Enter` goes to the next match, `Shift+Enter` to the previous one. A counter shows "1 of N" or "No matches", and arrow buttons (**Previous match**, **Next match**) appear when there is more than one. |
 
