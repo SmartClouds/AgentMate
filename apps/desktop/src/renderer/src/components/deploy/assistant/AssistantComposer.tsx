@@ -2,7 +2,7 @@ import { CLI_REGISTRY } from '@runova/core';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { CliLogo } from '@/components/cliLogos';
-import { Send, StopCircle } from '@/components/icons';
+import { Play, Send, StopCircle } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
 import { Label } from '@/components/ui/label';
@@ -12,15 +12,20 @@ import { queryKeys } from '@/lib/queryKeys';
 /**
  * Where the user says what the AI should do (E09 T8), and with which AI: the provider set in
  * Settings by default, or an installed agent CLI. While a run goes, the button stops it; once it
- * is over, the same box asks a follow-up on the same server and context.
+ * is over, the same box asks a follow-up on the same server and context, and a stopped run can
+ * be carried on from where it was.
  */
 
 /** Picker value for the OpenAI, Gemini or Ollama provider set in Settings. */
 export const SETTINGS_PROVIDER = '__settings__';
 
+/** What a Continue asks for. The AI is told what happened in the run it picks up. */
+export const CONTINUE_PROMPT = 'Carry on from where you stopped.';
+
 export function AssistantComposer({
   running,
-  finished,
+  followUp,
+  canContinue = false,
   initialPrompt,
   disabled,
   onStart,
@@ -28,7 +33,9 @@ export function AssistantComposer({
 }: {
   running: boolean;
   /** A run ended, so the next task is a follow-up. */
-  finished: boolean;
+  followUp: boolean;
+  /** A run was stopped or failed before it was done, so it can be carried on. */
+  canContinue?: boolean;
   initialPrompt: string;
   disabled?: boolean;
   onStart: (prompt: string, cliId: string | null) => Promise<boolean>;
@@ -57,10 +64,20 @@ export function AssistantComposer({
     }
   }
 
+  async function carryOn(): Promise<void> {
+    if (starting) return;
+    setStarting(true);
+    try {
+      await onStart(CONTINUE_PROMPT, ai === SETTINGS_PROVIDER ? null : ai);
+    } finally {
+      setStarting(false);
+    }
+  }
+
   return (
     <div className="space-y-2">
       <Label htmlFor="deploy-assistant-task" className="text-xs">
-        {finished ? 'Ask a follow-up' : 'What should the AI look into?'}
+        {followUp ? 'Ask a follow-up' : 'What should the AI look into?'}
       </Label>
       <Textarea
         id="deploy-assistant-task"
@@ -99,9 +116,16 @@ export function AssistantComposer({
             <StopCircle /> Stop
           </Button>
         ) : (
-          <Button onClick={() => void start()} disabled={!prompt.trim() || starting || disabled}>
-            <Send /> {finished ? 'Ask' : 'Start'}
-          </Button>
+          <>
+            {canContinue && (
+              <Button variant="soft" onClick={() => void carryOn()} disabled={starting || disabled}>
+                <Play /> Continue
+              </Button>
+            )}
+            <Button onClick={() => void start()} disabled={!prompt.trim() || starting || disabled}>
+              <Send /> {followUp ? 'Ask' : 'Start'}
+            </Button>
+          </>
         )}
       </div>
     </div>

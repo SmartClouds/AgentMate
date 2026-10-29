@@ -110,6 +110,12 @@ describe('argument checks', () => {
       modelId: null,
       effort: null,
     });
+    expect(startInput({ serverId: 'srv-1', prompt: 'x', continuePrevious: true })).toMatchObject({
+      continuePrevious: true,
+    });
+    expect(
+      startInput({ serverId: 'srv-1', prompt: 'x', continuePrevious: 'yes' }),
+    ).not.toHaveProperty('continuePrevious');
     expect(() => startInput({ serverId: 'srv-1', prompt: '   ' })).toThrow('Describe what');
     expect(() => startInput({ serverId: 'srv-1', prompt: 'a'.repeat(4_001) })).toThrow();
     expect(() => startInput({ serverId: '../x', prompt: 'x' })).toThrow('saved server');

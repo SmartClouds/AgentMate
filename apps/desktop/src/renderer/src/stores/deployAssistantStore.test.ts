@@ -75,4 +75,35 @@ describe('deployAssistantStore', () => {
     useDeployAssistantStore.getState().reset(S);
     expect(steps()).toEqual([]);
   });
+
+  it('carries a chat on with follow-ups and starts over with a new chat', () => {
+    const store = useDeployAssistantStore.getState();
+    const run = () => useDeployAssistantStore.getState().runs[S];
+    store.reset(S, 'Why does it restart?');
+    progress('running', 1, { command: 'docker ps' });
+    progress('stopped', 1, { message: 'Stopped by user.' });
+
+    store.followUp(S, 'Carry on');
+    expect(run()).toMatchObject({ prompt: 'Carry on', steps: [], progress: null });
+    expect(run()?.earlier).toEqual([
+      {
+        prompt: 'Why does it restart?',
+        progress: expect.objectContaining({ phase: 'stopped' }),
+        steps: [expect.objectContaining({ command: 'docker ps', status: 'done' })],
+      },
+    ]);
+    progress('thinking', 1);
+    expect(run()?.earlier).toHaveLength(1);
+
+    const before = run();
+    store.followUp(S, 'And the disk?');
+    expect(run()?.earlier).toHaveLength(2);
+    store.restore(S, before);
+    expect(run()).toBe(before);
+
+    store.reset(S);
+    expect(run()).toEqual({ progress: null, steps: [], earlier: [] });
+    store.restore(S, undefined);
+    expect(run()).toBeUndefined();
+  });
 });

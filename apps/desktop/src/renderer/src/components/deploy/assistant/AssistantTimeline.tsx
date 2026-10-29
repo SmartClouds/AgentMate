@@ -4,12 +4,13 @@ import { Check, CircleCheck, CircleX, Play, Spinner, TriangleAlert, X } from '@/
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { AssistantStep } from '@/stores/deployAssistantStore';
+import type { AssistantStep, AssistantTurn } from '@/stores/deployAssistantStore';
 
 /**
  * The run as a list of steps (E09 T8): each command with its state in words, why it waits when
  * it does, and its output as plain text (it comes from the server). Under it, what the run needs
- * now: an approval, an answer, a decision after an error.
+ * now: an approval, an answer, a decision after an error. The runs the chat carried on from sit
+ * above it, each with what the user asked and how it ended.
  */
 
 const STATUS: Record<AssistantStep['status'], string> = {
@@ -85,7 +86,66 @@ export function StepItem({
   );
 }
 
+function Asked({ text }: { text: string }) {
+  return (
+    <p
+      aria-label="You asked"
+      className="ml-auto w-fit max-w-[85%] whitespace-pre-wrap break-words rounded-xl rounded-br-sm bg-primary/12 px-3 py-2 text-sm text-foreground"
+    >
+      {text}
+    </p>
+  );
+}
+
+function Steps({ steps, tall }: { steps: AssistantStep[]; tall: boolean }) {
+  if (steps.length === 0) return null;
+  return (
+    <ol aria-label="Steps" className="space-y-2">
+      {steps.map((step) => (
+        <StepItem key={`${step.step}-${step.command}`} step={step} tall={tall} />
+      ))}
+    </ol>
+  );
+}
+
+/** How a run ended. `live` is the run going now, which screen readers hear about. */
+function Ended({ progress, live }: { progress: SshAgentProgress | null; live: boolean }) {
+  const phase = progress?.phase;
+  if (phase === 'error' && !live) {
+    return (
+      <p className="flex items-start gap-2 rounded-xl bg-destructive/10 p-3 text-sm ring-1 ring-inset ring-destructive/30">
+        <CircleX className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" />
+        {progress?.message}
+      </p>
+    );
+  }
+  if (phase !== 'finished' && phase !== 'stopped') return null;
+  return (
+    <p
+      role={live ? 'status' : undefined}
+      className={cn(
+        'flex items-start gap-2 rounded-xl p-3 text-sm ring-1 ring-inset',
+        phase === 'finished'
+          ? 'bg-success/8 ring-success/25'
+          : 'bg-foreground/[0.03] ring-foreground/[0.07]',
+      )}
+    >
+      {phase === 'finished' ? (
+        <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" />
+      ) : (
+        <X className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+      )}
+      <span>
+        <span className="font-medium">{phase === 'finished' ? 'Finished: ' : 'Stopped: '}</span>
+        {progress?.message}
+      </span>
+    </p>
+  );
+}
+
 export function AssistantTimeline({
+  earlier = [],
+  prompt,
   steps,
   progress,
   onApprove,
@@ -95,6 +155,10 @@ export function AssistantTimeline({
   onStop,
   tall = false,
 }: {
+  /** The runs before this one in the chat, oldest first. */
+  earlier?: AssistantTurn[];
+  /** What the user asked this run. */
+  prompt?: string;
   steps: AssistantStep[];
   progress: SshAgentProgress | null;
   /** The drawer is maximized, so each step's output gets more room. */
@@ -110,13 +174,17 @@ export function AssistantTimeline({
 
   return (
     <div className="space-y-3">
-      {steps.length > 0 && (
-        <ol aria-label="Steps" className="space-y-2">
-          {steps.map((step) => (
-            <StepItem key={`${step.step}-${step.command}`} step={step} tall={tall} />
-          ))}
-        </ol>
-      )}
+      {earlier.map((turn, index) => (
+        // A turn never changes once it is in the list, so its place is key enough.
+        <section key={index} aria-label="Earlier run" className="space-y-3">
+          {turn.prompt && <Asked text={turn.prompt} />}
+          <Steps steps={turn.steps} tall={tall} />
+          <Ended progress={turn.progress} live={false} />
+        </section>
+      ))}
+
+      {prompt && <Asked text={prompt} />}
+      <Steps steps={steps} tall={tall} />
 
       {phase === 'thinking' && (
         <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -193,27 +261,7 @@ export function AssistantTimeline({
         </div>
       )}
 
-      {(phase === 'finished' || phase === 'stopped') && (
-        <p
-          role="status"
-          className={cn(
-            'flex items-start gap-2 rounded-xl p-3 text-sm ring-1 ring-inset',
-            phase === 'finished'
-              ? 'bg-success/8 ring-success/25'
-              : 'bg-foreground/[0.03] ring-foreground/[0.07]',
-          )}
-        >
-          {phase === 'finished' ? (
-            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" />
-          ) : (
-            <X className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-          )}
-          <span>
-            <span className="font-medium">{phase === 'finished' ? 'Finished: ' : 'Stopped: '}</span>
-            {progress?.message}
-          </span>
-        </p>
-      )}
+      <Ended progress={progress} live />
     </div>
   );
 }

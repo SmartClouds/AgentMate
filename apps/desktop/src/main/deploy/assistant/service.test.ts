@@ -185,6 +185,29 @@ describe('approve every command (the default)', () => {
     expect(core.assistant.ran).toEqual([]);
   });
 
+  it('carries on from a stopped run, or starts a new chat that knows nothing of it', async () => {
+    const { assistant, serverId, progress } = setup();
+    fake.replies.push('RUN: docker ps');
+    await assistant.start({ serverId, prompt: 'Why does the sender restart?' });
+    await until(progress, 'proposed');
+    assistant.stop(serverId);
+
+    fake.replies.push('FINISHED: It runs out of memory.');
+    await assistant.start({ serverId, prompt: 'Carry on', continuePrevious: true });
+    await until(progress, 'finished');
+    const continued = fake.prompts.at(-1) ?? '';
+    expect(continued).toContain('Earlier task: "Why does the sender restart?"');
+    expect(continued).toContain('[Stopped]: Stopped by user.');
+    const [latest, first] = assistant.state(serverId).history;
+    expect(latest?.continuedFromRunId).toBe(first?.id);
+
+    fake.replies.push('FINISHED: ok');
+    await assistant.start({ serverId, prompt: 'Check the disk' });
+    await until(progress, 'finished', 2);
+    expect(fake.prompts.at(-1)).not.toContain('Earlier task');
+    expect(assistant.state(serverId).history[0]?.continuedFromRunId).toBeUndefined();
+  });
+
   it('answers a question and carries on', async () => {
     const { assistant, serverId, progress } = setup();
     fake.replies.push('NEEDS_INPUT: Which site?', 'FINISHED: ok');

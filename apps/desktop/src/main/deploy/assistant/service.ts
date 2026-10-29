@@ -20,6 +20,7 @@ import {
   approveSshTaskCommand,
   cliPreamble,
   cliRunArgs,
+  continuedTaskContext,
   continueSshTask,
   getSshTaskHistory,
   isSshTaskRunning,
@@ -107,6 +108,9 @@ export class DeployAssistant {
       subscribeExit: () => () => undefined,
       endedMessage: 'Runova is closing.',
     };
+    // Newest first: the run this one picks up from, when the user carries on rather than
+    // starting a new chat.
+    const previous = input.continuePrevious ? getSshTaskHistory(key)[0] : undefined;
     this.progress.delete(serverId);
     if (input.context) this.contexts.set(serverId, input.context);
     else this.contexts.delete(serverId);
@@ -115,6 +119,9 @@ export class DeployAssistant {
         key,
         prompt: input.prompt,
         target,
+        ...(previous
+          ? { continuedFromRunId: previous.id, previousContext: continuedTaskContext(previous.id) }
+          : {}),
         // In auto-run mode nothing waits here: the core runs its allowlist and refuses the rest,
         // which the loop then proposes. The mode is read each step, so a change applies at once.
         policy: () => ({ pause: this.modes.get(serverId) !== 'autoRunDiagnostics' }),

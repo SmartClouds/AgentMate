@@ -31,6 +31,11 @@ export interface DeployAssistantStartInput {
   modelId?: string | null;
   effort?: EffortLevel | null;
   context?: DeployAssistantContextInput;
+  /**
+   * Carry on from the server's last run (stopped, finished or failed): the AI is told what
+   * happened in it. Without it the run starts a new chat.
+   */
+  continuePrevious?: boolean;
 }
 
 /** The run's state, as the SSH AI reports it. `progress.sessionId` is the run's key. */

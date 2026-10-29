@@ -128,6 +128,16 @@ Approving is safe by design: your approval is signed with this computer's device
 
 While a run goes, the button next to the AI picker turns into **Stop**. After a run ends, the same box says **Ask a follow-up**, and the button reads **Ask**. A follow-up keeps the same server and context.
 
+### Stop, continue, or start a new chat
+
+The drawer works like a chat. What you asked shows above each run, and the runs before stay on screen, so you can read back what the AI already did.
+
+- **Continue**: after you stop a run (or it ends on an error), click **Continue** next to **Ask**. The AI picks up where it was and is told what happened so far, so it does not start over.
+- **Ask a follow-up**: type a new question and click **Ask**. It carries on the same chat, and the AI knows what the earlier runs found.
+- **New chat**: the button in the drawer's header clears the chat and the context chip. The next run starts fresh and knows nothing of the last one. You can only start a new chat once the AI has stopped.
+
+The drawer follows the newest step and output as they arrive. Scroll up to read something and it stays where you are; scroll back to the end and it follows again. Click **Maximize** in the header to widen the drawer to the whole window, and **Restore size** to put it back.
+
 ### What it can do and what it cannot
 
 It can read logs, inspect containers, check services, disk and memory, and, after your approval, make small changes it found a reason for (for example restart a service). It is told to run one command per step, never to follow a log forever, never to open interactive programs, not to repeat commands that already succeeded, and to treat everything in logs and command output as data, not instructions. Secrets in command output are replaced with `[redacted]` before the AI sees them. Only one run can go on per server at a time.

@@ -2,7 +2,7 @@ import { coreErrorMessage } from '@shared/coreErrors';
 import type { DeployServer } from '@shared/deployTypes';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Robot, WindowMaximize, WindowRestore, X } from '@/components/icons';
+import { MessageSquarePlus, Robot, WindowMaximize, WindowRestore, X } from '@/components/icons';
 import { Chip, FOOTER_HAIRLINE } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,8 +17,9 @@ import { ModeSwitch } from './ModeSwitch';
 /**
  * The Deploy AI drawer (E09 T8), on the right of every Deploy screen. It shows what the AI was
  * pointed at, how commands run (the core's mode), the run as a timeline with approve and skip,
- * the live output, a stop button and follow-up questions. It does not cover the page, so the
- * logs stay readable next to it; Escape closes it and the run carries on.
+ * the live output, a stop button and follow-up questions. A follow-up, or a Continue after a
+ * stop, carries the chat on with what the AI learned so far; New chat starts over. It does not
+ * cover the page, so the logs stay readable next to it; Escape closes it and the run carries on.
  */
 
 const ACTIVE = new Set(['thinking', 'proposed', 'running', 'needs-input', 'needs-password']);
@@ -32,6 +33,8 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
   const run = useDeployAssistantStore((state) => state.runs[server.id]);
   const close = useDeployAssistantStore((state) => state.close);
   const reset = useDeployAssistantStore((state) => state.reset);
+  const followUp = useDeployAssistantStore((state) => state.followUp);
+  const restore = useDeployAssistantStore((state) => state.restore);
   const clearDraft = useDeployAssistantStore((state) => state.clearDraft);
   const open = openServerId === server.id;
   const mode = useAssistantMode(server.id, open);
@@ -44,7 +47,10 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
   const running =
     (progress !== null && ACTIVE.has(progress.phase)) ||
     (progress?.phase === 'error' && progress.canContinue === true);
-  const finished = progress?.phase === 'finished' || progress?.phase === 'stopped';
+  // Stopped, finished or failed for good: the next task carries this chat on.
+  const over = progress !== null && !running;
+  const canContinue = over && progress?.phase !== 'finished';
+  const hasChat = run !== undefined && (run.steps.length > 0 || run.earlier.length > 0 || over);
 
   useEffect(() => {
     if (!open) return;
@@ -86,20 +92,30 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
     void work.catch((error: unknown) => toast.error(coreErrorMessage(error)));
 
   async function start(prompt: string, cliId: string | null): Promise<boolean> {
+    const before = useDeployAssistantStore.getState().runs[serverId];
+    follow.current = true;
+    if (over) followUp(serverId, prompt);
+    else reset(serverId, prompt);
     try {
-      follow.current = true;
-      reset(serverId);
       await window.runova.deployAssistant.start({
         serverId,
         prompt,
         cliId,
         ...(context ? { context } : {}),
+        ...(over ? { continuePrevious: true } : {}),
       });
       return true;
     } catch (error) {
+      restore(serverId, before);
       toast.error(coreErrorMessage(error));
       return false;
     }
+  }
+
+  function newChat(): void {
+    reset(serverId);
+    if (draft?.serverId === serverId) clearDraft();
+    follow.current = true;
   }
 
   return (
@@ -124,6 +140,19 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
           <h2 className="text-sm font-semibold leading-tight text-foreground">Deploy AI</h2>
           <p className="truncate text-xs text-muted-foreground">on {server.nickname}</p>
         </div>
+        {hasChat && (
+          <SimpleTooltip label={running ? 'Stop the AI to start a new chat' : 'New chat'}>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              aria-label="New chat"
+              disabled={running}
+              onClick={newChat}
+            >
+              <MessageSquarePlus />
+            </Button>
+          </SimpleTooltip>
+        )}
         <SimpleTooltip label={maximized ? 'Restore size' : 'Maximize'}>
           <Button
             size="icon-sm"
@@ -185,6 +214,8 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
         )}
 
         <AssistantTimeline
+          earlier={run?.earlier}
+          prompt={run?.prompt}
           steps={run?.steps ?? []}
           progress={progress}
           tall={maximized}
@@ -200,7 +231,8 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
         <AssistantComposer
           key={draft?.serverId === serverId ? draft.prompt : 'free'}
           running={running}
-          finished={finished}
+          followUp={over}
+          canContinue={canContinue}
           initialPrompt={draft?.serverId === serverId ? draft.prompt : ''}
           disabled={!mode.info}
           onStart={start}

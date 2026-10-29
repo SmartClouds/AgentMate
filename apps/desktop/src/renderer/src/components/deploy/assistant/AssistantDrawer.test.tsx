@@ -4,6 +4,7 @@ import { useDeployAssistantStore } from '@/stores/deployAssistantStore';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
 import { SERVER, STEP_UP_REFUSAL } from '../overview/testing/fixtures';
 import { signedIn } from '../security/testing/fixtures';
+import { CONTINUE_PROMPT } from './AssistantComposer';
 import { AssistantLauncher } from './AssistantLauncher';
 
 /**
@@ -176,6 +177,107 @@ describe('AssistantDrawer', () => {
     fireEvent.scroll(body);
     progress('proposed', { command: 'docker logs api' });
     expect(body.scrollTop).toBe(2000);
+  });
+
+  it('carries a stopped run on with Continue, keeping what came before', async () => {
+    const { user, bridge: fake } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+      bridge: bridge(),
+    });
+    act(() => useDeployAssistantStore.getState().open(SERVER.id));
+    const drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    await within(drawer).findByRole('radio', { name: /Approve every command/ });
+    await user.type(
+      within(drawer).getByLabelText('What should the AI look into?'),
+      'Why does the sender restart?',
+    );
+    await user.click(within(drawer).getByRole('button', { name: 'Start' }));
+    expect(within(drawer).getByLabelText('You asked')).toHaveTextContent(
+      'Why does the sender restart?',
+    );
+    expect(within(drawer).queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+
+    progress('running', { command: 'docker ps' });
+    expect(within(drawer).getByRole('button', { name: 'New chat' })).toBeDisabled();
+    await user.click(within(drawer).getByRole('button', { name: 'Stop' }));
+    expect(fake.$fn('deployAssistant.stop')).toHaveBeenCalledWith(SERVER.id);
+    progress('stopped', { message: 'Stopped by user.' });
+
+    await user.click(within(drawer).getByRole('button', { name: 'Continue' }));
+    expect(fake.$fn('deployAssistant.start')).toHaveBeenLastCalledWith({
+      serverId: SERVER.id,
+      prompt: CONTINUE_PROMPT,
+      cliId: null,
+      continuePrevious: true,
+    });
+    const earlier = within(drawer).getByRole('region', { name: 'Earlier run' });
+    expect(within(earlier).getByLabelText('You asked')).toHaveTextContent('sender restart');
+    expect(
+      within(earlier).getByRole('listitem', { name: 'Step 1: docker ps' }),
+    ).toBeInTheDocument();
+    expect(earlier).toHaveTextContent('Stopped: Stopped by user.');
+    expect(within(drawer).getAllByLabelText('You asked').at(-1)).toHaveTextContent(CONTINUE_PROMPT);
+
+    progress('finished', { message: 'It runs out of memory.' });
+    expect(within(drawer).queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+    await user.type(within(drawer).getByLabelText('Ask a follow-up'), 'How much does it use?');
+    await user.click(within(drawer).getByRole('button', { name: 'Ask' }));
+    expect(fake.$fn('deployAssistant.start')).toHaveBeenLastCalledWith(
+      expect.objectContaining({ prompt: 'How much does it use?', continuePrevious: true }),
+    );
+    expect(within(drawer).getAllByRole('region', { name: 'Earlier run' })).toHaveLength(2);
+  });
+
+  it('starts a new chat that leaves the last one behind', async () => {
+    const { user, bridge: fake } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+      bridge: bridge(),
+    });
+    act(() =>
+      useDeployAssistantStore.getState().open(SERVER.id, {
+        prompt: 'Look at the sender.',
+        context: { title: 'Crash loop: sender' },
+      }),
+    );
+    const drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    await within(drawer).findByRole('radio', { name: /Approve every command/ });
+    expect(within(drawer).queryByRole('button', { name: 'New chat' })).not.toBeInTheDocument();
+    await user.click(within(drawer).getByRole('button', { name: 'Start' }));
+    progress('running', { command: 'docker ps' });
+    progress('finished', { message: 'Done.' });
+
+    await user.click(within(drawer).getByRole('button', { name: 'New chat' }));
+    expect(within(drawer).queryByLabelText('You asked')).not.toBeInTheDocument();
+    expect(within(drawer).queryByRole('listitem')).not.toBeInTheDocument();
+    expect(within(drawer).queryByLabelText('Context')).not.toBeInTheDocument();
+    expect(within(drawer).queryByRole('button', { name: 'New chat' })).not.toBeInTheDocument();
+
+    await user.type(within(drawer).getByLabelText('What should the AI look into?'), 'Disk?');
+    await user.click(within(drawer).getByRole('button', { name: 'Start' }));
+    expect(fake.$fn('deployAssistant.start')).toHaveBeenLastCalledWith({
+      serverId: SERVER.id,
+      prompt: 'Disk?',
+      cliId: null,
+    });
+  });
+
+  it('puts the chat back when a follow-up is refused', async () => {
+    const { user } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+      bridge: bridge({
+        'deployAssistant.start': async () => {
+          throw new Error('[core:forbidden] Your role cannot do that.');
+        },
+      }),
+    });
+    act(() => {
+      useDeployAssistantStore.getState().open(SERVER.id);
+      useDeployAssistantStore.getState().reset(SERVER.id, 'First');
+    });
+    const drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    await within(drawer).findByRole('radio', { name: /Approve every command/ });
+    progress('stopped', { message: 'Stopped by user.' });
+    await user.click(within(drawer).getByRole('button', { name: 'Continue' }));
+    expect(within(drawer).queryByRole('region', { name: 'Earlier run' })).not.toBeInTheDocument();
+    expect(within(drawer).getByLabelText('You asked')).toHaveTextContent('First');
+    expect(within(drawer).getByRole('button', { name: 'Continue' })).toBeInTheDocument();
   });
 
   it('maximizes to fill the window and restores', async () => {

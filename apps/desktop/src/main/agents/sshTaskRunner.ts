@@ -448,6 +448,11 @@ function startHistory(
 }
 
 /** The terminal's AI tasks, newest first. */
+/** What a task that continues `runId` is told about it and the tasks it continued. */
+export function continuedTaskContext(runId: string): string {
+  return previousTaskContext(historyChain(runId));
+}
+
 export function getSshTaskHistory(sessionId: string): SshAgentHistoryRun[] {
   return [...(histories.get(sessionId) ?? [])].reverse();
 }

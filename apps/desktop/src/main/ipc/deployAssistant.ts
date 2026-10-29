@@ -87,6 +87,7 @@ export function startInput(value: unknown): DeployAssistantStartInput {
     modelId: optionalId(input.modelId, CLI_ID, 'model'),
     effort: effort as EffortLevel | null,
     ...(found ? { context: found } : {}),
+    ...(input.continuePrevious === true ? { continuePrevious: true } : {}),
   };
 }
 
