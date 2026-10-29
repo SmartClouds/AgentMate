@@ -5,7 +5,7 @@ import type {
 } from '@shared/apiTypes';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { formatBytes } from '@/lib/format';
-import type { RdpFailure } from '@/lib/rdp/failure';
+import { describeProxyFailure, type RdpFailure } from '@/lib/rdp/failure';
 import {
   clampDesktopSize,
   cleanEngineText,
@@ -129,7 +129,15 @@ export function useRdpSession(sessionId: string, hostRef: React.RefObject<HTMLDi
       setCertificate(prompt);
     });
     const offProxyError = window.runova.rdp.onProxyError((payload) => {
-      if (payload.sessionId === sessionId) proxyFailureRef.current = payload;
+      if (payload.sessionId !== sessionId) return;
+      proxyFailureRef.current = payload;
+      // The engine hears about the refusal over the proxy's socket, and this report comes over
+      // IPC, so it can arrive after the failed screen went up with only "could not reach the
+      // server" to say. The proxy only reports failures from before the session starts, so
+      // what it says is the reason that screen is about.
+      setPhase((current) =>
+        current.kind === 'failed' ? { kind: 'failed', ...describeProxyFailure(payload) } : current,
+      );
     });
     return () => {
       offCertificate();

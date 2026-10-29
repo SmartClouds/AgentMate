@@ -209,6 +209,29 @@ describe('useRdpSession when the connection fails', () => {
     });
   });
 
+  it('explains the failure when the proxy report arrives after the engine gave up', async () => {
+    mount.connectError = rdCleanPathError;
+
+    const { result } = renderSession();
+    await waitFor(() =>
+      expect(result.current.phase).toMatchObject({ kind: 'failed', code: 'other' }),
+    );
+    act(() => {
+      bridge.$emit('rdp.onCertificatePrompt', prompt);
+      bridge.$emit('rdp.onProxyError', {
+        sessionId: 's1',
+        code: 'certificate-changed',
+        message: 'office is presenting a different certificate than the one Runova saved.',
+      });
+    });
+
+    expect(result.current.phase).toMatchObject({
+      kind: 'failed',
+      code: 'certificate-changed',
+      title: "The server's certificate changed",
+    });
+  });
+
   it('ignores what the proxy reports for another session', async () => {
     mount.connectError = rdCleanPathError;
     mount.beforeConnect = () =>
