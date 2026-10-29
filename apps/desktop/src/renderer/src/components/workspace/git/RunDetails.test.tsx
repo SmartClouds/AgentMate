@@ -12,6 +12,22 @@ import { RunDetails } from './RunDetails';
 
 const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn(), info: vi.fn() }));
 vi.mock('sonner', () => ({ toast, Toaster: () => null }));
+vi.mock('./FixStepDialog', () => ({
+  FixStepDialog: ({
+    open,
+    project,
+    target,
+  }: {
+    open: boolean;
+    project: Project;
+    target: Record<string, unknown>;
+  }) =>
+    open ? (
+      <div role="dialog" aria-label="Fix step">
+        {JSON.stringify({ project: project.id, ...target })}
+      </div>
+    ) : null,
+}));
 
 const project = { id: 'p1', name: 'App', folderPath: 'C:\\work\\app' } as Project;
 
@@ -219,6 +235,47 @@ describe('RunDetails jobs', () => {
     expect(within(jobs).getByRole('button', { name: /^deploy/ })).toBeInTheDocument();
     expect(within(jobs).getByRole('button', { name: /^lint/ })).toBeInTheDocument();
     expect(screen.queryByTestId('run-jobs-loading')).not.toBeInTheDocument();
+  });
+
+  it('opens the failed step on its log and fixes it with the run it belongs to', async () => {
+    const { user } = renderWithProviders(
+      <RunDetails project={project} repo="acme/app" workflow={workflow} run={FAILED_RUN} />,
+      {
+        bridge: {
+          'pipelines.runDetails': runDetails,
+          'pipelines.runAnnotations': runAnnotations,
+          'pipelines.runError': runError,
+          'pipelines.jobLog': async () => ({
+            ok: true,
+            steps: [
+              {
+                number: 1,
+                lines: [{ text: 'deploy refused: 401', kind: 'error' }],
+                errors: 1,
+                warnings: 0,
+              },
+            ],
+          }),
+        },
+      },
+    );
+
+    const log = await screen.findByRole('region', { name: 'Run deploy log' });
+    expect(await within(log).findByText('deploy refused: 401')).toBeInTheDocument();
+    await user.click(within(log).getByRole('button', { name: 'Fix with AI' }));
+
+    expect(JSON.parse(screen.getByRole('dialog', { name: 'Fix step' }).textContent ?? '')).toEqual({
+      project: 'p1',
+      repo: 'acme/app',
+      jobId: 11,
+      jobName: 'deploy',
+      stepNumber: 1,
+      stepName: 'Run deploy',
+      workflowName: 'CD',
+      displayTitle: 'fix(desktop): stop click-swallow timer',
+      runNumber: 7,
+      headBranch: 'master',
+    });
   });
 
   it('asks for the jobs of this run only', async () => {

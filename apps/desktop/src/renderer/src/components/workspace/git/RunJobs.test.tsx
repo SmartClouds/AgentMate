@@ -1,9 +1,32 @@
-import type { GithubRunJob, GithubRunStep } from '@shared/apiTypes';
+import type { Project } from '@runova/core';
+import type {
+  GithubJobLogInput,
+  GithubLogLine,
+  GithubRunJob,
+  GithubRunStep,
+  GithubStepLog,
+} from '@shared/apiTypes';
 import { screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
-import { RunJobs, summarizeJobs } from './RunJobs';
+
+const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
+vi.mock('sonner', () => ({ toast }));
+vi.mock('./FixStepDialog', () => ({
+  FixStepDialog: ({
+    open,
+    target,
+    failed,
+  }: {
+    open: boolean;
+    target: { stepName: string };
+    failed: boolean;
+  }) =>
+    open ? <div role="dialog">{`fix ${target.stepName}${failed ? ' (failed)' : ''}`}</div> : null,
+}));
+
+const { RunJobs, summarizeJobs } = await import('./RunJobs');
 
 const NOW = Date.parse('2026-03-15T09:10:00Z');
 const openExternal = vi.fn();
@@ -60,13 +83,15 @@ function renderJobs(jobs: GithubRunJob[]) {
   });
 }
 
+/** Steps are buttons too, so a job's toggle is matched by the name its label starts with. */
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-/** The button that folds a job. Its name starts with the outcome, unlike the "Open ... on GitHub" link. */
+/** The button that folds a job. Its name starts with the job's own name, then its outcome. */
 function toggle(name: string): HTMLElement {
-  return screen.getByRole('button', { name: new RegExp(`^(?!Open ).*\\b${name}\\b`) });
+  return screen.getByRole('button', { name: new RegExp(`^${name}, `) });
 }
 
 describe('RunJobs', () => {
@@ -142,7 +167,7 @@ describe('RunJobs', () => {
     renderJobs([passedA, queued, passedB, running, lateFailure, timedOut]);
 
     const order = screen
-      .getAllByRole('button', { name: /^(?!Open ).*, / })
+      .getAllByRole('button', { name: /^(?!Open |Step ).*, / })
       .map((button) => button.getAttribute('aria-label')?.split(',')[0]);
     expect(order).toEqual([
       'late-failure',
@@ -263,5 +288,288 @@ describe('summarizeJobs', () => {
     const skipped = job({ id: 6, name: 's', conclusion: 'skipped' });
     const cancelled = job({ id: 7, name: 'c', conclusion: 'cancelled' });
     expect(summarizeJobs([skipped, cancelled])).toBe('1 cancelled · 1 skipped');
+  });
+});
+
+describe('RunJobs step logs', () => {
+  const project = { id: 'p1', name: 'App', folderPath: 'C:\\work\\app' } as Project;
+  const RUN = { workflowName: 'CI', displayTitle: 'Add login', runNumber: 7, headBranch: 'main' };
+
+  function lines(...items: [GithubLogLine['kind'], string][]): GithubLogLine[] {
+    return items.map(([kind, text]) => ({ kind, text }));
+  }
+
+  function stepLog(number: number, items: GithubLogLine[]): GithubStepLog {
+    return {
+      number,
+      lines: items,
+      errors: items.filter((line) => line.kind === 'error').length,
+      warnings: items.filter((line) => line.kind === 'warning').length,
+    };
+  }
+
+  /** The logs GitHub would hand back, per job. */
+  const LOGS: Record<number, GithubStepLog[]> = {
+    1: [
+      stepLog(1, lines(['plain', 'Current runner version: 2.320.0'])),
+      stepLog(
+        2,
+        lines(
+          ['group', 'Run pnpm build'],
+          ['warning', 'Unused variable x'],
+          ['warning', 'Unused variable y'],
+          ['plain', 'built in 3s'],
+        ),
+      ),
+    ],
+    2: [
+      stepLog(1, []),
+      stepLog(
+        2,
+        lines(
+          ['group', 'Run pnpm test'],
+          ['command', '/usr/bin/pnpm test'],
+          ['plain', 'login.test.ts'],
+          ['error', 'expected 200, got 500'],
+        ),
+      ),
+      stepLog(3, []),
+    ],
+  };
+
+  function renderLogs(
+    jobs: GithubRunJob[],
+    {
+      withProject = true,
+      jobLog = async (input: GithubJobLogInput) => ({ ok: true, steps: LOGS[input.jobId] ?? [] }),
+    }: { withProject?: boolean; jobLog?: (input: GithubJobLogInput) => Promise<unknown> } = {},
+  ) {
+    return renderWithProviders(
+      <RunJobs
+        jobs={jobs}
+        now={NOW}
+        repo="acme/app"
+        project={withProject ? project : undefined}
+        run={RUN}
+      />,
+      { bridge: { 'shell.openExternal': openExternal, 'pipelines.jobLog': jobLog } },
+    );
+  }
+
+  function stepButton(name: string): HTMLElement {
+    return screen.getByRole('button', { name: new RegExp(`^Step \\d+: ${name}, `) });
+  }
+
+  function logOf(name: string): HTMLElement {
+    return screen.getByRole('region', { name: `${name} log` });
+  }
+
+  it('turns each step that ran into a disclosure, and leaves skipped or queued ones plain', () => {
+    renderLogs([FAILED]);
+
+    expect(stepButton('Set up job')).toHaveAttribute('aria-expanded', 'false');
+    expect(stepButton('Run tests')).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.queryByRole('button', { name: /Upload report/ })).not.toBeInTheDocument();
+  });
+
+  it('opens the failed step on its log, with the error line marked', async () => {
+    renderLogs([FAILED]);
+
+    const log = logOf('Run tests');
+    const error = await within(log).findByText('expected 200, got 500');
+    expect(error.closest('[data-kind]')).toHaveAttribute('data-kind', 'error');
+    expect(within(log).getByText('Run pnpm test').closest('[data-kind]')).toHaveAttribute(
+      'data-kind',
+      'group',
+    );
+    expect(within(log).getByText('1 error')).toBeInTheDocument();
+  });
+
+  it('reads the job log once and shows every step from it', async () => {
+    const { user, bridge } = renderLogs([FAILED]);
+
+    await within(logOf('Run tests')).findByText('expected 200, got 500');
+    await user.click(stepButton('Set up job'));
+
+    expect(
+      await within(logOf('Set up job')).findByText('This step printed nothing.'),
+    ).toBeVisible();
+    expect(bridge.$fn('pipelines.jobLog')).toHaveBeenCalledTimes(1);
+    expect(bridge.$fn('pipelines.jobLog')).toHaveBeenCalledWith({
+      repo: 'acme/app',
+      jobId: 2,
+      steps: FAILED.steps.map(({ number, conclusion, startedAt, completedAt }) => ({
+        number,
+        conclusion,
+        startedAt,
+        completedAt,
+      })),
+    });
+  });
+
+  it('folds a step log away again', async () => {
+    const { user } = renderLogs([FAILED]);
+
+    await user.click(stepButton('Run tests'));
+
+    expect(stepButton('Run tests')).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('region', { name: 'Run tests log' })).not.toBeInTheDocument();
+  });
+
+  it('does not read the log of a job that stays folded', () => {
+    const { bridge } = renderLogs([PASSED, FAILED]);
+    expect(bridge.$fn('pipelines.jobLog')).not.toHaveBeenCalledWith(
+      expect.objectContaining({ jobId: 1 }),
+    );
+  });
+
+  it('copies a step log as plain text', async () => {
+    const { user } = renderLogs([FAILED]);
+    const log = logOf('Run tests');
+    await within(log).findByText('expected 200, got 500');
+
+    await user.click(within(log).getByRole('button', { name: 'Copy Run tests log' }));
+
+    expect(await navigator.clipboard.readText()).toBe(
+      'Run pnpm test\n/usr/bin/pnpm test\nlogin.test.ts\nexpected 200, got 500',
+    );
+    expect(toast.success).toHaveBeenCalledWith('Run tests log copied.');
+  });
+
+  it('offers Fix with AI on a failed step and opens the fix for it', async () => {
+    const { user } = renderLogs([FAILED]);
+    const log = logOf('Run tests');
+    await within(log).findByText('expected 200, got 500');
+
+    await user.click(within(log).getByRole('button', { name: 'Fix with AI' }));
+
+    expect(screen.getByRole('dialog')).toHaveTextContent('fix Run tests (failed)');
+  });
+
+  it('counts warnings on the step row and offers to fix them', async () => {
+    const { user } = renderLogs([PASSED]);
+
+    // The lone job starts open, so its log is read and the counts show before any step is opened.
+    expect(await within(stepButton('Run build')).findByLabelText('2 warnings')).toBeVisible();
+    await user.click(stepButton('Run build'));
+    const log = logOf('Run build');
+    expect(within(log).getByText('2 warnings')).toBeInTheDocument();
+    expect(within(log).getByText('Unused variable x').closest('[data-kind]')).toHaveAttribute(
+      'data-kind',
+      'warning',
+    );
+
+    await user.click(within(log).getByRole('button', { name: 'Fix with AI' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('fix Run build');
+  });
+
+  it('has nothing to fix on a clean step', async () => {
+    const { user } = renderLogs([PASSED]);
+    await user.click(stepButton('Set up job'));
+    const log = logOf('Set up job');
+    await within(log).findByText('Current runner version: 2.320.0');
+    expect(within(log).queryByRole('button', { name: 'Fix with AI' })).not.toBeInTheDocument();
+  });
+
+  it('leaves Fix with AI out when there is no project to fix it in', async () => {
+    renderLogs([FAILED], { withProject: false });
+    const log = logOf('Run tests');
+    await within(log).findByText('expected 200, got 500');
+    expect(within(log).queryByRole('button', { name: 'Fix with AI' })).not.toBeInTheDocument();
+    expect(within(log).getByRole('button', { name: 'Copy Run tests log' })).toBeInTheDocument();
+  });
+
+  it('opens the step itself on GitHub', async () => {
+    const { user } = renderLogs([FAILED]);
+    await user.click(
+      within(logOf('Run tests')).getByRole('button', { name: 'Open Run tests on GitHub' }),
+    );
+    expect(openExternal).toHaveBeenCalledWith(`${FAILED.htmlUrl}#step:2:1`);
+  });
+
+  it('waits for a running job to finish, pointing at the live log on GitHub instead', async () => {
+    const running = job({
+      id: 3,
+      name: 'deploy',
+      status: 'in_progress',
+      conclusion: null,
+      completedAt: null,
+      steps: [
+        step({
+          number: 1,
+          name: 'Deploy',
+          status: 'in_progress',
+          conclusion: null,
+          completedAt: null,
+        }),
+      ],
+    });
+    const jobLog = vi.fn();
+    const { user } = renderLogs([running], { jobLog });
+
+    await user.click(stepButton('Deploy'));
+
+    const log = logOf('Deploy');
+    expect(within(log).getByText('The log is ready once the job finishes.')).toBeInTheDocument();
+    await user.click(within(log).getByRole('button', { name: 'Watch it live on GitHub' }));
+    expect(openExternal).toHaveBeenCalledWith(`${running.htmlUrl}#step:1:1`);
+    expect(jobLog).not.toHaveBeenCalled();
+  });
+
+  it('says when the log could not be read, and tries again on Retry', async () => {
+    const jobLog = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, error: 'HTTP 410: Gone' })
+      .mockResolvedValue({ ok: true, steps: LOGS[2] });
+    const { user } = renderLogs([FAILED], { jobLog });
+
+    const log = logOf('Run tests');
+    expect(await within(log).findByText('Could not load this log.')).toBeInTheDocument();
+    await user.click(within(log).getByRole('button', { name: 'Retry' }));
+
+    expect(await within(logOf('Run tests')).findByText('expected 200, got 500')).toBeVisible();
+    expect(jobLog).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps an opened step open when the jobs refresh', async () => {
+    function Harness(): React.JSX.Element {
+      const [jobs, setJobs] = useState([FAILED]);
+      return (
+        <>
+          <button type="button" onClick={() => setJobs([{ ...FAILED }])}>
+            refresh
+          </button>
+          <RunJobs jobs={jobs} now={NOW} repo="acme/app" project={project} run={RUN} />
+        </>
+      );
+    }
+    const { user } = renderWithProviders(<Harness />, {
+      bridge: {
+        'pipelines.jobLog': async (input: GithubJobLogInput) => ({
+          ok: true,
+          steps: LOGS[input.jobId],
+        }),
+      },
+    });
+
+    await user.click(stepButton('Set up job'));
+    await user.click(screen.getByRole('button', { name: 'refresh' }));
+
+    expect(stepButton('Set up job')).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('keeps steps as plain rows when it does not know the repo to read logs from', () => {
+    renderJobs([FAILED]);
+    expect(screen.queryByRole('button', { name: /^Step / })).not.toBeInTheDocument();
+  });
+
+  it('jumps to the first error from its count and highlights it', async () => {
+    const { user } = renderLogs([FAILED]);
+    const log = logOf('Run tests');
+    const error = await within(log).findByText('expected 200, got 500');
+
+    await user.click(within(log).getByRole('button', { name: '1 error' }));
+
+    expect(error.closest('[data-kind]')).toHaveAttribute('data-current', 'true');
   });
 });

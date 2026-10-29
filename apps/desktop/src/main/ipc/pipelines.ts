@@ -5,6 +5,8 @@ import type {
   GithubActionsActivity,
   GithubActionsRunErrorInput,
   GithubActionsRunErrorResult,
+  GithubJobLogInput,
+  GithubJobLogResult,
   GithubPipelineActionResult,
   GithubRunAnnotationsInput,
   GithubRunAnnotationsResult,
@@ -24,6 +26,7 @@ import {
   cancelWorkflowRun,
   dispatchWorkflow,
   fetchDashboardActionsActivity,
+  fetchJobLog,
   fetchRunAnnotations,
   fetchRunDetails,
   fetchRunFailureText,
@@ -89,6 +92,13 @@ export function registerPipelineHandlers(): void {
     IPC.pipelines.runDetails,
     (_event, input: GithubRunDetailsInput): Promise<GithubRunDetailsResult> => {
       return fetchRunDetails(input);
+    },
+  );
+
+  ipcMain.handle(
+    IPC.pipelines.jobLog,
+    (_event, input: GithubJobLogInput): Promise<GithubJobLogResult> => {
+      return fetchJobLog(input);
     },
   );
 

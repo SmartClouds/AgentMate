@@ -88,6 +88,7 @@ export default function DockerPage(): React.JSX.Element {
             label="Image source"
             value={view}
             onChange={openView}
+            className="ml-auto"
             items={[
               { value: 'images', label: 'On this machine', icon: <Monitor /> },
               { value: 'hub', label: 'Docker Hub', icon: <Docker /> },

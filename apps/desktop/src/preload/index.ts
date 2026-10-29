@@ -183,6 +183,8 @@ import type {
   GithubRunAnnotationsInput,
   GithubRunAnnotationsResult,
   GithubRunCancelRequest,
+  GithubJobLogInput,
+  GithubJobLogResult,
   GithubRunDetailsInput,
   GithubRunDetailsResult,
   GithubRunnersInput,
@@ -1045,8 +1047,6 @@ const docker = {
   restart: (id: string): Promise<DockerActionResult> => ipcRenderer.invoke(IPC.docker.restart, id),
   remove: (id: string, options: DockerRemoveOptions): Promise<DockerActionResult> =>
     ipcRenderer.invoke(IPC.docker.remove, id, options),
-};
-
   listImages: (): Promise<DockerImage[]> => ipcRenderer.invoke(IPC.docker.listImages),
   removeImages: (targets: DockerImageTarget[]): Promise<DockerImageRemoveResult> =>
     ipcRenderer.invoke(IPC.docker.removeImages, targets),
@@ -1060,6 +1060,8 @@ const dockerHub = {
     ipcRenderer.invoke(IPC.dockerHub.tags, namespace, name),
   pull: (input: DockerHubPullInput): Promise<DockerActionResult> =>
     ipcRenderer.invoke(IPC.dockerHub.pull, input),
+};
+
 const resourceActivity = {
   snapshot: (options?: { fresh?: boolean }): Promise<ResourceActivitySnapshot> =>
     ipcRenderer.invoke(IPC.resourceActivity.snapshot, options),
@@ -1773,6 +1775,9 @@ const pipelines = {
   /** The jobs of one run with each step's status and timing. */
   runDetails: (input: GithubRunDetailsInput): Promise<GithubRunDetailsResult> =>
     ipcRenderer.invoke(IPC.pipelines.runDetails, input),
+  /** One finished job's log, split by step, with each line's kind. */
+  jobLog: (input: GithubJobLogInput): Promise<GithubJobLogResult> =>
+    ipcRenderer.invoke(IPC.pipelines.jobLog, input),
   /** Branches and tags a manual run can be started from. */
   refs: (repo: string): Promise<GithubWorkflowRefsResult> =>
     ipcRenderer.invoke(IPC.pipelines.refs, repo),
@@ -2771,12 +2776,12 @@ const runovaApi = {
   devSetup,
   android,
   docker,
+  dockerHub,
   resourceActivity,
   fs,
   explorer,
   workspaceSearch,
   settings,
-  dockerHub,
   templates,
   activity,
   shell: shellApi,

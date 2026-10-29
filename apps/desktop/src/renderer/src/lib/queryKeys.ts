@@ -144,6 +144,10 @@ export const queryKeys = {
   /** `live` is part of the key so a run that just finished is read once more, not left half done. */
   runDetails: (repo: string, runId: number, attempt: number, live: boolean) =>
     ['run-details', repo, runId, attempt, live] as const,
+  /** Every job log, for the Pipelines refresh. */
+  jobLogAll: ['job-log'] as const,
+  /** One finished job's log, split by step. */
+  jobLog: (repo: string, jobId: number) => ['job-log', repo, jobId] as const,
   pipelineStatus: (projectId: string) => ['pipeline-status', projectId] as const,
   /** Test frameworks and tests found in a project, for the workspace Tests panel. */
   testsDiscovery: (projectId: string) => ['tests-discovery', projectId] as const,
@@ -181,16 +185,16 @@ export const queryKeys = {
   dockerAvailability: ['docker-availability'] as const,
   dockerList: ['docker-list'] as const,
   dockerListForProject: (projectId: string) => ['docker-list', 'project', projectId] as const,
-  /** The Dashboard's Docker and emulator usage chart and idle list, read from the main process. */
-  resourceActivity: ['resource-activity'] as const,
-  /** Saved servers with the server core each one runs, for the Deploy rail. */
-  deployServers: ['deploy', 'servers'] as const,
   dockerImages: ['docker-images'] as const,
   /** The Docker page's Hub view: whether a Docker Hub sign-in is saved, then what it can see. */
   dockerHubStatus: ['docker-hub', 'status'] as const,
   dockerHubRepositories: ['docker-hub', 'repositories'] as const,
   dockerHubTags: (namespace: string, name: string) =>
     ['docker-hub', 'tags', namespace, name] as const,
+  /** The Dashboard's Docker and emulator usage chart and idle list, read from the main process. */
+  resourceActivity: ['resource-activity'] as const,
+  /** Saved servers with the server core each one runs, for the Deploy rail. */
+  deployServers: ['deploy', 'servers'] as const,
   /** A core's live health, shared by its rail entry and its health card. */
   deployHealth: (serverId: string) => ['deploy', 'health', serverId] as const,
   /** The install wizard's read-only look at a server. */

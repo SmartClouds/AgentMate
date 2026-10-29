@@ -1,5 +1,6 @@
 import type { Project } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { PipelineConclusion } from '../../shared/apiTypes';
 
 /**
  * Everything here talks to GitHub by spawning `gh`, so the process boundary is the only thing
@@ -1478,5 +1479,268 @@ describe('setProjectMutedActions', () => {
     await expect(actions.setProjectMutedActions('ghost', [])).rejects.toThrow(
       'Project ghost not found',
     );
+  });
+});
+
+/** A job log line as GitHub prints it: a 7-digit fraction timestamp, then the text. */
+function logLine(second: string, text: string): string {
+  return `2026-03-15T09:00:${second}.1234567Z ${text}`;
+}
+
+function logStep(
+  number: number,
+  startedAt: string | null,
+  completedAt: string | null,
+  conclusion: PipelineConclusion = 'success',
+) {
+  return {
+    number,
+    conclusion,
+    startedAt: startedAt && `2026-03-15T09:00:${startedAt}Z`,
+    completedAt: completedAt && `2026-03-15T09:00:${completedAt}Z`,
+  };
+}
+
+function texts(lines: { text: string }[]): string[] {
+  return lines.map((line) => line.text);
+}
+
+describe('splitJobLog', () => {
+  it('gives each step the lines printed while it ran, without the timestamps', () => {
+    const raw = [
+      logLine('01', 'Current runner version: 2.320.0'),
+      logLine('02', 'Prepare workflow directory'),
+      logLine('03', '##[group]Run actions/checkout@v4'),
+      logLine('04', 'Syncing repository: acme/demo'),
+      logLine('06', '##[group]Run pnpm test'),
+      logLine('07', '12 tests passed'),
+    ].join('\n');
+
+    const steps = actions.splitJobLog(raw, [
+      logStep(1, '01', '02'),
+      logStep(2, '03', '05'),
+      logStep(3, '06', '08'),
+    ]);
+
+    expect(steps.map((step) => [step.number, texts(step.lines)])).toEqual([
+      [1, ['Current runner version: 2.320.0', 'Prepare workflow directory']],
+      [2, ['Run actions/checkout@v4', 'Syncing repository: acme/demo']],
+      [3, ['Run pnpm test', '12 tests passed']],
+    ]);
+  });
+
+  it('uses the "Run" header to split two steps that share a second', () => {
+    // Step times are whole seconds, so a quick step ends in the very second the next one starts.
+    const raw = [
+      logLine('03', '##[group]Run ./setup.sh'),
+      logLine('03', 'setting up'),
+      logLine('03', '##[group]Run ./build.sh'),
+      logLine('03', 'building'),
+      logLine('04', '##[group]Run ./lint.sh'),
+    ].join('\n');
+
+    const steps = actions.splitJobLog(raw, [
+      logStep(1, '03', '03'),
+      logStep(2, '03', '03'),
+      logStep(3, '04', '05'),
+    ]);
+
+    expect(steps.map((step) => texts(step.lines))).toEqual([
+      ['Run ./setup.sh', 'setting up'],
+      ['Run ./build.sh', 'building'],
+      ['Run ./lint.sh'],
+    ]);
+  });
+
+  it('gives post steps their own lines from the "Post job cleanup." header', () => {
+    const raw = [
+      logLine('05', '##[group]Run pnpm test'),
+      logLine('05', 'done'),
+      logLine('05', 'Post job cleanup.'),
+      logLine('05', 'Saving cache'),
+      logLine('06', 'Cleaning up orphan processes'),
+    ].join('\n');
+
+    const steps = actions.splitJobLog(raw, [
+      logStep(4, '05', '05'),
+      logStep(29, '05', '05'),
+      logStep(33, '06', '06'),
+    ]);
+
+    expect(steps.map((step) => [step.number, texts(step.lines)])).toEqual([
+      [4, ['Run pnpm test', 'done']],
+      [29, ['Post job cleanup.', 'Saving cache']],
+      [33, ['Cleaning up orphan processes']],
+    ]);
+  });
+
+  it('passes over a step that printed nothing on its way to the step a header opens', () => {
+    const raw = [logLine('01', 'checking out'), logLine('03', '##[group]Run make')].join('\n');
+
+    const steps = actions.splitJobLog(raw, [
+      logStep(1, '01', '01'),
+      logStep(2, '02', '02'),
+      logStep(3, '03', '04'),
+    ]);
+
+    expect(steps.map((step) => texts(step.lines))).toEqual([['checking out'], [], ['Run make']]);
+  });
+
+  it('keeps a line with no timestamp with the step of the line before it', () => {
+    const raw = [
+      logLine('03', '##[group]Run make'),
+      'continued output',
+      logLine('06', 'next'),
+    ].join('\r\n');
+
+    const steps = actions.splitJobLog(raw, [logStep(1, '03', '04'), logStep(2, '05', '06')]);
+
+    expect(steps.map((step) => texts(step.lines))).toEqual([
+      ['Run make', 'continued output'],
+      ['next'],
+    ]);
+  });
+
+  it('skips steps that never ran and leaves them empty', () => {
+    const raw = [logLine('01', 'one'), logLine('09', 'three')].join('\n');
+
+    const steps = actions.splitJobLog(raw, [
+      logStep(1, '01', '02'),
+      logStep(2, '03', '03', 'skipped'),
+      logStep(3, '09', '10'),
+      logStep(4, null, null, null),
+    ]);
+
+    expect(steps.map((step) => [step.number, texts(step.lines)])).toEqual([
+      [1, ['one']],
+      [2, []],
+      [3, ['three']],
+      [4, []],
+    ]);
+  });
+
+  it('reads the workflow commands into line kinds and counts errors and warnings', () => {
+    const esc = String.fromCharCode(27);
+    const raw = [
+      `﻿${logLine('01', '##[group]Run pnpm lint')}`,
+      logLine('01', '[command]/usr/bin/pnpm lint'),
+      logLine('01', '##[warning]Unused variable x'),
+      logLine('01', '##[warning]Unused variable y'),
+      logLine('01', '##[notice]Lint took 3s'),
+      logLine('01', '##[debug]cache miss'),
+      logLine('01', '##[endgroup]'),
+      logLine('01', '##[error]Process completed with exit code 1.'),
+      logLine('01', `${esc}[31mred text${esc}[0m`),
+    ].join('\n');
+
+    const [step] = actions.splitJobLog(raw, [logStep(1, '01', '02', 'failure')]);
+
+    expect(step).toEqual({
+      number: 1,
+      errors: 1,
+      warnings: 2,
+      lines: [
+        { text: 'Run pnpm lint', kind: 'group' },
+        { text: '/usr/bin/pnpm lint', kind: 'command' },
+        { text: 'Unused variable x', kind: 'warning' },
+        { text: 'Unused variable y', kind: 'warning' },
+        { text: 'Lint took 3s', kind: 'notice' },
+        { text: 'cache miss', kind: 'plain' },
+        { text: 'Process completed with exit code 1.', kind: 'error' },
+        { text: 'red text', kind: 'plain' },
+      ],
+    });
+  });
+
+  it('puts lines from before the first step started into the first step', () => {
+    const raw = [logLine('00', 'Requested labels: ubuntu-latest'), logLine('01', 'ready')].join(
+      '\n',
+    );
+    const [first] = actions.splitJobLog(raw, [logStep(1, '01', '02')]);
+    expect(texts(first.lines)).toEqual(['Requested labels: ubuntu-latest', 'ready']);
+  });
+
+  it('drops the trailing empty line at the end of the file', () => {
+    const [step] = actions.splitJobLog(`${logLine('01', 'only')}\n`, [logStep(1, '01', '02')]);
+    expect(texts(step.lines)).toEqual(['only']);
+  });
+});
+
+describe('fetchJobLog', () => {
+  const LOG_PATH = 'repos/acme/demo/actions/jobs/11/logs';
+  const STEPS = [logStep(1, '01', '02'), logStep(2, '03', '05', 'failure')];
+  const RAW = [
+    logLine('01', 'Current runner version: 2.320.0'),
+    logLine('03', '##[group]Run pnpm test'),
+    logLine('04', '##[error]1 test failed'),
+  ].join('\n');
+
+  it('reads the raw job log through gh api and splits it by step', async () => {
+    scenario.apiRaw[LOG_PATH] = RAW;
+
+    const result = await actions.fetchJobLog({ repo: 'acme/demo', jobId: 11, steps: STEPS });
+
+    expect(ghCalls()).toEqual([['api', '-H', 'Accept: application/vnd.github+json', LOG_PATH]]);
+    expect(result).toEqual({
+      ok: true,
+      steps: [
+        {
+          number: 1,
+          errors: 0,
+          warnings: 0,
+          lines: [{ text: 'Current runner version: 2.320.0', kind: 'plain' }],
+        },
+        {
+          number: 2,
+          errors: 1,
+          warnings: 0,
+          lines: [
+            { text: 'Run pnpm test', kind: 'group' },
+            { text: '1 test failed', kind: 'error' },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('keeps a finished job log in memory, since it never changes', async () => {
+    scenario.apiRaw[LOG_PATH] = RAW;
+
+    await actions.fetchJobLog({ repo: 'acme/demo', jobId: 11, steps: STEPS });
+    const before = proc.calls.length;
+    const again = await actions.fetchJobLog({ repo: 'acme/demo', jobId: 11, steps: STEPS });
+
+    expect(proc.calls.length).toBe(before);
+    expect(again.ok).toBe(true);
+  });
+
+  it('refuses a job it cannot identify', async () => {
+    await expect(actions.fetchJobLog({ repo: 'acme', jobId: 11, steps: [] })).resolves.toEqual({
+      ok: false,
+      error: 'That job could not be identified.',
+    });
+    await expect(actions.fetchJobLog({ repo: 'acme/demo', jobId: -1, steps: [] })).resolves.toEqual(
+      { ok: false, error: 'That job could not be identified.' },
+    );
+    expect(ghCalls()).toEqual([]);
+  });
+
+  it('reports a GitHub failure instead of throwing', async () => {
+    scenario.apiErrors[LOG_PATH] = 'HTTP 404: Not Found';
+
+    await expect(
+      actions.fetchJobLog({ repo: 'acme/demo', jobId: 11, steps: STEPS }),
+    ).resolves.toEqual({ ok: false, error: 'HTTP 404: Not Found' });
+  });
+
+  it('says to install the CLI when gh cannot be started at all', async () => {
+    proc.reply = async () => {
+      const error = new Error('spawn gh ENOENT') as Error & { code: string };
+      error.code = 'ENOENT';
+      throw error;
+    };
+    await expect(
+      actions.fetchJobLog({ repo: 'acme/demo', jobId: 11, steps: STEPS }),
+    ).resolves.toEqual({ ok: false, error: 'Install the GitHub CLI and sign in to see this log.' });
   });
 });

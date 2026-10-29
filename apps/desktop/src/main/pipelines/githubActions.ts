@@ -8,6 +8,10 @@ import type {
   GithubActionsHistoryItem,
   GithubActionsRunErrorInput,
   GithubActionsRunErrorResult,
+  GithubJobLogInput,
+  GithubJobLogResult,
+  GithubLogLine,
+  GithubLogLineKind,
   GithubPipelineActionResult,
   GithubRunAnnotation,
   GithubRunAnnotationLevel,
@@ -17,6 +21,7 @@ import type {
   GithubRunDetailsInput,
   GithubRunDetailsResult,
   GithubRunJob,
+  GithubStepLog,
   GithubWorkflowDispatchRequest,
   GithubWorkflowInfo,
   GithubWorkflowRefsResult,
@@ -728,6 +733,132 @@ export async function fetchRunDetails(
     }
     return { ok: false, error: ghErrorMessage(error) };
   }
+}
+
+const LOG_TIMESTAMP = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.\d+)?Z ?/;
+const LOG_COMMANDS: [prefix: string, kind: GithubLogLineKind][] = [
+  ['##[error]', 'error'],
+  ['##[warning]', 'warning'],
+  ['##[notice]', 'notice'],
+  ['##[group]', 'group'],
+  ['##[section]', 'group'],
+  ['##[debug]', 'plain'],
+  ['[command]', 'command'],
+];
+
+/** Whole seconds, since that is all the precision GitHub gives a step's start and end. */
+function toSecond(iso: string | null): number | null {
+  if (!iso) return null;
+  const ms = Date.parse(iso);
+  return Number.isNaN(ms) ? null : Math.floor(ms / 1000);
+}
+
+/** The first line of a step: `run` and `uses` steps open a "Run ..." group, post steps say so. */
+function isStepHeader(text: string): boolean {
+  return text.startsWith('##[group]Run ') || text === 'Post job cleanup.';
+}
+
+function toLogLine(text: string): GithubLogLine | null {
+  if (text.startsWith('##[endgroup]')) return null;
+  for (const [prefix, kind] of LOG_COMMANDS) {
+    if (text.startsWith(prefix)) return { text: text.slice(prefix.length), kind };
+  }
+  return { text, kind: 'plain' };
+}
+
+/**
+ * Cuts a job's log into its steps. GitHub only serves the log of a whole job, and its lines carry
+ * nothing but a timestamp, so each line goes to the step that was running at that time. Step
+ * times are whole seconds, which leaves quick steps sharing a second; there the "Run ..." header a
+ * step opens with marks where one ends and the next begins.
+ */
+export function splitJobLog(raw: string, steps: GithubJobLogInput['steps']): GithubStepLog[] {
+  const logs: GithubStepLog[] = steps.map((step) => ({
+    number: step.number,
+    lines: [],
+    errors: 0,
+    warnings: 0,
+  }));
+  const ran = steps.flatMap((step, index) => {
+    const start = toSecond(step.startedAt);
+    if (start === null || step.conclusion === 'skipped') return [];
+    return [{ log: logs[index], start, end: toSecond(step.completedAt) ?? Infinity }];
+  });
+  if (ran.length === 0) return logs;
+
+  let cursor = 0;
+  const rows = stripAnsi(raw.replace(/^﻿/, '')).split(/\r?\n/);
+  if (rows.at(-1) === '') rows.pop();
+  for (const row of rows) {
+    const stamp = LOG_TIMESTAMP.exec(row);
+    const text = stamp ? row.slice(stamp[0].length) : row;
+    if (stamp) {
+      const second = Math.floor(Date.parse(`${stamp[1]}Z`) / 1000);
+      const header = isStepHeader(text);
+      while (cursor + 1 < ran.length) {
+        const current = ran[cursor];
+        if (second < ran[cursor + 1].start) break;
+        if (second > current.end) {
+          cursor += 1;
+          continue;
+        }
+        // A header opens exactly one step, and only after the current one has printed something,
+        // so it never moves past the step it belongs to.
+        if (header && current.log.lines.length > 0) cursor += 1;
+        break;
+      }
+    }
+    const line = toLogLine(text);
+    if (!line) continue;
+    const log = ran[cursor].log;
+    log.lines.push(line);
+    if (line.kind === 'error') log.errors += 1;
+    if (line.kind === 'warning') log.warnings += 1;
+  }
+  return logs;
+}
+
+/** A finished job's log never changes, but logs are big, so only a few are kept. */
+const JOB_LOG_CACHE_CAP = 20;
+const jobLogCache = new Map<string, string>();
+
+/** One job's log, split by step, for the step logs in the Pipelines details. */
+export async function fetchJobLog(input: GithubJobLogInput): Promise<GithubJobLogResult> {
+  const parsed = parseOwnerRepo(input.repo);
+  const jobId = Number(input.jobId);
+  if (!parsed || !Number.isInteger(jobId) || jobId <= 0) {
+    return { ok: false, error: 'That job could not be identified.' };
+  }
+  const steps = Array.isArray(input.steps) ? input.steps : [];
+
+  const cacheKey = `${parsed.owner}/${parsed.repo}#job${jobId}`;
+  let raw = jobLogCache.get(cacheKey);
+  if (raw === undefined) {
+    try {
+      // Not `ghApi`: the log is plain text, which gh fetches by following GitHub's redirect.
+      const { stdout } = await runGh(
+        [
+          'api',
+          '-H',
+          'Accept: application/vnd.github+json',
+          `repos/${parsed.owner}/${parsed.repo}/actions/jobs/${jobId}/logs`,
+        ],
+        { timeout: 60_000, maxBuffer: 64 * 1024 * 1024, readOnly: true },
+      );
+      raw = stdout;
+    } catch (error) {
+      if ((error as { code?: string }).code === 'ENOENT') {
+        return { ok: false, error: 'Install the GitHub CLI and sign in to see this log.' };
+      }
+      return { ok: false, error: ghErrorMessage(error) };
+    }
+    if (jobLogCache.size >= JOB_LOG_CACHE_CAP) {
+      const oldest = jobLogCache.keys().next().value;
+      if (oldest !== undefined) jobLogCache.delete(oldest);
+    }
+    jobLogCache.set(cacheKey, raw);
+  }
+  return { ok: true, steps: splitJobLog(raw, steps) };
 }
 
 /** A finished run's annotations never change, so they are kept until the cache fills up. */

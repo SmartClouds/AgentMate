@@ -3199,6 +3199,37 @@ export type GithubRunDetailsResult =
     }
   | { ok: false; error: string };
 
+/** The steps go along so the log can be cut up by when each step ran. */
+export interface GithubJobLogInput {
+  repo: string;
+  jobId: number;
+  steps: Pick<GithubRunStep, 'number' | 'conclusion' | 'startedAt' | 'completedAt'>[];
+}
+
+/** What a log line is, read from the workflow command it started with (`##[error]` and so on). */
+export type GithubLogLineKind = 'error' | 'warning' | 'notice' | 'group' | 'command' | 'plain';
+
+export interface GithubLogLine {
+  /** The line without its timestamp or workflow command. */
+  text: string;
+  kind: GithubLogLineKind;
+}
+
+export interface GithubStepLog {
+  number: number;
+  lines: GithubLogLine[];
+  errors: number;
+  warnings: number;
+}
+
+export type GithubJobLogResult =
+  | {
+      ok: true;
+      /** One entry per step asked about, in the same order. Steps that never ran are empty. */
+      steps: GithubStepLog[];
+    }
+  | { ok: false; error: string };
+
 export interface GithubActionsActivity {
   ok: boolean;
   cliAvailable: boolean;
@@ -3403,37 +3434,6 @@ export interface DockerRemoveOptions {
   removeImage: boolean;
 }
 
-/* Vault ----------------------------------------------------------------------------------- */
-
-export type VaultState = 'uninitialized' | 'locked' | 'unlocked';
-
-export type VaultLockReason = 'manual' | 'idle' | 'system' | 'quit' | 'reset' | 'restore';
-
-export interface VaultStatus {
-  state: VaultState;
-  /** Milliseconds until another unlock attempt is accepted. */
-  retryAfterMs: number;
-  autoLockMinutes: number;
-  clipboardClearSeconds: number;
-}
-
-export type VaultUnlockResult =
-  | { ok: true }
-  | { ok: false; reason: 'wrong-password' | 'throttled' | 'busy'; retryAfterMs: number };
-
-export interface VaultStateEvent {
-  state: VaultState;
-  reason?: VaultLockReason;
-}
-
-export interface VaultCopyResult {
-  /** When the clipboard will be cleared (epoch ms), or null when clearing is off. */
-  clearsAt: number | null;
-}
-
-export interface VaultClipboardEvent {
-  cleared: boolean;
-}
 /** One image on this machine, with every tag that points at it folded together. */
 export interface DockerImage {
   /** The full "sha256:..." id. */
@@ -3499,6 +3499,37 @@ export interface DockerHubPullInput {
   isPrivate: boolean;
 }
 
+/* Vault ----------------------------------------------------------------------------------- */
+
+export type VaultState = 'uninitialized' | 'locked' | 'unlocked';
+
+export type VaultLockReason = 'manual' | 'idle' | 'system' | 'quit' | 'reset' | 'restore';
+
+export interface VaultStatus {
+  state: VaultState;
+  /** Milliseconds until another unlock attempt is accepted. */
+  retryAfterMs: number;
+  autoLockMinutes: number;
+  clipboardClearSeconds: number;
+}
+
+export type VaultUnlockResult =
+  | { ok: true }
+  | { ok: false; reason: 'wrong-password' | 'throttled' | 'busy'; retryAfterMs: number };
+
+export interface VaultStateEvent {
+  state: VaultState;
+  reason?: VaultLockReason;
+}
+
+export interface VaultCopyResult {
+  /** When the clipboard will be cleared (epoch ms), or null when clearing is off. */
+  clearsAt: number | null;
+}
+
+export interface VaultClipboardEvent {
+  cleared: boolean;
+}
 
 export interface VaultImportSampleRow {
   type: VaultEntryType;

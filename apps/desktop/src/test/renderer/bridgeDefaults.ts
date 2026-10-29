@@ -167,6 +167,7 @@ export function bridgeDefaults(): Record<string, unknown> {
       annotations: [],
       counts: { failure: 0, warning: 0, notice: 0 },
     },
+    'pipelines.jobLog': { ok: true, steps: [] },
     'deploySystem.services': [],
     'deployRegistry.plan': { sendSignIns: false, entries: [] },
     'cloudflareServer.dnsTokens': [],

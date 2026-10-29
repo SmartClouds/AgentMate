@@ -5,15 +5,9 @@ import type {
   GithubWorkflowRunInfo,
 } from '@shared/apiTypes';
 import { useEffect, useState } from 'react';
-import {
-  ChevronRight,
-  CircleX,
-  Copy,
-  ExternalLink,
-  GitBranch,
-  GitCommit,
-} from '@/components/icons';
+import { ChevronRight, Copy, ExternalLink, GitBranch, GitCommit } from '@/components/icons';
 import { SECTION_HEADING } from '@/components/pageKit';
+import { InlineProblem } from '@/components/pipelines/InlineProblem';
 import { copyText, RunAnnotations, useRunAnnotations } from '@/components/pipelines/RunAnnotations';
 import {
   isLiveRun,
@@ -59,42 +53,16 @@ function useNow(active: boolean): number {
   return now;
 }
 
-/** A one-line problem with a reason behind a tooltip and a way to try again. */
-function InlineProblem({
-  message,
-  reason,
-  onRetry,
-}: {
-  message: string;
-  reason: string;
-  onRetry: () => void;
-}): React.JSX.Element {
-  return (
-    <div
-      role="alert"
-      className="flex items-center gap-2 rounded-xl bg-destructive/[0.05] px-3 py-2 text-xs ring-1 ring-inset ring-destructive/15"
-    >
-      <CircleX className="h-3.5 w-3.5 shrink-0 text-destructive" />
-      <span className="min-w-0 flex-1">
-        <SimpleTooltip label={reason} className="max-w-sm" wrapTrigger>
-          <span className="cursor-help underline decoration-dotted underline-offset-4">
-            {message}
-          </span>
-        </SimpleTooltip>
-      </span>
-      <Button type="button" variant="ghost" size="xs" onClick={onRetry}>
-        Retry
-      </Button>
-    </div>
-  );
-}
-
 function JobsSection({
+  project,
   repo,
+  workflow,
   run,
   now,
 }: {
+  project: Project;
   repo: string;
+  workflow: GithubWorkflowInfo;
   run: GithubWorkflowRunInfo;
   now: number;
 }): React.JSX.Element {
@@ -126,7 +94,18 @@ function JobsSection({
           {isLiveRun(run) ? 'GitHub has not started any jobs yet.' : 'No jobs ran for this run.'}
         </p>
       ) : (
-        <RunJobs jobs={jobs} now={now} />
+        <RunJobs
+          jobs={jobs}
+          now={now}
+          repo={repo}
+          project={project}
+          run={{
+            workflowName: workflow.name,
+            displayTitle: run.displayTitle,
+            runNumber: run.runNumber,
+            headBranch: run.headBranch,
+          }}
+        />
       )}
     </section>
   );
@@ -352,7 +331,7 @@ export function RunDetails({
           </div>
         </header>
 
-        <JobsSection repo={repo} run={run} now={now} />
+        <JobsSection project={project} repo={repo} workflow={workflow} run={run} now={now} />
         <AnnotationsSection repo={repo} workflow={workflow} run={run} />
         {tone.outcome === 'failed' ? <FailureOutput input={failureInput} /> : null}
       </div>

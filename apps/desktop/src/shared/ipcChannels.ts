@@ -1069,6 +1069,8 @@ export const IPC = {
     runError: 'pipelines:runError',
     runAnnotations: 'pipelines:runAnnotations',
     runDetails: 'pipelines:runDetails',
+    /** (GithubJobLogInput) -> GithubJobLogResult: one finished job's log, split by step. */
+    jobLog: 'pipelines:jobLog',
     refs: 'pipelines:refs',
     dispatch: 'pipelines:dispatch',
     cancelRun: 'pipelines:cancelRun',
