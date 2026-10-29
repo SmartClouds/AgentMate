@@ -32,6 +32,8 @@ const ACTIONS: ReadonlySet<string> = new Set<StackAction>(['start', 'stop', 'res
 const MAX_RISKS = 500;
 const MAX_RISK_ID = 300;
 const MAX_SERVICES = 200;
+/** Far more files than an environment ever holds. */
+const MAX_ENV_FILES = 100;
 const MAX_PATH = 1024;
 const MAX_NAME = 63;
 
@@ -70,7 +72,7 @@ const serviceNames = (value: unknown) =>
   strings(value, 'services', MAX_SERVICES, (item) => SERVICE_NAME.test(item));
 
 function source(input: Record<string, unknown>): DeployStackSourceInput {
-  const { composePath, environmentId } = input;
+  const { composePath, environmentId, envFileIds } = input;
   if (
     typeof composePath !== 'string' ||
     composePath.length === 0 ||
@@ -78,13 +80,20 @@ function source(input: Record<string, unknown>): DeployStackSourceInput {
   ) {
     throw new Error('Pick a compose file.');
   }
+  const environment =
+    environmentId === null || environmentId === undefined
+      ? null
+      : recordId(environmentId, 'an environment');
+  // Picked files only mean something with an environment; left out, every file applies.
+  const files =
+    environment === null || envFileIds === null || envFileIds === undefined
+      ? null
+      : [...new Set(strings(envFileIds, 'env files', MAX_ENV_FILES, (id) => RECORD_ID.test(id)))];
   return {
     projectId: recordId(input.projectId, 'a project'),
     composePath,
-    environmentId:
-      environmentId === null || environmentId === undefined
-        ? null
-        : recordId(environmentId, 'an environment'),
+    environmentId: environment,
+    ...(files ? { envFileIds: files } : {}),
   };
 }
 

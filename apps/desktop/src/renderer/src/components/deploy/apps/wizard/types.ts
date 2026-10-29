@@ -6,6 +6,8 @@ export interface WizardSource {
   composePath: string;
   environmentId: string | null;
   environmentName: string | null;
+  /** The environment's files that make the .env, in its order; null uses them all. */
+  envFileIds: string[] | null;
   name: string;
 }
 

@@ -46,7 +46,11 @@ const SEVERITY_ORDER: Record<ComposeRiskSeverity, number> = {
 export interface StackSourceDeps {
   project: (projectId: string) => Promise<Project>;
   index: (folder: string) => Promise<ExplorerFileIndex>;
-  environment: (projectId: string, environmentId: string) => Promise<ResolvedProjectEnvironment>;
+  environment: (
+    projectId: string,
+    environmentId: string,
+    fileIds?: readonly string[],
+  ) => Promise<ResolvedProjectEnvironment>;
 }
 
 /** A compose file read from a project, with everything a preview or an upload needs. */
@@ -135,13 +139,20 @@ async function readComposeText(root: string, composePath: string): Promise<strin
 
 export async function readStackSource(
   deps: StackSourceDeps,
-  input: { projectId: string; composePath: string; environmentId: string | null },
+  input: {
+    projectId: string;
+    composePath: string;
+    environmentId: string | null;
+    envFileIds?: string[] | null;
+  },
 ): Promise<ReadStackSource> {
   const project = await deps.project(input.projectId);
   const root = resolve(project.folderPath);
   const composeText = await readComposeText(root, input.composePath);
   const environment = input.environmentId
-    ? await deps.environment(input.projectId, input.environmentId)
+    ? input.envFileIds
+      ? await deps.environment(input.projectId, input.environmentId, input.envFileIds)
+      : await deps.environment(input.projectId, input.environmentId)
     : null;
   const composeDir = dirname(resolve(root, ...input.composePath.split('/')));
   return { project, root, composePath: input.composePath, composeDir, composeText, environment };

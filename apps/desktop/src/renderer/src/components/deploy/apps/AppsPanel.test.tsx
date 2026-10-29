@@ -125,6 +125,73 @@ describe('AppsPanel list', () => {
     expect(await screen.findByRole('heading', { name: 'shop' })).toBeInTheDocument();
   });
 
+  it('deploys another compose file from the edit, starting on Configure with fresh services', async () => {
+    const { user, bridge } = renderApps(
+      {
+        'deployStacks.discover': {
+          projectId: 'proj-1',
+          projectName: 'Shop',
+          files: [
+            { path: 'compose.yaml', services: 2 },
+            { path: 'deploy/docker-compose.prod.yml', services: 3 },
+          ],
+          truncated: false,
+        },
+      },
+      undefined,
+      `/deploy?server=${SERVER.id}&view=apps&app=${STACK_ID}`,
+    );
+    await user.click(
+      await screen.findByRole('button', { name: 'Edit the compose file and env files' }),
+    );
+    const dialog = await screen.findByRole('dialog');
+    await user.click(await within(dialog).findByRole('radio', { name: /docker-compose\.prod/ }));
+    await user.click(within(dialog).getByRole('button', { name: /Continue/ }));
+
+    expect(await screen.findByRole('heading', { name: 'Deploy shop again' })).toBeInTheDocument();
+    expect(screen.getByTestId('where')).toHaveTextContent('new=1');
+    expect(await screen.findByRole('list', { name: 'Services to deploy' })).toBeInTheDocument();
+    // A new compose file starts from the preview's own choice of private services.
+    expect(bridge.$fn('deployStacks.preview')).toHaveBeenNthCalledWith(1, {
+      projectId: 'proj-1',
+      composePath: 'deploy/docker-compose.prod.yml',
+      environmentId: 'env-1',
+    });
+
+    await user.click(screen.getByRole('button', { name: /Back/ }));
+    expect(await screen.findByRole('radio', { name: /docker-compose\.prod/ })).toBeChecked();
+    expect(screen.getByLabelText('App name')).toHaveValue('shop');
+  });
+
+  it('keeps the private services when only the env files change', async () => {
+    const { user, bridge } = renderApps(
+      {},
+      undefined,
+      `/deploy?server=${SERVER.id}&view=apps&app=${STACK_ID}`,
+    );
+    await user.click(
+      await screen.findByRole('button', { name: 'Edit the compose file and env files' }),
+    );
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('combobox', { name: 'Environment' }));
+    await user.click(await screen.findByRole('option', { name: 'Staging' }));
+    await user.click(
+      within(within(dialog).getByRole('list', { name: 'Env files' })).getByRole('checkbox', {
+        name: '.env.local',
+      }),
+    );
+    await user.click(within(dialog).getByRole('button', { name: /Continue/ }));
+
+    expect(await screen.findByRole('list', { name: 'Services to deploy' })).toBeInTheDocument();
+    expect(bridge.$fn('deployStacks.preview')).toHaveBeenNthCalledWith(1, {
+      projectId: 'proj-1',
+      composePath: 'compose.yaml',
+      environmentId: 'env-2',
+      envFileIds: ['s1', 's2'],
+      proxiedServices: ['web'],
+    });
+  });
+
   it('says so when the app to deploy again does not load', async () => {
     renderApps(
       { 'deployStacks.get': () => Promise.reject(new Error('There is no such app.')) },

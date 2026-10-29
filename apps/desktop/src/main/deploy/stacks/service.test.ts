@@ -163,12 +163,16 @@ function harness(
     source: {
       project: async () => ({ id: 'p1', name: 'Shop', folderPath: folder }) as Project,
       index: async (root) => ({ root, files: Object.keys(files), truncated: false }),
-      environment: async () => ({
-        id: 'e1',
-        name: 'Production',
-        files: [{ fileName: '.env', entries: [{ key: 'DB_PASSWORD', value: SECRET, line: 1 }] }],
-        entries: [{ key: 'DB_PASSWORD', value: SECRET }],
-      }),
+      // f1 is the .env every test without a pick gets; f2 only comes when picked.
+      environment: async (_project, _environment, fileIds = ['f1']) => {
+        const picked = fileIds.map((id) => ENV_FILES[id]);
+        return {
+          id: 'e1',
+          name: 'Production',
+          files: picked,
+          entries: picked.flatMap((file) => file.entries.map(({ key, value }) => ({ key, value }))),
+        };
+      },
     },
     pack,
     progress: (event) => progress.push(event),
@@ -176,6 +180,14 @@ function harness(
   });
   return { stacks, hub: fakeHub, client, calls, progress, pack, folder, contextRoot };
 }
+
+const ENV_FILES: Record<
+  string,
+  { fileName: string; entries: Array<{ key: string; value: string; line: number }> }
+> = {
+  f1: { fileName: '.env', entries: [{ key: 'DB_PASSWORD', value: SECRET, line: 1 }] },
+  f2: { fileName: '.env.local', entries: [{ key: 'LOCAL_ONLY', value: 'yes', line: 1 }] },
+};
 
 const CREATE = {
   serverId: SERVER,
@@ -344,6 +356,22 @@ describe('DeployStacks on the hub', () => {
       proxiedServices: ['web'],
       acknowledgedRisks: [],
     });
+    expect(calls.posts[0].body.env).not.toContain(SECRET);
+  });
+
+  it('renders the .env from the picked env files only', async () => {
+    const { stacks, calls } = harness({ 'compose.yaml': SIMPLE });
+    await stacks.upload({
+      serverId: SERVER,
+      stackId: STACK,
+      projectId: 'p1',
+      composePath: 'compose.yaml',
+      environmentId: 'e1',
+      envFileIds: ['f2'],
+      proxiedServices: ['web'],
+      acknowledgedRisks: [],
+    });
+    expect(calls.posts[0].body.env).toContain('LOCAL_ONLY=');
     expect(calls.posts[0].body.env).not.toContain(SECRET);
   });
 

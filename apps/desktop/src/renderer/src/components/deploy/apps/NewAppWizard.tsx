@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { folderName, needsAcknowledgment, suggestAppName } from '@/lib/deploy/apps/format';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
+import { rememberedEnvFiles } from '@/stores/deployAppEnvFilesStore';
 import {
   type AppRun,
   type AppWizard,
@@ -56,15 +57,18 @@ function describeBytes(bytes: number): string {
   return `${bytes} bytes`;
 }
 
-function initialSource(existing: StackDetails | undefined): WizardSource {
+/** Where deploying an app again starts: its source, and the env files it was last made from here. */
+export function initialSource(serverId: string, existing: StackDetails | undefined): WizardSource {
   const source = existing?.stack.source;
+  const environmentId = source?.environmentId ?? null;
   return {
     projectId: source?.projectId ?? '',
     projectName: source?.projectName ?? '',
     projectFolder: '',
     composePath: source?.composePath ?? '',
-    environmentId: source?.environmentId ?? null,
+    environmentId,
     environmentName: source?.environmentName ?? null,
+    envFileIds: existing ? rememberedEnvFiles(serverId, existing.stack.id, environmentId) : null,
     name: existing?.stack.name ?? '',
   };
 }
@@ -177,12 +181,12 @@ export function NewAppWizard({
   const fresh = useMemo(
     () =>
       emptyDraft({
-        source: initialSource(existing),
+        source: initialSource(serverId, existing),
         nameTouched: existing !== undefined,
         // Deploying again starts from what the app runs now; a new app from the preview's default.
         proxied: existing?.revisions[0]?.proxiedServices,
       }),
-    [existing],
+    [serverId, existing],
   );
   const kept = useDeployAppRunStore((state): AppWizard | undefined => state.wizards[key]);
   const draft = kept?.draft ?? fresh;
@@ -203,15 +207,20 @@ export function NewAppWizard({
   );
   const setStep = (next: WizardStep) => update(() => ({ step: next }));
 
-  const ready = source.projectId !== '' && source.composePath !== '';
+  const envFileIds = source.environmentId ? source.envFileIds : null;
+  const ready =
+    source.projectId !== '' &&
+    source.composePath !== '' &&
+    (envFileIds === null || envFileIds.length > 0);
   const previewInput = useMemo(
     () => ({
       projectId: source.projectId,
       composePath: source.composePath,
       environmentId: source.environmentId,
+      ...(envFileIds ? { envFileIds } : {}),
       ...(proxied ? { proxiedServices: proxied } : {}),
     }),
-    [source.projectId, source.composePath, source.environmentId, proxied],
+    [source.projectId, source.composePath, source.environmentId, envFileIds, proxied],
   );
   const preview = useQuery({
     queryKey: queryKeys.deployAppPreview(previewInput),
@@ -287,6 +296,7 @@ export function NewAppWizard({
         projectId: source.projectId,
         composePath: source.composePath,
         environmentId: source.environmentId,
+        envFileIds,
         proxiedServices: proxied ?? data?.proxiedServices ?? [],
         acknowledgedRisks: requires.filter((id) => acknowledged.has(id)),
       },

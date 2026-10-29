@@ -33,6 +33,7 @@ function access(roles: string[]): AppsAccess {
 function renderDetail(bridge: Record<string, unknown> = {}, roles = ['owner']) {
   const onBack = vi.fn();
   const onDeployAgain = vi.fn();
+  const onEditSource = vi.fn();
   const onDeleted = vi.fn();
   const onOpenWebsites = vi.fn();
   const view = renderWithProviders(
@@ -43,6 +44,7 @@ function renderDetail(bridge: Record<string, unknown> = {}, roles = ['owner']) {
         access={access(roles)}
         onBack={onBack}
         onDeployAgain={onDeployAgain}
+        onEditSource={onEditSource}
         onDeleted={onDeleted}
         onOpenWebsites={onOpenWebsites}
       />
@@ -50,8 +52,10 @@ function renderDetail(bridge: Record<string, unknown> = {}, roles = ['owner']) {
     </>,
     { bridge: { ...appsBridge(roles), ...bridge } },
   );
-  return { ...view, onBack, onDeployAgain, onDeleted, onOpenWebsites };
+  return { ...view, onBack, onDeployAgain, onEditSource, onDeleted, onOpenWebsites };
 }
+
+const EDIT = 'Edit the compose file and env files';
 
 function finishJob(
   bridge: ReturnType<typeof renderDetail>['bridge'],
@@ -307,6 +311,71 @@ describe('AppDetail', () => {
     expect(onDeployAgain).toHaveBeenCalledWith(
       expect.objectContaining({ stack: expect.objectContaining({ id: STACK_ID }) }),
     );
+  });
+
+  it('edits the compose file from the source line, then hands it to Deploy again', async () => {
+    const { user, onEditSource, onDeployAgain } = renderDetail();
+    await screen.findByRole('heading', { name: 'shop' });
+    expect(
+      screen.getByText('From Shop, compose.yaml, with the Production environment.'),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: EDIT }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Change what shop deploys' })).toBeVisible();
+    await user.click(await within(dialog).findByRole('radio', { name: /docker-compose\.broken/ }));
+    // The broken file cannot be picked, so nothing changed yet.
+    expect(within(dialog).getByRole('button', { name: /Continue/ })).toBeDisabled();
+    await user.click(within(dialog).getByRole('combobox', { name: 'Environment' }));
+    await user.click(await screen.findByRole('option', { name: 'No environment' }));
+    await user.click(within(dialog).getByRole('button', { name: /Continue/ }));
+    expect(onEditSource).toHaveBeenCalledWith(
+      expect.objectContaining({ stack: expect.objectContaining({ id: STACK_ID }) }),
+      expect.objectContaining({ composePath: 'compose.yaml', environmentId: null }),
+    );
+    expect(onDeployAgain).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('closes the edit without a change from Cancel', async () => {
+    const { user, onEditSource } = renderDetail();
+    await screen.findByRole('heading', { name: 'shop' });
+    await user.click(screen.getByRole('button', { name: EDIT }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(onEditSource).not.toHaveBeenCalled();
+  });
+
+  it('cannot edit for a Viewer or while a job works on the app', async () => {
+    const viewer = renderDetail({}, ['viewer']);
+    await screen.findByRole('heading', { name: 'shop' });
+    expect(screen.getByRole('button', { name: EDIT })).toBeDisabled();
+    viewer.unmount();
+
+    renderDetail({
+      'deployStacks.get': sampleDetails({
+        stack: sampleStack({ status: 'busy', activeJobId: 'job-x' }),
+      }),
+    });
+    await screen.findByRole('heading', { name: 'shop' });
+    expect(screen.getByRole('button', { name: EDIT })).toBeDisabled();
+  });
+
+  it('cannot edit an app whose project is not known here, and has no edit without a source', async () => {
+    const known = renderDetail({
+      'deployStacks.get': sampleDetails({
+        stack: sampleStack({ source: { projectName: 'Shop', composePath: 'compose.yaml' } }),
+      }),
+    });
+    await screen.findByRole('heading', { name: 'shop' });
+    expect(screen.getByRole('button', { name: EDIT })).toBeDisabled();
+    known.unmount();
+
+    renderDetail({
+      'deployStacks.get': sampleDetails({ stack: sampleStack({ source: undefined }) }),
+    });
+    await screen.findByRole('heading', { name: 'shop' });
+    expect(screen.queryByRole('button', { name: EDIT })).not.toBeInTheDocument();
   });
 
   it('cannot deploy again an app with no project on this computer', async () => {

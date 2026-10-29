@@ -278,6 +278,32 @@ export function appsBridge(roles: string[] = ['owner']): Record<string, unknown>
         createdAt: T0,
         updatedAt: T0,
       },
+      {
+        id: 'env-2',
+        projectId: 'proj-1',
+        name: 'Staging',
+        kind: 'staging',
+        order: 1,
+        files: [
+          { id: 's1', fileName: '.env', keyCount: 5, updatedAt: T0 },
+          { id: 's2', fileName: '.env.staging', keyCount: 3, updatedAt: T0 },
+          { id: 's3', fileName: '.env.local', keyCount: 1, updatedAt: T0 },
+        ],
+        credentials: [],
+        createdAt: T0,
+        updatedAt: T0,
+      },
+      {
+        id: 'env-3',
+        projectId: 'proj-1',
+        name: 'Preview',
+        kind: 'development',
+        order: 2,
+        files: [],
+        credentials: [],
+        createdAt: T0,
+        updatedAt: T0,
+      },
     ],
   };
 }

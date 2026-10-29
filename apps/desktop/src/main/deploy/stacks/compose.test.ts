@@ -153,6 +153,28 @@ describe('readStackSource', () => {
     ).rejects.toThrow('leads out of the project');
   });
 
+  it('asks the environment for the picked files only, and for all of them otherwise', async () => {
+    const folder = folderWith({ 'compose.yaml': COMPOSE });
+    const calls: unknown[][] = [];
+    const source: StackSourceDeps = {
+      ...deps(folder),
+      environment: async (...args) => {
+        calls.push(args);
+        return environment([]);
+      },
+    };
+    const input = { projectId: 'p1', composePath: 'compose.yaml', environmentId: 'e1' };
+    await readStackSource(source, { ...input, envFileIds: ['f2', 'f1'] });
+    await readStackSource(source, { ...input, envFileIds: null });
+    await readStackSource(source, input);
+    await readStackSource(source, { ...input, environmentId: null, envFileIds: ['f1'] });
+    expect(calls).toEqual([
+      ['p1', 'e1', ['f2', 'f1']],
+      ['p1', 'e1'],
+      ['p1', 'e1'],
+    ]);
+  });
+
   it('refuses a compose file over 1 MB', async () => {
     const folder = folderWith({ 'compose.yaml': `# ${'x'.repeat(1024 * 1024)}\n` });
     await expect(
@@ -192,6 +214,42 @@ describe('previewStack', () => {
     expect(preview.risks[0].id).toBe('host-network:tools');
     expect(preview.requiresAcknowledgment).toEqual(['host-network:tools']);
     expect(JSON.stringify(preview)).not.toContain(SECRET);
+  });
+
+  it('lists the keys and file names of the picked env files only', async () => {
+    const folder = folderWith({ 'compose.yaml': COMPOSE });
+    const files: Record<
+      string,
+      { fileName: string; entries: Array<{ key: string; value: string }> }
+    > = {
+      f1: { fileName: '.env', entries: [{ key: 'DB_PASSWORD', value: SECRET }] },
+      f2: { fileName: '.env.local', entries: [{ key: 'MISSING_TOKEN', value: 't' }] },
+    };
+    const source: StackSourceDeps = {
+      ...deps(folder),
+      environment: async (_project, _environment, ids = ['f1', 'f2']) => {
+        const picked = ids.map((id) => files[id]);
+        const entries = picked.flatMap((file) => file.entries);
+        return {
+          id: 'e1',
+          name: 'Production',
+          files: picked.map((file) => ({
+            fileName: file.fileName,
+            entries: file.entries.map((entry, i) => ({ ...entry, line: i + 1 })),
+          })),
+          entries,
+        };
+      },
+    };
+    const input = { projectId: 'p1', composePath: 'compose.yaml', environmentId: 'e1' };
+    const one = await previewStack(source, { ...input, envFileIds: ['f1'] });
+    expect(one.envFiles).toEqual(['.env']);
+    expect(one.envKeys).toEqual(['DB_PASSWORD']);
+    expect(one.missingVariables).toEqual(['MISSING_TOKEN']);
+    const both = await previewStack(source, input);
+    expect(both.envFiles).toEqual(['.env', '.env.local']);
+    expect(both.envKeys).toEqual(['DB_PASSWORD', 'MISSING_TOKEN']);
+    expect(both.missingVariables).toEqual([]);
   });
 
   it('reports the public port of a service left public, which then needs an acknowledgment', async () => {

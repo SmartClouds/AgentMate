@@ -35,6 +35,8 @@ export interface DeployStackSourceInput {
   composePath: string;
   /** Null deploys without a .env. */
   environmentId: string | null;
+  /** The environment's files to use, by id, applied in the environment's order. Left out: all. */
+  envFileIds?: string[] | null;
 }
 
 export interface DeployStackPreviewInput extends DeployStackSourceInput {

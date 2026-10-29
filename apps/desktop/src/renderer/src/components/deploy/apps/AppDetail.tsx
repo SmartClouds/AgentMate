@@ -21,6 +21,7 @@ import {
   Globe,
   History,
   Pause,
+  Pencil,
   Play,
   Plus,
   Power,
@@ -66,10 +67,12 @@ import {
 } from '../stackTools/StackToolsSheet';
 import { OPERATOR_ONLY } from './AppsList';
 import { DeployTimeline } from './DeployTimeline';
+import { EditSourceDialog } from './EditSourceDialog';
 import type { AppsAccess } from './hooks';
 import { stackIsBusy, useStack } from './hooks';
 import { type ProxyRoute, ProxyRouteDialog } from './ProxyRouteDialog';
 import { StatusPill } from './StatusPill';
+import type { WizardSource } from './wizard/types';
 
 /**
  * One app: how it is doing, its services and containers, every revision with its deploy
@@ -573,6 +576,7 @@ export function AppDetail({
   access,
   onBack,
   onDeployAgain,
+  onEditSource,
   onDeleted,
   onOpenRegistries,
   onOpenWebsites,
@@ -582,6 +586,8 @@ export function AppDetail({
   access: AppsAccess;
   onBack: () => void;
   onDeployAgain: (details: StackDetails) => void;
+  /** Deploys the app again from another compose file, environment or env files. */
+  onEditSource?: (details: StackDetails, source: WizardSource) => void;
   onDeleted: () => void;
   /** The registry sign-ins for private images (E08). */
   onOpenRegistries?: () => void;
@@ -597,6 +603,7 @@ export function AppDetail({
   const [logJob, setLogJob] = useFollowedJob(serverId, `app:${stackId}:log`);
   const [working, setWorking] = useState<string | null>(null);
   const [tools, setTools] = useState<StackToolsRequest | null>(null);
+  const [editing, setEditing] = useState(false);
 
   const refresh = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.deployApps(serverId) });
@@ -763,14 +770,44 @@ export function AppDetail({
           </span>
         </div>
         {stack.source && (
-          <p className="text-xs text-muted-foreground">
-            From {stack.source.projectName ?? 'a project'}
-            {stack.source.composePath ? `, ${stack.source.composePath}` : ''}
-            {stack.source.environmentName
-              ? `, with the ${stack.source.environmentName} environment`
-              : ', without an environment'}
-            .
-          </p>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="text-xs text-muted-foreground">
+              From {stack.source.projectName ?? 'a project'}
+              {stack.source.composePath ? `, ${stack.source.composePath}` : ''}
+              {stack.source.environmentName
+                ? `, with the ${stack.source.environmentName} environment`
+                : ', without an environment'}
+              .
+            </p>
+            {onEditSource && (
+              <Gate
+                allowed={canRedeploy && !disabled}
+                reason={why || 'This app has no project to deploy from on this computer.'}
+              >
+                <Button
+                  size="sm"
+                  variant="soft"
+                  aria-label="Edit the compose file and env files"
+                  disabled={disabled || !canRedeploy}
+                  onClick={() => setEditing(true)}
+                  className="h-6 px-2 text-xs"
+                >
+                  <Pencil className="h-3 w-3" /> Edit
+                </Button>
+              </Gate>
+            )}
+          </div>
+        )}
+        {editing && onEditSource && (
+          <EditSourceDialog
+            serverId={serverId}
+            details={data}
+            onClose={() => setEditing(false)}
+            onContinue={(source) => {
+              setEditing(false);
+              onEditSource(data, source);
+            }}
+          />
         )}
         <div
           role="toolbar"

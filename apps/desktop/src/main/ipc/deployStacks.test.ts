@@ -127,6 +127,45 @@ describe('registerDeployStacksHandlers', () => {
     expect(stacks.delete).toHaveBeenCalledWith(SERVER, STACK, true);
   });
 
+  it('passes the picked env files through, once each, and only with an environment', async () => {
+    const { call, stacks } = harness();
+    await call(IPC.deployStacks.preview, { ...SOURCE, envFileIds: ['f2', 'f1', 'f2'] });
+    await call(IPC.deployStacks.preview, { ...SOURCE, envFileIds: null });
+    await call(IPC.deployStacks.preview, { ...SOURCE, environmentId: null, envFileIds: ['f1'] });
+    await call(IPC.deployStacks.create, {
+      ...SOURCE,
+      envFileIds: ['f1'],
+      serverId: SERVER,
+      name: 'shop',
+      proxiedServices: [],
+      acknowledgedRisks: [],
+    });
+    await call(IPC.deployStacks.upload, {
+      ...SOURCE,
+      envFileIds: ['f2'],
+      serverId: SERVER,
+      stackId: STACK,
+      proxiedServices: [],
+      acknowledgedRisks: [],
+    });
+    expect(stacks.preview).toHaveBeenNthCalledWith(1, { ...SOURCE, envFileIds: ['f2', 'f1'] });
+    expect(stacks.preview).toHaveBeenNthCalledWith(2, SOURCE);
+    expect(stacks.preview).toHaveBeenNthCalledWith(3, { ...SOURCE, environmentId: null });
+    expect(stacks.create).toHaveBeenCalledWith(expect.objectContaining({ envFileIds: ['f1'] }));
+    expect(stacks.upload).toHaveBeenCalledWith(expect.objectContaining({ envFileIds: ['f2'] }));
+  });
+
+  it('refuses env files that are not a list of ids', async () => {
+    const { call, stacks } = harness();
+    const tooMany = Array.from({ length: 101 }, (_, i) => `f${i}`);
+    for (const envFileIds of ['f1', [''], ['a b'], [42], tooMany]) {
+      await expect(call(IPC.deployStacks.preview, { ...SOURCE, envFileIds })).rejects.toThrow(
+        /env files/,
+      );
+    }
+    expect(stacks.preview).not.toHaveBeenCalled();
+  });
+
   it('makes the named services of an app private', async () => {
     const { call, stacks } = harness();
     await call(IPC.deployStacks.makePrivate, {

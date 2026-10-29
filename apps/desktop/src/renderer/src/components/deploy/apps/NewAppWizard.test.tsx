@@ -1,5 +1,6 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { rememberedEnvFiles, useDeployAppEnvFilesStore } from '@/stores/deployAppEnvFilesStore';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
 import type { AppsAccess } from './hooks';
 import {
@@ -133,6 +134,193 @@ describe('NewAppWizard source', () => {
     await user.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByText('1 service')).toBeInTheDocument();
     expect(screen.getByText(/The project is large/)).toBeInTheDocument();
+  });
+});
+
+describe('NewAppWizard env files', () => {
+  async function pickEnvironment(user: ReturnType<typeof renderWizard>['user'], name: string) {
+    const environment = screen.getByRole('combobox', { name: 'Environment' });
+    await waitFor(() => expect(environment).toBeEnabled());
+    await user.click(environment);
+    await user.click(await screen.findByRole('option', { name: new RegExp(`^${name}`) }));
+  }
+
+  async function pickStaging(user: ReturnType<typeof renderWizard>['user']) {
+    await pickProject(user);
+    await user.click(await screen.findByRole('radio', { name: /compose\.yaml/ }));
+    await pickEnvironment(user, 'Staging');
+  }
+
+  const files = () => screen.getByRole('list', { name: 'Env files' });
+  const box = (name: string) => within(files()).getByRole('checkbox', { name });
+  const lastPreview = (bridge: ReturnType<typeof renderWizard>['bridge']) =>
+    bridge.$fn('deployStacks.preview').mock.calls.at(-1)?.[0];
+
+  it('lists every file of the environment, all ticked, with their key counts', async () => {
+    const { user } = renderWizard();
+    await pickStaging(user);
+    for (const name of ['.env', '.env.staging', '.env.local']) {
+      expect(box(name)).toBeChecked();
+    }
+    expect(within(files()).getByText('5 keys')).toBeInTheDocument();
+    expect(within(files()).getByText('1 key')).toBeInTheDocument();
+    expect(screen.getByText('3 of 3 files')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Use all' })).not.toBeInTheDocument();
+    expect(screen.getByText(/A later file wins when a key repeats/)).toBeInTheDocument();
+  });
+
+  it('previews with the ticked files in the environment order, and all again from Use all', async () => {
+    const { user, bridge } = renderWizard();
+    await pickStaging(user);
+    await user.click(box('.env'));
+    expect(box('.env')).not.toBeChecked();
+    expect(screen.getByText('2 of 3 files')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Next/ }));
+    await screen.findByRole('list', { name: 'Services to deploy' });
+    expect(bridge.$fn('deployStacks.preview')).toHaveBeenCalledWith({
+      projectId: 'proj-1',
+      composePath: 'compose.yaml',
+      environmentId: 'env-2',
+      envFileIds: ['s2', 's3'],
+    });
+
+    await user.click(screen.getByRole('button', { name: /Back/ }));
+    await user.click(box('.env.local'));
+    await user.click(box('.env'));
+    expect(screen.getByText('2 of 3 files')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Use all' }));
+    expect(screen.getByText('3 of 3 files')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Next/ }));
+    await screen.findByRole('list', { name: 'Services to deploy' });
+    expect(lastPreview(bridge)).toEqual({
+      projectId: 'proj-1',
+      composePath: 'compose.yaml',
+      environmentId: 'env-2',
+      proxiedServices: ['web'],
+    });
+  });
+
+  it('says the single ticked file applies alone, without the order note', async () => {
+    const { user } = renderWizard();
+    await pickStaging(user);
+    await user.click(box('.env'));
+    await user.click(box('.env.local'));
+    expect(screen.getByText('1 of 3 files')).toBeInTheDocument();
+    expect(screen.queryByText(/A later file wins/)).not.toBeInTheDocument();
+  });
+
+  it('will not go on with no file ticked', async () => {
+    const { user } = renderWizard();
+    await pickStaging(user);
+    for (const name of ['.env', '.env.staging', '.env.local']) await user.click(box(name));
+    expect(screen.getByText('Tick at least one file, or pick No environment.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Next/ })).toBeDisabled();
+    await pickEnvironment(user, 'No environment');
+    expect(screen.queryByRole('list', { name: 'Env files' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Next/ })).toBeEnabled();
+  });
+
+  it('says when the environment has no files yet', async () => {
+    const { user } = renderWizard();
+    await pickProject(user);
+    await user.click(await screen.findByRole('radio', { name: /compose\.yaml/ }));
+    await pickEnvironment(user, 'Preview');
+    expect(screen.getByText(/This environment has no files yet/)).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Env files' })).not.toBeInTheDocument();
+  });
+
+  it('starts from every file again when another environment or project is picked', async () => {
+    const { user } = renderWizard();
+    await pickStaging(user);
+    await user.click(box('.env'));
+    await pickEnvironment(user, 'Production');
+    expect(box('.env.production')).toBeChecked();
+    await pickEnvironment(user, 'Staging');
+    expect(box('.env')).toBeChecked();
+    expect(screen.getByText('3 of 3 files')).toBeInTheDocument();
+
+    await user.click(box('.env'));
+    await user.click(screen.getByRole('combobox', { name: 'Project' }));
+    await user.click(await screen.findByRole('option', { name: 'Blog' }));
+    await user.click(screen.getByRole('combobox', { name: 'Project' }));
+    await user.click(await screen.findByRole('option', { name: 'Shop' }));
+    await user.click(await screen.findByRole('radio', { name: /compose\.yaml/ }));
+    await pickEnvironment(user, 'Staging');
+    expect(screen.getByText('3 of 3 files')).toBeInTheDocument();
+  });
+
+  it('deploys with the ticked files and remembers them for the app', async () => {
+    const { user, bridge } = renderWizard({
+      'deployStacks.create': uploadResult(),
+      'deployStacks.deploy': sampleJob(),
+    });
+    await pickStaging(user);
+    await user.click(box('.env.local'));
+    await user.click(screen.getByRole('button', { name: /Next/ }));
+    await screen.findByRole('list', { name: 'Services to deploy' });
+    await user.click(screen.getByRole('button', { name: /Next/ }));
+    await screen.findByRole('list', { name: 'Exposure' });
+    await user.click(screen.getByRole('button', { name: /Next/ }));
+    await user.click(
+      await screen.findByRole('checkbox', { name: 'I accept: db runs privileged.' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Deploy shop' }));
+    await waitFor(() =>
+      expect(bridge.$fn('deployStacks.create')).toHaveBeenCalledWith(
+        expect.objectContaining({ environmentId: 'env-2', envFileIds: ['s1', 's2'] }),
+      ),
+    );
+    expect(rememberedEnvFiles(SERVER.id, STACK_ID, 'env-2')).toEqual(['s1', 's2']);
+  });
+
+  it('deploys an app again from the files it was last deployed from here', async () => {
+    useDeployAppEnvFilesStore.getState().remember(SERVER.id, STACK_ID, 'env-2', ['s2']);
+    const existing = sampleDetails({
+      stack: sampleStack({
+        source: {
+          projectId: 'proj-1',
+          projectName: 'Shop',
+          composePath: 'compose.yaml',
+          environmentId: 'env-2',
+          environmentName: 'Staging',
+        },
+      }),
+    });
+    const { user, bridge } = renderWizard({}, { existing });
+    await waitFor(() => expect(box('.env.staging')).toBeChecked());
+    expect(box('.env')).not.toBeChecked();
+    expect(screen.getByText('1 of 3 files')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Next/ }));
+    await screen.findByRole('list', { name: 'Services to deploy' });
+    expect(lastPreview(bridge)).toMatchObject({ environmentId: 'env-2', envFileIds: ['s2'] });
+  });
+
+  it('uses every file when the remembered pick was for another environment or is gone', async () => {
+    useDeployAppEnvFilesStore.getState().remember(SERVER.id, STACK_ID, 'env-2', ['gone']);
+    const existing = sampleDetails({
+      stack: sampleStack({
+        source: {
+          projectId: 'proj-1',
+          projectName: 'Shop',
+          composePath: 'compose.yaml',
+          environmentId: 'env-2',
+          environmentName: 'Staging',
+        },
+      }),
+    });
+    const { user, bridge } = renderWizard({}, { existing });
+    await waitFor(() => expect(screen.getByText('3 of 3 files')).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: /Next/ }));
+    await screen.findByRole('list', { name: 'Services to deploy' });
+    expect(lastPreview(bridge)).not.toHaveProperty('envFileIds');
+  });
+
+  it('ignores a pick remembered for another environment of the app', async () => {
+    useDeployAppEnvFilesStore.getState().remember(SERVER.id, STACK_ID, 'env-2', ['s2']);
+    // The sample app deploys with Production (env-1).
+    renderWizard({}, { existing: sampleDetails() });
+    expect(await screen.findByText('1 of 1 file')).toBeInTheDocument();
+    expect(box('.env.production')).toBeChecked();
   });
 });
 

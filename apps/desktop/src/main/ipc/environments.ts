@@ -88,20 +88,32 @@ export interface ResolvedProjectEnvironment {
 /**
  * The decrypted entries of one of a project's environments. Only main-process callers (the
  * Apps deploy) use it; nothing here is ever sent to the renderer. It waits for saves already
- * queued, so it reads what the Environments tab shows once they land.
+ * queued, so it reads what the Environments tab shows once they land. `fileIds` keeps only those
+ * files (still in the environment's order, and the others are never decrypted); left out, all apply.
  */
 export async function resolveProjectEnvironment(
   projectId: string,
   environmentId: string,
+  fileIds?: readonly string[],
 ): Promise<ResolvedProjectEnvironment> {
   await updateQueue;
   const environment = findEnvironment(await store.getProjectEnvironments(), environmentId);
   if (environment.projectId !== projectId) {
     throw new Error('That environment belongs to another project.');
   }
+  let picked = environment.files;
+  if (fileIds) {
+    if (fileIds.length === 0) throw new Error("Pick at least one of the environment's files.");
+    const known = new Set(environment.files.map((file) => file.id));
+    if (fileIds.some((id) => !known.has(id))) {
+      throw new Error('One of the picked env files is no longer in the environment.');
+    }
+    const wanted = new Set(fileIds);
+    picked = environment.files.filter((file) => wanted.has(file.id));
+  }
   const files: ResolvedEnvFile[] = [];
   const merged = new Map<string, string>();
-  for (const file of environment.files) {
+  for (const file of picked) {
     const entries = parseDotenv(await decryptSecret(file.contentEnvelope));
     files.push({ fileName: file.fileName, entries });
     for (const { key, value } of entries) merged.set(key, value);

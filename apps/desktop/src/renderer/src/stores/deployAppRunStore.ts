@@ -3,6 +3,7 @@ import type { JobInfo } from '@shared/deploy/protocol/generated/Runova.ServerCor
 import type { DeployStackUploadProgress, DeployStackUploadResult } from '@shared/deployStacksTypes';
 import { create } from 'zustand';
 import type { WizardSource, WizardStep } from '@/components/deploy/apps/wizard/types';
+import { useDeployAppEnvFilesStore } from './deployAppEnvFilesStore';
 
 /**
  * The New App wizard's draft and its deploy (E07 T7), per server and app. The upload, the
@@ -50,6 +51,8 @@ export interface AppDeployInput {
   projectId: string;
   composePath: string;
   environmentId: string | null;
+  /** Null uses every file of the environment. */
+  envFileIds: string[] | null;
   proxiedServices: string[];
   acknowledgedRisks: string[];
 }
@@ -69,6 +72,7 @@ export function emptyDraft(overrides: Partial<AppWizardDraft> = {}): AppWizardDr
       composePath: '',
       environmentId: null,
       environmentName: null,
+      envFileIds: null,
       name: '',
     },
     nameTouched: false,
@@ -146,7 +150,9 @@ export const useDeployAppRunStore = create<DeployAppRunState>((set, get) => {
       const stop = window.runova.deployStacks.onUploadProgress((event) => {
         if (event.serverId === input.serverId) patch(key, () => ({ progress: event }));
       });
-      const { existingStackId, name, ...common } = input;
+      const { existingStackId, name, envFileIds, ...rest } = input;
+      // Left out when every file applies, the way the main process reads it.
+      const common = envFileIds ? { ...rest, envFileIds } : rest;
       let result: DeployStackUploadResult;
       try {
         result = existingStackId
@@ -158,6 +164,9 @@ export const useDeployAppRunStore = create<DeployAppRunState>((set, get) => {
       } finally {
         stop();
       }
+      useDeployAppEnvFilesStore
+        .getState()
+        .remember(input.serverId, result.stack.id, input.environmentId, envFileIds);
       onSettled?.();
       if (result.revision.state === 'invalid') {
         patch(key, () => ({ run: { phase: 'invalid', result } }));

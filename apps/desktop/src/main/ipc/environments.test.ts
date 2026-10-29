@@ -89,6 +89,50 @@ describe('resolveProjectEnvironment (main process only)', () => {
     ]);
   });
 
+  it('keeps only the picked files, in the order the environment keeps them', async () => {
+    const created = await newEnvironment();
+    const save = (fileName: string, content: string) =>
+      invoke<ProjectEnvironment>(IPC.environments.saveFile, {
+        environmentId: created.id,
+        fileName,
+        content,
+      });
+    await save('.env', 'A=1\nSHARED=from-env\n');
+    await save('.env.production', 'SHARED=from-production\nB=2\n');
+    const saved = await save('.env.local', 'SHARED=from-local\nC=3\n');
+    const [base, , local] = saved.files;
+
+    // Picked out of order, still applied top to bottom: the local file wins.
+    const resolved = await environmentsModule.resolveProjectEnvironment(PROJECT_ID, created.id, [
+      local.id,
+      base.id,
+    ]);
+    expect(resolved.files.map((file) => file.fileName)).toEqual(['.env', '.env.local']);
+    expect(resolved.entries).toEqual([
+      { key: 'A', value: '1' },
+      { key: 'SHARED', value: 'from-local' },
+      { key: 'C', value: '3' },
+    ]);
+
+    const all = await environmentsModule.resolveProjectEnvironment(PROJECT_ID, created.id);
+    expect(all.files).toHaveLength(3);
+  });
+
+  it('refuses an empty pick and a file that is gone', async () => {
+    const created = await newEnvironment();
+    await invoke(IPC.environments.saveFile, {
+      environmentId: created.id,
+      fileName: '.env',
+      content: 'A=1\n',
+    });
+    await expect(
+      environmentsModule.resolveProjectEnvironment(PROJECT_ID, created.id, []),
+    ).rejects.toThrow("Pick at least one of the environment's files.");
+    await expect(
+      environmentsModule.resolveProjectEnvironment(PROJECT_ID, created.id, ['gone']),
+    ).rejects.toThrow('One of the picked env files is no longer in the environment.');
+  });
+
   it("refuses another project's environment and one that is gone", async () => {
     const created = await newEnvironment();
     await expect(environmentsModule.resolveProjectEnvironment('other', created.id)).rejects.toThrow(

@@ -7,6 +7,7 @@ import {
   uploadResult,
 } from '@/components/deploy/apps/testing/fixtures';
 import { type FakeBridge, installRunovaBridge } from '../../../test/renderer/runovaBridge';
+import { appEnvFilesKey, useDeployAppEnvFilesStore } from './deployAppEnvFilesStore';
 import {
   type AppDeployInput,
   emptyDraft,
@@ -29,9 +30,12 @@ const INPUT: AppDeployInput = {
   projectId: 'proj-1',
   composePath: 'compose.yaml',
   environmentId: 'env-1',
+  envFileIds: null,
   proxiedServices: ['web'],
   acknowledgedRisks: [],
 };
+
+const picks = () => useDeployAppEnvFilesStore.getState().picks;
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -120,6 +124,44 @@ describe('deployAppRunStore', () => {
     expect(fake.$fn('deployStacks.upload')).toHaveBeenCalledWith(
       expect.objectContaining({ stackId: STACK_ID, serverId: SERVER.id }),
     );
+  });
+
+  it('sends the picked env files and remembers them for the app once the files are up', async () => {
+    const fake = installRunovaBridge({
+      'deployStacks.create': uploadResult(),
+      'deployStacks.deploy': sampleJob(),
+    });
+    store().open(KEY, emptyDraft());
+    await store().startDeploy(KEY, { ...INPUT, envFileIds: ['f2'] });
+    expect(fake.$fn('deployStacks.create')).toHaveBeenCalledWith(
+      expect.objectContaining({ environmentId: 'env-1', envFileIds: ['f2'] }),
+    );
+    expect(picks()[appEnvFilesKey(SERVER.id, STACK_ID)]).toEqual({
+      environmentId: 'env-1',
+      envFileIds: ['f2'],
+    });
+  });
+
+  it('forgets a remembered pick once every env file is used again', async () => {
+    useDeployAppEnvFilesStore.getState().remember(SERVER.id, STACK_ID, 'env-1', ['f2']);
+    installRunovaBridge({
+      'deployStacks.upload': uploadResult(),
+      'deployStacks.deploy': sampleJob(),
+    });
+    const key = wizardKey(SERVER.id, STACK_ID);
+    store().open(key, emptyDraft());
+    await store().startDeploy(key, { ...INPUT, existingStackId: STACK_ID });
+    expect(picks()).toEqual({});
+  });
+
+  it('remembers nothing when the upload fails', async () => {
+    const { done } = start({
+      'deployStacks.create': async () => {
+        throw new Error('The server is busy.');
+      },
+    });
+    await done;
+    expect(picks()).toEqual({});
   });
 
   it('waits for the server findings to be accepted, then deploys', async () => {
