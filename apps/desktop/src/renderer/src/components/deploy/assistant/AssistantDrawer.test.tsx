@@ -500,6 +500,11 @@ describe('AssistantComposer', () => {
     });
     act(() => useDeployAssistantStore.getState().open(SERVER.id));
     expect(await screen.findByText('Which unit?')).toBeInTheDocument();
+    // The open drawer shows the question, so the top bar button does not flag it too.
+    expect(screen.getByRole('button', { name: 'Deploy AI' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     act(() => useDeployAssistantStore.getState().close());
     expect(screen.getByRole('button', { name: 'Deploy AI, waiting for you' })).toHaveAttribute(
       'aria-pressed',

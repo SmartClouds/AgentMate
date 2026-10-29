@@ -29,7 +29,8 @@ export function AssistantLauncher({ server }: { server: DeployServer }): React.J
 /**
  * The top bar's Deploy AI button, shown while a Deploy server's page is open. It toggles the
  * drawer like the terminal button next to it toggles the terminal, and a run that waits for the
- * user says so with the same amber dot.
+ * user says so with the same amber dot (only while the drawer is closed, since an open drawer
+ * already shows what waits).
  */
 export function AssistantTopBarButton(): React.JSX.Element | null {
   const serverId = useDeployAssistantStore((state) => state.pageServerId);
@@ -41,7 +42,7 @@ export function AssistantTopBarButton(): React.JSX.Element | null {
   );
   if (!serverId) return null;
   const isOpen = openServerId === serverId;
-  const waiting = phase === 'proposed' || phase === 'needs-input';
+  const waiting = !isOpen && (phase === 'proposed' || phase === 'needs-input');
 
   return (
     <SimpleTooltip label={waiting ? 'The Deploy AI is waiting for you' : 'Deploy AI'}>
