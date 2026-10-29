@@ -1,3 +1,4 @@
+import type { EffortLevel } from '@runova/core';
 import type { SshAgentProgress } from '@shared/apiTypes';
 import type { ExecLine } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type {
@@ -42,6 +43,17 @@ export interface AssistantRun extends AssistantTurn {
   earlier: AssistantTurn[];
 }
 
+/** Which AI decides each step: an agent CLI with its model and effort, or the Settings provider. */
+export interface AssistantAiChoice {
+  /** Null is the OpenAI, Gemini or Ollama provider set in Settings. */
+  cliId: string | null;
+  /** Null lets the CLI use the model it is set up with. */
+  modelId: string | null;
+  effort: EffortLevel | null;
+}
+
+export const SETTINGS_AI: AssistantAiChoice = { cliId: null, modelId: null, effort: null };
+
 const EMPTY_RUN: AssistantRun = { progress: null, steps: [], earlier: [] };
 
 interface DeployAssistantStoreState {
@@ -49,6 +61,9 @@ interface DeployAssistantStoreState {
   /** What "Diagnose with AI" handed over, waiting for the user to start. */
   draft: { serverId: string; context: DeployAssistantContextInput; prompt: string } | null;
   runs: Record<string, AssistantRun>;
+  /** The last AI picked in the drawer, kept for the next run and the next time it opens. */
+  ai: AssistantAiChoice;
+  setAi: (ai: AssistantAiChoice) => void;
   open: (
     serverId: string,
     draft?: { context: DeployAssistantContextInput; prompt: string },
@@ -106,6 +121,8 @@ export const useDeployAssistantStore = create<DeployAssistantStoreState>((set) =
   openServerId: null,
   draft: null,
   runs: {},
+  ai: SETTINGS_AI,
+  setAi: (ai) => set({ ai }),
   open: (serverId, draft) =>
     set((state) => ({
       openServerId: serverId,

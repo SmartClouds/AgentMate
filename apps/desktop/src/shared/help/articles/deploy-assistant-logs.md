@@ -110,7 +110,10 @@ Turning on **Auto-run diagnostics** asks for your password (or a code from your 
 1. Open the drawer.
 2. Type what to look into in **What should the AI look into?** For example: "Find out why the sender keeps restarting".
 3. Pick the AI in **Which AI**: **AI provider (Settings)** (the OpenAI, Gemini or Ollama provider you set up, see [AI providers](ai-providers.md)) or an installed agent CLI from the list.
-4. Click **Start**, or press `Ctrl+Enter` (`Cmd+Enter` on macOS) in the text box.
+4. If you picked a CLI, **Model** appears next to it. Leave it on **CLI default** to use the model the CLI is set up with, or pick one. Once you pick a model that has effort levels, **Effort** appears too, already set to a sensible level for that model.
+5. Click **Start**, or press `Ctrl+Enter` (`Cmd+Enter` on macOS) in the text box.
+
+The drawer remembers the AI, model and effort you picked, for the next run and the next time you open it. If the CLI you used last is no longer installed, it goes back to **AI provider (Settings)**.
 
 ### Approve, skip, answer
 

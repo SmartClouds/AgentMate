@@ -1,6 +1,6 @@
 import { act, fireEvent, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { useDeployAssistantStore } from '@/stores/deployAssistantStore';
+import { SETTINGS_AI, useDeployAssistantStore } from '@/stores/deployAssistantStore';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
 import { SERVER, STEP_UP_REFUSAL } from '../overview/testing/fixtures';
 import { signedIn } from '../security/testing/fixtures';
@@ -35,7 +35,7 @@ function progress(phase: string, extra: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  useDeployAssistantStore.setState({ openServerId: null, draft: null, runs: {} });
+  useDeployAssistantStore.setState({ openServerId: null, draft: null, runs: {}, ai: SETTINGS_AI });
 });
 
 describe('AssistantDrawer', () => {
@@ -386,6 +386,99 @@ describe('AssistantComposer', () => {
     act(() => useDeployAssistantStore.getState().close());
     expect(screen.getByRole('button', { name: 'Deploy AI, waiting for you' })).toHaveTextContent(
       'Waiting for you',
+    );
+  });
+
+  it('offers the model once a CLI is picked and the effort once a model is', async () => {
+    const { user, bridge: fake } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+      bridge: bridge({ 'cli.detectAll': [{ id: 'claude-code', installed: true }] }),
+    });
+    act(() => useDeployAssistantStore.getState().open(SERVER.id));
+    const drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    await within(drawer).findByRole('radio', { name: /Approve every command/ });
+    const settings = within(drawer).getByRole('group', { name: 'AI to use' });
+
+    // The Settings provider has no model or effort to pick.
+    expect(within(settings).getByLabelText('Which AI')).toHaveTextContent('AI provider (Settings)');
+    expect(within(settings).queryByLabelText('Model')).not.toBeInTheDocument();
+    expect(within(settings).queryByLabelText('Effort')).not.toBeInTheDocument();
+
+    await user.click(within(settings).getByLabelText('Which AI'));
+    await user.click(await screen.findByRole('option', { name: /Claude/ }));
+    expect(within(settings).getByLabelText('Model')).toHaveTextContent('CLI default');
+    // Effort only goes with a model the flags can name.
+    expect(within(settings).queryByLabelText('Effort')).not.toBeInTheDocument();
+
+    await user.click(within(settings).getByLabelText('Model'));
+    await user.click(await screen.findByRole('option', { name: /Sonnet/ }));
+    expect(within(settings).getByLabelText('Model')).toHaveTextContent('Sonnet');
+    expect(within(settings).getByLabelText('Effort')).toHaveTextContent('Medium');
+    await user.click(within(settings).getByLabelText('Effort'));
+    await user.click(await screen.findByRole('option', { name: 'Extra high' }));
+
+    await user.type(within(drawer).getByLabelText('What should the AI look into?'), 'Disk?');
+    await user.click(within(drawer).getByRole('button', { name: 'Start' }));
+    expect(fake.$fn('deployAssistant.start')).toHaveBeenLastCalledWith({
+      serverId: SERVER.id,
+      prompt: 'Disk?',
+      cliId: 'claude-code',
+      modelId: 'sonnet',
+      effort: 'xhigh',
+    });
+
+    // Back to the default model, the effort goes with it.
+    progress('finished', { message: 'Fine.' });
+    await user.click(within(settings).getByLabelText('Model'));
+    await user.click(await screen.findByRole('option', { name: 'CLI default' }));
+    expect(within(settings).queryByLabelText('Effort')).not.toBeInTheDocument();
+    await user.click(within(settings).getByLabelText('Which AI'));
+    await user.click(await screen.findByRole('option', { name: 'AI provider (Settings)' }));
+    expect(within(settings).queryByLabelText('Model')).not.toBeInTheDocument();
+  });
+
+  it('keeps the AI picked for the next time the drawer opens', async () => {
+    const { user } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+      bridge: bridge({ 'cli.detectAll': [{ id: 'claude-code', installed: true }] }),
+    });
+    act(() => {
+      useDeployAssistantStore
+        .getState()
+        .setAi({ cliId: 'claude-code', modelId: 'opus', effort: 'high' });
+      useDeployAssistantStore.getState().open(SERVER.id);
+    });
+    let drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    expect(await within(drawer).findByLabelText('Model')).toHaveTextContent('Opus');
+    expect(within(drawer).getByLabelText('Effort')).toHaveTextContent('High');
+
+    await user.click(within(drawer).getByRole('button', { name: 'Close' }));
+    await user.click(screen.getByRole('button', { name: 'Deploy AI' }));
+    drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    expect(within(drawer).getByLabelText('Which AI')).toHaveTextContent('Claude');
+    expect(within(drawer).getByLabelText('Model')).toHaveTextContent('Opus');
+  });
+
+  it('falls back to the Settings provider when the CLI picked last is gone', async () => {
+    const { user, bridge: fake } = renderWithProviders(<AssistantLauncher server={SERVER} />, {
+      bridge: bridge({ 'cli.detectAll': [{ id: 'claude-code', installed: false }] }),
+    });
+    act(() => {
+      useDeployAssistantStore
+        .getState()
+        .setAi({ cliId: 'claude-code', modelId: 'opus', effort: 'high' });
+      useDeployAssistantStore
+        .getState()
+        .open(SERVER.id, { prompt: 'Look.', context: { title: 'x' } });
+    });
+    const drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    await within(drawer).findByRole('radio', { name: /Approve every command/ });
+    expect(within(drawer).getByLabelText('Which AI')).toHaveTextContent('AI provider (Settings)');
+    expect(within(drawer).queryByLabelText('Model')).not.toBeInTheDocument();
+    await user.click(within(drawer).getByRole('button', { name: 'Start' }));
+    expect(fake.$fn('deployAssistant.start')).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ modelId: expect.anything() }),
+    );
+    expect(fake.$fn('deployAssistant.start')).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cliId: null }),
     );
   });
 });

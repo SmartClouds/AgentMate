@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { useDeployAssistantStore } from '@/stores/deployAssistantStore';
+import { type AssistantAiChoice, useDeployAssistantStore } from '@/stores/deployAssistantStore';
 import { AssistantComposer } from './AssistantComposer';
 import { AssistantTimeline } from './AssistantTimeline';
 import { useAssistantMode } from './hooks';
@@ -91,7 +91,7 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
   const act = (work: Promise<unknown>) =>
     void work.catch((error: unknown) => toast.error(coreErrorMessage(error)));
 
-  async function start(prompt: string, cliId: string | null): Promise<boolean> {
+  async function start(prompt: string, ai: AssistantAiChoice): Promise<boolean> {
     const before = useDeployAssistantStore.getState().runs[serverId];
     follow.current = true;
     if (over) followUp(serverId, prompt);
@@ -100,7 +100,9 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
       await window.runova.deployAssistant.start({
         serverId,
         prompt,
-        cliId,
+        cliId: ai.cliId,
+        ...(ai.modelId ? { modelId: ai.modelId } : {}),
+        ...(ai.effort ? { effort: ai.effort } : {}),
         ...(context ? { context } : {}),
         ...(over ? { continuePrevious: true } : {}),
       });
