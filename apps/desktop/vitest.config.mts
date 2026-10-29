@@ -1,8 +1,25 @@
 import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
+import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 
 const path = (relative: string): string => fileURLToPath(new URL(relative, import.meta.url));
+
+/**
+ * Vitest keeps transformed modules in node_modules/.vitest-cache, keyed on each file's own source.
+ * import.meta.glob is expanded into a fixed list of files at transform time, so a file that globs a
+ * folder kept its old list after a file was added there. src/test/renderer/stores.ts is one: a new
+ * store was never reset between tests, and its state leaked into the next one. The Mac CI runner
+ * keeps node_modules between jobs, so it hit this on every run. Files that glob are not cached.
+ */
+const noCacheForGlobs: Plugin = {
+  name: 'runova:no-cache-for-globs',
+  configureVitest({ defineCacheKeyGenerator }) {
+    defineCacheKeyGenerator(({ sourceCode }) =>
+      sourceCode.includes('import.meta.glob') ? false : undefined,
+    );
+  },
+};
 
 // CI splits this suite across jobs with --shard and merges their blob reports afterwards. One
 // shard covers only part of the code, so the thresholds are left to the merge run.
@@ -19,7 +36,7 @@ const sharded = process.argv.some((arg) => arg.startsWith('--shard'));
  * "renderer" is React, in jsdom, with the browser APIs and the heavy editors stubbed.
  */
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), noCacheForGlobs],
   resolve: {
     alias: {
       '@': path('./src/renderer/src'),
