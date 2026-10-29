@@ -1,6 +1,6 @@
+import lexendFont from '@/assets/lexend-latin-variable.woff2';
 import splashLogoDark from '@/assets/splash-logo.webp';
 import splashLogoLight from '@/assets/splash-logo-light.webp';
-import unboundedFont from '@/assets/unbounded-latin-variable.woff2';
 import { readSplashParams } from './splashParams';
 
 // Everything the splash needs comes in on the URL from src/main/splashWindow.ts,
@@ -14,9 +14,9 @@ root.dataset.glass = view.glass;
 const logo = document.getElementById('logo') as HTMLImageElement;
 logo.src = view.theme === 'dark' ? splashLogoDark : splashLogoLight;
 
-// Unbounded is only used for the wordmark. It ships with the app so the splash never needs the network.
-const wordmark = new FontFace('Unbounded', `url(${unboundedFont}) format('woff2')`, {
-  weight: '200 900',
+// Lexend is only used for the wordmark. It ships with the app so the splash never needs the network.
+const wordmark = new FontFace('Lexend', `url(${lexendFont}) format('woff2')`, {
+  weight: '100 900',
 });
 document.fonts.add(wordmark);
 
