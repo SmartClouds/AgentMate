@@ -3,7 +3,7 @@
  * Plugin Name:       AgentMate Connector
  * Plugin URI:        https://runovahq.com
  * Description:       AgentMate is now Runova. This is Runova Connector in its old folder: it works as before, and moves itself to its own folder the next time the Runova app connects.
- * Version:           1.63.0
+ * Version:           2.0.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Runova
@@ -39,7 +39,7 @@ if (
     return;
 }
 
-define('AGENTMATE_CONNECTOR_VERSION', '1.63.0');
+define('AGENTMATE_CONNECTOR_VERSION', '2.0.0');
 define('RUNOVA_CONNECTOR_VERSION', AGENTMATE_CONNECTOR_VERSION);
 // The guard mu-plugin may have defined it already, for the same file.
 if (!defined('RUNOVA_CONNECTOR_FILE')) {

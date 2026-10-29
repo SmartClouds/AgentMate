@@ -1,7 +1,7 @@
 {
   "name": "runova",
   "private": true,
-  "version": "1.63.0",
+  "version": "2.0.0",
   "description": "Runova: AI Agent Management Platform",
   "homepage": "https://runovahq.com",
   "repository": {
