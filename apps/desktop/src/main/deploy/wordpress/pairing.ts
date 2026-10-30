@@ -192,7 +192,6 @@ export async function pairWithSite(input: WpPairInput): Promise<WpPairResult> {
           deviceName,
           timestamp,
           nonce,
-          prefix: pairClient.signingPrefix,
         }),
       ),
     }),

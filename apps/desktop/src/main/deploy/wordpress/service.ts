@@ -2,11 +2,9 @@ import { randomUUID } from 'node:crypto';
 import {
   encodeWpFrame,
   isValidWpSlug,
-  isWpLegacyRestUrl,
   type ProjectWordPressItemKind,
   WP_ROUTES,
   type WpAuditEntry,
-  type WpConnectorMigrateResponse,
   type WpConnectorUpdateRequest,
   type WpConnectorUpdateResponse,
   type WpDeployRecord,
@@ -72,11 +70,6 @@ export interface WordPressServiceDeps {
   saveConnectorZip: () => Promise<DeployWordPressSaveZipResult>;
   /** The connector that ships with the app, unpacked for an in-app update of a site. */
   readConnectorBundle: () => Promise<ConnectorBundle>;
-  /**
-   * The bridge package that ships with the app: the same connector in the folder 1.63 used, the
-   * only update a 1.63 site takes. Without it such a site is updated by hand once.
-   */
-  readBridgeBundle?: () => Promise<ConnectorBundle>;
   /** Milliseconds. */
   now?: () => number;
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
@@ -368,7 +361,6 @@ export class WordPressService {
         connectionExpiresAt:
           typeof info.connection.expiresAt === 'number' ? info.connection.expiresAt : null,
         rescueUrl: sameOriginRescueUrl(info.guard.rescueUrl, current) ?? current.rescueUrl,
-        ...movedEndpoints(current, info.layout === 'runova' ? info.endpoints : undefined),
       }));
       return { ...info, checkedAt: this.now() };
     });
@@ -475,7 +467,7 @@ export class WordPressService {
   async updateConnector(siteId: string): Promise<DeployWordPressUpdateConnectorResult> {
     const bundle = await this.deps.readConnectorBundle();
     const result = await this.holdSite(siteId, () =>
-      this.withSite(siteId, (client, site) => this.updateByLayout(client, site, bundle)),
+      this.withSite(siteId, (client) => this.sendConnector(client, bundle)),
     );
     if (result.outcome === 'current') return result;
     // Asked again either way: the reply is signed by whichever code runs on the site now, and the
@@ -493,75 +485,13 @@ export class WordPressService {
     return result;
   }
 
-  /**
-   * A site that still runs from the 1.63 folder (a 1.63 connector, which reports no layout, or the
-   * bridge) only takes the bridge package, since its folder and its plugin entry are the old ones.
-   * Once it runs the bridge, the site moves itself to runova-connector/ and the app saves the
-   * addresses it answers at from then on. A move that does not happen leaves the site working
-   * in the old folder; the reply says why, and the next update tries again.
-   */
-  private async updateByLayout(
-    client: WpClient,
-    site: StoredWpSite,
-    bundle: ConnectorBundle,
-  ): Promise<DeployWordPressUpdateConnectorResult> {
-    const info = cleanInfo((await client.call(WP_ROUTES.siteInfo, {})).data);
-    if (info.layout === 'runova') return this.sendConnector(client, bundle, info);
-    if (!this.deps.readBridgeBundle) {
-      throw wordPressError(
-        'connectorOutdated',
-        `The connector on this site (version ${info.pluginVersion || 'unknown'}) is the one from before AgentMate became Runova, and this build of Runova cannot move it. Upload the plugin once in wp-admin (Plugins > Add New > Upload Plugin).`, // legacy-name
-      );
-    }
-    const bridge = await this.deps.readBridgeBundle();
-    // A 1.63 site takes the bridge even at the same version: what changes is the code in it.
-    const sent = await this.sendConnector(client, bridge, info, info.layout === undefined);
-    if (sent.outcome === 'rolledBack') return sent;
-    const moved = await this.moveConnector(client, site);
-    if (moved !== true) return { ...sent, moveProblem: moved };
-    return { ...sent, outcome: 'updated', moved: true };
-  }
-
-  /** `/connector/migrate`, then the new addresses saved. True, or why the site did not move. */
-  private async moveConnector(client: WpClient, site: StoredWpSite): Promise<true | string> {
-    let reply: WpConnectorMigrateResponse;
-    try {
-      reply = (
-        await client.call(
-          WP_ROUTES.connectorMigrate,
-          {},
-          { timeoutMs: CONNECTOR_UPDATE_TIMEOUT_MS },
-        )
-      ).data;
-    } catch (error) {
-      // A reply that got lost may still follow a move that worked; the site's info tells later.
-      return cleanSiteText(wordPressErrorMessage(error), 300) || 'The site did not answer.';
-    }
-    if (reply.state === 'rolledBack') {
-      return 'The site failed its health check with the connector in its new folder, so it stays in the old one and works as before.';
-    }
-    if (reply.state !== 'migrated' && reply.state !== 'current') {
-      return 'The site sent back a reply to the move that Runova could not read.';
-    }
-    await this.deps.state.updateSite(site.id, (current) => ({
-      ...current,
-      ...movedEndpoints(current, reply),
-      rescueUrl: sameOriginRescueUrl(reply.rescueUrl, current) ?? current.rescueUrl,
-      pluginVersion: cleanSiteText(reply.version, 40) || current.pluginVersion,
-    }));
-    return true;
-  }
-
   private async sendConnector(
     client: WpClient,
     bundle: ConnectorBundle,
-    info: WpSiteInfo,
-    /** Send it even when the site reports the same version (a 1.63 site getting the bridge). */
-    resend = false,
   ): Promise<DeployWordPressUpdateConnectorResult> {
+    const info = cleanInfo((await client.call(WP_ROUTES.siteInfo, {})).data);
     const fromVersion = info.pluginVersion;
-    const order = compareConnectorVersions(fromVersion, bundle.version);
-    if (order > 0 || (order === 0 && !resend)) {
+    if (compareConnectorVersions(fromVersion, bundle.version) >= 0) {
       return { outcome: 'current', fromVersion, version: bundle.version, checks: [] };
     }
     if (info.selfUpdate === false) {
@@ -914,32 +844,6 @@ export class WordPressService {
       this.operations.delete(operationId);
     }
   }
-}
-
-/**
- * The REST and admin-ajax addresses a site reports after it moved to its own folder, for a site
- * saved with its 1.63 ones. Only on the same origins, so a reply can never point the app at
- * another host. Nothing for a site already saved with the new ones.
- */
-export function movedEndpoints(
-  site: Pick<StoredWpSite, 'restUrl' | 'ajaxUrl'>,
-  reported: { restUrl?: unknown; ajaxUrl?: unknown } | undefined,
-): Partial<Pick<StoredWpSite, 'restUrl' | 'ajaxUrl'>> {
-  if (!reported || !isWpLegacyRestUrl(site.restUrl)) return {};
-  const { restUrl, ajaxUrl } = reported;
-  if (typeof restUrl !== 'string' || typeof ajaxUrl !== 'string') return {};
-  if (restUrl.length > 2048 || ajaxUrl.length > 2048 || isWpLegacyRestUrl(restUrl)) return {};
-  const origin = (url: string) => {
-    try {
-      const parsed = new URL(url);
-      return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.origin : null;
-    } catch {
-      return null;
-    }
-  };
-  if (origin(restUrl) === null || origin(restUrl) !== origin(site.restUrl)) return {};
-  if (origin(ajaxUrl) === null || origin(ajaxUrl) !== origin(site.ajaxUrl)) return {};
-  return { restUrl, ajaxUrl };
 }
 
 /** Whether a failed download left the site as it was, so sending the files is worth a try. */

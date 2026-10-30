@@ -13,13 +13,11 @@
  *  7. the nonce is recorded, after the signature checked out, so a forged request burns nothing;
  *  8. scope (read-only keys get readOnly on write routes);
  *  9. kill switches: RUNOVA_CONNECTOR_DISABLED; for writes also RUNOVA_CONNECTOR_READ_ONLY,
- *     DISALLOW_FILE_MODS and a filesystem method other than direct (each switch also under the
- *     name it had before the rename);
+ *     DISALLOW_FILE_MODS and a filesystem method other than direct;
  * 10. only then is the bundle gunzipped (with a limit) and the frame read.
  *
  * Every reply, errors included, is signed over the route, the request's nonce and the connection
- * id the request named ('-' for none), so /hello and /pair replies are signed with '-'. The reply
- * uses the signing prefix the request verified with, or the endpoint's when it never verified.
+ * id the request named ('-' for none), so /hello and /pair replies are signed with '-'.
  *
  * @package Runova\Connector
  */
@@ -44,7 +42,7 @@ use Runova\Connector\Storage\Storage;
 final class Dispatcher
 {
     /** Features a client can count on from this build. */
-    const CAPABILITIES = array('pair', 'read', 'audit', 'revoke', 'deploy', 'update', 'updateDownload', 'rescue', 'migrate');
+    const CAPABILITIES = array('pair', 'read', 'audit', 'revoke', 'deploy', 'update', 'updateDownload', 'rescue');
 
     /** @var Storage */
     private $storage;
@@ -67,9 +65,6 @@ final class Dispatcher
     /** @var callable|null receives unexpected errors, for the PHP error log */
     private $logger;
 
-    /** @var string the signing prefix of the request being handled, which its reply is signed with */
-    private $prefix = Protocol::PREFIX;
-
     /**
      * @param array<string, Handler> $handlers route => handler
      */
@@ -91,7 +86,6 @@ final class Dispatcher
         $nonce = '-';
         $connectionId = null;
         $connection = null;
-        $this->prefix = $request->prefix;
         try {
             $locked = $this->limiter->lockedFor($request->ip, $now);
             if ($locked > 0 && !$this->namesLiveConnection($route, $request->auth, $now)) {
@@ -122,7 +116,7 @@ final class Dispatcher
                 return $this->respond($route, $nonce, $connectionId, 200, array('ok' => true, 'data' => $this->hello($now)));
             }
             if ($route === Protocol::ROUTES['pair']) {
-                $data = (new Pairing($this->storage, $this->env, $this->audit))->pair($auth, $request->bundle, $request->ip, $this->prefix);
+                $data = (new Pairing($this->storage, $this->env, $this->audit))->pair($auth, $request->bundle, $request->ip);
                 return $this->respond($route, $nonce, $connectionId, 200, array('ok' => true, 'data' => $data));
             }
 
@@ -205,22 +199,10 @@ final class Dispatcher
         }
         $signature = Base64Url::decode((string) $auth['signature']);
         $publicKey = Base64Url::decode($connection['public_key']);
-        $verified = null;
-        if ($signature !== null && $publicKey !== null) {
-            // The endpoint's prefix first, then the other one: a 1.63 desktop signs with the old
-            // prefix, and it may be calling the Runova endpoints a site reported to it.
-            foreach (array($this->prefix, Protocol::otherPrefix($this->prefix)) as $prefix) {
-                $text = Canonical::request($route, $auth['timestamp'], $auth['nonce'], $auth['connectionId'], $bundle->sha256(), $prefix);
-                if (Crypto::verify($signature, $text, $publicKey)) {
-                    $verified = $prefix;
-                    break;
-                }
-            }
-        }
-        if ($verified === null) {
+        $text = Canonical::request($route, $auth['timestamp'], $auth['nonce'], $auth['connectionId'], $bundle->sha256());
+        if ($signature === null || $publicKey === null || !Crypto::verify($signature, $text, $publicKey)) {
             throw ApiError::auth('badSignature', 'The request signature does not match this connection.');
         }
-        $this->prefix = $verified;
         $nonceKey = hash('sha256', $connection['id'] . "\n" . $auth['nonce']);
         if (!$this->storage->insertNonce($nonceKey, $now + 2 * Protocol::TIMESTAMP_WINDOW_SECONDS + 60)) {
             throw ApiError::auth('replayed', 'This request was already used.');
@@ -264,9 +246,6 @@ final class Dispatcher
             'rescueUrl' => $this->env->rescueUrl(),
             'multisite' => $this->env->isMultisite(),
             'siteName' => $this->env->siteName(),
-            'layout' => $this->env->layout(),
-            // Where this copy answers now, so an app that saved older addresses can repair them.
-            'endpoints' => array('restUrl' => $this->env->restUrl(), 'ajaxUrl' => $this->env->ajaxUrl()),
         );
     }
 
@@ -341,7 +320,7 @@ final class Dispatcher
         $payload = Gzip::encode($frame, $total > 1048576 ? 1 : 6);
         $timestamp = $this->env->now();
         try {
-            $signature = $this->keys->sign(Canonical::response($route === null ? '-' : $route, $nonce, $connectionId, $timestamp, $status, hash('sha256', $payload), $this->prefix));
+            $signature = $this->keys->sign(Canonical::response($route === null ? '-' : $route, $nonce, $connectionId, $timestamp, $status, hash('sha256', $payload)));
         } catch (\Throwable $error) {
             if ($this->logger !== null) {
                 call_user_func($this->logger, $error);

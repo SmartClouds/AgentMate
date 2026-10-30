@@ -10,8 +10,6 @@ namespace Runova\Connector\Files;
 
 use Runova\Connector\Env\Environment;
 use Runova\Connector\Http\ApiError;
-use Runova\Connector\Layout;
-use Runova\Connector\Legacy;
 
 final class ItemResolver
 {
@@ -71,13 +69,6 @@ final class ItemResolver
             return true;
         }
         if ($kind === 'mu-plugin' && strcasecmp($slug, $this->env->guardSlug()) === 0) {
-            return true;
-        }
-        // The copy in the other layout and its guard, while a site moves between the two.
-        if ($kind === 'plugin' && (strcasecmp($slug, Legacy::SLUG) === 0 || strcasecmp($slug, Layout::SLUG) === 0)) {
-            return true;
-        }
-        if ($kind === 'mu-plugin' && strcasecmp($slug, Legacy::GUARD_FILE) === 0) {
             return true;
         }
         if ($real === null) {

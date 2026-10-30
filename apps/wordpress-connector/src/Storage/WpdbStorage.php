@@ -1,8 +1,7 @@
 <?php
 /**
  * Storage in the plugin's own tables through $wpdb. Every statement with a value in it goes
- * through $wpdb->prepare() or the $wpdb->insert() helpers. The tables keep the names the plugin
- * gave them before it was renamed (see Legacy::TABLE_PREFIX and Schema::table()).
+ * through $wpdb->prepare() or the $wpdb->insert() helpers (see Schema::table() for the names).
  *
  * @package Runova\Connector
  */
@@ -27,7 +26,7 @@ final class WpdbStorage implements Storage
     public function insertConnection(array $row): void
     {
         $row = Rows::connection($row);
-        $ok = $this->db->insert($this->db->base_prefix . 'agentmate_connections', $row); // legacy-name
+        $ok = $this->db->insert($this->db->base_prefix . 'runova_connections', $row);
         if ($ok === false) {
             throw new \RuntimeException('The connection could not be saved.');
         }
@@ -37,7 +36,7 @@ final class WpdbStorage implements Storage
     {
         $wpdb = $this->db;
         $row = $wpdb->get_row(
-            $wpdb->prepare("SELECT * FROM {$wpdb->base_prefix}agentmate_connections WHERE id = %s", $id), // legacy-name
+            $wpdb->prepare("SELECT * FROM {$wpdb->base_prefix}runova_connections WHERE id = %s", $id),
             ARRAY_A
         );
         return is_array($row) ? Rows::connection($row) : null;
@@ -46,7 +45,7 @@ final class WpdbStorage implements Storage
     public function listConnections(): array
     {
         $wpdb = $this->db;
-        $rows = $wpdb->get_results("SELECT * FROM {$wpdb->base_prefix}agentmate_connections ORDER BY created_at DESC LIMIT 500", ARRAY_A); // legacy-name
+        $rows = $wpdb->get_results("SELECT * FROM {$wpdb->base_prefix}runova_connections ORDER BY created_at DESC LIMIT 500", ARRAY_A);
         return array_map(array(Rows::class, 'connection'), is_array($rows) ? $rows : array());
     }
 
@@ -54,7 +53,7 @@ final class WpdbStorage implements Storage
     {
         $wpdb = $this->db;
         $wpdb->query(
-            $wpdb->prepare("UPDATE {$wpdb->base_prefix}agentmate_connections SET revoked_at = %d WHERE id = %s AND revoked_at IS NULL", $at, $id) // legacy-name
+            $wpdb->prepare("UPDATE {$wpdb->base_prefix}runova_connections SET revoked_at = %d WHERE id = %s AND revoked_at IS NULL", $at, $id)
         );
     }
 
@@ -62,7 +61,7 @@ final class WpdbStorage implements Storage
     {
         $wpdb = $this->db;
         $wpdb->query(
-            $wpdb->prepare("UPDATE {$wpdb->base_prefix}agentmate_connections SET last_seen_at = %d, last_ip = %s WHERE id = %s", $at, $ip, $id) // legacy-name
+            $wpdb->prepare("UPDATE {$wpdb->base_prefix}runova_connections SET last_seen_at = %d, last_ip = %s WHERE id = %s", $at, $ip, $id)
         );
     }
 
@@ -70,7 +69,7 @@ final class WpdbStorage implements Storage
     {
         $row = Rows::pairing($row);
         $row['burned'] = $row['burned'] ? 1 : 0;
-        $ok = $this->db->insert($this->db->base_prefix . 'agentmate_pairings', $row); // legacy-name
+        $ok = $this->db->insert($this->db->base_prefix . 'runova_pairings', $row);
         if ($ok === false) {
             throw new \RuntimeException('The pairing could not be saved.');
         }
@@ -80,7 +79,7 @@ final class WpdbStorage implements Storage
     {
         $wpdb = $this->db;
         $row = $wpdb->get_row(
-            $wpdb->prepare("SELECT * FROM {$wpdb->base_prefix}agentmate_pairings WHERE id = %s", $id), // legacy-name
+            $wpdb->prepare("SELECT * FROM {$wpdb->base_prefix}runova_pairings WHERE id = %s", $id),
             ARRAY_A
         );
         return is_array($row) ? Rows::pairing($row) : null;
@@ -90,10 +89,10 @@ final class WpdbStorage implements Storage
     {
         $wpdb = $this->db;
         $wpdb->query(
-            $wpdb->prepare("UPDATE {$wpdb->base_prefix}agentmate_pairings SET attempts = attempts + 1 WHERE id = %s", $id) // legacy-name
+            $wpdb->prepare("UPDATE {$wpdb->base_prefix}runova_pairings SET attempts = attempts + 1 WHERE id = %s", $id)
         );
         $count = $wpdb->get_var(
-            $wpdb->prepare("SELECT attempts FROM {$wpdb->base_prefix}agentmate_pairings WHERE id = %s", $id) // legacy-name
+            $wpdb->prepare("SELECT attempts FROM {$wpdb->base_prefix}runova_pairings WHERE id = %s", $id)
         );
         return (int) $count;
     }
@@ -102,7 +101,7 @@ final class WpdbStorage implements Storage
     {
         $wpdb = $this->db;
         $wpdb->query(
-            $wpdb->prepare("UPDATE {$wpdb->base_prefix}agentmate_pairings SET burned = 1, secret = NULL WHERE id = %s", $id) // legacy-name
+            $wpdb->prepare("UPDATE {$wpdb->base_prefix}runova_pairings SET burned = 1, secret = NULL WHERE id = %s", $id)
         );
     }
 
@@ -111,7 +110,7 @@ final class WpdbStorage implements Storage
         $wpdb = $this->db;
         $changed = $wpdb->query(
             $wpdb->prepare(
-                "UPDATE {$wpdb->base_prefix}agentmate_pairings SET used_at = %d, secret = NULL WHERE id = %s AND used_at IS NULL AND burned = 0", // legacy-name
+                "UPDATE {$wpdb->base_prefix}runova_pairings SET used_at = %d, secret = NULL WHERE id = %s AND used_at IS NULL AND burned = 0",
                 $at,
                 $id
             )
@@ -123,7 +122,7 @@ final class WpdbStorage implements Storage
     {
         $wpdb = $this->db;
         $wpdb->query(
-            $wpdb->prepare("DELETE FROM {$wpdb->base_prefix}agentmate_pairings WHERE expires_at < %d", $before) // legacy-name
+            $wpdb->prepare("DELETE FROM {$wpdb->base_prefix}runova_pairings WHERE expires_at < %d", $before)
         );
     }
 
@@ -133,7 +132,7 @@ final class WpdbStorage implements Storage
         // INSERT IGNORE and a row count, never select-then-insert: two copies of one request racing
         // each other must not both get in.
         $changed = $wpdb->query(
-            $wpdb->prepare("INSERT IGNORE INTO {$wpdb->base_prefix}agentmate_nonces (nonce_hash, expires_at) VALUES (%s, %d)", $hash, $expiresAt) // legacy-name
+            $wpdb->prepare("INSERT IGNORE INTO {$wpdb->base_prefix}runova_nonces (nonce_hash, expires_at) VALUES (%s, %d)", $hash, $expiresAt)
         );
         if ($changed === false) {
             throw new \RuntimeException('The nonce could not be recorded.');
@@ -146,7 +145,7 @@ final class WpdbStorage implements Storage
         $row = Rows::audit($row + array('id' => 0));
         unset($row['id']);
         $wpdb = $this->db;
-        $ok = $wpdb->insert($wpdb->base_prefix . 'agentmate_audit', $row); // legacy-name
+        $ok = $wpdb->insert($wpdb->base_prefix . 'runova_audit', $row);
         if ($ok === false) {
             return 0;
         }
@@ -155,11 +154,11 @@ final class WpdbStorage implements Storage
         $noise = $row['noise'];
         $cap = $noise === 1 ? self::AUDIT_NOISE_CAP : self::AUDIT_CAP;
         $oldest = $wpdb->get_var(
-            $wpdb->prepare("SELECT id FROM {$wpdb->base_prefix}agentmate_audit WHERE noise = %d ORDER BY id DESC LIMIT 1 OFFSET %d", $noise, $cap) // legacy-name
+            $wpdb->prepare("SELECT id FROM {$wpdb->base_prefix}runova_audit WHERE noise = %d ORDER BY id DESC LIMIT 1 OFFSET %d", $noise, $cap)
         );
         if ($oldest !== null) {
             $wpdb->query(
-                $wpdb->prepare("DELETE FROM {$wpdb->base_prefix}agentmate_audit WHERE noise = %d AND id <= %d", $noise, (int) $oldest) // legacy-name
+                $wpdb->prepare("DELETE FROM {$wpdb->base_prefix}runova_audit WHERE noise = %d AND id <= %d", $noise, (int) $oldest)
             );
         }
         return $id;
@@ -170,12 +169,12 @@ final class WpdbStorage implements Storage
         $wpdb = $this->db;
         if ($beforeId === null) {
             $rows = $wpdb->get_results(
-                $wpdb->prepare("SELECT * FROM {$wpdb->base_prefix}agentmate_audit ORDER BY id DESC LIMIT %d", $limit), // legacy-name
+                $wpdb->prepare("SELECT * FROM {$wpdb->base_prefix}runova_audit ORDER BY id DESC LIMIT %d", $limit),
                 ARRAY_A
             );
         } else {
             $rows = $wpdb->get_results(
-                $wpdb->prepare("SELECT * FROM {$wpdb->base_prefix}agentmate_audit WHERE id < %d ORDER BY id DESC LIMIT %d", $beforeId, $limit), // legacy-name
+                $wpdb->prepare("SELECT * FROM {$wpdb->base_prefix}runova_audit WHERE id < %d ORDER BY id DESC LIMIT %d", $beforeId, $limit),
                 ARRAY_A
             );
         }
@@ -186,7 +185,7 @@ final class WpdbStorage implements Storage
     {
         $wpdb = $this->db;
         $row = $wpdb->get_row(
-            $wpdb->prepare("SELECT v, expires_at FROM {$wpdb->base_prefix}agentmate_kv WHERE k = %s", $key), // legacy-name
+            $wpdb->prepare("SELECT v, expires_at FROM {$wpdb->base_prefix}runova_kv WHERE k = %s", $key),
             ARRAY_A
         );
         if (!is_array($row)) {
@@ -203,19 +202,19 @@ final class WpdbStorage implements Storage
         $wpdb = $this->db;
         if ($expiresAt === null) {
             $wpdb->query(
-                $wpdb->prepare("REPLACE INTO {$wpdb->base_prefix}agentmate_kv (k, v, expires_at) VALUES (%s, %s, NULL)", $key, $value) // legacy-name
+                $wpdb->prepare("REPLACE INTO {$wpdb->base_prefix}runova_kv (k, v, expires_at) VALUES (%s, %s, NULL)", $key, $value)
             );
             return;
         }
         $wpdb->query(
-            $wpdb->prepare("REPLACE INTO {$wpdb->base_prefix}agentmate_kv (k, v, expires_at) VALUES (%s, %s, %d)", $key, $value, $expiresAt) // legacy-name
+            $wpdb->prepare("REPLACE INTO {$wpdb->base_prefix}runova_kv (k, v, expires_at) VALUES (%s, %s, %d)", $key, $value, $expiresAt)
         );
     }
 
     public function kvDelete(string $key): void
     {
         $wpdb = $this->db;
-        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->base_prefix}agentmate_kv WHERE k = %s", $key)); // legacy-name
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->base_prefix}runova_kv WHERE k = %s", $key));
     }
 
     public function kvAdd(string $key, string $value, ?int $expiresAt, int $now): bool
@@ -223,15 +222,15 @@ final class WpdbStorage implements Storage
         $wpdb = $this->db;
         // An expired holder no longer counts; clear it so the insert below can win.
         $wpdb->query(
-            $wpdb->prepare("DELETE FROM {$wpdb->base_prefix}agentmate_kv WHERE k = %s AND expires_at IS NOT NULL AND expires_at <= %d", $key, $now) // legacy-name
+            $wpdb->prepare("DELETE FROM {$wpdb->base_prefix}runova_kv WHERE k = %s AND expires_at IS NOT NULL AND expires_at <= %d", $key, $now)
         );
         if ($expiresAt === null) {
             $changed = $wpdb->query(
-                $wpdb->prepare("INSERT IGNORE INTO {$wpdb->base_prefix}agentmate_kv (k, v, expires_at) VALUES (%s, %s, NULL)", $key, $value) // legacy-name
+                $wpdb->prepare("INSERT IGNORE INTO {$wpdb->base_prefix}runova_kv (k, v, expires_at) VALUES (%s, %s, NULL)", $key, $value)
             );
         } else {
             $changed = $wpdb->query(
-                $wpdb->prepare("INSERT IGNORE INTO {$wpdb->base_prefix}agentmate_kv (k, v, expires_at) VALUES (%s, %s, %d)", $key, $value, $expiresAt) // legacy-name
+                $wpdb->prepare("INSERT IGNORE INTO {$wpdb->base_prefix}runova_kv (k, v, expires_at) VALUES (%s, %s, %d)", $key, $value, $expiresAt)
             );
         }
         if ($changed === false) {
@@ -245,7 +244,7 @@ final class WpdbStorage implements Storage
         $row = Rows::deploy($row);
         // Deploys started in the same second still list in the order they began.
         $row['started_us'] = (int) round(microtime(true) * 1000000);
-        $ok = $this->db->insert($this->db->base_prefix . 'agentmate_deploys', $row); // legacy-name
+        $ok = $this->db->insert($this->db->base_prefix . 'runova_deploys', $row);
         if ($ok === false) {
             throw new \RuntimeException('The deploy could not be saved.');
         }
@@ -255,7 +254,7 @@ final class WpdbStorage implements Storage
     {
         $wpdb = $this->db;
         $row = $wpdb->get_row(
-            $wpdb->prepare("SELECT * FROM {$wpdb->base_prefix}agentmate_deploys WHERE id = %s", $id), // legacy-name
+            $wpdb->prepare("SELECT * FROM {$wpdb->base_prefix}runova_deploys WHERE id = %s", $id),
             ARRAY_A
         );
         return is_array($row) ? Rows::deploy($row) : null;
@@ -279,7 +278,7 @@ final class WpdbStorage implements Storage
         }
         // rev always changes, so a matched row is always a changed row and the count is honest.
         $sets[] = '`rev` = `rev` + 1';
-        $sql = "UPDATE {$wpdb->base_prefix}agentmate_deploys SET " . implode(', ', $sets) . ' WHERE id = %s'; // legacy-name
+        $sql = "UPDATE {$wpdb->base_prefix}runova_deploys SET " . implode(', ', $sets) . ' WHERE id = %s';
         $values[] = $id;
         if ($expectedState !== null) {
             $sql .= ' AND state = %s';
@@ -297,7 +296,7 @@ final class WpdbStorage implements Storage
     {
         $wpdb = $this->db;
         $rows = $wpdb->get_results(
-            $wpdb->prepare("SELECT * FROM {$wpdb->base_prefix}agentmate_deploys ORDER BY started_at DESC, started_us DESC LIMIT %d", $limit), // legacy-name
+            $wpdb->prepare("SELECT * FROM {$wpdb->base_prefix}runova_deploys ORDER BY started_at DESC, started_us DESC LIMIT %d", $limit),
             ARRAY_A
         );
         return array_map(array(Rows::class, 'deploy'), is_array($rows) ? $rows : array());
@@ -306,7 +305,7 @@ final class WpdbStorage implements Storage
     public function deleteDeploy(string $id): void
     {
         $wpdb = $this->db;
-        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->base_prefix}agentmate_deploys WHERE id = %s", $id)); // legacy-name
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->base_prefix}runova_deploys WHERE id = %s", $id));
     }
 
     public function getHashes(array $files): array
@@ -316,7 +315,7 @@ final class WpdbStorage implements Storage
         foreach (array_chunk(array_keys($files), 200) as $chunk) {
             $placeholders = implode(', ', array_fill(0, count($chunk), '%s'));
             // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- placeholders are built from the chunk size.
-            $rows = $wpdb->get_results($wpdb->prepare("SELECT path_hash, size, mtime, sha256 FROM {$wpdb->base_prefix}agentmate_hash_cache WHERE path_hash IN ($placeholders)", $chunk), ARRAY_A); // legacy-name
+            $rows = $wpdb->get_results($wpdb->prepare("SELECT path_hash, size, mtime, sha256 FROM {$wpdb->base_prefix}runova_hash_cache WHERE path_hash IN ($placeholders)", $chunk), ARRAY_A);
             foreach (is_array($rows) ? $rows : array() as $row) {
                 $key = (string) $row['path_hash'];
                 if (isset($files[$key]) && (int) $row['size'] === $files[$key]['size'] && (int) $row['mtime'] === $files[$key]['mtime']) {
@@ -332,7 +331,7 @@ final class WpdbStorage implements Storage
         $wpdb = $this->db;
         $wpdb->query(
             $wpdb->prepare(
-                "REPLACE INTO {$wpdb->base_prefix}agentmate_hash_cache (path_hash, size, mtime, sha256, checked_at) VALUES (%s, %d, %d, %s, %d)", // legacy-name
+                "REPLACE INTO {$wpdb->base_prefix}runova_hash_cache (path_hash, size, mtime, sha256, checked_at) VALUES (%s, %d, %d, %s, %d)",
                 $pathHash,
                 $size,
                 $mtime,
@@ -345,9 +344,9 @@ final class WpdbStorage implements Storage
     public function purgeExpired(int $now): void
     {
         $wpdb = $this->db;
-        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->base_prefix}agentmate_nonces WHERE expires_at < %d LIMIT 1000", $now)); // legacy-name
-        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->base_prefix}agentmate_kv WHERE expires_at IS NOT NULL AND expires_at <= %d LIMIT 1000", $now)); // legacy-name
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->base_prefix}runova_nonces WHERE expires_at < %d LIMIT 1000", $now));
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->base_prefix}runova_kv WHERE expires_at IS NOT NULL AND expires_at <= %d LIMIT 1000", $now));
         // Cached hashes nobody looked at for 30 days belong to files that are long gone.
-        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->base_prefix}agentmate_hash_cache WHERE checked_at < %d LIMIT 1000", $now - 2592000)); // legacy-name
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->base_prefix}runova_hash_cache WHERE checked_at < %d LIMIT 1000", $now - 2592000));
     }
 }

@@ -4,8 +4,6 @@
  *  - REST: POST <rest base>/runova/v1/<route> (pretty permalinks or ?rest_route=);
  *  - admin-ajax: POST admin-ajax.php?action=runova_connector&route=<route>, for sites whose
  *    REST API is blocked. Logged in or not makes no difference: auth is the signature.
- * The namespace and action from before the rename are served too, for the addresses 1.63
- * desktops saved; a request that comes in under them gets its replies signed the 1.63 way.
  * Either way the reply is raw bytes sent after every output buffer is thrown away, with caching
  * turned off for every layer we know of.
  *
@@ -14,7 +12,6 @@
 
 namespace Runova\Connector\Http;
 
-use Runova\Connector\Legacy;
 use Runova\Connector\Plugin;
 use Runova\Connector\Protocol;
 
@@ -30,16 +27,11 @@ final class Transport
         add_action('rest_api_init', array(self::class, 'registerRoutes'));
         add_filter('rest_authentication_errors', array(self::class, 'clearAuthErrors'), 9999);
         add_filter('rest_pre_serve_request', array(self::class, 'serveRest'), 9999, 4);
-        foreach (Protocol::AJAX_ACTIONS as $action) {
-            add_action('wp_ajax_' . $action, array(self::class, 'serveAjax'));
-            add_action('wp_ajax_nopriv_' . $action, array(self::class, 'serveAjax'));
-        }
+        add_action('wp_ajax_' . Protocol::AJAX_ACTION, array(self::class, 'serveAjax'));
+        add_action('wp_ajax_nopriv_' . Protocol::AJAX_ACTION, array(self::class, 'serveAjax'));
         // The health checks' second probe: admin-ajax answers only if every plugin still loads.
-        // The 1.63 updater checks the old one right after it installs the bridge package.
         add_action('wp_ajax_' . Protocol::AJAX_ACTION . '_ping', array(self::class, 'ping'));
         add_action('wp_ajax_nopriv_' . Protocol::AJAX_ACTION . '_ping', array(self::class, 'ping'));
-        add_action('wp_ajax_' . Legacy::AJAX_ACTION . '_ping', array(self::class, 'legacyPing'));
-        add_action('wp_ajax_nopriv_' . Legacy::AJAX_ACTION . '_ping', array(self::class, 'legacyPing'));
     }
 
     /** True for a POST that is plainly for us, checked as early as the plugin loads. */
@@ -51,12 +43,10 @@ final class Transport
         }
         // Only a hint for buffering early; the route that counts comes from WordPress later.
         $uri = isset($_SERVER['REQUEST_URI']) ? rawurldecode(esc_url_raw(wp_unslash($_SERVER['REQUEST_URI']))) : '';
-        foreach (Protocol::REST_NAMESPACES as $namespace) {
-            if (stripos($uri, '/' . $namespace . '/') !== false) {
-                return true;
-            }
+        if (stripos($uri, '/' . Protocol::REST_NAMESPACE . '/') !== false) {
+            return true;
         }
-        return isset($_GET['action']) && in_array($_GET['action'], Protocol::AJAX_ACTIONS, true);
+        return isset($_GET['action']) && $_GET['action'] === Protocol::AJAX_ACTION;
     }
 
     /** Called at load time for our requests: buffer stray output and keep page caches away. */
@@ -70,39 +60,36 @@ final class Transport
 
     public static function registerRoutes(): void
     {
-        foreach (Protocol::REST_NAMESPACES as $namespace) {
-            $prefix = $namespace === Protocol::REST_NAMESPACE ? Protocol::PREFIX : Protocol::LEGACY_PREFIX;
-            foreach (Protocol::ROUTES as $route) {
-                register_rest_route(
-                    $namespace,
-                    $route,
-                    array(
-                        'methods' => 'POST',
-                        // The route that gets signed is this constant, never anything read from the URL.
-                        'callback' => function () use ($route, $prefix) {
-                            return Transport::handleRest($route, $prefix);
-                        },
-                        // Our own signature check runs inside the callback.
-                        'permission_callback' => '__return_true',
-                    )
-                );
-            }
+        foreach (Protocol::ROUTES as $route) {
+            register_rest_route(
+                Protocol::REST_NAMESPACE,
+                $route,
+                array(
+                    'methods' => 'POST',
+                    // The route that gets signed is this constant, never anything read from the URL.
+                    'callback' => function () use ($route) {
+                        return Transport::handleRest($route);
+                    },
+                    // Our own signature check runs inside the callback.
+                    'permission_callback' => '__return_true',
+                )
+            );
         }
     }
 
     /**
      * @return \WP_REST_Response
      */
-    public static function handleRest(string $route, string $prefix = Protocol::PREFIX)
+    public static function handleRest(string $route)
     {
-        $response = Plugin::dispatcher()->handle(self::incoming($route, $prefix));
+        $response = Plugin::dispatcher()->handle(self::incoming($route));
         self::$pending = $response;
         return new \WP_REST_Response(null, $response->status);
     }
 
     /**
      * Security plugins often refuse REST calls from logged-out users. Our routes do their own auth,
-     * so their errors are cleared for our namespaces only, and only here, as late as possible.
+     * so their errors are cleared for our namespace only, and only here, as late as possible.
      *
      * @param mixed $result
      * @return mixed
@@ -119,13 +106,8 @@ final class Transport
     {
         $wp = isset($GLOBALS['wp']) ? $GLOBALS['wp'] : null;
         $route = (is_object($wp) && isset($wp->query_vars['rest_route']) && is_string($wp->query_vars['rest_route'])) ? $wp->query_vars['rest_route'] : '';
-        foreach (Protocol::REST_NAMESPACES as $namespace) {
-            $prefix = '/' . $namespace . '/';
-            if (strncasecmp($route, $prefix, strlen($prefix)) === 0) {
-                return true;
-            }
-        }
-        return false;
+        $prefix = '/' . Protocol::REST_NAMESPACE . '/';
+        return strncasecmp($route, $prefix, strlen($prefix)) === 0;
     }
 
     /**
@@ -147,20 +129,9 @@ final class Transport
 
     public static function ping(): void
     {
-        self::pong('runova-pong');
-    }
-
-    /** What the 1.63 updater's health check looks for, after it installed the bridge package. */
-    public static function legacyPing(): void
-    {
-        self::pong(Legacy::PING_REPLY);
-    }
-
-    private static function pong(string $word): void
-    {
         nocache_headers();
         header('Content-Type: text/plain; charset=utf-8');
-        echo $word; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- a fixed word.
+        echo 'runova-pong';
         exit;
     }
 
@@ -168,19 +139,13 @@ final class Transport
     {
         // Only ever compared against the fixed route list.
         $route = isset($_GET['route']) && is_string($_GET['route']) ? sanitize_text_field(wp_unslash($_GET['route'])) : '';
-        $action = isset($_GET['action']) && is_string($_GET['action']) ? sanitize_text_field(wp_unslash($_GET['action'])) : '';
-        $prefix = $action === Legacy::AJAX_ACTION ? Protocol::LEGACY_PREFIX : Protocol::PREFIX;
-        $response = Plugin::dispatcher()->handle(self::incoming($route, $prefix));
+        $response = Plugin::dispatcher()->handle(self::incoming($route));
         self::emit($response);
         exit;
     }
 
-    /**
-     * The current request's form fields and upload, for any entry point.
-     *
-     * @param string $prefix the signing prefix the entry point suggests (see IncomingRequest)
-     */
-    public static function incoming(string $route, string $prefix = Protocol::PREFIX): IncomingRequest
+    /** The current request's form fields and upload, for any entry point. */
+    public static function incoming(string $route): IncomingRequest
     {
         // The value must then match Canonical::parseAuth's strict format; a valid one is unchanged here.
         $auth = isset($_POST[Protocol::AUTH_FIELD]) && is_string($_POST[Protocol::AUTH_FIELD])
@@ -196,7 +161,7 @@ final class Transport
         if ($auth === null && $bundle === null && $postMax > 0 && $length > $postMax) {
             $tooLarge = true;
         }
-        return new IncomingRequest($route, $auth, $bundle, ClientIp::get(), $tooLarge, $prefix);
+        return new IncomingRequest($route, $auth, $bundle, ClientIp::get(), $tooLarge);
     }
 
     public static function emit(OutgoingResponse $response): void

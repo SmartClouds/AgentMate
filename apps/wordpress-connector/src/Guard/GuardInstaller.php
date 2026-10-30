@@ -1,15 +1,12 @@
 <?php
 /**
  * Puts the guard into the mu-plugins folder, with the connector's folder written into it, and
- * takes it out again on deactivation. The guard 1.63 installed under the old file name is removed
- * once the new one is in place.
+ * takes it out again on deactivation.
  *
  * @package Runova\Connector
  */
 
 namespace Runova\Connector\Guard;
-
-use Runova\Connector\Legacy;
 
 final class GuardInstaller
 {
@@ -20,11 +17,6 @@ final class GuardInstaller
     public static function path(): string
     {
         return self::muDir() . '/' . self::FILE;
-    }
-
-    public static function legacyPath(): string
-    {
-        return self::muDir() . '/' . Legacy::GUARD_FILE;
     }
 
     private static function muDir(): string
@@ -50,7 +42,7 @@ final class GuardInstaller
     {
         $path = rtrim($muDir, '/\\') . '/' . self::FILE;
         // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-        return is_file($path) && file_get_contents($path) === self::render($pluginDir) && !self::legacyIsOurs($muDir);
+        return is_file($path) && file_get_contents($path) === self::render($pluginDir);
     }
 
     /** Writes the guard when it is missing or out of date. False when mu-plugins is not writable. */
@@ -77,35 +69,9 @@ final class GuardInstaller
                 // Someone else's file under our name; leave it alone.
                 return false;
             }
-            if (!self::write($path, $content)) {
-                return false;
-            }
+            return self::write($path, $content);
         }
-        // The new guard runs first from now on; the old one would load the same classes again.
-        return self::removeLegacyAt($muDir);
-    }
-
-    /**
-     * Removes the guard 1.63 installed, when it is still there and still ours. False only when it
-     * is there and could not be removed.
-     */
-    public static function removeLegacyAt(string $muDir): bool
-    {
-        $legacy = rtrim($muDir, '/\\') . '/' . Legacy::GUARD_FILE;
-        if (!self::legacyIsOurs($muDir)) {
-            return true;
-        }
-        @unlink($legacy); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-        clearstatcache(true, $legacy);
-        return !is_file($legacy);
-    }
-
-    /** The 1.63 guard is in mu-plugins (and is ours, not someone else's file under that name). */
-    public static function legacyIsOurs(string $muDir): bool
-    {
-        $legacy = rtrim($muDir, '/\\') . '/' . Legacy::GUARD_FILE;
-        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-        return is_file($legacy) && strpos((string) file_get_contents($legacy), Legacy::GUARD_MARKER) !== false;
+        return true;
     }
 
     /** Writes through a temporary file and a rename, so the guard is never half written. */
@@ -135,6 +101,5 @@ final class GuardInstaller
         if (is_file($path) && strpos((string) file_get_contents($path), self::MARKER) !== false) {
             @unlink($path); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
         }
-        self::removeLegacyAt(self::muDir());
     }
 }

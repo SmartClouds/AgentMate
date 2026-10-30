@@ -149,27 +149,6 @@ describe('WordPress protocol vectors', () => {
     }
   });
 
-  it('builds the same strings under the prefix 1.63 signs with', () => {
-    const legacy = read('legacy/canonical-v1.json') as Pick<
-      Vectors,
-      'canonicalRequest' | 'canonicalResponse' | 'pairProof'
-    >;
-    expect(legacy.canonicalRequest.length).toBeGreaterThan(0);
-    for (const vector of legacy.canonicalRequest) {
-      expect(wpCanonicalRequest(vector.input)).toBe(vector.text);
-      expect(signWith(vectors.keys[vector.signer].seedHex, vector.text)).toBe(vector.signature);
-    }
-    for (const vector of legacy.canonicalResponse) {
-      expect(wpCanonicalResponse(vector.input)).toBe(vector.text);
-      expect(signWith(vectors.keys[vector.signer].seedHex, vector.text)).toBe(vector.signature);
-    }
-    for (const vector of legacy.pairProof) {
-      expect(wpCanonicalPair(vector.input)).toBe(vector.text);
-    }
-    const [first] = vectors.canonicalRequest;
-    expect(() => wpCanonicalRequest({ ...first.input, prefix: 'other-wp/v1' as never })).toThrow();
-  });
-
   it('formats and parses am_auth', () => {
     for (const vector of vectors.authField.valid) {
       expect(formatWpAuthField(vector.parsed)).toBe(vector.value);

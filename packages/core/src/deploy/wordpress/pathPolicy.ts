@@ -1,4 +1,3 @@
-import { LEGACY_IGNORE_FILE, LEGACY_PROJECT_DIR } from '../../legacyNames.js';
 import type { ProjectWordPressItemKind } from '../../types/index.js';
 import {
   createIgnoreRules,
@@ -30,8 +29,6 @@ import {
 /** Folders that hold agent settings, skills, Runova's own files, or version control. */
 export const WP_HARD_DENY_DIRS: readonly string[] = [
   '.runova',
-  // The same folder in projects made before the rename.
-  LEGACY_PROJECT_DIR,
   // KNOWN_AGENT_DIRS in skills/installPaths.ts, and a few more assistants' folders.
   '.claude',
   '.agents',
@@ -66,7 +63,6 @@ export const WP_HARD_DENY_FILES: readonly string[] = [
   '.windsurfrules',
   '.roomodes',
   '.runovaignore',
-  LEGACY_IGNORE_FILE,
   '.env',
   '.envrc',
   // Package manager and network credentials.
@@ -86,12 +82,7 @@ export const WP_HARD_DENY_FILES: readonly string[] = [
  * starts with `.claude` or `.runova` (`.claude-plugin/`, `.runova-cache/`), so a name an
  * agent or Runova invents later is kept here too.
  */
-export const WP_AGENT_PREFIXES: readonly string[] = [
-  '.aider',
-  '.claude',
-  '.runova',
-  LEGACY_PROJECT_DIR,
-];
+export const WP_AGENT_PREFIXES: readonly string[] = ['.aider', '.claude', '.runova'];
 
 /** Name prefixes: the agent ones above, `.env.local` and friends, SSH private keys. */
 export const WP_HARD_DENY_PREFIXES: readonly string[] = [

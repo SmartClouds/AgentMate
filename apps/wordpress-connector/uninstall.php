@@ -3,9 +3,6 @@
  * Removes everything the plugin made: its tables, options and private data folder. Themes and
  * plugins it deployed stay as they are.
  *
- * While the site moves from the 1.63 folder to the Runova one, both folders are on disk for a
- * while and share the same tables. Deleting either of them then removes only its files.
- *
  * @package Runova\Connector
  */
 
@@ -13,23 +10,15 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
     exit;
 }
 
-// The copy in the other layout may be running in this request; its classes are the same ones.
-if (!class_exists('Runova\\Connector\\Autoloader', false)) {
-    require_once __DIR__ . '/src/Autoloader.php';
-    \Runova\Connector\Autoloader::register(__DIR__ . '/src');
-}
+require_once __DIR__ . '/src/Autoloader.php';
+\Runova\Connector\Autoloader::register(__DIR__ . '/src');
 
 use Runova\Connector\Activator;
 use Runova\Connector\Crypto\SiteKeys;
-use Runova\Connector\Layout;
 use Runova\Connector\Schema;
 use Runova\Connector\Support\Constants;
 use Runova\Connector\Support\DataDir;
 use Runova\Connector\Support\Options;
-
-if (Layout::otherExists(__DIR__)) {
-    return;
-}
 
 global $wpdb;
 
@@ -46,7 +35,7 @@ foreach (Schema::TABLES as $runova_table) {
     $wpdb->query('DROP TABLE IF EXISTS ' . Schema::table($wpdb->base_prefix, $runova_table));
 }
 
-foreach (array(SiteKeys::OPTION, DataDir::OPTION, Activator::DB_VERSION_OPTION, \Runova\Connector\Update\LayoutMigration::CLEANUP_OPTION) as $runova_option) {
+foreach (array(SiteKeys::OPTION, DataDir::OPTION, Activator::DB_VERSION_OPTION) as $runova_option) {
     Options::delete($runova_option);
 }
 \Runova\Connector\Guard\GuardInstaller::uninstall();

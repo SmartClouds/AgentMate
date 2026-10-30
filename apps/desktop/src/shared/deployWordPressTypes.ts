@@ -321,13 +321,6 @@ export interface DeployWordPressUpdateConnectorResult {
   source?: 'site' | 'app';
   /** Why the site could not download the release itself, when the app sent the files instead. */
   downloadProblem?: string;
-  /**
-   * A site that ran the connector from its folder from before the rename moved it to
-   * runova-connector/, and the app now calls it at the new addresses.
-   */
-  moved?: boolean;
-  /** Why such a site did not move this time. It keeps working from the old folder. */
-  moveProblem?: string;
 }
 
 /** Re-exported so renderer code can import everything WordPress from one place. */

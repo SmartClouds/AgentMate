@@ -19,7 +19,6 @@ use Runova\Connector\Http\Gzip;
 use Runova\Connector\Http\IncomingRequest;
 use Runova\Connector\Http\OutgoingResponse;
 use Runova\Connector\Http\StringBundle;
-use Runova\Connector\Protocol;
 use Runova\Connector\Routes\Handlers;
 use Runova\Connector\Storage\MemoryStorage;
 
@@ -124,12 +123,9 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
     /** @var callable|null how the connector update moves folders; tests swap in one that fails */
     protected $rename = null;
 
-    /** @var FakeLayoutHost|null WordPress's side of the layout move */
-    protected $layoutHost = null;
-
     protected function dispatcher(): Dispatcher
     {
-        $handlers = Handlers::all($this->storage, $this->env, $this->writer, $this->rename, $this->layoutHost !== null ? $this->layoutHost : new FakeLayoutHost());
+        $handlers = Handlers::all($this->storage, $this->env, $this->writer, $this->rename);
         $logged = &$this->logged;
         return new Dispatcher($this->storage, $this->env, $this->siteKeys, $handlers, function (\Throwable $error) use (&$logged) {
             $logged[] = $error;
@@ -170,9 +166,7 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
 
     /**
      * Builds and sends a signed request. Options: connectionId, timestamp, nonce, secretKey,
-     * bundle (raw gzip bytes), auth (a ready am_auth), ip, unsigned, prefix (what the request is
-     * signed with), hint (the prefix the endpoint suggests), replyPrefix (what the reply must be
-     * signed with; prefix, else hint, by default).
+     * bundle (raw gzip bytes), auth (a ready am_auth), ip, unsigned.
      *
      * @param mixed $body
      * @param array<string, mixed> $options
@@ -191,14 +185,12 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
             $auth = Canonical::formatAuth($connectionId, $timestamp, $nonce, null);
         } else {
             $secret = isset($options['secretKey']) ? $options['secretKey'] : $this->desktop['secret'];
-            $text = Canonical::request($route, $timestamp, $nonce, $connectionId, hash('sha256', $bundle), isset($options['prefix']) ? $options['prefix'] : Protocol::PREFIX);
+            $text = Canonical::request($route, $timestamp, $nonce, $connectionId, hash('sha256', $bundle));
             $auth = Canonical::formatAuth($connectionId, $timestamp, $nonce, Base64Url::encode(Crypto::sign($text, $secret)));
         }
-        $hint = isset($options['hint']) ? $options['hint'] : Protocol::PREFIX;
-        $request = new IncomingRequest($route, $auth, $bundle === false ? null : new StringBundle($bundle), isset($options['ip']) ? $options['ip'] : '203.0.113.5', !empty($options['tooLarge']), $hint);
+        $request = new IncomingRequest($route, $auth, $bundle === false ? null : new StringBundle($bundle), isset($options['ip']) ? $options['ip'] : '203.0.113.5', !empty($options['tooLarge']));
         $response = $this->dispatcher()->handle($request);
-        $reply = isset($options['replyPrefix']) ? $options['replyPrefix'] : (isset($options['prefix']) ? $options['prefix'] : $hint);
-        return $this->open($response, $route, $nonce, $connectionId, $reply);
+        return $this->open($response, $route, $nonce, $connectionId);
     }
 
     /**
@@ -206,14 +198,14 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
      *
      * @return array{status: int, meta: array<string, mixed>, frame: Frame, body: array<string, mixed>, nonce: string, response: OutgoingResponse}
      */
-    protected function open(OutgoingResponse $response, string $route, string $nonce, ?string $connectionId, string $prefix = Protocol::PREFIX): array
+    protected function open(OutgoingResponse $response, string $route, string $nonce, ?string $connectionId): array
     {
         $envelope = Envelope::decode($response->body);
         $this->assertNotNull($envelope, 'The reply is an envelope.');
         $meta = $envelope['meta'];
         $this->assertSame($response->status, $meta['status']);
         if ($meta['sig'] !== '') {
-            $text = Canonical::response($route, $nonce, $connectionId, $meta['ts'], $meta['status'], hash('sha256', $envelope['payload']), $prefix);
+            $text = Canonical::response($route, $nonce, $connectionId, $meta['ts'], $meta['status'], hash('sha256', $envelope['payload']));
             $this->assertTrue(
                 Crypto::verify((string) Base64Url::decode($meta['sig']), $text, $this->siteKeys->publicKey()),
                 'The reply is signed by the site for this request.'

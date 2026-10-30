@@ -57,10 +57,10 @@ try {
 
   say('Tables and guard');
   const tables = site
-    .wp(['db', 'query', "SHOW TABLES LIKE '%agentmate%'", '--skip-column-names']) // legacy-name
+    .wp(['db', 'query', "SHOW TABLES LIKE '%runova%'", '--skip-column-names'])
     .split('\n');
   check(
-    tables.length === 7 && tables.every((table) => table.trim().startsWith('wp_agentmate_')), // legacy-name
+    tables.length === 7 && tables.every((table) => table.trim().startsWith('wp_runova_')),
     'seven tables, all on the base prefix (none per site)',
     tables,
   );
@@ -209,7 +209,7 @@ try {
         `cd ${content} && find themes plugins mu-plugins -type f -not -path 'plugins/runova-connector/*' -not -name '00-runova-connector-guard.php' -exec sha256sum {} + | sort`,
       );
     const before = fingerprint();
-    const dataDir = site.wp(['network', 'meta', 'get', '1', 'agentmate_connector_data_dir']); // legacy-name
+    const dataDir = site.wp(['network', 'meta', 'get', '1', 'runova_connector_data_dir']);
     check(
       /^runova-connector-[0-9a-f]{12}$/.test(dataDir),
       'the data folder name is a network option',
@@ -245,7 +245,7 @@ try {
     const state = site.wp([
       'db',
       'query',
-      `SELECT CONCAT(state, ' ', IFNULL(reason, '')) FROM wp_agentmate_deploys WHERE id = '${pendingId}'`, // legacy-name
+      `SELECT CONCAT(state, ' ', IFNULL(reason, '')) FROM wp_runova_deploys WHERE id = '${pendingId}'`,
       '--skip-column-names',
     ]);
     check(
@@ -274,13 +274,13 @@ try {
     // is what wp-admin's Delete does: uninstall.php, then the files.
     site.wp(['plugin', 'uninstall', 'runova-connector']);
     // The tables kept the names the plugin gave them before the rename.
-    const showTables = "SHOW TABLES LIKE '%agentmate%'"; // legacy-name
+    const showTables = "SHOW TABLES LIKE '%runova%'";
     const tables = site.wp(['db', 'query', showTables, '--skip-column-names']);
     check(tables === '', 'all seven tables are dropped', tables);
     const networkOptions = site.wp([
       'db',
       'query',
-      "SELECT meta_key FROM wp_sitemeta WHERE meta_key LIKE '%runova%' OR meta_key LIKE '%agentmate%'", // legacy-name
+      "SELECT meta_key FROM wp_sitemeta WHERE meta_key LIKE '%runova%'",
       '--skip-column-names',
     ]);
     check(networkOptions === '', 'no network options are left', networkOptions);
@@ -289,7 +289,7 @@ try {
       const left = site.wp([
         'db',
         'query',
-        `SELECT option_name FROM ${table} WHERE option_name LIKE '%runova%' OR option_name LIKE '%agentmate%'`, // legacy-name
+        `SELECT option_name FROM ${table} WHERE option_name LIKE '%runova%'`,
         '--skip-column-names',
       ]);
       check(left === '', `no options are left on site ${blog.trim()}`, left);

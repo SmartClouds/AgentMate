@@ -5,8 +5,6 @@ import {
   createWpIgnoreRules,
   findWpCaseCollisions,
   isWpHardDenied,
-  LEGACY_IGNORE_FILE,
-  LEGACY_PROJECT_DIR,
   validateWpItemPath,
   WP_AGENT_PREFIXES,
   WP_MAX_FILE_BYTES,
@@ -71,7 +69,6 @@ export interface WpWalkOptions {
 /** Agent settings, skills and Runova's own files, among the hard deny list. */
 const AGENT_DIRS: ReadonlySet<string> = new Set([
   '.runova',
-  LEGACY_PROJECT_DIR,
   '.claude',
   '.agents',
   '.codex',
@@ -98,7 +95,6 @@ const AGENT_FILES: ReadonlySet<string> = new Set([
   '.windsurfrules',
   '.roomodes',
   '.runovaignore',
-  LEGACY_IGNORE_FILE,
 ]);
 /** A denied folder with more files than this is reported once, as `folder/`. */
 const DENIED_LIST_MAX = 100;
@@ -172,17 +168,6 @@ async function readIgnoreFile(
 }
 
 /**
- * A folder's `.runovaignore`, or its `.agentmateignore` from before the rename when that is the
- * only one there. The new name wins when both exist.
- */
-async function readOwnIgnoreFile(folder: string, label: string): Promise<WpIgnoreLayer | null> {
-  return (
-    (await readIgnoreFile(join(folder, '.runovaignore'), `${label}.runovaignore`, true)) ??
-    (await readIgnoreFile(join(folder, LEGACY_IGNORE_FILE), `${label}${LEGACY_IGNORE_FILE}`, true))
-  );
-}
-
-/**
  * The item's ignore layers, in order: its .distignore, the project's and its .runovaignore,
  * then the list the user saved for the project. What git ignores (the project's and the item's
  * .gitignore) counts like the default list: left out until the site has it.
@@ -201,8 +186,10 @@ export async function itemIgnoreRules(
     isFile
       ? null
       : await readIgnoreFile(join(root, '.distignore'), `${itemRoot}/.distignore`, false),
-    await readOwnIgnoreFile(projectRoot, ''),
-    isFile ? null : await readOwnIgnoreFile(root, `${itemRoot}/`),
+    await readIgnoreFile(join(projectRoot, '.runovaignore'), '.runovaignore', true),
+    isFile
+      ? null
+      : await readIgnoreFile(join(root, '.runovaignore'), `${itemRoot}/.runovaignore`, true),
     savedIgnore.length > 0
       ? { source: 'the saved ignore list', text: savedIgnore.join('\n'), negations: true }
       : null,

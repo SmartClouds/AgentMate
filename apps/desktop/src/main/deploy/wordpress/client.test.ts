@@ -4,12 +4,7 @@ import {
   encodeWpResponse,
   WP_BATCH_MAX_BYTES,
   WP_BATCH_MIN_BYTES,
-  WP_LEGACY_AJAX_ACTION,
-  WP_LEGACY_PROTOCOL_PREFIX,
-  WP_LEGACY_REST_NAMESPACE,
-  WP_PROTOCOL_PREFIX,
   WP_ROUTES,
-  type WpSigningPrefix,
   wpCanonicalResponse,
 } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -547,82 +542,3 @@ describe('batch sizing', () => {
 });
 
 vi.setConfig({ testTimeout: 20_000 });
-
-describe('WpClient at the addresses a site had before the rename', () => {
-  const siteKey = privateKeyFromSeed(seedBytes(WP_VECTORS.keys.site.seedHex));
-
-  function legacyClient(
-    reply: (url: string, nonce: string) => WpHttpResponse,
-    endpoint: 'rest' | 'ajax' = 'ajax',
-  ): WpClient {
-    return new WpClient({
-      transport: async (request) => {
-        const text = Buffer.from(request.body ?? []).toString('latin1');
-        const auth = /name="am_auth"\r\n\r\n([^\r]+)/.exec(text)?.[1] ?? '';
-        return reply(request.url, auth.split('.')[3]);
-      },
-      endpoints: {
-        restUrl: `https://shop.example/wp-json/${WP_LEGACY_REST_NAMESPACE}`,
-        ajaxUrl: 'https://shop.example/wp-admin/admin-ajax.php',
-        rescueUrl: null,
-      },
-      sitePublicKey: WP_VECTORS.keys.site.publicKey,
-      connectionId: null,
-      privateKey: null,
-      endpoint,
-    });
-  }
-
-  function hello(nonce: string, prefix: WpSigningPrefix): WpHttpResponse {
-    const payload = gzipBytes(
-      encodeWpFrame({ route: '/hello', body: { ok: true, data: { protocol: 1 } }, blobs: [] }),
-    );
-    const sig = signEd25519(
-      siteKey,
-      wpCanonicalResponse({
-        route: '/hello',
-        requestNonce: nonce,
-        connectionId: null,
-        timestamp: 1,
-        httpStatus: 200,
-        bodySha256: sha256Hex(payload),
-        prefix,
-      }),
-    );
-    return {
-      status: 200,
-      header: () => null,
-      body: encodeWpResponse({ ts: 1, status: 200, sig }, payload),
-    };
-  }
-
-  it('calls the old ajax action and signs the old way', async () => {
-    const urls: string[] = [];
-    const client = legacyClient((url, nonce) => {
-      urls.push(url);
-      return hello(nonce, WP_LEGACY_PROTOCOL_PREFIX);
-    });
-    expect(client.legacy).toBe(true);
-    expect(client.signingPrefix).toBe(WP_LEGACY_PROTOCOL_PREFIX);
-    expect((await client.call(WP_ROUTES.hello, {})).data).toEqual({ protocol: 1 });
-    expect(new URL(urls[0]).searchParams.get('action')).toBe(WP_LEGACY_AJAX_ACTION);
-  });
-
-  it('also takes a reply signed the new way, which rescue.php in the new folder sends', async () => {
-    const client = legacyClient((_url, nonce) => hello(nonce, WP_PROTOCOL_PREFIX), 'rest');
-    expect((await client.call(WP_ROUTES.hello, {})).data).toEqual({ protocol: 1 });
-  });
-
-  it('still refuses a reply signed by another key', async () => {
-    const other = privateKeyFromSeed(randomBytes(32));
-    const client = legacyClient((_url, nonce) => {
-      const reply = hello(nonce, WP_LEGACY_PROTOCOL_PREFIX);
-      const payload = gzipBytes(new Uint8Array(1));
-      const sig = signEd25519(other, 'x');
-      return { ...reply, body: encodeWpResponse({ ts: 1, status: 200, sig }, payload) };
-    });
-    expect(wordPressErrorCode(await failure(client.call(WP_ROUTES.hello, {})))).toBe(
-      'badResponseSignature',
-    );
-  });
-});

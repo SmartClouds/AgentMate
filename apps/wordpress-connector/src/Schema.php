@@ -16,8 +16,7 @@ final class Schema
 
     public static function table(string $basePrefix, string $name): string
     {
-        // The names from before the rename: renaming a table needs rights many hosts do not grant.
-        return $basePrefix . Legacy::TABLE_PREFIX . $name;
+        return $basePrefix . 'runova_' . $name;
     }
 
     /**

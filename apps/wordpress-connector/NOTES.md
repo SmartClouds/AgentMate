@@ -164,11 +164,6 @@ runs every shared vector.
   "Connector update from the app" (a broken release is rolled back on real WordPress, then a
   good one lands and a deploy still works).
 
-## Sites from before the rename
-
-The bridge package, the layout move and the names the plugin still answers to are in
-`legacy/NOTES.md`.
-
 ## Smoke fixture
 
 `tests/smoke/fixture.mjs` exports `startWordPressFixture({ port, multisite }) -> { url, port, name,

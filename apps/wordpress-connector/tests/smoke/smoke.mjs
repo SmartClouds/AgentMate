@@ -631,9 +631,9 @@ try {
   say('A copy of the site at another address gets its own key');
   {
     // What a staging copy looks like from inside: the stored key says it belongs elsewhere.
-    const stored = JSON.parse(site.wp(['option', 'get', 'agentmate_connector_site_key'])); // legacy-name
+    const stored = JSON.parse(site.wp(['option', 'get', 'runova_connector_site_key']));
     stored.home = 'https://original.example.test';
-    site.wp(['option', 'update', 'agentmate_connector_site_key', JSON.stringify(stored)]); // legacy-name
+    site.wp(['option', 'update', 'runova_connector_site_key', JSON.stringify(stored)]);
     const hello = await client.call('/hello', {}, { unsigned: true });
     check(
       hello.ok && hello.data.sitePublicKey !== client.key.sitePublicKey && hello.verified === false,
@@ -644,7 +644,7 @@ try {
     const detail = site.wp([
       'db',
       'query',
-      "SELECT detail FROM wp_agentmate_audit WHERE detail LIKE 'This site%' ORDER BY id DESC LIMIT 1", // legacy-name
+      "SELECT detail FROM wp_runova_audit WHERE detail LIKE 'This site%' ORDER BY id DESC LIMIT 1",
       '--skip-column-names',
     ]);
     check(
@@ -661,7 +661,7 @@ try {
         "cd /var/www/html/wp-content && find themes plugins mu-plugins -type f -not -path 'plugins/runova-connector/*' -not -name '00-runova-connector-guard.php' -exec sha256sum {} + | sort",
       );
     const before = fingerprint();
-    const dataDir = site.wp(['option', 'get', 'agentmate_connector_data_dir']); // legacy-name
+    const dataDir = site.wp(['option', 'get', 'runova_connector_data_dir']);
     site.wp(['plugin', 'deactivate', 'runova-connector']);
     const guard = '/var/www/html/wp-content/mu-plugins/00-runova-connector-guard.php';
     check(
@@ -670,14 +670,14 @@ try {
     );
     site.wp(['plugin', 'uninstall', 'runova-connector']);
     // The tables kept the names the plugin gave them before the rename.
-    const showTables = "SHOW TABLES LIKE '%agentmate%'"; // legacy-name
+    const showTables = "SHOW TABLES LIKE '%runova%'";
     const tables = site.wp(['db', 'query', showTables, '--skip-column-names']);
     check(tables === '', 'its tables are dropped', tables);
     for (const option of [
-      'agentmate_connector_site_key', // legacy-name
-      'agentmate_connector_data_dir', // legacy-name
-      'agentmate_connector_guard', // legacy-name
-      'agentmate_connector_db_version', // legacy-name
+      'runova_connector_site_key',
+      'runova_connector_data_dir',
+      'runova_connector_guard',
+      'runova_connector_db_version',
     ]) {
       check(
         site.wp(['option', 'get', option], { allowFail: true }) === '',

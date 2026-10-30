@@ -8,14 +8,13 @@
 
 namespace Runova\Connector\Crypto;
 
-use Runova\Connector\Legacy;
 use Runova\Connector\Support\Json;
 use Runova\Connector\Support\Options;
 
 final class SiteKeys
 {
     /** Never autoloaded: it is read only when a request needs it. */
-    const OPTION = Legacy::OPTION_PREFIX . 'site_key';
+    const OPTION = 'runova_connector_site_key';
 
     /** @var string */
     private $publicKey;

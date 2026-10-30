@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { LEGACY_IGNORE_FILE, LEGACY_PROJECT_DIR } from '../../legacyNames.js';
 import {
   isWpHardDenied,
   validateWpItemPath,
@@ -163,8 +164,19 @@ describe('deniedReasonForSync', () => {
   });
 
   it('only names agent entries that are on the deny list', () => {
-    for (const name of FILE_SITE_AGENT_DIRS) expect(WP_HARD_DENY_DIRS).toContain(name);
-    for (const name of FILE_SITE_AGENT_FILES) expect(FILE_SITE_HARD_DENY_FILES).toContain(name);
+    for (const name of FILE_SITE_AGENT_DIRS) {
+      if (name !== LEGACY_PROJECT_DIR) expect(WP_HARD_DENY_DIRS).toContain(name);
+    }
+    for (const name of FILE_SITE_AGENT_FILES) {
+      if (name !== LEGACY_IGNORE_FILE) expect(FILE_SITE_HARD_DENY_FILES).toContain(name);
+    }
+    for (const path of [
+      `${LEGACY_PROJECT_DIR}/x`,
+      `${LEGACY_PROJECT_DIR}-cache/a`,
+      LEGACY_IGNORE_FILE,
+    ]) {
+      expect(deniedReasonForSync(path), path).toBe('agentFiles');
+    }
   });
 });
 

@@ -45,26 +45,6 @@ final class AdminViews
         echo '<div class="notice ' . esc_attr($class) . '"><p>' . esc_html($text) . '</p></div>';
     }
 
-    /**
-     * Shown while the connector still runs from its 1.63 folder. The Runova app moves it on its
-     * own; this is for a site the app cannot reach.
-     */
-    public static function moveBox(bool $canChangeCode): void
-    {
-        ?>
-        <div class="notice notice-info">
-            <p><?php echo esc_html__('AgentMate is now Runova. This connector still runs from its old folder, and moves to its own the next time the Runova app connects. You can also move it now.', 'runova-connector'); // legacy-name ?></p>
-            <?php if ($canChangeCode) : ?>
-                <form method="post">
-                    <?php wp_nonce_field(AdminActions::nonceAction(AdminActions::MIGRATE)); ?>
-                    <input type="hidden" name="runova_connector_action" value="<?php echo esc_attr(AdminActions::MIGRATE); ?>">
-                    <p><button type="submit" class="button"><?php echo esc_html__('Move to its own folder', 'runova-connector'); ?></button></p>
-                </form>
-            <?php endif; ?>
-        </div>
-        <?php
-    }
-
     private static function when(?int $timestamp, string $none): string
     {
         if ($timestamp === null) {

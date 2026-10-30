@@ -1,4 +1,3 @@
-import { WP_LEGACY_PROTOCOL_PREFIX } from './legacyNames.js';
 import { WP_PROTOCOL_PREFIX, type WpRoute } from './protocol.js';
 
 /**
@@ -25,17 +24,6 @@ export function isWpNonce(value: string): boolean {
 
 export function isWpConnectionId(value: string): boolean {
   return CONNECTION_ID.test(value);
-}
-
-/** The prefix a canonical string starts with: this one, or the one 1.63 signs with. */
-export type WpSigningPrefix = typeof WP_PROTOCOL_PREFIX | typeof WP_LEGACY_PROTOCOL_PREFIX;
-
-function checkPrefix(value: string | undefined): string {
-  if (value === undefined) return WP_PROTOCOL_PREFIX;
-  if (value !== WP_PROTOCOL_PREFIX && value !== WP_LEGACY_PROTOCOL_PREFIX) {
-    throw new Error('That is not a signing prefix of this protocol.');
-  }
-  return value;
 }
 
 function checkTimestamp(value: number): string {
@@ -65,11 +53,9 @@ export function wpCanonicalRequest(parts: {
   connectionId: string | null;
   /** SHA-256 of the gzip bundle exactly as sent, lowercase hex. */
   bodySha256: string;
-  /** WP_PROTOCOL_PREFIX unless the site is reached at its 1.63 addresses. */
-  prefix?: WpSigningPrefix;
 }): string {
   return [
-    checkPrefix(parts.prefix),
+    WP_PROTOCOL_PREFIX,
     checkLine('The route', parts.route),
     checkTimestamp(parts.timestamp),
     checkLine('The nonce', parts.nonce),
@@ -93,13 +79,12 @@ export function wpCanonicalResponse(parts: {
   httpStatus: number;
   /** SHA-256 of the gzip payload exactly as sent, lowercase hex. */
   bodySha256: string;
-  prefix?: WpSigningPrefix;
 }): string {
   if (!Number.isInteger(parts.httpStatus) || parts.httpStatus < 100 || parts.httpStatus > 599) {
     throw new Error('An HTTP status runs from 100 to 599.');
   }
   return [
-    `${checkPrefix(parts.prefix)}/response`,
+    `${WP_PROTOCOL_PREFIX}/response`,
     checkLine('The route', parts.route),
     checkLine('The nonce', parts.requestNonce),
     parts.connectionId === null ? '-' : checkLine('The connection id', parts.connectionId),
@@ -119,10 +104,9 @@ export function wpCanonicalPair(parts: {
   deviceName: string;
   timestamp: number;
   nonce: string;
-  prefix?: WpSigningPrefix;
 }): string {
   return [
-    `${checkPrefix(parts.prefix)}/pair`,
+    `${WP_PROTOCOL_PREFIX}/pair`,
     checkLine('The pairing id', parts.pairingId),
     checkLine('The public key', parts.desktopPublicKey),
     checkLine('The device name', parts.deviceName),

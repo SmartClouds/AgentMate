@@ -18,11 +18,10 @@ if (!defined('ABSPATH')) {
 // Filled in when the connector installs this file.
 $runova_connector_dir = '';
 
-// The guard 1.63 installed may still be here for a moment, and it runs first; it loads the same code.
-if (!defined('RUNOVA_CONNECTOR_GUARD') && !defined('AGENTMATE_CONNECTOR_GUARD') && $runova_connector_dir !== '' && is_file($runova_connector_dir . '/src/Guard/GuardRuntime.php')) { // legacy-name
+if (!defined('RUNOVA_CONNECTOR_GUARD') && $runova_connector_dir !== '' && is_file($runova_connector_dir . '/src/Guard/GuardRuntime.php')) {
     define('RUNOVA_CONNECTOR_GUARD', __FILE__);
-    // One autoloaded option: an empty string unless a deploy is pending. It kept its 1.63 name.
-    $runova_connector_state = is_multisite() ? get_site_option('agentmate_connector_guard', '') : get_option('agentmate_connector_guard', ''); // legacy-name
+    // One autoloaded option: an empty string unless a deploy is pending.
+    $runova_connector_state = is_multisite() ? get_site_option('runova_connector_guard', '') : get_option('runova_connector_guard', '');
     $runova_connector_maybe_rescue = isset($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'])
         && 'POST' === $_SERVER['REQUEST_METHOD']
         && false !== strpos((string) $_SERVER['REQUEST_URI'], 'rescue'); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- only looked at; GuardRuntime checks the route exactly.

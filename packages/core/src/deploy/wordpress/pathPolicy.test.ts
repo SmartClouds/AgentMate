@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { LEGACY_IGNORE_FILE, LEGACY_PROJECT_DIR } from '../../legacyNames.js';
 import {
   createWpIgnoreRules,
   findWpCaseCollisions,
@@ -33,14 +32,6 @@ describe('the hard deny list', () => {
       '.runovafoo',
     ]) {
       expect(isWpHardDenied(path), path).toBe(true);
-      expect(validateWpItemPath(path), path).toEqual({ ok: false, reason: 'hardDenied' });
-    }
-    // The folder and ignore file of projects made before the rename, too.
-    for (const path of [
-      `${LEGACY_PROJECT_DIR}/hooks/notify.sh`,
-      `inc/${LEGACY_PROJECT_DIR}-cache/a.json`,
-      LEGACY_IGNORE_FILE,
-    ]) {
       expect(validateWpItemPath(path), path).toEqual({ ok: false, reason: 'hardDenied' });
     }
     // Only the dot names: a plain word, or a longer name that merely shares the letters, is fine.

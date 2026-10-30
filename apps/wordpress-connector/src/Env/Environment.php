@@ -17,9 +17,6 @@ interface Environment
 
     public function pluginVersion(): string;
 
-    /** Layout::RUNOVA, or Layout::BRIDGE while the site still runs from the 1.63 folder. */
-    public function layout(): string;
-
     public function siteName(): string;
 
     public function homeUrl(): string;

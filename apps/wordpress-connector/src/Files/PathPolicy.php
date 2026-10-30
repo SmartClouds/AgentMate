@@ -18,7 +18,6 @@ final class PathPolicy
     /** Folders that hold agent settings, skills, Runova's own files, or version control. */
     const DENY_DIRS = array(
         '.runova',
-        '.agentmate', // legacy-name
         '.claude',
         '.agents',
         '.codex',
@@ -52,7 +51,6 @@ final class PathPolicy
         '.windsurfrules',
         '.roomodes',
         '.runovaignore',
-        '.agentmateignore', // legacy-name
         '.env',
         '.envrc',
         // Package manager and network credentials.
@@ -67,7 +65,7 @@ final class PathPolicy
         'desktop.ini',
     );
 
-    const DENY_PREFIXES = array('.aider', '.claude', '.runova', '.agentmate', '.env.', 'id_rsa', 'id_ed25519', 'id_ecdsa'); // legacy-name
+    const DENY_PREFIXES = array('.aider', '.claude', '.runova', '.env.', 'id_rsa', 'id_ed25519', 'id_ecdsa');
 
     const DENY_SUFFIXES = array('.pem', '.ppk');
 

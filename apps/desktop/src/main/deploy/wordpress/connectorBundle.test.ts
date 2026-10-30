@@ -5,15 +5,9 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   WP_CONNECTOR_VERSION,
-  WP_LEGACY_CONNECTOR_MAIN,
-  WP_LEGACY_CONNECTOR_NAME,
-  WP_LEGACY_CONNECTOR_SLUG,
-  WP_LEGACY_CONNECTOR_ZIP,
-  WP_LEGACY_VERSION_CONSTANT,
   WP_UPDATE_MAX_FILE_BYTES,
   WP_UPDATE_MAX_FILES,
   WP_UPDATE_MAX_TOTAL_BYTES,
-  wpLegacyConnectorReleaseUrl,
 } from '@runova/core';
 import AdmZip from 'adm-zip';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -23,7 +17,7 @@ import {
   readConnectorBundle,
   readShippedConnector,
 } from './connectorBundle';
-import { BRIDGE_ZIP_NAME, connectorZipPath } from './connectorZip';
+import { connectorZipPath } from './connectorZip';
 
 /**
  * The shipped plugin zip, unpacked into what `/connector/update` sends: the files under the
@@ -267,79 +261,5 @@ describe('compareConnectorVersions', () => {
     ['', '1.0.0', -1],
   ])('%s against %s is %i', (a, b, expected) => {
     expect(compareConnectorVersions(a, b)).toBe(expected);
-  });
-});
-
-describe('the bridge package', () => {
-  const BRIDGE = `${WP_LEGACY_CONNECTOR_SLUG}/`;
-  const legacyMain = (version: string) => `<?php
-/**
- * Plugin Name:       ${WP_LEGACY_CONNECTOR_NAME}
- * Version:           ${version}
- */
-define('${WP_LEGACY_VERSION_CONSTANT}', '${version}');
-`;
-
-  it('reads the old folder, with the 1.63 main file and the Runova one in layout/', async () => {
-    const file = zipOf({
-      [`${BRIDGE}${WP_LEGACY_CONNECTOR_MAIN}`]: legacyMain(WP_CONNECTOR_VERSION),
-      [`${BRIDGE}layout/runova-connector.php`]: mainFile(WP_CONNECTOR_VERSION),
-      [`${BRIDGE}src/Plugin.php`]: '<?php',
-    });
-    const bundle = await readConnectorBundle(file, 'bridge');
-    expect(bundle.package).toBe('bridge');
-    expect(bundle.files.map((entry) => entry.path)).toEqual([
-      WP_LEGACY_CONNECTOR_MAIN,
-      'layout/runova-connector.php',
-      'src/Plugin.php',
-    ]);
-  });
-
-  it('refuses the Runova zip as the bridge, and the bridge as the Runova zip', async () => {
-    const runova = zipOf({ [`${ROOT}runova-connector.php`]: mainFile(WP_CONNECTOR_VERSION) });
-    expect(wordPressErrorCode(await failure(readConnectorBundle(runova, 'bridge')))).toBe(
-      'internal',
-    );
-    const bridge = zipOf(
-      { [`${BRIDGE}${WP_LEGACY_CONNECTOR_MAIN}`]: legacyMain(WP_CONNECTOR_VERSION) },
-      'bridge.zip',
-    );
-    expect(wordPressErrorCode(await failure(readConnectorBundle(bridge)))).toBe('internal');
-  });
-
-  it('names the release under the repository address a 1.63 site downloads from', async () => {
-    const folder = join(dir, 'wordpress-connector');
-    mkdirSync(folder, { recursive: true });
-    zipOf(
-      { [`${BRIDGE}${WP_LEGACY_CONNECTOR_MAIN}`]: legacyMain(WP_CONNECTOR_VERSION) },
-      `wordpress-connector/${BRIDGE_ZIP_NAME}`,
-    );
-    const bundle = await readShippedConnector(
-      { isPackaged: true, resourcesPath: dir, appPath: join(dir, 'app') },
-      'bridge',
-    );
-    expect(bundle.downloadUrl).toBe(wpLegacyConnectorReleaseUrl(WP_CONNECTOR_VERSION));
-    expect(bundle.downloadUrl).toContain(`/${WP_LEGACY_CONNECTOR_ZIP}`);
-  });
-
-  it('is built beside the Runova zip, from the same source', async () => {
-    const appPath = fileURLToPath(new URL('../../../../', import.meta.url));
-    const bridgeZip = connectorZipPath(
-      { isPackaged: false, resourcesPath: '', appPath },
-      BRIDGE_ZIP_NAME,
-    );
-    if (!existsSync(bridgeZip)) return;
-    const bridge = await readConnectorBundle(bridgeZip, 'bridge');
-    const runova = await readConnectorBundle(
-      connectorZipPath({ isPackaged: false, resourcesPath: '', appPath }),
-    );
-    const byPath = new Map(runova.files.map((entry) => [entry.path, entry.sha256]));
-    expect(bridge.files.find((entry) => entry.path === 'layout/runova-connector.php')?.sha256).toBe(
-      byPath.get('runova-connector.php'),
-    );
-    for (const entry of bridge.files) {
-      if (entry.path.startsWith('src/'))
-        expect(byPath.get(entry.path), entry.path).toBe(entry.sha256);
-    }
   });
 });

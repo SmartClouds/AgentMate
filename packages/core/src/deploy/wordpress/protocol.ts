@@ -1,7 +1,5 @@
 import type { ProjectWordPressItem } from '../../types/index.js';
 
-export * from './legacyNames.js';
-
 /**
  * The wire contract between Runova and the Runova Connector WordPress plugin (E19). Pure
  * data: no Node or browser APIs, so the renderer, the main process and the vector generator all
@@ -94,7 +92,6 @@ export const WP_ROUTES = {
   auditList: '/audit/list',
   connectionRevoke: '/connection/revoke',
   connectorUpdate: '/connector/update',
-  connectorMigrate: '/connector/migrate',
   rescueStatus: '/rescue/status',
   rescueRollback: '/rescue/rollback',
 } as const;
@@ -117,7 +114,6 @@ export const WP_WRITE_ROUTES: readonly WpRoute[] = [
   WP_ROUTES.deployRollback,
   WP_ROUTES.deployAbort,
   WP_ROUTES.connectorUpdate,
-  WP_ROUTES.connectorMigrate,
   WP_ROUTES.rescueRollback,
 ];
 
@@ -243,9 +239,6 @@ export interface WpSiteInfo {
    * the app.
    */
   updateDownload?: boolean;
-  /** Absent from a 1.63 connector. */
-  layout?: WpConnectorLayout;
-  endpoints?: WpConnectorEndpoints;
   sodium: 'native' | 'compat';
   limits: WpLimits;
   guard: { installed: boolean; rescueUrl: string | null };
@@ -411,22 +404,6 @@ export interface WpHelloResponse {
   rescueUrl: string | null;
   multisite: boolean;
   siteName: string;
-  /** Absent from a 1.63 connector, which runs in the old folder (`legacy`). */
-  layout?: WpConnectorLayout;
-  /** Where the site answers now, so an app that saved older addresses can repair them. */
-  endpoints?: WpConnectorEndpoints;
-}
-
-/**
- * Where a site runs the connector from: its own folder (`runova`), or the 1.63 folder with the
- * Runova code in it (`bridge`), which `/connector/migrate` moves to its own folder. A 1.63
- * connector reports neither; the app calls that `legacy`.
- */
-export type WpConnectorLayout = 'runova' | 'bridge';
-
-export interface WpConnectorEndpoints {
-  restUrl: string;
-  ajaxUrl: string;
 }
 
 export interface WpPairRequest {
@@ -592,21 +569,6 @@ export interface WpConnectorUpdateResponse {
   checks: WpHealthCheck[];
 }
 
-/**
- * `/connector/migrate`: a site in the bridge layout moves to its own folder, health-checks itself
- * and puts everything back when that fails. `current` when it already runs from its own folder.
- * The addresses are where the site answers afterwards; rescue.php moves with the folder.
- */
-export interface WpConnectorMigrateResponse {
-  state: 'migrated' | 'current' | 'rolledBack';
-  layout: WpConnectorLayout;
-  version: string;
-  restUrl: string;
-  ajaxUrl: string;
-  rescueUrl: string | null;
-  checks: WpHealthCheck[];
-}
-
 /** Route to request and response body. The request body is the frame's `b`. */
 export interface WpRouteMap {
   '/hello': { request: Record<string, never>; response: WpHelloResponse };
@@ -635,7 +597,6 @@ export interface WpRouteMap {
   };
   '/connection/revoke': { request: Record<string, never>; response: { revoked: true } };
   '/connector/update': { request: WpConnectorUpdateRequest; response: WpConnectorUpdateResponse };
-  '/connector/migrate': { request: Record<string, never>; response: WpConnectorMigrateResponse };
   '/rescue/status': { request: Record<string, never>; response: WpRescueStatusResponse };
   '/rescue/rollback': { request: { deployId: string }; response: WpDeployStateResponse };
 }

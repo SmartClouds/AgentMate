@@ -15,16 +15,9 @@ import { wordPressErrorCode } from '../../../shared/wordpressErrors';
 import { VaultLockedError } from '../../ssh/vaultErrors';
 import type { WpClient } from './client';
 import { WpRemoteError } from './client';
-import {
-  cleanInfo,
-  cleanItem,
-  conflictMessage,
-  movedEndpoints,
-  WordPressService,
-  wpMessagePath,
-} from './service';
+import { cleanInfo, cleanItem, conflictMessage, WordPressService, wpMessagePath } from './service';
 import { WordPressBases, WordPressState, wordPressStateFilePort } from './state';
-import { testBridgeBundle, testConnectorBundle } from './testing/connectorBundle';
+import { testConnectorBundle } from './testing/connectorBundle';
 import { FakeConnector, pairingSecretOf } from './testing/fakeConnector';
 import { createFetchTransport } from './transport';
 
@@ -80,7 +73,6 @@ function make(overrides: Partial<ConstructorParameters<typeof WordPressService>[
     hostname: () => 'test-laptop',
     saveConnectorZip: async () => ({ saved: true, path: '/tmp/runova-connector.zip' }),
     readConnectorBundle: async () => testConnectorBundle(),
-    readBridgeBundle: async () => testBridgeBundle(),
     sleep: async () => undefined,
     ...overrides,
   });
@@ -1022,138 +1014,5 @@ describe('cleaning what a site says', () => {
     expect(conflictMessage(bare)).toBe(bare);
     const other = new Error('x');
     expect(conflictMessage(other)).toBe(other);
-  });
-});
-
-describe('updateConnector on a site from before the rename', () => {
-  const routes = () => fake.requests.map((request) => request.route);
-
-  it('sends a bridge site the bridge package, then moves it to its own folder', async () => {
-    fake.layout = 'bridge';
-    fake.pluginVersion = '1.0.0';
-    const { service, state } = make();
-    const site = await service.connect({ connectionKey: fake.createKey() });
-
-    const result = await service.updateConnector(site.id);
-
-    expect(result).toMatchObject({
-      outcome: 'updated',
-      moved: true,
-      version: WP_CONNECTOR_VERSION,
-    });
-    expect(result.moveProblem).toBeUndefined();
-    expect(fake.updates[0]?.files).toContain('agentmate-connector.php'); // legacy-name
-    expect(fake.updates[0]?.files).toContain('layout/runova-connector.php');
-    expect(fake.moves).toEqual(['migrated']);
-    expect(fake.layout).toBe('runova');
-    expect(routes().indexOf(WP_ROUTES.connectorMigrate)).toBeGreaterThan(
-      routes().indexOf(WP_ROUTES.connectorUpdate),
-    );
-    expect((await state.site(site.id))?.pluginVersion).toBe(WP_CONNECTOR_VERSION);
-  });
-
-  it('moves a bridge site that already runs this version without sending files', async () => {
-    fake.layout = 'bridge';
-    const { service } = make();
-    const site = await service.connect({ connectionKey: fake.createKey() });
-
-    const result = await service.updateConnector(site.id);
-
-    expect(result).toMatchObject({ outcome: 'updated', moved: true });
-    expect(fake.updates).toEqual([]);
-    expect(fake.moves).toEqual(['migrated']);
-  });
-
-  it('sends the bridge to a site that reports no layout even at the same version', async () => {
-    fake.layout = null;
-    const { service } = make();
-    const site = await service.connect({ connectionKey: fake.createKey() });
-
-    await service.updateConnector(site.id);
-
-    expect(fake.updates[0]?.files).toContain('agentmate-connector.php'); // legacy-name
-  });
-
-  it('keeps the update and says why when the site does not move', async () => {
-    fake.layout = 'bridge';
-    fake.pluginVersion = '1.0.0';
-    fake.moveFails = 'refused';
-    const { service } = make();
-    const site = await service.connect({ connectionKey: fake.createKey() });
-
-    const result = await service.updateConnector(site.id);
-
-    expect(result.outcome).toBe('updated');
-    expect(result.moved).toBeUndefined();
-    expect(result.moveProblem).toContain('not writable');
-    expect(fake.layout).toBe('bridge');
-
-    fake.moveFails = 'health';
-    const again = await service.updateConnector(site.id);
-    expect(again.outcome).toBe('current');
-    expect(again.moveProblem).toContain('health check');
-    fake.moveFails = null;
-    expect((await service.updateConnector(site.id)).moved).toBe(true);
-  });
-
-  it('says what to do when this build has no bridge package', async () => {
-    fake.layout = null;
-    fake.pluginVersion = '1.0.0';
-    const { service } = make({ readBridgeBundle: undefined });
-    const site = await service.connect({ connectionKey: fake.createKey() });
-
-    const error = await failure(service.updateConnector(site.id));
-
-    expect(wordPressErrorCode(error)).toBe('connectorOutdated');
-    expect(fake.updates).toEqual([]);
-  });
-
-  it('never sends the bridge to a site in its own folder', async () => {
-    fake.pluginVersion = '1.0.0';
-    const { service } = make();
-    const site = await service.connect({ connectionKey: fake.createKey() });
-
-    await service.updateConnector(site.id);
-
-    expect(fake.updates[0]?.files).toContain('runova-connector.php');
-    expect(fake.requests.some((request) => request.route === WP_ROUTES.connectorMigrate)).toBe(
-      false,
-    );
-  });
-});
-
-describe('movedEndpoints', () => {
-  const legacy = {
-    restUrl: 'https://shop.test/wp-json/agentmate/v1', // legacy-name
-    ajaxUrl: 'https://shop.test/wp-admin/admin-ajax.php',
-  };
-  const moved = {
-    restUrl: 'https://shop.test/wp-json/runova/v1',
-    ajaxUrl: 'https://shop.test/wp-admin/admin-ajax.php',
-  };
-
-  it('takes the new addresses of a site saved with its old ones', () => {
-    expect(movedEndpoints(legacy, moved)).toEqual(moved);
-    expect(
-      movedEndpoints(
-        { ...legacy, restUrl: 'https://shop.test/?rest_route=/agentmate/v1' }, // legacy-name
-        { ...moved, restUrl: 'https://shop.test/?rest_route=/runova/v1' },
-      ),
-    ).toEqual({ ...moved, restUrl: 'https://shop.test/?rest_route=/runova/v1' });
-  });
-
-  it('never moves a site to another host, or a site already on the new addresses', () => {
-    expect(
-      movedEndpoints(legacy, { ...moved, restUrl: 'https://evil.test/wp-json/runova/v1' }),
-    ).toEqual({});
-    expect(
-      movedEndpoints(legacy, { ...moved, ajaxUrl: 'https://evil.test/admin-ajax.php' }),
-    ).toEqual({});
-    expect(
-      movedEndpoints(legacy, { restUrl: 'javascript:alert(1)', ajaxUrl: moved.ajaxUrl }),
-    ).toEqual({});
-    expect(movedEndpoints(legacy, { restUrl: 42, ajaxUrl: moved.ajaxUrl })).toEqual({});
-    expect(movedEndpoints(legacy, undefined)).toEqual({});
-    expect(movedEndpoints(moved, moved)).toEqual({});
   });
 });

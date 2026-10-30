@@ -42,10 +42,6 @@ extraResources:
   # it the app still packages; the download button then says the zip is missing.
   - from: ../wordpress-connector/dist/runova-connector.zip
     to: wordpress-connector/runova-connector.zip
-  # The bridge package from the same build, which the app sends to sites still on 1.63 before it
-  # moves them to runova-connector/.
-  - from: ../wordpress-connector/dist/agentmate-connector.zip # legacy-name
-    to: wordpress-connector/agentmate-connector.zip # legacy-name
 
 # node-pty ships native .node/.dll/.exe files that must exist as real files on
 # disk (it also spawns conpty/winpty helper executables at runtime); they

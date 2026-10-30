@@ -73,9 +73,6 @@ final class SiteInfo
                 'expiresAt' => $connection['expires_at'],
             ),
             'pendingDeploy' => $this->pendingDeploy($now),
-            // `bridge` while the site still runs from the 1.63 folder; the app then moves it.
-            'layout' => $env->layout(),
-            'endpoints' => array('restUrl' => $env->restUrl(), 'ajaxUrl' => $env->ajaxUrl()),
         );
     }
 

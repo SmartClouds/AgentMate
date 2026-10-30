@@ -29,8 +29,6 @@ use Runova\Connector\Files\PathPolicy;
 use Runova\Connector\Guard\Rescue;
 use Runova\Connector\Http\ApiError;
 use Runova\Connector\Http\Frame;
-use Runova\Connector\Layout;
-use Runova\Connector\Legacy;
 use Runova\Connector\Protocol;
 use Runova\Connector\Support\Text;
 
@@ -44,19 +42,6 @@ final class ConnectorUpdater
         'src/Autoloader.php',
         'src/Plugin.php',
         'guard/00-runova-connector-guard.php',
-    );
-
-    /**
-     * The bridge package, for a site still in the 1.63 folder: what 1.63 itself insists on, plus
-     * what LayoutMigration needs later.
-     */
-    const BRIDGE_REQUIRED = array(
-        Legacy::MAIN,
-        'src/Autoloader.php',
-        'src/Plugin.php',
-        'guard/' . Legacy::GUARD_FILE,
-        'guard/00-runova-connector-guard.php',
-        Layout::STAGED_MAIN,
     );
 
     /** The folder the release zip holds the plugin in. */
@@ -117,33 +102,6 @@ final class ConnectorUpdater
     }
 
     /**
-     * What an update for this site must look like. A site in the bridge layout takes only the
-     * bridge package again, since its folder and its active plugin entry are still the 1.63 ones;
-     * LayoutMigration moves it to the Runova layout.
-     *
-     * @return array{main: string, required: string[], root: string, name: string, constant: string}
-     */
-    private function package(?string $layout = null): array
-    {
-        if (($layout !== null ? $layout : $this->env->layout()) === Layout::BRIDGE) {
-            return array(
-                'main' => Legacy::MAIN,
-                'required' => self::BRIDGE_REQUIRED,
-                'root' => Legacy::SLUG . '/',
-                'name' => Legacy::PLUGIN_NAME,
-                'constant' => Legacy::VERSION_CONSTANT,
-            );
-        }
-        return array(
-            'main' => self::MAIN,
-            'required' => self::REQUIRED,
-            'root' => self::ZIP_ROOT,
-            'name' => 'Runova Connector',
-            'constant' => 'RUNOVA_CONNECTOR_VERSION',
-        );
-    }
-
-    /**
      * @param mixed $body
      * @param array<string, mixed> $connection
      * @return array<string, mixed> WpConnectorUpdateResponse
@@ -177,8 +135,8 @@ final class ConnectorUpdater
             $download = $body['download'];
             $url = is_array($download) && isset($download['url']) && is_string($download['url']) ? $download['url'] : '';
             $tag = Protocol::downloadTag($url);
-            if ($tag === null || $tag['tag'] !== $version || $tag['folder'] . '/' !== $this->package()['root']) {
-                throw ApiError::badRequest('An update the site downloads names the Runova release of the version it installs, and the zip for this site\'s layout.');
+            if ($tag === null || $tag !== $version) {
+                throw ApiError::badRequest('An update the site downloads names the Runova release of the version it installs.');
             }
             if ($frame->blobCount() !== 0) {
                 throw ApiError::badRequest('An update the site downloads carries no blobs.');
@@ -232,20 +190,15 @@ final class ConnectorUpdater
                 }
             }
         }
-        $package = $this->package();
-        foreach ($package['required'] as $required) {
+        foreach (self::REQUIRED as $required) {
             if (!isset($listed[$required])) {
-                throw $this->badPackage('The update is missing ' . $required . ', so it is not a complete connector' . ($package['main'] === self::MAIN ? '' : ' for a site still in the AgentMate Connector folder') . '.'); // legacy-name
+                throw $this->badPackage('The update is missing ' . $required . ', so it is not a complete connector.');
             }
         }
         if ($url !== null) {
             $out = $this->download($url, $wanted);
         }
-        $this->checkMain($out[$package['main']], $version);
-        if (isset($out[Layout::STAGED_MAIN])) {
-            // The bridge's main file for later must be this same release.
-            $this->checkMain($out[Layout::STAGED_MAIN], $version, $this->package(Layout::RUNOVA));
-        }
+        $this->checkMain($out[self::MAIN], $version);
         return array('version' => $version, 'files' => $out, 'downloaded' => $url !== null);
     }
 
@@ -262,7 +215,7 @@ final class ConnectorUpdater
         if ($fetched['body'] === null) {
             throw $this->refused('downloadFailed', 'The site could not download the connector from GitHub (' . Text::clean($fetched['error'], 200) . ').');
         }
-        $files = ZipReader::read($fetched['body'], $this->package()['root'], Protocol::UPDATE_MAX_FILES, Protocol::UPDATE_MAX_FILE_BYTES, Protocol::UPDATE_MAX_TOTAL_BYTES);
+        $files = ZipReader::read($fetched['body'], self::ZIP_ROOT, Protocol::UPDATE_MAX_FILES, Protocol::UPDATE_MAX_FILE_BYTES, Protocol::UPDATE_MAX_TOTAL_BYTES);
         if ($files === null) {
             throw $this->refused('downloadFailed', 'The file the site downloaded from GitHub is not a plugin zip it can read.');
         }
@@ -280,22 +233,17 @@ final class ConnectorUpdater
         return $out;
     }
 
-    /**
-     * The main file must be this connector and say it is the version the request names.
-     *
-     * @param array{name: string, constant: string}|null $package what to expect; this site's layout by default
-     */
-    private function checkMain(string $main, string $version, ?array $package = null): void
+    /** The main file must be this connector and say it is the version the request names. */
+    private function checkMain(string $main, string $version): void
     {
-        $package = $package !== null ? $package : $this->package();
         $head = substr($main, 0, self::HEADER_BYTES);
-        if (self::header($head, 'Plugin Name') !== $package['name']) {
+        if (self::header($head, 'Plugin Name') !== 'Runova Connector') {
             throw $this->badPackage('The update is not the Runova Connector plugin.');
         }
         if (self::header($head, 'Version') !== $version) {
             throw $this->badPackage('The plugin header in the update does not say version ' . $version . '.');
         }
-        $constant = preg_match("/define\\(\\s*'" . $package['constant'] . "'\\s*,\\s*'([^']+)'\\s*\\)/", $main, $match) === 1 ? $match[1] : '';
+        $constant = preg_match("/define\\(\\s*'RUNOVA_CONNECTOR_VERSION'\\s*,\\s*'([^']+)'\\s*\\)/", $main, $match) === 1 ? $match[1] : '';
         if ($constant !== $version) {
             throw $this->badPackage('The version constant in the update does not say version ' . $version . '.');
         }
@@ -327,7 +275,7 @@ final class ConnectorUpdater
         if (version_compare($to, $from, '<')) {
             throw $this->refused('downgrade', 'This site already runs Runova Connector ' . $from . ', which is newer than ' . $to . '.');
         }
-        $this->checkRequirements($files[$this->package()['main']], $to);
+        $this->checkRequirements($files[self::MAIN], $to);
         foreach ($files as $path => $bytes) {
             $error = SyntaxCheck::isPhp($path) ? SyntaxCheck::check($bytes) : null;
             if ($error !== null) {
@@ -524,7 +472,7 @@ final class ConnectorUpdater
     {
         $names = @scandir($root); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
         foreach (is_array($names) ? $names : array() as $name) {
-            if (preg_match(self::SIBLING, $name) === 1 || preg_match(Legacy::SIBLING, $name) === 1) {
+            if (preg_match(self::SIBLING, $name) === 1) {
                 $this->remove($root . '/' . $name);
             }
         }

@@ -1,6 +1,5 @@
 import { copyFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { WP_LEGACY_CONNECTOR_ZIP } from '@runova/core';
 import type { DeployWordPressSaveZipResult } from '../../../shared/deployWordPressTypes';
 import { wordPressError } from '../../../shared/wordpressErrors';
 
@@ -11,11 +10,6 @@ import { wordPressError } from '../../../shared/wordpressErrors';
  */
 
 export const CONNECTOR_ZIP_NAME = 'runova-connector.zip';
-/**
- * The bridge package, the same plugin in the folder 1.63 used: the only update a 1.63 site takes.
- * The app sends it to such a site, then asks the site to move to its own folder.
- */
-export const BRIDGE_ZIP_NAME = WP_LEGACY_CONNECTOR_ZIP;
 
 export interface ConnectorZipDeps {
   isPackaged: boolean;
@@ -30,11 +24,10 @@ export interface ConnectorZipDeps {
 
 export function connectorZipPath(
   deps: Pick<ConnectorZipDeps, 'isPackaged' | 'resourcesPath' | 'appPath'>,
-  name: string = CONNECTOR_ZIP_NAME,
 ): string {
   return deps.isPackaged
-    ? join(deps.resourcesPath, 'wordpress-connector', name)
-    : join(deps.appPath, '..', 'wordpress-connector', 'dist', name);
+    ? join(deps.resourcesPath, 'wordpress-connector', CONNECTOR_ZIP_NAME)
+    : join(deps.appPath, '..', 'wordpress-connector', 'dist', CONNECTOR_ZIP_NAME);
 }
 
 export async function saveConnectorZip(

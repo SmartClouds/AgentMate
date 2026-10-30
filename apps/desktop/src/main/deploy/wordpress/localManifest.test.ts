@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { LEGACY_IGNORE_FILE, type WpItemRef } from '@runova/core';
+import type { WpItemRef } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { wordPressErrorCode } from '../../../shared/wordpressErrors';
 import {
@@ -145,25 +145,6 @@ describe('ignore layers', () => {
       '.runovaignore': 'agentFiles',
     });
     expect(walk.rules.excluded('src/app.ts')).toBe(true);
-  });
-
-  it('reads the ignore file of a project made before the rename, unless a new one is there', async () => {
-    put(`${THEME_ROOT}/style.css`);
-    put(`${THEME_ROOT}/notes.txt`);
-    put(`${THEME_ROOT}/build/keep.js`);
-    put(LEGACY_IGNORE_FILE, 'notes.txt\n');
-    put(`${THEME_ROOT}/${LEGACY_IGNORE_FILE}`, 'build/\n');
-    const old = await walkLocalItem({ projectRoot: root, item: THEME, isFile: false });
-    expect(Object.keys(old.files).sort()).toEqual(['style.css']);
-    expect(old.leftOut.find((entry) => entry.path === LEGACY_IGNORE_FILE)?.reason).toBe(
-      'agentFiles',
-    );
-
-    // The new name wins in each folder where both are.
-    put('.runovaignore', 'build/\n');
-    const both = await walkLocalItem({ projectRoot: root, item: THEME, isFile: false });
-    expect(both.rules.excluded('notes.txt')).toBe(false);
-    expect(both.rules.excluded('build/keep.js')).toBe(true);
   });
 
   it('drops ! lines from a .distignore, which can come from the site', async () => {

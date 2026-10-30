@@ -15,7 +15,6 @@ use Runova\Connector\Auth\SiteMove;
 use Runova\Connector\Cli\ConnectionsCommand;
 use Runova\Connector\Cli\DeploysCommand;
 use Runova\Connector\Cli\KeyCommand;
-use Runova\Connector\Cli\MigrateCommand;
 use Runova\Connector\Cli\RescueCommand;
 use Runova\Connector\Cli\StatusCommand;
 use Runova\Connector\Crypto\SiteKeys;
@@ -27,11 +26,13 @@ use Runova\Connector\Http\Transport;
 use Runova\Connector\Routes\Handlers;
 use Runova\Connector\Storage\Storage;
 use Runova\Connector\Storage\WpdbStorage;
-use Runova\Connector\Update\LayoutMigration;
-use Runova\Connector\Update\WpLayoutHost;
 
 final class Plugin
 {
+    /** The plugin folder and main file, as WordPress lists them. */
+    const SLUG = 'runova-connector';
+    const MAIN = 'runova-connector.php';
+
     /** @var Storage|null */
     private static $storage = null;
 
@@ -57,36 +58,26 @@ final class Plugin
             Activator::maybeUpgrade();
         }
         Transport::register();
-        add_action(LayoutMigration::CRON_HOOK, array(self::class, 'cleanUpLayout'));
         if (is_admin()) {
             AdminPage::register();
         }
         if ($cli) {
-            // The old command name keeps the scripts site owners wrote for 1.63 working.
-            foreach (array('runova', Legacy::CLI_COMMAND) as $name) {
-                \WP_CLI::add_command($name . ' key', KeyCommand::class);
-                \WP_CLI::add_command($name . ' connections', ConnectionsCommand::class);
-                \WP_CLI::add_command($name . ' deploys', DeploysCommand::class);
-                \WP_CLI::add_command($name . ' status', StatusCommand::class);
-                \WP_CLI::add_command($name . ' migrate', MigrateCommand::class);
-                // The guard registers `wp runova rescue` so it works even with --skip-plugins;
-                // without a guard the plugin does it.
-                if (!defined('RUNOVA_CONNECTOR_GUARD') && !defined(Legacy::GUARD_CONSTANT)) {
-                    \WP_CLI::add_command($name . ' rescue', RescueCommand::class);
-                }
+            \WP_CLI::add_command('runova key', KeyCommand::class);
+            \WP_CLI::add_command('runova connections', ConnectionsCommand::class);
+            \WP_CLI::add_command('runova deploys', DeploysCommand::class);
+            \WP_CLI::add_command('runova status', StatusCommand::class);
+            // The guard registers `wp runova rescue` so it works even with --skip-plugins;
+            // without a guard the plugin does it.
+            if (!defined('RUNOVA_CONNECTOR_GUARD')) {
+                \WP_CLI::add_command('runova rescue', RescueCommand::class);
             }
         }
     }
 
-    /** WP-Cron, after a move to the Runova layout: the old folder's grace period is over. */
-    public static function cleanUpLayout(): void
+    /** The main file of the copy in $pluginDir. */
+    public static function mainFile(string $pluginDir): string
     {
-        LayoutMigration::cleanUp(new WpLayoutHost(), time());
-    }
-
-    public static function layoutMigration(): LayoutMigration
-    {
-        return new LayoutMigration(self::environment(), self::audit(), self::deployService(), new WpLayoutHost());
+        return rtrim($pluginDir, '/\\') . '/' . self::MAIN;
     }
 
     public static function storage(): Storage

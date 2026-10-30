@@ -369,17 +369,6 @@ jobs:
           RUNOVA_SYSTEM_TESTS: "1"
         run: pnpm --filter @runova/desktop exec vitest run src/main/deploy/wordpress/wordpress.int.test.ts
 
-      # A site running the released 1.63 connector, from before the rename to Runova, takes the
-      # bridge through its own updater and moves to the new plugin folder, single site and
-      # multisite. It needs both zips this commit builds.
-      - name: Build the connector zips
-        run: node scripts/wordpress-connector.mjs build
-
-      - name: Move a connector from before the rename
-        env:
-          RUNOVA_SYSTEM_TESTS: "1"
-        run: pnpm --filter @runova/desktop exec vitest run src/main/deploy/wordpress/connectorMigration.int.test.ts
-
   # The .NET server core (apps/server-core). Its global.json pins the SDK feature band and the
   # Microsoft.Testing.Platform runner, so every dotnet command runs from that folder. System tests
   # (real Docker, test servers) are not part of this job; they run in the [e2e] job instead.

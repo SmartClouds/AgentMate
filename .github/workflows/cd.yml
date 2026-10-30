@@ -244,15 +244,13 @@ jobs:
       - name: Build the WordPress connector zip
         run: node scripts/wordpress-connector.mjs build
 
-      # One copy goes on the GitHub Release, so a site owner can get it without the app. The
-      # bridge beside it carries the old name: sites with a connector from before the rename to
-      # Runova only take an update under that name, and then move themselves over.
+      # One copy goes on the GitHub Release, so a site owner can get it without the app.
       - name: Upload the WordPress connector zip
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v7
         with:
           name: wordpress-connector
-          path: apps/wordpress-connector/dist/*-connector.zip
+          path: apps/wordpress-connector/dist/runova-connector.zip
           if-no-files-found: error
 
       # Spotlight indexes the disk image dmgbuild mounts while it is still

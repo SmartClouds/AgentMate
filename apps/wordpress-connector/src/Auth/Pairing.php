@@ -42,10 +42,9 @@ final class Pairing
 
     /**
      * @param array{connectionId: ?string, timestamp: int, nonce: string, signature: ?string} $auth
-     * @param string $prefix the endpoint's signing prefix; set to the one the proof matched
      * @return array<string, mixed> the WpPairResponse
      */
-    public function pair(array $auth, ?Bundle $bundle, string $ip, string &$prefix = Protocol::PREFIX): array
+    public function pair(array $auth, ?Bundle $bundle, string $ip): array
     {
         $now = $this->env->now();
         if ($auth['connectionId'] !== null || $auth['signature'] === null) {
@@ -86,25 +85,13 @@ final class Pairing
 
         $secret = Base64Url::decode($pairing['secret']);
         $given = Base64Url::decode($proof);
-        $matched = null;
-        if ($secret !== null && $given !== null) {
-            // A 1.63 desktop proves with the old prefix; one wrong proof is one attempt either way.
-            foreach (array($prefix, Protocol::otherPrefix($prefix)) as $candidate) {
-                $expected = Crypto::hmac($secret, Canonical::pair($pairingId, $publicKey, $deviceName, $auth['timestamp'], $auth['nonce'], $candidate));
-                if (hash_equals($expected, $given)) {
-                    $matched = $candidate;
-                    break;
-                }
-            }
-        }
-        if ($matched === null) {
+        if ($secret === null || $given === null || !hash_equals(Crypto::hmac($secret, Canonical::pair($pairingId, $publicKey, $deviceName, $auth['timestamp'], $auth['nonce'])), $given)) {
             $this->failAttempt($pairing, $ip, $now);
             throw ApiError::auth('pairingInvalid', 'The connection key proof did not match.');
         }
-        $prefix = $matched;
 
         $signature = Base64Url::decode((string) $auth['signature']);
-        $text = Canonical::request(Protocol::ROUTES['pair'], $auth['timestamp'], $auth['nonce'], null, $bundle->sha256(), $prefix);
+        $text = Canonical::request(Protocol::ROUTES['pair'], $auth['timestamp'], $auth['nonce'], null, $bundle->sha256());
         if ($signature === null || !Crypto::verify($signature, $text, (string) Base64Url::decode($publicKey))) {
             $this->failAttempt($pairing, $ip, $now);
             throw ApiError::auth('badSignature', 'The pair request is not signed by the key it carries.');

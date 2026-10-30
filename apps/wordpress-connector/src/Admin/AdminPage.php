@@ -14,7 +14,6 @@ namespace Runova\Connector\Admin;
 use Runova\Connector\Audit\AuditLog;
 use Runova\Connector\Guard\GuardInstaller;
 use Runova\Connector\Info\StatusChecks;
-use Runova\Connector\Layout;
 use Runova\Connector\Plugin;
 
 final class AdminPage
@@ -78,7 +77,7 @@ final class AdminPage
 
     private static function actions(): AdminActions
     {
-        return new AdminActions(Plugin::storage(), Plugin::environment(), new WpAdminContext(), array(Plugin::class, 'keyService'), Plugin::deployService(), array(Plugin::class, 'layoutMigration'));
+        return new AdminActions(Plugin::storage(), Plugin::environment(), new WpAdminContext(), array(Plugin::class, 'keyService'), Plugin::deployService());
     }
 
     /** The page's one script: a fixed string, so nothing a user typed can end up in it. */
@@ -129,8 +128,7 @@ final class AdminPage
             header('Referrer-Policy: no-referrer');
             return;
         }
-        $tabs = array(AdminActions::REVOKE => 'connections', AdminActions::MIGRATE => 'status');
-        $args = array('tab' => isset($tabs[$action]) ? $tabs[$action] : 'deploys', 'runova_notice' => $result['code']);
+        $args = array('tab' => $action === AdminActions::REVOKE ? 'connections' : 'deploys', 'runova_notice' => $result['code']);
         foreach (array('restored', 'removed', 'count') as $number) {
             if (isset($result['data'][$number])) {
                 $args[$number] = (int) $result['data'][$number];
@@ -172,12 +170,6 @@ final class AdminPage
                 return __('Choose how long the connection lasts from the list.', 'runova-connector');
             case 'label':
                 return __('A label is up to 100 characters.', 'runova-connector');
-            case 'moved':
-                return __('Runova Connector now runs from its own folder. The old folder is removed in a few minutes.', 'runova-connector');
-            case 'moveRolledBack':
-                return __('The site failed its health check in the new folder, so the connector stays where it was.', 'runova-connector');
-            case 'moveRefused':
-                return __('The connector could not move to its new folder (the plugins or mu-plugins folder may not be writable). It keeps working where it is.', 'runova-connector');
         }
         return __('That did not work. The PHP error log has the details.', 'runova-connector');
     }
@@ -207,11 +199,8 @@ final class AdminPage
         }
         AdminViews::open($tab, $urls);
         if ($notice !== '') {
-            $good = in_array($notice, array('revoked', 'alreadyRevoked', 'rolledBack', 'moved'), true);
+            $good = in_array($notice, array('revoked', 'alreadyRevoked', 'rolledBack'), true);
             AdminViews::notice($good ? 'success' : 'error', self::message($notice, $numbers));
-        }
-        if (Layout::current() === Layout::BRIDGE) {
-            AdminViews::moveBox($actions->canChangeCode());
         }
         $storage = Plugin::storage();
         $env = Plugin::environment();

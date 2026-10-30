@@ -13,9 +13,7 @@ use Runova\Connector\Crypto\SiteKeys;
 use Runova\Connector\Env\WordPressEnvironment;
 use Runova\Connector\Http\Dispatcher;
 use Runova\Connector\Http\Transport;
-use Runova\Connector\Layout;
 use Runova\Connector\Plugin;
-use Runova\Connector\Protocol;
 use Runova\Connector\Routes\DeployHandlers;
 use Runova\Connector\Routes\Handlers;
 use Runova\Connector\Storage\WpdbStorage;
@@ -28,7 +26,7 @@ final class Rescue
     {
         global $wpdb;
         if (!defined('RUNOVA_CONNECTOR_FILE')) {
-            define('RUNOVA_CONNECTOR_FILE', Layout::mainFile($pluginDir));
+            define('RUNOVA_CONNECTOR_FILE', Plugin::mainFile($pluginDir));
         }
         if (!self::active($pluginDir)) {
             // A deactivated connector answers nothing, here as everywhere else.
@@ -47,16 +45,13 @@ final class Rescue
             SiteMove::apply($storage, time(), $from, $to);
         });
         $dispatcher = new Dispatcher($storage, $env, $keys, Handlers::rescue($storage, $env), array(Plugin::class, 'logError'));
-        // Nothing in the address says which app is calling; the copy in the 1.63 folder is the
-        // one 1.63 desktops know about. A signed request verifies under either prefix anyway.
-        $prefix = Layout::of($pluginDir) === Layout::BRIDGE ? Protocol::LEGACY_PREFIX : Protocol::PREFIX;
-        Transport::emit($dispatcher->handle(Transport::incoming($route, $prefix)));
+        Transport::emit($dispatcher->handle(Transport::incoming($route)));
         exit;
     }
 
     private static function active(string $pluginDir): bool
     {
-        $basename = basename($pluginDir) . '/' . basename(Layout::mainFile($pluginDir));
+        $basename = basename($pluginDir) . '/' . Plugin::MAIN;
         $active = get_option('active_plugins');
         if (is_array($active) && in_array($basename, $active, true)) {
             return true;

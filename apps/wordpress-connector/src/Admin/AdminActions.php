@@ -1,7 +1,6 @@
 <?php
 /**
- * Everything the wp-admin pages can change: create a key, revoke a connection, roll back a deploy,
- * and move a connector that still runs from its 1.63 folder to its own.
+ * Everything the wp-admin pages can change: create a key, revoke a connection, roll back a deploy.
  * Each action checks the capability first, then the nonce, then does the work. The page turns the
  * result codes into words; nothing here prints anything.
  *
@@ -25,7 +24,6 @@ final class AdminActions
     const CREATE_KEY = 'create_key';
     const REVOKE = 'revoke';
     const ROLLBACK = 'rollback';
-    const MIGRATE = 'migrate';
 
     const EXPIRY_CHOICES = array(0, 1, 7, 30, 90, 365);
 
@@ -44,21 +42,16 @@ final class AdminActions
     /** @var DeployService */
     private $deploys;
 
-    /** @var callable|null */
-    private $migration;
-
     /**
      * @param callable(): KeyService $keys built only when a key is made (it loads the site key)
-     * @param callable|null $migration callable(): LayoutMigration, built only for a move
      */
-    public function __construct(Storage $storage, Environment $env, AdminContext $context, callable $keys, DeployService $deploys, ?callable $migration = null)
+    public function __construct(Storage $storage, Environment $env, AdminContext $context, callable $keys, DeployService $deploys)
     {
         $this->storage = $storage;
         $this->env = $env;
         $this->context = $context;
         $this->keys = $keys;
         $this->deploys = $deploys;
-        $this->migration = $migration;
     }
 
     /** The nonce action for a form. Per object for revoke and rollback. */
@@ -84,14 +77,14 @@ final class AdminActions
      */
     public function run(string $action, array $fields): array
     {
-        if (!in_array($action, array(self::CREATE_KEY, self::REVOKE, self::ROLLBACK, self::MIGRATE), true)) {
+        if (!in_array($action, array(self::CREATE_KEY, self::REVOKE, self::ROLLBACK), true)) {
             return self::result('error', 'unknownAction');
         }
         if (!$this->context->can($this->baseCapability())) {
             return self::result('refused', 'capability');
         }
         $id = isset($fields['id']) && is_string($fields['id']) ? $fields['id'] : '';
-        if (!$this->context->nonceOk(self::nonceAction($action, in_array($action, array(self::CREATE_KEY, self::MIGRATE), true) ? '' : $id))) {
+        if (!$this->context->nonceOk(self::nonceAction($action, $action === self::CREATE_KEY ? '' : $id))) {
             return self::result('refused', 'nonce');
         }
         if ($action === self::CREATE_KEY) {
@@ -103,26 +96,7 @@ final class AdminActions
         if (!$this->canChangeCode()) {
             return self::result('refused', 'capability');
         }
-        if ($action === self::MIGRATE) {
-            return $this->migrate();
-        }
         return $this->rollback($id);
-    }
-
-    /**
-     * @return array{status: string, code: string, data?: array<string, mixed>}
-     */
-    private function migrate(): array
-    {
-        if ($this->migration === null) {
-            return self::result('error', 'failed');
-        }
-        try {
-            $result = call_user_func($this->migration)->migrate(null, $this->context->ip());
-        } catch (ApiError $error) {
-            return self::result('error', $error->errorCode === 'busy' ? 'busy' : 'moveRefused');
-        }
-        return $result['state'] === 'rolledBack' ? self::result('error', 'moveRolledBack') : self::result('done', 'moved');
     }
 
     /**

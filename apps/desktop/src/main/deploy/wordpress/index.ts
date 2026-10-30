@@ -59,15 +59,6 @@ export function registerDeployWordPressIpc(deps: {
         resourcesPath: process.resourcesPath,
         appPath: app.getAppPath(),
       }),
-    readBridgeBundle: () =>
-      readShippedConnector(
-        {
-          isPackaged: app.isPackaged,
-          resourcesPath: process.resourcesPath,
-          appPath: app.getAppPath(),
-        },
-        'bridge',
-      ),
     saveConnectorZip: () =>
       saveConnectorZip({
         isPackaged: app.isPackaged,

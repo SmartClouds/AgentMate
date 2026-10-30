@@ -7,8 +7,6 @@
 
 namespace Runova\Connector\Http;
 
-use Runova\Connector\Protocol;
-
 final class IncomingRequest
 {
     /** @var string The route the URL asked for (REST path or the ajax `route` parameter). */
@@ -26,20 +24,12 @@ final class IncomingRequest
     /** @var string */
     public $ip;
 
-    /**
-     * @var string The signing prefix the endpoint suggests: the old one for the namespace and
-     *      action 1.63 desktops call. A signed request is checked against both prefixes anyway;
-     *      this one signs replies to requests that never verified, such as /hello.
-     */
-    public $prefix;
-
-    public function __construct(string $route, ?string $auth, ?Bundle $bundle, string $ip, bool $bodyTooLarge = false, string $prefix = Protocol::PREFIX)
+    public function __construct(string $route, ?string $auth, ?Bundle $bundle, string $ip, bool $bodyTooLarge = false)
     {
         $this->route = $route;
         $this->auth = $auth;
         $this->bundle = $bundle;
         $this->ip = $ip;
         $this->bodyTooLarge = $bodyTooLarge;
-        $this->prefix = $prefix;
     }
 }

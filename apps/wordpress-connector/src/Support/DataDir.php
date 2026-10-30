@@ -4,19 +4,16 @@
  * snapshots. It gets a random name, deny rules for Apache and IIS, and an index.php, and what goes
  * in it has no file extension, so nothing in it can be run from the web even on nginx.
  * RUNOVA_CONNECTOR_DATA_DIR in wp-config.php moves it anywhere (outside the web root is best).
- * A folder made before the rename keeps its old name, and so does the option that holds it.
  *
  * @package Runova\Connector
  */
 
 namespace Runova\Connector\Support;
 
-use Runova\Connector\Legacy;
-
 final class DataDir
 {
-    const OPTION = Legacy::OPTION_PREFIX . 'data_dir';
-    const NAME = '/^(?:runova|agentmate)-connector-[0-9a-f]{12}$/D'; // legacy-name
+    const OPTION = 'runova_connector_data_dir';
+    const NAME = '/^runova-connector-[0-9a-f]{12}$/D';
 
     const HTACCESS = "# Runova Connector keeps private files here. Nothing in it is ever served.\n"
         . "<IfModule mod_authz_core.c>\n\tRequire all denied\n</IfModule>\n"

@@ -98,14 +98,6 @@ final class FakeEnvironment implements Environment
         return $this->pluginVersion;
     }
 
-    /** @var string */
-    public $layout = 'runova';
-
-    public function layout(): string
-    {
-        return $this->layout;
-    }
-
     public function siteName(): string
     {
         return 'Test Site';
@@ -207,7 +199,7 @@ final class FakeEnvironment implements Environment
         return $this->networkActivePlugins;
     }
 
-    /** @var string the plugin folder; the 1.63 one for a site in the bridge layout */
+    /** @var string the plugin folder */
     public $connectorSlug = 'runova-connector';
 
     public function connectorSlug(): string

@@ -11,12 +11,11 @@
 
 namespace Runova\Connector\Guard;
 
-use Runova\Connector\Legacy;
 
 final class GuardState
 {
-    /** Kept its 1.63 name; the guard mu-plugin reads it by that name on every request. */
-    const OPTION = Legacy::OPTION_PREFIX . 'guard';
+    /** The guard mu-plugin reads it by this name on every request. */
+    const OPTION = 'runova_connector_guard';
 
     /** Creates the option, empty and autoloaded, if it is missing. */
     public static function ensure(): void

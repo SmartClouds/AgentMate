@@ -9,8 +9,6 @@
 namespace Runova\Connector\Env;
 
 use Runova\Connector\Crypto\Crypto;
-use Runova\Connector\Layout;
-use Runova\Connector\Legacy;
 use Runova\Connector\Protocol;
 use Runova\Connector\Support\Constants;
 use Runova\Connector\Support\DataDir;
@@ -47,11 +45,6 @@ final class WordPressEnvironment implements Environment
     public function pluginVersion(): string
     {
         return RUNOVA_CONNECTOR_VERSION;
-    }
-
-    public function layout(): string
-    {
-        return Layout::current();
     }
 
     private function mainSiteId(): ?int
