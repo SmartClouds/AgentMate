@@ -1525,6 +1525,122 @@
           }
         }
       }
+    },
+    "/api/v1/releases/latest": {
+      "get": {
+        "tags": [
+          "ReleaseEndpoints"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseDto"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified"
+          }
+        }
+      }
+    },
+    "/api/v1/releases/latest/assets": {
+      "get": {
+        "tags": [
+          "ReleaseEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "platform",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "arch",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReleaseAssetDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified"
+          }
+        }
+      }
+    },
+    "/api/v1/releases/latest/downloads/{platform}": {
+      "get": {
+        "tags": [
+          "ReleaseEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "platform",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "arch",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3084,6 +3200,114 @@
         },
         "additionalProperties": false
       },
+      "ReleaseArch": {
+        "enum": [
+          "x64",
+          "arm64",
+          "universal"
+        ]
+      },
+      "ReleaseAssetDto": {
+        "required": [
+          "name",
+          "platform",
+          "arch",
+          "kind",
+          "size",
+          "sha256",
+          "downloadUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/ReleasePlatform"
+          },
+          "arch": {
+            "$ref": "#/components/schemas/ReleaseArch"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ReleaseKind"
+          },
+          "size": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "sha256": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "downloadUrl": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReleaseDto": {
+        "required": [
+          "version",
+          "tagName",
+          "name",
+          "publishedAt",
+          "notesUrl",
+          "fetchedAt",
+          "assets"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "tagName": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "notesUrl": {
+            "type": "string"
+          },
+          "fetchedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReleaseAssetDto"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReleaseKind": {
+        "enum": [
+          "nsis",
+          "dmg",
+          "zip",
+          "appimage",
+          "deb"
+        ]
+      },
+      "ReleasePlatform": {
+        "enum": [
+          "windows",
+          "macos",
+          "linux"
+        ]
+      },
       "SetupLinkDto": {
         "required": [
           "url",
@@ -3444,6 +3668,9 @@
     },
     {
       "name": "ApiClientEndpoints"
+    },
+    {
+      "name": "ReleaseEndpoints"
     }
   ]
 }

@@ -4,6 +4,7 @@ using Npgsql;
 using Runova.Website.Api.ApiClients;
 using Runova.Website.Api.Identity;
 using Runova.Website.Api.News;
+using Runova.Website.Api.Releases;
 using Runova.Website.Api.Users;
 using Runova.Website.Data;
 
@@ -41,6 +42,7 @@ internal static partial class JobsSetup
         services.AddScoped<NewsPublishJob>();
         services.AddScoped<SignatureNoncesPurgeJob>();
         services.AddScoped<IdempotencyPurgeJob>();
+        services.AddScoped<ReleasesSyncJob>();
         services.AddHostedService<RegisterRecurringJobs>();
         return services;
     }

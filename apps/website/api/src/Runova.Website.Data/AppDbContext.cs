@@ -6,11 +6,13 @@ using Runova.Website.Core.ApiClients;
 using Runova.Website.Core.Media;
 using Runova.Website.Core.News;
 using Runova.Website.Core.Posts;
+using Runova.Website.Core.Releases;
 using Runova.Website.Data.ApiClients;
 using Runova.Website.Data.Audit;
 using Runova.Website.Data.Identity;
 using Runova.Website.Data.News;
 using Runova.Website.Data.Posts;
+using Runova.Website.Data.Releases;
 
 namespace Runova.Website.Data;
 
@@ -34,6 +36,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Tag> Tags => Set<Tag>();
 
     public DbSet<MediaFile> Media => Set<MediaFile>();
+
+    public DbSet<Release> Releases => Set<Release>();
 
     public DbSet<ApiClient> ApiClients => Set<ApiClient>();
 
@@ -80,6 +84,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
         builder.ConfigureNews();
         builder.ConfigurePosts();
         builder.ConfigureApiClients();
+        builder.ConfigureReleases();
 
         // Identity gives claims an int key, and Data Protection its keys; widen them so every key in the database is bigint.
         builder.Entity<IdentityUserClaim<long>>().Property(c => c.Id).HasConversion<long>();

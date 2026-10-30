@@ -919,6 +919,85 @@ namespace Runova.Website.Data.Migrations
                     b.ToTable("Tags");
                 });
 
+            modelBuilder.Entity("Runova.Website.Core.Releases.Release", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTimeOffset>("FetchedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("GitHubETag")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("NotesUrl")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("TagName")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.ComplexCollection(typeof(List<Dictionary<string, object>>), "Assets", "Runova.Website.Core.Releases.Release.Assets#ReleaseAsset", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<int>("Arch");
+
+                            b1.Property<string>("DownloadUrl")
+                                .IsRequired();
+
+                            b1.Property<int>("Kind");
+
+                            b1.Property<string>("Name")
+                                .IsRequired();
+
+                            b1.Property<int>("Platform");
+
+                            b1.Property<string>("Sha256");
+
+                            b1.Property<long>("Size");
+
+                            b1
+                                .ToJson("Assets")
+                                .HasColumnType("jsonb");
+                        });
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FetchedAt");
+
+                    b.HasIndex("TagName")
+                        .IsUnique();
+
+                    b.ToTable("Releases");
+                });
+
             modelBuilder.Entity("Runova.Website.Data.ApiClients.IdempotencyRecord", b =>
                 {
                     b.Property<long>("Id")

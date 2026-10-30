@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Hangfire;
 using Runova.Website.Api.ApiClients;
 using Runova.Website.Api.News;
+using Runova.Website.Api.Releases;
 using Runova.Website.Api.Users;
 
 namespace Runova.Website.Api.Jobs;
@@ -15,6 +16,7 @@ internal static class RecurringJobRegistry
     public const string NewsPublish = "news-publish";
     public const string SignatureNoncesPurge = "signature-nonces-purge";
     public const string IdempotencyPurge = "idempotency-purge";
+    public const string ReleasesSync = "releases-sync";
 
     public static readonly IReadOnlyDictionary<string, string> Schedules = new Dictionary<string, string>
     {
@@ -22,6 +24,7 @@ internal static class RecurringJobRegistry
         [NewsPublish] = Cron.Minutely(),
         [SignatureNoncesPurge] = Cron.MinuteInterval(10),
         [IdempotencyPurge] = Cron.Hourly(),
+        [ReleasesSync] = Cron.MinuteInterval(15),
     };
 
     /// <summary>Adds each job, or updates it when its schedule or method changed.</summary>
@@ -31,6 +34,7 @@ internal static class RecurringJobRegistry
         Add<NewsPublishJob>(jobs, NewsPublish, job => job.RunAsync(CancellationToken.None));
         Add<SignatureNoncesPurgeJob>(jobs, SignatureNoncesPurge, job => job.RunAsync(CancellationToken.None));
         Add<IdempotencyPurgeJob>(jobs, IdempotencyPurge, job => job.RunAsync(CancellationToken.None));
+        Add<ReleasesSyncJob>(jobs, ReleasesSync, job => job.RunAsync(CancellationToken.None));
     }
 
     // Hangfire passes its own shutdown token in place of CancellationToken.None.
