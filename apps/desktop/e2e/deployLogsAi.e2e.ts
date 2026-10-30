@@ -52,8 +52,7 @@ test('a crash loop, diagnosed: a check runs by itself, a change waits for approv
       '',
       '- It logged ECONNREFUSED for the relay',
       `- Its queue lives in ${LONG_PATH}`,
-    ].join('
-'),
+    ].join('\n'),
   ]);
   launched = await launchApp({
     settings: {
@@ -132,7 +131,7 @@ test('a crash loop, diagnosed: a check runs by itself, a change waits for approv
   });
   await expect(answer.getByRole('listitem')).toHaveCount(2);
   await expect(answer.getByRole('button', { name: 'Copy message' })).toBeVisible();
-  const run = drawer.getByLabel('Run');
+  const run = drawer.getByLabel('Run', { exact: true });
   const sideways = () => run.evaluate((element) => element.scrollWidth - element.clientWidth);
   expect(await sideways()).toBeLessThanOrEqual(0);
   await drawer.getByRole('button', { name: 'Maximize' }).click();
