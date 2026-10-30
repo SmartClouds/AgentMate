@@ -62,6 +62,7 @@ import { DockerLinks } from './live/dockerLinks';
 import { DockerSubscriptions } from './live/dockerSubscriptions';
 import { DeploySubscriptions } from './live/subscriptions';
 import { JournalSubscriptions } from './logs/journal';
+import { registerRecaptchaIpc } from './recaptcha';
 import { createDeployRegistries, registerDeployRegistryIpc } from './registry';
 import type { DeployRegistries } from './registry/service';
 import { DeploySecurity } from './security';
@@ -334,6 +335,7 @@ export function registerDeployIpc(): void {
   registerDeployHardeningIpc(service, guard);
   registerDeployServerBackupsIpc(service, guard);
   registerDeployDockerIpc(service, guard, registries);
+  registerRecaptchaIpc();
   registerCloudflareIpc({
     call: (serverId, work) => service.links.call(serverId, work),
     roles: (serverId) => service.roles(serverId),

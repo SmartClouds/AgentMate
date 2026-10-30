@@ -1,4 +1,5 @@
 import type { CloudflareStatus } from '@shared/cloudflareTypes';
+import type { RecaptchaStatus } from '@shared/deployRecaptchaTypes';
 import type {
   DeployAccess,
   DeployCoreRecord,
@@ -99,6 +100,7 @@ const CORE: DeployCoreRecord = {
 };
 
 const NO_CLOUDFLARE: CloudflareStatus = { configured: false, locked: false, accounts: [] };
+const NO_RECAPTCHA: RecaptchaStatus = { runovaClient: true, locked: false, accounts: [] };
 
 function server(overrides: Partial<DeployServer> = {}): DeployServer {
   return {
@@ -967,6 +969,19 @@ describe('DeployPage containers', () => {
   });
 });
 
+describe('DeployPage cleanup', () => {
+  it('opens the Cleanup section from the section bar', async () => {
+    const { user } = renderPage({
+      'deploy.listServers': async () => [server({ core: CORE, enrolled: true })],
+      'deploy.access': async (): Promise<DeployAccess> => ({ state: 'needs-sign-in' }),
+    });
+    const sections = await screen.findByRole('navigation', { name: 'Server sections' });
+    await user.click(within(sections).getByRole('button', { name: /Cleanup/ }));
+    expect(await screen.findByText(/to see what could be cleaned up/)).toBeTruthy();
+    expect(screen.getByTestId('path').textContent).toBe('/deploy?server=srv-1&view=cleanup');
+  });
+});
+
 describe('DeployPage files', () => {
   it('opens the Files section from the section bar, on the server disk', async () => {
     const { user } = renderPage({
@@ -1044,6 +1059,7 @@ describe('DeployPage WordPress sites', () => {
     expect(await screen.findByText('No servers yet')).toBeTruthy();
     expect(screen.getByRole('button', { name: /Open Remote/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Manage Cloudflare/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Get reCAPTCHA keys/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Download the plugin/ })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Connect a WordPress site/ }));
     expect(await screen.findByLabelText('Connection key')).toBeTruthy();
@@ -1089,6 +1105,40 @@ describe('DeployPage WordPress sites', () => {
     expect(await screen.findByRole('heading', { name: 'Staging' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Cloudflare' })).toBeNull();
     expect(screen.getByTestId('path').textContent).toBe('/deploy?server=srv-2');
+  });
+
+  it('opens the reCAPTCHA page from a server, and leaves it for another', async () => {
+    const { user } = renderPage(
+      {
+        'deploy.listServers': async () => [server(), server({ id: 'srv-2', nickname: 'Staging' })],
+        'deployRecaptcha.status': async () => NO_RECAPTCHA,
+      },
+      '/deploy?server=srv-2',
+    );
+    expect(await screen.findByRole('heading', { name: 'Staging' })).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: /reCAPTCHA: keys for your sites/ }));
+    expect(await screen.findByRole('heading', { name: 'reCAPTCHA' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Staging' })).toBeNull();
+    expect(screen.getByTestId('path').textContent).toBe('/deploy?recaptcha=1');
+    expect(
+      screen
+        .getByRole('button', { name: /reCAPTCHA: keys for your sites/ })
+        .getAttribute('aria-current'),
+    ).toBe('true');
+
+    await user.click(screen.getByRole('button', { name: /Staging/ }));
+    expect(await screen.findByRole('heading', { name: 'Staging' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'reCAPTCHA' })).toBeNull();
+  });
+
+  it('opens the reCAPTCHA page with no servers or sites at all', async () => {
+    renderPage(
+      { 'deploy.listServers': async () => [], 'deployRecaptcha.status': async () => NO_RECAPTCHA },
+      '/deploy?recaptcha=1',
+    );
+    expect(await screen.findByRole('heading', { name: 'reCAPTCHA' })).toBeTruthy();
+    expect(screen.queryByText('No servers yet')).toBeNull();
   });
 
   it('says why the sites did not load when there are no servers, and tries again', async () => {

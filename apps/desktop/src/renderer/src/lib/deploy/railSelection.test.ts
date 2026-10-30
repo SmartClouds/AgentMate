@@ -37,6 +37,16 @@ describe('resolveSelection', () => {
     ).toEqual({ kind: 'cloudflare' });
   });
 
+  it('opens the reCAPTCHA page ahead of a server or site, but after Cloudflare', () => {
+    expect(
+      resolveSelection(params('recaptcha=1&server=srv-1&files=fs-1'), [SERVER], [WP], [FILES]),
+    ).toEqual({ kind: 'recaptcha' });
+    expect(resolveSelection(params('recaptcha=1'), [], [], [])).toEqual({ kind: 'recaptcha' });
+    expect(resolveSelection(params('recaptcha=1&cloudflare=1'), [], [], [])).toEqual({
+      kind: 'cloudflare',
+    });
+  });
+
   it('opens the FTP or SFTP site the address names', () => {
     expect(resolveSelection(params('files=fs-2'), [SERVER], [WP], [FILES, FILES_2])).toEqual({
       kind: 'files',
@@ -122,6 +132,11 @@ describe('waitForRail', () => {
         { servers: 0, wpSites: 0 },
       ),
     ).toBe(true);
+  });
+
+  it('waits only for the servers on the reCAPTCHA page', () => {
+    const pending = { servers: false, wpSites: true, fileSites: true };
+    expect(waitForRail(params('recaptcha=1'), pending, { servers: 0, wpSites: 0 })).toBe(false);
   });
 
   it('shows the page once everything it needs is in', () => {

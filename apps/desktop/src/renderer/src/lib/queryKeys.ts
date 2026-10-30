@@ -335,6 +335,17 @@ export const queryKeys = {
   cloudflareSettings: (zoneId: string) => ['cloudflare', 'data', 'settings', zoneId] as const,
   cloudflareCustomRules: (zoneId: string) => ['cloudflare', 'data', 'customRules', zoneId] as const,
   cloudflareAccessRules: (zoneId: string) => ['cloudflare', 'data', 'accessRules', zoneId] as const,
+  /** The Google sign-ins of the reCAPTCHA page (E40), never their tokens. */
+  recaptchaStatus: ['recaptcha', 'status'] as const,
+  /** Prefix of everything read with a Google sign-in, dropped when the sign-ins change. */
+  recaptchaData: ['recaptcha', 'data'] as const,
+  recaptchaProjects: (accountId: string) => ['recaptcha', 'data', accountId, 'projects'] as const,
+  recaptchaKeys: (accountId: string, projectId: string) =>
+    ['recaptcha', 'data', accountId, projectId, 'keys'] as const,
+  recaptchaUsage: (accountId: string, projectId: string) =>
+    ['recaptcha', 'data', accountId, projectId, 'usage'] as const,
+  recaptchaSecret: (accountId: string, projectId: string, keyId: string) =>
+    ['recaptcha', 'data', accountId, projectId, 'secret', keyId] as const,
   /** A server's Cloudflare origin lock, as its core reports it (E14). */
   cloudflareOriginLock: (serverId: string) =>
     ['deploy', 'cloudflare', serverId, 'origin-lock'] as const,

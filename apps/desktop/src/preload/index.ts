@@ -420,6 +420,20 @@ import type {
   DeployFirewallProgressEvent,
 } from '../shared/deployFirewallTypes';
 import type {
+  RecaptchaAccount,
+  RecaptchaKey,
+  RecaptchaKeyInput,
+  RecaptchaKeyRef,
+  RecaptchaKeyType,
+  RecaptchaKeyUpdate,
+  RecaptchaProject,
+  RecaptchaProjectRef,
+  RecaptchaSetupProgress,
+  RecaptchaSignInInput,
+  RecaptchaStatus,
+  RecaptchaUsage,
+} from '../shared/deployRecaptchaTypes';
+import type {
   DeployAuditExportInput,
   DeployAuditExportResult,
   DeployAuditQueryInput,
@@ -2148,6 +2162,52 @@ const deploySecurity = {
 };
 
 /**
+ * reCAPTCHA keys on the Deploy page (E40). The Google sign-in happens in the browser and stays in
+ * the main process; nothing here ever carries a Google token.
+ */
+const deployRecaptcha = {
+  /** The signed-in Google accounts, whether the vault is locked, and whether one-click sign-in exists. */
+  status: (): Promise<RecaptchaStatus> => ipcRenderer.invoke(IPC.deployRecaptcha.status),
+  /** Opens Google's consent page in the browser and waits (up to 5 minutes) for it to come back. */
+  signIn: (input: RecaptchaSignInInput): Promise<RecaptchaAccount> =>
+    ipcRenderer.invoke(IPC.deployRecaptcha.signIn, input),
+  cancelSignIn: (): Promise<void> => ipcRenderer.invoke(IPC.deployRecaptcha.cancelSignIn),
+  /** Signs the account out here and asks Google to drop the sign-in. */
+  removeAccount: (accountId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.deployRecaptcha.removeAccount, accountId),
+  listProjects: (accountId: string): Promise<RecaptchaProject[]> =>
+    ipcRenderer.invoke(IPC.deployRecaptcha.listProjects, accountId),
+  /** Makes a project just for reCAPTCHA and makes it the account's project. */
+  createProject: (accountId: string): Promise<RecaptchaProject> =>
+    ipcRenderer.invoke(IPC.deployRecaptcha.createProject, accountId),
+  /** Turns reCAPTCHA on in the project when it is off, reporting through onProgress. */
+  prepareProject: (ref: RecaptchaProjectRef): Promise<void> =>
+    ipcRenderer.invoke(IPC.deployRecaptcha.prepareProject, ref),
+  listKeys: (ref: RecaptchaProjectRef): Promise<RecaptchaKey[]> =>
+    ipcRenderer.invoke(IPC.deployRecaptcha.listKeys, ref),
+  createKey: (ref: RecaptchaProjectRef, input: RecaptchaKeyInput): Promise<RecaptchaKey> =>
+    ipcRenderer.invoke(IPC.deployRecaptcha.createKey, ref, input),
+  updateKey: (
+    ref: RecaptchaKeyRef,
+    type: RecaptchaKeyType,
+    update: RecaptchaKeyUpdate,
+  ): Promise<RecaptchaKey> => ipcRenderer.invoke(IPC.deployRecaptcha.updateKey, ref, type, update),
+  deleteKey: (ref: RecaptchaKeyRef): Promise<void> =>
+    ipcRenderer.invoke(IPC.deployRecaptcha.deleteKey, ref),
+  /** The key's secret for the server-side check, read from Google only when asked. */
+  secret: (ref: RecaptchaKeyRef): Promise<string> =>
+    ipcRenderer.invoke(IPC.deployRecaptcha.secret, ref),
+  usage: (ref: RecaptchaProjectRef): Promise<RecaptchaUsage> =>
+    ipcRenderer.invoke(IPC.deployRecaptcha.usage, ref),
+  onProgress: (callback: (progress: RecaptchaSetupProgress) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, progress: RecaptchaSetupProgress): void =>
+      callback(progress);
+    ipcRenderer.on(IPC.deployRecaptcha.onProgress, listener);
+    return () => ipcRenderer.removeListener(IPC.deployRecaptcha.onProgress, listener);
+  },
+};
+
+/**
  * The Deploy section's Cloudflare dialog. The API token goes in through saveToken and never comes
  * back: everything else answers with zones, records, settings and rules.
  */
@@ -2870,6 +2930,7 @@ const runovaApi = {
   studioGen,
   relay,
   errorTracking,
+  deployRecaptcha,
   cloudflare,
   cloudflareServer,
   pullRequests,

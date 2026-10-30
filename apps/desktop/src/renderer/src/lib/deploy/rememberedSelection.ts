@@ -2,9 +2,9 @@ import { isCloudflare, type ParamReader } from './railSelection';
 
 /**
  * What the Deploy page had open, kept so that coming back to a bare `/deploy` (the sidebar link)
- * opens it again rather than the first server's Overview. An address that names a server, a site
- * or the Cloudflare page always wins, and one-shot params (a Cloudflare account to show, a site to
- * add, a fix to offer) are not kept.
+ * opens it again rather than the first server's Overview. An address that names a server, a site,
+ * the Cloudflare page or the reCAPTCHA page always wins, and one-shot params (a Cloudflare account
+ * to show, a site to add, a key to make, a fix to offer) are not kept.
  */
 
 /** The params that say what is open: the selection, its section and what is open inside it. */
@@ -13,6 +13,7 @@ const KEPT = [
   'site',
   'files',
   'cloudflare',
+  'recaptcha',
   'zone',
   'view',
   'tab',
@@ -24,7 +25,7 @@ const KEPT = [
   'target',
 ] as const;
 
-const SELECTION = ['server', 'site', 'files', 'cloudflare'] as const;
+const SELECTION = ['server', 'site', 'files', 'cloudflare', 'recaptcha'] as const;
 
 function named(params: ParamReader): boolean {
   return SELECTION.some((name) => params.get(name) !== null);

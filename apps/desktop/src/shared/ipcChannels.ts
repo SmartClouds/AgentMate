@@ -1597,6 +1597,24 @@ export const IPC = {
     planPointDomain: 'cloudflare:planPointDomain',
     pointDomain: 'cloudflare:pointDomain',
   },
+  /** reCAPTCHA keys on the Deploy page (E40): Google sign-in, the project and its keys. */
+  deployRecaptcha: {
+    status: 'deployRecaptcha:status',
+    signIn: 'deployRecaptcha:signIn',
+    cancelSignIn: 'deployRecaptcha:cancelSignIn',
+    removeAccount: 'deployRecaptcha:removeAccount',
+    listProjects: 'deployRecaptcha:listProjects',
+    createProject: 'deployRecaptcha:createProject',
+    prepareProject: 'deployRecaptcha:prepareProject',
+    listKeys: 'deployRecaptcha:listKeys',
+    createKey: 'deployRecaptcha:createKey',
+    updateKey: 'deployRecaptcha:updateKey',
+    deleteKey: 'deployRecaptcha:deleteKey',
+    secret: 'deployRecaptcha:secret',
+    usage: 'deployRecaptcha:usage',
+    /** main -> renderer: RecaptchaSetupProgress while a project is made ready. */
+    onProgress: 'deployRecaptcha:onProgress',
+  },
   /** Cloudflare work on one server (E14): origin lock, Origin CA certificates, DNS-01 tokens. */
   cloudflareServer: {
     originLock: 'cloudflareServer:originLock',

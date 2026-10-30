@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { CloudflareMark } from '@/components/cloudflare/CloudflareMark';
 import { ExternalLink, Plus, RefreshCw, Sliders, Spinner } from '@/components/icons';
 import { Chip, SECTION_HEADING } from '@/components/pageKit';
+import { RecaptchaMark } from '@/components/recaptcha/RecaptchaMark';
 import { Button } from '@/components/ui/button';
 import { ReorderableGroup, type ReorderMotion } from '@/components/ui/ReorderableGroup';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -247,7 +248,7 @@ function GroupHeading({ label, count }: { label: string; count?: number }): Reac
   );
 }
 
-/** A quiet row for the places this rail hands off to: Remote, and the Cloudflare page. */
+/** A quiet row for the places this rail hands off to: Remote, Cloudflare and reCAPTCHA. */
 const LINK_ROW =
   'flex h-8 items-center gap-2 rounded-lg px-3 text-[13px] text-muted-foreground outline-none transition-colors hover:bg-foreground/[0.06] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0';
 
@@ -405,6 +406,8 @@ export function ServerRail({
   onConnectSite,
   onOpenCloudflare,
   cloudflareSelected = false,
+  onOpenRecaptcha,
+  recaptchaSelected = false,
   fileSites,
   fileSitesLoading = false,
   fileSitesError = null,
@@ -429,6 +432,10 @@ export function ServerRail({
   onOpenCloudflare: () => void;
   /** Whether the Cloudflare page is the one on screen. */
   cloudflareSelected?: boolean;
+  /** Opens the reCAPTCHA page. Left out, the rail has no row for it. */
+  onOpenRecaptcha?: () => void;
+  /** Whether the reCAPTCHA page is the one on screen. */
+  recaptchaSelected?: boolean;
   /** Left out, the WordPress group is not shown at all. */
   sites?: DeployWordPressSite[];
   sitesLoading?: boolean;
@@ -525,6 +532,22 @@ export function ServerRail({
             {cloudflareSelected && <ActivePill />}
             <CloudflareMark /> Cloudflare: domains and DNS
           </button>
+          {onOpenRecaptcha && (
+            <button
+              type="button"
+              aria-current={recaptchaSelected ? 'true' : undefined}
+              onClick={onOpenRecaptcha}
+              className={cn(
+                LINK_ROW,
+                'relative isolate w-full',
+                recaptchaSelected &&
+                  'font-medium text-primary hover:bg-transparent hover:text-primary',
+              )}
+            >
+              {recaptchaSelected && <ActivePill />}
+              <RecaptchaMark /> reCAPTCHA: keys for your sites
+            </button>
+          )}
         </div>
         {(sites !== undefined || sitesLoading || sitesError !== null) && onSelectSite && (
           <SiteGroup

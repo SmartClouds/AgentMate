@@ -23,6 +23,7 @@ describe('rememberable', () => {
     expect(rememberable(params('cloudflare=1&zone=z-1&tab=ssl&account=acc-1'))).toBe(
       'cloudflare=1&zone=z-1&tab=ssl',
     );
+    expect(rememberable(params('recaptcha=1&newKey=a.com&label=Shop'))).toBe('recaptcha=1');
   });
 
   it('leaves out the one-shot params', () => {
@@ -52,6 +53,11 @@ describe('restoreTarget', () => {
     expect(restoreTarget(params(''), 'cloudflare=1&zone=z-1')?.toString()).toBe(
       'cloudflare=1&zone=z-1',
     );
+  });
+
+  it('opens the reCAPTCHA page again', () => {
+    expect(restoreTarget(params(''), 'recaptcha=1')?.toString()).toBe('recaptcha=1');
+    expect(restoreTarget(params('recaptcha=1'), 'server=srv-2')).toBeNull();
   });
 
   it('leaves an older Cloudflare dialog link alone, since it names the Cloudflare page', () => {

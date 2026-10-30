@@ -1,11 +1,24 @@
 import type { SiteInfo } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
+import { Link } from 'react-router-dom';
 import { Globe, Pencil, Plus } from '@/components/icons';
 import { Chip, EmptyState, FOOTER_HAIRLINE, GLASS_CARD, TileHeader } from '@/components/pageKit';
+import { RecaptchaMark } from '@/components/recaptcha/RecaptchaMark';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import type { SiteTab } from '@/lib/deploy/sites/problems';
 import { cn } from '@/lib/utils';
 import { RouteMap } from './RouteMap';
+
+/** The reCAPTCHA page with a new key for the site's domains already filled in (E40). */
+function recaptchaLink(site: SiteInfo, label: string): string {
+  const query = new URLSearchParams({
+    recaptcha: '1',
+    newKey: site.settings.domains.join(','),
+    label,
+  });
+  return `/deploy?${query.toString()}`;
+}
 
 /** Every site on the server as its route, whether it is live, and a way into its editor. */
 
@@ -101,6 +114,18 @@ export function SitesCard({
                   <RouteMap site={site} now={now} onOpen={(tab) => onOpen(site.settings.id, tab)} />
                 </div>
                 <AppliedChip applied={site.applied} />
+                {site.settings.domains.length > 0 && (
+                  <SimpleTooltip label="Protect with reCAPTCHA">
+                    <Button asChild variant="ghost" size="icon-sm">
+                      <Link
+                        to={recaptchaLink(site, domain)}
+                        aria-label={`Protect ${domain} with reCAPTCHA`}
+                      >
+                        <RecaptchaMark />
+                      </Link>
+                    </Button>
+                  </SimpleTooltip>
+                )}
                 <Button
                   type="button"
                   variant="soft"

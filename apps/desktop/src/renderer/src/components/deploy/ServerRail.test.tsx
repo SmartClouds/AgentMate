@@ -69,6 +69,33 @@ describe('ServerRail Cloudflare', () => {
   });
 });
 
+describe('ServerRail reCAPTCHA', () => {
+  it('opens the reCAPTCHA page from its row', async () => {
+    const onOpenRecaptcha = vi.fn();
+    const { user } = renderRail({ onOpenRecaptcha });
+
+    const row = screen.getByRole('button', { name: /reCAPTCHA: keys for your sites/ });
+    expect(row.getAttribute('aria-current')).toBeNull();
+    await user.click(row);
+    expect(onOpenRecaptcha).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks its row while the reCAPTCHA page is on screen', () => {
+    renderRail({ selectedId: null, onOpenRecaptcha: vi.fn(), recaptchaSelected: true });
+
+    expect(
+      screen
+        .getByRole('button', { name: /reCAPTCHA: keys for your sites/ })
+        .getAttribute('aria-current'),
+    ).toBe('true');
+  });
+
+  it('has no row where nothing opens the page', () => {
+    renderRail();
+    expect(screen.queryByRole('button', { name: /reCAPTCHA/ })).toBeNull();
+  });
+});
+
 describe('ServerRail WordPress sites', () => {
   it('lists each site with its host, last contact and badges', () => {
     renderRail({

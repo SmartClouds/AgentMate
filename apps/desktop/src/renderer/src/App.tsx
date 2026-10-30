@@ -228,6 +228,10 @@ export default function App(): React.JSX.Element {
                   element={<Navigate to="/deploy?cloudflare=1" replace />}
                 />
                 <Route
+                  path="deploy/recaptcha"
+                  element={<Navigate to="/deploy?recaptcha=1" replace />}
+                />
+                <Route
                   path="skills"
                   element={
                     <Suspense

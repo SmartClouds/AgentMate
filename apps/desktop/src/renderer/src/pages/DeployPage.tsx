@@ -13,6 +13,7 @@ import { AssistantLauncher } from '@/components/deploy/assistant/AssistantLaunch
 import { BackupsPanel } from '@/components/deploy/backups/BackupsPanel';
 import { ChooseServersDialog } from '@/components/deploy/ChooseServersDialog';
 import { CoreUpdatePanel } from '@/components/deploy/CoreUpdatePanel';
+import { CleanupPanel } from '@/components/deploy/cleanup/CleanupPanel';
 import { ContainersPanel } from '@/components/deploy/containers/ContainersPanel';
 import { Notice } from '@/components/deploy/deployKit';
 import { FileSiteView, fileSectionFromView } from '@/components/deploy/files/FileSiteView';
@@ -40,6 +41,8 @@ import { siteSectionFromView } from '@/components/deploy/wordpress/SiteSections'
 import { SiteView } from '@/components/deploy/wordpress/SiteView';
 import { CloudUpload, Lock, RefreshCw, Server, Sliders } from '@/components/icons';
 import { Chip, EmptyState, GLASS_CARD, GLASS_PANEL } from '@/components/pageKit';
+import { RecaptchaMark } from '@/components/recaptcha/RecaptchaMark';
+import { RecaptchaView } from '@/components/recaptcha/RecaptchaView';
 import { SshVaultUnlockDialog } from '@/components/remote/SshVaultUnlockDialog';
 import { Button } from '@/components/ui/button';
 import { ResizeHandle } from '@/components/ui/ResizeHandle';
@@ -346,6 +349,7 @@ export default function DeployPage(): React.JSX.Element {
   });
   // The Cloudflare page is picked like a server, so the address names it and nothing else.
   const openCloudflare = () => setParams({ cloudflare: '1' }, { replace: true });
+  const openRecaptcha = () => setParams({ recaptcha: '1' }, { replace: true });
 
   // The servers and which of them were chosen both have to be in before the rail can list any. A
   // site asked for by the address, or no servers to fall back on: wait for the sites rather
@@ -431,13 +435,14 @@ export default function DeployPage(): React.JSX.Element {
   );
 
   const selection = resolveSelection(params, servers, sites, fileSites);
-  // The Cloudflare page needs no server or site, and the rail shows the lists' failures itself.
-  const cloudflare = selection.kind === 'cloudflare';
+  // The Cloudflare and reCAPTCHA pages need no server or site, and the rail shows the lists'
+  // failures itself.
+  const accountPage = selection.kind === 'cloudflare' || selection.kind === 'recaptcha';
 
   // A failure only stands in for the page when there is no server to pick either. With saved
   // servers still to choose from, the empty state below is the more useful way out.
   const noneSaved = saved.length === 0;
-  if (!cloudflare && noneSaved && sitesQuery.isError && fileSites.length === 0) {
+  if (!accountPage && noneSaved && sitesQuery.isError && fileSites.length === 0) {
     return (
       <PageFailure message={wpProblem(sitesQuery.error)} onRetry={() => void sitesQuery.refetch()}>
         {unlockDialog}
@@ -445,7 +450,7 @@ export default function DeployPage(): React.JSX.Element {
     );
   }
 
-  if (!cloudflare && noneSaved && sites.length === 0 && fileSitesQuery.isError) {
+  if (!accountPage && noneSaved && sites.length === 0 && fileSitesQuery.isError) {
     return (
       <PageFailure
         message={filesProblem(fileSitesQuery.error)}
@@ -456,7 +461,7 @@ export default function DeployPage(): React.JSX.Element {
     );
   }
 
-  if (!cloudflare && servers.length === 0 && sites.length === 0 && fileSites.length === 0) {
+  if (!accountPage && servers.length === 0 && sites.length === 0 && fileSites.length === 0) {
     return (
       <div className="flex flex-1 flex-col gap-2 p-2">
         <EmptyState
@@ -488,6 +493,9 @@ export default function DeployPage(): React.JSX.Element {
               </Button>
               <Button variant="soft" onClick={openCloudflare}>
                 <CloudflareMark className="h-3.5 w-3.5" /> Manage Cloudflare
+              </Button>
+              <Button variant="soft" onClick={openRecaptcha}>
+                <RecaptchaMark className="h-3.5 w-3.5" /> Get reCAPTCHA keys
               </Button>
             </div>
           }
@@ -525,6 +533,7 @@ export default function DeployPage(): React.JSX.Element {
     onRetrySites: () => void sitesQuery.refetch(),
     onConnectSite: () => setConnectOpen(true),
     onOpenCloudflare: openCloudflare,
+    onOpenRecaptcha: openRecaptcha,
     fileSites,
     fileSitesLoading: fileSitesQuery.isPending,
     fileSitesError: fileSitesQuery.isError ? filesProblem(fileSitesQuery.error) : null,
@@ -538,6 +547,19 @@ export default function DeployPage(): React.JSX.Element {
     return (
       <DeployLayout rail={<ServerRail {...railProps} selectedId={null} cloudflareSelected />}>
         <CloudflareView />
+        {connectDialog}
+        {unlockDialog}
+        {fileFormDialog}
+        {chooseDialog}
+      </DeployLayout>
+    );
+  }
+
+  if (selection.kind === 'recaptcha') {
+    // No Deploy AI here either: reCAPTCHA keys belong to a Google account, not a server.
+    return (
+      <DeployLayout rail={<ServerRail {...railProps} selectedId={null} recaptchaSelected />}>
+        <RecaptchaView />
         {connectDialog}
         {unlockDialog}
         {fileFormDialog}
@@ -682,6 +704,9 @@ export default function DeployPage(): React.JSX.Element {
   } else if (section === 'files') {
     sections = true;
     content = <ServerFilesPanel server={selected} />;
+  } else if (section === 'cleanup') {
+    sections = true;
+    content = <CleanupPanel server={selected} onUpdateCore={updateCore} />;
   } else if (section === 'apps') {
     sections = true;
     content = <AppsPanel server={selected} />;

@@ -84,6 +84,20 @@ describe('SitesPanel states', () => {
     expect(screen.getByText(/Last applied 1 hour ago by maria/)).toBeInTheDocument();
   });
 
+  it('links each site to a reCAPTCHA key for its domains', async () => {
+    renderPanel();
+    const sites = await screen.findByRole('list', { name: 'Sites' });
+    const blog = within(sites).getByRole('listitem', { name: 'blog.example.com' });
+    const link = within(blog).getByRole('link', {
+      name: 'Protect blog.example.com with reCAPTCHA',
+    });
+    const target = new URL(link.getAttribute('href') ?? '', 'http://runova');
+    expect(target.pathname).toBe('/deploy');
+    expect(target.searchParams.get('recaptcha')).toBe('1');
+    expect(target.searchParams.get('newKey')?.split(',')[0]).toBe('blog.example.com');
+    expect(target.searchParams.get('label')).toBe('blog.example.com');
+  });
+
   it('says there are no sites yet, or that nginx needs setting up first', async () => {
     renderPanel({ 'deploySites.list': [], 'deploySites.listStreams': [] });
     expect(await screen.findByText(/No sites yet/)).toBeInTheDocument();

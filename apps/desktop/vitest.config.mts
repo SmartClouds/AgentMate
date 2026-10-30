@@ -111,6 +111,7 @@ export default defineConfig({
         'src/main/vault/index.ts',
         'src/main/deploy/index.ts',
         'src/main/deploy/cloudflare/index.ts',
+        'src/main/deploy/recaptcha/index.ts',
         'src/main/deploy/registry/index.ts',
         'src/main/deploy/wordpress/index.ts',
         'src/main/deploy/files/index.ts',
@@ -296,6 +297,13 @@ export default defineConfig({
             'src/main/ipc/cloudflareServer.ts': { lines: 95, branches: 90 },
             'src/shared/cloudflare/dns01.ts': { lines: 95, branches: 90 },
             'src/renderer/src/components/cloudflare/**': { lines: 85, functions: 75, branches: 75 },
+            // The Google sign-ins for reCAPTCHA (E40) live here, and every call made with them.
+            'src/main/google/**': { lines: 95, branches: 85 },
+            'src/main/oauth/**': { lines: 95, branches: 85 },
+            'src/main/deploy/recaptcha/**': { lines: 90, branches: 80 },
+            'src/main/ipc/deployRecaptcha.ts': { lines: 95, branches: 90 },
+            'src/shared/recaptcha/**': { lines: 95, branches: 90 },
+            'src/renderer/src/components/recaptcha/**': { lines: 85, functions: 75, branches: 75 },
             // CI auto-fix commits and pushes to the user's branch on its own. The wiring module
             // only plugs the real ports in, everything that decides is held to these.
             'src/main/pipelines/autoFix/{machine,service,git,runs,launch}.ts': {

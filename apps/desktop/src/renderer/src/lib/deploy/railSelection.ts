@@ -4,13 +4,15 @@ import type { DeployWordPressSite } from '@shared/deployWordPressTypes';
 
 /**
  * What the Deploy page shows, read from its address (E23): `?cloudflare=1` the Cloudflare page,
- * `?files=` an FTP or SFTP site, `?site=` a WordPress site and `?server=` a server, in that order.
+ * `?recaptcha=1` the reCAPTCHA page (E40), `?files=` an FTP or SFTP site, `?site=` a WordPress
+ * site and `?server=` a server, in that order.
  * A link to something that is gone falls back to the first server, and with no servers to the
  * first site of either kind.
  */
 
 export type RailSelection =
   | { kind: 'cloudflare' }
+  | { kind: 'recaptcha' }
   | { kind: 'files'; site: FileSite }
   | { kind: 'wordpress'; site: DeployWordPressSite }
   | { kind: 'server'; server: DeployServer }
@@ -29,6 +31,15 @@ export function isCloudflare(params: ParamReader): boolean {
   return params.get('cloudflare') !== null || params.get('dialog') === 'cloudflare';
 }
 
+export function isRecaptcha(params: ParamReader): boolean {
+  return params.get('recaptcha') !== null;
+}
+
+/** The pages that belong to an account rather than to one server or site. */
+function isAccountPage(params: ParamReader): boolean {
+  return isCloudflare(params) || isRecaptcha(params);
+}
+
 export function resolveSelection(
   params: ParamReader,
   servers: readonly DeployServer[],
@@ -36,6 +47,7 @@ export function resolveSelection(
   fileSites: readonly FileSite[],
 ): RailSelection {
   if (isCloudflare(params)) return { kind: 'cloudflare' };
+  if (isRecaptcha(params)) return { kind: 'recaptcha' };
   const fileSite = fileSites.find((site) => site.id === params.get('files'));
   if (fileSite) return { kind: 'files', site: fileSite };
   const wpSite = wpSites.find((site) => site.id === params.get('site'));
@@ -50,8 +62,8 @@ export function resolveSelection(
 /**
  * Whether the page should keep shimmering. It waits for a list the address names, and, with no
  * servers to fall back on, for the sites, rather than flash a server (and start its health
- * checks) or the empty state. The Cloudflare page needs only the servers: the rail draws the
- * sites' loading in their own groups.
+ * checks) or the empty state. The Cloudflare and reCAPTCHA pages need only the servers: the rail
+ * draws the sites' loading in their own groups.
  */
 export function waitForRail(
   params: ParamReader,
@@ -59,7 +71,7 @@ export function waitForRail(
   counts: { servers: number; wpSites: number },
 ): boolean {
   if (pending.servers) return true;
-  if (isCloudflare(params)) return false;
+  if (isAccountPage(params)) return false;
   if (pending.wpSites && (params.get('site') !== null || counts.servers === 0)) return true;
   return (
     pending.fileSites &&
