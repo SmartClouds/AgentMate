@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Runova Connector Guard
  * Description: Undoes a Runova deploy that breaks the site. Runova Connector installs it and keeps it up to date; it does nothing while no deploy is pending.
- * Version:     2.1.0
+ * Version:     2.2.0
  *
  * While a deploy waits for confirmation it rolls the deploy back when the deadline passes or when
  * PHP dies of a fatal error in a file the deploy changed. It also answers Runova's /rescue/*

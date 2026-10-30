@@ -3,7 +3,7 @@
  * Plugin Name:       Runova Connector
  * Plugin URI:        https://runovahq.com
  * Description:       Lets the Runova desktop app pull and deploy this site's theme and plugin files over a signed, paired connection.
- * Version:           2.1.0
+ * Version:           2.2.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Runova
@@ -22,7 +22,7 @@ if (!defined('ABSPATH')) {
 
 // Keep in step with WP_CONNECTOR_VERSION in packages/core/src/deploy/wordpress/protocol.ts and the
 // Version header above; the tests and the zip build check all three.
-define('RUNOVA_CONNECTOR_VERSION', '2.1.0');
+define('RUNOVA_CONNECTOR_VERSION', '2.2.0');
 // The guard mu-plugin may have defined it already, for the same file.
 if (!defined('RUNOVA_CONNECTOR_FILE')) {
     define('RUNOVA_CONNECTOR_FILE', __FILE__);

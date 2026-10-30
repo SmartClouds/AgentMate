@@ -1,6 +1,6 @@
 {
   "name": "@runova/studio",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "private": true,
   "description": "Runova Studio: AI video creation. Pure domain logic and Node services, no Electron or React.",
   "type": "module",
