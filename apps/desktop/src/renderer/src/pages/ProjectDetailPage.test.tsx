@@ -103,6 +103,7 @@ const backgroundTabs: Overrides = {
   'packages.list': notLoaded,
   'studio.projectStorage': notLoaded,
   'deployWordPress.localChanges': notLoaded,
+  'deploy.listServers': [],
 };
 
 function renderPage(bridge: Overrides = {}, projects: Project[] = [project()]) {
@@ -890,17 +891,18 @@ describe('ProjectDetailPage Deploy section', () => {
     firstDeploy: false,
   };
 
-  it('opens from the query string with a way to add a site when none is attached', async () => {
+  it('opens from the query string with both ways to deploy when nothing is set up', async () => {
     renderWithProviders(<ProjectDetailPage />, {
       route: '/projects/p1?tab=deploy',
       path: 'projects/:projectId',
       bridge: { ...backgroundTabs, 'projects.list': [project()], 'deployFiles.list': [] },
     });
 
-    expect(await screen.findByText('No FTP or SFTP site yet')).toBeTruthy();
+    expect(await screen.findByText('Not deployed yet')).toBeTruthy();
     expect(
       within(sectionNav()).getByRole('button', { name: /^Deploy/, current: 'page' }),
     ).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Deploy with Runova/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Add an FTP or SFTP site/ })).toBeTruthy();
   });
 

@@ -18,6 +18,7 @@ import { AppDetail } from './AppDetail';
 import { AppsList } from './AppsList';
 import { useAppsAccess, useStack, useStacks } from './hooks';
 import { NewAppWizard } from './NewAppWizard';
+import { freshWizard } from './wizard/startNewApp';
 import type { WizardSource } from './wizard/types';
 
 /**
@@ -47,14 +48,6 @@ function useDeploysInFlight(serverId: string): InFlight[] {
       }),
     [wizards, serverId],
   );
-}
-
-/** Opens a wizard afresh, unless a deploy from it is still on its way or waiting. */
-function freshWizard(serverId: string, existingStackId: string | null): void {
-  const key = wizardKey(serverId, existingStackId);
-  const kept = useDeployAppRunStore.getState().wizards[key];
-  if (kept && (isAppRunBusy(kept.run) || kept.run.phase === 'confirm')) return;
-  useDeployAppRunStore.getState().reset(key);
 }
 
 /**

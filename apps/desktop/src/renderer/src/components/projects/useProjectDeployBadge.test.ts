@@ -1,7 +1,9 @@
 import { act, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { sampleStack } from '@/components/deploy/apps/testing/fixtures';
 import { useFilesRunEvents, writeSnapshot } from '@/components/deploy/files/hooks';
 import { fileSite, pending, runResult, snapshot } from '@/components/deploy/files/testing/fixtures';
+import { queryKeys } from '@/lib/queryKeys';
 import { renderHookWithProviders } from '../../../../test/renderer/renderWithProviders';
 import { useProjectDeployBadge } from './useProjectDeployBadge';
 
@@ -92,6 +94,30 @@ describe('useProjectDeployBadge', () => {
       },
     });
     await waitFor(() => expect(failed.result.current).toEqual({ count: 2, attention: true }));
+  });
+
+  it('asks for attention when a Runova app of the project failed, from the cache alone', async () => {
+    const { result, queryClient, bridge } = renderHookWithProviders(
+      () => useProjectDeployBadge('p1'),
+      {
+        bridge: {
+          'deployFiles.list': [],
+          'deploy.listServers': [{ id: 's1' }],
+        },
+      },
+    );
+    await waitFor(() => expect(queryClient.getQueryData(queryKeys.deployServers)).toBeTruthy());
+    expect(result.current).toBeUndefined();
+
+    act(() =>
+      queryClient.setQueryData(queryKeys.deployAppsList('s1'), [
+        sampleStack({ id: 'a1', status: 'failed', source: { projectId: 'p1' } }),
+        sampleStack({ id: 'a2', status: 'failed', source: { projectId: 'p2' } }),
+        sampleStack({ id: 'a3', status: 'running', source: { projectId: 'p1' } }),
+      ]),
+    );
+    await waitFor(() => expect(result.current).toEqual({ count: 1, attention: true }));
+    expect(() => bridge.$fn('deployStacks.list')).toThrow();
   });
 
   it('follows the app-wide run events, with no watch of its own', async () => {

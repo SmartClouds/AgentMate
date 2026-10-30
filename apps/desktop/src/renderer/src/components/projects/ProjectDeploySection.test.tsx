@@ -1,7 +1,10 @@
 import type { Project } from '@runova/core';
+import { DEFAULT_SETTINGS } from '@shared/defaultSettings';
+import type { DeployServer } from '@shared/deployTypes';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { sampleStack } from '@/components/deploy/apps/testing/fixtures';
 import { useFilesRunEvents } from '@/components/deploy/files/hooks';
 import {
   fileSite,
@@ -12,13 +15,15 @@ import {
   snapshot,
 } from '@/components/deploy/files/testing/fixtures';
 import { queryKeys } from '@/lib/queryKeys';
+import { useDeployAppRunStore } from '@/stores/deployAppRunStore';
 import { useDeployFilesRunStore } from '@/stores/deployFilesRunStore';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
 import { ProjectDeploySection } from './ProjectDeploySection';
 
 /**
- * A project's Deploy tab (E23): the FTP and SFTP sites attached to it, each with its changes and
- * its own Deploy button, and the way to add one with the project already filled in.
+ * A project's Deploy tab (E23): the apps the project runs on Runova servers, each a link into
+ * Deploy, and the FTP and SFTP sites attached to it, each with its changes and its own Deploy
+ * button, with the ways to start either with the project already filled in.
  */
 
 const toast = vi.hoisted(() => ({
@@ -88,6 +93,7 @@ function renderSection(bridge: Record<string, unknown> = {}) {
       bridge: {
         'deployFiles.subscribe': snapshot(),
         'deployFiles.changes': snapshot(),
+        'deploy.listServers': [],
         ...bridge,
       },
     },
@@ -98,6 +104,7 @@ beforeEach(() => {
   useDeployFilesRunStore.setState(useDeployFilesRunStore.getInitialState(), true);
   for (const fn of Object.values(toast)) fn.mockClear();
   siteForm.last = null;
+  useDeployAppRunStore.setState(useDeployAppRunStore.getInitialState(), true);
 });
 
 describe('ProjectDeploySection', () => {
@@ -112,7 +119,7 @@ describe('ProjectDeploySection', () => {
       'deployFiles.list': [fileSite({ id: 'fs-9', label: 'Elsewhere', projectIds: ['p2'] })],
     });
 
-    expect(await screen.findByText('No FTP or SFTP site yet')).toBeTruthy();
+    expect(await screen.findByText('Not deployed yet')).toBeTruthy();
     expect(screen.queryByText('Elsewhere')).toBeNull();
     await user.click(screen.getByRole('button', { name: /Add an FTP or SFTP site/ }));
     expect(siteForm.last).toMatchObject({ site: null, initialProjectId: 'p1', open: true });
@@ -214,7 +221,7 @@ describe('ProjectDeploySection', () => {
     expect(await screen.findByText(/locked with a passkey/)).toBeTruthy();
     bridge.$set('deployFiles.list', async () => []);
     await user.click(screen.getByRole('button', { name: /Try again/ }));
-    expect(await screen.findByText('No FTP or SFTP site yet')).toBeTruthy();
+    expect(await screen.findByText('Not deployed yet')).toBeTruthy();
   });
 
   it('offers to edit the site after a certificate failure', async () => {
@@ -261,5 +268,138 @@ describe('ProjectDeploySection', () => {
     queryClient.setQueryData(queryKeys.deployFilesSites, [fileSite({ projectIds: ['p1'] })]);
     act(() => bridge.$emit('deployFiles.onRunFinished', runResult({ trigger: 'deployOnSave' })));
     expect(await screen.findByRole('region', { name: 'Last deploy' })).toBeTruthy();
+  });
+});
+
+const CORE = {
+  version: '1.52.0',
+  release: '/opt/runova/1.52.0',
+  transport: 'streamlocal',
+  installedAt: 1,
+  os: 'Ubuntu 24.04',
+  architecture: 'x86_64',
+} as DeployServer['core'];
+
+function deployServer(extra: Partial<DeployServer> = {}): DeployServer {
+  return {
+    id: 's1',
+    nickname: 'Hetzner box',
+    host: 'box.example',
+    port: 22,
+    username: 'deploy',
+    core: CORE,
+    enrolled: true,
+    ...extra,
+  };
+}
+
+const SIGNED_IN = {
+  state: 'signed-in',
+  user: { userName: 'me', roles: ['owner'], twoFactorEnabled: false },
+};
+
+/** The servers Deploy lists: saved, and chosen in the settings. */
+function runovaBridge(servers: DeployServer[], extra: Record<string, unknown> = {}) {
+  return {
+    'deployFiles.list': [],
+    'deploy.listServers': servers,
+    'settings.get': { ...DEFAULT_SETTINGS, deployServerIds: servers.map((server) => server.id) },
+    'deploy.access': SIGNED_IN,
+    ...extra,
+  };
+}
+
+describe('ProjectDeploySection, Runova apps', () => {
+  it('lists the project apps under their server, with links into Deploy', async () => {
+    renderSection(
+      runovaBridge([deployServer()], {
+        'deployStacks.list': [
+          sampleStack({
+            id: 'a1',
+            name: 'apollo-web',
+            source: { projectId: 'p1', composePath: 'compose.yaml', environmentName: 'Production' },
+          }),
+          sampleStack({ id: 'a2', name: 'other', source: { projectId: 'p2' } }),
+        ],
+      }),
+    );
+
+    const card = await screen.findByRole('region', { name: 'Hetzner box' });
+    expect(within(card).getByText('apollo-web')).toBeTruthy();
+    expect(within(card).getByText('Running')).toBeTruthy();
+    expect(within(card).getByText('compose.yaml · Production')).toBeTruthy();
+    expect(within(card).queryByText('other')).toBeNull();
+    expect(within(card).getByRole('link', { name: 'Open apollo-web' }).getAttribute('href')).toBe(
+      '/deploy?server=s1&view=apps&app=a1',
+    );
+    expect(
+      within(card)
+        .getByRole('link', { name: /Open server/ })
+        .getAttribute('href'),
+    ).toBe('/deploy?server=s1');
+    expect(screen.getByText('No FTP or SFTP site yet.')).toBeTruthy();
+  });
+
+  it('leaves out servers that are not chosen or have no core', async () => {
+    const { bridge } = renderSection({
+      ...runovaBridge([deployServer()]),
+      'deploy.listServers': [
+        deployServer(),
+        deployServer({ id: 's2', nickname: 'Bare', core: null }),
+        deployServer({ id: 's3', nickname: 'Hidden' }),
+      ],
+      'settings.get': { ...DEFAULT_SETTINGS, deployServerIds: ['s1', 's2'] },
+      'deployStacks.list': [sampleStack({ source: { projectId: 'p1' } })],
+    });
+
+    await screen.findByRole('region', { name: 'Hetzner box' });
+    expect(bridge.$fn('deploy.access').mock.calls.map(([id]) => id)).toEqual(['s1']);
+  });
+
+  it('says which servers it could not check, and still shows the FTP sites', async () => {
+    renderSection(
+      runovaBridge([deployServer(), deployServer({ id: 's2', nickname: 'Office' })], {
+        'deployFiles.list': [fileSite({ projectIds: ['p1'] })],
+        'deploy.access': async (id: string) =>
+          id === 's2' ? { state: 'needs-sign-in' } : SIGNED_IN,
+        'deployStacks.list': [],
+      }),
+    );
+
+    expect(await screen.findByRole('region', { name: 'Bakery static' })).toBeTruthy();
+    expect(await screen.findByText(/Sign in to Office/)).toBeTruthy();
+    expect(screen.getByText('Not deployed with Runova yet.')).toBeTruthy();
+  });
+
+  it('starts a Runova deploy with the project picked on the only server', async () => {
+    const { user } = renderSection(runovaBridge([deployServer()], { 'deployStacks.list': [] }));
+
+    await user.click(await screen.findByRole('button', { name: /Deploy with Runova/ }));
+    expect(screen.getByTestId('path').textContent).toBe('/deploy?server=s1&view=apps&new=1');
+    expect(useDeployAppRunStore.getState().wizards['s1:new']?.draft.source).toMatchObject({
+      projectId: 'p1',
+      projectName: 'Apollo',
+      projectFolder: 'C:\\code\\apollo',
+      name: 'apollo',
+    });
+  });
+
+  it('asks which server when there are several', async () => {
+    const { user } = renderSection(
+      runovaBridge([deployServer(), deployServer({ id: 's2', nickname: 'Office' })], {
+        'deployStacks.list': [],
+      }),
+    );
+
+    await user.click(await screen.findByRole('button', { name: /Deploy with Runova/ }));
+    await user.click(await screen.findByRole('menuitem', { name: /Office/ }));
+    expect(screen.getByTestId('path').textContent).toBe('/deploy?server=s2&view=apps&new=1');
+  });
+
+  it('leads to Deploy when no server has the core yet', async () => {
+    const { user } = renderSection({ 'deployFiles.list': [] });
+
+    await user.click(await screen.findByRole('button', { name: /Deploy with Runova/ }));
+    expect(screen.getByTestId('path').textContent).toBe('/deploy');
   });
 });
