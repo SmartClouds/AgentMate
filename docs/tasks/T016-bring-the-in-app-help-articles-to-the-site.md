@@ -1,7 +1,7 @@
 ---
 id: T016
 title: Bring the in-app help articles to the site
-status: in-progress
+status: done
 epic: E40
 depends: [T013, T014]
 estimate: 180000

@@ -1,7 +1,7 @@
 ---
 id: T017
 title: Build the download page with the latest release for the visitor's system
-status: todo
+status: in-progress
 epic: E40
 depends: [T010, T014]
 estimate: 140000
