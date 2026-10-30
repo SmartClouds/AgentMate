@@ -89,7 +89,7 @@ You switch auto-fix on for one run while it is still going.
 - In a project's Workspace, the same button sits under a running pipeline in the Git panel's **Pipelines** section, and in the pipeline's details.
 - When you start a workflow by hand with **Run workflow**, tick **Auto-fix if it fails**.
 
-A small panel asks which agent fixes it and how many tries it gets (1 to 5), and says in one sentence what will happen. Click **Turn on auto-fix**. The run now shows an auto-fix chip, such as **Auto-fix on**, **Fixing 1/3**, **Pushing** or **Checking fix 1/3**. Click the chip to see the session.
+A small panel asks which agent fixes it and how many tries it gets (1 to 5), and says in one sentence what will happen. For an agent that takes a model, you can also pick the model and, once a model is picked, the effort. They start from the ones in Settings when the agent is the one picked there. Click **Turn on auto-fix**. The run now shows an auto-fix chip, such as **Auto-fix on**, **Fixing 1/3**, **Pushing** or **Checking fix 1/3**. Click the chip to see the session.
 
 > [!IMPORTANT]
 > Auto-fix commits everything in the working tree, so keep the project on the run's branch with nothing uncommitted. If it is on another branch or has changes, auto-fix stops before the agent starts and asks you to sort it out first, then press **Retry**.

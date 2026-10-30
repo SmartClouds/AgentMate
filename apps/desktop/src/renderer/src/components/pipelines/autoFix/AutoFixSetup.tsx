@@ -1,4 +1,11 @@
-import { CLI_REGISTRY, type Project } from '@runova/core';
+import {
+  CLI_REGISTRY,
+  cliLaunchOptions,
+  type EffortLevel,
+  launchPickArgs,
+  launchPickLabel,
+  type Project,
+} from '@runova/core';
 import {
   AUTO_FIX_DEFAULT_ATTEMPTS,
   AUTO_FIX_MAX_ATTEMPTS,
@@ -7,6 +14,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { EffortPicker } from '@/components/cli/RunSettingsFields';
 import { cliOptionIcon } from '@/components/cliLogos';
 import { Minus, Plus, Spinner, Wand2 } from '@/components/icons';
 import { Notice } from '@/components/pageKit';
@@ -23,11 +31,19 @@ export type AutoFixTarget = Omit<
   'cliId' | 'runArgs' | 'runLabel' | 'maxAttempts'
 >;
 
+/** A model and effort for the CLI, both optional. */
+interface AutoFixPick {
+  model?: string;
+  effort?: EffortLevel;
+}
+
 /** Installed agent CLIs, and the one auto-fix would pick for this project. */
 export function useAutoFixCliChoice(projectId: string): {
   clis: { id: string; name: string }[];
   detecting: boolean;
   preferred: string | null;
+  /** The CLI picked in Settings, with the model and effort picked there for it. */
+  saved: AutoFixPick & { cliId: string | null };
   maxAttempts: number;
   projectName: string | null;
 } {
@@ -62,6 +78,11 @@ export function useAutoFixCliChoice(projectId: string): {
     clis,
     detecting: !cliQuery.isFetched || !settingsQuery.isFetched,
     preferred,
+    saved: {
+      cliId: settingsQuery.data?.ciAutoFixCliId ?? null,
+      model: settingsQuery.data?.ciAutoFixModel ?? undefined,
+      effort: settingsQuery.data?.ciAutoFixEffort ?? undefined,
+    },
     maxAttempts: settingsQuery.data?.ciAutoFixMaxAttempts ?? AUTO_FIX_DEFAULT_ATTEMPTS,
     projectName: project?.name ?? null,
   };
@@ -72,8 +93,8 @@ function tries(count: number): string {
 }
 
 /**
- * Switching auto-fix on for one run: which CLI fixes it and how many tries it gets, with what will
- * happen spelled out underneath before anything starts.
+ * Switching auto-fix on for one run: which CLI fixes it, on which model and effort, and how many
+ * tries it gets, with what will happen spelled out underneath before anything starts.
  */
 export function AutoFixSetup({
   target,
@@ -86,10 +107,17 @@ export function AutoFixSetup({
   const choice = useAutoFixCliChoice(target.projectId);
   const actions = useAutoFixActions();
   const [pickedCli, setCli] = useState<string | null>(null);
+  const [pickedPick, setPick] = useState<AutoFixPick | null>(null);
   const [pickedAttempts, setAttempts] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const cliId = pickedCli ?? choice.preferred;
   const attempts = pickedAttempts ?? choice.maxAttempts;
+  // The model and effort in Settings were picked for the CLI picked there, so only it starts with them.
+  const pick: AutoFixPick =
+    pickedPick ?? (cliId && cliId === choice.saved.cliId ? choice.saved : {});
+  const options = cliId ? cliLaunchOptions(cliId) : null;
+  const runArgs = cliId ? launchPickArgs(cliId, pick) : [];
+  const runLabel = (cliId && launchPickLabel(cliId, pick)) || null;
   const run = target.runNumber ? `run #${target.runNumber}` : 'the run';
   const project = choice.projectName ?? 'the project';
 
@@ -97,7 +125,13 @@ export function AutoFixSetup({
     if (!cliId) return;
     setBusy(true);
     try {
-      const started = await actions.start({ ...target, cliId, maxAttempts: attempts });
+      const started = await actions.start({
+        ...target,
+        cliId,
+        runArgs,
+        runLabel,
+        maxAttempts: attempts,
+      });
       if (started) onDone();
     } finally {
       setBusy(false);
@@ -135,7 +169,10 @@ export function AutoFixSetup({
             <Combobox
               ariaLabel="Agent CLI for auto-fix"
               value={cliId ?? ''}
-              onChange={setCli}
+              onChange={(next) => {
+                setCli(next);
+                setPick(null);
+              }}
               disabled={choice.detecting}
               placeholder={choice.detecting ? 'Finding CLIs…' : 'Pick a CLI'}
               searchable={false}
@@ -177,9 +214,46 @@ export function AutoFixSetup({
         </div>
       )}
 
+      {options?.modelFlag && choice.clis.length > 0 ? (
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <p className="text-[11px] font-medium text-muted-foreground">Model</p>
+            <Combobox
+              ariaLabel="Model for auto-fix"
+              value={pick.model ?? ''}
+              onChange={(next) => setPick({ model: next.trim() || undefined })}
+              disabled={choice.detecting}
+              options={options.models.map((m) => ({
+                value: m.value,
+                label: m.label,
+                keywords: [m.value],
+              }))}
+              placeholder="CLI default"
+              searchPlaceholder="Search or type a model name…"
+              emptyText="Type a model name to use it."
+              customLabel={(text) => `Use "${text}"`}
+              allowCustom
+              clearable
+            />
+          </div>
+          {/* The effort flag only goes along with a model, so it waits for one. */}
+          {pick.model && options.efforts.length > 0 ? (
+            <div className="space-y-1">
+              <p className="text-[11px] font-medium text-muted-foreground">Effort</p>
+              <EffortPicker
+                options={options}
+                model={pick.model}
+                value={pick.effort}
+                onChange={(effort) => setPick({ model: pick.model, effort })}
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {cliId ? (
         <p className="text-xs leading-relaxed text-foreground/85">
-          {`If ${run} fails, ${cliName(cliId)} fixes it in a new tab of ${project}. Runova then commits the fix, pushes it to ${target.branch} and checks the next run, up to ${tries(attempts)}.`}
+          {`If ${run} fails, ${cliName(cliId)}${runLabel ? ` (${runLabel})` : ''} fixes it in a new tab of ${project}. Runova then commits the fix, pushes it to ${target.branch} and checks the next run, up to ${tries(attempts)}.`}
         </p>
       ) : null}
       <p className="text-[11px] leading-relaxed text-muted-foreground">

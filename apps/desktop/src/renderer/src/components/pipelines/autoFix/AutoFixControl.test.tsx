@@ -1,3 +1,4 @@
+import { launchPickArgs, launchPickLabel } from '@runova/core';
 import type { AutoFixSession } from '@shared/ciAutoFixTypes';
 import { screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -5,7 +6,7 @@ import { renderWithProviders } from '../../../../../test/renderer/renderWithProv
 
 /**
  * Switching auto-fix on hands a branch to an agent, so the setup says plainly what will happen
- * (which CLI, which branch, how many tries) before anything starts, and the chip afterwards keeps
+ * (which CLI on which model, which branch, how many tries) before anything starts, and the chip afterwards keeps
  * saying where it stands.
  */
 
@@ -116,10 +117,69 @@ describe('a live run without auto-fix', () => {
       expect(bridge.$fn('ciAutoFix.start')).toHaveBeenCalledWith({
         ...target,
         cliId: 'claude-code',
+        runArgs: [],
+        runLabel: null,
         maxAttempts: 4,
       }),
     );
     expect(toast.success).toHaveBeenCalled();
+  });
+
+  it('turns it on with the chosen model and effort', async () => {
+    const { user, bridge } = render({
+      bridge: { 'ciAutoFix.start': { ok: true, session: session() } },
+    });
+    await user.click(await screen.findByRole('button', { name: 'Auto-fix this run if it fails' }));
+    await user.click(await screen.findByRole('combobox', { name: 'Model for auto-fix' }));
+    // No model means the CLI default, and the effort flag only goes along with a model.
+    expect(screen.queryByRole('radiogroup', { name: 'Effort' })).toBeNull();
+    await user.click(await screen.findByRole('option', { name: /Opus/ }));
+    await user.click(await screen.findByRole('radio', { name: 'High' }));
+    const pick = { model: 'opus', effort: 'high' } as const;
+    expect(
+      await screen.findByText(
+        `Claude Code CLI (${launchPickLabel('claude-code', pick)}) fixes it`,
+        { exact: false },
+      ),
+    ).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Turn on auto-fix' }));
+
+    await waitFor(() =>
+      expect(bridge.$fn('ciAutoFix.start')).toHaveBeenCalledWith({
+        ...target,
+        cliId: 'claude-code',
+        runArgs: launchPickArgs('claude-code', pick),
+        runLabel: launchPickLabel('claude-code', pick),
+        maxAttempts: 3,
+      }),
+    );
+  });
+
+  it('starts with the model and effort from Settings, and drops them for another CLI', async () => {
+    const { user } = render({
+      bridge: {
+        'settings.get': {
+          ciAutoFixCliId: 'claude-code',
+          ciAutoFixModel: 'opus',
+          ciAutoFixEffort: 'high',
+          ciAutoFixMaxAttempts: 3,
+        },
+      },
+    });
+    await user.click(await screen.findByRole('button', { name: 'Auto-fix this run if it fails' }));
+    const label = launchPickLabel('claude-code', { model: 'opus', effort: 'high' });
+    expect(await screen.findByRole('combobox', { name: 'Model for auto-fix' })).toHaveTextContent(
+      /Opus/,
+    );
+    expect(screen.getByRole('radio', { name: 'High' })).toBeChecked();
+    expect(screen.getByText(`Claude Code CLI (${label})`, { exact: false })).toBeVisible();
+
+    await user.click(screen.getByRole('combobox', { name: 'Agent CLI for auto-fix' }));
+    await user.click(await screen.findByRole('option', { name: /Codex/ }));
+    expect(await screen.findByText(/Codex CLI fixes it/)).toBeVisible();
+    expect(screen.getByRole('combobox', { name: 'Model for auto-fix' })).toHaveTextContent(
+      'CLI default',
+    );
   });
 
   it('keeps the tries between 1 and 5', async () => {
