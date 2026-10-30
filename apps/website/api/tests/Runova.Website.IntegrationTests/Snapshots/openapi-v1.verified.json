@@ -1,0 +1,13 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "Runova Website API",
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "http://localhost/"
+    }
+  ],
+  "paths": {}
+}

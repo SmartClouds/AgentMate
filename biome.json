@@ -6,6 +6,7 @@
     "includes": [
       "**",
       "!apps/server-core/**",
+      "!apps/website/**",
       "!apps/desktop/src/shared/deploy/protocol/generated/**",
       "!packages/core/src/deploy/wordpress/vectors/**"
     ]

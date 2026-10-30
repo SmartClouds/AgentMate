@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Runova.Website.Api/Runova.Website.Api.csproj" />
+    <Project Path="src/Runova.Website.Core/Runova.Website.Core.csproj" />
+    <Project Path="src/Runova.Website.Data/Runova.Website.Data.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Runova.Website.Tests/Runova.Website.Tests.csproj" />
+    <Project Path="tests/Runova.Website.IntegrationTests/Runova.Website.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

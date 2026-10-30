@@ -28,6 +28,11 @@ apps/server-core/**/bin/
 apps/server-core/**/obj/
 apps/server-core/artifacts/
 
+# Website API (.NET) build output and Verify snapshots that did not match
+apps/website/api/**/bin/
+apps/website/api/**/obj/
+apps/website/api/**/*.received.*
+
 # WordPress connector plugin: Composer dev tools, PHPUnit cache, and the file activation writes
 apps/wordpress-connector/vendor/
 apps/wordpress-connector/.phpunit.cache/

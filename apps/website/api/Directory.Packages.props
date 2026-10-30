@@ -1,0 +1,26 @@
+<Project>
+  <!-- One version per package for the whole solution. Bump here, never in a project file. -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+  <ItemGroup Label="Data">
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <!-- The /health/ready check: asks the DbContext whether it can connect. -->
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.14" />
+  </ItemGroup>
+  <ItemGroup Label="OpenAPI">
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
+    <!-- The reference page at /scalar, in Development and Staging only. -->
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.18.6" />
+  </ItemGroup>
+  <ItemGroup Label="Mapping">
+    <!-- A source generator: mappers are plain code at build time, no reflection at run time. -->
+    <PackageVersion Include="Riok.Mapperly" Version="4.3.1" />
+  </ItemGroup>
+  <ItemGroup Label="Tests">
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.14" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
+    <PackageVersion Include="xunit.v3" Version="4.0.2" />
+  </ItemGroup>
+</Project>
