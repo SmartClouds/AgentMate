@@ -780,6 +780,8 @@ jobs:
         # launcher drops it here rather than having Electron refuse to start.
         env:
           RUNOVA_E2E_NO_SANDBOX: "1"
+          # Two spec files at a time, each with its own Electron, on the one Xvfb display.
+          RUNOVA_E2E_WORKERS: "2"
         run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" pnpm --filter @runova/desktop test:e2e --shard=${{ matrix.shard }}/3
 
       - name: Playwright

@@ -8,8 +8,11 @@ export default defineConfig({
   testDir: '.',
   testMatch: '**/*.e2e.ts',
   globalSetup: './globalSetup.ts',
-  // One Electron at a time: every instance starts its own terminal host and CLI probes.
-  workers: 1,
+  // One Electron at a time by default: every instance starts its own terminal host and CLI
+  // probes. Each launch has a profile, lock and terminal pipe of its own, so a machine with room
+  // for more sets RUNOVA_E2E_WORKERS. Spec files then share out across workers, and the tests in a
+  // file still run in order on one worker.
+  workers: Number(process.env.RUNOVA_E2E_WORKERS) || 1,
   fullyParallel: false,
   timeout: 120_000,
   expect: { timeout: 20_000 },

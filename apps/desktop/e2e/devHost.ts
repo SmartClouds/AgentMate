@@ -1,10 +1,18 @@
 import { type ChildProcess, execFileSync, spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { request } from 'node:http';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { APP_ROOT } from './paths';
+import { APP_ROOT, E2E_OUT_DIR } from './paths';
 
 /**
  * The server core's DevHost for e2e runs: the real core on loopback TCP, so the Deploy page can
@@ -17,6 +25,9 @@ import { APP_ROOT } from './paths';
 const PROJECT = join(APP_ROOT, '..', 'server-core', 'src', 'Runova.ServerCore.DevHost');
 const DLL = join(PROJECT, 'bin', 'Debug', 'net10.0', 'Runova.ServerCore.DevHost.dll');
 const READY_TIMEOUT_MS = 60_000;
+const BUILD_LOCK = join(E2E_OUT_DIR, 'devhost-build.lock');
+const BUILD_MARKER = join(E2E_OUT_DIR, 'devhost-built');
+const BUILD_LOCK_STALE_MS = 10 * 60_000;
 
 export interface DevHost {
   port: number;
@@ -63,9 +74,57 @@ function healthy(port: number): Promise<boolean> {
   });
 }
 
+/**
+ * Builds the DevHost the first time a run asks for it. Workers run side by side, and two
+ * `dotnet build`s of one project at once fight over its obj and bin folders, so the build is
+ * taken under a lock folder and a marker records the run (see globalSetup) that built it.
+ */
+async function buildOncePerRun(): Promise<void> {
+  const runId = process.env.RUNOVA_E2E_RUN_ID ?? '';
+  const isBuilt = () => runId !== '' && readMarker() === runId;
+  if (isBuilt()) return;
+  mkdirSync(E2E_OUT_DIR, { recursive: true });
+  for (;;) {
+    try {
+      mkdirSync(BUILD_LOCK);
+      break;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+      // A worker killed mid-build leaves its lock behind; no build takes this long.
+      if (Date.now() - lockTakenAt() > BUILD_LOCK_STALE_MS)
+        rmSync(BUILD_LOCK, { recursive: true, force: true });
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+  try {
+    if (isBuilt()) return;
+    execFileSync('dotnet', ['build', PROJECT, '--nologo', '-v', 'quiet'], { stdio: 'inherit' });
+    writeFileSync(BUILD_MARKER, runId);
+  } finally {
+    rmSync(BUILD_LOCK, { recursive: true, force: true });
+  }
+}
+
+function readMarker(): string | null {
+  try {
+    return readFileSync(BUILD_MARKER, 'utf-8');
+  } catch {
+    return null;
+  }
+}
+
+/** When the lock was taken, or now if it is already gone. */
+function lockTakenAt(): number {
+  try {
+    return statSync(BUILD_LOCK).mtimeMs;
+  } catch {
+    return Date.now();
+  }
+}
+
 /** `args` go on the DevHost's command line after its own, such as a setting a spec needs. */
 export async function startDevHost(options: { args?: string[] } = {}): Promise<DevHost> {
-  execFileSync('dotnet', ['build', PROJECT, '--nologo', '-v', 'quiet'], { stdio: 'inherit' });
+  await buildOncePerRun();
   const port = await freePort();
   const data = mkdtempSync(join(tmpdir(), 'runova-e2e-devhost-'));
   // Later arguments win, so this replaces the DevHost's own data folder.
