@@ -319,7 +319,8 @@ test('a 500-clip timeline draws only the clips in view and stays quick to scroll
         videoId: id,
         baseSeq: session.session.status.seq,
         ops: [
-          { op: 'scene.update', sceneId: 'one', patch: { targetDuration: 600 * flicks } },
+          // As long as the clips, so every scroll step below has clips to draw.
+          { op: 'scene.update', sceneId: 'one', patch: { targetDuration: 500 * flicks } },
           ...Array.from({ length: 500 }, (_, i) => ({
             op: 'clip.add',
             clip: {
@@ -353,9 +354,10 @@ test('a 500-clip timeline draws only the clips in view and stays quick to scroll
   expect(drawn).toBeGreaterThan(3);
   expect(drawn).toBeLessThan(120);
 
-  // Scroll across the whole video and time the app's own work per step: the scroll handler and
-  // React's render, in MessageChannel turns (timers and frames are held to about one a second in
-  // the e2e window, which is in the background). Setting scrollLeft itself is left out: on a
+  // Scroll across the whole video in 40 even steps and time the app's own work per step: the
+  // scroll handler and React's render, in MessageChannel turns (timers and frames are held to
+  // about one a second in the e2e window, which is in the background). Setting scrollLeft itself
+  // is left out: on a
   // composited scroller it waits for a compositor commit, which that window also makes about once
   // a second (a trace showed LayerTreeHost::WaitForCommitCompletion, not layout or script).
   const timings = await page.evaluate(async () => {
@@ -367,25 +369,35 @@ test('a 500-clip timeline draws only the clips in view and stays quick to scroll
         channel.port1.onmessage = () => resolve();
         channel.port2.postMessage(0);
       });
-    const out: number[] = [];
-    for (let i = 0; i < 40; i++) {
-      scroller.scrollLeft += scroller.clientWidth;
+    // Even steps over the scrollable range, not a view at a time: at this zoom the video is only
+    // a few views wide, and steps past its end would time a scroll that moves nothing.
+    const stride = (scroller.scrollWidth - scroller.clientWidth) / 40;
+    const steps: number[] = [];
+    const counts: number[] = [];
+    for (let i = 1; i <= 40; i++) {
+      scroller.scrollLeft = Math.round(i * stride);
       const started = performance.now();
       scroller.dispatchEvent(new Event('scroll'));
       await nextTask();
       await nextTask();
-      out.push(performance.now() - started);
+      steps.push(performance.now() - started);
+      counts.push(document.querySelectorAll('[aria-label="Text clips"] button').length);
     }
-    return out;
+    return { steps, counts };
   });
-  timings.sort((a, b) => a - b);
-  const p90 = timings[Math.floor(timings.length * 0.9)] as number;
+  // The real check: every step along the video draws only what is in view, not all 500.
+  expect(Math.max(...timings.counts)).toBeLessThan(120);
+  expect(Math.min(...timings.counts)).toBeGreaterThan(3);
+
+  const sorted = [...timings.steps].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)] as number;
+  const p90 = sorted[Math.floor(sorted.length * 0.9)] as number;
   test.info().annotations.push({
-    type: 'scroll step p90',
-    description: `${p90.toFixed(1)} ms over ${timings.length} steps`,
+    type: 'scroll step',
+    description: `median ${median.toFixed(1)} ms, p90 ${p90.toFixed(1)} ms over ${sorted.length} steps`,
   });
-  // Two frames: the Linux runner shares its machine with other jobs and measured 16.4 ms twice
-  // in a row. Drawing all 500 costs far more than that, and the count below is the real check.
-  expect(p90).toBeLessThan(32);
-  expect(await rows.getByRole('button').count()).toBeLessThan(120);
+  // The median, not the p90: the Linux runner shares its machine with other jobs, which stall a
+  // few steps at random (a p90 of 42.7 ms once). Drawing all 500 slows every step, so the median
+  // still catches it.
+  expect(median).toBeLessThan(32);
 });
