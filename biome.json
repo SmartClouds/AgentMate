@@ -175,7 +175,7 @@
       }
     },
     {
-      "includes": ["scripts/**", ".github/actions/**"],
+      "includes": ["scripts/**", ".github/actions/**", "docs/tasks/handoffs/**"],
       "linter": { "rules": { "suspicious": { "noConsole": "off" } } }
     },
     {

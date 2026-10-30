@@ -1,7 +1,8 @@
 // T001 doc checks. Usage: node check-t001.mjs <repoRoot> [--worktree <path>]
-import { createHash, createHmac } from 'node:crypto';
+
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { createHash, createHmac } from 'node:crypto';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 const root = resolve(process.argv[2] ?? '.');
@@ -46,8 +47,21 @@ for (const extra of ['docs/DELIVERY_STATUS.md', 'docs/tasks/handoffs/T001.md']) 
 }
 
 // 4. No mention of a mobile version of Runova outside the forbidden list block
-const mobile = [/runova mobile/i, /mobile app/i, /companion app/i, /iphone/i, /\bios\b/i, /\bipad\b/i,
-  /testflight/i, /google play/i, /play store/i, /\bapk\b/i, /pair (your|a) phone/i, /react native/i, /\bexpo\b/i];
+const mobile = [
+  /runova mobile/i,
+  /mobile app/i,
+  /companion app/i,
+  /iphone/i,
+  /\bios\b/i,
+  /\bipad\b/i,
+  /testflight/i,
+  /google play/i,
+  /play store/i,
+  /\bapk\b/i,
+  /pair (your|a) phone/i,
+  /react native/i,
+  /\bexpo\b/i,
+];
 for (const [s, t] of docs) {
   const body = withoutForbiddenBlocks(t);
   for (const re of mobile) if (re.test(body)) fail(`${s}: mobile phrase ${re}`);
@@ -83,20 +97,35 @@ for (const v of vectors) {
   if (k !== key) fail(`vector ${name}: signing key ${k} != ${key}`);
   const bh = createHash('sha256').update(body, 'utf8').digest('hex');
   if (bh !== bodyHash) fail(`vector ${name}: body hash ${bh} != ${bodyHash}`);
-  if (!canon.endsWith(bodyHash)) fail(`vector ${name}: canonical string does not end in the body hash`);
+  if (!canon.endsWith(bodyHash))
+    fail(`vector ${name}: canonical string does not end in the body hash`);
   const s = createHmac('sha256', Buffer.from(key, 'hex')).update(canon, 'utf8').digest('hex');
   if (`v1=${s}` !== sig) fail(`vector ${name}: signature v1=${s} != ${sig}`);
 }
 
 // 7. Endpoint tables: method, path, auth, request, responses; plural nouns under /api/v1
-const SINGLETONS = new Set(['me', 'current', 'latest', 'two-factor', 'downloads', 'recovery-codes',
-  'password', 'v1', 'api', 'media']);
+const SINGLETONS = new Set([
+  'me',
+  'current',
+  'latest',
+  'two-factor',
+  'downloads',
+  'recovery-codes',
+  'password',
+  'v1',
+  'api',
+  'media',
+]);
 let endpointCount = 0;
 for (const line of contract.split('\n')) {
-  const cells = line.split('|').slice(1, -1).map((c) => c.trim());
+  const cells = line
+    .split('|')
+    .slice(1, -1)
+    .map((c) => c.trim());
   if (!/^(GET|POST|PUT|PATCH|DELETE)$/.test(cells[0] ?? '')) continue;
   endpointCount++;
-  if (cells.length < 5 || cells.slice(0, 5).some((c) => c === '')) fail(`endpoint row incomplete: ${line}`);
+  if (cells.length < 5 || cells.slice(0, 5).some((c) => c === ''))
+    fail(`endpoint row incomplete: ${line}`);
   const path = cells[1].replace(/`/g, '').split('?')[0];
   if (!path.startsWith('/api/v1/')) fail(`endpoint not under /api/v1: ${path}`);
   for (const seg of path.split('/').filter(Boolean)) {
@@ -110,11 +139,21 @@ if (endpointCount < 30) fail(`api-contract.md lists only ${endpointCount} endpoi
 // 8. Design tokens match index.css for Dark and Light
 const css = readFileSync(join(root, 'apps/desktop/src/renderer/src/index.css'), 'utf8');
 const block = (sel) => css.match(new RegExp(`^${sel} \\{([\\s\\S]*?)\\n\\}`, 'm'))?.[1] ?? '';
-const tokens = (b) => Object.fromEntries([...b.matchAll(/--([a-z-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
+const tokens = (b) =>
+  Object.fromEntries([...b.matchAll(/--([a-z-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
 const light = tokens(block(':root,\\n\\.theme-light'));
 const dark = tokens(block('\\.dark'));
 const design = docs.find(([s]) => s.endsWith('design.md'))?.[1] ?? '';
-for (const t of ['primary', 'background', 'card', 'border', 'muted', 'destructive', 'warning', 'success']) {
+for (const t of [
+  'primary',
+  'background',
+  'card',
+  'border',
+  'muted',
+  'destructive',
+  'warning',
+  'success',
+]) {
   if (!dark[t] || !light[t]) fail(`index.css token ${t} not parsed`);
   const row = `| \`--${t}\` | \`${dark[t]}\` | \`${light[t]}\` |`;
   if (!design.includes(row)) fail(`design.md lacks row ${row}`);
