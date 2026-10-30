@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { createServer as createTlsServer, type Server } from 'node:tls';
 import { fileURLToPath } from 'node:url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { cleanTlsDetail, isKeyUsageError, RSA_KEY_EXCHANGE_TLS } from './handshake';
 import { rdpStyleCertificate } from './testing/rdpCertificate';
 
@@ -72,36 +72,56 @@ afterEach(() => {
   for (const server of servers.splice(0)) server.close();
 });
 
-describe.skipIf(!electron)("Electron's TLS stack and a Windows Remote Desktop certificate", () => {
-  it('refuses it with an error the handshake recognises, or has stopped refusing it', async (context) => {
-    const result = await probe(await serve('windows'), {});
-    if (result.ok) {
-      context.skip(
-        'This Electron accepts the certificate with its normal settings, so the RSA retry is not needed.',
-      );
-      return;
-    }
-    expect(isKeyUsageError(result.message ?? '')).toBe(true);
-    expect(cleanTlsDetail(result.message ?? '')).toBe('KEY_USAGE_BIT_INCORRECT (SSL routines)');
-  });
+// Longer than the probe's own 30s limit, so a slow probe fails with its own error.
+const PROBE_TEST_TIMEOUT = 40_000;
 
-  it('connects once only RSA key exchange over TLS 1.2 is offered', async () => {
-    const result = await probe(await serve('windows'), RSA_KEY_EXCHANGE_TLS);
-    expect(result.message).toBeUndefined();
-    expect(result.ok).toBe(true);
-    expect(result.protocol).toBe('TLSv1.2');
-    expect(result.cipher).toMatch(/^AES(?:128|256)-/);
-  });
+describe.skipIf(!electron)(
+  "Electron's TLS stack and a Windows Remote Desktop certificate",
+  { timeout: PROBE_TEST_TIMEOUT },
+  () => {
+    // The first launch of a freshly installed Electron can take many seconds (on macOS, Gatekeeper
+    // scans the app bundle), which would otherwise land on whichever test happens to run first.
+    beforeAll(async () => {
+      await new Promise<void>((resolve, reject) => {
+        execFile(
+          electron as string,
+          ['--version'],
+          { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, windowsHide: true },
+          (error) => (error ? reject(error) : resolve()),
+        );
+      });
+    }, 120_000);
 
-  it('connects with its normal settings when the certificate allows signing', async () => {
-    const result = await probe(await serve('signature'), {});
-    expect(result.message).toBeUndefined();
-    expect(result.ok).toBe(true);
-  });
+    it('refuses it with an error the handshake recognises, or has stopped refusing it', async (context) => {
+      const result = await probe(await serve('windows'), {});
+      if (result.ok) {
+        context.skip(
+          'This Electron accepts the certificate with its normal settings, so the RSA retry is not needed.',
+        );
+        return;
+      }
+      expect(isKeyUsageError(result.message ?? '')).toBe(true);
+      expect(cleanTlsDetail(result.message ?? '')).toBe('KEY_USAGE_BIT_INCORRECT (SSL routines)');
+    });
 
-  it('connects with its normal settings when the certificate has no Key Usage at all', async () => {
-    const result = await probe(await serve('none'), {});
-    expect(result.message).toBeUndefined();
-    expect(result.ok).toBe(true);
-  });
-});
+    it('connects once only RSA key exchange over TLS 1.2 is offered', async () => {
+      const result = await probe(await serve('windows'), RSA_KEY_EXCHANGE_TLS);
+      expect(result.message).toBeUndefined();
+      expect(result.ok).toBe(true);
+      expect(result.protocol).toBe('TLSv1.2');
+      expect(result.cipher).toMatch(/^AES(?:128|256)-/);
+    });
+
+    it('connects with its normal settings when the certificate allows signing', async () => {
+      const result = await probe(await serve('signature'), {});
+      expect(result.message).toBeUndefined();
+      expect(result.ok).toBe(true);
+    });
+
+    it('connects with its normal settings when the certificate has no Key Usage at all', async () => {
+      const result = await probe(await serve('none'), {});
+      expect(result.message).toBeUndefined();
+      expect(result.ok).toBe(true);
+    });
+  },
+);
