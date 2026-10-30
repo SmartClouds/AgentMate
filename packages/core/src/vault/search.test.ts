@@ -26,6 +26,8 @@ function summary(overrides: Partial<VaultEntrySummary>): VaultEntrySummary {
     passwordUpdatedAt: null,
     expiresAt: null,
     fields: [],
+    categoryId: null,
+    autoSubmit: false,
     ...overrides,
   };
 }

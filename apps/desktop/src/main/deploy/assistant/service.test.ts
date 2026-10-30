@@ -461,9 +461,10 @@ describe('the app the user has open', () => {
     expect(stacks.get).toHaveBeenCalledTimes(2);
   });
 
-  it('reads at most six containers, and a log it cannot read becomes a fact', async () => {
+  it('reads at most six containers, and one it cannot inspect or read becomes a fact', async () => {
     const { core, assistant, serverId, progress, stacks, docker } = setup();
     stacks.get.mockResolvedValue(shopDetails(core, 2));
+    vi.spyOn(docker, 'inspect').mockRejectedValueOnce(new Error('the engine is busy'));
     const tail = vi.spyOn(docker, 'logTail');
     tail.mockRejectedValueOnce(new Error('the engine timed out'));
     fake.replies.push('FINISHED: ok');
@@ -473,6 +474,7 @@ describe('the app the user has open', () => {
     expect(tail).toHaveBeenCalledTimes(6);
     expect(tail).toHaveBeenCalledWith(expect.objectContaining({ tail: 40 }));
     expect(fake.prompts[0]).toContain('could not read the log of shop-web-1: the engine timed out');
+    expect(fake.prompts[0]).toContain('could not inspect shop-web-1: the engine is busy');
   });
 
   it('refuses to start when the app cannot be read, and runs nothing', async () => {

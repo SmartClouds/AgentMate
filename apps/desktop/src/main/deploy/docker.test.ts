@@ -221,6 +221,12 @@ describe('DeployDocker', () => {
     expect(await docker.prune({ serverId: 'srv-1', target: 'containers' })).toMatchObject({
       removed: 2,
     });
+
+    // Any other refusal keeps its own reason.
+    const viewer = setup(['viewer']);
+    await expect(viewer.docker.prune({ serverId: 'srv-1', target: 'buildCache' })).rejects.toThrow(
+      'Your role on this server (viewer) cannot do that.',
+    );
   });
 
   it('installs Docker as a job, which fails without agreement to remove what is in the way', async () => {

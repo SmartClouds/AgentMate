@@ -83,6 +83,11 @@ describe('chatsFrom', () => {
     expect(chat).toMatchObject({ runId: 'r2', app: shop, status: 'running', updatedAt: 999 });
   });
 
+  it('dates a chat that has only just started by its start', () => {
+    const [chat] = chatsFrom([run('r4', { status: 'running', endedAt: null })]);
+    expect(chat).toMatchObject({ runId: 'r4', status: 'running', updatedAt: 400 });
+  });
+
   it('is empty without runs', () => {
     expect(chatsFrom([])).toEqual([]);
   });
