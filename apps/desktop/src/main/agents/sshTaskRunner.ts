@@ -306,6 +306,8 @@ interface RunState {
   pendingContinue: ((resume: boolean) => void) | null;
   /** The step the run stops at. Continue after hitting it allows another MAX_STEPS. */
   stepLimit: number;
+  /** FINISHED may span several lines, so the AI can answer a question in full. */
+  longAnswers: boolean;
   history: SshAgentHistoryRun;
   /** What the run last reported, so a notification can say what it is waiting for. */
   lastProgress: SshAgentProgress | null;
@@ -329,9 +331,13 @@ function allHistory(): SshAgentHistoryRun[] {
   return [...restored, ...[...histories.values()].flat()];
 }
 
-/** Writes the history soon, when the task belongs to a saved server. Nothing else is kept. */
+/**
+ * Writes the history soon, when the task belongs to a saved server. Nothing else is kept. The
+ * file is read first, so the first task of a session does not write over the earlier ones.
+ */
 function persist(entry: SshAgentHistoryRun): void {
-  if (entry.serverId) savedHistory.save(allHistory());
+  if (!entry.serverId) return;
+  void ensureSshHistoryRestored().then(() => savedHistory.save(allHistory()));
 }
 
 /** Reads the saved history once, so earlier tasks can be listed and continued. */
@@ -352,7 +358,36 @@ export function flushSshTaskHistory(): Promise<void> {
 export async function clearSshServerTaskHistory(serverId: string): Promise<void> {
   await ensureSshHistoryRestored();
   const gone = (run: SshAgentHistoryRun): boolean =>
-    run.serverId === serverId && run.status !== 'running' && run.status !== 'paused';
+    run.serverId === serverId && !run.scope && run.status !== 'running' && run.status !== 'paused';
+  restored = restored.filter((run) => !gone(run));
+  for (const [sessionId, list] of histories)
+    histories.set(
+      sessionId,
+      list.filter((run) => !gone(run)),
+    );
+  savedHistory.save(allHistory());
+  await savedHistory.flush();
+}
+
+/**
+ * The runs kept in a scope of their own on one server (the Deploy AI's chats), newest first,
+ * whether from this session of the app or an earlier one.
+ */
+export async function getScopedTaskHistory(
+  scope: NonNullable<SshAgentHistoryRun['scope']>,
+  serverId: string,
+): Promise<SshAgentHistoryRun[]> {
+  await ensureSshHistoryRestored();
+  return allHistory()
+    .filter((run) => run.scope === scope && run.serverId === serverId)
+    .sort((a, b) => b.startedAt - a.startedAt);
+}
+
+/** Forgets these runs, here and on disk. A run still going is kept. */
+export async function forgetTaskRuns(ids: readonly string[]): Promise<void> {
+  await ensureSshHistoryRestored();
+  const gone = (run: SshAgentHistoryRun): boolean =>
+    ids.includes(run.id) && run.status !== 'running' && run.status !== 'paused';
   restored = restored.filter((run) => !gone(run));
   for (const [sessionId, list] of histories)
     histories.set(
@@ -426,7 +461,7 @@ function startHistory(
   sessionId: string,
   serverId: string | null,
   prompt: string,
-  extra: Pick<SshAgentHistoryRun, 'settings' | 'continuedFromRunId'>,
+  extra: Pick<SshAgentHistoryRun, 'settings' | 'continuedFromRunId' | 'scope' | 'app'>,
 ): SshAgentHistoryRun {
   const entry: SshAgentHistoryRun = {
     id: randomUUID(),
@@ -440,9 +475,15 @@ function startHistory(
     entries: [],
     ...(extra.settings ? { settings: extra.settings } : {}),
     ...(extra.continuedFromRunId ? { continuedFromRunId: extra.continuedFromRunId } : {}),
+    ...(extra.scope ? { scope: extra.scope } : {}),
+    ...(extra.app ? { app: extra.app } : {}),
   };
   const list = histories.get(sessionId) ?? [];
   list.push(entry);
+  // A scoped run that falls out of this session's short list is still on disk, so it stays
+  // listed there rather than being dropped at the next write.
+  const dropped = list.slice(0, -MAX_HISTORY_RUNS);
+  restored.push(...dropped.filter((run) => run.scope && run.serverId));
   histories.set(sessionId, list.slice(-MAX_HISTORY_RUNS));
   persist(entry);
   return entry;
@@ -464,9 +505,20 @@ export function getSshTaskHistory(sessionId: string): SshAgentHistoryRun[] {
  */
 export function getSshServerTaskHistory(serverId: string): SshAgentHistoryRun[] {
   return allHistory()
-    .filter((run) => run.serverId === serverId)
+    .filter((run) => run.serverId === serverId && !run.scope)
     .sort((a, b) => b.startedAt - a.startedAt)
     .slice(0, MAX_SERVER_HISTORY_RUNS);
+}
+
+/** What the pet says when a task finishes: the answer's first line, which is a sentence at most. */
+function spokenLine(message: string): string {
+  const first =
+    message
+      .split('\n')
+      .find((line) => line.trim())
+      ?.trim() ?? '';
+  if (!first) return 'AI finished the task.';
+  return first.length > 140 ? `${first.slice(0, 139)}…` : first;
 }
 
 const PROVIDER_LABELS: Record<AiProvider, string> = {
@@ -769,7 +821,7 @@ async function runLoop(run: RunState): Promise<void> {
         continue;
       }
 
-      const parsed = parseModelReply(reply);
+      const parsed = parseModelReply(reply, { multilineFinished: run.longAnswers });
       if (!parsed) {
         // Without this the retry would send the very same prompt and likely get the same reply.
         run.transcript +=
@@ -785,7 +837,7 @@ async function runLoop(run: RunState): Promise<void> {
         endHistory(run, 'finished');
         emit(run, 'finished', { message: summary });
         const settings = await store.getSettings();
-        speakOnPet(settings, run.target.label, parsed.message || 'AI finished the task.', 'pass');
+        speakOnPet(settings, run.target.label, spokenLine(parsed.message), 'pass');
         return;
       }
 
@@ -915,6 +967,10 @@ export interface AgentTaskSpec {
   /** The earlier task this one continues, and what the AI is told happened in it. */
   continuedFromRunId?: string;
   previousContext?: string;
+  /** FINISHED may span several lines (Markdown), for a run that answers questions. */
+  longAnswers?: boolean;
+  /** Where a run that is not a terminal's is kept: saved under this server, in its own scope. */
+  history?: { serverId: string; scope: 'deploy'; app?: SshAgentHistoryRun['app'] };
 }
 
 /** Starts the loop on any target with any executor. `startSshTask` is this for a terminal. */
@@ -958,12 +1014,18 @@ export function startAgentTask(
     pendingPassword: null,
     pendingContinue: null,
     stepLimit: MAX_STEPS,
+    longAnswers: spec.longAnswers ?? false,
     // Read now: the session forgets its server as soon as the tab closes.
     history: startHistory(
       sessionId,
-      target.kind === 'ssh' ? sshSessionServerId(sessionId) : null,
+      target.kind === 'ssh' ? sshSessionServerId(sessionId) : (spec.history?.serverId ?? null),
       prompt.trim(),
-      { settings: spec.settings, continuedFromRunId: spec.continuedFromRunId },
+      {
+        settings: spec.settings,
+        continuedFromRunId: spec.continuedFromRunId,
+        scope: spec.history?.scope,
+        app: spec.history?.app,
+      },
     ),
     lastProgress: null,
     // Replaced immediately below, once the real subscription exists.

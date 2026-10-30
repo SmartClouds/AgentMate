@@ -73,6 +73,7 @@ import {
 import { NAV_ITEMS } from '@/components/layout/Sidebar';
 import { SECTION_HEADING } from '@/components/pageKit';
 import { CompanionSettings } from '@/components/pet/CompanionSettings';
+import { AgentTabViewSettings } from '@/components/settings/AgentTabViewSettings';
 import { AndroidSdkSettings } from '@/components/settings/AndroidSdkSettings';
 import { BackupEnvironmentsPasswordDialog } from '@/components/settings/BackupEnvironmentsPasswordDialog';
 import { BlueprintPresetSettings } from '@/components/settings/BlueprintPresetSettings';
@@ -383,6 +384,11 @@ const SECTIONS = {
     keywords: 'default cli provider agent arguments args flags model',
   },
   launchDefaults: { tab: 'agents', title: 'Launch defaults', keywords: LAUNCH_DEFAULTS_KEYWORDS },
+  agentTabView: {
+    tab: 'agents',
+    title: 'Default view for agent tabs',
+    keywords: 'chat view cli view mode default tab conversation workspace agent messages bubbles',
+  },
   agentOrder: {
     tab: 'agents',
     title: 'Agent order',
@@ -2095,6 +2101,16 @@ export default function SettingsPage(): React.JSX.Element {
                     <div className="max-w-3xl">
                       <CliLaunchDefaultsSettings />
                     </div>
+                  </SettingsCard>
+                )}
+
+                {show('agentTabView') && (
+                  <SettingsCard
+                    icon={MessageSquare}
+                    title="Default view for agent tabs"
+                    description="How an agent tab in the Workspace opens: as its CLI, or as a chat drawn from the same running CLI. Right-click a tab to switch just that one; a tab you switched keeps its own choice."
+                  >
+                    <AgentTabViewSettings />
                   </SettingsCard>
                 )}
 

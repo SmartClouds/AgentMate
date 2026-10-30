@@ -52,6 +52,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
   menuPosition: 'left',
   startupPage: 'last',
+  defaultAgentTabMode: 'cli',
   projectsRootPath: null,
   skillRepositoryIds: [],
   pingTargets: [...DEFAULT_PING_TARGETS_IPV4],

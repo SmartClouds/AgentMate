@@ -95,6 +95,16 @@ export function sameFolder(a: string, b: string, caseInsensitive: boolean): bool
  * slash command wrappers, command output, system reminders and interrupted-request markers.
  */
 export function promptPreview(text: string): string | null {
+  const cleaned = cleanPromptText(text)?.replace(/\s+/g, ' ');
+  if (!cleaned) return null;
+  return cleaned.length > PREVIEW_LIMIT ? `${cleaned.slice(0, PREVIEW_LIMIT - 1)}…` : cleaned;
+}
+
+/**
+ * What the user typed in a prompt, in full and with its line breaks, after the same clean-up as
+ * `promptPreview`. Null when the text is only a wrapper the user did not type.
+ */
+export function cleanPromptText(text: string): string | null {
   const trimmed = text.trim();
   if (!trimmed) return null;
   if (
@@ -110,10 +120,10 @@ export function promptPreview(text: string): string | null {
     .replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, ' ')
     .replace(/<bash-input>([\s\S]*?)<\/bash-input>/g, '! $1')
     .replace(/\[Image #\d+\]/g, ' ')
-    .replace(/\s+/g, ' ')
+    .replace(/[ \t]+$/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
-  if (!cleaned) return null;
-  return cleaned.length > PREVIEW_LIMIT ? `${cleaned.slice(0, PREVIEW_LIMIT - 1)}…` : cleaned;
+  return cleaned || null;
 }
 
 function parse(line: string): Record<string, unknown> | null {

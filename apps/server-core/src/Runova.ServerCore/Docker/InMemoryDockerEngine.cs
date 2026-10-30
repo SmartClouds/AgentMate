@@ -30,6 +30,9 @@ internal sealed partial class InMemoryDockerEngine : IDockerEngine, IDisposable
     private readonly List<ImageInfo> _images = [];
     private readonly List<VolumeEntry> _volumes = [];
     private readonly List<NetworkEntry> _networks = [];
+
+    /// <summary>The build cache, as a count of records and their size, until a prune clears it.</summary>
+    private (int Count, long SizeBytes) _buildCache = (3, 412 * 1024 * 1024);
     private readonly List<EngineEvent> _history = [];
     private readonly List<Channel<EngineEvent>> _listeners = [];
     private long _lastEventNano;

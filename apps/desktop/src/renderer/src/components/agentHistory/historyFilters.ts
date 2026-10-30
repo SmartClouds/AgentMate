@@ -29,9 +29,9 @@ export interface HistoryFilter {
   showBackground: boolean;
 }
 
-export interface DayGroup {
+export interface DayGroup<T = AgentHistorySession> {
   label: string;
-  items: AgentHistorySession[];
+  items: T[];
 }
 
 export interface FolderGroup {
@@ -92,8 +92,11 @@ export function countByProvider(
 }
 
 /** Splits an already sorted list into day runs, keeping its order. */
-export function groupByDay(sessions: readonly AgentHistorySession[], now: Date): DayGroup[] {
-  const groups: DayGroup[] = [];
+export function groupByDay<T extends { updatedAt: number } = AgentHistorySession>(
+  sessions: readonly T[],
+  now: Date,
+): DayGroup<T>[] {
+  const groups: DayGroup<T>[] = [];
   for (const session of sessions) {
     const label = dayBucket(session.updatedAt, now);
     const last = groups[groups.length - 1];

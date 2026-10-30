@@ -5,10 +5,13 @@ import { useBrowserStore } from './browserStore';
 import { useEditorRevealStore } from './editorRevealStore';
 import { useRecentFilesStore } from './recentFilesStore';
 import {
+  canShowChat,
+  effectiveViewMode,
   GIT_PANEL_DEFAULT_WIDTH,
   type ProjectWorkspace,
   terminalTabLabel,
   useWorkspaceStore,
+  type WorkspaceTerminalTab,
 } from './workspaceStore';
 
 const dispose = vi.hoisted(() => vi.fn());
@@ -512,6 +515,70 @@ describe('setAutoContinue', () => {
     const [tabId] = Object.keys(workspace().tabs);
     const before = workspace();
     store().setAutoContinue('p1', tabId, { afterLimitReset: true });
+    expect(workspace()).toStrictEqual(before);
+  });
+});
+
+describe('setViewMode and effectiveViewMode', () => {
+  function withAgent(cliId = 'claude-code'): string {
+    store().openProject('p1');
+    return store().addTerminal('p1', { title: 'Claude Code', cwd: 'E:\\proj', cliId });
+  }
+
+  function terminal(tabId: string): WorkspaceTerminalTab {
+    const tab = workspace().tabs[tabId];
+    if (tab?.kind !== 'terminal') throw new Error('not a terminal tab');
+    return tab;
+  }
+
+  it('follows the default until the tab is switched, then keeps its own choice', () => {
+    const tabId = withAgent();
+    expect(effectiveViewMode(terminal(tabId), 'cli')).toBe('cli');
+    expect(effectiveViewMode(terminal(tabId), 'chat')).toBe('chat');
+
+    store().setViewMode('p1', tabId, 'chat');
+    expect(terminal(tabId).viewMode).toBe('chat');
+    expect(effectiveViewMode(terminal(tabId), 'cli')).toBe('chat');
+
+    store().setViewMode('p1', tabId, 'cli');
+    expect(effectiveViewMode(terminal(tabId), 'chat')).toBe('cli');
+  });
+
+  it('keeps a plain shell and a CLI without a chat view in the CLI view', () => {
+    const { tabId: shellId } = withTerminal();
+    expect(effectiveViewMode(terminal(shellId), 'chat')).toBe('cli');
+    const aiderId = withAgent('aider');
+    store().setViewMode('p1', aiderId, 'chat');
+    expect(effectiveViewMode(terminal(aiderId), 'chat')).toBe('cli');
+  });
+
+  it('tells which tabs can show the chat view', () => {
+    expect(canShowChat(terminal(withAgent('codex-cli')))).toBe(true);
+    expect(canShowChat(terminal(withAgent('aider')))).toBe(false);
+    expect(canShowChat(terminal(withTerminal().tabId))).toBe(false);
+  });
+
+  it('keeps the view when the tab is restarted', () => {
+    const tabId = withAgent();
+    store().setViewMode('p1', tabId, 'chat');
+    store().restartTab('p1', tabId);
+    const [freshId] = allTabIds(workspace().root);
+    expect(terminal(freshId).viewMode).toBe('chat');
+  });
+
+  it('remembers the view across a restart of the app', () => {
+    const tabId = withAgent();
+    store().setViewMode('p1', tabId, 'chat');
+    const saved = JSON.parse(localStorage.getItem('runova-workspaces') ?? '{}');
+    expect(saved.state.workspaces.p1.tabs[tabId].viewMode).toBe('chat');
+  });
+
+  it('leaves a file tab alone', () => {
+    store().openProject('p1');
+    store().openFile('p1', 'E:\\proj\\a.ts');
+    const [tabId] = Object.keys(workspace().tabs);
+    const before = workspace();
+    store().setViewMode('p1', tabId, 'chat');
     expect(workspace()).toStrictEqual(before);
   });
 });

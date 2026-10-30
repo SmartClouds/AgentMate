@@ -260,8 +260,11 @@ public enum DockerPruneTarget
     /// <summary>Unused networks.</summary>
     Networks,
 
-    /// <summary>Containers, networks and images; volumes too with IncludeVolumes.</summary>
+    /// <summary>Containers, networks, images and the build cache; volumes too with IncludeVolumes.</summary>
     System,
+
+    /// <summary>All of the build cache, in use or not.</summary>
+    BuildCache,
 }
 
 [TranspilationSource]

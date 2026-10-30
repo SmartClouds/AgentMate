@@ -7,7 +7,13 @@ export interface MarkdownMessageProps {
   className?: string;
 }
 
-/** Renders chat message content as markdown, scoped to look right inside a small chat bubble. */
+/** Long words (URLs, paths, hashes) break anywhere rather than push the chat sideways. */
+const WRAP = 'break-words [overflow-wrap:anywhere]';
+
+/**
+ * Renders chat message content as markdown, scoped to look right inside a small chat bubble.
+ * Nothing in it widens the bubble: text and code wrap, and only a wide table scrolls, in its box.
+ */
 export function MarkdownMessage({ content, className }: MarkdownMessageProps): React.JSX.Element {
   return (
     <div
@@ -19,7 +25,7 @@ export function MarkdownMessage({ content, className }: MarkdownMessageProps): R
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          p: ({ children }) => <p className="whitespace-pre-wrap">{children}</p>,
+          p: ({ children }) => <p className={cn('whitespace-pre-wrap', WRAP)}>{children}</p>,
           a: ({ children, href }) => (
             <a
               href={href}
@@ -32,7 +38,7 @@ export function MarkdownMessage({ content, className }: MarkdownMessageProps): R
           ),
           ul: ({ children }) => <ul className="list-disc space-y-1 pl-5">{children}</ul>,
           ol: ({ children }) => <ol className="list-decimal space-y-1 pl-5">{children}</ol>,
-          li: ({ children }) => <li>{children}</li>,
+          li: ({ children }) => <li className={WRAP}>{children}</li>,
           h1: ({ children }) => <h1 className="text-base font-semibold">{children}</h1>,
           h2: ({ children }) => <h2 className="text-sm font-semibold">{children}</h2>,
           h3: ({ children }) => <h3 className="text-sm font-semibold">{children}</h3>,
@@ -47,7 +53,8 @@ export function MarkdownMessage({ content, className }: MarkdownMessageProps): R
               return (
                 <code
                   className={cn(
-                    'block overflow-x-auto rounded-lg bg-foreground/[0.08] p-3 font-mono text-xs',
+                    'block whitespace-pre-wrap rounded-lg bg-foreground/[0.08] p-3 font-mono text-xs',
+                    WRAP,
                     codeClassName,
                   )}
                   {...props}
@@ -58,7 +65,7 @@ export function MarkdownMessage({ content, className }: MarkdownMessageProps): R
             }
             return (
               <code
-                className="rounded bg-foreground/[0.08] px-1 py-0.5 font-mono text-[0.85em]"
+                className="break-all rounded bg-foreground/[0.08] px-1 py-0.5 font-mono text-[0.85em]"
                 {...props}
               >
                 {children}
@@ -67,7 +74,7 @@ export function MarkdownMessage({ content, className }: MarkdownMessageProps): R
           },
           pre: ({ children }) => <pre className="whitespace-pre-wrap">{children}</pre>,
           table: ({ children }) => (
-            <div className="overflow-x-auto">
+            <div className="max-w-full overflow-x-auto">
               <table className="w-full border-collapse text-xs">{children}</table>
             </div>
           ),

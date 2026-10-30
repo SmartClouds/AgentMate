@@ -71,6 +71,7 @@ const PRUNE_TARGETS: ReadonlySet<string> = new Set<DockerPruneTarget>([
   'volumes',
   'networks',
   'system',
+  'buildCache',
 ]);
 const TAIL = { min: 0, max: 5_000 };
 const SIZE = { min: 1, max: 1_000 };
@@ -283,7 +284,9 @@ function volumeRemove(value: unknown): DeployVolumeRemoveInput {
 function pruneInput(value: unknown): DeployDockerPruneInput {
   const input = object(value, 'what to prune');
   if (typeof input.target !== 'string' || !PRUNE_TARGETS.has(input.target)) {
-    throw new Error('Prune containers, images, volumes, networks or the whole system.');
+    throw new Error(
+      'Prune containers, images, volumes, networks, the build cache or the whole system.',
+    );
   }
   return {
     serverId: serverId(input.serverId),

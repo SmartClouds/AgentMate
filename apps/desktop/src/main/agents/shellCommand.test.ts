@@ -48,6 +48,64 @@ describe('parseModelReply', () => {
     expect(parseModelReply('I would run df -h')).toBeNull();
     expect(parseModelReply('RUN: ``')).toBeNull();
   });
+
+  it('keeps only the first line of FINISHED unless long answers are on', () => {
+    expect(parseModelReply('FINISHED: line one\nline two')).toEqual({
+      kind: 'finished',
+      message: 'line one',
+    });
+  });
+
+  describe('with long answers', () => {
+    const long = { multilineFinished: true };
+
+    it('takes everything after FINISHED, over several lines', () => {
+      expect(parseModelReply('FINISHED: The app has two services:\n\n- web\n- db', long)).toEqual({
+        kind: 'finished',
+        message: 'The app has two services:\n\n- web\n- db',
+      });
+    });
+
+    it('lets the answer start on the next line', () => {
+      expect(parseModelReply('FINISHED:\n## Summary\nAll good.', long)).toEqual({
+        kind: 'finished',
+        message: '## Summary\nAll good.',
+      });
+    });
+
+    it('does not read a RUN line inside the answer as a command', () => {
+      expect(
+        parseModelReply('FINISHED: To check it yourself:\nRUN: docker ps\nThat lists them.', long),
+      ).toEqual({
+        kind: 'finished',
+        message: 'To check it yourself:\nRUN: docker ps\nThat lists them.',
+      });
+    });
+
+    it('still runs a command that comes before FINISHED', () => {
+      expect(parseModelReply('RUN: docker ps\nFINISHED: done', long)).toEqual({
+        kind: 'run',
+        command: 'docker ps',
+      });
+    });
+
+    it('caps a very long answer', () => {
+      const parsed = parseModelReply(`FINISHED: ${'a'.repeat(9000)}`, long);
+      expect(parsed?.kind).toBe('finished');
+      expect(parsed && 'message' in parsed ? parsed.message.length : 0).toBeLessThanOrEqual(8000);
+    });
+
+    it('reads RUN and NEEDS_INPUT as before', () => {
+      expect(parseModelReply('NEEDS_INPUT: which port?\nmore', long)).toEqual({
+        kind: 'needs-input',
+        message: 'which port?',
+      });
+      expect(parseModelReply('Sure.\nRUN: uptime', long)).toEqual({
+        kind: 'run',
+        command: 'uptime',
+      });
+    });
+  });
 });
 
 describe('isRiskyCommand', () => {

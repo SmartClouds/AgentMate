@@ -1,6 +1,9 @@
 import { ipcRenderer } from 'electron';
+import type { SshAgentHistoryRun } from '../shared/apiTypes';
 import type { AssistantModeInfo } from '../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type {
+  DeployAssistantChatInput,
+  DeployAssistantChatSummary,
   DeployAssistantModeInput,
   DeployAssistantOutputEvent,
   DeployAssistantProgressEvent,
@@ -42,6 +45,14 @@ export function createDeployAssistant(subscribe: Subscribe) {
       ipcRenderer.invoke(IPC.deployAssistant.getMode, serverId),
     setMode: (input: DeployAssistantModeInput): Promise<AssistantModeInfo> =>
       ipcRenderer.invoke(IPC.deployAssistant.setMode, input),
+    /** The server's past chats, from this session of the app and earlier ones. */
+    chats: (serverId: string): Promise<DeployAssistantChatSummary[]> =>
+      ipcRenderer.invoke(IPC.deployAssistant.chats, serverId),
+    /** A chat's runs, oldest first, to show it again and carry it on. Null once it is gone. */
+    chat: (input: DeployAssistantChatInput): Promise<SshAgentHistoryRun[] | null> =>
+      ipcRenderer.invoke(IPC.deployAssistant.chat, input),
+    deleteChat: (input: DeployAssistantChatInput): Promise<void> =>
+      ipcRenderer.invoke(IPC.deployAssistant.deleteChat, input),
     onProgress: (cb: (event: DeployAssistantProgressEvent) => void): (() => void) =>
       subscribe(IPC.deployAssistant.onProgress, cb),
     onOutput: (cb: (event: DeployAssistantOutputEvent) => void): (() => void) =>

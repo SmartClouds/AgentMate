@@ -1,6 +1,8 @@
 import type { EffortLevel } from '@runova/core';
 import type { IpcMainInvokeEvent } from 'electron';
 import type {
+  DeployAssistantAppInput,
+  DeployAssistantChatInput,
   DeployAssistantContextInput,
   DeployAssistantModeInput,
   DeployAssistantProjectInput,
@@ -42,6 +44,9 @@ export interface DeployAssistantHandlerDeps {
     | 'state'
     | 'mode'
     | 'setMode'
+    | 'chats'
+    | 'chat'
+    | 'deleteChat'
   >;
   journals: Pick<JournalSubscriptions, 'watch' | 'unwatch'>;
   guard: (event: IpcMainInvokeEvent) => boolean;
@@ -95,6 +100,15 @@ function projectInput(value: unknown): DeployAssistantProjectInput | undefined {
   return { projectId: input.projectId, allowEdits: input.allowEdits };
 }
 
+function appInput(value: unknown): DeployAssistantAppInput | undefined {
+  if (value === undefined || value === null) return undefined;
+  const input = object(value, 'an app');
+  if (typeof input.stackId !== 'string' || !GUID.test(input.stackId)) {
+    throw new Error('That is not an app.');
+  }
+  return { stackId: input.stackId };
+}
+
 export function startInput(value: unknown): DeployAssistantStartInput {
   const input = object(value, 'a task for the AI');
   const prompt = text(input.prompt, MAX_PROMPT, 'task');
@@ -103,6 +117,8 @@ export function startInput(value: unknown): DeployAssistantStartInput {
   if (effort && !EFFORTS.has(effort)) throw new Error('That is not a reasoning effort.');
   const found = context(input.context);
   const project = projectInput(input.project);
+  const app = appInput(input.app);
+  const continueFromRunId = optionalId(input.continueFromRunId, GUID, 'chat');
   return {
     serverId: serverId(input.serverId),
     prompt,
@@ -112,7 +128,17 @@ export function startInput(value: unknown): DeployAssistantStartInput {
     ...(found ? { context: found } : {}),
     ...(input.continuePrevious === true ? { continuePrevious: true } : {}),
     ...(project ? { project } : {}),
+    ...(app ? { app } : {}),
+    ...(continueFromRunId ? { continueFromRunId } : {}),
   };
+}
+
+export function chatInput(value: unknown): DeployAssistantChatInput {
+  const input = object(value, 'a chat');
+  if (typeof input.runId !== 'string' || !GUID.test(input.runId)) {
+    throw new Error('That is not a chat.');
+  }
+  return { serverId: serverId(input.serverId), runId: input.runId };
 }
 
 export function modeInput(value: unknown): DeployAssistantModeInput {
@@ -177,6 +203,15 @@ export function registerDeployAssistantHandlers(deps: DeployAssistantHandlerDeps
   handle(IPC.deployAssistant.state, (_owner, id) => assistant.state(serverId(id)));
   handle(IPC.deployAssistant.getMode, (_owner, id) => assistant.mode(serverId(id)));
   handle(IPC.deployAssistant.setMode, (_owner, value) => assistant.setMode(modeInput(value)));
+  handle(IPC.deployAssistant.chats, (_owner, id) => assistant.chats(serverId(id)));
+  handle(IPC.deployAssistant.chat, (_owner, value) => {
+    const chat = chatInput(value);
+    return assistant.chat(chat.serverId, chat.runId);
+  });
+  handle(IPC.deployAssistant.deleteChat, (_owner, value) => {
+    const chat = chatInput(value);
+    return assistant.deleteChat(chat.serverId, chat.runId);
+  });
 
   handle(IPC.deployLogs.watchJournal, (owner, value) =>
     journals.watch(owner(), journalInput(value)),

@@ -234,6 +234,24 @@ describe('Disk use', () => {
     );
   });
 
+  it('clears the build cache, and links to the Cleanup section to pick items', async () => {
+    const { user, bridge } = await openTab('Disk use', {
+      'deployDocker.prune': async () => ({ removed: 12, reclaimedBytes: 300 * 1024 * 1024 }),
+    });
+    const kinds = await screen.findByRole('list', { name: 'Disk use' });
+    await user.click(within(kinds).getByRole('button', { name: /Remove the build cache/ }));
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Remove' }),
+    );
+    await waitFor(() =>
+      expect(bridge.$fn('deployDocker.prune')).toHaveBeenCalledWith(
+        expect.objectContaining({ target: 'buildCache' }),
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: 'Pick what to remove' }));
+    expect(screen.getByTestId('path')).toHaveTextContent(`server=${SERVER.id}&view=cleanup`);
+  });
+
   it('says why a prune failed, and keeps pruning from Operators', async () => {
     const { user } = await openTab('Disk use', { 'deployDocker.prune': down });
     const kinds = await screen.findByRole('list', { name: 'Disk use' });

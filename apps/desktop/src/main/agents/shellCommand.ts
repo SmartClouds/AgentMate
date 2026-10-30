@@ -53,7 +53,25 @@ export type ParsedReply =
   | { kind: 'finished'; message: string }
   | { kind: 'needs-input'; message: string };
 
-export function parseModelReply(text: string): ParsedReply | null {
+/** The longest answer a FINISHED that spans lines may be. */
+export const MAX_ANSWER_CHARS = 8000;
+
+export interface ParseReplyOptions {
+  /**
+   * FINISHED takes the rest of the reply when it comes first, so an answer to a question can
+   * span several lines (Markdown). A RUN line inside such an answer is part of it, not a command.
+   */
+  multilineFinished?: boolean;
+}
+
+export function parseModelReply(text: string, options: ParseReplyOptions = {}): ParsedReply | null {
+  if (options.multilineFinished) {
+    const first = text.match(/^\s*(RUN|FINISHED|NEEDS_INPUT)\b:?/im);
+    if (first?.[1]?.toUpperCase() === 'FINISHED' && first.index !== undefined) {
+      const answer = text.slice(first.index + first[0].length).trim();
+      return { kind: 'finished', message: answer.slice(0, MAX_ANSWER_CHARS).trimEnd() };
+    }
+  }
   const runMatch = text.match(/^\s*RUN:\s*(.+)$/im);
   if (runMatch) {
     const command = runMatch[1]

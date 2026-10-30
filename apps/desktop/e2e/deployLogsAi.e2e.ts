@@ -18,6 +18,8 @@ test.skip(!dotnetAvailable(), 'needs the .NET SDK to build the server core DevHo
 /** The DevHost's fixed development owner (see its DevHost.cs). */
 const DEV_PASSWORD = 'runova-local-password';
 const CRASHING = 'newsletter-sender-1';
+/** A path with nowhere to break, which must wrap rather than widen the drawer. */
+const LONG_PATH = `/var/lib/docker/volumes/${'0123456789abcdef'.repeat(12)}/_data`;
 
 let devHost: DevHost | undefined;
 let ollama: FakeOllama | undefined;
@@ -45,7 +47,13 @@ test('a crash loop, diagnosed: a check runs by itself, a change waits for approv
   ollama = await startFakeOllama([
     `RUN: docker logs --tail 50 ${CRASHING}`,
     `RUN: docker restart ${CRASHING}`,
-    'FINISHED: The sender cannot reach its SMTP relay; restarted it.',
+    [
+      'FINISHED: The sender cannot reach its SMTP relay; restarted it.',
+      '',
+      '- It logged ECONNREFUSED for the relay',
+      `- Its queue lives in ${LONG_PATH}`,
+    ].join('
+'),
   ]);
   launched = await launchApp({
     settings: {
@@ -117,9 +125,28 @@ test('a crash loop, diagnosed: a check runs by itself, a change waits for approv
     name: `Step 2: docker restart ${CRASHING}`,
   });
   await expect(change.getByLabel('Output of step 2')).toContainText(CRASHING, { timeout: 60_000 });
-  await expect(drawer.getByText(/Finished: The sender cannot reach its SMTP relay/)).toBeVisible({
+  // The answer is Markdown over several lines, and nothing in it widens the drawer.
+  const answer = drawer.getByRole('article', { name: 'AI answer' });
+  await expect(answer).toContainText('The sender cannot reach its SMTP relay', {
     timeout: 60_000,
   });
+  await expect(answer.getByRole('listitem')).toHaveCount(2);
+  await expect(answer.getByRole('button', { name: 'Copy message' })).toBeVisible();
+  const run = drawer.getByLabel('Run');
+  const sideways = () => run.evaluate((element) => element.scrollWidth - element.clientWidth);
+  expect(await sideways()).toBeLessThanOrEqual(0);
+  await drawer.getByRole('button', { name: 'Maximize' }).click();
+  expect(await sideways()).toBeLessThanOrEqual(0);
+  await drawer.getByRole('button', { name: 'Restore size' }).click();
+
+  // The chat is in the server's history, and opens back up from there.
+  await drawer.getByRole('button', { name: 'Chat history' }).click();
+  const history = drawer.getByRole('region', { name: 'Chat history' });
+  const past = history.getByRole('button', { name: /^Find out why/ });
+  await expect(past).toContainText('1 question');
+  await expect(past).toContainText('Open now');
+  await past.click();
+  await expect(answer).toBeVisible();
 
   // The sender runs again, so the feed drops the crash loop on its next look (every 30 seconds).
   await expect(crash).toHaveCount(0, { timeout: 75_000 });

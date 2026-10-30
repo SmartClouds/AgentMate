@@ -423,7 +423,13 @@ const DISK_KINDS: Array<{
     prune: 'volumes',
     what: 'volumes no container uses',
   },
-  { key: 'buildCache', label: 'Build cache', icon: <Wrench />, what: 'the build cache' },
+  {
+    key: 'buildCache',
+    label: 'Build cache',
+    icon: <Wrench />,
+    prune: 'buildCache',
+    what: 'the build cache',
+  },
 ];
 
 export function DiskUsageTab({
@@ -436,6 +442,7 @@ export function DiskUsageTab({
   roles: ResourceRoles;
 }): React.JSX.Element {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [pruning, setPruning] = useState<DockerPruneTarget | null>(null);
   const usage = useQuery({
     queryKey: queryKeys.deployDiskUsage(serverId),
@@ -489,6 +496,17 @@ export function DiskUsageTab({
           Docker uses {formatBytes(total)} on {serverName}; up to {formatBytes(free)} of it could be
           freed.
         </p>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() =>
+            navigate(
+              `/deploy?${new URLSearchParams({ server: serverId, view: 'cleanup' }).toString()}`,
+            )
+          }
+        >
+          Pick what to remove
+        </Button>
         {roles.canAdmin && (
           <Button
             size="sm"

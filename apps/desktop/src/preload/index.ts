@@ -124,6 +124,9 @@ import type {
   BrowserElementShot,
   BrowserGuestShortcut,
   BrowserOpenInNewTab,
+  ChatAppend,
+  ChatSessionSpec,
+  ChatSubscribeResult,
   CleanupAfterMergeInput,
   CloneIntoInput,
   CloneIntoResult,
@@ -2842,6 +2845,16 @@ const runProposals = {
     subscribe(IPC.runProposals.onChanged, callback),
 };
 
+/** The chat view of a Workspace agent tab, read from the transcript its CLI writes. */
+const agentChat = {
+  subscribe: (spec: ChatSessionSpec): Promise<ChatSubscribeResult> =>
+    ipcRenderer.invoke(IPC.agentChat.subscribe, spec),
+  unsubscribe: (sessionId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.agentChat.unsubscribe, sessionId),
+  onAppend: (callback: (append: ChatAppend) => void): (() => void) =>
+    subscribe(IPC.agentChat.onAppend, callback),
+};
+
 const runovaApi = {
   platform: process.platform,
   windowsBuild: windowsBuildNumber(),
@@ -2856,6 +2869,7 @@ const runovaApi = {
   sshAgent,
   rdpAgent,
   agents,
+  agentChat,
   power,
   projects,
   skills,

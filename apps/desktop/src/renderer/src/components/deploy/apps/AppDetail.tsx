@@ -8,7 +8,7 @@ import type {
 } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, useReducedMotion } from 'framer-motion';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
   ArrowLeft,
@@ -55,6 +55,7 @@ import { domainsForPort, proxyBlockReason, publishedPort } from '@/lib/deploy/ap
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { confirmDialog } from '@/stores/confirmStore';
+import { useDeployAssistantStore } from '@/stores/deployAssistantStore';
 import { useFinishedOnce, useFollowedJob } from '@/stores/deployFollowedJobStore';
 import { JobLogDialog } from '../overview/JobLogDialog';
 import { RegistryPlanCard } from '../registries/RegistryPlanCard';
@@ -611,6 +612,15 @@ export function AppDetail({
 
   const data = details.data;
   const stack = data?.stack;
+  const setPageApp = useDeployAssistantStore((state) => state.setPageApp);
+  const appName = stack?.name;
+
+  // The Deploy AI attaches the open app to a new chat, so a question is about it by default.
+  useEffect(() => {
+    if (!appName) return;
+    setPageApp({ serverId, stackId, name: appName });
+    return () => setPageApp(null);
+  }, [serverId, stackId, appName, setPageApp]);
   const revisions = data?.revisions ?? [];
   const latest = revisions[0]?.number ?? null;
   const followed = followJob

@@ -17,6 +17,7 @@ function progress(
 }
 
 const steps = () => useDeployAssistantStore.getState().runs[S]?.steps ?? [];
+const EMPTY = { progress: null, steps: [], messages: [] };
 
 beforeEach(() => {
   useDeployAssistantStore.setState({
@@ -25,6 +26,9 @@ beforeEach(() => {
     runs: {},
     prompts: {},
     maximized: false,
+    pageApp: null,
+    dismissedApps: {},
+    continueFrom: {},
   });
 });
 
@@ -163,6 +167,77 @@ describe('deployAssistantStore', () => {
     expect(useDeployAssistantStore.getState().maximized).toBe(true);
     store.setMaximized(false);
     expect(useDeployAssistantStore.getState().maximized).toBe(false);
+  });
+
+  describe('the app the user has open', () => {
+    const shop = { stackId: 'stack-shop', name: 'shop' };
+
+    it('knows which app page is showing, until it is left', () => {
+      const store = useDeployAssistantStore.getState();
+      store.setPageApp({ serverId: S, ...shop });
+      expect(useDeployAssistantStore.getState().pageApp).toEqual({ serverId: S, ...shop });
+      store.setPageApp(null);
+      expect(useDeployAssistantStore.getState().pageApp).toBeNull();
+    });
+
+    it('keeps a chat’s app through its follow-ups, and a new chat starts without one', () => {
+      const store = useDeployAssistantStore.getState();
+      store.reset(S, 'How is it?', shop);
+      expect(useDeployAssistantStore.getState().runs[S]?.app).toEqual(shop);
+      store.followUp(S, 'And now?');
+      expect(useDeployAssistantStore.getState().runs[S]?.app).toEqual(shop);
+      store.followUp(S, 'About the other one', { stackId: 'stack-blog', name: 'blog' });
+      expect(useDeployAssistantStore.getState().runs[S]?.app?.name).toBe('blog');
+      store.reset(S);
+      expect(useDeployAssistantStore.getState().runs[S]?.app).toBeUndefined();
+    });
+
+    it('takes an app off a chat, or puts one on, without touching the rest', () => {
+      const store = useDeployAssistantStore.getState();
+      store.reset(S, 'How is it?', shop);
+      store.setChatApp(S, null);
+      expect(useDeployAssistantStore.getState().runs[S]?.app).toBeUndefined();
+      expect(useDeployAssistantStore.getState().runs[S]?.prompt).toBe('How is it?');
+      store.setChatApp(S, shop);
+      expect(useDeployAssistantStore.getState().runs[S]?.app).toEqual(shop);
+      store.setChatApp('srv-without-a-chat', shop);
+      expect(useDeployAssistantStore.getState().runs['srv-without-a-chat']).toBeUndefined();
+    });
+
+    it('remembers an app the user took off, until they put it back', () => {
+      const store = useDeployAssistantStore.getState();
+      store.dismissApp(S, shop.stackId);
+      expect(useDeployAssistantStore.getState().dismissedApps[S]).toBe(shop.stackId);
+      store.dismissApp(S, null);
+      expect(useDeployAssistantStore.getState().dismissedApps[S]).toBeUndefined();
+    });
+  });
+
+  describe('a chat from the history', () => {
+    it('shows it as it was and carries it on from its newest run', () => {
+      const store = useDeployAssistantStore.getState();
+      store.reset(S, 'Something else');
+      store.openChat(
+        S,
+        {
+          prompt: 'Why is shop slow?',
+          steps: [],
+          messages: [],
+          earlier: [],
+          progress: { sessionId: `deploy:${S}`, phase: 'finished', step: 1, message: 'Memory.' },
+        },
+        'run-7',
+      );
+      const state = useDeployAssistantStore.getState();
+      expect(state.runs[S]?.prompt).toBe('Why is shop slow?');
+      expect(state.continueFrom[S]).toBe('run-7');
+
+      store.clearContinueFrom(S);
+      expect(useDeployAssistantStore.getState().continueFrom[S]).toBeUndefined();
+      store.openChat(S, { ...EMPTY, earlier: [] }, 'run-8');
+      store.reset(S);
+      expect(useDeployAssistantStore.getState().continueFrom[S]).toBeUndefined();
+    });
   });
 
   describe('sync', () => {

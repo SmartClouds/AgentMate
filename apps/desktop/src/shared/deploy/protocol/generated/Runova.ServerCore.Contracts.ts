@@ -1552,7 +1552,7 @@ export type DockerDiskUsage = {
 }
 
 /** Transpiled from Runova.ServerCore.Contracts.DockerPruneTarget */
-export type DockerPruneTarget = "containers" | "images" | "volumes" | "networks" | "system";
+export type DockerPruneTarget = "containers" | "images" | "volumes" | "networks" | "system" | "buildCache";
 
 /** Transpiled from Runova.ServerCore.Contracts.DockerPruneRequest */
 export type DockerPruneRequest = {

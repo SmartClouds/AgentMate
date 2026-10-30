@@ -34,6 +34,17 @@ export function isMenuPosition(value: unknown): value is MenuPosition {
 }
 
 /**
+ * How a Workspace agent tab shows its CLI: the CLI itself in a terminal, or a chat view drawn from
+ * the transcript the CLI writes while the same CLI keeps running underneath.
+ */
+export const AGENT_TAB_MODES = ['cli', 'chat'] as const;
+export type AgentTabMode = (typeof AGENT_TAB_MODES)[number];
+
+export function isAgentTabMode(value: unknown): value is AgentTabMode {
+  return AGENT_TAB_MODES.includes(value as AgentTabMode);
+}
+
+/**
  * Where the main window opens. 'last' reopens the page the app was on when it closed; the rest
  * are the sidebar's pages, so the list has to follow the sidebar when a page is added there.
  */
@@ -484,6 +495,8 @@ export interface AppSettings {
   menuPosition: MenuPosition;
   /** The page the main window opens on: the one it was on when the app closed, or a fixed page. */
   startupPage: StartupPage;
+  /** How a Workspace agent tab shows its CLI until the user switches that tab's view. */
+  defaultAgentTabMode: AgentTabMode;
   /** Folder that holds the user's projects; folder pickers open here instead of the OS default. */
   projectsRootPath: string | null;
   skillRepositoryIds: string[];

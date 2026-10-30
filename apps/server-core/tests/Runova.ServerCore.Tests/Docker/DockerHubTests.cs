@@ -353,6 +353,45 @@ public sealed class DockerHubTests
     }
 
     [Fact]
+    public async Task Admins_clear_the_build_cache_and_a_system_prune_clears_it_too()
+    {
+        await using var operatorHarness = await AuthHarness.CreateAsync(CoreRoles.Operator);
+        await using var operatorHub = await ConnectAsync(operatorHarness);
+        await using var harness = await AuthHarness.CreateAsync(CoreRoles.Admin);
+        await using var hub = await ConnectAsync(harness);
+        await using var systemHarness = await AuthHarness.CreateAsync(CoreRoles.Admin);
+        await using var systemHub = await ConnectAsync(systemHarness);
+
+        var notAdmin = await Assert.ThrowsAsync<HubException>(() =>
+            operatorHub.InvokeAsync<DockerPruneResult>(nameof(ICoreHub.PruneDocker), new DockerPruneRequest(DockerPruneTarget.BuildCache), Cancel));
+        var before = await hub.InvokeAsync<DockerDiskUsage>(nameof(ICoreHub.GetDockerDiskUsage), Cancel);
+        var cleared = await hub.InvokeAsync<DockerPruneResult>(nameof(ICoreHub.PruneDocker), new DockerPruneRequest(DockerPruneTarget.BuildCache), Cancel);
+        var after = await hub.InvokeAsync<DockerDiskUsage>(nameof(ICoreHub.GetDockerDiskUsage), Cancel);
+        await systemHub.InvokeAsync<DockerPruneResult>(nameof(ICoreHub.PruneDocker), new DockerPruneRequest(DockerPruneTarget.System), Cancel);
+
+        Assert.Contains("unauthorized", notAdmin.Message, StringComparison.Ordinal);
+        Assert.Equal(new DockerPruneResult(before.BuildCache.Count, before.BuildCache.SizeBytes), cleared);
+        Assert.True(cleared.ReclaimedBytes > 0);
+        Assert.Equal(new DockerDiskUsageEntry(0, 0, 0, 0), after.BuildCache);
+        Assert.Contains("prune BuildCache", Engine(systemHarness).Changes);
+        Assert.Contains(await AuditAsync(harness), e => e.Action == "docker.prune" && e.Result == "success" && e.Parameters!.Contains("\"target\":\"buildCache\"", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task A_prune_target_the_core_does_not_know_is_refused_in_general_words()
+    {
+        // What a core from before a new target says, which the app turns into "update the core".
+        await using var harness = await AuthHarness.CreateAsync(CoreRoles.Admin);
+        await using var hub = await ConnectAsync(harness);
+
+        var unknown = await Assert.ThrowsAsync<HubException>(() =>
+            hub.InvokeAsync<DockerPruneResult>(nameof(ICoreHub.PruneDocker), new { target = "somethingNew", allImages = false, includeVolumes = false }, Cancel));
+
+        Assert.Equal("Failed to invoke 'PruneDocker' due to an error on the server.", unknown.Message);
+        Assert.Empty(Engine(harness).Changes);
+    }
+
+    [Fact]
     public async Task A_stopped_engine_is_said_plainly()
     {
         await using var harness = await AuthHarness.CreateAsync(CoreRoles.Viewer);

@@ -95,6 +95,29 @@ describe('saving', () => {
     expect(write.mock.calls[0]?.[0].map((r) => r.id).sort()).toEqual(['r2', 'r3', 'r4', 'r5']);
   });
 
+  it('counts Deploy AI chats apart from SSH tasks on the same id', async () => {
+    const { write, history } = setup();
+    const deploy = { scope: 'deploy' as const };
+    history.save([
+      run('r1'),
+      run('r2'),
+      run('r3'),
+      run('r4', deploy),
+      run('r5', deploy),
+      run('r6', deploy),
+      run('r7', deploy),
+    ]);
+    await history.flush();
+    expect(write.mock.calls[0]?.[0].map((r) => r.id).sort()).toEqual([
+      'r1',
+      'r2',
+      'r3',
+      'r5',
+      'r6',
+      'r7',
+    ]);
+  });
+
   it('flush writes what is pending at once, and nothing when there is not', async () => {
     const { write, history } = setup();
     await history.flush();

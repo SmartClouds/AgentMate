@@ -1,6 +1,7 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { ConfirmDialogHost } from '@/components/ConfirmDialog';
+import { useDeployAssistantStore } from '@/stores/deployAssistantStore';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
 import { nginxStatus, site } from '../sites/testing/fixtures';
 import type { AppsAccess } from './hooks';
@@ -81,6 +82,19 @@ function finishJob(
 }
 
 describe('AppDetail', () => {
+  it('tells the Deploy AI which app is open, until the page is left', async () => {
+    const { unmount } = renderDetail();
+    await waitFor(() =>
+      expect(useDeployAssistantStore.getState().pageApp).toEqual({
+        serverId: SERVER.id,
+        stackId: STACK_ID,
+        name: sampleStack().name,
+      }),
+    );
+    unmount();
+    expect(useDeployAssistantStore.getState().pageApp).toBeNull();
+  });
+
   it('shimmers, then shows the app, its services, routes and the latest deploy', async () => {
     renderDetail();
     expect(document.querySelector('[aria-busy="true"]')).not.toBeNull();

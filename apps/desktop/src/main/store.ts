@@ -24,6 +24,7 @@ import {
   DASHBOARD_CHART_IDS,
   DEFAULT_DASHBOARD,
   DEFAULT_TERMINAL_BACKGROUND_COLOR,
+  isAgentTabMode,
   isMenuPosition,
   isPipelineFailureOpen,
   isRunDockerStopMode,
@@ -278,6 +279,9 @@ function withSettingsMigrations(settings: AppSettings): AppSettings {
     theme: isThemeMode(settings.theme) ? settings.theme : 'system',
     menuPosition: isMenuPosition(settings.menuPosition) ? settings.menuPosition : 'left',
     startupPage: isStartupPage(settings.startupPage) ? settings.startupPage : 'last',
+    defaultAgentTabMode: isAgentTabMode(settings.defaultAgentTabMode)
+      ? settings.defaultAgentTabMode
+      : 'cli',
     workspaceTerminalCustomBackground: settings.workspaceTerminalCustomBackground === true,
     workspaceTerminalBackgroundColor:
       normalizeProjectColor(settings.workspaceTerminalBackgroundColor) ??

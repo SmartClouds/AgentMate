@@ -37,6 +37,11 @@ import { ADMIN_ROLES, type CoreCallDeps, callCore } from './coreCalls';
  */
 
 const DEFAULT_TAIL = 200;
+/**
+ * A core from before the build cache could be pruned cannot read that target, and SignalR says
+ * only this much about it.
+ */
+const UNREADABLE_ARGUMENTS = /due to an error on the server/i;
 /** A log tail that has not finished by then is cut short with what came. */
 const TAIL_WAIT_MS = 15_000;
 
@@ -171,14 +176,27 @@ export class DeployDocker {
     return this.run(serverId, (hub) => hub.getDockerDiskUsage());
   }
 
-  prune(input: DeployDockerPruneInput): Promise<DockerPruneResult> {
-    return this.run(input.serverId, (hub) =>
-      hub.pruneDocker({
-        target: input.target,
-        allImages: input.allImages ?? false,
-        includeVolumes: input.includeVolumes ?? false,
-      }),
-    );
+  async prune(input: DeployDockerPruneInput): Promise<DockerPruneResult> {
+    try {
+      return await this.run(input.serverId, (hub) =>
+        hub.pruneDocker({
+          target: input.target,
+          allImages: input.allImages ?? false,
+          includeVolumes: input.includeVolumes ?? false,
+        }),
+      );
+    } catch (error) {
+      if (
+        input.target === 'buildCache' &&
+        error instanceof Error &&
+        UNREADABLE_ARGUMENTS.test(error.message)
+      ) {
+        throw new Error(
+          'This server runs an older core that cannot clear the build cache. Update the core from the Overview, then try again.',
+        );
+      }
+      throw error;
+    }
   }
 
   private run<T>(serverId: string, work: (hub: ICoreHub) => Promise<T>): Promise<T> {

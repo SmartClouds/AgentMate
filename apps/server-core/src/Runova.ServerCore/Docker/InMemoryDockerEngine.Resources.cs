@@ -182,7 +182,7 @@ internal sealed partial class InMemoryDockerEngine
                 new DockerDiskUsageEntry(_images.Count, _images.Count(i => used.Contains(i.Id)), _images.Sum(i => i.SizeBytes), _images.Where(i => !used.Contains(i.Id)).Sum(i => i.SizeBytes)),
                 new DockerDiskUsageEntry(_containers.Count, running.Count, _containers.Count * containerLayer, (_containers.Count - running.Count) * containerLayer),
                 new DockerDiskUsageEntry(_volumes.Count, _volumes.Count(v => UsersOf(v) > 0), _volumes.Sum(v => v.SizeBytes), _volumes.Where(v => UsersOf(v) == 0).Sum(v => v.SizeBytes)),
-                new DockerDiskUsageEntry(3, 0, 412 * 1024 * 1024, 412 * 1024 * 1024)));
+                new DockerDiskUsageEntry(_buildCache.Count, 0, _buildCache.SizeBytes, _buildCache.SizeBytes)));
         }
     }
 
@@ -211,6 +211,10 @@ internal sealed partial class InMemoryDockerEngine
                     var idle = _networks.Where(n => !_builtInNetworks.Contains(n.Name) && !_containers.Any(c => c.Networks.Contains(n.Name))).ToList();
                     idle.ForEach(n => _networks.Remove(n));
                     return Task.FromResult(new DockerPruneResult(idle.Count, 0));
+                case DockerPruneTarget.BuildCache:
+                    var cache = _buildCache;
+                    _buildCache = (0, 0);
+                    return Task.FromResult(new DockerPruneResult(cache.Count, cache.SizeBytes));
                 default:
                     throw new ArgumentOutOfRangeException(nameof(target), "Prune one kind at a time.");
             }

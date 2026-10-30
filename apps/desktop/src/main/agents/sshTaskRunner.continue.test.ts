@@ -30,8 +30,21 @@ const fake = vi.hoisted(() => {
     /** The next CLI call never answers by itself, only when it is cancelled. */
     cliHangs: false,
     cancelers: new Map<string, () => void>(),
-    /** What the history file holds when the runner first reads it. */
-    savedHistory: [] as unknown[],
+    /** What the history file holds when the runner first reads it: a task from yesterday. */
+    savedHistory: [
+      {
+        id: 'from-yesterday',
+        sessionId: 'tab-gone',
+        serverId: 'srv-1',
+        prompt: 'rotate the logs',
+        aiLabel: 'Gemini',
+        startedAt: 5,
+        endedAt: 6,
+        status: 'finished',
+        entries: [{ kind: 'finished', at: 6, text: 'Rotated.' }],
+        settings: { target: 'ssh', mode: 'autonomous', cliId: null, modelId: null, effort: null },
+      },
+    ] as unknown[],
     /** Every write of the history file, oldest first. */
     writes: [] as unknown[][],
   };
@@ -284,23 +297,11 @@ describe('the history on disk', () => {
     const saved = fake.state.writes.at(-1) as SshAgentHistoryRun[];
     expect(saved.some((r) => r.sessionId === onServer && r.status === 'finished')).toBe(true);
     expect(saved.some((r) => r.sessionId === local)).toBe(false);
+    // The file is read before the first write, so tasks from an earlier session stay in it.
+    expect(saved.some((r) => r.id === 'from-yesterday')).toBe(true);
   });
 
   it('lists the saved tasks of a server after a restart, and they can be continued', async () => {
-    fake.state.savedHistory = [
-      {
-        id: 'from-yesterday',
-        sessionId: 'tab-gone',
-        serverId: 'srv-1',
-        prompt: 'rotate the logs',
-        aiLabel: 'Gemini',
-        startedAt: 5,
-        endedAt: 6,
-        status: 'finished',
-        entries: [{ kind: 'finished', at: 6, text: 'Rotated.' }],
-        settings: { target: 'ssh', mode: 'autonomous', cliId: null, modelId: null, effort: null },
-      },
-    ];
     await ensureSshHistoryRestored();
     expect(getSshServerTaskHistory('srv-1').map((r) => r.id)).toContain('from-yesterday');
 

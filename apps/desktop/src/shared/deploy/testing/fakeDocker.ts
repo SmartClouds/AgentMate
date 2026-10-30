@@ -64,6 +64,8 @@ export class FakeDocker {
   readonly consoles: FakeConsoleSession[] = [];
   readonly removed: ContainerRemoveRequest[] = [];
   readonly pruned: DockerPruneRequest[] = [];
+  /** False for a core from before the build cache could be pruned. */
+  knowsBuildCache = true;
   private cursor = 0;
   private statsCount = 0;
 

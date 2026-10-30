@@ -119,6 +119,7 @@ export function AssistantComposer({
   followUp,
   canContinue = false,
   disabled,
+  attachment,
   onStart,
   onMessage,
   onStop,
@@ -132,6 +133,8 @@ export function AssistantComposer({
   /** A run was stopped or failed before it was done, so it can be carried on. */
   canContinue?: boolean;
   disabled?: boolean;
+  /** What the next run is about (the app the user has open), shown above the box. */
+  attachment?: React.ReactNode;
   /** `project` is only ever set with a CLI, since the Settings provider cannot open files. */
   onStart: (
     prompt: string,
@@ -247,6 +250,7 @@ export function AssistantComposer({
             ? 'Ask a follow-up'
             : 'What should the AI look into?'}
       </Label>
+      {attachment}
       <Textarea
         id="deploy-assistant-task"
         value={prompt}

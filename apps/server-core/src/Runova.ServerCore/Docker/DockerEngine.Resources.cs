@@ -1,3 +1,5 @@
+using System.Net.Sockets;
+using System.Text.Json;
 using System.Threading.Channels;
 using Docker.DotNet;
 using Docker.DotNet.Models;
@@ -154,11 +156,54 @@ internal sealed partial class DockerEngine
                     case DockerPruneTarget.Networks:
                         var networks = await client.Networks.PruneNetworksAsync(new NetworksDeleteUnusedParameters(), cancellationToken);
                         return new DockerPruneResult(networks.NetworksDeleted?.Count ?? 0, 0);
+                    case DockerPruneTarget.BuildCache:
+                        return await PruneBuildCacheAsync(cancellationToken);
                     default:
                         throw new ArgumentOutOfRangeException(nameof(target), "Prune one kind at a time.");
                 }
             },
             cancellationToken);
+
+    /// <summary>
+    /// `docker builder prune --all`. Docker.DotNet has no call for it, so this one goes over the
+    /// same socket by hand, in the API version the engine was negotiated at.
+    /// </summary>
+    private async Task<DockerPruneResult> PruneBuildCacheAsync(CancellationToken cancellationToken)
+    {
+        var version = _version?.NegotiatedApiVersion ?? MaxApiVersion.ToString();
+        using var http = new HttpClient(new SocketsHttpHandler { ConnectCallback = ConnectSocketAsync })
+        {
+            BaseAddress = new Uri("http://docker/"),
+            Timeout = _requestTimeout,
+        };
+        using var response = await http.PostAsync($"v{version}/build/prune?all=true", content: null, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new DockerApiException(response.StatusCode, body);
+        }
+
+        using var json = JsonDocument.Parse(body);
+        var root = json.RootElement;
+        var removed = root.TryGetProperty("CachesDeleted", out var deleted) && deleted.ValueKind == JsonValueKind.Array ? deleted.GetArrayLength() : 0;
+        var reclaimed = root.TryGetProperty("SpaceReclaimed", out var space) && space.TryGetInt64(out var bytes) ? bytes : 0;
+        return new DockerPruneResult(removed, reclaimed);
+    }
+
+    private async ValueTask<Stream> ConnectSocketAsync(SocketsHttpConnectionContext context, CancellationToken cancellationToken)
+    {
+        var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+        try
+        {
+            await socket.ConnectAsync(new UnixDomainSocketEndPoint(endpoint.LocalPath), cancellationToken);
+            return new NetworkStream(socket, ownsSocket: true);
+        }
+        catch
+        {
+            socket.Dispose();
+            throw;
+        }
+    }
 
     /// <summary>A reader that falls this far behind ends the stream rather than missing events silently.</summary>
     public IAsyncEnumerable<EngineEvent> StreamEventsAsync(EventCursor? since, CancellationToken cancellationToken) =>

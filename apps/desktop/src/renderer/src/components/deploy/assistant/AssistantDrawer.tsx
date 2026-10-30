@@ -1,9 +1,20 @@
 import { coreErrorMessage } from '@shared/coreErrors';
+import type {
+  DeployAssistantAppRef,
+  DeployAssistantChatSummary,
+} from '@shared/deployAssistantTypes';
 import type { DeployServer } from '@shared/deployTypes';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
-import { MessageSquarePlus, Robot, WindowMaximize, WindowRestore, X } from '@/components/icons';
+import {
+  History,
+  MessageSquarePlus,
+  Robot,
+  WindowMaximize,
+  WindowRestore,
+  X,
+} from '@/components/icons';
 import { Chip, FOOTER_HAIRLINE } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,8 +26,11 @@ import {
   isRunActive,
   useDeployAssistantStore,
 } from '@/stores/deployAssistantStore';
+import { AppAttachment } from './AppAttachment';
 import { AssistantComposer } from './AssistantComposer';
+import { AssistantHistory } from './AssistantHistory';
 import { AssistantTimeline } from './AssistantTimeline';
+import { runFromChain } from './historyTurns';
 import { useAssistantMode } from './hooks';
 import { ModeSwitch } from './ModeSwitch';
 
@@ -28,8 +42,15 @@ import { ModeSwitch } from './ModeSwitch';
  * cover the page, so the logs stay readable next to it; Escape closes it and the run carries on.
  * It sits in the page area, under the top bar, so the Deploy AI button there stays in reach to
  * close it again. Its size and what is typed in it are kept in the store, so leaving the page
- * and coming back finds them as they were.
+ * and coming back finds them as they were. On an app's page that app is attached to a new chat,
+ * so the AI knows what "it" is; the History button lists the server's past chats, and picking
+ * one shows it here, ready to carry on.
  */
+
+/** A container id is 64 hex characters; the first 12 are what Docker shows. */
+function shortContainer(id: string): string {
+  return /^[0-9a-f]{64}$/i.test(id) ? id.slice(0, 12) : id;
+}
 
 /** How close to the end still counts as being at the end, in pixels. */
 const BOTTOM_SLACK = 24;
@@ -46,6 +67,18 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
   const clearDraft = useDeployAssistantStore((state) => state.clearDraft);
   const maximized = useDeployAssistantStore((state) => state.maximized);
   const setMaximized = useDeployAssistantStore((state) => state.setMaximized);
+  const pageApp = useDeployAssistantStore((state) =>
+    state.pageApp?.serverId === server.id ? state.pageApp : null,
+  );
+  const dismissed = useDeployAssistantStore((state) => state.dismissedApps[server.id]);
+  const dismissApp = useDeployAssistantStore((state) => state.dismissApp);
+  const setChatApp = useDeployAssistantStore((state) => state.setChatApp);
+  const continueFrom = useDeployAssistantStore((state) => state.continueFrom[server.id]);
+  const clearContinueFrom = useDeployAssistantStore((state) => state.clearContinueFrom);
+  const openChat = useDeployAssistantStore((state) => state.openChat);
+  const [view, setView] = useState<'chat' | 'history'>('chat');
+  /** The newest run main has for this server's chat on screen, which the history marks. */
+  const [liveRunId, setLiveRunId] = useState<string | undefined>();
   const open = openServerId === server.id;
   const mode = useAssistantMode(server.id, open);
   const panel = useRef<HTMLElement | null>(null);
@@ -58,10 +91,17 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
   const over = progress !== null && !running;
   const canContinue = over && progress?.phase !== 'finished';
   const hasChat = run !== undefined && (run.steps.length > 0 || run.earlier.length > 0 || over);
+  const page: DeployAssistantAppRef | null = pageApp
+    ? { stackId: pageApp.stackId, name: pageApp.name }
+    : null;
+  // The chat's own app wins; a chat without one takes the app on the page, unless taken off.
+  const app = run?.app ?? (page && dismissed !== page.stackId ? page : null);
+  const currentRunId = continueFrom ?? (hasChat ? liveRunId : undefined);
 
   useEffect(() => {
     if (!open) return;
     follow.current = true;
+    setView('chat');
     panel.current?.focus();
   }, [open]);
 
@@ -100,8 +140,8 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
   ): Promise<boolean> {
     const before = useDeployAssistantStore.getState().runs[serverId];
     follow.current = true;
-    if (over) followUp(serverId, prompt);
-    else reset(serverId, prompt);
+    if (over) followUp(serverId, prompt, app ?? undefined);
+    else reset(serverId, prompt, app ?? undefined);
     try {
       await window.runova.deployAssistant.start({
         serverId,
@@ -111,8 +151,15 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
         ...(ai.effort ? { effort: ai.effort } : {}),
         ...(project ? { project } : {}),
         ...(context ? { context } : {}),
-        ...(over ? { continuePrevious: true } : {}),
+        ...(app ? { app: { stackId: app.stackId } } : {}),
+        // A chat picked from the history carries on from its own last run.
+        ...(continueFrom
+          ? { continueFromRunId: continueFrom }
+          : over
+            ? { continuePrevious: true }
+            : {}),
       });
+      if (continueFrom) clearContinueFrom(serverId);
       return true;
     } catch (error) {
       restore(serverId, before);
@@ -135,8 +182,54 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
 
   function newChat(): void {
     reset(serverId);
+    dismissApp(serverId, null);
     if (draft?.serverId === serverId) clearDraft();
     follow.current = true;
+  }
+
+  function removeApp(): void {
+    if (!app) return;
+    if (run?.app) setChatApp(serverId, null);
+    if (page?.stackId === app.stackId) dismissApp(serverId, app.stackId);
+  }
+
+  function attachApp(): void {
+    if (!page) return;
+    dismissApp(serverId, null);
+    if (run) setChatApp(serverId, page);
+  }
+
+  function openHistory(): void {
+    setView('history');
+    window.runova.deployAssistant.state(serverId).then(
+      (state) => setLiveRunId(state?.history[0]?.id),
+      () => undefined,
+    );
+  }
+
+  async function openPast(chat: DeployAssistantChatSummary): Promise<void> {
+    // The chat on screen is already here as it goes, with more than the history has of it.
+    if (chat.runId === currentRunId && !continueFrom) {
+      setView('chat');
+      return;
+    }
+    try {
+      const chain = await window.runova.deployAssistant.chat({ serverId, runId: chat.runId });
+      if (!chain) {
+        toast.error('That chat is no longer in the history.');
+        return;
+      }
+      openChat(serverId, runFromChain(chain), chat.runId);
+      if (draft?.serverId === serverId) clearDraft();
+      follow.current = true;
+      setView('chat');
+    } catch (error) {
+      toast.error(coreErrorMessage(error));
+    }
+  }
+
+  function deleted(runId: string): void {
+    if (runId === currentRunId) reset(serverId);
   }
 
   // The app shell's page area, there before any page renders. Outside the shell (a test, say)
@@ -149,7 +242,10 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
       tabIndex={-1}
       aria-label="Deploy AI"
       onKeyDown={(event) => {
-        if (event.key === 'Escape') close();
+        if (event.key !== 'Escape') return;
+        // The history is a view in the drawer: Escape leaves it, the next one closes the drawer.
+        if (view === 'history') setView('chat');
+        else close();
       }}
       // Near-opaque glass, so the logs it sits beside never show through its text.
       className={cn(
@@ -166,7 +262,19 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
           <h2 className="text-sm font-semibold leading-tight text-foreground">Deploy AI</h2>
           <p className="truncate text-xs text-muted-foreground">on {server.nickname}</p>
         </div>
-        {hasChat && (
+        <SimpleTooltip label={running ? 'Stop the AI to open another chat' : 'Chat history'}>
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label="Chat history"
+            aria-pressed={view === 'history'}
+            disabled={running}
+            onClick={() => (view === 'history' ? setView('chat') : openHistory())}
+          >
+            <History />
+          </Button>
+        </SimpleTooltip>
+        {hasChat && view === 'chat' && (
           <SimpleTooltip label={running ? 'Stop the AI to start a new chat' : 'New chat'}>
             <Button
               size="icon-sm"
@@ -205,9 +313,20 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
           follow.current =
             element.scrollHeight - element.scrollTop - element.clientHeight < BOTTOM_SLACK;
         }}
-        className={cn('rail-scroll flex-1 space-y-4 overflow-y-auto px-4 py-3', FOOTER_HAIRLINE)}
+        className={cn(
+          'rail-scroll min-w-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden px-4 py-3',
+          FOOTER_HAIRLINE,
+        )}
       >
-        {mode.loading ? (
+        {view === 'history' ? (
+          <AssistantHistory
+            serverId={serverId}
+            currentRunId={currentRunId}
+            onOpen={(chat) => void openPast(chat)}
+            onBack={() => setView('chat')}
+            onDeleted={deleted}
+          />
+        ) : mode.loading ? (
           <Skeleton className="h-7 w-full rounded-full" />
         ) : mode.forbidden ? (
           <p role="alert" className="text-sm text-muted-foreground">
@@ -221,12 +340,16 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
           </p>
         )}
 
-        {context && (
-          <div aria-label="Context" className="flex flex-wrap items-center gap-1.5">
-            <Chip tone="primary" className="max-w-full truncate">
-              {context.title}
+        {view === 'chat' && context && (
+          <div aria-label="Context" className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <Chip tone="primary" className="min-w-0 max-w-full" title={context.title}>
+              <span className="truncate">{context.title}</span>
             </Chip>
-            {context.containerId && <Chip>container {context.containerId}</Chip>}
+            {context.containerId && (
+              <Chip className="min-w-0 max-w-full" title={context.containerId}>
+                <span className="truncate">container {shortContainer(context.containerId)}</span>
+              </Chip>
+            )}
             {!running && (
               <button
                 type="button"
@@ -239,34 +362,47 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
           </div>
         )}
 
-        <AssistantTimeline
-          earlier={run?.earlier}
-          prompt={run?.prompt}
-          messages={run?.messages}
-          steps={run?.steps ?? []}
-          progress={progress}
-          tall={maximized}
-          onApprove={() => act(window.runova.deployAssistant.approve(serverId))}
-          onSkip={() => act(window.runova.deployAssistant.skip(serverId))}
-          onAnswer={(answer) => act(window.runova.deployAssistant.answer(serverId, answer))}
-          onResume={() => act(window.runova.deployAssistant.resume(serverId))}
-          onStop={stop}
-        />
+        {view === 'chat' && (
+          <AssistantTimeline
+            earlier={run?.earlier}
+            prompt={run?.prompt}
+            messages={run?.messages}
+            steps={run?.steps ?? []}
+            progress={progress}
+            tall={maximized}
+            onApprove={() => act(window.runova.deployAssistant.approve(serverId))}
+            onSkip={() => act(window.runova.deployAssistant.skip(serverId))}
+            onAnswer={(answer) => act(window.runova.deployAssistant.answer(serverId, answer))}
+            onResume={() => act(window.runova.deployAssistant.resume(serverId))}
+            onStop={stop}
+          />
+        )}
       </div>
 
-      <footer className={cn('px-4 py-3', FOOTER_HAIRLINE)}>
-        <AssistantComposer
-          serverId={serverId}
-          running={running}
-          phase={progress?.phase}
-          followUp={over}
-          canContinue={canContinue}
-          disabled={!mode.info}
-          onStart={start}
-          onMessage={message}
-          onStop={stop}
-        />
-      </footer>
+      {view === 'chat' && (
+        <footer className={cn('px-4 py-3', FOOTER_HAIRLINE)}>
+          <AssistantComposer
+            serverId={serverId}
+            running={running}
+            phase={progress?.phase}
+            followUp={over}
+            canContinue={canContinue}
+            disabled={!mode.info}
+            attachment={
+              <AppAttachment
+                app={app}
+                suggested={app ? null : page}
+                locked={running}
+                onRemove={removeApp}
+                onAttach={attachApp}
+              />
+            }
+            onStart={start}
+            onMessage={message}
+            onStop={stop}
+          />
+        </footer>
+      )}
     </aside>
   );
 

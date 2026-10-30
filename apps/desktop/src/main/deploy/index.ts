@@ -343,7 +343,7 @@ export function registerDeployIpc(): void {
     serverName: async (serverId) =>
       (await service.listServers()).find((server) => server.id === serverId)?.nickname ?? serverId,
   });
-  registerDeployAssistantIpc(service, state, guard);
+  registerDeployAssistantIpc(service, state, stacks, guard);
   registerDeployWordPressIpc({ guard });
   // FTP and SFTP sites (E23): Deploy on save starts here and stops at quit.
   registerDeployFilesIpc({ guard });
@@ -353,6 +353,7 @@ export function registerDeployIpc(): void {
 function registerDeployAssistantIpc(
   service: DeployService,
   state: DeployState,
+  stacks: DeployStacks,
   guard: (event: IpcMainInvokeEvent) => boolean,
 ): void {
   const roles = (id: string) => service.roles(id);
@@ -370,6 +371,7 @@ function registerDeployAssistantIpc(
       project: async (projectId) =>
         (await store.getProjects()).find((project) => project.id === projectId) ?? null,
       docker: new DeployDocker({ links: service.links, roles }),
+      stacks,
       send: (channel, payload) => sendToWindow(getMainWindow(), channel, payload),
     }),
     journals,

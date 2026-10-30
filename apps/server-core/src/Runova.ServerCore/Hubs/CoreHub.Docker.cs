@@ -326,7 +326,7 @@ internal sealed partial class CoreHub
         if (request is null || !Enum.IsDefined(request.Target))
         {
             await AuditAsync("docker.prune", AuditResult.Denied, null, parameters);
-            throw new HubException("Prune containers, images, volumes, networks or the whole system.");
+            throw new HubException("Prune containers, images, volumes, networks, the build cache or the whole system.");
         }
 
         parameters["target"] = Jobs.JobEngine.KindName(request.Target);

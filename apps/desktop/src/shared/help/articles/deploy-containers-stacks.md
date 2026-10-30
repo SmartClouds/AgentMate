@@ -3,7 +3,7 @@ title: Containers, apps and stacks
 category: Deploy
 order: 30
 summary: Manage Docker on a server you deploy to, with live container lists, logs, consoles, images, volumes and networks, and deploy compose apps from your projects with rollbacks.
-keywords: docker, containers, compose, stack, apps, logs, compose logs, console, shell, exec, run command, docker exec, root, images, volumes, networks, prune, disk usage, deploy app, revision, rollback, new app wizard, docker install
+keywords: docker, containers, compose, stack, apps, logs, compose logs, console, shell, exec, run command, docker exec, root, images, volumes, networks, prune, disk usage, cleanup, clean up, unused images, build cache, deploy app, revision, rollback, new app wizard, docker install
 route: /deploy
 ---
 
@@ -132,10 +132,22 @@ The **Networks** tab lists each network with its driver, whether it is internal 
 
 ### Disk use
 
-The **Disk use** tab says how much space Docker uses on the server and how much could be freed. Cards for **Images**, **Containers**, **Volumes** and **Build cache** show the size, how many exist, how many are in use and how much is reclaimable. Admins get buttons to remove unused things per card (images no container uses, stopped containers, volumes no container uses) and **Clean up everything unused**, which also clears the build cache and unused networks. Removing volumes this way asks you to type the server's name. A toast reports how many items went and how much space was freed.
+The **Disk use** tab says how much space Docker uses on the server and how much could be freed. Cards for **Images**, **Containers**, **Volumes** and **Build cache** show the size, how many exist, how many are in use and how much is reclaimable. Admins get buttons to remove unused things per card (images no container uses, stopped containers, volumes no container uses, the build cache) and **Clean up everything unused**, which also clears the build cache and unused networks. **Pick what to remove** opens the server's **Cleanup** section, where you choose item by item. Removing volumes this way asks you to type the server's name. A toast reports how many items went and how much space was freed.
 
 > [!WARNING]
 > Pruning volumes deletes data for good. Check **Disk use** first and make sure nothing you care about sits in an unused volume.
+
+## Cleanup
+
+The **Cleanup** section of a server lists what Docker keeps there that nothing uses: images no container runs (an untagged one is marked **Untagged**), stopped containers, volumes no container mounts and networks no container is on. Each item shows its age and, where Docker reports one, its size. The card at the top says how much Docker uses and how much could be freed, split by kind.
+
+- Narrow the list by kind, by age (**Over a week**, **Over a month**, **Over 3 months**) or by typing part of a name or project. An item Docker gives no date for only shows under **Any age**.
+- Tick single items, or a whole group with the box in its header. The bar at the bottom says how many are picked and about how much space they free.
+- **Remove selected** asks first. When volumes are in the selection it also asks you to type the server's name, since their data cannot be brought back.
+- Stopped containers go first, so an image they held can go right after. If Docker refuses one item, the rest still go, and the refused one stays ticked with Docker's reason under it.
+- **Clear build cache** removes every cached build step. The next build on the server starts from scratch. A server whose core is too old for this says so and offers the core update.
+
+Operators can remove images, containers and networks. Removing volumes and clearing the build cache are for Admins. Viewers see the list only.
 
 ## Apps
 

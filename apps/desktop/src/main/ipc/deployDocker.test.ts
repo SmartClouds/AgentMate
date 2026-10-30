@@ -222,6 +222,13 @@ describe('registerDeployDockerHandlers', () => {
       allImages: true,
       includeVolumes: false,
     });
+    await call(C.prune, { serverId: 'srv-1', target: 'buildCache' });
+    expect(docker.prune).toHaveBeenLastCalledWith({
+      serverId: 'srv-1',
+      target: 'buildCache',
+      allImages: false,
+      includeVolumes: false,
+    });
     await expect(call(C.prune, { serverId: 'srv-1', target: 'everything' })).rejects.toThrow(
       /Prune containers/,
     );

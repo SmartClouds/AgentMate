@@ -267,6 +267,8 @@ export const queryKeys = {
   /** Prefix of a server's Apps (compose stacks). */
   // Logs center, problems feed and Deploy AI (E09).
   deployAssistantMode: (serverId: string) => ['deploy', 'assistant', serverId, 'mode'] as const,
+  /** The Deploy AI's past chats on a server, newest first. */
+  deployAssistantChats: (serverId: string) => ['deploy', 'assistant', serverId, 'chats'] as const,
   deployCertificates: (serverId: string) => ['deploy', 'web', serverId, 'certificates'] as const,
   deployAlertsList: (serverId: string) => ['deploy', 'overview', serverId, 'alerts-list'] as const,
   deployApps: (serverId: string) => ['deploy', 'apps', serverId] as const,

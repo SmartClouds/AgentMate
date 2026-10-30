@@ -1223,6 +1223,58 @@ export const localHistoryFs: HistoryFs = {
 };
 
 /** Past conversations from every supported CLI started in `folder`, newest first. */
+/** A transcript a CLI keeps for a folder, with when its session started (from its first line). */
+export interface LiveTranscriptCandidate {
+  path: string;
+  startedAt: number | null;
+}
+
+/**
+ * The transcripts Codex, Gemini or Qwen kept for a folder, so a Workspace tab's chat view can
+ * find the one its running CLI is writing. Claude Code reports its own through hooks, so it and
+ * every other CLI list nothing here.
+ */
+export async function liveTranscriptCandidates(
+  fs: HistoryFs,
+  cliId: string,
+  folder: string,
+): Promise<LiveTranscriptCandidate[]> {
+  const settings: Settings = {
+    folder,
+    limit: MAX_SESSIONS,
+    headBytes: HEAD_BYTES,
+    tailBytes: TAIL_BYTES,
+    concurrency: CONCURRENCY,
+    providers: undefined,
+  };
+  const home = await fs.home();
+  let files: FileInfo[];
+  if (cliId === 'codex-cli') files = await codexFiles(fs, await codexHome(fs, home), settings);
+  else if (cliId === 'gemini-cli' || cliId === 'qwen-cli') {
+    const tmp = fs.join(home, cliId === 'gemini-cli' ? '.gemini' : '.qwen', 'tmp');
+    files = (await geminiChats(fs, tmp, settings)).map(({ file }) => file);
+  } else return [];
+  return mapLimit(files, settings.concurrency, async (file) => ({
+    path: file.path,
+    startedAt: startOf(await readFirstLine(fs, file).catch(() => '')),
+  }));
+}
+
+/** When a session started, from a Codex `session_meta` line or a Gemini chat header. */
+function startOf(firstLine: string): number | null {
+  let record: Record<string, unknown> | null = null;
+  try {
+    record = JSON.parse(firstLine) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+  const payload = record?.payload as Record<string, unknown> | undefined;
+  const value = payload?.timestamp ?? record?.startTime ?? record?.timestamp;
+  if (typeof value !== 'string') return null;
+  const at = Date.parse(value);
+  return Number.isNaN(at) ? null : at;
+}
+
 export async function listAgentHistory(folder: string): Promise<AgentHistorySession[]> {
   return collectHistory(localHistoryFs, { folder });
 }

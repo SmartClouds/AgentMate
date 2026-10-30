@@ -297,6 +297,19 @@ public sealed class DockerEngineTests
     }
 
     [Fact]
+    public async Task Build_cache_prune_clears_all_of_it_and_reports_the_space()
+    {
+        await using var daemon = await FakeDockerDaemon.StartAsync(apiVersion: "1.47");
+        using var engine = Engine(daemon);
+
+        var cache = await engine.PruneAsync(DockerPruneTarget.BuildCache, false, Cancel);
+
+        Assert.Equal(new DockerPruneResult(3, 432013312), cache);
+        Assert.Contains(daemon.Requests, r => r.StartsWith("POST /build/prune", StringComparison.Ordinal) && r.Contains("all=true", StringComparison.Ordinal));
+        Assert.Equal("1.47", daemon.RequestedVersions.Last());
+    }
+
+    [Fact]
     public async Task Events_resume_from_a_cursor_to_the_nanosecond()
     {
         await using var daemon = await FakeDockerDaemon.StartAsync();

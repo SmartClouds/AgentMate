@@ -736,6 +736,30 @@ describe('settings migrations', () => {
     expect((await store.getSettings()).menuPosition).toBe('top');
   });
 
+  it('opens agent tabs in CLI view by default, including for a file that predates the setting', async () => {
+    const fresh = await loadStore();
+    expect((await fresh.store.getSettings()).defaultAgentTabMode).toBe('cli');
+
+    userData.writeData('settings.json', { theme: 'dark' });
+    expect((await fresh.store.getSettings()).defaultAgentTabMode).toBe('cli');
+  });
+
+  it('falls back to CLI view when the saved default view is not one it knows', async () => {
+    const { store } = await loadStore();
+
+    for (const defaultAgentTabMode of ['bubbles', 42, null, 'CHAT']) {
+      userData.writeData('settings.json', { defaultAgentTabMode });
+      expect((await store.getSettings()).defaultAgentTabMode).toBe('cli');
+    }
+  });
+
+  it('keeps chat as the default view once it was picked', async () => {
+    userData.writeData('settings.json', { defaultAgentTabMode: 'chat' });
+    const { store } = await loadStore();
+
+    expect((await store.getSettings()).defaultAgentTabMode).toBe('chat');
+  });
+
   it('fills in a key the saved file has never heard of', async () => {
     userData.writeData('settings.json', { theme: 'dark' });
     const { store, DEFAULT_SETTINGS } = await loadStore();

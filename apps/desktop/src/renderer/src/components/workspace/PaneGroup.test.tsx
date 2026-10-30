@@ -1,4 +1,5 @@
 import type { PaneGroupNode, Project } from '@runova/core';
+import { DEFAULT_SETTINGS } from '@shared/defaultSettings';
 import { fireEvent, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useExplorerStore } from '@/stores/explorerStore';
@@ -173,6 +174,75 @@ describe('PaneGroup', () => {
       keys: '[MouseRight]',
     });
     expect(await screen.findByRole('menuitem', { name: 'Rename' })).toBeInTheDocument();
+  });
+});
+
+describe('PaneGroup agent tab view', () => {
+  function agentTab(): string {
+    const ws = useWorkspaceStore.getState().workspaces.p1;
+    const tab = Object.values(ws?.tabs ?? {}).find((one) => one.kind === 'terminal');
+    if (!tab) throw new Error('no terminal tab');
+    return tab.id;
+  }
+
+  async function openMenu(user: ReturnType<typeof renderWithProviders>['user'], name: RegExp) {
+    await user.pointer({ target: screen.getByRole('tab', { name }), keys: '[MouseRight]' });
+  }
+
+  it('shows the CLI by default and switches the tab to the chat from its menu', async () => {
+    const { user } = renderWithProviders(<Harness />);
+    useWorkspaceStore.getState().activateTab('p1', agentTab());
+    expect(screen.queryByRole('region', { name: 'Claude Code chat' })).not.toBeInTheDocument();
+
+    await openMenu(user, /Claude Code/);
+    expect(await screen.findByRole('menuitemradio', { name: 'CLI' })).toBeChecked();
+    await user.click(screen.getByRole('menuitemradio', { name: 'Chat' }));
+
+    const tabId = agentTab();
+    expect(useWorkspaceStore.getState().workspaces.p1?.tabs[tabId]).toMatchObject({
+      viewMode: 'chat',
+    });
+    expect(await screen.findByRole('region', { name: 'Claude Code chat' })).toBeInTheDocument();
+    // The CLI keeps running underneath, so its terminal stays mounted, only hidden.
+    expect(document.querySelector('[data-terminal-slot][aria-hidden="true"]')).toBeInTheDocument();
+    expect(
+      screen.getByRole('tab', { name: /Claude Code/ }).querySelector('[data-chat-badge]'),
+    ).toBeInTheDocument();
+
+    await openMenu(user, /Claude Code/);
+    await user.click(await screen.findByRole('menuitemradio', { name: 'CLI' }));
+    expect(screen.queryByRole('region', { name: 'Claude Code chat' })).not.toBeInTheDocument();
+  });
+
+  it('opens agent tabs as a chat when that is the default in Settings', async () => {
+    renderWithProviders(<Harness />, {
+      bridge: {
+        'settings.get': async () => ({ ...DEFAULT_SETTINGS, defaultAgentTabMode: 'chat' }),
+      },
+    });
+    useWorkspaceStore.getState().activateTab('p1', agentTab());
+    expect(await screen.findByRole('region', { name: 'Claude Code chat' })).toBeInTheDocument();
+  });
+
+  it('offers no chat view for a plain shell', async () => {
+    useWorkspaceStore.getState().addTerminal('p1', { title: 'PowerShell', cwd: 'C:\\work\\app' });
+    const { user } = renderWithProviders(<Harness />);
+    await openMenu(user, /PowerShell/);
+    expect(await screen.findByRole('menuitem', { name: 'Rename' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitemradio', { name: 'Chat' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the chat view off for a CLI it cannot read yet', async () => {
+    useWorkspaceStore.getState().addTerminal('p1', {
+      title: 'Aider',
+      cwd: 'C:\\work\\app',
+      cliId: 'aider',
+    });
+    const { user } = renderWithProviders(<Harness />);
+    await openMenu(user, /Aider/);
+    const chat = await screen.findByRole('menuitemradio', { name: /Chat/ });
+    expect(chat).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByText("Chat view isn't available for this CLI yet")).toBeInTheDocument();
   });
 });
 

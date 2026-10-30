@@ -22,6 +22,7 @@ import { shutdownLocalServer } from './grammar/localServer';
 import { startHealthScheduler, stopHealthScheduler } from './health/scheduler';
 import { pruneOrphanHealthTargets } from './health/store';
 import { registerActivityHandlers } from './ipc/activity';
+import { registerAgentChatHandlers } from './ipc/agentChat';
 import { registerAgentHandlers } from './ipc/agents';
 import { registerAiHandlers } from './ipc/ai';
 import { registerAndroidHandlers } from './ipc/android';
@@ -351,6 +352,7 @@ function registerAllIpcHandlers(): void {
   registerSshAgentHandlers();
   registerRdpAgentHandlers();
   registerAgentHandlers();
+  registerAgentChatHandlers();
   registerTerminalClipboardHandlers();
   registerBrowserHandlers();
   registerPowerHandlers();

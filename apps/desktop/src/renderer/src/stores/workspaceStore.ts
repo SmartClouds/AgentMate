@@ -1,9 +1,11 @@
 import {
+  type AgentTabMode,
   type AutoContinueOptions,
   activateTab,
   addTab,
   allGroups,
   allTabIds,
+  chatReaderFor,
   createGroup,
   findGroup,
   findGroupOfTab,
@@ -62,6 +64,8 @@ export interface WorkspaceTerminalTab {
   runLabel?: string;
   /** Types "continue" for the agent after a usage limit resets or a network error. */
   autoContinue?: AutoContinueOptions;
+  /** The view the user picked for this tab; unset follows the default view from Settings. */
+  viewMode?: AgentTabMode;
   restored?: boolean;
   /**
    * Set on a tab that shows a Relay leg (E26). Main started its session, so the tab only ever
@@ -262,6 +266,8 @@ interface WorkspaceState {
   /** Remembers which agent conversation a tab is running, so it can be resumed later. */
   setConversationId: (projectId: string, tabId: string, conversationId: string) => void;
   setAutoContinue: (projectId: string, tabId: string, options: AutoContinueOptions) => void;
+  /** Shows an agent tab as its CLI or as a chat, for this tab only. */
+  setViewMode: (projectId: string, tabId: string, mode: AgentTabMode) => void;
   toggleZoom: (projectId: string, groupId: string) => void;
   /**
    * Shows a file's diff. An already open tab for it comes forward; otherwise it replaces the
@@ -739,6 +745,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             return { ...ws, tabs: { ...ws.tabs, [tabId]: { ...tab, autoContinue } } };
           }),
 
+        setViewMode: (projectId, tabId, viewMode) =>
+          update(projectId, (ws) => {
+            const tab = ws.tabs[tabId];
+            if (tab?.kind !== 'terminal' || tab.viewMode === viewMode) return ws;
+            return { ...ws, tabs: { ...ws.tabs, [tabId]: { ...tab, viewMode } } };
+          }),
+
         toggleZoom: (projectId, groupId) =>
           update(projectId, (ws) => ({
             ...ws,
@@ -950,4 +963,21 @@ export const useWorkspaceStore = create<WorkspaceState>()(
  */
 export function terminalTabLabel(tab: WorkspaceTerminalTab): string {
   return tab.userTitle ?? tab.agentTitle ?? tab.title;
+}
+
+/** Whether the tab runs an agent CLI whose transcript the chat view can read. */
+export function canShowChat(tab: WorkspaceTerminalTab): boolean {
+  return chatReaderFor(tab.cliId) !== null;
+}
+
+/**
+ * The view a terminal tab shows: the one picked for it, else the default from Settings. A plain
+ * shell, or a CLI the chat view cannot read, always shows the terminal.
+ */
+export function effectiveViewMode(
+  tab: WorkspaceTerminalTab,
+  defaultMode: AgentTabMode,
+): AgentTabMode {
+  if (!canShowChat(tab)) return 'cli';
+  return tab.viewMode ?? defaultMode;
 }

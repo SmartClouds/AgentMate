@@ -203,6 +203,26 @@ describe('DeployDocker', () => {
     ]);
   });
 
+  it('clears the build cache, and says plainly when an older core cannot', async () => {
+    const { core, docker } = setup(['admin']);
+    const before = core.docker.diskUsage.buildCache;
+
+    expect(await docker.prune({ serverId: 'srv-1', target: 'buildCache' })).toEqual({
+      removed: before.count,
+      reclaimedBytes: before.sizeBytes,
+    });
+    expect((await docker.diskUsage('srv-1')).buildCache.sizeBytes).toBe(0);
+
+    core.docker.knowsBuildCache = false;
+    await expect(docker.prune({ serverId: 'srv-1', target: 'buildCache' })).rejects.toThrow(
+      'This server runs an older core that cannot clear the build cache. Update the core from the Overview, then try again.',
+    );
+    // Other targets still go through on that core.
+    expect(await docker.prune({ serverId: 'srv-1', target: 'containers' })).toMatchObject({
+      removed: 2,
+    });
+  });
+
   it('installs Docker as a job, which fails without agreement to remove what is in the way', async () => {
     const { core, docker } = setup(['admin']);
     core.docker.status = {

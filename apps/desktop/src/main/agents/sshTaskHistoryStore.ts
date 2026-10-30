@@ -38,14 +38,18 @@ function settle(run: SshAgentHistoryRun): SshAgentHistoryRun {
   };
 }
 
-/** Only tasks on a saved server, newest `perServer` of each. A local tab means nothing next time. */
+/**
+ * Only tasks on a saved server, newest `perServer` of each. A local tab means nothing next time.
+ * Deploy AI chats count apart, so a busy Deploy server never pushes out its SSH tasks.
+ */
 function keep(runs: SshAgentHistoryRun[], perServer: number): SshAgentHistoryRun[] {
   const byServer = new Map<string, SshAgentHistoryRun[]>();
   for (const run of runs) {
     if (!run.serverId) continue;
-    const list = byServer.get(run.serverId) ?? [];
+    const key = `${run.scope ?? 'ssh'}:${run.serverId}`;
+    const list = byServer.get(key) ?? [];
     list.push(run);
-    byServer.set(run.serverId, list);
+    byServer.set(key, list);
   }
   return [...byServer.values()].flatMap((list) =>
     list.sort((a, b) => a.startedAt - b.startedAt).slice(-perServer),

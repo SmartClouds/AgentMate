@@ -77,6 +77,7 @@ import type { FakeConsoleSession } from './fakeDocker';
 import { FakeFilesError } from './fakeFiles';
 import type { FakeFirewall, FakeFirewallCaller } from './fakeFirewall';
 import {
+  bindingError,
   connectionClosedError,
   FakeStream,
   invocationError,
@@ -837,6 +838,13 @@ export class FakeCoreConnection implements ICoreHub {
   pruneDocker = async (request: DockerPruneRequest): Promise<DockerPruneResult> => {
     this.assertOpen();
     this.assertRole('PruneDocker', ADMINS);
+    if (request.target === 'buildCache') {
+      if (!this.docker.knowsBuildCache) throw bindingError('PruneDocker');
+      const cache = this.docker.diskUsage.buildCache;
+      this.docker.pruned.push({ ...request });
+      this.docker.diskUsage.buildCache = { count: 0, active: 0, sizeBytes: 0, reclaimableBytes: 0 };
+      return { removed: cache.count, reclaimedBytes: cache.sizeBytes };
+    }
     this.docker.pruned.push({ ...request });
     return { removed: 2, reclaimedBytes: 124_000_000 };
   };

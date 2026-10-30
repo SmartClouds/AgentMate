@@ -121,6 +121,14 @@ describe('previousTaskContext', () => {
     expect(text).toContain('(output trimmed)');
   });
 
+  it('keeps the start of a long answer, so one answer does not crowd out the rest', () => {
+    const answer = `The short version: memory.\n${'detail '.repeat(800)}`;
+    const text = previousTaskContext([run('a', 'x', [{ kind: 'finished', at, text: answer }])]);
+    expect(text).toContain('[Finished]: The short version: memory.');
+    expect(text).toContain('(answer trimmed)');
+    expect(text.length).toBeLessThan(2000);
+  });
+
   it('keeps Persian as it was written', () => {
     const text = previousTaskContext([
       run('a', 'لاگ‌ها را پاک کن', [{ kind: 'answer', at, text: 'بله' }]),

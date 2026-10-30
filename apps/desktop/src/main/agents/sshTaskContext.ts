@@ -4,6 +4,13 @@ import type { SshAgentHistoryEntry, SshAgentHistoryRun } from '../../shared/apiT
 export const MAX_PREVIOUS_CONTEXT_CHARS = 6000;
 /** The end of each command's output, which is what says how it went. */
 const OUTPUT_TAIL_CHARS = 600;
+/** The start of a long answer, which is where it says what was found. */
+const ANSWER_HEAD_CHARS = 1500;
+
+function answerHead(text: string): string {
+  if (text.length <= ANSWER_HEAD_CHARS) return text;
+  return `${text.slice(0, ANSWER_HEAD_CHARS).trimEnd()}\n(answer trimmed)`;
+}
 
 function outputTail(output: string): string {
   const trimmed = output.trim();
@@ -33,7 +40,7 @@ function entryLine(entry: SshAgentHistoryEntry): string | null {
     case 'error':
       return `[Error]: ${entry.text}`;
     case 'finished':
-      return `[Finished]: ${entry.text}`;
+      return `[Finished]: ${answerHead(entry.text)}`;
     case 'stopped':
       return `[Stopped]: ${entry.text}`;
     case 'continued':

@@ -33,6 +33,20 @@ export interface DeployAssistantProjectInput {
   allowEdits: boolean;
 }
 
+/**
+ * The app (a compose stack) the user has open, which the AI works on unless they say otherwise.
+ * Only its id comes from the window: the main process reads its services, containers and logs.
+ */
+export interface DeployAssistantAppInput {
+  stackId: string;
+}
+
+/** An app a chat was about, kept with the chat so it can be named and attached again. */
+export interface DeployAssistantAppRef {
+  stackId: string;
+  name: string;
+}
+
 export interface DeployAssistantStartInput {
   serverId: string;
   prompt: string;
@@ -46,8 +60,14 @@ export interface DeployAssistantStartInput {
    * happened in it. Without it the run starts a new chat.
    */
   continuePrevious?: boolean;
+  /**
+   * Carry on a past chat the user picked from the history, by its newest run. Takes the place of
+   * `continuePrevious`.
+   */
+  continueFromRunId?: string;
   /** Only with a CLI: the provider from Settings cannot open files. */
   project?: DeployAssistantProjectInput;
+  app?: DeployAssistantAppInput;
 }
 
 /** The run's state, as the SSH AI reports it. `progress.sessionId` is the run's key. */
@@ -78,6 +98,28 @@ export interface DeployAssistantState {
   progress: SshAgentProgress | null;
   context: DeployAssistantContextInput | null;
   history: SshAgentHistoryRun[];
+}
+
+/** A past Deploy AI chat on a server, as its history lists it. */
+export interface DeployAssistantChatSummary {
+  /** Its newest run, which a continued chat picks up from. */
+  runId: string;
+  /** What the user first asked. */
+  title: string;
+  startedAt: number;
+  /** When anything last happened in it. */
+  updatedAt: number;
+  status: SshAgentHistoryRun['status'];
+  /** How many times the user asked: the first question and each follow-up. */
+  turns: number;
+  aiLabel: string;
+  app?: DeployAssistantAppRef;
+}
+
+/** Which chat to read or delete. */
+export interface DeployAssistantChatInput {
+  serverId: string;
+  runId: string;
 }
 
 export type { AssistantModeInfo };

@@ -1396,6 +1396,12 @@ export const IPC = {
     getMode: 'deployAssistant:getMode',
     /** (DeployAssistantModeInput) -> AssistantModeInfo; turning auto-run on needs a step-up. */
     setMode: 'deployAssistant:setMode',
+    /** (serverId) -> DeployAssistantChatSummary[], the most recently active first. */
+    chats: 'deployAssistant:chats',
+    /** (DeployAssistantChatInput) -> SshAgentHistoryRun[] | null, the chat's runs oldest first. */
+    chat: 'deployAssistant:chat',
+    /** (DeployAssistantChatInput) -> void; refused while the AI works in that chat. */
+    deleteChat: 'deployAssistant:deleteChat',
     /** main -> renderer: DeployAssistantProgressEvent */
     onProgress: 'deployAssistant:onProgress',
     /** main -> renderer: DeployAssistantOutputEvent */
@@ -1790,6 +1796,14 @@ export const IPC = {
     cancelAutoContinue: 'agents:cancelAutoContinue',
     // main -> renderer: AutoContinuePendingMap of tabs whose scheduled continue changed
     onAutoContinue: 'agents:onAutoContinue',
+  },
+  agentChat: {
+    // (ChatSessionSpec) -> ChatSubscribeResult: the transcript so far of a tab shown as a chat
+    subscribe: 'agentChat:subscribe',
+    // (sessionId) -> void: the tab left the chat view, so its transcript is no longer read
+    unsubscribe: 'agentChat:unsubscribe',
+    // main -> renderer: ChatAppend with the lines the CLI added since
+    onAppend: 'agentChat:onAppend',
   },
   apiClient: {
     listCollections: 'apiClient:listCollections',

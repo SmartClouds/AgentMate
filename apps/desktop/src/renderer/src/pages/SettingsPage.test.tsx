@@ -386,6 +386,16 @@ describe('SettingsPage startup page', () => {
     );
   });
 
+  it('finds the default view for agent tabs by searching for chat', async () => {
+    const { user } = renderSettings();
+    await screen.findByText('Appearance');
+
+    await user.type(screen.getByLabelText('Search settings'), 'chat view');
+
+    expect(await screen.findByText('Default view for agent tabs')).toBeInTheDocument();
+    expect(screen.queryByText('Appearance')).toBeNull();
+  });
+
   it('is found by searching for it', async () => {
     const { user } = renderSettings();
     await screen.findByText('Appearance');

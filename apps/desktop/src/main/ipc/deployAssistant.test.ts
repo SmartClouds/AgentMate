@@ -30,6 +30,9 @@ function harness(trusted = true) {
       'state',
       'mode',
       'setMode',
+      'chats',
+      'chat',
+      'deleteChat',
     ].map((name) => [name, vi.fn(async () => ({}))]),
   ) as unknown as Record<string, ReturnType<typeof vi.fn>>;
   const journals = { watch: vi.fn(() => 'sub'), unwatch: vi.fn(() => true) };
@@ -47,6 +50,25 @@ function harness(trusted = true) {
 }
 
 describe('deployAssistant channels', () => {
+  it('lists, reads and deletes past chats by a run id that looks like one', async () => {
+    const { call, assistant } = harness();
+    const runId = '7c1d2e3f-0000-4000-8000-000000000abc';
+    await call(IPC.deployAssistant.chats, 'srv-1');
+    expect(assistant.chats).toHaveBeenCalledWith('srv-1');
+    await call(IPC.deployAssistant.chat, { serverId: 'srv-1', runId });
+    expect(assistant.chat).toHaveBeenCalledWith('srv-1', runId);
+    await call(IPC.deployAssistant.deleteChat, { serverId: 'srv-1', runId });
+    expect(assistant.deleteChat).toHaveBeenCalledWith('srv-1', runId);
+    await expect(
+      call(IPC.deployAssistant.chat, { serverId: 'srv-1', runId: '../x' }),
+    ).rejects.toThrow('not a chat');
+    await expect(call(IPC.deployAssistant.deleteChat, { serverId: '../x', runId })).rejects.toThrow(
+      'saved server',
+    );
+    await expect(call(IPC.deployAssistant.chats, 42)).rejects.toThrow();
+    expect(assistant.deleteChat).toHaveBeenCalledTimes(1);
+  });
+
   it('refuses every window but the main one', async () => {
     const { call, assistant } = harness(false);
     await expect(call(IPC.deployAssistant.stop, 'srv-1')).rejects.toThrow(
@@ -171,6 +193,25 @@ describe('argument checks', () => {
       startInput({ serverId: 'srv-1', prompt: 'x', context: { title: 'a', containerId: '-x' } }),
     ).toThrow('container');
     expect(() => startInput({ serverId: 'srv-1', prompt: 'x', context: 'nope' })).toThrow();
+  });
+
+  it('start: the open app by its id only, and a past chat to continue', () => {
+    const stackId = '5a0f1c2e-0000-4000-8000-00000000a001';
+    expect(
+      startInput({ serverId: 'srv-1', prompt: 'x', app: { stackId, name: 'evil' } }).app,
+    ).toEqual({ stackId });
+    expect(() => startInput({ serverId: 'srv-1', prompt: 'x', app: { stackId: '../x' } })).toThrow(
+      'not an app',
+    );
+    expect(() => startInput({ serverId: 'srv-1', prompt: 'x', app: 'shop' })).toThrow();
+    expect(startInput({ serverId: 'srv-1', prompt: 'x', app: null })).not.toHaveProperty('app');
+
+    expect(
+      startInput({ serverId: 'srv-1', prompt: 'x', continueFromRunId: stackId }).continueFromRunId,
+    ).toBe(stackId);
+    expect(() => startInput({ serverId: 'srv-1', prompt: 'x', continueFromRunId: 'nope' })).toThrow(
+      'not a chat',
+    );
   });
 
   it('mode: one of the two, with an optional step-up', () => {

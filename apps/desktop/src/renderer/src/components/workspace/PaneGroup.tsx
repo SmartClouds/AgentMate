@@ -12,6 +12,7 @@ import {
   GitCommit,
   Globe,
   ImageIcon,
+  MessageSquare,
   Plus,
   RefreshCw,
   SplitView,
@@ -25,6 +26,8 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuLabel,
+  ContextMenuRadioGroup,
+  ContextMenuRadioItem,
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
@@ -36,6 +39,7 @@ import { useTerminalSessionStore } from '@/lib/terminal/terminalRuntime';
 import { cn } from '@/lib/utils';
 import { useLauncherStore } from '@/lib/workspace/commands';
 import { resumeInputFor, statusHooksReady } from '@/lib/workspace/launch';
+import { useDefaultAgentTabMode } from '@/lib/workspace/viewMode';
 import {
   isSessionBusy,
   tabRunLine,
@@ -47,6 +51,8 @@ import {
 import { confirmDialog } from '@/stores/confirmStore';
 import { useShortcutLabel } from '@/stores/shortcutStore';
 import {
+  canShowChat,
+  effectiveViewMode,
   type ProjectWorkspace,
   terminalTabLabel,
   useWorkspaceStore,
@@ -56,6 +62,7 @@ import {
 import { AgentStatusChip, AgentStatusDot } from './AgentStatusDot';
 import { AutoContinueMenu, autoContinuePendingLine } from './AutoContinueMenu';
 import { BrowserTabMenu } from './browser/BrowserTabMenu';
+import { AgentChatView } from './chat/AgentChatView';
 import { FileTabMenu } from './FileTabMenu';
 import { LauncherMenu } from './LauncherMenu';
 import { PaneLauncher } from './PaneLauncher';
@@ -270,7 +277,7 @@ function BrowserTabIcon({ tab }: { tab: WorkspaceBrowserTab }): React.JSX.Elemen
   return <Globe className="h-3 w-3 text-muted-foreground" />;
 }
 
-function TabIcon({ tab }: { tab: WorkspaceTab }): React.JSX.Element {
+function TabIcon({ tab, chat }: { tab: WorkspaceTab; chat: boolean }): React.JSX.Element {
   if (tab.kind === 'browser') return <BrowserTabIcon tab={tab} />;
   if (tab.kind === 'diff') {
     return tab.commit ? (
@@ -284,6 +291,19 @@ function TabIcon({ tab }: { tab: WorkspaceTab }): React.JSX.Element {
       <ImageIcon className="h-3 w-3 text-muted-foreground" />
     ) : (
       <FileIcon className="h-3 w-3 text-muted-foreground" />
+    );
+  }
+  if (tab.cliId && chat) {
+    return (
+      <span className="relative inline-flex">
+        <CliLogo cliId={tab.cliId} className="h-3.5 w-3.5" />
+        <span
+          data-chat-badge=""
+          className="absolute -bottom-1 -right-1 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-background"
+        >
+          <MessageSquare className="h-2 w-2 text-muted-foreground" />
+        </span>
+      </span>
     );
   }
   if (tab.cliId) return <CliLogo cliId={tab.cliId} className="h-3.5 w-3.5" />;
@@ -332,6 +352,8 @@ function PaneTab({
 }: PaneTabProps): React.JSX.Element {
   const renameTab = useWorkspaceStore((s) => s.renameTab);
   const setAutoContinue = useWorkspaceStore((s) => s.setAutoContinue);
+  const setViewMode = useWorkspaceStore((s) => s.setViewMode);
+  const defaultViewMode = useDefaultAgentTabMode();
   const setAgentTitle = useWorkspaceStore((s) => s.setAgentTitle);
   const autoContinuePending = useAutoContinuePending(tab.id);
   const openDiff = useWorkspaceStore((s) => s.openDiff);
@@ -357,6 +379,7 @@ function PaneTab({
     if (agentTitle) setAgentTitle(projectId, tab.id, agentTitle);
   }, [status, agentTitle, projectId, tab.id, setAgentTitle]);
   const label = tabLabel(tab, settledTitle);
+  const viewMode = tab.kind === 'terminal' ? effectiveViewMode(tab, defaultViewMode) : 'cli';
   const attention = tab.kind === 'terminal' && !ended ? status : null;
   // What the agent runs on: the live report when it has hooks (Claude Code),
   // else the launch label, the CLI's last run, or its launch default, so a
@@ -434,7 +457,7 @@ function PaneTab({
       {active && groupFocused ? (
         <span className="absolute inset-x-2 -bottom-[5px] h-[2px] rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.7)]" />
       ) : null}
-      <TabIcon tab={tab} />
+      <TabIcon tab={tab} chat={viewMode === 'chat'} />
       {editing && tab.kind === 'terminal' ? (
         <input
           autoFocus
@@ -528,6 +551,28 @@ function PaneTab({
         >
           Rename
         </ContextMenuItem>
+        {tab.cliId ? (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuLabel>View</ContextMenuLabel>
+            <ContextMenuRadioGroup
+              value={viewMode}
+              onValueChange={(mode) => {
+                if (mode === 'cli' || mode === 'chat') setViewMode(projectId, tab.id, mode);
+              }}
+            >
+              <ContextMenuRadioItem value="cli">CLI</ContextMenuRadioItem>
+              <ContextMenuRadioItem value="chat" disabled={!canShowChat(tab)}>
+                Chat
+              </ContextMenuRadioItem>
+            </ContextMenuRadioGroup>
+            {canShowChat(tab) ? null : (
+              <p className="px-2 py-1 text-[11px] text-muted-foreground">
+                Chat view isn't available for this CLI yet
+              </p>
+            )}
+          </>
+        ) : null}
         {isAgent ? (
           <>
             <ContextMenuSeparator />
@@ -661,6 +706,10 @@ export function PaneGroup({
     });
   }, [resumeTab, projectId, restartTab]);
   const workspaceEmpty = Object.keys(workspace.tabs).length === 0;
+  const setViewMode = useWorkspaceStore((s) => s.setViewMode);
+  const defaultViewMode = useDefaultAgentTabMode();
+  const activeChat =
+    activeTab?.kind === 'terminal' && effectiveViewMode(activeTab, defaultViewMode) === 'chat';
 
   const stripRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -1026,12 +1075,28 @@ export function PaneGroup({
       >
         {activeTab?.kind === 'terminal' ? (
           <>
-            <TerminalSlot
-              key={activeTab.id}
-              projectId={projectId}
-              tab={activeTab}
-              focused={focused}
-            />
+            {activeChat ? (
+              <AgentChatView
+                key={`chat-${activeTab.id}`}
+                projectId={projectId}
+                tab={activeTab}
+                focused={focused}
+                onShowCli={() => setViewMode(projectId, activeTab.id, 'cli')}
+              />
+            ) : null}
+            {/* The CLI keeps running under the chat, so its terminal stays mounted, only hidden. */}
+            <div
+              data-terminal-slot=""
+              aria-hidden={activeChat || undefined}
+              className={cn('absolute inset-0', activeChat && 'invisible')}
+            >
+              <TerminalSlot
+                key={activeTab.id}
+                projectId={projectId}
+                tab={activeTab}
+                focused={focused && !activeChat}
+              />
+            </div>
             {exitCode !== undefined && !resumeTab ? (
               <SessionEndedBar
                 exitCode={exitCode}

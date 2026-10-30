@@ -107,6 +107,7 @@ export * from './vault/settings.js';
 export * from './vault/strength.js';
 export * from './vault/summary.js';
 export * from './vault/url.js';
+export * from './workspace/agentChat/index.js';
 export * from './workspace/agentReady.js';
 export * from './workspace/agentStatus.js';
 export * from './workspace/autoContinue.js';

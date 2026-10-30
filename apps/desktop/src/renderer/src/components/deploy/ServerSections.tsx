@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Lock,
   Shield,
+  Sparkles,
   Store,
 } from '@/components/icons';
 import { SectionStrip } from './deployKit';
@@ -19,6 +20,7 @@ export type ServerSection =
   | 'apps'
   | 'containers'
   | 'files'
+  | 'cleanup'
   | 'store'
   | 'websites'
   | 'firewall'
@@ -32,6 +34,7 @@ const SECTIONS: ReadonlyArray<{ value: ServerSection; label: string; icon?: type
   { value: 'apps', label: 'Apps', icon: Blocks },
   { value: 'containers', label: 'Containers', icon: Docker },
   { value: 'files', label: 'Files', icon: FolderOpen },
+  { value: 'cleanup', label: 'Cleanup', icon: Sparkles },
   { value: 'store', label: 'App Store', icon: Store },
   { value: 'websites', label: 'Websites', icon: Globe },
   { value: 'firewall', label: 'Firewall', icon: Lock },

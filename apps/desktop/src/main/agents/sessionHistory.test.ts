@@ -8,6 +8,7 @@ import {
   collectHistory,
   type HistoryDirEntry,
   type HistoryFs,
+  liveTranscriptCandidates,
   localHistoryFs,
 } from './sessionHistory';
 
@@ -1138,5 +1139,55 @@ describe('localHistoryFs', () => {
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('liveTranscriptCandidates', () => {
+  it('lists the Codex rollouts started in a folder, with when each started', async () => {
+    const fs = fakeFs({
+      [`${codexDir}/rollout-1.jsonl`]: {
+        content: codexRollout('x1', '/work/app', 'One'),
+        mtimeMs: 10,
+      },
+      [`${codexDir}/rollout-2.jsonl`]: {
+        content: codexRollout('x2', '/work/other', 'Two'),
+        mtimeMs: 20,
+      },
+    });
+    expect(await liveTranscriptCandidates(fs, 'codex-cli', '/work/app')).toEqual([
+      { path: `${codexDir}/rollout-1.jsonl`, startedAt: Date.parse('2026-09-01T10:00:00.000Z') },
+    ]);
+  });
+
+  it('lists the Gemini and Qwen chats of a folder from their header line', async () => {
+    const header = (at: string) =>
+      jsonl({ sessionId: 'g1', startTime: at, lastUpdated: at, kind: 'main' });
+    const fs = fakeFs({
+      '/home/me/.gemini/tmp/app/.project_root': { content: '/work/app', mtimeMs: 1 },
+      '/home/me/.gemini/tmp/app/chats/session-a.jsonl': {
+        content: header('2026-10-07T04:30:00.000Z'),
+        mtimeMs: 5,
+      },
+      '/home/me/.gemini/tmp/other/.project_root': { content: '/work/other', mtimeMs: 1 },
+      '/home/me/.gemini/tmp/other/chats/session-b.jsonl': {
+        content: header('2026-10-07T04:31:00.000Z'),
+        mtimeMs: 5,
+      },
+      '/home/me/.qwen/tmp/app/.project_root': { content: '/work/app', mtimeMs: 1 },
+      '/home/me/.qwen/tmp/app/chats/session-q.jsonl': { content: 'not json\n', mtimeMs: 5 },
+    });
+    expect(await liveTranscriptCandidates(fs, 'gemini-cli', '/work/app')).toEqual([
+      {
+        path: '/home/me/.gemini/tmp/app/chats/session-a.jsonl',
+        startedAt: Date.parse('2026-10-07T04:30:00.000Z'),
+      },
+    ]);
+    expect(await liveTranscriptCandidates(fs, 'qwen-cli', '/work/app')).toEqual([
+      { path: '/home/me/.qwen/tmp/app/chats/session-q.jsonl', startedAt: null },
+    ]);
+  });
+
+  it('lists nothing for a CLI whose transcript is found another way', async () => {
+    expect(await liveTranscriptCandidates(fakeFs({}), 'claude-code', '/work/app')).toEqual([]);
   });
 });

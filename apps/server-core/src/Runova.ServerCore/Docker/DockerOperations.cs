@@ -309,7 +309,7 @@ internal sealed partial class DockerOperations(
             return await engine.PruneAsync(request.Target, request.AllImages, cancellationToken);
         }
 
-        List<DockerPruneTarget> targets = [DockerPruneTarget.Containers, DockerPruneTarget.Networks, DockerPruneTarget.Images];
+        List<DockerPruneTarget> targets = [DockerPruneTarget.Containers, DockerPruneTarget.Networks, DockerPruneTarget.Images, DockerPruneTarget.BuildCache];
         if (request.IncludeVolumes)
         {
             targets.Add(DockerPruneTarget.Volumes);

@@ -219,6 +219,9 @@ internal sealed partial class FakeDockerDaemon : IAsyncDisposable
             case ("POST", ["networks", "prune"]):
                 await JsonAsync(context, """{"NetworksDeleted":["old_default"]}""");
                 return;
+            case ("POST", ["build", "prune"]):
+                await JsonAsync(context, """{"CachesDeleted":["k1","k2","k3"],"SpaceReclaimed":432013312}""");
+                return;
             case ("GET", ["events"]):
                 await StreamEventsAsync(context, query["since"], query["until"]);
                 return;

@@ -1,13 +1,22 @@
 import { access } from 'node:fs/promises';
-import { buildDeployAssistantPrompt, type DeployAssistantContext } from '@runova/core';
-import type { SshAgentProgress } from '../../../shared/apiTypes';
+import {
+  buildDeployAssistantPrompt,
+  type DeployAssistantAppFacts,
+  type DeployAssistantContext,
+  type DeployAssistantLog,
+} from '@runova/core';
+import type { SshAgentHistoryRun, SshAgentProgress } from '../../../shared/apiTypes';
 import type {
   AssistantMode,
   AssistantModeInfo,
+  ContainerSummary,
   ExecApproval,
+  StackDetails,
 } from '../../../shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type { ICoreHub } from '../../../shared/deploy/protocol/generated/TypedSignalR.Client/Runova.ServerCore.Contracts';
 import type {
+  DeployAssistantAppRef,
+  DeployAssistantChatSummary,
   DeployAssistantContextInput,
   DeployAssistantModeInput,
   DeployAssistantOutputEvent,
@@ -24,6 +33,8 @@ import {
   cliRunArgs,
   continuedTaskContext,
   continueSshTask,
+  forgetTaskRuns,
+  getScopedTaskHistory,
   getSshTaskHistory,
   isSshTaskRunning,
   sendSshTaskMessage,
@@ -34,6 +45,8 @@ import {
 } from '../../agents/sshTaskRunner';
 import { ADMIN_ROLES, type CoreCallDeps, callCore } from '../coreCalls';
 import type { DeployDocker } from '../docker';
+import type { DeployStacks } from '../stacks/service';
+import { chainOf, chatsFrom } from './chats';
 import { coreExecutor } from './coreExecutor';
 
 /**
@@ -45,6 +58,10 @@ import { coreExecutor } from './coreExecutor';
  */
 
 const LOG_TAIL = 100;
+/** Per container of an open app: enough to see how it is doing, across several of them. */
+const APP_LOG_TAIL = 40;
+/** The containers of an app the prompt reads: the first ones, which are its main services. */
+const APP_CONTAINERS = 6;
 
 export interface DeployAssistantDeps extends CoreCallDeps {
   approve: (serverId: string, hub: ICoreHub, command: string) => Promise<ExecApproval>;
@@ -52,6 +69,8 @@ export interface DeployAssistantDeps extends CoreCallDeps {
   /** A Runova project by id, for a run the user gave one to. Null when there is no such project. */
   project: (projectId: string) => Promise<{ name: string; folderPath: string } | null>;
   docker: Pick<DeployDocker, 'inspect' | 'logTail'>;
+  /** The app the user has open, read here: only its id comes from the window. */
+  stacks: Pick<DeployStacks, 'get'>;
   /** To the main window. */
   send: (
     channel: string,
@@ -131,7 +150,15 @@ export class DeployAssistant {
     // Asking the core first also checks the role: only Admins may run commands.
     await this.mode(serverId);
     const serverName = await this.deps.serverName(serverId);
-    const context = input.context ? await this.gather(serverId, input.context) : undefined;
+    const app = input.app ? await this.gatherApp(serverId, input.app.stackId) : undefined;
+    const gathered = input.context ? await this.gather(serverId, input.context) : undefined;
+    const context: DeployAssistantContext | undefined = app
+      ? {
+          ...(gathered ?? { title: `App ${app.facts.name}` }),
+          facts: [...(gathered?.facts ?? []), ...app.notes],
+          app: app.facts,
+        }
+      : gathered;
     const target: TaskTarget = {
       kind: 'core',
       description: `the server "${serverName}" through its Runova server core`,
@@ -142,7 +169,11 @@ export class DeployAssistant {
     };
     // Newest first: the run this one picks up from, when the user carries on rather than
     // starting a new chat.
-    const previous = input.continuePrevious ? getSshTaskHistory(key)[0] : undefined;
+    const previous = input.continueFromRunId
+      ? await this.pastRun(serverId, input.continueFromRunId)
+      : input.continuePrevious
+        ? getSshTaskHistory(key)[0]
+        : undefined;
     this.progress.delete(serverId);
     if (input.context) this.contexts.set(serverId, input.context);
     else this.contexts.delete(serverId);
@@ -155,6 +186,8 @@ export class DeployAssistant {
           ? { continuedFromRunId: previous.id, previousContext: continuedTaskContext(previous.id) }
           : {}),
         ...(workspace ? { cliWorkspace: workspace.cli } : {}),
+        longAnswers: true,
+        history: { serverId, scope: 'deploy', ...(app ? { app: app.ref } : {}) },
         // In auto-run mode nothing waits here: the core runs its allowlist and refuses the rest,
         // which the loop then proposes. The mode is read each step, so a change applies at once.
         policy: () => ({ pause: this.modes.get(serverId) !== 'autoRunDiagnostics' }),
@@ -208,6 +241,26 @@ export class DeployAssistant {
     };
   }
 
+  /** The server's past chats, the most recently active first, from this session and earlier ones. */
+  async chats(serverId: string): Promise<DeployAssistantChatSummary[]> {
+    return chatsFrom(await getScopedTaskHistory('deploy', serverId));
+  }
+
+  /** The runs of the chat whose newest run is `runId`, oldest first. Null when it is not there. */
+  async chat(serverId: string, runId: string): Promise<SshAgentHistoryRun[] | null> {
+    const chain = chainOf(await getScopedTaskHistory('deploy', serverId), runId);
+    return chain.length > 0 ? chain : null;
+  }
+
+  /** Forgets a whole chat, here and on disk. One the AI is still working in stays. */
+  async deleteChat(serverId: string, runId: string): Promise<void> {
+    const chain = (await this.chat(serverId, runId)) ?? [];
+    if (chain.some((run) => run.status === 'running' || run.status === 'paused')) {
+      throw new Error('Stop the AI before deleting this chat.');
+    }
+    await forgetTaskRuns(chain.map((run) => run.id));
+  }
+
   approve(serverId: string): void {
     approveSshTaskCommand(assistantKey(serverId));
   }
@@ -233,6 +286,13 @@ export class DeployAssistant {
     stopSshTask(assistantKey(serverId));
   }
 
+  /** A run of this server's chats, which a run picked from the history carries on from. */
+  private async pastRun(serverId: string, runId: string): Promise<SshAgentHistoryRun> {
+    const found = (await getScopedTaskHistory('deploy', serverId)).find((run) => run.id === runId);
+    if (!found) throw new Error('That chat is no longer in the history.');
+    return found;
+  }
+
   /** The project's folder, looked up here: a path from the window is never used. */
   private async workspace(
     input: NonNullable<DeployAssistantStartInput['project']>,
@@ -245,6 +305,96 @@ export class DeployAssistant {
       throw new Error(`The folder of ${project.name} is not there any more: ${project.folderPath}`);
     }
     return { project, cli: { cwd: project.folderPath, allowWrites: input.allowEdits } };
+  }
+
+  /**
+   * What the prompt says about the app the user has open: its services and containers, the
+   * names of its env variables and the end of each container's log. A container that cannot be
+   * inspected or read is said so rather than ending the run; an app that cannot be read does.
+   */
+  private async gatherApp(
+    serverId: string,
+    stackId: string,
+  ): Promise<{ ref: DeployAssistantAppRef; facts: DeployAssistantAppFacts; notes: string[] }> {
+    const details = await this.deps.stacks.get(serverId, stackId);
+    const { stack } = details;
+    const live = details.revisions.find((revision) => revision.number === stack.liveRevision);
+    const read = details.services.flatMap((service) => service.containers).slice(0, APP_CONTAINERS);
+    const notes: string[] = [];
+    const looked = new Map(
+      await Promise.all(
+        read.map(
+          async (container) =>
+            [container.id, await this.lookAt(serverId, container, notes)] as const,
+        ),
+      ),
+    );
+    const facts: DeployAssistantAppFacts = {
+      name: stack.name,
+      status: stack.status,
+      ...(stack.liveRevision === undefined ? {} : { liveRevision: stack.liveRevision }),
+      ...(composeProject(details) ? { composeProject: composeProject(details) } : {}),
+      envKeys: live?.envKeys ?? [],
+      services: details.services.map((service) => ({
+        name: service.name,
+        ...(service.image ? { image: service.image } : {}),
+        ports: service.ports.map(
+          (port) => `${port.published ? `${port.published}->` : ''}${port.target}/${port.protocol}`,
+        ),
+        containers: service.containers.map((container) => ({
+          id: container.id.slice(0, 12),
+          name: container.name,
+          state: container.state,
+          status: container.status,
+          health: container.health,
+          ...looked.get(container.id)?.facts,
+        })),
+      })),
+      logs: read.flatMap((container) => {
+        const log = looked.get(container.id)?.log;
+        return log ? [log] : [];
+      }),
+    };
+    return { ref: { stackId, name: stack.name }, facts, notes };
+  }
+
+  /** One container of an app: its restarts and exit code, and the end of its log. */
+  private async lookAt(
+    serverId: string,
+    container: ContainerSummary,
+    notes: string[],
+  ): Promise<{ facts: { restartCount?: number; exitCode?: number }; log?: DeployAssistantLog }> {
+    const [details, lines] = await Promise.allSettled([
+      this.deps.docker.inspect(serverId, container.id),
+      this.deps.docker.logTail({ serverId, containerId: container.id, tail: APP_LOG_TAIL }),
+    ]);
+    const facts =
+      details.status === 'fulfilled'
+        ? {
+            restartCount: details.value.restartCount,
+            ...(details.value.exitCode === undefined ? {} : { exitCode: details.value.exitCode }),
+          }
+        : {};
+    if (details.status === 'rejected') {
+      notes.push(
+        `The app could not inspect ${container.name}: ${(details.reason as Error).message}`,
+      );
+    }
+    if (lines.status === 'rejected') {
+      notes.push(
+        `The app could not read the log of ${container.name}: ${(lines.reason as Error).message}`,
+      );
+      return { facts };
+    }
+    return {
+      facts,
+      log: {
+        source: `the log of ${container.name}`,
+        lines: lines.value.map(
+          (line) => `${line.stream === 'stderr' ? 'err' : 'out'} ${line.text}`,
+        ),
+      },
+    };
   }
 
   /** What the prompt says about the container: read here, never taken from the window. */
@@ -289,4 +439,11 @@ export class DeployAssistant {
     context.facts = facts;
     return context;
   }
+}
+
+/** The compose project the app's containers run under, which `docker compose -p` takes. */
+function composeProject(details: StackDetails): string | undefined {
+  return details.services
+    .flatMap((service) => service.containers)
+    .find((container) => container.composeProject)?.composeProject;
 }

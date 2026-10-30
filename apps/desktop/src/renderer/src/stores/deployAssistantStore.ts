@@ -2,6 +2,7 @@ import type { EffortLevel } from '@runova/core';
 import type { SshAgentProgress } from '@shared/apiTypes';
 import type { ExecLine } from '@shared/deploy/protocol/generated/Runova.ServerCore.Contracts';
 import type {
+  DeployAssistantAppRef,
   DeployAssistantContextInput,
   DeployAssistantOutputEvent,
   DeployAssistantProgressEvent,
@@ -14,7 +15,9 @@ import { create } from 'zustand';
  * as it goes (a timeline of steps with their output). The run itself lives in the main process,
  * so leaving the page and coming back finds it where it was. A follow-up or a Continue after a
  * stop carries the chat on: the run before it stays above the new one, until a new chat. What is
- * typed in each server's box and the drawer's size live here too, so they outlast the page.
+ * typed in each server's box and the drawer's size live here too, so they outlast the page. So do
+ * the app page that is showing (the AI is about that app unless the user takes it off) and a chat
+ * picked from the history, which the next question carries on.
  */
 
 /** Output kept per step; the full output stays in the run's history. */
@@ -38,6 +41,8 @@ export interface AssistantMessage {
   text: string;
   /** How many steps the run had when it was sent, so it shows between the right ones. */
   at: number;
+  /** A question the AI asked, in a chat read back from the history; the user's otherwise. */
+  from?: 'ai';
 }
 
 /** A run that is over, kept above the one the chat carried on with. */
@@ -51,6 +56,13 @@ export interface AssistantTurn {
 export interface AssistantRun extends AssistantTurn {
   /** The runs before this one in the same chat, oldest first. */
   earlier: AssistantTurn[];
+  /** The app the chat is about, sent along with each of its runs. */
+  app?: DeployAssistantAppRef;
+}
+
+/** An app page that is showing, on a Deploy server. */
+export interface PageApp extends DeployAssistantAppRef {
+  serverId: string;
 }
 
 /** Which AI decides each step: an agent CLI with its model and effort, or the Settings provider. */
@@ -102,6 +114,19 @@ interface DeployAssistantStoreState {
    */
   pageServerId: string | null;
   setPageServer: (serverId: string | null) => void;
+  /** The app whose page is showing, which a new chat is about unless the user took it off. */
+  pageApp: PageApp | null;
+  setPageApp: (app: PageApp | null) => void;
+  /** Puts an app on the server's chat, or takes it off with null. Nothing without a chat. */
+  setChatApp: (serverId: string, app: DeployAssistantAppRef | null) => void;
+  /** Per server, the app the user took off the next chat; null puts it back. */
+  dismissedApps: Record<string, string>;
+  dismissApp: (serverId: string, stackId: string | null) => void;
+  /** Per server, the run a chat picked from the history carries on from. */
+  continueFrom: Record<string, string>;
+  /** Shows a past chat in the drawer, so the next question carries it on from `runId`. */
+  openChat: (serverId: string, run: AssistantRun, runId: string) => void;
+  clearContinueFrom: (serverId: string) => void;
   /** What "Diagnose with AI" pointed the AI at, sent along with each run on that server. */
   draft: { serverId: string; context: DeployAssistantContextInput } | null;
   /** What is in each server's task box, so leaving the page does not lose it or bring it back. */
@@ -124,9 +149,12 @@ interface DeployAssistantStoreState {
   close: () => void;
   clearDraft: () => void;
   /** A new chat on the server: its timeline starts empty. */
-  reset: (serverId: string, prompt?: string) => void;
-  /** A run that carries the chat on: the one before it moves up into the chat's history. */
-  followUp: (serverId: string, prompt: string) => void;
+  reset: (serverId: string, prompt?: string, app?: DeployAssistantAppRef) => void;
+  /**
+   * A run that carries the chat on: the one before it moves up into the chat's history. The chat
+   * keeps its app unless another one is given.
+   */
+  followUp: (serverId: string, prompt: string, app?: DeployAssistantAppRef) => void;
   /** A message the run took while it was going. */
   said: (serverId: string, text: string) => void;
   /** Puts a run back as it was, when starting the next one was refused. */
@@ -208,17 +236,51 @@ export const useDeployAssistantStore = create<DeployAssistantStoreState>((set) =
   close: () => set({ openServerId: null }),
   pageServerId: null,
   setPageServer: (serverId) => set({ pageServerId: serverId }),
-  clearDraft: () => set({ draft: null }),
-  reset: (serverId, prompt) =>
+  pageApp: null,
+  setPageApp: (app) => set({ pageApp: app }),
+  setChatApp: (serverId, app) =>
+    set((state) => {
+      const run = state.runs[serverId];
+      if (!run) return state;
+      const { app: _old, ...rest } = run;
+      return { runs: { ...state.runs, [serverId]: app ? { ...rest, app } : rest } };
+    }),
+  dismissedApps: {},
+  dismissApp: (serverId, stackId) =>
+    set((state) => {
+      const { [serverId]: _old, ...others } = state.dismissedApps;
+      return { dismissedApps: stackId ? { ...others, [serverId]: stackId } : others };
+    }),
+  continueFrom: {},
+  openChat: (serverId, run, runId) =>
     set((state) => ({
-      runs: { ...state.runs, [serverId]: { ...EMPTY_RUN, ...(prompt ? { prompt } : {}) } },
+      runs: { ...state.runs, [serverId]: run },
+      continueFrom: { ...state.continueFrom, [serverId]: runId },
     })),
-  followUp: (serverId, prompt) =>
+  clearContinueFrom: (serverId) =>
+    set((state) => {
+      const { [serverId]: _old, ...others } = state.continueFrom;
+      return { continueFrom: others };
+    }),
+  clearDraft: () => set({ draft: null }),
+  reset: (serverId, prompt, app) =>
+    set((state) => {
+      const { [serverId]: _old, ...continueFrom } = state.continueFrom;
+      return {
+        runs: {
+          ...state.runs,
+          [serverId]: { ...EMPTY_RUN, ...(prompt ? { prompt } : {}), ...(app ? { app } : {}) },
+        },
+        continueFrom,
+      };
+    }),
+  followUp: (serverId, prompt, app) =>
     set((state) => {
       const run = state.runs[serverId] ?? EMPTY_RUN;
-      const { earlier, ...last } = run;
+      const { earlier, app: chatApp, ...last } = run;
       const kept =
         last.steps.length > 0 || last.messages.length > 0 || last.prompt || last.progress;
+      const keptApp = app ?? chatApp;
       return {
         runs: {
           ...state.runs,
@@ -226,6 +288,7 @@ export const useDeployAssistantStore = create<DeployAssistantStoreState>((set) =
             ...EMPTY_RUN,
             prompt,
             earlier: kept ? [...earlier, last].slice(-MAX_TURNS) : earlier,
+            ...(keptApp ? { app: keptApp } : {}),
           },
         },
       };

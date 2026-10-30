@@ -25,6 +25,11 @@ export function unauthorizedError(method: string): Error {
   return new Error(`Failed to invoke '${method}' because user is unauthorized`);
 }
 
+/** What a call gets when the core could not read its arguments (a value it does not know). */
+export function bindingError(method: string): Error {
+  return new Error(`Failed to invoke '${method}' due to an error on the server.`);
+}
+
 /** What every open stream and call gets when its connection goes away. */
 export function connectionClosedError(): Error {
   return new Error('Invocation canceled due to the underlying connection being closed.');

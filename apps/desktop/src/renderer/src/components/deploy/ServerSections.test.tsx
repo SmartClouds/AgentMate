@@ -52,6 +52,20 @@ describe('ServerSections notifications', () => {
   });
 });
 
+describe('ServerSections cleanup', () => {
+  it('lists Cleanup right after Files and switches to it', async () => {
+    const onChange = vi.fn();
+    const { user } = renderWithProviders(<ServerSections value="overview" onChange={onChange} />);
+    const names = within(screen.getByRole('navigation', { name: 'Server sections' }))
+      .getAllByRole('button')
+      .map((button) => button.textContent);
+    expect(names.indexOf('Cleanup')).toBe(names.indexOf('Files') + 1);
+    await user.click(screen.getByRole('button', { name: 'Cleanup' }));
+    expect(onChange).toHaveBeenCalledWith('cleanup');
+    expect(sectionFromView('cleanup')).toBe('cleanup');
+  });
+});
+
 describe('sectionFromView', () => {
   it('reads files, and falls back to the Overview for anything else', () => {
     expect(sectionFromView('files')).toBe('files');

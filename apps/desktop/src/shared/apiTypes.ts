@@ -270,6 +270,28 @@ export type AutoContinuePendingMap = Record<string, AutoContinuePending | null>;
 /** Session id to what its agent is doing right now. */
 export type AgentStatusMap = Record<string, AgentStatus>;
 
+/** The session a Workspace tab's chat view is for: the terminal tab and the CLI running in it. */
+export interface ChatSessionSpec {
+  sessionId: string;
+  cliId: string;
+  cwd: string;
+  /** When the tab was opened, so a transcript from an earlier session is not mistaken for it. */
+  startedAt: number;
+  /** Set when the tab resumed a past conversation, whose transcript can be found by id. */
+  conversationId?: string;
+}
+
+/** What a chat view gets when it opens: the transcript so far, or word that none exists yet. */
+export type ChatSubscribeResult = { status: 'ready'; lines: string[] } | { status: 'waiting' };
+
+/** Lines a running CLI added to the transcript a chat view is showing. */
+export interface ChatAppend {
+  sessionId: string;
+  lines: string[];
+  /** The view should drop what it has and start again from these lines. */
+  reset: boolean;
+}
+
 /** The model and reasoning effort an agent reports it is running on right now. */
 export interface AgentRunInfo {
   /** Raw model id, e.g. `claude-opus-5`. */
@@ -2840,6 +2862,13 @@ export interface SshAgentHistoryRun {
   settings?: SshAgentRunSettings;
   /** The earlier task this one continued, when it did. */
   continuedFromRunId?: string;
+  /**
+   * Whose history the run is in. Absent for the SSH AI; `deploy` is a Deploy AI chat, whose
+   * `serverId` is a Deploy server's id and which the SSH server history never lists.
+   */
+  scope?: 'deploy';
+  /** The app a Deploy AI chat was about. */
+  app?: { stackId: string; name: string };
 }
 
 /** Starts an AI task that operates a Remote Desktop session by looking at it and using mouse and keyboard. */
