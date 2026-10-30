@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Npgsql;
 
 namespace Runova.Website.IntegrationTests.Infrastructure;
 
@@ -51,6 +52,15 @@ public sealed class WebsiteApiFactory(
 
             services?.Invoke(testServices);
         });
+    }
+
+    // Most tests have a database of their own, and so a pool of their own, whose idle connections
+    // would stay open for minutes and run the server out of them.
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        using var connection = new NpgsqlConnection(connectionString);
+        NpgsqlConnection.ClearPool(connection);
     }
 
     private static bool IsJobServer(ServiceDescriptor service) =>

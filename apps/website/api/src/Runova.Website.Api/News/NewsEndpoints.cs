@@ -24,15 +24,18 @@ internal static class NewsEndpoints
     // At least one letter, so a slug never looks like the id the write routes will take.
     private const string SlugRoute = "{slug:regex(^[a-z0-9-]*[a-z][a-z0-9-]*$)}";
 
+    /// <summary>The Markdown renderer, and the built-in validation that news writes run.</summary>
     public static IServiceCollection AddWebsiteNews(this IServiceCollection services) =>
-        services.AddSingleton(provider => new MarkdownRenderer(new Uri(SiteUrl.From(provider.GetRequiredService<IConfiguration>()))));
+        services
+            .AddValidation()
+            .AddSingleton(provider => new MarkdownRenderer(new Uri(SiteUrl.From(provider.GetRequiredService<IConfiguration>()))));
 
     public static RouteGroupBuilder MapNews(this RouteGroupBuilder api)
     {
         var news = api.MapGroup("/news").AllowAnonymous();
         news.MapGet("", ListAsync).Produces(StatusCodes.Status304NotModified);
         news.MapGet($"/{SlugRoute}", GetAsync).Produces(StatusCodes.Status304NotModified);
-        return api;
+        return api.MapNewsWrites();
     }
 
     private static async Task<Results<Ok<Page<NewsListItemDto>>, StatusCodeHttpResult, ValidationProblem, ProblemHttpResult>> ListAsync(
@@ -115,5 +118,5 @@ internal static class NewsEndpoints
         return TypedResults.Ok(NewsMapper.ToDto(item, ItemUrl(SiteUrl.From(configuration), item)));
     }
 
-    private static string ItemUrl(string siteUrl, NewsItem item) => $"{siteUrl}/news/{item.Slug}";
+    public static string ItemUrl(string siteUrl, NewsItem item) => $"{siteUrl}/news/{item.Slug}";
 }

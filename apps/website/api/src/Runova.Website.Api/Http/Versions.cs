@@ -31,11 +31,13 @@ internal static class Versions
         var tag = ETag(current);
         var matches = EntityTagHeaderValue.TryParseList(ifMatch, out var tags)
             && tags.Any(t => t.Equals(EntityTagHeaderValue.Any) || (!t.IsWeak && t.Tag == tag));
-        return matches
-            ? null
-            : ApiProblems.Of(
-                ProblemTypes.PreconditionFailed,
-                "This was changed since you read it. Read it again and reapply your change.",
-                new Dictionary<string, object?> { ["currentVersion"] = current.ToString(CultureInfo.InvariantCulture) });
+        return matches ? null : Stale(current);
     }
+
+    /// <summary>The 412 for a write made against an older version, with the current one.</summary>
+    public static ProblemHttpResult Stale(uint current) =>
+        ApiProblems.Of(
+            ProblemTypes.PreconditionFailed,
+            "This was changed since you read it. Read it again and reapply your change.",
+            new Dictionary<string, object?> { ["currentVersion"] = current.ToString(CultureInfo.InvariantCulture) });
 }

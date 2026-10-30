@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Hangfire;
+using Runova.Website.Api.News;
 using Runova.Website.Api.Users;
 
 namespace Runova.Website.Api.Jobs;
@@ -10,16 +11,19 @@ namespace Runova.Website.Api.Jobs;
 internal static class RecurringJobRegistry
 {
     public const string InvitationsCleanup = "invitations-cleanup";
+    public const string NewsPublish = "news-publish";
 
     public static readonly IReadOnlyDictionary<string, string> Schedules = new Dictionary<string, string>
     {
         [InvitationsCleanup] = Cron.Hourly(),
+        [NewsPublish] = Cron.Minutely(),
     };
 
     /// <summary>Adds each job, or updates it when its schedule or method changed.</summary>
     public static void Register(IRecurringJobManager jobs)
     {
         Add<InvitationsCleanupJob>(jobs, InvitationsCleanup, job => job.RunAsync(CancellationToken.None));
+        Add<NewsPublishJob>(jobs, NewsPublish, job => job.RunAsync(CancellationToken.None));
     }
 
     // Hangfire passes its own shutdown token in place of CancellationToken.None.

@@ -657,6 +657,43 @@
             "description": "Not Modified"
           }
         }
+      },
+      "post": {
+        "tags": [
+          "NewsWriteEndpoints"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewsItemWriteDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsItemAdminDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/news/{slug}": {
@@ -691,6 +728,165 @@
           }
         }
       }
+    },
+    "/api/v1/news/{id}": {
+      "get": {
+        "tags": [
+          "NewsWriteEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsItemAdminDto"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "NewsWriteEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewsItemWriteDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsItemAdminDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "NewsWriteEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/merge-patch\u002Bjson": {
+              "schema": {
+                "$ref": "#/components/schemas/NewsItemWriteDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewsItemWriteDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsItemAdminDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "NewsWriteEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -714,6 +910,38 @@
             "type": "string"
           },
           "fixedIn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "AffectedTechnologyWriteDto": {
+        "required": [
+          "technology",
+          "versionRange"
+        ],
+        "type": "object",
+        "properties": {
+          "technology": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "versionRange": {
+            "maxLength": 100,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fixedIn": {
+            "maxLength": 40,
+            "minLength": 0,
             "type": [
               "null",
               "string"
@@ -825,6 +1053,155 @@
           "industry"
         ]
       },
+      "NewsCreatorDto": {
+        "required": [
+          "kind",
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NewsItemAdminDto": {
+        "required": [
+          "id",
+          "slug",
+          "url",
+          "title",
+          "summary",
+          "category",
+          "severity",
+          "technologies",
+          "cveIds",
+          "cvssScore",
+          "tags",
+          "publishedAt",
+          "updatedAt",
+          "bodyHtml",
+          "sourceLinks",
+          "bodyMarkdown",
+          "status",
+          "createdAt",
+          "createdBy",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/NewsCategory"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/NewsSeverity"
+          },
+          "technologies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AffectedTechnologyDto"
+            }
+          },
+          "cveIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cvssScore": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "publishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "bodyHtml": {
+            "type": "string"
+          },
+          "sourceLinks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceLinkDto"
+            }
+          },
+          "bodyMarkdown": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/NewsStatus"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/NewsCreatorDto"
+              }
+            ]
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "NewsItemDto": {
         "required": [
           "id",
@@ -914,6 +1291,140 @@
             "items": {
               "$ref": "#/components/schemas/SourceLinkDto"
             }
+          }
+        },
+        "additionalProperties": false
+      },
+      "NewsItemWriteDto": {
+        "required": [
+          "slug",
+          "title",
+          "summary",
+          "category",
+          "severity",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "slug": {
+            "maxLength": 120,
+            "minLength": 3,
+            "pattern": "^(?=.*[a-z])[a-z0-9]\u002B(-[a-z0-9]\u002B)*$",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "maxLength": 160,
+            "minLength": 5,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "summary": {
+            "maxLength": 400,
+            "minLength": 20,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bodyMarkdown": {
+            "maxLength": 100000,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "category": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/NewsCategory"
+              }
+            ]
+          },
+          "severity": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/NewsSeverity"
+              }
+            ]
+          },
+          "technologies": {
+            "maxItems": 20,
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AffectedTechnologyWriteDto"
+            }
+          },
+          "cveIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "cvssScore": {
+            "maximum": 10,
+            "minimum": 0,
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "sourceLinks": {
+            "maxItems": 10,
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SourceLinkWriteDto"
+            }
+          },
+          "tags": {
+            "maxItems": 10,
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/NewsStatus"
+              }
+            ]
+          },
+          "publishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         },
         "additionalProperties": false
@@ -1010,6 +1521,14 @@
           "medium",
           "high",
           "critical"
+        ]
+      },
+      "NewsStatus": {
+        "enum": [
+          "draft",
+          "scheduled",
+          "published",
+          "archived"
         ]
       },
       "PageOfNewsListItemDto": {
@@ -1216,6 +1735,32 @@
           },
           "url": {
             "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SourceLinkWriteDto": {
+        "required": [
+          "title",
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "maxLength": 2000,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ]
           }
         },
         "additionalProperties": false
@@ -1445,6 +1990,9 @@
     },
     {
       "name": "NewsEndpoints"
+    },
+    {
+      "name": "NewsWriteEndpoints"
     }
   ]
 }

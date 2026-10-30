@@ -42,4 +42,33 @@ public sealed record NewsItemDto(
     string BodyHtml,
     IReadOnlyList<SourceLinkDto> SourceLinks);
 
+/// <summary>Who wrote a news item first: a user or an API client, with its name.</summary>
+public sealed record NewsCreatorDto(string Kind, long Id, string Name);
+
+/// <summary>
+/// A news item in any status, for staff and API clients: the public fields plus the Markdown
+/// body, the status, who created it and its version (the ETag without quotes).
+/// </summary>
+public sealed record NewsItemAdminDto(
+    long Id,
+    string Slug,
+    string Url,
+    string Title,
+    string Summary,
+    NewsCategory Category,
+    NewsSeverity Severity,
+    IReadOnlyList<AffectedTechnologyDto> Technologies,
+    IReadOnlyList<string> CveIds,
+    decimal? CvssScore,
+    IReadOnlyList<string> Tags,
+    DateTimeOffset? PublishedAt,
+    DateTimeOffset UpdatedAt,
+    string BodyHtml,
+    IReadOnlyList<SourceLinkDto> SourceLinks,
+    string BodyMarkdown,
+    NewsStatus Status,
+    DateTimeOffset CreatedAt,
+    NewsCreatorDto? CreatedBy,
+    string Version);
+
 public sealed record TechnologyDto(string Slug, string Name, TechnologyKind Kind, bool Detectable);

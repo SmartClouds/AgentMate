@@ -11,6 +11,12 @@ public static partial class NewsMapper
     /// <summary>For a published item only: one with no <c>publishedAt</c> throws.</summary>
     public static partial NewsItemDto ToDto(NewsItem item, string url);
 
+    /// <summary>
+    /// The caller passes the item's public URL and its creator, which lives in another table
+    /// (null for an item made outside the API).
+    /// </summary>
+    public static partial NewsItemAdminDto ToAdminDto(NewsItem item, string url, NewsCreatorDto? createdBy);
+
     [MapPropertyFromSource(nameof(AffectedTechnologyDto.Name), Use = nameof(TechnologyName))]
     private static partial AffectedTechnologyDto ToDto(AffectedTechnology technology);
 

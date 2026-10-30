@@ -12,6 +12,9 @@ internal static class Policies
 {
     public const string Staff = "Staff";
     public const string Admin = "Admin";
+
+    /// <summary>Writing news: staff for now; T008 adds API clients with the <c>news:write</c> scope.</summary>
+    public const string NewsWrite = "NewsWrite";
 }
 
 internal static class IdentitySetup
@@ -78,7 +81,8 @@ internal static class IdentitySetup
         services.AddAuthorizationBuilder()
             .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())
             .AddPolicy(Policies.Staff, policy => policy.RequireRole(Roles.Admin, Roles.Editor))
-            .AddPolicy(Policies.Admin, policy => policy.RequireRole(Roles.Admin));
+            .AddPolicy(Policies.Admin, policy => policy.RequireRole(Roles.Admin))
+            .AddPolicy(Policies.NewsWrite, policy => policy.RequireRole(Roles.Admin, Roles.Editor));
         services.AddSingleton<IAuthorizationMiddlewareResultHandler, RouteOnlyAuthorizationResultHandler>();
 
         return services;

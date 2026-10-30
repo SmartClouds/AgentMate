@@ -272,7 +272,6 @@ public sealed class NewsReadTests(PostgresFixture postgres) : IAsyncLifetime
     [InlineData("an-archived-one")]
     [InlineData("published-in-the-future")]
     [InlineData("no-such-item")]
-    [InlineData("12345")]
     [InlineData("Not-A-Slug")]
     public async Task Anything_not_published_answers_404(string slug)
     {

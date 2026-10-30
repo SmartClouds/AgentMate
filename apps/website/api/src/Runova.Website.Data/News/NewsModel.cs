@@ -27,6 +27,8 @@ internal static class NewsModel
             item.Property(i => i.Title).HasMaxLength(160);
             item.Property(i => i.Summary).HasMaxLength(400);
             item.Property(i => i.CvssScore).HasPrecision(3, 1);
+            // No foreign key to the creator: an item outlives the user or client that wrote it.
+            item.Property(i => i.CreatedByKind).HasMaxLength(16);
             item.Property(i => i.Version).IsRowVersion();
             item.HasIndex(i => i.Slug).IsUnique();
             item.HasIndex(i => new { i.Status, i.PublishedAt });

@@ -5,7 +5,10 @@ using Runova.Website.Data;
 
 namespace Runova.Website.IntegrationTests.Infrastructure;
 
-/// <summary>News items written straight to the database, since the API has no writes for them yet.</summary>
+/// <summary>
+/// News items written straight to the database, for tests that need an item in a state or at a time
+/// the write endpoints would refuse (an archived one, or one already due).
+/// </summary>
 internal static class TestNews
 {
     /// <summary>A valid item: published at the given time unless told otherwise, with a body to search.</summary>

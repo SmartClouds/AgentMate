@@ -40,6 +40,14 @@ public class NewsItem
     /// <summary>When the item went or goes public; null for a draft that has no date yet.</summary>
     public DateTimeOffset? PublishedAt { get; set; }
 
+    public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>One of <c>AuditActorKinds</c>: who wrote the item first.</summary>
+    public string CreatedByKind { get; set; } = "user";
+
+    /// <summary>The user or API client that wrote the item first; null for one made outside the API.</summary>
+    public long? CreatedById { get; set; }
+
     public DateTimeOffset UpdatedAt { get; set; }
 
     /// <summary>PostgreSQL's <c>xmin</c>, the row version behind the ETag.</summary>

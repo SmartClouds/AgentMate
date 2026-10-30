@@ -76,6 +76,25 @@ public class NewsMapperTests
     }
 
     [Fact]
+    public void An_admin_dto_adds_the_markdown_status_creator_and_version()
+    {
+        var item = Item();
+        item.CreatedAt = _publishedAt.AddDays(-1);
+        var creator = new NewsCreatorDto("user", 7, "Sam Editor");
+
+        var dto = NewsMapper.ToAdminDto(item, Url, creator);
+
+        Assert.Equal(Url, dto.Url);
+        Assert.Equal("## What happened", dto.BodyMarkdown);
+        Assert.Equal("<h2 id=\"what-happened\">What happened</h2>", dto.BodyHtml);
+        Assert.Equal(NewsStatus.Published, dto.Status);
+        Assert.Equal(_publishedAt.AddDays(-1), dto.CreatedAt);
+        Assert.Equal(creator, dto.CreatedBy);
+        Assert.Equal("1234", dto.Version);
+        Assert.Equal([new AffectedTechnologyDto("openssh", "OpenSSH", ">=9.8.0 <10.3.0", "10.3.0")], dto.Technologies);
+    }
+
+    [Fact]
     public void A_public_dto_leaves_out_the_markdown_status_and_version()
     {
         string[] hidden = ["BodyMarkdown", "Status", "Version"];
@@ -89,6 +108,7 @@ public class NewsMapperTests
     {
         Assert.Empty(SecretProperties.In(typeof(NewsListItemDto)));
         Assert.Empty(SecretProperties.In(typeof(NewsItemDto)));
+        Assert.Empty(SecretProperties.In(typeof(NewsItemAdminDto)));
         Assert.Empty(SecretProperties.In(typeof(TechnologyDto)));
     }
 

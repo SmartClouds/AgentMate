@@ -146,6 +146,17 @@ namespace Runova.Website.Data.Migrations
                     b.Property<int>("Category")
                         .HasColumnType("integer");
 
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("CreatedById")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("CreatedByKind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
                     b.PrimitiveCollection<List<string>>("CveIds")
                         .IsRequired()
                         .HasColumnType("text[]");
