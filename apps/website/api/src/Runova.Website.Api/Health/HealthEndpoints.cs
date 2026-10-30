@@ -27,12 +27,12 @@ internal static class HealthEndpoints
 
     public static IEndpointRouteBuilder MapHealth(this IEndpointRouteBuilder app)
     {
-        app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
+        app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
         app.MapHealthChecks("/health/ready", new HealthCheckOptions
         {
             Predicate = check => check.Tags.Contains(ReadyTag),
             ResponseWriter = WriteReadyAsync,
-        });
+        }).AllowAnonymous();
         return app;
     }
 

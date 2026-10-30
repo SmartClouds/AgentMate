@@ -1,3 +1,6 @@
+using Runova.Website.Api.Sessions;
+using Runova.Website.Api.Users;
+
 namespace Runova.Website.Api;
 
 /// <summary>The <c>/api/v1</c> route group that every resource maps its endpoints on.</summary>
@@ -9,6 +12,8 @@ internal static class ApiV1
     {
         var api = app.MapGroup(Prefix);
         // One static class per resource adds itself here, as in api.MapNews().
+        api.MapSessions();
+        api.MapMe();
         return api;
     }
 }

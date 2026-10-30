@@ -12,6 +12,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Runova.Website.IntegrationTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Runova.Website.Core\Runova.Website.Core.csproj" />
     <ProjectReference Include="..\Runova.Website.Data\Runova.Website.Data.csproj" />
   </ItemGroup>

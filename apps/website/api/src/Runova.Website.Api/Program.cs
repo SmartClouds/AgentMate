@@ -1,12 +1,18 @@
 using Runova.Website.Api;
+using Runova.Website.Api.Cli;
+using Runova.Website.Api.Database;
 using Runova.Website.Api.Health;
+using Runova.Website.Api.Identity;
 using Runova.Website.Api.Problems;
 using Runova.Website.Data;
 using Scalar.AspNetCore;
 
-var builder = WebApplication.CreateBuilder(args);
+// The admin verbs are not configuration, so they stay out of the builder's command line.
+var builder = WebApplication.CreateBuilder(AdminCli.IsCommand(args) ? [] : args);
 
 builder.Services.AddWebsiteData();
+builder.Services.AddWebsiteIdentity();
+builder.Services.AddHostedService<MigrateOnStart>();
 builder.Services.AddWebsiteProblemDetails();
 builder.Services.AddWebsiteHealthChecks();
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document, _, _) =>
@@ -18,15 +24,22 @@ builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document,
 
 var app = builder.Build();
 
-app.UseWebsiteProblemDetails();
+if (AdminCli.IsCommand(args))
+{
+    return await AdminCli.RunAsync(args, app.Services, Console.In, Console.Out, Console.Error);
+}
 
-app.MapOpenApi();
+app.UseWebsiteProblemDetails();
+app.UseWebsiteIdentity();
+
+app.MapOpenApi().AllowAnonymous();
 if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
 {
-    app.MapScalarApiReference();
+    app.MapScalarApiReference().AllowAnonymous();
 }
 
 app.MapHealth();
 app.MapApiV1();
 
-app.Run();
+await app.RunAsync();
+return 0;
