@@ -1,8 +1,8 @@
 import type { ChatItem } from '@runova/core';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MarkdownMessage } from '@/components/askAi/MarkdownMessage';
 import { CliLogo } from '@/components/cliLogos';
-import { ChevronRight, Sparkles } from '@/components/icons';
+import { Check, ChevronRight, Copy, ImageIcon, Sparkles } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import type { ChatTheme } from './chatThemes';
 import { ToolCallCard } from './ToolCallCard';
@@ -30,6 +30,55 @@ function Thinking({ text, theme }: { text: string; theme: ChatTheme }): React.JS
   );
 }
 
+const COPIED_MS = 1500;
+
+/** Copies a prompt or a reply as it was written (a reply as its markdown). */
+export function CopyMessageButton({
+  text,
+  className,
+}: {
+  text: string;
+  className?: string;
+}): React.JSX.Element {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), COPIED_MS);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
+  return (
+    <button
+      type="button"
+      aria-label={copied ? 'Copied' : 'Copy message'}
+      title={copied ? 'Copied' : 'Copy'}
+      onClick={() => {
+        void navigator.clipboard
+          .writeText(text)
+          .then(() => setCopied(true))
+          .catch(() => undefined);
+      }}
+      className={cn(
+        'flex h-6 w-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-foreground/[0.06] hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100',
+        copied && 'opacity-100',
+        className,
+      )}
+    >
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+    </button>
+  );
+}
+
+/** A small note in a prompt's bubble for the images sent with it. */
+export function ImageCount({ count }: { count: number }): React.JSX.Element {
+  return (
+    <span className="flex items-center gap-1 text-[11px] opacity-75">
+      <ImageIcon className="h-3 w-3" />
+      {count === 1 ? '1 image' : `${count} images`}
+    </span>
+  );
+}
+
 export interface ChatMessageProps {
   item: ChatItem;
   theme: ChatTheme;
@@ -47,15 +96,17 @@ export function ChatMessage({
 }: ChatMessageProps): React.JSX.Element {
   if (item.kind === 'user') {
     return (
-      <div className="flex justify-end pl-12">
+      <div className="group flex items-end justify-end gap-1 pl-12">
+        {item.text ? <CopyMessageButton text={item.text} /> : null}
         <div
           dir="auto"
           className={cn(
-            'max-w-[85%] whitespace-pre-wrap break-words px-4 py-2.5 text-sm',
+            'max-w-[85%] space-y-1 whitespace-pre-wrap break-words px-4 py-2.5 text-sm',
             theme.userBubble,
           )}
         >
-          {item.text}
+          {item.images ? <ImageCount count={item.images} /> : null}
+          {item.text ? <div>{item.text}</div> : null}
         </div>
       </div>
     );
@@ -85,8 +136,11 @@ export function ChatMessage({
       </div>
       <div className="min-w-0 flex-1">
         {item.kind === 'assistant' ? (
-          <div dir="auto">
-            <MarkdownMessage content={item.text} className={theme.replyText} />
+          <div className="group">
+            <div dir="auto">
+              <MarkdownMessage content={item.text} className={theme.replyText} />
+            </div>
+            <CopyMessageButton text={item.text} className="-ml-1 mt-0.5" />
           </div>
         ) : item.kind === 'thinking' ? (
           <Thinking text={item.text} theme={theme} />

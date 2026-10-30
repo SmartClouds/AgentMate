@@ -6,6 +6,7 @@ import {
   describeTool,
   draft,
   find,
+  imageCount,
   parseLine,
   record,
   text,
@@ -47,9 +48,10 @@ function readItem(
   switch (item.type) {
     case 'message': {
       const body = blockText(item.content).trim();
-      if (!body) return;
+      const images = item.role === 'user' ? imageCount(item.content) : 0;
+      if (!body && images === 0) return;
       if (item.role === 'user' && !INJECTED.test(body)) {
-        upsert(state, { kind: 'user', key, at, text: body });
+        upsert(state, { kind: 'user', key, at, text: body, ...(images > 0 ? { images } : {}) });
       } else if (item.role === 'assistant') {
         upsert(state, { kind: 'assistant', key, at, text: body });
       }

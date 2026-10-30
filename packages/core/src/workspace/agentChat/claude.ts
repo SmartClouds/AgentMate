@@ -6,6 +6,7 @@ import {
   describeTool,
   draft,
   find,
+  imageCount,
   parseLine,
   record,
   timeOf,
@@ -27,6 +28,7 @@ export const applyClaudeLines: ChatReader = (state, lines) => {
     const id = typeof entry.uuid === 'string' ? entry.uuid : `line-${next.seq}`;
     const content = record(entry.message)?.content;
     if (entry.type === 'user' && entry.isMeta !== true) readUser(next, id, at, content);
+    else if (entry.type === 'attachment') readQueued(next, id, at, record(entry.attachment));
     else if (entry.type === 'assistant' && Array.isArray(content)) {
       content.forEach((block, i) => readAssistantBlock(next, `${id}:${i}`, at, block));
     }
@@ -42,6 +44,11 @@ function readUser(state: ChatState, id: string, at: number | null, content: unkn
     }
   }
   const raw = blockText(content).trim();
+  const images = imageCount(content);
+  if (images > 0 && !raw) {
+    upsert(state, { kind: 'user', key: id, at, text: '', images });
+    return;
+  }
   if (!raw || raw.startsWith('<task-notification>')) return;
   if (raw.startsWith('[Request interrupted')) {
     upsert(state, { kind: 'notice', key: id, at, text: 'Interrupted', tone: 'warning' });
@@ -53,6 +60,25 @@ function readUser(state: ChatState, id: string, at: number | null, content: unkn
     return;
   }
   const text = cleanPromptText(raw);
+  if (text) upsert(state, { kind: 'user', key: id, at, text, ...(images > 0 ? { images } : {}) });
+}
+
+/**
+ * A message typed while Claude was working is written as a `queued_command` attachment rather
+ * than a user line. Background task notifications travel the same way and are left out.
+ */
+function readQueued(
+  state: ChatState,
+  id: string,
+  at: number | null,
+  attachment: Record<string, unknown> | null,
+): void {
+  if (attachment?.type !== 'queued_command' || typeof attachment.prompt !== 'string') return;
+  const origin = record(attachment.origin)?.kind;
+  if (origin !== undefined && origin !== 'human') return;
+  const prompt = attachment.prompt.trim();
+  if (prompt.startsWith('<task-notification>')) return;
+  const text = cleanPromptText(prompt);
   if (text) upsert(state, { kind: 'user', key: id, at, text });
 }
 

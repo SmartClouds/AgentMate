@@ -2,11 +2,11 @@ import type { ChatItem } from '@runova/core';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { CliLogo } from '@/components/cliLogos';
-import { ArrowDown, TerminalSquare, TriangleAlert } from '@/components/icons';
+import { ArrowDown, Clock, TerminalSquare, TriangleAlert } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { openAgentChat, useAgentChatStore } from '@/stores/agentChatStore';
+import { openAgentChat, type PendingMessage, useAgentChatStore } from '@/stores/agentChatStore';
 import {
   tabRunLine,
   useAgentRunInfo,
@@ -15,8 +15,10 @@ import {
 } from '@/stores/agentStatusStore';
 import type { WorkspaceTerminalTab } from '@/stores/workspaceStore';
 import { ChatComposer } from './ChatComposer';
-import { ChatMessage } from './ChatMessage';
+import { ChatMessage, ImageCount } from './ChatMessage';
 import { type ChatTheme, chatThemeFor } from './chatThemes';
+
+const NO_PENDING: PendingMessage[] = [];
 
 /** How close to the bottom still counts as reading the newest message. */
 const STICK_PX = 48;
@@ -59,6 +61,36 @@ function EmptyState({
   );
 }
 
+/** A message sent from the chat that the CLI has not written to its transcript yet. */
+function PendingBubble({
+  message,
+  theme,
+  working,
+}: {
+  message: PendingMessage;
+  theme: ChatTheme;
+  working: boolean;
+}): React.JSX.Element {
+  return (
+    <div data-pending="" className="flex flex-col items-end gap-1 pl-12">
+      <div
+        dir="auto"
+        className={cn(
+          'max-w-[85%] space-y-1 whitespace-pre-wrap break-words px-4 py-2.5 text-sm opacity-60',
+          theme.userBubble,
+        )}
+      >
+        {message.images > 0 ? <ImageCount count={message.images} /> : null}
+        {message.text ? <div>{message.text}</div> : null}
+      </div>
+      <span className="flex items-center gap-1 pr-2 text-[10px] text-muted-foreground">
+        <Clock className="h-3 w-3" />
+        {working ? 'Queued' : 'Sending'}
+      </span>
+    </div>
+  );
+}
+
 function WorkingDots({ theme }: { theme: ChatTheme }): React.JSX.Element {
   return (
     <div className="flex gap-3">
@@ -85,6 +117,7 @@ export function AgentChatView({
   const cliId = tab.cliId ?? '';
   const theme = chatThemeFor(tab.cliId);
   const chat = useAgentChatStore((s) => s.chats[tab.id]);
+  const pending = useAgentChatStore((s) => s.pending[tab.id] ?? NO_PENDING);
   const status = useAgentStatus(tab.id);
   const runInfo = useAgentRunInfo(tab.id);
   const cliRunLine = useCliRunLine(tab.cliId);
@@ -110,7 +143,7 @@ export function AgentChatView({
   useLayoutEffect(() => {
     const log = logRef.current;
     if (log && atBottom.current) log.scrollTop = log.scrollHeight;
-  }, [items.length, items[items.length - 1], working]);
+  }, [items.length, items[items.length - 1], working, pending.length]);
 
   const onScroll = useCallback(() => {
     const log = logRef.current;
@@ -188,7 +221,7 @@ export function AgentChatView({
                 title={`Waiting for ${theme.name}`}
                 body="The conversation shows here as soon as the CLI starts it."
               />
-            ) : items.length === 0 ? (
+            ) : items.length === 0 && pending.length === 0 ? (
               <EmptyState
                 theme={theme}
                 cliId={cliId}
@@ -212,6 +245,9 @@ export function AgentChatView({
                 </motion.div>
               ))
             )}
+            {pending.map((message) => (
+              <PendingBubble key={message.key} message={message} theme={theme} working={working} />
+            ))}
             {working && chat?.status === 'ready' ? <WorkingDots theme={theme} /> : null}
           </div>
         </div>
@@ -265,7 +301,13 @@ export function AgentChatView({
         </div>
       ) : null}
 
-      <ChatComposer ref={composerRef} sessionId={tab.id} theme={theme} working={working} />
+      <ChatComposer
+        ref={composerRef}
+        sessionId={tab.id}
+        cliId={cliId}
+        theme={theme}
+        working={working}
+      />
     </section>
   );
 }

@@ -22,7 +22,11 @@ interface ChatItemBase {
 }
 
 export type ChatItem =
-  | (ChatItemBase & { kind: 'user'; text: string })
+  | (ChatItemBase & {
+      kind: 'user';
+      text: string /** Pasted or attached images. */;
+      images?: number;
+    })
   | (ChatItemBase & { kind: 'assistant'; text: string })
   | (ChatItemBase & { kind: 'thinking'; text: string })
   | (ChatItemBase & {
@@ -115,6 +119,15 @@ export function blockText(content: unknown): string {
     })
     .filter(Boolean)
     .join('\n');
+}
+
+/** How many blocks of a content list are images (`image` for Claude, `input_image` for Codex). */
+export function imageCount(content: unknown): number {
+  if (!Array.isArray(content)) return 0;
+  return content.filter((block) => {
+    const type = record(block)?.type;
+    return type === 'image' || type === 'input_image';
+  }).length;
 }
 
 export function fileName(path: string): string {

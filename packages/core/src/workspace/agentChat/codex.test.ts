@@ -32,6 +32,22 @@ describe('codex chat reader', () => {
     ]);
   });
 
+  it('counts the images sent with a prompt', () => {
+    const items = read([
+      item({
+        type: 'message',
+        role: 'user',
+        content: [
+          { type: 'input_image', image_url: 'data:image/png;base64,x' },
+          { type: 'input_text', text: 'match this design' },
+        ],
+      }),
+    ]);
+    expect(items).toEqual([
+      expect.objectContaining({ kind: 'user', text: 'match this design', images: 1 }),
+    ]);
+  });
+
   it('skips the context Codex injects and developer messages', () => {
     const items = read([
       item({

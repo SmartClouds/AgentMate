@@ -10,7 +10,7 @@ import type { ChipInput, ChipPasteController } from '@/lib/terminal/chipPasteMod
 const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/bmp']);
 
 /** A path for each pasted file: its own on disk, or a saved copy for clipboard-only images. */
-async function pathsForFiles(files: File[]): Promise<string[]> {
+export async function pathsForFiles(files: File[]): Promise<string[]> {
   const paths: string[] = [];
   for (const file of files) {
     const onDisk = window.runova.shell.pathForFile(file);

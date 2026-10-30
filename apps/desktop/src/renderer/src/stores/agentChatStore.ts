@@ -16,6 +16,18 @@ interface AgentChatState {
   /** What was typed in each tab's chat box and not sent yet; outlives the view. */
   drafts: Record<string, string>;
   setDraft: (sessionId: string, text: string) => void;
+  /** Image files pasted into each tab's chat box, sent along with the next message. */
+  attachments: Record<string, string[]>;
+  setAttachments: (sessionId: string, paths: string[]) => void;
+  /** Messages sent to the CLI that its transcript does not show yet, oldest first. */
+  pending: Record<string, PendingMessage[]>;
+  addPending: (sessionId: string, message: PendingMessage) => void;
+}
+
+export interface PendingMessage {
+  key: string;
+  text: string;
+  images: number;
 }
 
 export const useAgentChatStore = create<AgentChatState>((set) => ({
@@ -23,6 +35,14 @@ export const useAgentChatStore = create<AgentChatState>((set) => ({
   drafts: {},
   setDraft: (sessionId, text) =>
     set((state) => ({ drafts: { ...state.drafts, [sessionId]: text } })),
+  attachments: {},
+  setAttachments: (sessionId, paths) =>
+    set((state) => ({ attachments: { ...state.attachments, [sessionId]: paths } })),
+  pending: {},
+  addPending: (sessionId, message) =>
+    set((state) => ({
+      pending: { ...state.pending, [sessionId]: [...(state.pending[sessionId] ?? []), message] },
+    })),
 }));
 
 interface Open {
@@ -42,13 +62,33 @@ function apply(sessionId: string, lines: string[], reset: boolean): void {
   if (!entry) return;
   const current = useAgentChatStore.getState().chats[sessionId];
   const base = reset || !current ? emptyChatState() : current.state;
-  setChat(sessionId, { status: 'ready', state: entry.reader(base, lines) });
+  const next = entry.reader(base, lines);
+  setChat(sessionId, { status: 'ready', state: next });
+  if (!reset) settlePending(sessionId, base, next);
+}
+
+/**
+ * A message sent from the chat shows as pending until the CLI writes it down. CLIs take queued
+ * messages in the order they were sent, and may write them differently (an image becomes a
+ * placeholder), so each new prompt in the transcript settles the oldest pending one.
+ */
+function settlePending(sessionId: string, before: ChatState, after: ChatState): void {
+  const waiting = useAgentChatStore.getState().pending[sessionId];
+  if (!waiting?.length) return;
+  const arrived = after.items.filter(
+    (item) => item.kind === 'user' && before.index[item.key] === undefined,
+  ).length;
+  if (arrived === 0) return;
+  useAgentChatStore.setState((state) => ({
+    pending: { ...state.pending, [sessionId]: waiting.slice(arrived) },
+  }));
 }
 
 /**
  * Starts showing a tab's conversation as a chat: main finds the transcript its CLI writes and
  * sends what is added. Returns the release for the view; the last one to let go stops the
- * reading and drops the conversation (the draft stays for when the chat opens again).
+ * reading and drops the conversation (the draft and attachments stay for when the chat opens
+ * again).
  */
 export function openAgentChat(tab: WorkspaceTerminalTab): () => void {
   const reader = chatReaderFor(tab.cliId);
@@ -96,7 +136,8 @@ export function openAgentChat(tab: WorkspaceTerminalTab): () => void {
     void window.runova.agentChat.unsubscribe(sessionId);
     useAgentChatStore.setState((state) => {
       const { [sessionId]: _gone, ...chats } = state.chats;
-      return { chats };
+      const { [sessionId]: _sent, ...pending } = state.pending;
+      return { chats, pending };
     });
   };
 }

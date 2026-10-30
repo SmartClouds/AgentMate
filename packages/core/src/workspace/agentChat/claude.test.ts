@@ -171,6 +171,35 @@ describe('claude chat reader', () => {
     expect(items[0]).toEqual(expect.objectContaining({ toolKind: 'search', title: 'TODO' }));
   });
 
+  it('shows a message sent while Claude was working', () => {
+    const queued = (uuid: string, prompt: string, origin: unknown) =>
+      line({
+        type: 'attachment',
+        uuid,
+        timestamp: at,
+        attachment: { type: 'queued_command', prompt, commandMode: 'prompt', origin },
+      });
+    const items = read([
+      queued('q1', 'also fix the footer', { kind: 'human' }),
+      queued('q2', '<task-notification>\n<task-id>1</task-id>', { kind: 'task' }),
+    ]);
+    expect(items).toEqual([
+      expect.objectContaining({ kind: 'user', key: 'q1', text: 'also fix the footer' }),
+    ]);
+  });
+
+  it('counts the images sent with a prompt', () => {
+    const image = { type: 'image', source: { type: 'base64', data: 'x', media_type: 'image/png' } };
+    const items = read([
+      user('u1', [image, { type: 'text', text: 'what is wrong here?' }]),
+      user('u2', [image, image]),
+    ]);
+    expect(items).toEqual([
+      expect.objectContaining({ kind: 'user', text: 'what is wrong here?', images: 1 }),
+      expect.objectContaining({ kind: 'user', text: '', images: 2 }),
+    ]);
+  });
+
   it('ends up the same whether the lines come at once or a few at a time', () => {
     const lines = [
       user('u1', 'hello'),

@@ -1,4 +1,4 @@
-import { act, screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAgentChatStore } from '@/stores/agentChatStore';
 import { useAgentStatusStore } from '@/stores/agentStatusStore';
@@ -174,6 +174,110 @@ describe('AgentChatView', () => {
     expect(bridge.$fn('terminal.write')).toHaveBeenLastCalledWith('tab-1', '\x1b');
     await user.click(within(card).getByRole('button', { name: 'Show in CLI' }));
     expect(onShowCli).toHaveBeenCalled();
+  });
+
+  it('copies a message', async () => {
+    const { user } = renderChat();
+    await screen.findByText('fix the header');
+    const [prompt, reply] = screen.getAllByRole('button', { name: 'Copy message' });
+    await user.click(reply);
+    expect(await navigator.clipboard.readText()).toBe('Fixed it in **header.css**.');
+    expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
+    await user.click(prompt);
+    expect(await navigator.clipboard.readText()).toBe('fix the header');
+  });
+
+  it('shows a message sent while the agent works as queued until the CLI takes it', async () => {
+    useAgentStatusStore.setState({ statuses: { 'tab-1': 'working' } });
+    const { user, field, bridge } = renderChat();
+    await screen.findByText('fix the header');
+    await user.type(field(), 'and the footer{Enter}');
+    expect(runtime.insertText).toHaveBeenCalledWith('tab-1', 'and the footer');
+    const queued = screen.getByText('and the footer').closest('[data-pending]');
+    expect(queued).toHaveTextContent('Queued');
+
+    act(() =>
+      bridge.$emit('agentChat.onAppend', {
+        sessionId: 'tab-1',
+        lines: [
+          line({
+            type: 'attachment',
+            uuid: 'q1',
+            attachment: {
+              type: 'queued_command',
+              prompt: 'and the footer',
+              origin: { kind: 'human' },
+            },
+          }),
+        ],
+        reset: false,
+      }),
+    );
+    expect(screen.getAllByText('and the footer')).toHaveLength(1);
+    expect(document.querySelector('[data-pending]')).toBeNull();
+  });
+
+  it('attaches a pasted image and sends its path with the message', async () => {
+    const saveImage = vi.fn(async () => 'C:\\pasted\\shot.png');
+    const { user, field } = renderChat({
+      'shell.pathForFile': () => '',
+      'terminalClipboard.saveImage': saveImage,
+      'terminalClipboard.previewImage': async () => 'data:image/png;base64,x',
+    });
+    const image = new File([new Uint8Array([1, 2, 3])], 'image.png', { type: 'image/png' });
+    fireEvent.paste(field(), {
+      clipboardData: { files: [image], getData: () => '', types: ['Files'] },
+    });
+    const chip = await screen.findByRole('img', { name: 'shot.png' });
+    expect(chip).toHaveAttribute('src', 'data:image/png;base64,x');
+    expect(saveImage).toHaveBeenCalledWith(expect.any(Uint8Array), 'image/png');
+
+    await user.type(field(), 'what is wrong here?{Enter}');
+    const sent = runtime.insertText.mock.calls[0]?.[1] ?? '';
+    expect(sent).toContain('C:\\pasted\\shot.png');
+    expect(sent.endsWith(' what is wrong here?')).toBe(true);
+    expect(screen.queryByRole('img', { name: 'shot.png' })).not.toBeInTheDocument();
+  });
+
+  it('reads a screenshot the paste event cannot carry from the clipboard', async () => {
+    const { field } = renderChat({
+      'terminalClipboard.read': { kind: 'files', paths: ['C:\\pasted\\screen.png'] },
+      'terminalClipboard.previewImage': async () => 'data:image/png;base64,y',
+    });
+    fireEvent.paste(field(), { clipboardData: { files: [], getData: () => '', types: [] } });
+    expect(await screen.findByRole('img', { name: 'screen.png' })).toBeInTheDocument();
+  });
+
+  it('lets an attached image be removed before sending', async () => {
+    const { user, field } = renderChat({
+      'terminalClipboard.read': { kind: 'files', paths: ['C:\\pasted\\screen.png'] },
+      'terminalClipboard.previewImage': async () => 'data:image/png;base64,y',
+    });
+    fireEvent.paste(field(), { clipboardData: { files: [], getData: () => '', types: [] } });
+    await user.click(await screen.findByRole('button', { name: 'Remove screen.png' }));
+    expect(screen.queryByRole('img', { name: 'screen.png' })).not.toBeInTheDocument();
+  });
+
+  it('marks a prompt that was sent with images', async () => {
+    renderChat({
+      'agentChat.subscribe': {
+        status: 'ready',
+        lines: [
+          line({
+            type: 'user',
+            uuid: 'u1',
+            message: {
+              content: [
+                { type: 'image', source: { type: 'base64', data: 'x' } },
+                { type: 'text', text: 'like this' },
+              ],
+            },
+          }),
+        ],
+      },
+    });
+    expect(await screen.findByText('like this')).toBeInTheDocument();
+    expect(screen.getByText('1 image')).toBeInTheDocument();
   });
 
   it('offers a way back to the newest message once scrolled up', async () => {
