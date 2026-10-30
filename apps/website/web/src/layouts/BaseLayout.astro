@@ -1,0 +1,43 @@
+---
+import '@fontsource-variable/inter/wght.css';
+import '@fontsource-variable/jetbrains-mono/wght.css';
+import '../styles/global.css';
+import bricolageLatin from '@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-wght-normal.woff2?url';
+import interLatin from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url';
+import type { ComponentProps } from 'astro/types';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import SeoHead from '../components/SeoHead.astro';
+import { themeInitScript } from '../lib/theme';
+
+type Props = ComponentProps<typeof SeoHead>;
+---
+
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <script is:inline set:html={themeInitScript} />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preload" href={interLatin} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={bricolageLatin} as="font" type="font/woff2" crossorigin />
+    <SeoHead {...Astro.props} />
+    <slot name="head" />
+  </head>
+  <body class="flex min-h-dvh flex-col">
+    <a
+      href="#main"
+      class="sr-only rounded-md bg-primary px-4 py-2 text-primary-foreground focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50"
+    >
+      Skip to content
+    </a>
+    <Header />
+    <main id="main" tabindex="-1" class="mx-auto w-full max-w-[1200px] flex-1 px-4 md:px-6">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

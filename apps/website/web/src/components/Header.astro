@@ -1,0 +1,17 @@
+---
+import { ThemeToggle } from './ThemeToggle';
+---
+
+<header
+  class="sticky top-0 z-40 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70"
+>
+  <div class="mx-auto flex h-14 max-w-[1200px] items-center justify-between gap-4 px-4 md:px-6">
+    <a href="/" class="flex items-center gap-2 font-display font-semibold text-lg tracking-tight">
+      <img src="/favicon-32.png" alt="" width="24" height="24" class="rounded-[6px]" />
+      Runova
+    </a>
+    <nav aria-label="Main" class="flex items-center gap-1">
+      <ThemeToggle client:load />
+    </nav>
+  </div>
+</header>
