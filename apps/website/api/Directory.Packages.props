@@ -29,6 +29,13 @@
     <PackageVersion Include="HtmlSanitizer" Version="9.2.1039" />
     <PackageVersion Include="Markdig" Version="1.5.1" />
   </ItemGroup>
+  <ItemGroup Label="Images">
+    <!-- Decodes uploads and re-encodes their pixels, which drops EXIF, XMP and every other metadata
+         block. MIT licensed (ImageSharp from 3.2 needs a license key for Release builds, see T009).
+         The Linux assets carry their own dependencies, so no fontconfig is needed in the container. -->
+    <PackageVersion Include="SkiaSharp" Version="4.154.0" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.154.0" />
+  </ItemGroup>
   <ItemGroup Label="Jobs">
     <PackageVersion Include="Hangfire.AspNetCore" Version="1.8.25" />
     <PackageVersion Include="Hangfire.Core" Version="1.8.25" />

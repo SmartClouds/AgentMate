@@ -6,6 +6,7 @@ using Runova.Website.Api.Health;
 using Runova.Website.Api.Identity;
 using Runova.Website.Api.Jobs;
 using Runova.Website.Api.Json;
+using Runova.Website.Api.Media;
 using Runova.Website.Api.News;
 using Runova.Website.Api.Problems;
 using Runova.Website.Api.Telemetry;
@@ -22,6 +23,7 @@ builder.Services.AddWebsiteIdentity();
 builder.Services.AddWebsiteApiClients();
 builder.Services.AddWebsiteUsers();
 builder.Services.AddWebsiteNews();
+builder.Services.AddWebsiteMedia();
 builder.Services.AddWebsiteJobs();
 builder.Services.AddWebsiteJson();
 builder.Services.AddHostedService<MigrateOnStart>();
@@ -46,6 +48,7 @@ if (AdminCli.IsCommand(args))
 }
 
 app.UseWebsiteProblemDetails();
+MediaStorage.UseMediaFiles(app);
 app.UseWebsiteIdentity();
 
 app.MapOpenApi().AllowAnonymous();

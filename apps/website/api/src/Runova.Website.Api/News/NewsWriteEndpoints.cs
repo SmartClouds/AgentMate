@@ -3,7 +3,6 @@ using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Npgsql;
 using Runova.Website.Api.ApiClients;
 using Runova.Website.Api.Audit;
 using Runova.Website.Api.Http;
@@ -89,7 +88,7 @@ internal static class NewsWriteEndpoints
 
         await using var transaction = await db.Database.BeginTransactionAsync();
         db.NewsItems.Add(item);
-        if (!await TrySaveAsync(db))
+        if (!await Writes.TrySaveAsync(db))
         {
             return SlugTaken();
         }
@@ -171,7 +170,7 @@ internal static class NewsWriteEndpoints
             audit.Add(AuditActions.NewsUpdate, AuditTargetTypes.News, item.Id, new { slug = item.Slug, fields = changed });
             try
             {
-                if (!await TrySaveAsync(db))
+                if (!await Writes.TrySaveAsync(db))
                 {
                     return SlugTaken();
                 }
@@ -314,31 +313,9 @@ internal static class NewsWriteEndpoints
 
     private static async Task<NewsItemAdminDto> ToAdminDtoAsync(AppDbContext db, IConfiguration configuration, NewsItem item)
     {
-        var name = item switch
-        {
-            { CreatedByKind: AuditActorKinds.User, CreatedById: { } userId } =>
-                await db.Users.AsNoTracking().Where(u => u.Id == userId).Select(u => u.DisplayName).SingleOrDefaultAsync(),
-            { CreatedByKind: AuditActorKinds.ApiClient, CreatedById: { } clientId } =>
-                await db.ApiClients.AsNoTracking().Where(c => c.Id == clientId).Select(c => c.Name).SingleOrDefaultAsync(),
-            _ => null,
-        };
-        var createdBy = name is null ? null : new NewsCreatorDto(item.CreatedByKind, item.CreatedById!.Value, name);
+        var createdBy = await Writes.CreatorAsync(db, item.CreatedByKind, item.CreatedById);
 
         return NewsMapper.ToAdminDto(item, NewsEndpoints.ItemUrl(SiteUrl.From(configuration), item), createdBy);
-    }
-
-    /// <summary>Saves, or answers false when the slug was taken by a write that won the race.</summary>
-    private static async Task<bool> TrySaveAsync(AppDbContext db)
-    {
-        try
-        {
-            await db.SaveChangesAsync();
-            return true;
-        }
-        catch (DbUpdateException e) when (e.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
-        {
-            return false;
-        }
     }
 
     private static async Task<ProblemHttpResult> ChangedMeanwhileAsync(AppDbContext db, long id)

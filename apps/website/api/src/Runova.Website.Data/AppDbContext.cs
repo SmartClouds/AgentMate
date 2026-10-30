@@ -3,11 +3,14 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Runova.Website.Core.ApiClients;
+using Runova.Website.Core.Media;
 using Runova.Website.Core.News;
+using Runova.Website.Core.Posts;
 using Runova.Website.Data.ApiClients;
 using Runova.Website.Data.Audit;
 using Runova.Website.Data.Identity;
 using Runova.Website.Data.News;
+using Runova.Website.Data.Posts;
 
 namespace Runova.Website.Data;
 
@@ -25,6 +28,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<NewsItem> NewsItems => Set<NewsItem>();
 
     public DbSet<Technology> Technologies => Set<Technology>();
+
+    public DbSet<Post> Posts => Set<Post>();
+
+    public DbSet<Tag> Tags => Set<Tag>();
+
+    public DbSet<MediaFile> Media => Set<MediaFile>();
 
     public DbSet<ApiClient> ApiClients => Set<ApiClient>();
 
@@ -69,6 +78,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
         });
 
         builder.ConfigureNews();
+        builder.ConfigurePosts();
         builder.ConfigureApiClients();
 
         // Identity gives claims an int key, and Data Protection its keys; widen them so every key in the database is bigint.

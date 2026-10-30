@@ -16,6 +16,9 @@ internal sealed class ApiClient(HttpClient http)
 
     public HttpClient Http => http;
 
+    /// <summary>The antiforgery token held now, for a request the client builds by hand.</summary>
+    public string? AntiforgeryToken => _antiforgeryToken;
+
     /// <summary>Fetches a fresh antiforgery token, which belongs to whoever is signed in now.</summary>
     public async Task<string> RefreshAntiforgeryTokenAsync()
     {

@@ -2,6 +2,8 @@
   <ItemGroup>
     <PackageReference Include="HtmlSanitizer" />
     <PackageReference Include="Markdig" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
   </ItemGroup>
 
   <ItemGroup>
