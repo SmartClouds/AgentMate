@@ -31,7 +31,7 @@
     <NuGetAuditLevel>low</NuGetAuditLevel>
     <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1900;NU1901;NU1902</WarningsNotAsErrors>
 
-    <Version Condition="'$(Version)' == ''">2.2.0</Version>
+    <Version Condition="'$(Version)' == ''">3.0.0</Version>
     <Product>Runova Server Core</Product>
     <Company>Runova</Company>
     <Copyright>Runova</Copyright>
