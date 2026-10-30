@@ -3548,6 +3548,29 @@ export interface VaultCopyResult {
   clearsAt: number | null;
 }
 
+/**
+ * Where one-click login opens a site. `window` is Runova's own login window, which fills the
+ * form; `system` is the default browser, which Runova can't type into, so the password is copied.
+ * A Workspace browser tab is opened by the renderer and filled through `fillGuest`.
+ */
+export type VaultLoginTarget = 'window' | 'system';
+
+export type VaultLoginResult =
+  | {
+      ok: true;
+      /** For the system browser: when the copied password leaves the clipboard, or null. */
+      clearsAt: number | null;
+    }
+  | { ok: false; reason: 'not-login' | 'no-url' | 'no-guest' | 'unavailable' };
+
+/** How a one-click login went in a page Runova filled. */
+export interface VaultLoginFilledEvent {
+  entryId: string;
+  host: string;
+  result: 'filled' | 'username-only' | 'no-form';
+  submitted: boolean;
+}
+
 export interface VaultClipboardEvent {
   cleared: boolean;
 }

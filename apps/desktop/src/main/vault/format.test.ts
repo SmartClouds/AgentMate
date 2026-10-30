@@ -37,6 +37,7 @@ function payload(title = 'GitHub'): VaultPayload {
         passwordUpdatedAt: 1,
       },
     ],
+    categories: [],
   };
 }
 

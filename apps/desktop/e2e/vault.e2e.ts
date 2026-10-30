@@ -344,3 +344,102 @@ test('a backup carries the vault, which opens with its own master password after
     await target.close();
   }
 });
+
+test('sorts entries into categories that survive a lock', async () => {
+  launched = await launchApp({});
+  const { page } = launched;
+  await createVault(page);
+  await seedEntries(page);
+  await page.getByRole('link', { name: 'Vault' }).click();
+
+  const rail = page.getByRole('navigation', { name: 'Categories' });
+  await rail.getByRole('button', { name: 'Create your first category' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New category' });
+  await dialog.getByLabel('Name').fill('Work');
+  await dialog.getByRole('radio', { name: 'Violet' }).click();
+  await dialog.getByRole('radio', { name: 'Work' }).click();
+  await dialog.getByRole('button', { name: 'Create category' }).click();
+  await expect(dialog).toBeHidden();
+
+  // A new category is shown straight away, empty.
+  await expect(page.getByText('Nothing in Work yet')).toBeVisible();
+  await rail.getByRole('button', { name: /^All items/ }).click();
+
+  const list = page.getByRole('listbox', { name: 'Vault entries' });
+  await list
+    .getByRole('option', { name: /GitLab/ })
+    .dragTo(rail.getByRole('button', { name: 'Work (0)' }));
+  await expect(rail.getByRole('button', { name: 'Work (1)' })).toBeVisible();
+
+  await rail.getByRole('button', { name: 'Work (1)' }).click();
+  await expect(list.getByRole('option')).toHaveCount(1);
+
+  await page.keyboard.press('Control+L');
+  await unlock(page);
+  await expect(rail.getByRole('button', { name: 'Work (1)' })).toBeVisible();
+});
+
+test('logs in to a site with one click in the Runova window', async () => {
+  const { createServer } = await import('node:http');
+  const posted: string[] = [];
+  const server = createServer((req, res) => {
+    if (req.method === 'POST') {
+      let body = '';
+      req.on('data', (chunk) => {
+        body += chunk;
+      });
+      req.on('end', () => {
+        posted.push(body);
+        res.writeHead(200, { 'content-type': 'text/html' });
+        res.end('<h1>Welcome back</h1>');
+      });
+      return;
+    }
+    res.writeHead(200, { 'content-type': 'text/html' });
+    res.end(`<!doctype html><title>Sign in</title>
+      <form method="post" action="/session">
+        <label>Email <input name="email" type="email"></label>
+        <label>Password <input name="password" type="password"></label>
+        <button type="submit">Sign in</button>
+      </form>`);
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const port = (server.address() as { port: number }).port;
+
+  try {
+    launched = await launchApp({});
+    const { page, app } = launched;
+    await createVault(page);
+    await page.evaluate(async (url) => {
+      const vault = (
+        window as unknown as { runova: { vault: { save(input: unknown): Promise<unknown> } } }
+      ).runova.vault;
+      await vault.save({
+        type: 'login',
+        title: 'Local site',
+        tags: [],
+        favorite: false,
+        username: 'sentinel@example.com',
+        password: 'S3ntinel-login-e2e',
+        urls: [url],
+        autoSubmit: true,
+      });
+    }, `http://127.0.0.1:${port}/login`);
+    await page.getByRole('link', { name: 'Vault' }).click();
+    await page.getByRole('listbox', { name: 'Vault entries' }).getByRole('option').first().click();
+
+    const opened = app.waitForEvent('window');
+    await page
+      .getByRole('region', { name: 'Local site' })
+      .getByRole('button', { name: 'Log in to 127.0.0.1' })
+      .click();
+    const site = await opened;
+    await expect(site.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
+    expect(posted).toEqual([`email=sentinel%40example.com&password=S3ntinel-login-e2e`]);
+    await expect(page.getByText('Signed in to 127.0.0.1')).toBeVisible();
+    // The renderer never saw the password on the way.
+    expect(await page.locator('body').innerText()).not.toContain('S3ntinel-login-e2e');
+  } finally {
+    server.close();
+  }
+});

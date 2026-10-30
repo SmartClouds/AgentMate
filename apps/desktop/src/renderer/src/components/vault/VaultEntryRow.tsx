@@ -1,12 +1,17 @@
-import type { VaultEntrySummary } from '@runova/core';
+import type { VaultCategory, VaultEntrySummary } from '@runova/core';
 import { motion } from 'framer-motion';
 import { Copy, Key, Star } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { CATEGORY_COLORS } from './categoryMeta';
 import { EntryAvatar } from './EntryAvatar';
 import { entrySubtitle, primarySecret } from './entryTypes';
 import type { useVaultActions } from './useVaultActions';
+import { VaultLoginButton } from './VaultLoginButton';
+
+/** The drag data type an entry row carries, so only entries can be dropped on a category. */
+export const VAULT_ENTRY_DRAG_TYPE = 'application/x-runova-vault-entry';
 
 export function vaultOptionId(id: string): string {
   return `vault-option-${id}`;
@@ -35,6 +40,7 @@ export function VaultEntryRow({
   selected,
   onSelect,
   actions,
+  category,
   pillTransition,
 }: {
   entry: VaultEntrySummary;
@@ -42,6 +48,8 @@ export function VaultEntryRow({
   selected: boolean;
   onSelect: () => void;
   actions: ReturnType<typeof useVaultActions>;
+  /** Shown as a colored dot and name under the title, when the list mixes categories. */
+  category?: VaultCategory;
   /** How the selection pill slides between rows; instant when motion is reduced. */
   pillTransition?: React.ComponentProps<typeof motion.span>['transition'];
 }): React.JSX.Element {
@@ -55,6 +63,11 @@ export function VaultEntryRow({
       aria-selected={selected}
       data-title={entry.title}
       tabIndex={-1}
+      draggable
+      onDragStart={(event) => {
+        event.dataTransfer.setData(VAULT_ENTRY_DRAG_TYPE, entry.id);
+        event.dataTransfer.effectAllowed = 'move';
+      }}
       onClick={onSelect}
       onKeyDown={(event) => event.key === 'Enter' && onSelect()}
       className={cn(
@@ -83,7 +96,22 @@ export function VaultEntryRow({
         >
           <Highlighted text={entry.title} ranges={titleRanges} />
         </p>
-        <p className="truncate text-[11px] text-muted-foreground">{entrySubtitle(entry)}</p>
+        <p className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+          {category && (
+            <span className="inline-flex max-w-[45%] shrink-0 items-center gap-1">
+              <span
+                aria-hidden
+                className={cn(
+                  'h-1.5 w-1.5 shrink-0 rounded-full',
+                  CATEGORY_COLORS[category.color].swatch,
+                )}
+              />
+              <span className="truncate">{category.name}</span>
+              {entrySubtitle(entry) && <span aria-hidden>·</span>}
+            </span>
+          )}
+          <span className="truncate">{entrySubtitle(entry)}</span>
+        </p>
       </div>
 
       <div
@@ -94,6 +122,7 @@ export function VaultEntryRow({
             : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100',
         )}
       >
+        <VaultLoginButton entry={entry} variant="icon" />
         {canCopyUsername && (
           <SimpleTooltip label="Copy username">
             <Button

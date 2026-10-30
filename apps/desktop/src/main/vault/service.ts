@@ -10,11 +10,14 @@ import {
   type GenericMapping,
   hostOf,
   type ImportMapResult,
+  loginTargetUrl,
   mapImportRows,
   parseCsv,
   planImport,
+  type SaveVaultCategoryInput,
   type SaveVaultEntryInput,
   suggestGenericMapping,
+  type VaultCategory,
   type VaultEntry,
   type VaultEntrySummary,
   type VaultExportFormat,
@@ -26,11 +29,15 @@ import type {
   VaultImportPreview,
   VaultImportResult,
   VaultLockReason,
+  VaultLoginFilledEvent,
+  VaultLoginResult,
+  VaultLoginTarget,
   VaultStateEvent,
   VaultStatus,
   VaultUnlockResult,
 } from '../../shared/apiTypes';
 import { AttemptLimiter } from './attemptLimiter';
+import { type LoginPage, startFill } from './autofill/fillSession';
 import { ClipboardGuard, type ClipboardPort } from './clipboardGuard';
 import { IdleTimer } from './idleLock';
 import type { KdfCost } from './kdf';
@@ -46,6 +53,14 @@ export interface VaultEvents {
   stateChanged(event: VaultStateEvent): void;
   entriesChanged(): void;
   clipboardSettled(event: { cleared: boolean }): void;
+  /** How a one-click login went, for a toast. */
+  loginFilled?(event: VaultLoginFilledEvent): void;
+}
+
+/** Opens pages for one-click login. Main wires it to a BrowserWindow and the default browser. */
+export interface VaultLoginPort {
+  openWindow(url: string): LoginPage;
+  openExternal(url: string): Promise<void>;
 }
 
 export interface VaultServiceDeps {
@@ -55,6 +70,7 @@ export interface VaultServiceDeps {
   env: Record<string, string | undefined>;
   isPackaged: boolean;
   cost?: KdfCost;
+  login?: VaultLoginPort;
 }
 
 export const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
@@ -86,6 +102,8 @@ export class VaultService {
   private timers: VaultTimers;
   private unlocking = false;
   private detachPower: (() => void) | null = null;
+  /** One-click logins still waiting for their page. Each holds a password until it stops. */
+  private readonly fills = new Set<() => void>();
 
   constructor(private readonly deps: VaultServiceDeps) {
     this.session = new VaultSession({ files: deps.files, cost: deps.cost });
@@ -155,6 +173,7 @@ export class VaultService {
     this.clipboardGuard.clearIfOurs();
     // Pending imports hold the parsed file, passwords included.
     this.pendingImports.clear();
+    for (const stop of [...this.fills]) stop();
     await this.session.lock();
     if (wasUnlocked) this.deps.events.stateChanged({ state: 'locked', reason });
   }
@@ -221,6 +240,58 @@ export class VaultService {
 
   duplicate(id: string): Promise<VaultEntrySummary> {
     return this.changed(this.session.duplicate(id));
+  }
+
+  listCategories(): VaultCategory[] {
+    const list = this.session.listCategories();
+    this.idle.touch();
+    return list;
+  }
+
+  saveCategory(input: SaveVaultCategoryInput): Promise<VaultCategory> {
+    return this.changed(this.session.saveCategory(input));
+  }
+
+  deleteCategory(id: string): Promise<number> {
+    return this.changed(this.session.deleteCategory(id));
+  }
+
+  reorderCategories(ids: string[]): Promise<void> {
+    return this.changed(this.session.reorderCategories(ids));
+  }
+
+  moveEntries(ids: string[], categoryId: string | null): Promise<number> {
+    return this.changed(this.session.moveEntries(ids, categoryId));
+  }
+
+  /**
+   * One-click login. The window target opens Runova's login window and fills the form there once
+   * the page is on one of the entry's hosts. The system browser can't be typed into, so it gets
+   * the site and the password goes on the clipboard, cleared like any other copy.
+   */
+  async openLogin(id: string, target: VaultLoginTarget): Promise<VaultLoginResult> {
+    const ready = this.loginEntry(id);
+    if (!ready.ok) return ready;
+    const { entry, url, login } = ready;
+    this.session.markUsed(id);
+    if (target === 'system') {
+      const copied = entry.password
+        ? this.clipboardGuard.copy(entry.password, this.timers.clipboardClearMs)
+        : null;
+      await login.openExternal(url);
+      return { ok: true, clearsAt: copied?.clearsAt ?? null };
+    }
+    this.fill(entry, login.openWindow(url));
+    return { ok: true, clearsAt: null };
+  }
+
+  /** Fills a page the renderer already opened, such as a Workspace browser tab. */
+  fillGuest(id: string, page: LoginPage): VaultLoginResult {
+    const ready = this.loginEntry(id);
+    if (!ready.ok) return ready;
+    this.session.markUsed(id);
+    this.fill(ready.entry, page);
+    return { ok: true, clearsAt: null };
   }
 
   async importOpen(filePath: string): Promise<VaultImportPreview> {
@@ -301,7 +372,7 @@ export class VaultService {
   /** Plain text on disk, so it asks for the master password again first. */
   async exportCsv(password: string, format: VaultExportFormat, filePath: string): Promise<boolean> {
     if (!(await this.session.verifyPassword(password))) return false;
-    const csv = exportEntriesCsv(this.session.allEntries(), format);
+    const csv = exportEntriesCsv(this.session.allEntries(), format, this.session.listCategories());
     await writeFile(filePath, csv, { encoding: 'utf-8', mode: 0o600 });
     this.idle.touch();
     return true;
@@ -319,6 +390,39 @@ export class VaultService {
     this.idle.touch();
     this.deps.events.entriesChanged();
     return result;
+  }
+
+  private loginEntry(id: string):
+    | {
+        ok: true;
+        entry: Extract<VaultEntry, { type: 'login' }>;
+        url: string;
+        login: VaultLoginPort;
+      }
+    | Extract<VaultLoginResult, { ok: false }> {
+    const entry = this.session.getEntry(id);
+    this.idle.touch();
+    if (entry.type !== 'login') return { ok: false, reason: 'not-login' };
+    const url = loginTargetUrl(entry.urls);
+    if (!url) return { ok: false, reason: 'no-url' };
+    if (!this.deps.login) return { ok: false, reason: 'unavailable' };
+    return { ok: true, entry, url, login: this.deps.login };
+  }
+
+  private fill(entry: Extract<VaultEntry, { type: 'login' }>, page: LoginPage): void {
+    const stop = startFill({
+      page,
+      urls: entry.urls,
+      creds: {
+        username: entry.username,
+        password: entry.password,
+        submit: entry.autoSubmit === true,
+      },
+      isUnlocked: () => this.session.isUnlocked(),
+      onDone: (outcome) => this.deps.events.loginFilled?.({ entryId: entry.id, ...outcome }),
+      onStop: () => this.fills.delete(stop),
+    });
+    this.fills.add(stop);
   }
 
   private pendingImport(token: string): PendingImport {

@@ -1,8 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
+import type { Project } from '@runova/core';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Command as CommandPrimitive } from 'cmdk';
 import { useNavigate } from 'react-router-dom';
-import { Lock, LockOpen } from '@/components/icons';
+import { Lock, LockOpen, SignIn } from '@/components/icons';
 import { queryKeys } from '@/lib/queryKeys';
+import { loginUrlOf, resolveLoginChoice, runOneClickLogin } from '@/lib/vault/oneClickLogin';
+import { useVaultStore } from '@/stores/vaultStore';
 import { EntryAvatar } from './EntryAvatar';
 import { entrySubtitle } from './entryTypes';
 
@@ -24,6 +27,7 @@ export function VaultPaletteGroup({
   onDone: () => void;
 }): React.JSX.Element | null {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const statusQuery = useQuery({
     queryKey: queryKeys.vaultStatus,
     queryFn: () => window.runova.vault.status(),
@@ -58,6 +62,9 @@ export function VaultPaletteGroup({
     );
   }
 
+  const entries = entriesQuery.data ?? [];
+  const logins = entries.filter((entry) => loginUrlOf(entry) !== null);
+
   return (
     <CommandPrimitive.Group heading="Vault" className={groupClass}>
       <CommandPrimitive.Item
@@ -71,7 +78,26 @@ export function VaultPaletteGroup({
         <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         Lock Vault
       </CommandPrimitive.Item>
-      {(entriesQuery.data ?? []).map((entry) => (
+      {logins.map((entry) => (
+        <CommandPrimitive.Item
+          key={`login-${entry.id}`}
+          value={`log in sign in ${entry.title} ${entry.host} login-${entry.id}`}
+          className={itemClass}
+          onSelect={() => {
+            onDone();
+            const choice = resolveLoginChoice(
+              useVaultStore.getState().loginTarget,
+              queryClient.getQueryData<Project[]>(queryKeys.projects),
+            );
+            void runOneClickLogin({ entry, choice, navigate });
+          }}
+        >
+          <SignIn className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+          <span className="min-w-0 flex-1 truncate">Log in to {entry.title}</span>
+          <span className="truncate text-xs text-muted-foreground">{entry.host}</span>
+        </CommandPrimitive.Item>
+      ))}
+      {entries.map((entry) => (
         <CommandPrimitive.Item
           key={entry.id}
           value={`vault ${entry.title} ${entry.host} ${entry.username} ${entry.tags.join(' ')} ${entry.id}`}

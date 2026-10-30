@@ -1,4 +1,4 @@
-import type { VaultEntrySummary, VaultSearchHit, VaultSort } from '@runova/core';
+import type { VaultCategory, VaultEntrySummary, VaultSearchHit, VaultSort } from '@runova/core';
 import { LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import { forwardRef } from 'react';
 import {
@@ -29,6 +29,7 @@ import { SimpleTooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useShortcutLabel } from '@/stores/shortcutStore';
 import { useVaultStore, type VaultTypeFilter } from '@/stores/vaultStore';
+import { CategoryTile } from './CategoryTile';
 import { ENTRY_TYPE_META, ENTRY_TYPE_ORDER } from './entryTypes';
 import type { useVaultActions } from './useVaultActions';
 import { VaultEntryRow, vaultOptionId } from './VaultEntryRow';
@@ -82,6 +83,13 @@ export const VaultListPane = forwardRef<
     visibleCount: number;
     searching: boolean;
     knownTags: string[];
+    /** The category pills, shown above the type tabs when the window is too narrow for the rail. */
+    categoryStrip?: React.ReactNode;
+    categoryOf?: (entry: VaultEntrySummary) => VaultCategory | undefined;
+    /** Whether rows show their category, which is pointless once the list is filtered to one. */
+    showCategories?: boolean;
+    /** Set when the list is filtered to a category that holds nothing yet. */
+    emptyCategory?: VaultCategory;
     selectedId: string | null;
     actions: ReturnType<typeof useVaultActions>;
     onSelect: (id: string) => void;
@@ -99,6 +107,10 @@ export const VaultListPane = forwardRef<
     visibleCount,
     searching,
     knownTags,
+    categoryStrip,
+    categoryOf,
+    showCategories = false,
+    emptyCategory,
     selectedId,
     actions,
     onSelect,
@@ -120,6 +132,7 @@ export const VaultListPane = forwardRef<
   const favoritesOnly = useVaultStore((s) => s.favoritesOnly);
   const setFavoritesOnly = useVaultStore((s) => s.setFavoritesOnly);
   const clearFilters = useVaultStore((s) => s.clearFilters);
+  const categoryFilter = useVaultStore((s) => s.categoryFilter);
   const sort = useVaultStore((s) => s.sort);
   const setSort = useVaultStore((s) => s.setSort);
   const newShortcut = useShortcutLabel('vault.new');
@@ -133,7 +146,8 @@ export const VaultListPane = forwardRef<
   const counts = new Map<VaultTypeFilter, number>([['all', entries.length]]);
   for (const entry of entries) counts.set(entry.type, (counts.get(entry.type) ?? 0) + 1);
   const hasFavorites = entries.some((entry) => entry.favorite);
-  const filtered = typeFilter !== 'all' || tagFilters.length > 0 || favoritesOnly;
+  const filtered =
+    typeFilter !== 'all' || tagFilters.length > 0 || favoritesOnly || categoryFilter !== 'all';
   const trimmed = query.trim();
 
   return (
@@ -216,6 +230,7 @@ export const VaultListPane = forwardRef<
           )}
         </div>
 
+        {entries.length > 0 && categoryStrip}
         {entries.length > 0 && (
           <>
             {/* A pill group, the same shape as the segmented controls elsewhere. */}
@@ -340,6 +355,20 @@ export const VaultListPane = forwardRef<
               </Button>
             </div>
           </div>
+        ) : emptyCategory && !trimmed ? (
+          <div className="flex flex-col items-center gap-3 px-4 pb-6 pt-10 text-center">
+            <CategoryTile color={emptyCategory.color} icon={emptyCategory.icon} size="lg" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Nothing in {emptyCategory.name} yet</p>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Drag entries onto the category, or add a new one here.
+              </p>
+            </div>
+            <Button aria-label={`Add an entry to ${emptyCategory.name}`} onClick={() => onNew()}>
+              <Plus className="h-3 w-3" />
+              Add entry
+            </Button>
+          </div>
         ) : visibleCount === 0 ? (
           <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
             <Search className="h-4 w-4 text-muted-foreground/60" />
@@ -390,6 +419,7 @@ export const VaultListPane = forwardRef<
                       selected={hit.summary.id === selectedId}
                       onSelect={() => onSelect(hit.summary.id)}
                       actions={actions}
+                      category={showCategories ? categoryOf?.(hit.summary) : undefined}
                       pillTransition={pillTransition}
                     />
                   ))}

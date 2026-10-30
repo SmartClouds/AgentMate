@@ -51,6 +51,7 @@ import type {
   ResourceRef,
   ResourceStopOutcome,
   RunPauseReason,
+  SaveVaultCategoryInput,
   SaveVaultEntryInput,
   ScannerPreflight,
   ScheduledTask,
@@ -72,6 +73,7 @@ import type {
   UsageProviderConfig,
   UsageResetAlertSettings,
   UsageThresholdAlertSettings,
+  VaultCategory,
   VaultEntry,
   VaultEntrySummary,
   VaultExportFormat,
@@ -332,6 +334,9 @@ import type {
   VaultExportResult,
   VaultImportPreview,
   VaultImportResult,
+  VaultLoginFilledEvent,
+  VaultLoginResult,
+  VaultLoginTarget,
   VaultStateEvent,
   VaultStatus,
   VaultUnlockResult,
@@ -2731,11 +2736,29 @@ const vault = {
   importCancel: (token: string): Promise<void> => ipcRenderer.invoke(IPC.vault.importCancel, token),
   exportCsv: (password: string, format: VaultExportFormat): Promise<VaultExportResult> =>
     ipcRenderer.invoke(IPC.vault.exportCsv, password, format),
+  listCategories: (): Promise<VaultCategory[]> => ipcRenderer.invoke(IPC.vault.listCategories),
+  saveCategory: (input: SaveVaultCategoryInput): Promise<VaultCategory> =>
+    ipcRenderer.invoke(IPC.vault.saveCategory, input),
+  /** Deletes a category and resolves to how many entries were left without one. */
+  deleteCategory: (id: string): Promise<number> => ipcRenderer.invoke(IPC.vault.deleteCategory, id),
+  reorderCategories: (ids: string[]): Promise<void> =>
+    ipcRenderer.invoke(IPC.vault.reorderCategories, ids),
+  /** Files entries under a category, or under none with null. Resolves to how many moved. */
+  moveEntries: (ids: string[], categoryId: string | null): Promise<number> =>
+    ipcRenderer.invoke(IPC.vault.moveEntries, ids, categoryId),
+  /** Opens a login's website in Runova's login window or the default browser. */
+  openLogin: (id: string, target: VaultLoginTarget): Promise<VaultLoginResult> =>
+    ipcRenderer.invoke(IPC.vault.openLogin, id, target),
+  /** Fills a login into a Workspace browser tab, by the tab's webContents id. */
+  fillGuest: (id: string, webContentsId: number): Promise<VaultLoginResult> =>
+    ipcRenderer.invoke(IPC.vault.fillGuest, id, webContentsId),
   onStateChanged: (cb: (event: VaultStateEvent) => void): (() => void) =>
     subscribe(IPC.vault.onStateChanged, cb),
   onEntriesChanged: (cb: () => void): (() => void) => subscribe(IPC.vault.onEntriesChanged, cb),
   onClipboardSettled: (cb: (event: VaultClipboardEvent) => void): (() => void) =>
     subscribe(IPC.vault.onClipboardSettled, cb),
+  onLoginFilled: (cb: (event: VaultLoginFilledEvent) => void): (() => void) =>
+    subscribe(IPC.vault.onLoginFilled, cb),
 };
 
 /** Only the startup splash window listens to these. */

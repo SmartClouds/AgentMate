@@ -44,7 +44,14 @@ beforeEach(() => {
   installVaultApi(mock);
   onDone.mockClear();
   mock.api.list.mockResolvedValue([
-    summary({ id: 'gh', title: 'GitHub', host: 'github.com', username: 'octocat' }),
+    summary({
+      id: 'gh',
+      title: 'GitHub',
+      host: 'github.com',
+      username: 'octocat',
+      urls: ['https://github.com/login'],
+    }),
+    summary({ id: 'wf', type: 'note', title: 'Wi-Fi', hasPassword: false }),
   ]);
 });
 
@@ -59,7 +66,7 @@ describe('VaultPaletteGroup', () => {
     // The entries query only starts once the status query has said "unlocked", so the entry
     // lands two fetches after the first render. Under a full parallel run that can pass the
     // default one second.
-    const option = await screen.findByRole('option', { name: /GitHub/ }, { timeout: 5_000 });
+    const option = await screen.findByRole('option', { name: /^GitHub/ }, { timeout: 5_000 });
     fireEvent.click(option);
     expect(onDone).toHaveBeenCalled();
     expect(location).toEqual({ pathname: '/vault', state: { entryId: 'gh' } });
@@ -85,5 +92,18 @@ describe('VaultPaletteGroup', () => {
     const { container } = renderGroup();
     await waitFor(() => expect(mock.api.status).toHaveBeenCalled());
     expect(container.querySelector('[cmdk-group]')).toBeNull();
+  });
+
+  it('logs in to a login with a website straight from the palette', async () => {
+    renderGroup();
+    const option = await screen.findByRole(
+      'option',
+      { name: /^Log in to GitHub/ },
+      { timeout: 5_000 },
+    );
+    expect(screen.queryByRole('option', { name: /^Log in to Wi-Fi/ })).toBeNull();
+    fireEvent.click(option);
+    expect(onDone).toHaveBeenCalled();
+    await waitFor(() => expect(mock.api.openLogin).toHaveBeenCalledWith('gh', 'window'));
   });
 });

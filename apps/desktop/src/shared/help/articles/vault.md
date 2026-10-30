@@ -56,9 +56,21 @@ Click **Forgot your master password?** on the lock screen. The dialog "Reset the
 
 ## The Vault page
 
-When unlocked, the page has two panes: a list of entries on the left and the selected entry on the right. On a narrow window, only one shows at a time and a back arrow returns to the list.
+When unlocked, the page has a **Categories** column, a list of entries and the selected entry on the right. On a medium window the categories become a row of pills above the list. On a narrow window, only the list or the entry shows at a time and a back arrow returns to the list.
 
 If the vault is empty, the list says "Your vault is empty" with **Add your first entry** and **Import from CSV**.
+
+### Categories
+
+Categories work like folders: each entry can sit in one category, or in none. Give each one a name, a color and an icon so you can spot it at a glance. Tags still work alongside them for labels that cut across categories.
+
+- **All items** shows every entry, **Uncategorized** the ones in no category, and each category its own entries. The count next to each says how many it holds.
+- **New category** (the plus button, or **Create your first category** when you have none) opens a dialog with a **Name**, a **Color** and an **Icon**, and a preview of how it will look.
+- Hover a category and click its three dots for **Edit**, **Move up**, **Move down** and **Delete**. You can also drag a category up or down, or press `Alt+Up` and `Alt+Down` while it has focus.
+- **Delete** asks you to confirm. The entries in it are kept and move to **Uncategorized**.
+- Drag an entry from the list onto a category to move it there, or onto **Uncategorized** to take it out.
+
+A new entry starts in the category the list is showing. When a category is empty, the list says so and offers **Add entry**.
 
 ### The list pane
 
@@ -75,13 +87,14 @@ Below the search, once you have entries:
 
 - **Type tabs:** **All**, **Logins**, **API keys**, **Notes** and **Custom**, each with a count. Only types you actually have are shown.
 - **Favorites** chip and **tag** chips. Click a chip to filter. Click again to remove the filter.
+- When the list shows every category, each row names its category with a colored dot.
 - A counter (for example "12 entries" or "3 results") and a **Sort** menu: **Title, A to Z**, **Recently used**, **Recently updated** or **Newest first**. While searching, the label says "Best match".
 
 Favorites are pinned in a **Favorites** group above **All entries** when you are browsing.
 
 If nothing matches, the list says what it looked for and offers **Create "your search"** (start a new entry with that title) and **Clear filters**.
 
-Each row shows a round icon (the site's icon or a colored letter), the title, and a line underneath (username or website for logins, service and key ID for API keys, "Secure note", or the number of fields for custom entries). Hover or select a row to see quick copy buttons: **Copy username** and **Copy password** (or **Copy secret** for API keys). A star marks favorites. Press `Delete` with the list focused to delete the selected entry.
+Each row shows a round icon (the site's icon or a colored letter), the title, and a line underneath (username or website for logins, service and key ID for API keys, "Secure note", or the number of fields for custom entries). Hover or select a row to see its quick buttons: **Log in** for logins that have a website (see [One-click login](#one-click-login)), **Copy username** and **Copy password** (or **Copy secret** for API keys). A star marks favorites. Press `Delete` with the list focused to delete the selected entry.
 
 ### Entry types
 
@@ -92,7 +105,7 @@ Each row shows a round icon (the site's icon or a colored letter), the title, an
 | **Secure note** | Free text such as recovery codes or Wi-Fi passwords. |
 | **Custom** | Any number of named fields, each of which can be hidden or shown, plus notes. Good for PINs, license keys or recovery phrases. |
 
-Every entry can also have **Tags** and can be pinned to favorites.
+Every entry can also have a **Category** and **Tags**, and can be pinned to favorites.
 
 ### The detail pane
 
@@ -106,7 +119,8 @@ Selecting an entry shows its details. Secrets are hidden behind dots.
 - Notes are hidden until you click **Show**.
 - Tags are clickable and filter the list.
 - A footer shows when the entry was created, updated and last used.
-- Header buttons: **Add to favorites** / **Remove from favorites** (star), **Duplicate**, **Delete** (asks you to confirm, and cannot be undone) and **Edit**.
+- The entry's category shows under the title. Click it to list everything in that category.
+- Header buttons: **Add to favorites** / **Remove from favorites** (star), **Move to category** (folder), **Duplicate**, **Delete** (asks you to confirm, and cannot be undone), **Log in** for logins with a website, and **Edit**.
 
 ## Add or edit an entry
 
@@ -114,10 +128,10 @@ Selecting an entry shows its details. Secrets are hidden behind dots.
 2. When adding, choose the entry type: **Login**, **API key**, **Secure note** or **Custom**. The type can't be changed afterwards.
 3. Enter a **Title**. This is the only required field.
 4. Fill in the fields for that type:
-   - **Login:** **Username or email**, **Password** (with a strength meter and a **Generate a password** button), **Website** (use **Add another website** for more), and **Add an authenticator key** to store a setup key or an `otpauth://` link.
+   - **Login:** **Username or email**, **Password** (with a strength meter and a **Generate a password** button), **Website** (use **Add another website** for more), **Sign in automatically** (see [One-click login](#one-click-login)), and **Add an authenticator key** to store a setup key or an `otpauth://` link.
    - **API key:** **Service**, **Key ID**, **Secret**, **Website**, **Expires**.
    - **Custom:** click **Add field**, give each field a **Name** and **Value**, and use the switch to hide or show it in the details. The trash button removes a field.
-   - **Notes** (or **Note** for a secure note) and **Tags** (type a tag and press `Enter`, or end it with a comma).
+   - **Notes** (or **Note** for a secure note), **Category** (pick one, or **New category...** to make one on the spot) and **Tags** (type a tag and press `Enter`, or end it with a comma).
 5. Optionally turn on **Pin to favorites**.
 6. Click **Save**, or press `Ctrl+Enter`.
 
@@ -140,6 +154,25 @@ Click the dice button in the password box to open the generator.
 - A strength meter for the result.
 - **Use password** puts it in the entry. The generator remembers your settings.
 
+## One-click login
+
+A login with a website has a green **Log in** button. It opens the site and enters the username and password for you. The arrow next to it picks where the site opens, and Runova remembers your choice:
+
+| Where | What happens |
+| --- | --- |
+| **Runova window** | The site opens in a Runova browser window and the username and password are filled in. This is the default. |
+| **Workspace tab** | The site opens in a browser tab of the project you pick, in the Workspace, and is filled in there. |
+| **Default browser** | The site opens in your usual browser. Runova can't type into it, so the password is copied instead and cleared from the clipboard like any other copy. |
+
+The Runova window and Workspace tabs share one browser profile, so a site you sign in to in one is signed in in the other.
+
+Turn on **Sign in automatically** on a login to have Runova press the site's sign-in button after filling. It is off by default, so you can check the page first. Sites that ask for the username and the password on separate pages are followed to the second page.
+
+A toast says how it went: signed in, filled in, or that no login form was found. You can also press `Ctrl+Enter` on the Vault page, or pick **Log in to** an entry in the command palette.
+
+> [!NOTE]
+> Runova only fills a page whose address is on one of the login's saved websites (or a subdomain of one), and never fills a plain `http` page when the website was saved with `https`. A look-alike address such as `github.com.example.io` gets nothing. The password goes straight from the vault to the page and never passes through the rest of the app.
+
 ## Import and export
 
 ### Import from CSV
@@ -159,7 +192,7 @@ Use **More vault actions**, **Import from CSV**. The dialog "Import passwords" w
 
 Use **More vault actions**, **Export to CSV**. The dialog "Export the vault" asks you to:
 
-1. Choose a format: **Runova CSV** (every field of every entry type, imports back into Runova exactly) or **Bitwarden CSV** (for moving to Bitwarden or another manager that reads its format).
+1. Choose a format: **Runova CSV** (every field of every entry type, imports back into Runova exactly) or **Bitwarden CSV** (for moving to Bitwarden or another manager that reads its format). Bitwarden CSV uses each entry's category as its folder.
 2. Type your **Master password** to confirm it is you.
 3. Click **Export** and choose where to save the file.
 
@@ -199,18 +232,19 @@ These work only on the Vault page while it is unlocked. You can change them in *
 | Lock the vault | `Ctrl+L` |
 | Copy password (or API key secret) | `Ctrl+Shift+C` |
 | Copy username | `Ctrl+Shift+B` |
+| Log in to the selected entry | `Ctrl+Enter` |
 
 On macOS use `Cmd` instead of `Ctrl`. When a dialog is open, or when the terminal has focus, these shortcuts step aside.
 
 ## How it is stored and backed up
 
-- The vault is one file, `vault.json`, in Runova's data folder. It is encrypted with AES-256-GCM using a key made from your master password with scrypt, a slow function that makes guessing passwords expensive. Only you can unlock it.
+- The vault is one file, `vault.json`, in Runova's data folder. Categories are stored inside it with your entries. It is encrypted with AES-256-GCM using a key made from your master password with scrypt, a slow function that makes guessing passwords expensive. Only you can unlock it.
 - It is not shared with other devices. Runova does not sync it.
 - **Backups.** In **Settings**, **Data**, the backup option **Include the Vault (stays encrypted with its master password)** adds the vault file to the backup. It stays locked with its master password, so the backup needs no extra password for it. When you restore a backup that contains a Vault, Runova asks "Restore the Vault too?". Restoring replaces this computer's Vault, which is set aside in the data folder, and the vault locks. Unlock it with the master password the vault had when the backup was made. See [Backup and restore](backup-restore.md).
 
 ## Using Vault entries elsewhere
 
-The Vault is for storing and copying secrets. Runova does not automatically hand Vault entries to your AI CLIs, terminals or SSH connections. To use one, copy it with the copy button or shortcut and paste it where you need it.
+The Vault is for storing and copying secrets, and for logging in to websites with one click. Runova does not automatically hand Vault entries to your AI CLIs, terminals or SSH connections. To use one, copy it with the copy button or shortcut and paste it where you need it.
 
 The saved passwords for SSH and Remote Desktop servers, and the secrets in project environments, are protected separately. They use your operating system keychain, plus an optional servers passkey you can set on the Remote page. See [Remote](remote.md#the-servers-passkey).
 

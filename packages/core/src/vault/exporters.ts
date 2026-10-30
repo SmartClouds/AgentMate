@@ -1,3 +1,4 @@
+import type { VaultCategory } from './categories.js';
 import { serializeCsv } from './csv.js';
 import type { VaultEntry } from './entries.js';
 import { BITWARDEN_CSV_COLUMNS, RUNOVA_CSV_COLUMNS } from './importers.js';
@@ -32,7 +33,7 @@ function runovaRow(entry: VaultEntry): string[] {
   return RUNOVA_CSV_COLUMNS.map((column) => row[column]);
 }
 
-function bitwardenRow(entry: VaultEntry): string[] {
+function bitwardenRow(entry: VaultEntry, folders: Map<string, string>): string[] {
   const extra: string[] = [];
   let type = 'note';
   let uri = '';
@@ -59,7 +60,7 @@ function bitwardenRow(entry: VaultEntry): string[] {
     for (const field of entry.fields) extra.push(`${field.label}: ${field.value}`);
   }
   const row: Record<(typeof BITWARDEN_CSV_COLUMNS)[number], string> = {
-    folder: entry.tags[0] ?? '',
+    folder: (entry.categoryId && folders.get(entry.categoryId)) || (entry.tags[0] ?? ''),
     favorite: entry.favorite ? '1' : '',
     type,
     name: entry.title,
@@ -74,9 +75,19 @@ function bitwardenRow(entry: VaultEntry): string[] {
   return BITWARDEN_CSV_COLUMNS.map((column) => row[column]);
 }
 
-/** Plain text CSV. Anyone who can read the file can read every password in it. */
-export function exportEntriesCsv(entries: VaultEntry[], format: VaultExportFormat): string {
+/**
+ * Plain text CSV. Anyone who can read the file can read every password in it. Bitwarden gets the
+ * entry's category as its folder, or the first tag when it has none.
+ */
+export function exportEntriesCsv(
+  entries: VaultEntry[],
+  format: VaultExportFormat,
+  categories: VaultCategory[] = [],
+): string {
   const header = format === 'runova' ? [...RUNOVA_CSV_COLUMNS] : [...BITWARDEN_CSV_COLUMNS];
-  const rows = entries.map(format === 'runova' ? runovaRow : bitwardenRow);
+  const folders = new Map(categories.map((c) => [c.id, c.name]));
+  const rows = entries.map((entry) =>
+    format === 'runova' ? runovaRow(entry) : bitwardenRow(entry, folders),
+  );
   return serializeCsv([header, ...rows]);
 }

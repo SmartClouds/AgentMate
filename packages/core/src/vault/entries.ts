@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { VAULT_CATEGORY_LIMITS, VaultCategorySchema } from './categories.js';
 import { normalizeUrl } from './url.js';
 
 export const VAULT_ENTRY_TYPES = ['login', 'apiKey', 'note', 'custom'] as const;
@@ -42,6 +43,8 @@ const baseShape = {
   lastUsedAt: timestamp.nullable(),
   /** The site's favicon, fetched once from the editor and kept here so listing never goes online. */
   icon: icon.optional(),
+  /** The category the entry is filed under. Missing means no category. */
+  categoryId: id.optional(),
 };
 
 export const VaultCustomFieldSchema = z.object({
@@ -60,6 +63,8 @@ export const VaultEntrySchema = z.discriminatedUnion('type', [
     urls,
     totpSecret: secret,
     passwordUpdatedAt: timestamp.nullable(),
+    /** Press the site's sign-in button after a one-click login fills the form. Missing means off. */
+    autoSubmit: z.boolean().optional(),
   }),
   z.object({
     ...baseShape,
@@ -86,9 +91,12 @@ export const VaultPayloadSchema = z.object({
   schemaVersion: z.literal(1),
   createdAt: timestamp,
   entries: z.array(VaultEntrySchema).max(VAULT_LIMITS.entries),
+  /** Missing in vaults written before categories existed. */
+  categories: z.array(VaultCategorySchema).max(VAULT_CATEGORY_LIMITS.categories).default([]),
 });
 
-export type VaultPayload = z.infer<typeof VaultPayloadSchema>;
+/** As stored. A vault written before categories existed has none, so they are optional here. */
+export type VaultPayload = z.input<typeof VaultPayloadSchema>;
 
 /**
  * What the editor sends back. A secret left `undefined` keeps the stored value, so the renderer
@@ -102,6 +110,8 @@ const saveBaseShape = {
   notes: z.string().max(VAULT_LIMITS.notes).optional(),
   /** Undefined keeps the stored icon, null removes it. */
   icon: icon.nullable().optional(),
+  /** Undefined keeps the stored category, null takes the entry out of it. */
+  categoryId: id.nullable().optional(),
 };
 
 export const SaveVaultEntryInputSchema = z.discriminatedUnion('type', [
@@ -115,6 +125,7 @@ export const SaveVaultEntryInputSchema = z.discriminatedUnion('type', [
       .max(VAULT_LIMITS.urls * 2)
       .optional(),
     totpSecret: secret.optional(),
+    autoSubmit: z.boolean().optional(),
   }),
   z.object({
     ...saveBaseShape,
@@ -199,6 +210,8 @@ export function applySaveInput(
     throw new Error('The entry id does not match.');
   }
   const icon = input.icon === undefined ? existing?.icon : (input.icon ?? undefined);
+  const categoryId =
+    input.categoryId === undefined ? existing?.categoryId : (input.categoryId ?? undefined);
   const base = {
     id: existing?.id ?? clock.newId(),
     title: input.title.trim(),
@@ -209,6 +222,7 @@ export function applySaveInput(
     updatedAt: clock.now,
     lastUsedAt: existing?.lastUsedAt ?? null,
     ...(icon ? { icon } : {}),
+    ...(categoryId ? { categoryId } : {}),
   };
 
   let entry: VaultEntry;
@@ -229,6 +243,7 @@ export function applySaveInput(
             ? clock.now
             : null
           : (prev?.passwordUpdatedAt ?? null),
+        autoSubmit: input.autoSubmit ?? prev?.autoSubmit ?? false,
       };
       break;
     }

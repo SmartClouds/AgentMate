@@ -20,9 +20,12 @@ import {
   faBox,
   faBoxArchive,
   faBoxOpen,
+  faBriefcase,
   faBug,
+  faBuildingColumns,
   faCalendarDays,
   faCamera,
+  faCartShopping,
   faChartColumn,
   faChartSimple,
   faCheck,
@@ -38,6 +41,7 @@ import {
   faClapperboard,
   faClock,
   faClockRotateLeft,
+  faCloud,
   faCloudArrowDown,
   faCloudArrowUp,
   faCode,
@@ -70,20 +74,26 @@ import {
   faFolderOpen,
   faFolderPlus,
   faFolderTree,
+  faGamepad,
   faGaugeHigh,
   faGear,
   faGlobe,
+  faGraduationCap,
   faGripVertical,
   faHardDrive,
   faHeading,
+  faHeart,
   faHeartPulse,
+  faHouse,
   faImage,
+  faInbox,
   faInfinity,
   faItalic,
   faKey,
   faKeyboard,
   faLanguage,
   faLaptopCode,
+  faLayerGroup,
   faLink,
   faLinkSlash,
   faListOl,
@@ -114,6 +124,7 @@ import {
   faPowerOff,
   faQrcode,
   faQuoteLeft,
+  faRightToBracket,
   faRobot,
   faRocket,
   faRotate,
@@ -465,3 +476,14 @@ export const Vault = makeIcon(faVault);
 export const Dice = makeIcon(faDice);
 export const Sliders = makeIcon(faSliders);
 export const HeartPulse = makeIcon(faHeartPulse);
+export const Briefcase = makeIcon(faBriefcase);
+export const Bank = makeIcon(faBuildingColumns);
+export const ShoppingCart = makeIcon(faCartShopping);
+export const Cloud = makeIcon(faCloud);
+export const Gamepad = makeIcon(faGamepad);
+export const GraduationCap = makeIcon(faGraduationCap);
+export const Heart = makeIcon(faHeart);
+export const House = makeIcon(faHouse);
+export const Inbox = makeIcon(faInbox);
+export const Layers = makeIcon(faLayerGroup);
+export const SignIn = makeIcon(faRightToBracket);

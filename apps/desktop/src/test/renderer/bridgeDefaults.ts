@@ -124,6 +124,7 @@ export function bridgeDefaults(): Record<string, unknown> {
       autoLockMinutes: 15,
       clipboardClearSeconds: 30,
     },
+    'vault.listCategories': [],
     'pet.getSnooze': { until: null },
     'pet.customDataUrls': {},
     'deploy.coreRelease': async () => null,

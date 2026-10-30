@@ -45,6 +45,8 @@ describe('toEntrySummary', () => {
       keyId: '',
       urls: ['https://www.github.com/login'],
       host: 'github.com',
+      categoryId: null,
+      autoSubmit: false,
       hasPassword: true,
       hasTotp: true,
       hasSecret: false,
@@ -53,6 +55,28 @@ describe('toEntrySummary', () => {
       expiresAt: null,
       fields: [],
     });
+  });
+
+  it('exposes the category, and auto-submit for logins', () => {
+    const entry = applySaveInput(
+      undefined,
+      {
+        type: 'login',
+        title: 'G',
+        tags: [],
+        favorite: false,
+        categoryId: 'work',
+        autoSubmit: true,
+      },
+      { now: NOW, newId: () => 'e1' },
+    );
+    expect(toEntrySummary(entry)).toMatchObject({ categoryId: 'work', autoSubmit: true });
+    const note = applySaveInput(
+      undefined,
+      { type: 'note', title: 'N', tags: [], favorite: false },
+      { now: NOW, newId: () => 'e2' },
+    );
+    expect(toEntrySummary(note)).toMatchObject({ categoryId: null, autoSubmit: false });
   });
 
   it('shows labels for every custom field but values only for the ones that are not concealed', () => {

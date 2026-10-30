@@ -93,6 +93,8 @@ export * from './types/index.js';
 export * from './usage/pricing.js';
 export * from './usage/registry.js';
 export * from './usage/types.js';
+export * from './vault/autofill.js';
+export * from './vault/categories.js';
 export * from './vault/csv.js';
 export * from './vault/duplicates.js';
 export * from './vault/entries.js';

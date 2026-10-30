@@ -124,3 +124,26 @@ describe('exportEntriesCsv: bitwarden', () => {
     expect(parseCsv(exportEntriesCsv([], 'bitwarden'))).toHaveLength(1);
   });
 });
+
+describe('exportEntriesCsv: categories', () => {
+  const categories = [
+    { id: 'c1', name: 'Clients', color: 'blue', icon: 'briefcase', order: 0, createdAt: NOW },
+  ] as const;
+
+  it('uses the category as the Bitwarden folder, ahead of the first tag', () => {
+    const [filed, loose] = build([
+      { type: 'note', title: 'Filed', tags: ['Work'], favorite: false, categoryId: 'c1' },
+      { type: 'note', title: 'Loose', tags: ['Home'], favorite: false },
+    ]);
+    const rows = parseCsv(exportEntriesCsv([filed, loose], 'bitwarden', [...categories]));
+    expect(rows[1][0]).toBe('Clients');
+    expect(rows[2][0]).toBe('Home');
+  });
+
+  it('falls back to the first tag when the category is unknown', () => {
+    const [filed] = build([
+      { type: 'note', title: 'Filed', tags: ['Work'], favorite: false, categoryId: 'gone' },
+    ]);
+    expect(parseCsv(exportEntriesCsv([filed], 'bitwarden', [...categories]))[1][0]).toBe('Work');
+  });
+});

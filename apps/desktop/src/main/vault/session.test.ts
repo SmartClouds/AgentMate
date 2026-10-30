@@ -301,3 +301,122 @@ describe('VaultSession entries', () => {
     expect(JSON.stringify(session)).not.toContain('S3NT1NEL');
   });
 });
+
+describe('VaultSession categories', () => {
+  const work = { name: 'Work', color: 'blue', icon: 'briefcase' } as const;
+  const home = { name: 'Home', color: 'green', icon: 'home' } as const;
+
+  it('creates, renames and lists categories in order', async () => {
+    const { session } = makeSession();
+    await session.create(PASSWORD);
+    const made = await session.saveCategory(work);
+    await session.saveCategory(home);
+    expect(session.listCategories().map((c) => c.name)).toEqual(['Work', 'Home']);
+
+    await session.saveCategory({ ...work, id: made.id, name: 'Job', color: 'red' });
+    expect(session.listCategories()[0]).toMatchObject({ id: made.id, name: 'Job', color: 'red' });
+  });
+
+  it('refuses a duplicate name and an unknown category with readable errors', async () => {
+    const { session } = makeSession();
+    await session.create(PASSWORD);
+    await session.saveCategory(work);
+    await expectCode(session.saveCategory({ ...work, name: 'work' }), 'invalid');
+    await expectCode(session.saveCategory({ ...work, id: 'nope' }), 'not-found');
+    await expectCode(session.deleteCategory('nope'), 'not-found');
+  });
+
+  it('keeps categories and filed entries across lock, unlock and a password change', async () => {
+    const { session, files } = makeSession();
+    await session.create(PASSWORD);
+    const category = await session.saveCategory(work);
+    await session.save(login({ categoryId: category.id }));
+    expect(await session.changePassword(PASSWORD, NEW_PASSWORD)).toBe(true);
+    await session.lock();
+
+    const { session: again } = makeSession(files);
+    expect(await again.unlock(NEW_PASSWORD)).toBe(true);
+    expect(again.listCategories().map((c) => c.name)).toEqual(['Work']);
+    expect(again.list()[0].categoryId).toBe(category.id);
+  });
+
+  it('opens a vault written before categories existed', async () => {
+    const { session, files } = makeSession();
+    await session.create(PASSWORD);
+    await session.save(login());
+    await session.lock();
+    // Rewrite the payload the way an older build wrote it: no categories key at all.
+    const file = files.current as VaultFileV1;
+    const opened = await openVaultFile(file, PASSWORD);
+    if (typeof opened === 'string') throw new Error(opened);
+    const { categories: _none, ...old } = opened.payload;
+    const { sealVaultData } = await import('./format');
+    files.current = sealVaultData(file, opened.dataKey, old as typeof opened.payload);
+
+    const { session: again } = makeSession(files);
+    expect(await again.unlock(PASSWORD)).toBe(true);
+    expect(again.listCategories()).toEqual([]);
+    expect(again.list()).toHaveLength(1);
+  });
+
+  it('refuses to file an entry under a category that does not exist', async () => {
+    const { session } = makeSession();
+    await session.create(PASSWORD);
+    await expectCode(session.save(login({ categoryId: 'ghost' })), 'invalid');
+  });
+
+  it('deletes a category and keeps its entries, with no category', async () => {
+    const { session } = makeSession();
+    await session.create(PASSWORD);
+    const category = await session.saveCategory(work);
+    const entry = await session.save(login({ categoryId: category.id }));
+    await session.save(login({ title: 'Loose' }));
+
+    expect(await session.deleteCategory(category.id)).toBe(1);
+    expect(session.listCategories()).toEqual([]);
+    expect(session.list().find((s) => s.id === entry.id)?.categoryId).toBeNull();
+    expect(session.list()).toHaveLength(2);
+  });
+
+  it('moves entries in and out of a category in one write', async () => {
+    const { session, files } = makeSession();
+    await session.create(PASSWORD);
+    const category = await session.saveCategory(work);
+    const a = await session.save(login({ title: 'A' }));
+    const b = await session.save(login({ title: 'B' }));
+    const before = files.writes;
+
+    expect(await session.moveEntries([a.id, b.id], category.id)).toBe(2);
+    expect(files.writes).toBe(before + 1);
+    expect(session.list().every((s) => s.categoryId === category.id)).toBe(true);
+
+    expect(await session.moveEntries([a.id], null)).toBe(1);
+    expect(session.list().find((s) => s.id === a.id)?.categoryId).toBeNull();
+    await expectCode(session.moveEntries([a.id], 'ghost'), 'not-found');
+  });
+
+  it('reorders categories', async () => {
+    const { session } = makeSession();
+    await session.create(PASSWORD);
+    const first = await session.saveCategory(work);
+    const second = await session.saveCategory(home);
+    await session.reorderCategories([second.id, first.id]);
+    expect(session.listCategories().map((c) => c.name)).toEqual(['Home', 'Work']);
+  });
+
+  it('keeps an import from wiping the categories', async () => {
+    const { session } = makeSession();
+    await session.create(PASSWORD);
+    await session.saveCategory(work);
+    await session.replaceAll((entries) => entries);
+    expect(session.listCategories()).toHaveLength(1);
+  });
+
+  it('reads nothing while locked', async () => {
+    const { session } = makeSession();
+    await session.create(PASSWORD);
+    await session.lock();
+    expect(() => session.listCategories()).toThrow(VaultError);
+    await expectCode(session.saveCategory(work), 'locked');
+  });
+});

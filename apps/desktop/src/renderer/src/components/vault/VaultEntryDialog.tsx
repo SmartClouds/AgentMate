@@ -28,14 +28,16 @@ import { SimpleTooltip } from '@/components/ui/tooltip';
 import { queryKeys } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { confirmDialog } from '@/stores/confirmStore';
+import { CategoryPicker } from './CategoryPicker';
 import { EntryAvatar } from './EntryAvatar';
 import { ENTRY_TYPE_META, ENTRY_TYPE_ORDER } from './entryTypes';
 import { PasswordGeneratorPopover } from './PasswordGeneratorPopover';
 import { PasswordStrengthMeter } from './PasswordStrengthMeter';
 import { TagInput } from './TagInput';
+import { useVaultCategories } from './useVaultCategories';
 
 export type VaultEntryDialogTarget =
-  | { mode: 'new'; type?: VaultEntryType; title?: string }
+  | { mode: 'new'; type?: VaultEntryType; title?: string; categoryId?: string }
   | { mode: 'edit'; id: string };
 
 interface DraftField {
@@ -63,12 +65,19 @@ interface Draft {
   fields: DraftField[];
   /** Favicon data URL for the first website, or null for the letter tile. */
   icon: string | null;
+  categoryId: string | null;
+  /** Logins only: press the sign-in button after one-click login fills the form. */
+  autoSubmit: boolean;
 }
 
 let fieldKey = 0;
 const nextFieldKey = () => `field-${++fieldKey}`;
 
-function emptyDraft(type: VaultEntryType = 'login', title = ''): Draft {
+function emptyDraft(
+  type: VaultEntryType = 'login',
+  title = '',
+  categoryId: string | null = null,
+): Draft {
   return {
     type,
     title,
@@ -85,6 +94,8 @@ function emptyDraft(type: VaultEntryType = 'login', title = ''): Draft {
     expiresOn: '',
     fields: [],
     icon: null,
+    categoryId,
+    autoSubmit: false,
   };
 }
 
@@ -98,6 +109,7 @@ function draftFromEntry(entry: VaultEntry): Draft {
     tags: entry.tags,
     favorite: entry.favorite,
     icon: entry.icon ?? null,
+    categoryId: entry.categoryId ?? null,
   };
   draft.notes = entry.notes;
   if (entry.type === 'login') {
@@ -106,6 +118,7 @@ function draftFromEntry(entry: VaultEntry): Draft {
       password: entry.password,
       urls: entry.urls.length ? entry.urls : [''],
       totpSecret: entry.totpSecret,
+      autoSubmit: entry.autoSubmit === true,
     });
   } else if (entry.type === 'apiKey') {
     Object.assign(draft, {
@@ -139,6 +152,12 @@ function buildInput(draft: Draft, original: Draft | null, id?: string): SaveVaul
         ? undefined
         : draft.icon
       : (draft.icon ?? undefined),
+    // Same idea: null takes the entry out of its category, undefined leaves it where it is.
+    categoryId: original
+      ? draft.categoryId === original.categoryId
+        ? undefined
+        : draft.categoryId
+      : (draft.categoryId ?? undefined),
   };
   const urls = draft.urls.map((url) => url.trim()).filter(Boolean);
   switch (draft.type) {
@@ -150,6 +169,7 @@ function buildInput(draft: Draft, original: Draft | null, id?: string): SaveVaul
         password: changed(draft.password, original?.password),
         urls,
         totpSecret: changed(draft.totpSecret, original?.totpSecret),
+        autoSubmit: draft.autoSubmit,
       };
     case 'apiKey':
       return {
@@ -208,7 +228,9 @@ export function VaultEntryDialog({
     expires: useId(),
     notes: useId(),
     tags: useId(),
+    category: useId(),
   };
+  const { categories } = useVaultCategories();
 
   const entryQuery = useQuery({
     queryKey: queryKeys.vaultEntry(editId ?? ''),
@@ -220,10 +242,10 @@ export function VaultEntryDialog({
   });
 
   const [draft, setDraft] = useState<Draft>(() =>
-    target.mode === 'new' ? emptyDraft(target.type, target.title) : emptyDraft(),
+    target.mode === 'new' ? emptyDraft(target.type, target.title, target.categoryId) : emptyDraft(),
   );
   const [baseline, setBaseline] = useState<Draft | null>(() =>
-    target.mode === 'new' ? emptyDraft(target.type, target.title) : null,
+    target.mode === 'new' ? emptyDraft(target.type, target.title, target.categoryId) : null,
   );
   const [showTotp, setShowTotp] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -444,6 +466,21 @@ export function VaultEntryDialog({
                   onChange={(urls) => set('urls', urls)}
                   icon={iconControls}
                 />
+                <label className="flex cursor-pointer items-start gap-3 rounded-lg bg-foreground/[0.025] px-3 py-2.5 ring-1 ring-inset ring-foreground/[0.08]">
+                  <Switch
+                    aria-label="Sign in automatically"
+                    checked={draft.autoSubmit}
+                    onCheckedChange={(autoSubmit) => set('autoSubmit', autoSubmit)}
+                    className="mt-0.5"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium">Sign in automatically</span>
+                    <span className="block text-xs leading-relaxed text-muted-foreground">
+                      After Log in fills in your username and password, press the site's sign-in
+                      button too.
+                    </span>
+                  </span>
+                </label>
                 {showTotp || draft.totpSecret ? (
                   <div className="space-y-1.5">
                     <Label htmlFor={ids.totp}>Authenticator key</Label>
@@ -616,14 +653,25 @@ export function VaultEntryDialog({
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor={ids.tags}>Tags</Label>
-              <TagInput
-                id={ids.tags}
-                value={draft.tags}
-                onChange={(tags) => set('tags', tags)}
-                suggestions={knownTags}
-              />
+            <div className="grid gap-3 sm:grid-cols-[13rem_minmax(0,1fr)]">
+              <div className="space-y-1.5">
+                <Label htmlFor={ids.category}>Category</Label>
+                <CategoryPicker
+                  id={ids.category}
+                  categories={categories}
+                  value={draft.categoryId}
+                  onChange={(categoryId) => set('categoryId', categoryId)}
+                />
+              </div>
+              <div className="min-w-0 space-y-1.5">
+                <Label htmlFor={ids.tags}>Tags</Label>
+                <TagInput
+                  id={ids.tags}
+                  value={draft.tags}
+                  onChange={(tags) => set('tags', tags)}
+                  suggestions={knownTags}
+                />
+              </div>
             </div>
 
             {error && (

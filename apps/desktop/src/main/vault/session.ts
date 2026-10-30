@@ -1,13 +1,21 @@
 import { randomUUID } from 'node:crypto';
 import {
+  applyCategoryInput,
   applySaveInput,
   duplicateEntry,
   masterPasswordProblem,
+  moveToCategory,
   normalizeTags,
   readEntryField,
+  removeCategory,
+  reorderCategories,
+  type SaveVaultCategoryInput,
+  SaveVaultCategoryInputSchema,
   type SaveVaultEntryInput,
   SaveVaultEntryInputSchema,
+  sortCategories,
   toEntrySummary,
+  type VaultCategory,
   type VaultEntry,
   VaultEntrySchema,
   type VaultEntrySummary,
@@ -53,6 +61,13 @@ interface Unlocked {
   dataKey: Buffer;
   createdAt: number;
   entries: VaultEntry[];
+  categories: VaultCategory[];
+}
+
+/** The parts of the payload a change can touch, as a copy it may edit freely. */
+interface Draft {
+  entries: VaultEntry[];
+  categories: VaultCategory[];
 }
 
 const LOCKED = () => new VaultError('locked', 'The vault is locked.');
@@ -107,10 +122,15 @@ export class VaultSession {
     if (this.unlocked || (await this.files.read()) !== null) {
       throw new VaultError('exists', 'A vault already exists.');
     }
-    const payload: VaultPayload = { schemaVersion: 1, createdAt: this.now(), entries: [] };
+    const payload: VaultPayload = {
+      schemaVersion: 1,
+      createdAt: this.now(),
+      entries: [],
+      categories: [],
+    };
     const { file, dataKey } = await createVaultFile(password, payload, this.cost);
     await this.files.write(file);
-    this.unlocked = { file, dataKey, createdAt: payload.createdAt, entries: [] };
+    this.unlocked = { file, dataKey, createdAt: payload.createdAt, entries: [], categories: [] };
   }
 
   /** False for a wrong password. Throws for a missing or damaged vault. */
@@ -142,6 +162,7 @@ export class VaultSession {
       dataKey: opened.dataKey,
       createdAt: opened.payload.createdAt,
       entries: opened.payload.entries,
+      categories: opened.payload.categories ?? [],
     };
     return true;
   }
@@ -180,6 +201,7 @@ export class VaultSession {
         schemaVersion: 1,
         createdAt: state.createdAt,
         entries: state.entries,
+        categories: state.categories,
       };
       const rewrapped = await rewrapVaultFile(payload, next, this.cost, {
         dataKey: state.dataKey,
@@ -228,8 +250,11 @@ export class VaultSession {
     if (!parsed.success) {
       return Promise.reject(new VaultError('invalid', describeInvalid(parsed.error)));
     }
-    return this.mutate((entries) => {
-      const data = parsed.data;
+    const data = parsed.data;
+    return this.mutatePayload(({ entries, categories }) => {
+      if (data.categoryId && !categories.some((c) => c.id === data.categoryId)) {
+        throw new VaultError('invalid', 'That category no longer exists.');
+      }
       const index = data.id ? entries.findIndex((entry) => entry.id === data.id) : -1;
       if (data.id && index === -1)
         throw new VaultError('not-found', 'That entry no longer exists.');
@@ -280,6 +305,64 @@ export class VaultSession {
       const copy = duplicateEntry(source, this.clock());
       entries.push(copy);
       return toEntrySummary(copy);
+    });
+  }
+
+  listCategories(): VaultCategory[] {
+    return sortCategories(structuredClone(this.requireUnlocked().categories));
+  }
+
+  saveCategory(input: SaveVaultCategoryInput): Promise<VaultCategory> {
+    const parsed = SaveVaultCategoryInputSchema.safeParse(input);
+    if (!parsed.success) {
+      return Promise.reject(new VaultError('invalid', describeInvalid(parsed.error)));
+    }
+    return this.mutatePayload((draft) => {
+      if (parsed.data.id && !draft.categories.some((c) => c.id === parsed.data.id)) {
+        throw new VaultError('not-found', 'That category no longer exists.');
+      }
+      try {
+        const { category, categories } = applyCategoryInput(
+          draft.categories,
+          parsed.data,
+          this.clock(),
+        );
+        draft.categories = categories;
+        return category;
+      } catch (error) {
+        throw new VaultError('invalid', describeInvalid(error));
+      }
+    });
+  }
+
+  /** Deletes a category and returns how many entries were in it. Those entries are kept. */
+  deleteCategory(id: string): Promise<number> {
+    return this.mutatePayload((draft) => {
+      if (!draft.categories.some((c) => c.id === id)) {
+        throw new VaultError('not-found', 'That category no longer exists.');
+      }
+      const result = removeCategory(draft.categories, draft.entries, id, this.now());
+      draft.categories = result.categories;
+      draft.entries = result.entries;
+      return result.moved;
+    });
+  }
+
+  reorderCategories(ids: string[]): Promise<void> {
+    return this.mutatePayload((draft) => {
+      draft.categories = reorderCategories(draft.categories, ids);
+    });
+  }
+
+  /** Files entries under a category, or under none with null. Returns how many moved. */
+  moveEntries(ids: string[], categoryId: string | null): Promise<number> {
+    return this.mutatePayload((draft) => {
+      if (categoryId !== null && !draft.categories.some((c) => c.id === categoryId)) {
+        throw new VaultError('not-found', 'That category no longer exists.');
+      }
+      const result = moveToCategory(draft.entries, ids, categoryId, this.now());
+      draft.entries = result.entries;
+      return result.moved;
     });
   }
 
@@ -334,14 +417,23 @@ export class VaultSession {
   }
 
   private mutate<T>(change: (entries: VaultEntry[]) => T): Promise<T> {
+    return this.mutatePayload((draft) => change(draft.entries));
+  }
+
+  /** Changes a copy of the entries and categories, and only keeps it once the write succeeds. */
+  private mutatePayload<T>(change: (draft: Draft) => T): Promise<T> {
     return this.enqueue(async () => {
       const state = this.requireUnlocked();
-      const draft = structuredClone(state.entries);
+      const draft: Draft = {
+        entries: structuredClone(state.entries),
+        categories: structuredClone(state.categories),
+      };
       const result = change(draft);
       const parsed = VaultPayloadSchema.safeParse({
         schemaVersion: 1,
         createdAt: state.createdAt,
-        entries: draft,
+        entries: draft.entries,
+        categories: draft.categories,
       });
       if (!parsed.success) throw new VaultError('invalid', describeInvalid(parsed.error));
 
@@ -356,7 +448,12 @@ export class VaultSession {
       }
       await this.files.write(next);
       if (this.unlocked === state) {
-        this.unlocked = { ...state, file: next, entries: draft };
+        this.unlocked = {
+          ...state,
+          file: next,
+          entries: draft.entries,
+          categories: draft.categories,
+        };
       }
       return result;
     });

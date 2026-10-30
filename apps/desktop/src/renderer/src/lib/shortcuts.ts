@@ -57,7 +57,8 @@ export type ShortcutCommandId =
   | 'vault.edit'
   | 'vault.lock'
   | 'vault.copyPassword'
-  | 'vault.copyUsername';
+  | 'vault.copyUsername'
+  | 'vault.login';
 
 /**
  * Where a shortcut is listened for. `global` runs anywhere in the shell;
@@ -460,6 +461,14 @@ export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
     group: 'Vault',
     scope: 'vault',
     defaults: [{ code: 'KeyB', mod: true, shift: true }],
+  },
+  {
+    id: 'vault.login',
+    label: 'Log in',
+    description: "Opens the selected login's website and fills in the username and password.",
+    group: 'Vault',
+    scope: 'vault',
+    defaults: [{ code: 'Enter', mod: true }],
   },
 ];
 

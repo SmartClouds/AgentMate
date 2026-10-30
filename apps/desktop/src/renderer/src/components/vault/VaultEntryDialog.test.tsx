@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 import type { VaultEntry } from '@runova/core';
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  category,
   createVaultApiMock,
   expectNoNativeTitles,
   installDomShims,
@@ -108,6 +110,7 @@ describe('VaultEntryDialog: new entries', () => {
         password: 'n3w-Pa55word!',
         urls: ['github.com/login'],
         totpSecret: '',
+        autoSubmit: false,
       }),
     );
     expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ id: 'saved' }));
@@ -290,5 +293,96 @@ describe('VaultEntryDialog: site icon', () => {
     fireEvent.click(save());
     await waitFor(() => expect(mock.api.save).toHaveBeenCalled());
     expect(mock.api.save.mock.calls[0][0]).toMatchObject({ icon: null });
+  });
+});
+
+describe('VaultEntryDialog: category and one-click login', () => {
+  const work = category({ id: 'work', name: 'Work', color: 'blue', icon: 'briefcase' });
+  const bank = category({ id: 'bank', name: 'Banking', color: 'green', icon: 'bank' });
+
+  beforeEach(() => {
+    mock.api.listCategories.mockResolvedValue([work, bank]);
+  });
+
+  const picker = () => within(dialog()).getByRole('button', { name: /^Category/ });
+
+  it('files a new entry under the category picked', async () => {
+    const user = userEvent.setup();
+    renderDialog({ mode: 'new' });
+    type('Title', 'Bank login');
+    expect(picker().textContent).toContain('No category');
+    await user.click(picker());
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Banking' }));
+    expect(picker().textContent).toContain('Banking');
+    fireEvent.click(save());
+    await waitFor(() =>
+      expect(mock.api.save).toHaveBeenCalledWith(expect.objectContaining({ categoryId: 'bank' })),
+    );
+  });
+
+  it('starts a new entry in the category the list was showing', async () => {
+    renderDialog({ mode: 'new', categoryId: 'work' });
+    await waitFor(() => expect(picker().textContent).toContain('Work'));
+    type('Title', 'Jira');
+    fireEvent.click(save());
+    await waitFor(() =>
+      expect(mock.api.save).toHaveBeenCalledWith(expect.objectContaining({ categoryId: 'work' })),
+    );
+  });
+
+  it('leaves the category out of an edit that did not touch it, and sends null to clear it', async () => {
+    const user = userEvent.setup();
+    mock.api.getForEdit.mockResolvedValue({ ...storedLogin, categoryId: 'work' });
+    renderDialog({ mode: 'edit', id: 'gh' });
+    await waitFor(() => expect(picker().textContent).toContain('Work'));
+    type('Title', 'GitHub (work)');
+    fireEvent.click(save());
+    await waitFor(() => expect(mock.api.save).toHaveBeenCalledTimes(1));
+    expect(mock.api.save.mock.calls[0][0]).not.toHaveProperty('categoryId', expect.anything());
+
+    await user.click(picker());
+    await user.click(await screen.findByRole('menuitemradio', { name: 'No category' }));
+    fireEvent.click(save());
+    await waitFor(() => expect(mock.api.save).toHaveBeenCalledTimes(2));
+    expect(mock.api.save.mock.calls[1][0]).toMatchObject({ categoryId: null });
+  });
+
+  it('makes a new category from the picker and files the entry there', async () => {
+    const user = userEvent.setup();
+    mock.api.saveCategory.mockResolvedValue(
+      category({ id: 'fresh', name: 'Clients', color: 'pink', icon: 'heart' }),
+    );
+    renderDialog({ mode: 'new' });
+    type('Title', 'Acme portal');
+    await user.click(picker());
+    await user.click(await screen.findByRole('menuitem', { name: 'New category...' }));
+    const categoryDialog = await screen.findByRole('dialog', { name: 'New category' });
+    fireEvent.change(within(categoryDialog).getByLabelText('Name'), {
+      target: { value: 'Clients' },
+    });
+    fireEvent.click(within(categoryDialog).getByRole('button', { name: 'Create category' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New category' })).toBeNull());
+    await waitFor(() => expect(picker().textContent).toContain('Clients'));
+    fireEvent.click(save());
+    await waitFor(() =>
+      expect(mock.api.save).toHaveBeenCalledWith(expect.objectContaining({ categoryId: 'fresh' })),
+    );
+  });
+
+  it('saves the sign in automatically choice for a login', async () => {
+    renderDialog({ mode: 'new' });
+    type('Title', 'GitHub');
+    const toggle = within(dialog()).getByRole('switch', { name: 'Sign in automatically' });
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(toggle);
+    fireEvent.click(save());
+    await waitFor(() =>
+      expect(mock.api.save).toHaveBeenCalledWith(expect.objectContaining({ autoSubmit: true })),
+    );
+  });
+
+  it('only offers sign in automatically on logins', () => {
+    renderDialog({ mode: 'new', type: 'note' });
+    expect(within(dialog()).queryByRole('switch', { name: 'Sign in automatically' })).toBeNull();
   });
 });

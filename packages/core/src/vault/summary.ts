@@ -30,6 +30,9 @@ export interface VaultEntrySummary {
   host: string;
   /** Favicon data URL, when one was saved with the entry. */
   icon?: string;
+  categoryId: string | null;
+  /** Logins only: whether one-click login presses the sign-in button after filling. */
+  autoSubmit: boolean;
   hasPassword: boolean;
   hasTotp: boolean;
   hasSecret: boolean;
@@ -56,6 +59,8 @@ export function toEntrySummary(entry: VaultEntry): VaultEntrySummary {
     urls,
     host: hostOf(urls[0] ?? ''),
     ...(entry.icon ? { icon: entry.icon } : {}),
+    categoryId: entry.categoryId ?? null,
+    autoSubmit: entry.type === 'login' && entry.autoSubmit === true,
     hasPassword: entry.type === 'login' && entry.password !== '',
     hasTotp: entry.type === 'login' && entry.totpSecret !== '',
     hasSecret: entry.type === 'apiKey' && entry.secret !== '',

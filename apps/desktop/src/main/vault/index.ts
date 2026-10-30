@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { app, clipboard, dialog, ipcMain, powerMonitor } from 'electron';
+import { app, clipboard, dialog, ipcMain, powerMonitor, shell } from 'electron';
 import { IPC } from '../../shared/ipcChannels';
 import { sendToWindow } from '../ipc/send';
 import { registerVaultHandlers } from '../ipc/vault';
 import { getMainWindow } from '../mainWindow';
 import { fetchVaultIcon } from '../projectIcons';
+import { guestLoginPage, isWebUrl, openLoginWindow } from './autofill/loginWindow';
 import type { VaultFileV1 } from './format';
 import type { PowerPort, VaultFilePort } from './ports';
 import { VaultService } from './service';
@@ -78,9 +79,16 @@ export function getVaultService(): VaultService {
       stateChanged: (event) => sendToMainWindow(IPC.vault.onStateChanged, event),
       entriesChanged: () => sendToMainWindow(IPC.vault.onEntriesChanged),
       clipboardSettled: (event) => sendToMainWindow(IPC.vault.onClipboardSettled, event),
+      loginFilled: (event) => sendToMainWindow(IPC.vault.onLoginFilled, event),
     },
     env: process.env,
     isPackaged: app.isPackaged,
+    login: {
+      openWindow: openLoginWindow,
+      openExternal: async (url) => {
+        if (isWebUrl(url)) await shell.openExternal(url);
+      },
+    },
   });
   return service;
 }
@@ -90,6 +98,7 @@ export function registerVaultIpc(): void {
     ipc: ipcMain,
     service: getVaultService(),
     fetchIcon: fetchVaultIcon,
+    guestPage: (id) => guestLoginPage(id, getMainWindow()?.webContents ?? null),
     guard: (event) => {
       const win = getMainWindow();
       return (

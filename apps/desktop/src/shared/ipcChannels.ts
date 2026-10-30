@@ -205,10 +205,18 @@ export const IPC = {
     importCancel: 'vault:importCancel',
     exportCsv: 'vault:exportCsv',
     fetchIcon: 'vault:fetchIcon',
+    listCategories: 'vault:listCategories',
+    saveCategory: 'vault:saveCategory',
+    deleteCategory: 'vault:deleteCategory',
+    reorderCategories: 'vault:reorderCategories',
+    moveEntries: 'vault:moveEntries',
+    openLogin: 'vault:openLogin',
+    fillGuest: 'vault:fillGuest',
     // main -> renderer
     onStateChanged: 'vault:onStateChanged',
     onEntriesChanged: 'vault:onEntriesChanged',
     onClipboardSettled: 'vault:onClipboardSettled',
+    onLoginFilled: 'vault:onLoginFilled',
   },
   rdp: {
     listServers: 'rdp:listServers',

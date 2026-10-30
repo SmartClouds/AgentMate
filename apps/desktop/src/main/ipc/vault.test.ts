@@ -7,9 +7,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { VaultStatus } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';
 import { vaultErrorCode } from '../../shared/vaultErrors';
+import type { LoginPage } from '../vault/autofill/fillSession';
 import { VaultService } from '../vault/service';
 import { MemoryVaultFiles } from '../vault/testing/memoryVaultFiles';
 import { registerVaultHandlers, type VaultDialogs } from './vault';
+
+function page(url = 'about:blank'): LoginPage & { scripts: string[] } {
+  const scripts: string[] = [];
+  return {
+    scripts,
+    getURL: () => url,
+    isDestroyed: () => false,
+    executeJavaScript: async (code: string) => {
+      scripts.push(code);
+      return { username: true, password: true, submitted: false };
+    },
+    on: () => undefined,
+    removeListener: () => undefined,
+  };
+}
 
 vi.mock('electron', () => ({
   app: { getPath: () => tmpdir(), isPackaged: false },
@@ -50,6 +66,10 @@ let clipboardText = '';
 let ipc: FakeIpc;
 let service: VaultService;
 let dialogs: VaultDialogs;
+let opened: string[];
+let externals: string[];
+/** The Workspace browser tabs the main window has, by webContents id. */
+let guests: Map<number, LoginPage>;
 
 async function codeOf(promise: Promise<unknown>): Promise<string | null> {
   try {
@@ -63,6 +83,9 @@ async function codeOf(promise: Promise<unknown>): Promise<string | null> {
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), 'runova-vault-ipc-'));
   clipboardText = '';
+  opened = [];
+  externals = [];
+  guests = new Map();
   ipc = new FakeIpc();
   service = new VaultService({
     files: new MemoryVaultFiles(),
@@ -71,6 +94,15 @@ beforeEach(async () => {
     events: { stateChanged: vi.fn(), entriesChanged: vi.fn(), clipboardSettled: vi.fn() },
     env: {},
     isPackaged: false,
+    login: {
+      openWindow: (url) => {
+        opened.push(url);
+        return page();
+      },
+      openExternal: async (url) => {
+        externals.push(url);
+      },
+    },
   });
   dialogs = {
     pickImportFile: vi.fn(async () => null),
@@ -82,6 +114,7 @@ beforeEach(async () => {
     dialogs,
     fetchIcon: vi.fn(async () => null),
     guard: (event) => event.sender === ipc.mainSender,
+    guestPage: (id) => guests.get(id) ?? null,
   });
 });
 
@@ -288,5 +321,108 @@ describe('vault IPC handlers: account and import flows', () => {
     await ipc.invoke(IPC.vault.create, PASSWORD);
     vi.mocked(dialogs.pickImportFile).mockRejectedValueOnce(new Error('dialog crashed'));
     await expect(ipc.invoke(IPC.vault.importOpen)).rejects.toThrow('dialog crashed');
+  });
+});
+
+describe('vault IPC categories', () => {
+  const work = { name: 'Work', color: 'blue', icon: 'briefcase' };
+
+  it('creates, lists, moves into, reorders and deletes categories', async () => {
+    await ipc.invoke(IPC.vault.create, PASSWORD);
+    const made = await ipc.invoke<{ id: string }>(IPC.vault.saveCategory, work);
+    const entry = await ipc.invoke<{ id: string }>(IPC.vault.save, {
+      type: 'note',
+      title: 'Wi-Fi',
+      tags: [],
+      favorite: false,
+    });
+    expect(await ipc.invoke(IPC.vault.moveEntries, [entry.id], made.id)).toBe(1);
+    await ipc.invoke(IPC.vault.reorderCategories, [made.id]);
+    expect(await ipc.invoke(IPC.vault.listCategories)).toEqual([
+      expect.objectContaining({ id: made.id, name: 'Work' }),
+    ]);
+    expect(await ipc.invoke(IPC.vault.deleteCategory, made.id)).toBe(1);
+    expect(await ipc.invoke(IPC.vault.listCategories)).toEqual([]);
+  });
+
+  it('rejects malformed category arguments as invalid', async () => {
+    await ipc.invoke(IPC.vault.create, PASSWORD);
+    expect(await codeOf(ipc.invoke(IPC.vault.saveCategory, { ...work, color: 'plaid' }))).toBe(
+      'invalid',
+    );
+    expect(await codeOf(ipc.invoke(IPC.vault.saveCategory, null))).toBe('invalid');
+    expect(await codeOf(ipc.invoke(IPC.vault.deleteCategory, 7))).toBe('invalid');
+    expect(await codeOf(ipc.invoke(IPC.vault.reorderCategories, 'x'))).toBe('invalid');
+    expect(await codeOf(ipc.invoke(IPC.vault.moveEntries, ['a'], 42))).toBe('invalid');
+    expect(await codeOf(ipc.invoke(IPC.vault.moveEntries, 'a', null))).toBe('invalid');
+  });
+
+  it('keeps categories away from other windows', async () => {
+    await ipc.invoke(IPC.vault.create, PASSWORD);
+    expect(await codeOf(ipc.invokeAs(ipc.otherSender, IPC.vault.listCategories))).toBe('forbidden');
+  });
+});
+
+describe('vault IPC one-click login', () => {
+  async function savedLogin(): Promise<string> {
+    await ipc.invoke(IPC.vault.create, PASSWORD);
+    const saved = await ipc.invoke<{ id: string }>(IPC.vault.save, {
+      type: 'login',
+      title: 'GitHub',
+      tags: [],
+      favorite: false,
+      username: 'octo',
+      password: `${SENTINEL}-pw`,
+      urls: ['github.com/login'],
+    });
+    return saved.id;
+  }
+
+  it('opens the login window or the default browser', async () => {
+    const id = await savedLogin();
+    expect(await ipc.invoke(IPC.vault.openLogin, id, 'window')).toEqual({
+      ok: true,
+      clearsAt: null,
+    });
+    expect(opened).toEqual(['https://github.com/login']);
+    expect(await ipc.invoke(IPC.vault.openLogin, id, 'system')).toMatchObject({ ok: true });
+    expect(externals).toEqual(['https://github.com/login']);
+  });
+
+  it('never hands the password back to the renderer', async () => {
+    const id = await savedLogin();
+    const answers = [
+      await ipc.invoke(IPC.vault.openLogin, id, 'window'),
+      await ipc.invoke(IPC.vault.openLogin, id, 'system'),
+    ];
+    expect(JSON.stringify(answers)).not.toContain(SENTINEL);
+  });
+
+  it('fills a Workspace browser tab of the main window', async () => {
+    const id = await savedLogin();
+    const tab = page('https://github.com/login');
+    guests.set(42, tab);
+    expect(await ipc.invoke(IPC.vault.fillGuest, id, 42)).toEqual({ ok: true, clearsAt: null });
+    await vi.waitFor(() => expect(tab.scripts).toHaveLength(1));
+  });
+
+  it('refuses a tab that is not one of the main window ones', async () => {
+    const id = await savedLogin();
+    expect(await ipc.invoke(IPC.vault.fillGuest, id, 99)).toEqual({
+      ok: false,
+      reason: 'no-guest',
+    });
+  });
+
+  it('rejects malformed login arguments and other windows', async () => {
+    const id = await savedLogin();
+    expect(await codeOf(ipc.invoke(IPC.vault.openLogin, id, 'chrome'))).toBe('invalid');
+    expect(await codeOf(ipc.invoke(IPC.vault.openLogin, 7, 'window'))).toBe('invalid');
+    expect(await codeOf(ipc.invoke(IPC.vault.fillGuest, id, '42'))).toBe('invalid');
+    expect(await codeOf(ipc.invoke(IPC.vault.fillGuest, id, -1))).toBe('invalid');
+    expect(await codeOf(ipc.invokeAs(ipc.otherSender, IPC.vault.openLogin, id, 'window'))).toBe(
+      'forbidden',
+    );
+    expect(opened).toEqual([]);
   });
 });

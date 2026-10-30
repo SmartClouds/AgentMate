@@ -274,6 +274,7 @@ describe('CommandPalette selection', () => {
           title: 'GitHub',
           host: 'github.com',
           username: 'ada',
+          urls: [],
           tags: [],
         },
       ],

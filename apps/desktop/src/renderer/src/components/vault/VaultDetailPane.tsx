@@ -1,4 +1,9 @@
-import { hostOf, type VaultEntrySummary, type VaultFieldRef } from '@runova/core';
+import {
+  hostOf,
+  type VaultCategory,
+  type VaultEntrySummary,
+  type VaultFieldRef,
+} from '@runova/core';
 import { vaultErrorMessage } from '@shared/vaultErrors';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -10,6 +15,8 @@ import {
   Eye,
   EyeOff,
   FilePlus,
+  FolderOpen,
+  Inbox,
   Pencil,
   Star,
   Tag,
@@ -18,18 +25,30 @@ import {
 } from '@/components/icons';
 import { SECTION_HEADING } from '@/components/pageKit';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { relativeDate } from '@/lib/vault/relativeDate';
+import { CategoryTile } from './CategoryTile';
+import { CATEGORY_COLORS } from './categoryMeta';
 import { EntryAvatar } from './EntryAvatar';
 import { ENTRY_TYPE_META } from './entryTypes';
 import { SecretText } from './SecretText';
 import type { useVaultActions } from './useVaultActions';
+import { VaultLoginButton } from './VaultLoginButton';
 
 /** How long a revealed value stays on screen before it masks itself again. */
 export const REVEAL_MS = 20_000;
 const MASK = '••••••••••••';
 const DAY = 86_400_000;
+const NO_CATEGORY = '__none__';
 
 function refKey(ref: VaultFieldRef): string {
   return typeof ref === 'string' ? ref : `field:${ref.customFieldId}`;
@@ -87,9 +106,17 @@ export function VaultDetailPane({
   onEdit,
   onTagClick,
   onBack,
+  category,
+  categories = [],
+  onCategoryClick,
+  onMove,
 }: {
   entry: VaultEntrySummary;
   actions: ReturnType<typeof useVaultActions>;
+  category?: VaultCategory;
+  categories?: VaultCategory[];
+  onCategoryClick?: (categoryId: string) => void;
+  onMove?: (categoryId: string | null) => void;
   onEdit: () => void;
   onTagClick: (tag: string) => void;
   onBack: () => void;
@@ -288,6 +315,23 @@ export function VaultDetailPane({
               <typeMeta.icon className="h-2.5 w-2.5" />
               {typeMeta.label}
             </span>
+            {category && (
+              <button
+                type="button"
+                aria-label={`Show everything in ${category.name}`}
+                onClick={() => onCategoryClick?.(category.id)}
+                className={cn(
+                  'inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  CATEGORY_COLORS[category.color].tile,
+                )}
+              >
+                <span
+                  aria-hidden
+                  className={cn('h-1.5 w-1.5 rounded-full', CATEGORY_COLORS[category.color].swatch)}
+                />
+                {category.name}
+              </button>
+            )}
             {entry.host && <span className="truncate">{entry.host}</span>}
           </p>
         </div>
@@ -298,13 +342,53 @@ export function VaultDetailPane({
           >
             <Star className={cn('h-3.5 w-3.5', entry.favorite && 'text-warning')} />
           </IconAction>
+          {onMove && (
+            <DropdownMenu>
+              <SimpleTooltip label="Move to category">
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Move to category"
+                    className="data-[state=open]:bg-foreground/[0.06]"
+                  >
+                    <FolderOpen className="h-3.5 w-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+              </SimpleTooltip>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuLabel>Move to</DropdownMenuLabel>
+                <DropdownMenuRadioGroup
+                  value={category?.id ?? NO_CATEGORY}
+                  onValueChange={(value) => onMove(value === NO_CATEGORY ? null : value)}
+                >
+                  <DropdownMenuRadioItem value={NO_CATEGORY}>
+                    <Inbox className="h-3.5 w-3.5 text-muted-foreground" />
+                    No category
+                  </DropdownMenuRadioItem>
+                  {categories.map((option) => (
+                    <DropdownMenuRadioItem key={option.id} value={option.id}>
+                      <CategoryTile color={option.color} icon={option.icon} size="sm" />
+                      {option.name}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           <IconAction label="Duplicate" onClick={() => void actions.duplicate(entry.id)}>
             <FilePlus className="h-3.5 w-3.5" />
           </IconAction>
           <IconAction label="Delete" onClick={() => void actions.remove(entry)}>
             <Trash2 className="h-3.5 w-3.5" />
           </IconAction>
-          <Button className="ml-1.5" onClick={onEdit}>
+          <VaultLoginButton entry={entry} variant="full" className="ml-1.5" />
+          <Button
+            className="ml-1.5"
+            variant={entry.type === 'login' ? 'soft' : 'default'}
+            onClick={onEdit}
+          >
             <Pencil className="h-3 w-3" />
             Edit
           </Button>

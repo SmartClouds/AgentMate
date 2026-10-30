@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  category,
   createVaultApiMock,
   expectNoNativeTitles,
   installDomShims,
@@ -370,5 +372,196 @@ describe('VaultPage shortcuts', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     fireEvent.keyDown(window, { key: 'l', code: 'KeyL', ctrlKey: true });
     await waitFor(() => expect(mock.api.lock).toHaveBeenCalled());
+  });
+});
+
+describe('VaultPage categories', () => {
+  const work = category({ id: 'work', name: 'Work', color: 'blue', icon: 'briefcase' });
+  const home = category({ id: 'home', name: 'Home', color: 'green', icon: 'home' });
+  const filed = [
+    { ...github, categoryId: 'work' },
+    gitlab,
+    stripe,
+    { ...wifi, categoryId: 'home' },
+  ];
+
+  /** The column on a wide window. The strip of pills is the same filters, for narrow ones. */
+  const rail = () => screen.getAllByRole('navigation', { name: 'Categories' })[0];
+
+  async function renderFiled() {
+    mock.api.listCategories.mockResolvedValue([work, home]);
+    renderPage(filed);
+    await screen.findByRole('listbox', { name: 'Vault entries' });
+    await within(rail()).findByRole('button', { name: 'Work (1)' });
+  }
+
+  it('filters the list to the category picked, and to entries with none', async () => {
+    await renderFiled();
+    fireEvent.click(within(rail()).getByRole('button', { name: 'Work (1)' }));
+    expect(titlesInList()).toEqual(['GitHub']);
+    fireEvent.click(within(rail()).getByRole('button', { name: 'Uncategorized (2)' }));
+    expect(titlesInList()).toEqual(['GitLab', 'Stripe']);
+    fireEvent.click(within(rail()).getByRole('button', { name: 'All items (4)' }));
+    expect(titlesInList()).toHaveLength(4);
+  });
+
+  it('moves an entry dragged onto a category', async () => {
+    mock.api.moveEntries.mockResolvedValue(1);
+    await renderFiled();
+    const row = within(listbox()).getByRole('option', { name: /GitLab/ });
+    const data = new Map<string, string>();
+    const dataTransfer = {
+      setData: (type: string, value: string) => data.set(type, value),
+      getData: (type: string) => data.get(type) ?? '',
+      get types() {
+        return [...data.keys()];
+      },
+      effectAllowed: 'none',
+      dropEffect: 'none',
+    };
+    fireEvent.dragStart(row, { dataTransfer });
+    fireEvent.drop(within(rail()).getByRole('button', { name: 'Home (1)' }), { dataTransfer });
+    await waitFor(() => expect(mock.api.moveEntries).toHaveBeenCalledWith(['gl'], 'home'));
+    expect(toast.success).toHaveBeenCalledWith('Moved to Home', expect.anything());
+  });
+
+  it('deletes a category after confirming, and goes back to all items', async () => {
+    const user = userEvent.setup();
+    mock.api.deleteCategory.mockResolvedValue(1);
+    await renderFiled();
+    fireEvent.click(within(rail()).getByRole('button', { name: 'Work (1)' }));
+    await user.click(within(rail()).getByRole('button', { name: 'Options for Work' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Delete' }));
+    await waitFor(() => expect(mock.api.deleteCategory).toHaveBeenCalledWith('work'));
+    expect(confirm.confirmDialog).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Delete "Work"?', variant: 'destructive' }),
+    );
+    expect(confirm.confirmDialog).toHaveBeenCalledWith(
+      expect.objectContaining({ description: expect.stringContaining('1 entry') }),
+    );
+    expect(useVaultStore.getState().categoryFilter).toBe('all');
+  });
+
+  it('keeps the category when deleting is cancelled', async () => {
+    const user = userEvent.setup();
+    confirm.confirmDialog.mockResolvedValueOnce(false);
+    await renderFiled();
+    await user.click(within(rail()).getByRole('button', { name: 'Options for Home' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Delete' }));
+    await waitFor(() => expect(confirm.confirmDialog).toHaveBeenCalled());
+    expect(mock.api.deleteCategory).not.toHaveBeenCalled();
+  });
+
+  it('opens the category editor from the rail', async () => {
+    await renderFiled();
+    fireEvent.click(within(rail()).getByRole('button', { name: 'New category' }));
+    expect(await screen.findByRole('dialog', { name: 'New category' })).toBeTruthy();
+  });
+
+  it('saves a new order after a category is moved', async () => {
+    const user = userEvent.setup();
+    await renderFiled();
+    await user.click(within(rail()).getByRole('button', { name: 'Options for Home' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Move up' }));
+    await waitFor(() => expect(mock.api.reorderCategories).toHaveBeenCalledWith(['home', 'work']));
+  });
+
+  it('says when a category is empty and adds the next entry to it', async () => {
+    const empty = category({ id: 'empty', name: 'Travel', color: 'teal', icon: 'globe' });
+    mock.api.listCategories.mockResolvedValue([work, home, empty]);
+    renderPage(filed);
+    await screen.findByRole('listbox', { name: 'Vault entries' });
+    fireEvent.click(await within(rail()).findByRole('button', { name: 'Travel (0)' }));
+    expect(await screen.findByText('Nothing in Travel yet')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Add an entry to Travel' }));
+    const dialog = await screen.findByRole('dialog', { name: 'New entry' });
+    await waitFor(() =>
+      expect(within(dialog).getByRole('button', { name: /^Category/ }).textContent).toContain(
+        'Travel',
+      ),
+    );
+  });
+
+  it('shows the category in the detail and moves the entry from there', async () => {
+    const user = userEvent.setup();
+    mock.api.moveEntries.mockResolvedValue(1);
+    await renderFiled();
+    fireEvent.click(within(listbox()).getByRole('option', { name: /GitHub/ }));
+    const detail = await screen.findByRole('region', { name: 'GitHub' });
+
+    fireEvent.click(within(detail).getByRole('button', { name: 'Show everything in Work' }));
+    expect(useVaultStore.getState().categoryFilter).toBe('work');
+
+    await user.click(within(detail).getByRole('button', { name: 'Move to category' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Home' }));
+    await waitFor(() => expect(mock.api.moveEntries).toHaveBeenCalledWith(['gh'], 'home'));
+  });
+});
+
+describe('VaultPage one-click login', () => {
+  it('logs in from the detail pane', async () => {
+    renderPage();
+    await screen.findByRole('listbox', { name: 'Vault entries' });
+    fireEvent.click(within(listbox()).getByRole('option', { name: /GitHub/ }));
+    const detail = await screen.findByRole('region', { name: 'GitHub' });
+    fireEvent.click(within(detail).getByRole('button', { name: 'Log in to github.com' }));
+    await waitFor(() => expect(mock.api.openLogin).toHaveBeenCalledWith('gh', 'window'));
+  });
+
+  it('logs in from a row without selecting it, and only for logins with a website', async () => {
+    renderPage();
+    await screen.findByRole('listbox', { name: 'Vault entries' });
+    const row = within(listbox()).getByRole('option', { name: /GitHub/ });
+    fireEvent.click(within(row).getByRole('button', { name: 'Log in to github.com' }));
+    await waitFor(() => expect(mock.api.openLogin).toHaveBeenCalledWith('gh', 'window'));
+    expect(useVaultStore.getState().selectedId).toBeNull();
+    const gitlabRow = within(listbox()).getByRole('option', { name: /GitLab/ });
+    expect(within(gitlabRow).queryByRole('button', { name: /Log in/ })).toBeNull();
+  });
+
+  it('logs in to the selected entry with Ctrl+Enter', async () => {
+    renderPage();
+    await screen.findByRole('listbox', { name: 'Vault entries' });
+    fireEvent.click(within(listbox()).getByRole('option', { name: /GitHub/ }));
+    fireEvent.keyDown(window, { key: 'Enter', code: 'Enter', ctrlKey: true });
+    await waitFor(() => expect(mock.api.openLogin).toHaveBeenCalledWith('gh', 'window'));
+  });
+
+  it('says how the login went once the page is filled', async () => {
+    renderPage();
+    await screen.findByRole('listbox', { name: 'Vault entries' });
+    act(() =>
+      mock.emitLoginFilled({
+        entryId: 'gh',
+        host: 'github.com',
+        result: 'filled',
+        submitted: true,
+      }),
+    );
+    expect(toast.success).toHaveBeenCalledWith('Signed in to github.com', expect.anything());
+    act(() =>
+      mock.emitLoginFilled({
+        entryId: 'gh',
+        host: 'github.com',
+        result: 'filled',
+        submitted: false,
+      }),
+    );
+    expect(toast.success).toHaveBeenCalledWith(
+      'Filled in your login on github.com',
+      expect.anything(),
+    );
+    act(() =>
+      mock.emitLoginFilled({
+        entryId: 'gh',
+        host: 'github.com',
+        result: 'no-form',
+        submitted: false,
+      }),
+    );
+    expect(toast.error).toHaveBeenCalledWith(
+      'No login form found on github.com',
+      expect.anything(),
+    );
   });
 });

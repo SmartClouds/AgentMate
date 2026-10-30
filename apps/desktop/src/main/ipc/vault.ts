@@ -2,6 +2,7 @@ import {
   type DuplicatePolicy,
   GENERIC_COLUMN_TARGETS,
   type GenericMapping,
+  SaveVaultCategoryInputSchema,
   SaveVaultEntryInputSchema,
   VAULT_LIMITS,
   type VaultExportFormat,
@@ -12,11 +13,14 @@ import type {
   VaultExportResult,
   VaultImportPreview,
   VaultImportResult,
+  VaultLoginResult,
+  VaultLoginTarget,
   VaultStatus,
   VaultUnlockResult,
 } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';
 import { encodeVaultError } from '../../shared/vaultErrors';
+import type { LoginPage } from '../vault/autofill/fillSession';
 import type { VaultService } from '../vault/service';
 import { VaultError } from '../vault/session';
 
@@ -41,6 +45,8 @@ export interface VaultHandlerDeps {
   fetchIcon: (siteUrl: string) => Promise<string | null>;
   /** True only for the app's main window. Widgets and the pet share the preload but get nothing. */
   guard: (event: IpcMainInvokeEvent) => boolean;
+  /** A Workspace browser tab of the main window, by its webContents id; null for anything else. */
+  guestPage: (webContentsId: number) => LoginPage | null;
 }
 
 const invalid = (message: string) => new VaultError('invalid', message);
@@ -55,6 +61,10 @@ function ids(value: unknown): string[] {
     throw invalid('Expected a list of entry ids.');
   }
   return value.map((id) => text(id, 'Entry id', VAULT_LIMITS.id));
+}
+
+function categoryIdOrNull(value: unknown): string | null {
+  return value === null ? null : text(value, 'Category id', VAULT_LIMITS.id);
 }
 
 function fieldRef(value: unknown) {
@@ -73,6 +83,13 @@ function mapping(value: unknown): GenericMapping | null {
     throw invalid('Invalid column mapping.');
   }
   return { columns: columns as GenericMapping['columns'] };
+}
+
+function webContentsId(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) {
+    throw invalid('Expected a browser tab.');
+  }
+  return value;
 }
 
 function oneOf<T extends string>(value: unknown, options: readonly T[], name: string): T {
@@ -102,6 +119,7 @@ export function registerVaultHandlers({
   dialogs,
   fetchIcon,
   guard,
+  guestPage,
 }: VaultHandlerDeps): void {
   const handle = (channel: string, run: (...args: unknown[]) => unknown) => {
     ipc.handle(channel, async (event: IpcMainInvokeEvent, ...args: unknown[]) => {
@@ -151,6 +169,35 @@ export function registerVaultHandlers({
   handle(IPC.vault.duplicate, (id) => service.duplicate(text(id, 'Entry id', VAULT_LIMITS.id)));
   handle(IPC.vault.touch, () => service.touch());
   handle(IPC.vault.fetchIcon, (url) => fetchIcon(text(url, 'Website', VAULT_LIMITS.url)));
+
+  handle(IPC.vault.listCategories, () => service.listCategories());
+  handle(IPC.vault.saveCategory, (input) => {
+    const parsed = SaveVaultCategoryInputSchema.safeParse(input);
+    if (!parsed.success) throw invalid('That category could not be saved. Check the fields.');
+    return service.saveCategory(parsed.data);
+  });
+  handle(IPC.vault.deleteCategory, (id) =>
+    service.deleteCategory(text(id, 'Category id', VAULT_LIMITS.id)),
+  );
+  handle(IPC.vault.reorderCategories, (list) => service.reorderCategories(ids(list)));
+  handle(IPC.vault.moveEntries, (list, categoryId) =>
+    service.moveEntries(ids(list), categoryIdOrNull(categoryId)),
+  );
+
+  handle(
+    IPC.vault.openLogin,
+    (id, target): Promise<VaultLoginResult> =>
+      service.openLogin(
+        text(id, 'Entry id', VAULT_LIMITS.id),
+        oneOf<VaultLoginTarget>(target, ['window', 'system'], 'login target'),
+      ),
+  );
+  handle(IPC.vault.fillGuest, (id, tab): VaultLoginResult => {
+    const entryId = text(id, 'Entry id', VAULT_LIMITS.id);
+    const page = guestPage(webContentsId(tab));
+    if (!page) return { ok: false, reason: 'no-guest' };
+    return service.fillGuest(entryId, page);
+  });
 
   handle(IPC.vault.importOpen, async (): Promise<VaultImportPreview | null> => {
     const path = await dialogs.pickImportFile();

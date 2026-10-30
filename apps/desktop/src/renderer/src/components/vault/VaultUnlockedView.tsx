@@ -1,10 +1,12 @@
+import type { Project } from '@runova/core';
 import {
   parseVaultQuery,
   searchEntries,
+  type VaultCategory,
   type VaultEntrySummary,
   type VaultSearchHit,
 } from '@runova/core';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Vault } from '@/components/icons';
@@ -13,12 +15,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { queryKeys } from '@/lib/queryKeys';
 import type { VaultShortcutCommandId } from '@/lib/shortcuts';
 import { cn } from '@/lib/utils';
+import { categoryCounts, inCategory } from '@/lib/vault/categories';
+import { resolveLoginChoice, runOneClickLogin } from '@/lib/vault/oneClickLogin';
 import { PANEL_WIDTHS, usePanelWidth } from '@/stores/panelWidthStore';
 import { commandForEvent, useShortcutLabel, useShortcutStore } from '@/stores/shortcutStore';
 import { useVaultStore } from '@/stores/vaultStore';
 import { ChangeMasterPasswordDialog } from './ChangeMasterPasswordDialog';
 import { primarySecret } from './entryTypes';
 import { useVaultActions } from './useVaultActions';
+import { useVaultCategories } from './useVaultCategories';
+import { useVaultCategoryActions } from './useVaultCategoryActions';
+import { VaultCategoryDialog } from './VaultCategoryDialog';
+import { VaultCategoryRail, type VaultCategoryRailProps } from './VaultCategoryRail';
 import { VaultDetailPane } from './VaultDetailPane';
 import { VaultEntryDialog, type VaultEntryDialogTarget } from './VaultEntryDialog';
 import { vaultOptionId } from './VaultEntryRow';
@@ -31,6 +39,7 @@ type VaultDialogState =
   | { kind: 'import' }
   | { kind: 'export' }
   | { kind: 'password' }
+  | { kind: 'category'; category?: VaultCategory }
   | null;
 
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -105,6 +114,9 @@ export function VaultUnlockedView(): React.JSX.Element {
     meta: { silentLoading: true },
   });
   const actions = useVaultActions();
+  const queryClient = useQueryClient();
+  const location = useLocation();
+  const navigate = useNavigate();
   const searchRef = useRef<HTMLInputElement>(null);
   const [dialog, setDialog] = useState<VaultDialogState>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -119,8 +131,21 @@ export function VaultUnlockedView(): React.JSX.Element {
   const selectedId = useVaultStore((s) => s.selectedId);
   const select = useVaultStore((s) => s.select);
   const toggleTag = useVaultStore((s) => s.toggleTag);
+  const categoryFilter = useVaultStore((s) => s.categoryFilter);
+  const setCategoryFilter = useVaultStore((s) => s.setCategoryFilter);
+  const { categories } = useVaultCategories();
+  const categoryActions = useVaultCategoryActions();
 
   const entries = entriesQuery.data ?? [];
+  const counts = useMemo(() => categoryCounts(entries, categories), [entries, categories]);
+  const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+  // A category deleted elsewhere drops back to every entry instead of an empty list.
+  const activeCategory =
+    categoryFilter === 'all' || categoryFilter === 'uncategorized'
+      ? categoryFilter
+      : categoryById.has(categoryFilter)
+        ? categoryFilter
+        : 'all';
   const knownTags = useMemo(
     () =>
       [...new Set(entries.flatMap((entry) => entry.tags))].sort((a, b) =>
@@ -130,16 +155,19 @@ export function VaultUnlockedView(): React.JSX.Element {
   );
   const searching = parseVaultQuery(query).terms.length > 0;
 
-  const hits = useMemo(
-    () =>
-      searchEntries(entries, query, {
+  const hits = useMemo(() => {
+    const known = new Set(categoryById.keys());
+    return searchEntries(
+      entries.filter((entry) => inCategory(entry, activeCategory, known)),
+      query,
+      {
         types: typeFilter === 'all' ? undefined : [typeFilter],
         tags: tagFilters,
         favoritesOnly,
         sort,
-      }),
-    [entries, query, typeFilter, tagFilters, favoritesOnly, sort],
-  );
+      },
+    );
+  }, [entries, categoryById, activeCategory, query, typeFilter, tagFilters, favoritesOnly, sort]);
 
   // Favorites are pinned on top while browsing. A search is ranked as one list instead.
   const groups = useMemo<VaultListGroup[]>(() => {
@@ -162,6 +190,28 @@ export function VaultUnlockedView(): React.JSX.Element {
     (target: VaultEntryDialogTarget) => setDialog({ kind: 'entry', target }),
     [],
   );
+  // A new entry starts in the category the list is showing.
+  const newEntry = useCallback(
+    (title?: string) =>
+      openEntry({
+        mode: 'new',
+        title,
+        ...(categoryById.has(activeCategory) ? { categoryId: activeCategory } : {}),
+      }),
+    [openEntry, categoryById, activeCategory],
+  );
+  const categoryProps: Omit<VaultCategoryRailProps, 'variant' | 'className'> = {
+    categories,
+    counts,
+    active: activeCategory,
+    onSelect: setCategoryFilter,
+    onNew: () => setDialog({ kind: 'category' }),
+    onEdit: (category) => setDialog({ kind: 'category', category }),
+    onDelete: (category) =>
+      void categoryActions.remove(category, counts.byId.get(category.id) ?? 0),
+    onReorder: (ids) => void categoryActions.reorder(ids),
+    onDropEntries: (ids, categoryId) => void categoryActions.move(ids, categoryId),
+  };
 
   const moveSelection = useCallback(
     (delta: number, edge?: 'first' | 'last') => {
@@ -239,7 +289,7 @@ export function VaultUnlockedView(): React.JSX.Element {
         searchRef.current?.focus();
         searchRef.current?.select();
       },
-      'vault.new': () => openEntry({ mode: 'new' }),
+      'vault.new': () => newEntry(),
       'vault.edit': () => selected && openEntry({ mode: 'edit', id: selected.id }),
       'vault.lock': () => void actions.lock(),
       'vault.copyPassword': () => {
@@ -250,6 +300,14 @@ export function VaultUnlockedView(): React.JSX.Element {
         if (selected?.type === 'login' && selected.username) {
           void actions.copy(selected.id, 'username', 'Username');
         }
+      },
+      'vault.login': () => {
+        if (!selected) return;
+        const choice = resolveLoginChoice(
+          useVaultStore.getState().loginTarget,
+          queryClient.getQueryData<Project[]>(queryKeys.projects),
+        );
+        void runOneClickLogin({ entry: selected, choice, navigate });
       },
     };
     function onKeyDown(event: KeyboardEvent): void {
@@ -267,7 +325,7 @@ export function VaultUnlockedView(): React.JSX.Element {
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [actions, openEntry, selected]);
+  }, [actions, openEntry, newEntry, selected, queryClient, navigate]);
 
   // Anything that isn't a click or key in the page still counts as "using the vault" for auto-lock.
   useEffect(() => {
@@ -288,8 +346,6 @@ export function VaultUnlockedView(): React.JSX.Element {
 
   // `/vault` with `{ entryId }` state, from the command palette: select it and clear the state so
   // a reload or going back doesn't jump there again.
-  const location = useLocation();
-  const navigate = useNavigate();
   const deepLinkId = (location.state as { entryId?: string } | null)?.entryId;
   useEffect(() => {
     if (!deepLinkId || !entriesQuery.data) return;
@@ -308,6 +364,10 @@ export function VaultUnlockedView(): React.JSX.Element {
       {/* Two glass cards with the resize handle as the gap between them, like the API Client.
           On a narrow island only one shows at a time, and the detail has a back button. */}
       <div className="absolute inset-0 flex p-2">
+        {/* The categories get their own card on a wide window, and a strip of pills otherwise. */}
+        <div className={cn(PANEL, 'mr-2 hidden w-52 shrink-0 @5xl/vault:flex')}>
+          <VaultCategoryRail variant="rail" className="flex-1" {...categoryProps} />
+        </div>
         <div
           // The width only applies side by side. The cap keeps a wide saved width from
           // squeezing the detail card on a narrow window.
@@ -330,6 +390,22 @@ export function VaultUnlockedView(): React.JSX.Element {
               visibleCount={ordered.length}
               searching={searching}
               knownTags={knownTags}
+              categoryStrip={
+                <VaultCategoryRail
+                  variant="strip"
+                  className="@5xl/vault:hidden"
+                  {...categoryProps}
+                />
+              }
+              categoryOf={(entry) =>
+                entry.categoryId ? categoryById.get(entry.categoryId) : undefined
+              }
+              showCategories={activeCategory === 'all'}
+              emptyCategory={
+                categoryById.has(activeCategory) && (counts.byId.get(activeCategory) ?? 0) === 0
+                  ? categoryById.get(activeCategory)
+                  : undefined
+              }
               selectedId={selectedId}
               actions={actions}
               onSelect={(id) => {
@@ -337,7 +413,7 @@ export function VaultUnlockedView(): React.JSX.Element {
                 setDetailOpen(true);
               }}
               onSearchKeyDown={onSearchKeyDown}
-              onNew={(title) => openEntry({ mode: 'new', title })}
+              onNew={newEntry}
               onImport={() => setDialog({ kind: 'import' })}
               onExport={() => setDialog({ kind: 'export' })}
               onChangePassword={() => setDialog({ kind: 'password' })}
@@ -368,6 +444,13 @@ export function VaultUnlockedView(): React.JSX.Element {
               key={selected.id}
               entry={selected}
               actions={actions}
+              category={selected.categoryId ? categoryById.get(selected.categoryId) : undefined}
+              categories={categories}
+              onCategoryClick={(id) => {
+                setCategoryFilter(id);
+                setDetailOpen(false);
+              }}
+              onMove={(categoryId) => void categoryActions.move([selected.id], categoryId)}
               onEdit={() => openEntry({ mode: 'edit', id: selected.id })}
               onTagClick={(tag) => {
                 if (!useVaultStore.getState().tagFilters.includes(tag)) toggleTag(tag);
@@ -401,6 +484,15 @@ export function VaultUnlockedView(): React.JSX.Element {
       )}
       {dialog?.kind === 'export' && (
         <VaultExportDialog open onOpenChange={(open) => !open && closeDialog()} />
+      )}
+      {dialog?.kind === 'category' && (
+        <VaultCategoryDialog
+          key={dialog.category?.id ?? 'new'}
+          open
+          onOpenChange={(open) => !open && closeDialog()}
+          category={dialog.category}
+          onSaved={(category) => !dialog.category && setCategoryFilter(category.id)}
+        />
       )}
       {dialog?.kind === 'password' && (
         <ChangeMasterPasswordDialog open onOpenChange={(open) => !open && closeDialog()} />

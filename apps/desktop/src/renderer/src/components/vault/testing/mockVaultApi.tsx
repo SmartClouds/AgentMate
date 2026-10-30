@@ -1,5 +1,5 @@
-import type { VaultEntrySummary } from '@runova/core';
-import type { VaultStateEvent, VaultStatus } from '@shared/apiTypes';
+import type { VaultCategory, VaultEntrySummary } from '@runova/core';
+import type { VaultLoginFilledEvent, VaultStateEvent, VaultStatus } from '@shared/apiTypes';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { type RenderResult, render } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -31,18 +31,27 @@ type InvokeName =
   | 'importCommit'
   | 'importCancel'
   | 'exportCsv'
-  | 'fetchIcon';
+  | 'fetchIcon'
+  | 'listCategories'
+  | 'saveCategory'
+  | 'deleteCategory'
+  | 'reorderCategories'
+  | 'moveEntries'
+  | 'openLogin'
+  | 'fillGuest';
 
 export interface VaultApiMock {
   api: Record<InvokeName, Fn> & {
     onStateChanged: (cb: Listener<VaultStateEvent>) => () => void;
     onEntriesChanged: (cb: Listener<void>) => () => void;
     onClipboardSettled: (cb: Listener<{ cleared: boolean }>) => () => void;
+    onLoginFilled: (cb: Listener<VaultLoginFilledEvent>) => () => void;
   };
   status: VaultStatus;
   emitState(event: VaultStateEvent): void;
   emitEntriesChanged(): void;
   emitClipboard(cleared: boolean): void;
+  emitLoginFilled(event: VaultLoginFilledEvent): void;
 }
 
 /** A fake `window.runova.vault` whose calls are spies, plus a way to fire main-process events. */
@@ -50,6 +59,7 @@ export function createVaultApiMock(initial: Partial<VaultStatus> = {}): VaultApi
   const stateListeners = new Set<Listener<VaultStateEvent>>();
   const entriesListeners = new Set<Listener<void>>();
   const clipboardListeners = new Set<Listener<{ cleared: boolean }>>();
+  const loginListeners = new Set<Listener<VaultLoginFilledEvent>>();
   const status: VaultStatus = {
     state: 'unlocked',
     retryAfterMs: 0,
@@ -80,6 +90,13 @@ export function createVaultApiMock(initial: Partial<VaultStatus> = {}): VaultApi
     importCommit: vi.fn(),
     importCancel: vi.fn(async () => undefined),
     exportCsv: vi.fn(async () => ({ ok: true }) as const),
+    listCategories: vi.fn(async (): Promise<VaultCategory[]> => []),
+    saveCategory: vi.fn(),
+    deleteCategory: vi.fn(async () => 0),
+    reorderCategories: vi.fn(async () => undefined),
+    moveEntries: vi.fn(async (ids: string[]) => ids.length),
+    openLogin: vi.fn(async () => ({ ok: true, clearsAt: null })),
+    fillGuest: vi.fn(async () => ({ ok: true, clearsAt: null })),
     onStateChanged: (cb: Listener<VaultStateEvent>) => {
       stateListeners.add(cb);
       return () => stateListeners.delete(cb);
@@ -91,6 +108,10 @@ export function createVaultApiMock(initial: Partial<VaultStatus> = {}): VaultApi
     onClipboardSettled: (cb: Listener<{ cleared: boolean }>) => {
       clipboardListeners.add(cb);
       return () => clipboardListeners.delete(cb);
+    },
+    onLoginFilled: (cb: Listener<VaultLoginFilledEvent>) => {
+      loginListeners.add(cb);
+      return () => loginListeners.delete(cb);
     },
   };
 
@@ -107,6 +128,9 @@ export function createVaultApiMock(initial: Partial<VaultStatus> = {}): VaultApi
     emitClipboard(cleared: boolean) {
       for (const listener of clipboardListeners) listener({ cleared });
     },
+    emitLoginFilled(event: VaultLoginFilledEvent) {
+      for (const listener of loginListeners) listener(event);
+    },
   };
 }
 
@@ -116,6 +140,7 @@ export function installVaultApi(mock: VaultApiMock): void {
       platform: 'win32',
       vault: mock.api,
       shell: { openExternal: vi.fn(async () => undefined) },
+      projects: { list: vi.fn(async () => []) },
     },
   });
 }
@@ -137,6 +162,8 @@ export function summary(overrides: Partial<VaultEntrySummary> = {}): VaultEntryS
     keyId: '',
     urls: [],
     host: '',
+    categoryId: null,
+    autoSubmit: false,
     hasPassword: true,
     hasTotp: false,
     hasSecret: false,
@@ -144,6 +171,20 @@ export function summary(overrides: Partial<VaultEntrySummary> = {}): VaultEntryS
     passwordUpdatedAt: null,
     expiresAt: null,
     fields: [],
+    ...overrides,
+  };
+}
+
+let categoryCounter = 0;
+export function category(overrides: Partial<VaultCategory> = {}): VaultCategory {
+  categoryCounter++;
+  return {
+    id: `category-${categoryCounter}`,
+    name: `Category ${categoryCounter}`,
+    color: 'blue',
+    icon: 'folder',
+    order: categoryCounter,
+    createdAt: 1_700_000_000_000,
     ...overrides,
   };
 }

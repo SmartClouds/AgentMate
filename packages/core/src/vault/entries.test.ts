@@ -416,3 +416,95 @@ describe('applySaveInput: less common paths', () => {
     expect(readEntryField(note, 'notes')).toBe('x');
   });
 });
+
+describe('categories and auto-submit on entries', () => {
+  const clock = { now: NOW, newId: () => 'e1' };
+
+  it('files a new entry under the category it was saved with', () => {
+    const entry = applySaveInput(
+      undefined,
+      { type: 'note', title: 'N', tags: [], favorite: false, categoryId: 'work' },
+      clock,
+    );
+    expect(entry.categoryId).toBe('work');
+  });
+
+  it('keeps the category when an edit leaves it out, and clears it on null', () => {
+    const first = applySaveInput(
+      undefined,
+      { type: 'note', title: 'N', tags: [], favorite: false, categoryId: 'work' },
+      clock,
+    );
+    const kept = applySaveInput(
+      first,
+      { type: 'note', title: 'N2', tags: [], favorite: false },
+      { now: LATER, newId: () => 'x' },
+    );
+    expect(kept.categoryId).toBe('work');
+    const cleared = applySaveInput(
+      first,
+      { type: 'note', title: 'N', tags: [], favorite: false, categoryId: null },
+      { now: LATER, newId: () => 'x' },
+    );
+    expect(cleared).not.toHaveProperty('categoryId');
+  });
+
+  it('stores auto-submit on a login, off unless asked for, and keeps it on edits', () => {
+    const plain = applySaveInput(undefined, login(), clock);
+    expect(plain).toMatchObject({ type: 'login', autoSubmit: false });
+    const on = applySaveInput(undefined, login({ autoSubmit: true }), clock);
+    expect(on).toMatchObject({ autoSubmit: true });
+    const edited = applySaveInput(on, login({ id: 'e1', title: 'Renamed' }), {
+      now: LATER,
+      newId: () => 'x',
+    });
+    expect(edited).toMatchObject({ autoSubmit: true });
+  });
+
+  it('still reads a login stored before auto-submit existed', () => {
+    const stored = VaultEntrySchema.safeParse({
+      id: 'a',
+      type: 'login',
+      title: 'Old',
+      tags: [],
+      favorite: false,
+      notes: '',
+      createdAt: NOW,
+      updatedAt: NOW,
+      lastUsedAt: null,
+      username: '',
+      password: '',
+      urls: [],
+      totpSecret: '',
+      passwordUpdatedAt: null,
+    });
+    expect(stored.success).toBe(true);
+  });
+
+  it('keeps the category on a duplicate', () => {
+    const entry = applySaveInput(
+      undefined,
+      { type: 'note', title: 'N', tags: [], favorite: false, categoryId: 'work' },
+      clock,
+    );
+    expect(duplicateEntry(entry, { now: LATER, newId: () => 'copy' }).categoryId).toBe('work');
+  });
+
+  it('opens a payload written before categories existed with an empty list', () => {
+    const parsed = VaultPayloadSchema.parse({ schemaVersion: 1, createdAt: NOW, entries: [] });
+    expect(parsed.categories).toEqual([]);
+  });
+
+  it('keeps categories in the payload', () => {
+    const categories = [
+      { id: 'work', name: 'Work', color: 'blue', icon: 'briefcase', order: 0, createdAt: NOW },
+    ];
+    const parsed = VaultPayloadSchema.parse({
+      schemaVersion: 1,
+      createdAt: NOW,
+      entries: [],
+      categories,
+    });
+    expect(parsed.categories).toEqual(categories);
+  });
+});
