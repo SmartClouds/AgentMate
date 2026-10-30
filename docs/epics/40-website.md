@@ -228,7 +228,6 @@ scan the QR with the Runova mobile app
 pair the Runova mobile app
 pair your phone
 pair it again
-the old AgentMate app
 iPhone
 iPad
 iOS app
