@@ -41,9 +41,7 @@ internal static class MeEndpoints
             return TypedResults.Unauthorized();
         }
 
-        var now = time.GetUtcNow();
-        var lockedOutUntil = user.LockoutEnd > now ? user.LockoutEnd : null;
-        return TypedResults.Ok(UserMapper.ToDto(user, [.. await users.GetRolesAsync(user)], lockedOutUntil));
+        return TypedResults.Ok(await users.ToDtoAsync(user, time));
     }
 
     private static async Task<Results<Ok<TwoFactorStatusDto>, UnauthorizedHttpResult>> GetTwoFactorAsync(

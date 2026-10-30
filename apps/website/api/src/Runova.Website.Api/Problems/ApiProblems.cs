@@ -11,8 +11,12 @@ internal static class ApiProblems
 
     /// <summary>A 400 <c>validation-failed</c> for one request field.</summary>
     public static ValidationProblem Invalid(string field, string message) =>
+        Invalid(new Dictionary<string, string[]> { [field] = [message] });
+
+    /// <summary>A 400 <c>validation-failed</c> keyed by the JSON paths of the request fields.</summary>
+    public static ValidationProblem Invalid(IDictionary<string, string[]> errors) =>
         TypedResults.ValidationProblem(
-            new Dictionary<string, string[]> { [field] = [message] },
+            errors,
             detail: "One or more fields are not valid.",
             title: ProblemTypes.ValidationFailed.Title,
             type: ProblemTypes.ValidationFailed.Uri);

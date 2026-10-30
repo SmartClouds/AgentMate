@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Runova.Website.Data.Audit;
 using Runova.Website.Data.Identity;
 
 namespace Runova.Website.Data;
@@ -12,6 +13,10 @@ namespace Runova.Website.Data;
 public class AppDbContext(DbContextOptions<AppDbContext> options)
     : IdentityDbContext<AppUser, AppRole, long>(options)
 {
+    public DbSet<SetupLink> SetupLinks => Set<SetupLink>();
+
+    public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -20,6 +25,29 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
         {
             user.Property(u => u.DisplayName).HasMaxLength(100);
             user.Property(u => u.Version).IsRowVersion();
+        });
+
+        builder.Entity<SetupLink>(link =>
+        {
+            link.Property(l => l.Purpose).HasMaxLength(20);
+            link.HasIndex(l => l.TokenHash).IsUnique();
+            link.HasIndex(l => l.UserId);
+            link.HasIndex(l => l.ExpiresAt);
+            link.HasOne<AppUser>().WithMany().HasForeignKey(l => l.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // No foreign keys: an entry outlives the user or client it names.
+        builder.Entity<AuditEntry>(entry =>
+        {
+            entry.Property(e => e.ActorKind).HasMaxLength(16);
+            entry.Property(e => e.Action).HasMaxLength(64);
+            entry.Property(e => e.TargetType).HasMaxLength(32);
+            entry.Property(e => e.TargetId).HasMaxLength(64);
+            entry.Property(e => e.Ip).HasMaxLength(45);
+            entry.Property(e => e.Changes).HasColumnType("jsonb");
+            entry.HasIndex(e => e.At);
+            entry.HasIndex(e => new { e.TargetType, e.TargetId });
+            entry.HasIndex(e => new { e.ActorKind, e.ActorId });
         });
 
         // Identity gives claims an int key; widen it so every key in the database is bigint.

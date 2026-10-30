@@ -1,3 +1,4 @@
+using Runova.Website.Core.Paging;
 using Runova.Website.Core.Users;
 using Runova.Website.Tests.Mapping;
 
@@ -45,8 +46,23 @@ public class UserMapperTests
     }
 
     [Fact]
-    public void The_dto_carries_no_secret()
+    public void A_lockout_end_passed_in_is_kept()
     {
-        Assert.Empty(SecretProperties.In(typeof(UserDto)));
+        var until = new DateTimeOffset(2026, 10, 30, 12, 15, 0, TimeSpan.Zero);
+
+        var dto = UserMapper.ToDto(new StaffUser(), ["Admin", "Editor"], until);
+
+        Assert.Equal(until, dto.LockedOutUntil);
+        Assert.Equal(["Admin", "Editor"], dto.Roles);
+    }
+
+    [Theory]
+    [InlineData(typeof(UserDto))]
+    [InlineData(typeof(UserInvitedDto))]
+    [InlineData(typeof(SetupLinkDto))]
+    [InlineData(typeof(Page<UserDto>))]
+    public void No_user_dto_carries_a_secret(Type dto)
+    {
+        Assert.Empty(SecretProperties.In(dto));
     }
 }

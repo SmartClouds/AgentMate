@@ -3,7 +3,9 @@ using Runova.Website.Api.Cli;
 using Runova.Website.Api.Database;
 using Runova.Website.Api.Health;
 using Runova.Website.Api.Identity;
+using Runova.Website.Api.Json;
 using Runova.Website.Api.Problems;
+using Runova.Website.Api.Users;
 using Runova.Website.Data;
 using Scalar.AspNetCore;
 
@@ -12,15 +14,21 @@ var builder = WebApplication.CreateBuilder(AdminCli.IsCommand(args) ? [] : args)
 
 builder.Services.AddWebsiteData();
 builder.Services.AddWebsiteIdentity();
+builder.Services.AddWebsiteUsers();
+builder.Services.AddWebsiteJson();
 builder.Services.AddHostedService<MigrateOnStart>();
 builder.Services.AddWebsiteProblemDetails();
 builder.Services.AddWebsiteHealthChecks();
-builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document, _, _) =>
+builder.Services.AddOpenApi(options =>
 {
-    document.Info.Title = "Runova Website API";
-    document.Info.Version = "v1";
-    return Task.CompletedTask;
-}));
+    options.AddDocumentTransformer((document, _, _) =>
+    {
+        document.Info.Title = "Runova Website API";
+        document.Info.Version = "v1";
+        return Task.CompletedTask;
+    });
+    options.AddSchemaTransformer(JsonSetup.DescribeTimes);
+});
 
 var app = builder.Build();
 

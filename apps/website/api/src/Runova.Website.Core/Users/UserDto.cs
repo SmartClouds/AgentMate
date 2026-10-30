@@ -15,6 +15,15 @@ public sealed record UserDto(
     string Version);
 
 /// <summary>
+/// A one-time link that lets a user set their password. The token sits in the URL's fragment, so
+/// it never reaches a server log.
+/// </summary>
+public sealed record SetupLinkDto(string Url, DateTimeOffset ExpiresAt);
+
+/// <summary>A new user and the link they set their password with.</summary>
+public sealed record UserInvitedDto(UserDto User, SetupLinkDto SetupLink);
+
+/// <summary>
 /// What a staff user's DTO is made from. The Identity user in Runova.Website.Data implements it,
 /// so the mapper lives here without Core knowing Identity.
 /// </summary>

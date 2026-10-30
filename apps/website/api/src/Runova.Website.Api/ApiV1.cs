@@ -14,6 +14,8 @@ internal static class ApiV1
         // One static class per resource adds itself here, as in api.MapNews().
         api.MapSessions();
         api.MapMe();
+        api.MapUsers();
+        api.MapPasswordSetups();
         return api;
     }
 }

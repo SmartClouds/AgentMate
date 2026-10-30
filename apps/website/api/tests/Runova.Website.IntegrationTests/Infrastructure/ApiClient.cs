@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -41,14 +42,17 @@ internal sealed class ApiClient(HttpClient http)
 
     /// <summary>
     /// Sends with the antiforgery token held now, none when <paramref name="antiforgeryToken"/> is
-    /// empty, or the one given.
+    /// empty, or the one given. A PATCH body goes as a JSON merge patch.
     /// </summary>
-    public Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, object? body = null, string? antiforgeryToken = null)
+    public Task<HttpResponseMessage> SendAsync(
+        HttpMethod method, string path, object? body = null, string? antiforgeryToken = null, string? ifMatch = null)
     {
         var request = new HttpRequestMessage(method, path);
         if (body is not null)
         {
-            request.Content = JsonContent.Create(body);
+            request.Content = method == HttpMethod.Patch
+                ? JsonContent.Create(body, new MediaTypeHeaderValue("application/merge-patch+json"))
+                : JsonContent.Create(body);
         }
 
         var token = antiforgeryToken ?? _antiforgeryToken;
@@ -57,6 +61,20 @@ internal sealed class ApiClient(HttpClient http)
             request.Headers.Add(AntiforgeryHeader, token);
         }
 
+        if (ifMatch is not null)
+        {
+            request.Headers.TryAddWithoutValidation("If-Match", ifMatch);
+        }
+
         return http.SendAsync(request, TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>The response body as JSON, after checking its status.</summary>
+    public static async Task<JsonElement> ReadJsonAsync(HttpResponseMessage response, System.Net.HttpStatusCode status)
+    {
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        Assert.True(status == response.StatusCode, $"Expected {(int)status}, got {(int)response.StatusCode}: {body}");
+        using var document = JsonDocument.Parse(body);
+        return document.RootElement.Clone();
     }
 }
