@@ -108,6 +108,14 @@ function stripPlanPrefix(raw?: string): string {
     .replace(/^claude_/, '');
 }
 
+/**
+ * Anthropic renamed the Max tiers: Max 5x is now "Max" and Max 20x is now "Ultra". The account
+ * service still reports the old multipliers ('default_claude_max_20x'), and the usage estimate and
+ * the rank below key off them, so the ids stay and only the label the user sees changes.
+ */
+const MAX_PLAN = (): SubscriptionPlan => ({ id: 'max5x', label: 'Max' });
+const ULTRA_PLAN = (): SubscriptionPlan => ({ id: 'max20x', label: 'Ultra' });
+
 /** Higher wins when login-time credentials and the live profile disagree. */
 function planRank(plan: SubscriptionPlan): number {
   const id = plan.id.trim().toLowerCase();
@@ -138,8 +146,8 @@ function pickHighestPlan(
 function resolvePlanFromTier(rateLimitTier?: string | null): SubscriptionPlan | null {
   const tier = stripPlanPrefix(rateLimitTier ?? undefined);
   if (!tier) return null;
-  if (tier.includes('20x')) return { id: 'max20x', label: 'Max 20×' };
-  if (tier.includes('5x')) return { id: 'max5x', label: 'Max 5×' };
+  if (tier.includes('20x') || tier.startsWith('ultra')) return ULTRA_PLAN();
+  if (tier.includes('5x')) return MAX_PLAN();
   if (tier.startsWith('max')) return { id: 'max', label: 'Max' };
   if (tier === 'team' || tier.startsWith('team')) return { id: 'team', label: 'Team' };
   if (tier === 'enterprise' || tier.startsWith('enterprise')) {
@@ -161,11 +169,12 @@ function resolvePlan(subscriptionType?: string, rateLimitTier?: string): Subscri
   const fromTier = resolvePlanFromTier(rateLimitTier);
   if (!type) return fromTier;
 
+  if (type.startsWith('ultra')) return ULTRA_PLAN();
   if (type.startsWith('max')) {
     // The multiplier lives in either field depending on CLI version.
     const source = `${type} ${stripPlanPrefix(rateLimitTier)}`;
-    if (source.includes('20x')) return { id: 'max20x', label: 'Max 20×' };
-    if (source.includes('5x')) return { id: 'max5x', label: 'Max 5×' };
+    if (source.includes('20x')) return ULTRA_PLAN();
+    if (source.includes('5x')) return MAX_PLAN();
     return fromTier?.id.startsWith('max') ? fromTier : { id: 'max', label: 'Max' };
   }
   if (type === 'pro') {

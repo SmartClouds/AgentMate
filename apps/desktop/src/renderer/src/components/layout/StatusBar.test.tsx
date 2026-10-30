@@ -559,7 +559,7 @@ describe('the plan limits entries', () => {
         { key: 'session', label: 'Session (5h)', percent: 64, resetAt: inHours(3) },
         { key: 'week', label: 'Weekly', percent: 71, resetAt: inHours(13) },
       ],
-      'Max 5×',
+      'Max',
     ),
     usage(
       'codex',
@@ -755,7 +755,7 @@ describe('the plan limits entries when a read fails', () => {
     const { user, bridge, queryClient } = usageBar(
       [
         cursor(),
-        limitsOf('claude-code', 'Max 5×', [
+        limitsOf('claude-code', 'Max', [
           { key: 'session', label: 'Session (5h)', percent: 64, resetAt: inHours(3) },
         ]),
         limitsOf('codex', 'Plus', [
@@ -875,7 +875,7 @@ describe('how old the plan limits entry says its numbers are', () => {
       updatedAt: new Date().toISOString(),
       subscription: {
         mode: 'subscription',
-        plan: { id: 'max20x', label: 'Max 20×' },
+        plan: { id: 'max20x', label: 'Ultra' },
         windows: [{ key: 'session', label: 'Session (5h)', percent: 12, resetAt: inHours(3) }],
         source: 'account',
         ...subscription,
@@ -948,7 +948,7 @@ describe('how old the plan limits entry says its numbers are', () => {
         { source: 'estimate', estimateReason: 'account unreachable' },
         {
           lastLimits: {
-            plan: { id: 'max20x', label: 'Max 20×' },
+            plan: { id: 'max20x', label: 'Ultra' },
             windows: [{ key: 'session', label: 'Session (5h)', percent: 30, resetAt: inHours(3) }],
             readAt: ago(12 * MINUTE),
           },

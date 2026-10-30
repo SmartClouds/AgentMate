@@ -59,8 +59,9 @@ interface PlanBudget {
  */
 const PLAN_BUDGETS: Record<string, PlanBudget> = {
   pro: { session: 18, week: 90 },
-  // Max is sold as 5× / 20× Pro usage. The previous Max 5× session figure
-  // (35) was only ~2× Pro, so a Max account's estimate bars filled like Pro.
+  // Max (id max5x) is sold as 5× Pro usage. Ultra (id max20x) is the former Max 20× and keeps the
+  // 20× budget. The previous Max session figure (35) was only ~2× Pro, so a Max account's
+  // estimate bars filled like Pro.
   max: { session: 90, week: 450, fableWeek: 150 },
   max5x: { session: 90, week: 450, fableWeek: 150 },
   max20x: { session: 360, week: 1800, fableWeek: 600 },

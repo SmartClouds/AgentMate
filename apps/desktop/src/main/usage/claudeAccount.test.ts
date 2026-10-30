@@ -9,7 +9,7 @@ import { clearLiveWindowCache, getLiveWindows } from './claudeAccount';
 
 const NOW = Date.parse('2026-10-19T19:30:00.000Z');
 const MINUTE = 60_000;
-const PLAN = { id: 'max20x', label: 'Max 20×' };
+const PLAN = { id: 'max20x', label: 'Ultra' };
 
 const BODY = {
   five_hour: { utilization: 12, resets_at: '2026-10-19T22:40:00.000Z' },

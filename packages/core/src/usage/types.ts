@@ -96,7 +96,7 @@ export type UsageAccountMode = 'subscription' | 'api';
 export interface SubscriptionPlan {
   /** Raw id as the CLI records it ('pro', 'max', 'team'…). */
   id: string;
-  /** Display label: 'Pro', 'Max 5×', 'Team'. */
+  /** Display label: 'Pro', 'Max', 'Ultra', 'Team'. */
   label: string;
 }
 

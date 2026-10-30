@@ -174,7 +174,7 @@ describe('scanLocalProvider for Codex', () => {
  * reads. The card has to say when the account answered, or the status bar calls a cached answer new.
  */
 describe('scanLocalProvider for Claude Code', () => {
-  const PLAN = { id: 'max20x', label: 'Max 20×' };
+  const PLAN = { id: 'max20x', label: 'Ultra' };
   const SESSION = {
     key: 'session',
     label: 'Session (5h)',

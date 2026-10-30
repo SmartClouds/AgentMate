@@ -47,7 +47,7 @@ function cost(one: Entry): number {
 }
 
 const PRO: SubscriptionPlan = { id: 'pro', label: 'Pro' };
-const MAX: SubscriptionPlan = { id: 'max5x', label: 'Max 5x' };
+const MAX: SubscriptionPlan = { id: 'max5x', label: 'Max' };
 
 describe('buildSessionBlocks', () => {
   it('returns nothing for no activity', () => {

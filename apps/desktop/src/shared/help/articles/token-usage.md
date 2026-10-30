@@ -86,7 +86,7 @@ The icons in a card's header are:
 
 ### Plan limits view
 
-For Claude Code on a subscription plan, the card can show your plan's rolling limits instead of raw tokens. A plan badge (such as Pro) appears, then one bar per limit with the percent used and a "resets in" countdown:
+For Claude Code on a subscription plan, the card can show your plan's rolling limits instead of raw tokens. A plan badge (such as Pro, Max or Ultra) appears, then one bar per limit with the percent used and a "resets in" countdown:
 
 - **Session (5h)**: the 5-hour block, which starts with your first message after an idle gap.
 - **Weekly**: the rolling 7-day limit.
