@@ -380,7 +380,7 @@ export function RelayTrack({ project }: { project: Project }): React.JSX.Element
       }
     };
     return (
-      <div className="p-3">
+      <div className="min-h-0 flex-1 overflow-y-auto p-3">
         <EmptyState
           size="sm"
           icon={ListTodo}
@@ -435,8 +435,8 @@ export function RelayTrack({ project }: { project: Project }): React.JSX.Element
   const run = board.active;
 
   return (
-    <div className="flex min-h-0 flex-col">
-      <div className="space-y-2 px-3 pt-3 pb-2">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="shrink-0 space-y-2 px-3 pt-3 pb-2">
         <div className="flex items-end justify-between gap-2">
           <div className="min-w-0">
             <p className="text-[10px] font-semibold tracking-[0.12em] text-primary uppercase">
@@ -475,7 +475,7 @@ export function RelayTrack({ project }: { project: Project }): React.JSX.Element
         {run ? <RelayLiveStrip run={run} compact /> : <RunRelayButton board={board} />}
       </div>
 
-      <ol aria-label="Relay track" className="px-2 pt-1 pb-3">
+      <ol aria-label="Relay track" className="min-h-0 flex-1 overflow-y-auto px-2 pt-1 pb-3">
         {stations.map((station, index) => (
           <Station
             key={station.task.id}
