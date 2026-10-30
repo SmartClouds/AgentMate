@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Runova.Website.Core.News;
 using Runova.Website.Data.Audit;
 using Runova.Website.Data.Identity;
+using Runova.Website.Data.News;
 
 namespace Runova.Website.Data;
 
@@ -16,6 +18,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<SetupLink> SetupLinks => Set<SetupLink>();
 
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
+
+    public DbSet<NewsItem> NewsItems => Set<NewsItem>();
+
+    public DbSet<Technology> Technologies => Set<Technology>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -49,6 +55,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             entry.HasIndex(e => new { e.TargetType, e.TargetId });
             entry.HasIndex(e => new { e.ActorKind, e.ActorId });
         });
+
+        builder.ConfigureNews();
 
         // Identity gives claims an int key; widen it so every key in the database is bigint.
         builder.Entity<IdentityUserClaim<long>>().Property(c => c.Id).HasConversion<long>();

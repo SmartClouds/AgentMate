@@ -105,6 +105,31 @@
         }
       }
     },
+    "/api/v1/technologies": {
+      "get": {
+        "tags": [
+          "TechnologyEndpoints"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TechnologyDto"
+                  }
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified"
+          }
+        }
+      }
+    },
     "/api/v1/users/me": {
       "get": {
         "tags": [
@@ -497,10 +522,206 @@
           }
         }
       }
+    },
+    "/api/v1/news": {
+      "get": {
+        "tags": [
+          "NewsEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "minSeverity",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "technology",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageOfNewsListItemDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified"
+          }
+        }
+      }
+    },
+    "/api/v1/news/{slug}": {
+      "get": {
+        "tags": [
+          "NewsEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9-]*[a-z][a-z0-9-]*$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsItemDto"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified"
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AffectedTechnologyDto": {
+        "required": [
+          "technology",
+          "name",
+          "versionRange",
+          "fixedIn"
+        ],
+        "type": "object",
+        "properties": {
+          "technology": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "versionRange": {
+            "type": "string"
+          },
+          "fixedIn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
       "CsrfTokenDto": {
         "required": [
           "token"
@@ -589,6 +810,255 @@
             "items": {
               "type": "string"
             }
+          }
+        },
+        "additionalProperties": false
+      },
+      "NewsCategory": {
+        "enum": [
+          "security",
+          "release",
+          "deprecation",
+          "end-of-life",
+          "ai",
+          "tooling",
+          "industry"
+        ]
+      },
+      "NewsItemDto": {
+        "required": [
+          "id",
+          "slug",
+          "url",
+          "title",
+          "summary",
+          "category",
+          "severity",
+          "technologies",
+          "cveIds",
+          "cvssScore",
+          "tags",
+          "publishedAt",
+          "updatedAt",
+          "bodyHtml",
+          "sourceLinks"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/NewsCategory"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/NewsSeverity"
+          },
+          "technologies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AffectedTechnologyDto"
+            }
+          },
+          "cveIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cvssScore": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "bodyHtml": {
+            "type": "string"
+          },
+          "sourceLinks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceLinkDto"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "NewsListItemDto": {
+        "required": [
+          "id",
+          "slug",
+          "url",
+          "title",
+          "summary",
+          "category",
+          "severity",
+          "technologies",
+          "cveIds",
+          "cvssScore",
+          "tags",
+          "publishedAt",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/NewsCategory"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/NewsSeverity"
+          },
+          "technologies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AffectedTechnologyDto"
+            }
+          },
+          "cveIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cvssScore": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "publishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NewsSeverity": {
+        "enum": [
+          "info",
+          "low",
+          "medium",
+          "high",
+          "critical"
+        ]
+      },
+      "PageOfNewsListItemDto": {
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "totalItems",
+          "totalPages"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NewsListItemDto"
+            }
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalItems": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalPages": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         },
         "additionalProperties": false
@@ -733,6 +1203,58 @@
           }
         },
         "additionalProperties": false
+      },
+      "SourceLinkDto": {
+        "required": [
+          "title",
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TechnologyDto": {
+        "required": [
+          "slug",
+          "name",
+          "kind",
+          "detectable"
+        ],
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/TechnologyKind"
+          },
+          "detectable": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TechnologyKind": {
+        "enum": [
+          "app",
+          "runtime",
+          "tool",
+          "ai-cli",
+          "service",
+          "server",
+          "library",
+          "os"
+        ]
       },
       "TwoFactorConfirmRequest": {
         "required": [
@@ -913,10 +1435,16 @@
       "name": "PasswordSetupEndpoints"
     },
     {
+      "name": "TechnologyEndpoints"
+    },
+    {
       "name": "MeEndpoints"
     },
     {
       "name": "UserEndpoints"
+    },
+    {
+      "name": "NewsEndpoints"
     }
   ]
 }

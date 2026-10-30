@@ -2,6 +2,7 @@ using System.Buffers.Text;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Runova.Website.Api.Http;
 using Runova.Website.Core.Users;
 using Runova.Website.Data;
 using Runova.Website.Data.Identity;
@@ -16,8 +17,6 @@ internal sealed class SetupLinks(AppDbContext db, TimeProvider time, IConfigurat
 {
     public static readonly TimeSpan Lifetime = TimeSpan.FromHours(24);
 
-    private const string DefaultSiteUrl = "https://runovahq.com";
-
     /// <summary>
     /// Replaces any link the user has with a new one. The new link is added to the context, so the
     /// caller saves it with the rest of the change.
@@ -31,8 +30,7 @@ internal sealed class SetupLinks(AppDbContext db, TimeProvider time, IConfigurat
         var link = new SetupLink { UserId = user.Id, Purpose = purpose, TokenHash = Hash(token), CreatedAt = now, ExpiresAt = now + Lifetime };
         db.SetupLinks.Add(link);
 
-        var siteUrl = (configuration["Website:SiteUrl"] ?? DefaultSiteUrl).TrimEnd('/');
-        return new SetupLinkDto($"{siteUrl}/admin/set-password#token={token}", link.ExpiresAt);
+        return new SetupLinkDto($"{SiteUrl.From(configuration)}/admin/set-password#token={token}", link.ExpiresAt);
     }
 
     /// <summary>The link a token belongs to while it has not expired, or null.</summary>

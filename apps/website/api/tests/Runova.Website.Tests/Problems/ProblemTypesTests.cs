@@ -8,7 +8,7 @@ public partial class ProblemTypesTests
     [Fact]
     public void The_catalog_matches_the_contract_table()
     {
-        var contract = File.ReadAllText(FindContract());
+        var contract = Contract.Read();
         var rows = ContractRow().Matches(contract)
             .Select(m => (m.Groups["slug"].Value, int.Parse(m.Groups["status"].Value, System.Globalization.CultureInfo.InvariantCulture)))
             .ToList();
@@ -42,18 +42,4 @@ public partial class ProblemTypesTests
 
     [GeneratedRegex(@"^\| `(?<slug>[a-z-]+)` \| (?<status>\d{3}) \|", RegexOptions.Multiline)]
     private static partial Regex ContractRow();
-
-    private static string FindContract()
-    {
-        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
-        {
-            var candidate = Path.Combine(dir.FullName, "docs", "website", "api-contract.md");
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        throw new FileNotFoundException("docs/website/api-contract.md was not found above the test binary.");
-    }
 }

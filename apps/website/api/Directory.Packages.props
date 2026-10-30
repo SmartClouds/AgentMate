@@ -23,6 +23,10 @@
     <!-- A source generator: mappers are plain code at build time, no reflection at run time. -->
     <PackageVersion Include="Riok.Mapperly" Version="4.3.1" />
   </ItemGroup>
+  <ItemGroup Label="Content">
+    <PackageVersion Include="HtmlSanitizer" Version="9.2.1039" />
+    <PackageVersion Include="Markdig" Version="1.5.1" />
+  </ItemGroup>
   <ItemGroup Label="Jobs">
     <PackageVersion Include="Hangfire.AspNetCore" Version="1.8.25" />
     <PackageVersion Include="Hangfire.Core" Version="1.8.25" />

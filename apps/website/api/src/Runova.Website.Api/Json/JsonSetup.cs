@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
+using Runova.Website.Core;
 
 namespace Runova.Website.Api.Json;
 
@@ -10,13 +11,14 @@ internal static class JsonSetup
 {
     /// <summary>
     /// The contract's JSON rules: an unknown property in a request body is refused, and times are
-    /// written in UTC with a Z, to the millisecond.
+    /// written in UTC with a Z, to the millisecond. Enums are the contract's lowercase strings, never numbers.
     /// </summary>
     public static IServiceCollection AddWebsiteJson(this IServiceCollection services) =>
         services.ConfigureHttpJsonOptions(options =>
         {
             options.SerializerOptions.UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow;
             options.SerializerOptions.Converters.Add(new UtcTimeConverter());
+            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(ApiEnums.NamingPolicy, allowIntegerValues: false));
         });
 
     /// <summary>
