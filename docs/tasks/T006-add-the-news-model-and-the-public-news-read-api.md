@@ -1,7 +1,7 @@
 ---
 id: T006
 title: Add the news model and the public news read API
-status: todo
+status: done
 epic: E41
 depends: [T005]
 estimate: 170000

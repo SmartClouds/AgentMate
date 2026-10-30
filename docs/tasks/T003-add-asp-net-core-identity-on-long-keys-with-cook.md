@@ -1,7 +1,7 @@
 ---
 id: T003
 title: Add ASP.NET Core Identity on long keys with cookie sign-in
-status: todo
+status: done
 epic: E41
 depends: [T002]
 estimate: 180000

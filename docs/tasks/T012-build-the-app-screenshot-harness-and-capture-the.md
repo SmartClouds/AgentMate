@@ -1,7 +1,7 @@
 ---
 id: T012
 title: Build the app screenshot harness and capture the core screens
-status: todo
+status: done
 epic: E40
 depends: [T011]
 estimate: 200000

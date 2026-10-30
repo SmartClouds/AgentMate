@@ -1,7 +1,7 @@
 ---
 id: T014
 title: Build the home page with a three.js hero
-status: todo
+status: done
 epic: E40
 depends: [T012]
 estimate: 190000

@@ -1,7 +1,7 @@
 ---
 id: T010
 title: Serve the latest desktop release from GitHub Releases
-status: todo
+status: done
 epic: E41
 depends: [T005]
 estimate: 140000

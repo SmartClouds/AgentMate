@@ -1,7 +1,7 @@
 ---
 id: T002
 title: Scaffold the website API solution on .NET 10
-status: todo
+status: done
 epic: E41
 depends: [T001]
 estimate: 140000

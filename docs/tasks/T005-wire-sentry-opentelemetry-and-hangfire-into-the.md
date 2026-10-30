@@ -1,7 +1,7 @@
 ---
 id: T005
 title: Wire Sentry, OpenTelemetry and Hangfire into the API
-status: todo
+status: done
 epic: E41
 depends: [T004]
 estimate: 160000

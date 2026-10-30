@@ -1,7 +1,7 @@
 ---
 id: T008
 title: Add API clients and signed requests for writing news from other systems
-status: todo
+status: done
 epic: E41
 depends: [T007]
 estimate: 190000

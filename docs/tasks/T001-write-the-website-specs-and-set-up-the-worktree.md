@@ -1,7 +1,7 @@
 ---
 id: T001
 title: Write the website specs and set up the worktree
-status: todo
+status: done
 epic: E40
 estimate: 110000
 specs:

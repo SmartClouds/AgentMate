@@ -1,7 +1,7 @@
 ---
 id: T007
 title: Add news writing endpoints for editors
-status: todo
+status: done
 epic: E41
 depends: [T006]
 estimate: 150000

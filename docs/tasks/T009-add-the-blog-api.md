@@ -1,7 +1,7 @@
 ---
 id: T009
 title: Add the blog API
-status: todo
+status: done
 epic: E41
 depends: [T008]
 estimate: 180000

@@ -1,7 +1,7 @@
 ---
 id: T011
 title: Scaffold the Astro site on bun with the app's colors and fonts
-status: todo
+status: done
 epic: E40
 depends: [T001]
 estimate: 170000

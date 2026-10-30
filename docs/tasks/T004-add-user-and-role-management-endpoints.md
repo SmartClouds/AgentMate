@@ -1,7 +1,7 @@
 ---
 id: T004
 title: Add user and role management endpoints
-status: todo
+status: done
 epic: E41
 depends: [T003]
 estimate: 150000
