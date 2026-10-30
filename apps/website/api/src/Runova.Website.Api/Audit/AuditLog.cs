@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
+using Runova.Website.Api.ApiClients;
 using Runova.Website.Core.Audit;
 using Runova.Website.Data;
 using Runova.Website.Data.Audit;
@@ -19,16 +20,26 @@ internal sealed class AuditLog(AppDbContext db, IHttpContextAccessor http, TimeP
     /// An entry by the signed-in user, or by <paramref name="actorId"/> when the request has none
     /// (a user setting their password from a link). <paramref name="changes"/> must hold no secret.
     /// </summary>
-    public void Add(string action, string targetType, long targetId, object? changes = null, long? actorId = null) =>
-        Add(AuditActorKinds.User, actorId ?? SignedInUserId(http.HttpContext?.User), action, targetType, targetId, changes);
+    public void Add(string action, string targetType, long targetId, object? changes = null, long? actorId = null)
+    {
+        var (kind, id) = actorId is null ? Actor(http.HttpContext?.User) : (AuditActorKinds.User, actorId);
+        Add(kind, id, action, targetType, targetId, changes);
+    }
 
     /// <summary>An entry by the system itself, such as a background job.</summary>
     public void AddBySystem(string action, string targetType, long targetId, object? changes = null) =>
         Add(AuditActorKinds.System, null, action, targetType, targetId, changes);
 
-    /// <summary>The id of the signed-in user, when there is one.</summary>
+    /// <summary>The id of the signed-in user, when there is one. An API client is not a user.</summary>
     public static long? SignedInUserId(ClaimsPrincipal? user) =>
-        long.TryParse(user?.FindFirstValue(ClaimTypes.NameIdentifier), CultureInfo.InvariantCulture, out var id) ? id : null;
+        !ApiClientPrincipal.IsApiClient(user)
+        && long.TryParse(user?.FindFirstValue(ClaimTypes.NameIdentifier), CultureInfo.InvariantCulture, out var id)
+            ? id
+            : null;
+
+    /// <summary>Who the request runs as: a signed-in user or API client, with its id, or a user with none.</summary>
+    public static (string Kind, long? Id) Actor(ClaimsPrincipal? user) =>
+        ApiClientPrincipal.ClientId(user) is { } clientId ? (AuditActorKinds.ApiClient, clientId) : (AuditActorKinds.User, SignedInUserId(user));
 
     private void Add(string actorKind, long? actorId, string action, string targetType, long targetId, object? changes)
     {

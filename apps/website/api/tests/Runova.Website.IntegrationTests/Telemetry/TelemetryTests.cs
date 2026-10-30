@@ -31,7 +31,8 @@ public sealed class TelemetryTests(PostgresFixture postgres)
         {
             ["Cookie"] = "__Host-runova-session=cookie-secret-1; XSRF-TOKEN=cookie-secret-2",
             ["Authorization"] = "Bearer authorization-secret-3",
-            ["X-Runova-Key-Id"] = "key-id-secret-4",
+            // No X-Runova-Key-Id: that makes it a signed request, refused before the exception.
+            ["X-Runova-Timestamp"] = "timestamp-secret-4",
             ["X-Runova-Signature"] = "signature-secret-5",
             ["x-runova-nonce"] = "nonce-secret-6",
         };

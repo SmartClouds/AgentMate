@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Runova.Website.Core.Problems;
 
 namespace Runova.Website.Api.Problems;
@@ -20,4 +21,21 @@ internal static class ApiProblems
             detail: "One or more fields are not valid.",
             title: ProblemTypes.ValidationFailed.Title,
             type: ProblemTypes.ValidationFailed.Uri);
+
+    /// <summary>
+    /// Writes a problem straight to the response, for middleware that answers before any endpoint
+    /// runs. <paramref name="errors"/> makes it a <c>validation-failed</c> body.
+    /// </summary>
+    public static ValueTask WriteAsync(
+        HttpContext http, ProblemType type, string detail, IDictionary<string, string[]>? errors = null)
+    {
+        http.Response.StatusCode = type.Status;
+        var problem = errors is null ? new ProblemDetails() : new HttpValidationProblemDetails(errors);
+        problem.Type = type.Uri;
+        problem.Title = type.Title;
+        problem.Status = type.Status;
+        problem.Detail = detail;
+        return http.RequestServices.GetRequiredService<IProblemDetailsService>()
+            .WriteAsync(new ProblemDetailsContext { HttpContext = http, ProblemDetails = problem });
+    }
 }

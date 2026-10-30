@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Antiforgery;
+using Runova.Website.Api.ApiClients;
 using Runova.Website.Core.Problems;
 
 namespace Runova.Website.Api.Identity;
@@ -21,7 +22,8 @@ internal static class AntiforgeryCheck
     /// <summary>
     /// Checks the antiforgery header on every unsafe request that came with a session, and on the
     /// endpoints marked <see cref="RequiresAntiforgery"/>. The built-in middleware only looks at
-    /// form posts, and this API takes JSON. A missing or wrong token answers 400
+    /// form posts, and this API takes JSON. A signed request carries no cookie to forge, so it needs
+    /// no token. A missing or wrong token answers 400
     /// <c>validation-failed</c> with <c>errors.antiforgery</c>.
     /// </summary>
     public static IApplicationBuilder UseWebsiteAntiforgery(this IApplicationBuilder app) => app.Use(async (http, next) =>
@@ -70,6 +72,11 @@ internal static class AntiforgeryCheck
     {
         var method = http.Request.Method;
         if (HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method) || HttpMethods.IsTrace(method))
+        {
+            return false;
+        }
+
+        if (ApiClientPrincipal.IsApiClient(http.User))
         {
             return false;
         }

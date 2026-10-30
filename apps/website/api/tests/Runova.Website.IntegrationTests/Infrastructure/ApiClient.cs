@@ -45,7 +45,12 @@ internal sealed class ApiClient(HttpClient http)
     /// empty, or the one given. A PATCH body goes as a JSON merge patch.
     /// </summary>
     public Task<HttpResponseMessage> SendAsync(
-        HttpMethod method, string path, object? body = null, string? antiforgeryToken = null, string? ifMatch = null)
+        HttpMethod method,
+        string path,
+        object? body = null,
+        string? antiforgeryToken = null,
+        string? ifMatch = null,
+        IReadOnlyDictionary<string, string>? headers = null)
     {
         var request = new HttpRequestMessage(method, path);
         if (body is not null)
@@ -64,6 +69,11 @@ internal sealed class ApiClient(HttpClient http)
         if (ifMatch is not null)
         {
             request.Headers.TryAddWithoutValidation("If-Match", ifMatch);
+        }
+
+        foreach (var (name, value) in headers ?? new Dictionary<string, string>())
+        {
+            request.Headers.TryAddWithoutValidation(name, value);
         }
 
         return http.SendAsync(request, TestContext.Current.CancellationToken);

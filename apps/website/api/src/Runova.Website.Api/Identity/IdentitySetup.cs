@@ -1,6 +1,9 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Runova.Website.Api.ApiClients;
+using Runova.Website.Core.ApiClients;
 using Runova.Website.Core.Identity;
 using Runova.Website.Data;
 using Runova.Website.Data.Identity;
@@ -13,8 +16,11 @@ internal static class Policies
     public const string Staff = "Staff";
     public const string Admin = "Admin";
 
-    /// <summary>Writing news: staff for now; T008 adds API clients with the <c>news:write</c> scope.</summary>
+    /// <summary>Writing news: Editors, Admins, and API clients with the <c>news:write</c> scope.</summary>
     public const string NewsWrite = "NewsWrite";
+
+    /// <summary>Writing posts and media: Editors, Admins, and API clients with the <c>posts:write</c> scope.</summary>
+    public const string PostsWrite = "PostsWrite";
 }
 
 internal static class IdentitySetup
@@ -26,6 +32,7 @@ internal static class IdentitySetup
     /// <summary>
     /// Identity on <see cref="AppDbContext"/> with the contract's password, lockout and two-factor
     /// rules, the session cookie, antiforgery, and a fallback policy that denies anyone not signed in.
+    /// An API client never passes it: a client reaches only the endpoints its scopes name.
     /// </summary>
     public static IServiceCollection AddWebsiteIdentity(this IServiceCollection services)
     {
@@ -78,24 +85,40 @@ internal static class IdentitySetup
             options.Cookie.Path = "/";
         });
 
+        var signedInUser = new AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUser()
+            .RequireAssertion(context => !ApiClientPrincipal.IsApiClient(context.User))
+            .Build();
         services.AddAuthorizationBuilder()
-            .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())
+            .SetDefaultPolicy(signedInUser)
+            .SetFallbackPolicy(signedInUser)
             .AddPolicy(Policies.Staff, policy => policy.RequireRole(Roles.Admin, Roles.Editor))
             .AddPolicy(Policies.Admin, policy => policy.RequireRole(Roles.Admin))
-            .AddPolicy(Policies.NewsWrite, policy => policy.RequireRole(Roles.Admin, Roles.Editor));
+            .AddPolicy(Policies.NewsWrite, policy => policy.RequireAssertion(context => IsStaffOrHasScope(context.User, ApiScopes.NewsWrite)))
+            .AddPolicy(Policies.PostsWrite, policy => policy.RequireAssertion(context => IsStaffOrHasScope(context.User, ApiScopes.PostsWrite)));
         services.AddSingleton<IAuthorizationMiddlewareResultHandler, RouteOnlyAuthorizationResultHandler>();
 
         return services;
     }
 
-    /// <summary>Authentication, then the antiforgery check (which needs the user), then authorization.</summary>
+    /// <summary>
+    /// Authentication, the 401 for a failed signature, the per-client rate limit, the antiforgery
+    /// check (which needs the user), authorization, and then <c>Idempotency-Key</c>, which keeps
+    /// answers only for a caller that was allowed in.
+    /// </summary>
     public static WebApplication UseWebsiteIdentity(this WebApplication app)
     {
         app.UseAuthentication();
+        app.UseSignatureRefusals();
+        app.UseRateLimiter();
         app.UseWebsiteAntiforgery();
         app.UseAuthorization();
+        app.UseIdempotencyKeys();
         return app;
     }
+
+    private static bool IsStaffOrHasScope(ClaimsPrincipal user, string scope) =>
+        user.IsInRole(Roles.Admin) || user.IsInRole(Roles.Editor) || ApiClientPrincipal.HasScope(user, scope);
 
     private static Task SetStatus(HttpResponse response, int status)
     {

@@ -13,6 +13,8 @@
   </ItemGroup>
   <ItemGroup Label="Identity">
     <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.14" />
+    <!-- Keeps the Data Protection key ring, which seals API client signing keys, in PostgreSQL. -->
+    <PackageVersion Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="10.0.14" />
   </ItemGroup>
   <ItemGroup Label="OpenAPI">
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />

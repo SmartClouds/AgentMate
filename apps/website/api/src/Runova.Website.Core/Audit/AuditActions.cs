@@ -12,6 +12,10 @@ public static class AuditActions
     public const string NewsUpdate = "news.update";
     public const string NewsArchive = "news.archive";
     public const string NewsPublish = "news.publish";
+    public const string ApiClientCreate = "api-client.create";
+    public const string ApiClientUpdate = "api-client.update";
+    public const string ApiClientRevoke = "api-client.revoke";
+    public const string ApiClientRotate = "api-client.rotate";
 }
 
 /// <summary>Who made a change.</summary>
@@ -27,4 +31,5 @@ public static class AuditTargetTypes
 {
     public const string User = "user";
     public const string News = "news";
+    public const string ApiClient = "api-client";
 }

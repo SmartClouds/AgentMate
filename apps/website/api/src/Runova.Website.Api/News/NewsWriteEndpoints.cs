@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Npgsql;
+using Runova.Website.Api.ApiClients;
 using Runova.Website.Api.Audit;
 using Runova.Website.Api.Http;
 using Runova.Website.Api.Identity;
@@ -19,8 +20,9 @@ using JsonOptions = Microsoft.AspNetCore.Http.Json.JsonOptions;
 namespace Runova.Website.Api.News;
 
 /// <summary>
-/// Writing news, for Editors and Admins: create, replace, merge patch and archive by id. Every
-/// change to an item needs <c>If-Match</c>, and every write leaves an audit entry with it.
+/// Writing news, for Editors, Admins and API clients with <c>news:write</c>: create, replace,
+/// merge patch and archive by id. Every change to an item needs <c>If-Match</c>, every write leaves
+/// an audit entry with it, and a create honours <c>Idempotency-Key</c>.
 /// </summary>
 internal static class NewsWriteEndpoints
 {
@@ -30,7 +32,7 @@ internal static class NewsWriteEndpoints
     {
         var news = api.MapGroup("/news").RequireAuthorization(Policies.NewsWrite);
         news.MapGet("/{id:long}", GetAsync).Produces(StatusCodes.Status304NotModified);
-        news.MapPost("", CreateAsync).Accepts<NewsItemWriteDto>("application/json");
+        news.MapPost("", CreateAsync).Accepts<NewsItemWriteDto>("application/json").WithMetadata(Idempotent.Instance);
         news.MapPut("/{id:long}", ReplaceAsync).Accepts<NewsItemWriteDto>("application/json");
         news.MapPatch("/{id:long}", PatchAsync).Accepts<NewsItemWriteDto>(MergePatchJson, "application/json");
         news.MapDelete("/{id:long}", ArchiveAsync);
@@ -75,12 +77,13 @@ internal static class NewsWriteEndpoints
         }
 
         var now = time.GetUtcNow();
+        var (creatorKind, creatorId) = AuditLog.Actor(http.User);
         var item = new NewsItem
         {
             CreatedAt = now,
             UpdatedAt = now,
-            CreatedByKind = AuditActorKinds.User,
-            CreatedById = AuditLog.SignedInUserId(http.User),
+            CreatedByKind = creatorKind,
+            CreatedById = creatorId,
         };
         Apply(dto, item, renderer, now);
 
@@ -311,12 +314,15 @@ internal static class NewsWriteEndpoints
 
     private static async Task<NewsItemAdminDto> ToAdminDtoAsync(AppDbContext db, IConfiguration configuration, NewsItem item)
     {
-        NewsCreatorDto? createdBy = null;
-        if (item is { CreatedByKind: AuditActorKinds.User, CreatedById: { } userId }
-            && await db.Users.AsNoTracking().Where(u => u.Id == userId).Select(u => u.DisplayName).SingleOrDefaultAsync() is { } name)
+        var name = item switch
         {
-            createdBy = new NewsCreatorDto(AuditActorKinds.User, userId, name);
-        }
+            { CreatedByKind: AuditActorKinds.User, CreatedById: { } userId } =>
+                await db.Users.AsNoTracking().Where(u => u.Id == userId).Select(u => u.DisplayName).SingleOrDefaultAsync(),
+            { CreatedByKind: AuditActorKinds.ApiClient, CreatedById: { } clientId } =>
+                await db.ApiClients.AsNoTracking().Where(c => c.Id == clientId).Select(c => c.Name).SingleOrDefaultAsync(),
+            _ => null,
+        };
+        var createdBy = name is null ? null : new NewsCreatorDto(item.CreatedByKind, item.CreatedById!.Value, name);
 
         return NewsMapper.ToAdminDto(item, NewsEndpoints.ItemUrl(SiteUrl.From(configuration), item), createdBy);
     }

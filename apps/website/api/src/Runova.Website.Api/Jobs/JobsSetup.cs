@@ -1,6 +1,7 @@
 using Hangfire;
 using Hangfire.PostgreSql;
 using Npgsql;
+using Runova.Website.Api.ApiClients;
 using Runova.Website.Api.Identity;
 using Runova.Website.Api.News;
 using Runova.Website.Api.Users;
@@ -38,6 +39,8 @@ internal static partial class JobsSetup
         services.AddHangfireServer();
         services.AddScoped<InvitationsCleanupJob>();
         services.AddScoped<NewsPublishJob>();
+        services.AddScoped<SignatureNoncesPurgeJob>();
+        services.AddScoped<IdempotencyPurgeJob>();
         services.AddHostedService<RegisterRecurringJobs>();
         return services;
     }

@@ -1,7 +1,10 @@
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Runova.Website.Core.ApiClients;
 using Runova.Website.Core.News;
+using Runova.Website.Data.ApiClients;
 using Runova.Website.Data.Audit;
 using Runova.Website.Data.Identity;
 using Runova.Website.Data.News;
@@ -13,7 +16,7 @@ namespace Runova.Website.Data;
 /// tables' included; the resources add their sets later.
 /// </summary>
 public class AppDbContext(DbContextOptions<AppDbContext> options)
-    : IdentityDbContext<AppUser, AppRole, long>(options)
+    : IdentityDbContext<AppUser, AppRole, long>(options), IDataProtectionKeyContext
 {
     public DbSet<SetupLink> SetupLinks => Set<SetupLink>();
 
@@ -22,6 +25,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<NewsItem> NewsItems => Set<NewsItem>();
 
     public DbSet<Technology> Technologies => Set<Technology>();
+
+    public DbSet<ApiClient> ApiClients => Set<ApiClient>();
+
+    public DbSet<SignatureNonce> SignatureNonces => Set<SignatureNonce>();
+
+    public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
+
+    /// <summary>The Data Protection key ring, shared by every API instance.</summary>
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -57,10 +69,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
         });
 
         builder.ConfigureNews();
+        builder.ConfigureApiClients();
 
-        // Identity gives claims an int key; widen it so every key in the database is bigint.
+        // Identity gives claims an int key, and Data Protection its keys; widen them so every key in the database is bigint.
         builder.Entity<IdentityUserClaim<long>>().Property(c => c.Id).HasConversion<long>();
         builder.Entity<IdentityRoleClaim<long>>().Property(c => c.Id).HasConversion<long>();
+        builder.Entity<DataProtectionKey>().Property(k => k.Id).HasConversion<long>();
 
         // Fixed ids and stamps, so the seed does not change from one migration to the next.
         builder.Entity<AppRole>().HasData(

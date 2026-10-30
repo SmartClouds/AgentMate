@@ -24,6 +24,25 @@ namespace Runova.Website.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("FriendlyName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Xml")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DataProtectionKeys");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<long>", b =>
                 {
                     b.Property<long>("Id")
@@ -125,6 +144,53 @@ namespace Runova.Website.Data.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("Runova.Website.Core.ApiClients.ApiClient", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.PrimitiveCollection<List<string>>("IpAllowlist")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<DateTimeOffset?>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.PrimitiveCollection<List<string>>("Scopes")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("ApiClients");
                 });
 
             modelBuilder.Entity("Runova.Website.Core.News.NewsItem", b =>
@@ -669,6 +735,93 @@ namespace Runova.Website.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Runova.Website.Data.ApiClients.IdempotencyRecord", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Body")
+                        .HasColumnType("text");
+
+                    b.Property<long>("CallerId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("CallerKind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("ContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ETag")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<byte[]>("RequestHash")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<int>("StatusCode")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("CallerKind", "CallerId", "Key")
+                        .IsUnique();
+
+                    b.ToTable("IdempotencyRecords");
+                });
+
+            modelBuilder.Entity("Runova.Website.Data.ApiClients.SignatureNonce", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("KeyId")
+                        .IsRequired()
+                        .HasMaxLength(19)
+                        .HasColumnType("character varying(19)");
+
+                    b.Property<string>("Nonce")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("SeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SeenAt");
+
+                    b.HasIndex("KeyId", "Nonce")
+                        .IsUnique();
+
+                    b.ToTable("SignatureNonces");
+                });
+
             modelBuilder.Entity("Runova.Website.Data.Audit.AuditEntry", b =>
                 {
                     b.Property<long>("Id")
@@ -943,6 +1096,50 @@ namespace Runova.Website.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Runova.Website.Core.ApiClients.ApiClient", b =>
+                {
+                    b.OwnsMany("Runova.Website.Core.ApiClients.ApiClientKey", "Keys", b1 =>
+                        {
+                            b1.Property<long>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("bigint");
+
+                            NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<long>("Id"));
+
+                            b1.Property<long>("ApiClientId")
+                                .HasColumnType("bigint");
+
+                            b1.Property<DateTimeOffset>("CreatedAt")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<DateTimeOffset?>("ExpiresAt")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<string>("KeyId")
+                                .IsRequired()
+                                .HasMaxLength(19)
+                                .HasColumnType("character varying(19)");
+
+                            b1.Property<string>("SealedSigningKey")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("ApiClientId");
+
+                            b1.HasIndex("KeyId")
+                                .IsUnique();
+
+                            b1.ToTable("ApiClientKeys", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("ApiClientId");
+                        });
+
+                    b.Navigation("Keys");
                 });
 
             modelBuilder.Entity("Runova.Website.Core.News.NewsItem", b =>

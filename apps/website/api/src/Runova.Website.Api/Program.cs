@@ -1,4 +1,5 @@
 using Runova.Website.Api;
+using Runova.Website.Api.ApiClients;
 using Runova.Website.Api.Cli;
 using Runova.Website.Api.Database;
 using Runova.Website.Api.Health;
@@ -18,6 +19,7 @@ var builder = WebApplication.CreateBuilder(AdminCli.IsCommand(args) ? [] : args)
 builder.AddWebsiteTelemetry();
 builder.Services.AddWebsiteData();
 builder.Services.AddWebsiteIdentity();
+builder.Services.AddWebsiteApiClients();
 builder.Services.AddWebsiteUsers();
 builder.Services.AddWebsiteNews();
 builder.Services.AddWebsiteJobs();

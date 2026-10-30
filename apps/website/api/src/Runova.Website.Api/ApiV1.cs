@@ -1,3 +1,4 @@
+using Runova.Website.Api.ApiClients;
 using Runova.Website.Api.News;
 using Runova.Website.Api.Sessions;
 using Runova.Website.Api.Users;
@@ -19,6 +20,7 @@ internal static class ApiV1
         api.MapPasswordSetups();
         api.MapNews();
         api.MapTechnologies();
+        api.MapApiClients();
         return api;
     }
 }

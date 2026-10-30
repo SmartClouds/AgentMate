@@ -1,4 +1,6 @@
+using System.Net;
 using Hangfire;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -45,6 +47,7 @@ public sealed class WebsiteApiFactory(
                 testServices.Remove(server);
             }
 
+            testServices.AddSingleton<IStartupFilter, RemoteIpFromHeader>();
             if (time is not null)
             {
                 testServices.AddSingleton(time);
@@ -77,4 +80,25 @@ public sealed class WebsiteApiFactory(
             BaseAddress = new Uri("https://localhost"),
             AllowAutoRedirect = false,
         }));
+
+    /// <summary>
+    /// The test server sends no caller address, so a test that needs one names it in
+    /// <see cref="TestApiClients.RemoteIpHeader"/>, read before anything else in the pipeline.
+    /// </summary>
+    private sealed class RemoteIpFromHeader : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            app.Use((http, nextMiddleware) =>
+            {
+                if (IPAddress.TryParse(http.Request.Headers[TestApiClients.RemoteIpHeader].ToString(), out var address))
+                {
+                    http.Connection.RemoteIpAddress = address;
+                }
+
+                return nextMiddleware(http);
+            });
+            next(app);
+        };
+    }
 }

@@ -72,9 +72,9 @@ internal static class NewsEndpoints
                 return ApiProblems.Of(ProblemTypes.Unauthorized, "Sign in to list news by status.");
             }
 
-            if (!(await authorization.AuthorizeAsync(http.User, Policies.Staff)).Succeeded)
+            if (!(await authorization.AuthorizeAsync(http.User, Policies.NewsWrite)).Succeeded)
             {
-                return ApiProblems.Of(ProblemTypes.Forbidden, "Only staff can list news by status.");
+                return ApiProblems.Of(ProblemTypes.Forbidden, "Only staff and API clients that write news can list it by status.");
             }
 
             cacheControl = HttpCaching.Private;

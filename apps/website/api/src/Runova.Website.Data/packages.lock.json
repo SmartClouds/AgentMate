@@ -2,6 +2,16 @@
   "version": 2,
   "dependencies": {
     "net10.0": {
+      "Microsoft.AspNetCore.DataProtection.EntityFrameworkCore": {
+        "type": "Direct",
+        "requested": "[10.0.14, )",
+        "resolved": "10.0.14",
+        "contentHash": "zXov4zfbIsBCAYniekMemgWSAMpfzQ1jhWGs4k2WIr0n1Ac4osMD1xbqf31CllPZ2z4dTsYzWRmGZO+czKGOxw==",
+        "dependencies": {
+          "Microsoft.AspNetCore.DataProtection": "10.0.14",
+          "Microsoft.EntityFrameworkCore": "10.0.14"
+        }
+      },
       "Microsoft.AspNetCore.Identity.EntityFrameworkCore": {
         "type": "Direct",
         "requested": "[10.0.14, )",
@@ -73,6 +83,25 @@
         "dependencies": {
           "Microsoft.AspNetCore.Cryptography.Internal": "10.0.14"
         }
+      },
+      "Microsoft.AspNetCore.DataProtection": {
+        "type": "Transitive",
+        "resolved": "10.0.14",
+        "contentHash": "gDUH0z2bK0lPaHGy2/pIQkEtbhG3dFGSIbioy+Qu76Y+HiB0xg2TFqlSLc+DjQ2Jb/3GODGMtTh4JuufVWG7Dw==",
+        "dependencies": {
+          "Microsoft.AspNetCore.Cryptography.Internal": "10.0.14",
+          "Microsoft.AspNetCore.DataProtection.Abstractions": "10.0.14",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.14",
+          "Microsoft.Extensions.Hosting.Abstractions": "10.0.14",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.14",
+          "Microsoft.Extensions.Options": "10.0.14",
+          "System.Security.Cryptography.Xml": "10.0.14"
+        }
+      },
+      "Microsoft.AspNetCore.DataProtection.Abstractions": {
+        "type": "Transitive",
+        "resolved": "10.0.14",
+        "contentHash": "/4+1KX8VIKCCHZ8p/1dZ2WGxvIijm5lXmgHecxEwGnBYXiSjAqfF/Q7p9m6eojUDlpKMHkt1HHXeNdL9WH3YHw=="
       },
       "Microsoft.Build.Framework": {
         "type": "Transitive",
@@ -259,6 +288,26 @@
           "Microsoft.Extensions.Options": "10.0.14"
         }
       },
+      "Microsoft.Extensions.FileProviders.Abstractions": {
+        "type": "Transitive",
+        "resolved": "10.0.14",
+        "contentHash": "rAqf2Em2ZjLqNbcLJlboQnXNyJP604F960TsCKNiP00Ur6ExIc1mcwmNb8L2eTRT8RC8UKx/GjecoWcW2Sj7bw==",
+        "dependencies": {
+          "Microsoft.Extensions.Primitives": "10.0.14"
+        }
+      },
+      "Microsoft.Extensions.Hosting.Abstractions": {
+        "type": "Transitive",
+        "resolved": "10.0.14",
+        "contentHash": "p6NUEkmlaB+FujQZTtyNBKFULQO+Fj8SKuYdYHASQso+RkeYdFDPNsMM4mtOHqx1GZNQnZm/inmsqGkja/Dw2w==",
+        "dependencies": {
+          "Microsoft.Extensions.Configuration.Abstractions": "10.0.14",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.14",
+          "Microsoft.Extensions.Diagnostics.Abstractions": "10.0.14",
+          "Microsoft.Extensions.FileProviders.Abstractions": "10.0.14",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.14"
+        }
+      },
       "Microsoft.Extensions.Identity.Core": {
         "type": "Transitive",
         "resolved": "10.0.14",
@@ -396,6 +445,19 @@
           "System.Composition.AttributedModel": "9.0.0",
           "System.Composition.Hosting": "9.0.0",
           "System.Composition.Runtime": "9.0.0"
+        }
+      },
+      "System.Security.Cryptography.Pkcs": {
+        "type": "Transitive",
+        "resolved": "10.0.14",
+        "contentHash": "Wz+IgL2xpg8KJ4i2VWj6uz1PmZNu4Q0Ljlwd73P9Vze5NcOBtctLii3itV0PB2MpOqwqDEGfB6RCdv94A4E5yQ=="
+      },
+      "System.Security.Cryptography.Xml": {
+        "type": "Transitive",
+        "resolved": "10.0.14",
+        "contentHash": "qpDILpfJvj65+Pvpf5drWq2+mRNSrPffJsRYVQjBmEky+V34W+w2LXDZShq0miitf5qAPKuMAQ3CUaifaS2rrw==",
+        "dependencies": {
+          "System.Security.Cryptography.Pkcs": "10.0.14"
         }
       },
       "runova.website.core": {
