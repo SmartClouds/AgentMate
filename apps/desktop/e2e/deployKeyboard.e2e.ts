@@ -18,6 +18,7 @@ const SECTIONS = [
   'Apps',
   'Containers',
   'Files',
+  'Cleanup',
   'App Store',
   'Websites',
   'Firewall',

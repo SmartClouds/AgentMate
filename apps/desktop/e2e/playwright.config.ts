@@ -16,7 +16,10 @@ export default defineConfig({
   fullyParallel: false,
   timeout: 120_000,
   expect: { timeout: 20_000 },
+  // The CI retry only tells a flaky failure from a steady one. A test that needed it still fails
+  // the run, so a race can't hide behind a green check.
   retries: process.env.CI ? 1 : 0,
+  failOnFlakyTests: !!process.env.CI,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   outputDir: '../test-results/e2e',
   use: {

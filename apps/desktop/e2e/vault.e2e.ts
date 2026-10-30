@@ -188,6 +188,9 @@ test('create a vault, add a login, find it, copy it and lock', async () => {
 
   // Something copied after the vault's copy is left alone.
   await detail.getByRole('button', { name: 'Copy username' }).click();
+  // The copy reaches the main process over IPC, so writing before it lands would let the vault
+  // overwrite our text and then clear it.
+  await expect.poll(() => clipboardText(app)).toBe(SECRET_USER);
   await app.evaluate(({ clipboard }) => clipboard.writeText('my own text'));
   await page.waitForTimeout(3500);
   expect(await clipboardText(app)).toBe('my own text');
