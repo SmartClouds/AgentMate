@@ -118,7 +118,6 @@ export function AssistantComposer({
   phase,
   followUp,
   canContinue = false,
-  initialPrompt,
   disabled,
   onStart,
   onMessage,
@@ -132,7 +131,6 @@ export function AssistantComposer({
   followUp: boolean;
   /** A run was stopped or failed before it was done, so it can be carried on. */
   canContinue?: boolean;
-  initialPrompt: string;
   disabled?: boolean;
   /** `project` is only ever set with a CLI, since the Settings provider cannot open files. */
   onStart: (
@@ -144,7 +142,10 @@ export function AssistantComposer({
   onMessage: (text: string) => Promise<boolean>;
   onStop: () => void;
 }): React.JSX.Element {
-  const [prompt, setPrompt] = useState(initialPrompt);
+  // In the store, so the box is as the user left it when they come back to the page.
+  const prompt = useDeployAssistantStore((state) => state.prompts[serverId] ?? '');
+  const setText = useDeployAssistantStore((state) => state.setPrompt);
+  const setPrompt = (text: string) => setText(serverId, text);
   const [starting, setStarting] = useState(false);
   const picked = useDeployAssistantStore((state) => state.ai);
   const setAi = useDeployAssistantStore((state) => state.setAi);

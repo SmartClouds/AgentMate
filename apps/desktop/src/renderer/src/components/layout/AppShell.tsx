@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AskAiModal } from '@/components/askAi/AskAiModal';
 import { AssistantTopBarButton } from '@/components/deploy/assistant/AssistantLauncher';
+import { useDeployAssistantEvents } from '@/components/deploy/assistant/hooks';
 import { useFilesRunEvents } from '@/components/deploy/files/hooks';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AnglesLeft, AnglesRight, Bell, MessageSquare, TerminalSquare } from '@/components/icons';
@@ -234,6 +235,9 @@ export function AppShell(): React.JSX.Element {
   // FTP and SFTP deploys run on in main (Deploy on save with nobody on the page), so their
   // progress and outcome are taken in here, whichever page is open.
   useFilesRunEvents();
+  // The Deploy AI's run goes on in main too, so its steps keep arriving while another page is
+  // open and the drawer is not stuck where it was when the user comes back.
+  useDeployAssistantEvents();
 
   // The window is still hidden behind the startup splash. Once the first page has its data, give
   // React a beat to commit it and tell main to swap them. A timer, not requestAnimationFrame: a

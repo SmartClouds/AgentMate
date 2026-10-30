@@ -1,6 +1,6 @@
 import { coreErrorMessage } from '@shared/coreErrors';
 import type { DeployServer } from '@shared/deployTypes';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { MessageSquarePlus, Robot, WindowMaximize, WindowRestore, X } from '@/components/icons';
@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import {
   type AssistantAiChoice,
   type AssistantProjectChoice,
+  isRunActive,
   useDeployAssistantStore,
 } from '@/stores/deployAssistantStore';
 import { AssistantComposer } from './AssistantComposer';
@@ -26,10 +27,9 @@ import { ModeSwitch } from './ModeSwitch';
  * stop, carries the chat on with what the AI learned so far; New chat starts over. It does not
  * cover the page, so the logs stay readable next to it; Escape closes it and the run carries on.
  * It sits in the page area, under the top bar, so the Deploy AI button there stays in reach to
- * close it again.
+ * close it again. Its size and what is typed in it are kept in the store, so leaving the page
+ * and coming back finds them as they were.
  */
-
-const ACTIVE = new Set(['thinking', 'proposed', 'running', 'needs-input', 'needs-password']);
 
 /** How close to the end still counts as being at the end, in pixels. */
 const BOTTOM_SLACK = 24;
@@ -44,17 +44,16 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
   const restore = useDeployAssistantStore((state) => state.restore);
   const said = useDeployAssistantStore((state) => state.said);
   const clearDraft = useDeployAssistantStore((state) => state.clearDraft);
+  const maximized = useDeployAssistantStore((state) => state.maximized);
+  const setMaximized = useDeployAssistantStore((state) => state.setMaximized);
   const open = openServerId === server.id;
   const mode = useAssistantMode(server.id, open);
   const panel = useRef<HTMLElement | null>(null);
   const body = useRef<HTMLDivElement | null>(null);
   const follow = useRef(true);
-  const [maximized, setMaximized] = useState(false);
   const context = draft?.serverId === server.id ? draft.context : null;
   const progress = run?.progress ?? null;
-  const running =
-    (progress !== null && ACTIVE.has(progress.phase)) ||
-    (progress?.phase === 'error' && progress.canContinue === true);
+  const running = isRunActive(progress);
   // Stopped, finished or failed for good: the next task carries this chat on.
   const over = progress !== null && !running;
   const canContinue = over && progress?.phase !== 'finished';
@@ -74,30 +73,25 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
     if (element && follow.current) element.scrollTop = element.scrollHeight;
   }, [open, run?.steps, progress, maximized]);
 
-  // A window opened (or reloaded) while a run goes on picks up where it is.
+  // A window opened (or reloaded) while a run goes on picks up where it is, and a run that ended
+  // while nothing was listening ends here too rather than looking stuck.
   useEffect(() => {
-    if (!open || run) return;
+    if (!open) return;
     let cancelled = false;
-    window.runova.deployAssistant.state(server.id).then(
-      (state) => {
-        if (!cancelled && state?.progress) {
-          useDeployAssistantStore
-            .getState()
-            .progress({ serverId: server.id, progress: state.progress });
-        }
-      },
-      () => undefined,
-    );
+    syncWithMain(server.id, () => cancelled);
     return () => {
       cancelled = true;
     };
-  }, [open, run, server.id]);
+  }, [open, server.id]);
 
   if (!open) return null;
 
   const serverId = server.id;
   const act = (work: Promise<unknown>) =>
     void work.catch((error: unknown) => toast.error(coreErrorMessage(error)));
+  // Main ignores a stop for a run it no longer has, so ask it afterwards how things stand.
+  const stop = () =>
+    act(window.runova.deployAssistant.stop(serverId).finally(() => syncWithMain(serverId)));
 
   async function start(
     prompt: string,
@@ -191,7 +185,7 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
             variant="ghost"
             aria-label={maximized ? 'Restore size' : 'Maximize'}
             aria-pressed={maximized}
-            onClick={() => setMaximized((value) => !value)}
+            onClick={() => setMaximized(!maximized)}
           >
             {maximized ? <WindowRestore /> : <WindowMaximize />}
           </Button>
@@ -256,27 +250,35 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
           onSkip={() => act(window.runova.deployAssistant.skip(serverId))}
           onAnswer={(answer) => act(window.runova.deployAssistant.answer(serverId, answer))}
           onResume={() => act(window.runova.deployAssistant.resume(serverId))}
-          onStop={() => act(window.runova.deployAssistant.stop(serverId))}
+          onStop={stop}
         />
       </div>
 
       <footer className={cn('px-4 py-3', FOOTER_HAIRLINE)}>
         <AssistantComposer
-          key={draft?.serverId === serverId ? draft.prompt : 'free'}
           serverId={serverId}
           running={running}
           phase={progress?.phase}
           followUp={over}
           canContinue={canContinue}
-          initialPrompt={draft?.serverId === serverId ? draft.prompt : ''}
           disabled={!mode.info}
           onStart={start}
           onMessage={message}
-          onStop={() => act(window.runova.deployAssistant.stop(serverId))}
+          onStop={stop}
         />
       </footer>
     </aside>
   );
 
   return island ? createPortal(drawer, island) : drawer;
+}
+
+/** Reads the run's state from main into the store, unless `cancelled` says not to any more. */
+function syncWithMain(serverId: string, cancelled: () => boolean = () => false): void {
+  window.runova.deployAssistant.state(serverId).then(
+    (state) => {
+      if (!cancelled() && state) useDeployAssistantStore.getState().sync(serverId, state);
+    },
+    () => undefined,
+  );
 }

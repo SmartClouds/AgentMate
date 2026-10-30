@@ -5,6 +5,7 @@ import type {
   DeployAssistantContextInput,
   DeployAssistantOutputEvent,
   DeployAssistantProgressEvent,
+  DeployAssistantState,
 } from '@shared/deployAssistantTypes';
 import { create } from 'zustand';
 
@@ -12,7 +13,8 @@ import { create } from 'zustand';
  * The Deploy AI drawer (E09 T8): whether it is open, what it was opened on, and each server's run
  * as it goes (a timeline of steps with their output). The run itself lives in the main process,
  * so leaving the page and coming back finds it where it was. A follow-up or a Continue after a
- * stop carries the chat on: the run before it stays above the new one, until a new chat.
+ * stop carries the chat on: the run before it stays above the new one, until a new chat. What is
+ * typed in each server's box and the drawer's size live here too, so they outlast the page.
  */
 
 /** Output kept per step; the full output stays in the run's history. */
@@ -68,6 +70,26 @@ export interface AssistantProjectChoice {
 
 export const SETTINGS_AI: AssistantAiChoice = { cliId: null, modelId: null, effort: null };
 
+/** Phases in which the run is still going (an error it can carry on from counts too). */
+export const ACTIVE_PHASES = new Set([
+  'thinking',
+  'proposed',
+  'running',
+  'needs-input',
+  'needs-password',
+]);
+
+export function isRunActive(progress: SshAgentProgress | null | undefined): boolean {
+  if (!progress) return false;
+  return (
+    ACTIVE_PHASES.has(progress.phase) ||
+    (progress.phase === 'error' && progress.canContinue === true)
+  );
+}
+
+/** Said when main has no run any more and no last word on it (it was restarted, say). */
+export const GONE_MESSAGE = 'The AI is no longer running.';
+
 const EMPTY_RUN: AssistantRun = { progress: null, steps: [], messages: [], earlier: [] };
 /** Messages kept on screen per run. */
 const MAX_MESSAGES = 50;
@@ -80,8 +102,14 @@ interface DeployAssistantStoreState {
    */
   pageServerId: string | null;
   setPageServer: (serverId: string | null) => void;
-  /** What "Diagnose with AI" handed over, waiting for the user to start. */
-  draft: { serverId: string; context: DeployAssistantContextInput; prompt: string } | null;
+  /** What "Diagnose with AI" pointed the AI at, sent along with each run on that server. */
+  draft: { serverId: string; context: DeployAssistantContextInput } | null;
+  /** What is in each server's task box, so leaving the page does not lose it or bring it back. */
+  prompts: Record<string, string>;
+  setPrompt: (serverId: string, text: string) => void;
+  /** The drawer fills the page area, kept while the user goes to other pages. */
+  maximized: boolean;
+  setMaximized: (maximized: boolean) => void;
   runs: Record<string, AssistantRun>;
   /** The last AI picked in the drawer, kept for the next run and the next time it opens. */
   ai: AssistantAiChoice;
@@ -105,6 +133,11 @@ interface DeployAssistantStoreState {
   restore: (serverId: string, run: AssistantRun | undefined) => void;
   progress: (event: DeployAssistantProgressEvent) => void;
   output: (event: DeployAssistantOutputEvent) => void;
+  /**
+   * Squares the run with main's state of it. A run main no longer has ends here too, so one that
+   * ended while nothing was listening does not look stuck with a Stop that does nothing.
+   */
+  sync: (serverId: string, state: DeployAssistantState) => void;
 }
 
 function updateSteps(steps: AssistantStep[], progress: SshAgentProgress): AssistantStep[] {
@@ -147,6 +180,11 @@ function updateSteps(steps: AssistantStep[], progress: SshAgentProgress): Assist
 export const useDeployAssistantStore = create<DeployAssistantStoreState>((set) => ({
   openServerId: null,
   draft: null,
+  prompts: {},
+  setPrompt: (serverId, text) =>
+    set((state) => ({ prompts: { ...state.prompts, [serverId]: text } })),
+  maximized: false,
+  setMaximized: (maximized) => set({ maximized }),
   runs: {},
   ai: SETTINGS_AI,
   setAi: (ai) => set({ ai }),
@@ -160,10 +198,12 @@ export const useDeployAssistantStore = create<DeployAssistantStoreState>((set) =
     set((state) => ({
       openServerId: serverId,
       draft: draft
-        ? { serverId, ...draft }
+        ? { serverId, context: draft.context }
         : state.draft?.serverId === serverId
           ? state.draft
           : null,
+      // A new "Diagnose with AI" puts its question in the box, over what was there.
+      ...(draft ? { prompts: { ...state.prompts, [serverId]: draft.prompt } } : {}),
     })),
   close: () => set({ openServerId: null }),
   pageServerId: null,
@@ -208,15 +248,7 @@ export const useDeployAssistantStore = create<DeployAssistantStoreState>((set) =
       return { runs: run ? { ...others, [serverId]: run } : others };
     }),
   progress: ({ serverId, progress }) =>
-    set((state) => {
-      const run = state.runs[serverId] ?? EMPTY_RUN;
-      return {
-        runs: {
-          ...state.runs,
-          [serverId]: { ...run, progress, steps: updateSteps(run.steps, progress) },
-        },
-      };
-    }),
+    set((state) => withProgress(state.runs, serverId, state.runs[serverId] ?? EMPTY_RUN, progress)),
   output: ({ serverId, command, lines }) =>
     set((state) => {
       const run = state.runs[serverId];
@@ -230,4 +262,32 @@ export const useDeployAssistantStore = create<DeployAssistantStoreState>((set) =
         },
       };
     }),
+  sync: (serverId, { running, progress }) =>
+    set((state) => {
+      const run = state.runs[serverId];
+      // While main runs, its events keep the run current; a reply older than them must not win.
+      if (running) {
+        return run || !progress ? state : withProgress(state.runs, serverId, EMPTY_RUN, progress);
+      }
+      if (!run) return progress ? withProgress(state.runs, serverId, EMPTY_RUN, progress) : state;
+      if (!run.progress || !isRunActive(run.progress)) return state;
+      const ended: SshAgentProgress = progress ?? {
+        sessionId: run.progress.sessionId,
+        phase: 'stopped',
+        step: run.progress.step,
+        message: GONE_MESSAGE,
+      };
+      return withProgress(state.runs, serverId, run, ended);
+    }),
 }));
+
+function withProgress(
+  runs: Record<string, AssistantRun>,
+  serverId: string,
+  run: AssistantRun,
+  progress: SshAgentProgress,
+): { runs: Record<string, AssistantRun> } {
+  return {
+    runs: { ...runs, [serverId]: { ...run, progress, steps: updateSteps(run.steps, progress) } },
+  };
+}

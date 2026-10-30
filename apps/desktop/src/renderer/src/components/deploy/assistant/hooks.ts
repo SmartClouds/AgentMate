@@ -7,7 +7,8 @@ import { useDeployAssistantStore } from '@/stores/deployAssistantStore';
 
 /**
  * The Deploy AI's live state in the renderer (E09 T8): the main process's progress and output
- * events go into the store once, for every server, while the Deploy page is open; the drawer reads
+ * events go into the store once, for every server, on every page (the app shell listens, so a run
+ * that goes on while the user is elsewhere is where it is when they come back); the drawer reads
  * the session's mode from the core (Admins only, so others see the drawer explain that).
  */
 

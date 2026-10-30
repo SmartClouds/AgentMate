@@ -3,6 +3,7 @@ import { act, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { progressEvent, runResult, SITE_ID } from '@/components/deploy/files/testing/fixtures';
 import { queryKeys } from '@/lib/queryKeys';
+import { useDeployAssistantStore } from '@/stores/deployAssistantStore';
 import { selectSiteRun, useDeployFilesRunStore } from '@/stores/deployFilesRunStore';
 import { useTerminalStore } from '@/stores/terminalStore';
 import { renderWithProviders } from '../../../../test/renderer/renderWithProviders';
@@ -148,6 +149,36 @@ describe('AppShell FTP and SFTP deploy runs', () => {
     expect(run.progress).toBeNull();
     expect(run.result?.state).toBe('done');
     expect(toast.success).toHaveBeenCalled();
+  });
+});
+
+/**
+ * The Deploy AI's run goes on in main while the user is on another page. Its steps used to be
+ * taken in by the Deploy page only, so coming back found the drawer stuck where it was left.
+ */
+describe('AppShell Deploy AI runs', () => {
+  it('takes in the steps and output of a run while no Deploy page is open', async () => {
+    useDeployAssistantStore.setState({ runs: {} });
+    const { bridge } = await renderShell('left', '/usage');
+    expect(bridge.$listenerCount('deployAssistant.onProgress')).toBe(1);
+    expect(bridge.$listenerCount('deployAssistant.onOutput')).toBe(1);
+
+    act(() =>
+      bridge.$emit('deployAssistant.onProgress', {
+        serverId: 'srv-1',
+        progress: { sessionId: 'deploy:srv-1', phase: 'running', step: 1, command: 'uptime' },
+      }),
+    );
+    act(() =>
+      bridge.$emit('deployAssistant.onOutput', {
+        serverId: 'srv-1',
+        command: 'uptime',
+        lines: [{ stream: 'out', text: 'up 3 days' }],
+      }),
+    );
+    const run = useDeployAssistantStore.getState().runs['srv-1'];
+    expect(run?.progress?.phase).toBe('running');
+    expect(run?.steps[0]?.lines).toEqual([{ stream: 'out', text: 'up 3 days' }]);
   });
 });
 

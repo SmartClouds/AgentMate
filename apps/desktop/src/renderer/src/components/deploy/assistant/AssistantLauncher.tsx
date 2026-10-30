@@ -5,14 +5,12 @@ import { Button } from '@/components/ui/button';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { useDeployAssistantStore } from '@/stores/deployAssistantStore';
 import { AssistantDrawer } from './AssistantDrawer';
-import { useDeployAssistantEvents } from './hooks';
 
 /**
  * The Deploy AI on every screen of a server (E09 T8). The page tells the top bar which server it
  * shows, so the Deploy AI button there (next to the terminal's) opens the drawer on it.
  */
 export function AssistantLauncher({ server }: { server: DeployServer }): React.JSX.Element {
-  useDeployAssistantEvents();
   const setPageServer = useDeployAssistantStore((state) => state.setPageServer);
 
   useEffect(() => {

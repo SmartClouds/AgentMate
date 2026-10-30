@@ -1,11 +1,13 @@
-import { act, fireEvent, screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { useState } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { SETTINGS_AI, useDeployAssistantStore } from '@/stores/deployAssistantStore';
+import { GONE_MESSAGE, SETTINGS_AI, useDeployAssistantStore } from '@/stores/deployAssistantStore';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
 import { SERVER, STEP_UP_REFUSAL } from '../overview/testing/fixtures';
 import { signedIn } from '../security/testing/fixtures';
 import { CONTINUE_PROMPT } from './AssistantComposer';
 import { AssistantLauncher, AssistantTopBarButton } from './AssistantLauncher';
+import { useDeployAssistantEvents } from './hooks';
 
 /**
  * The Deploy AI drawer: opened from the corner button or a problem, it shows the core's mode,
@@ -21,6 +23,23 @@ function Page() {
     <>
       <AssistantTopBarButton />
       <AssistantLauncher server={SERVER} />
+    </>
+  );
+}
+
+/**
+ * The app shell, which takes in the AI's events on every page, with the Deploy page in it until
+ * the user leaves for another page (and back again).
+ */
+function Shell() {
+  useDeployAssistantEvents();
+  const [onPage, setOnPage] = useState(true);
+  return (
+    <>
+      <button type="button" onClick={() => setOnPage((value) => !value)}>
+        {onPage ? 'Go to another page' : 'Back to Deploy'}
+      </button>
+      {onPage && <Page />}
     </>
   );
 }
@@ -49,6 +68,8 @@ beforeEach(() => {
     openServerId: null,
     pageServerId: null,
     draft: null,
+    prompts: {},
+    maximized: false,
     runs: {},
     ai: SETTINGS_AI,
     projects: {},
@@ -453,6 +474,157 @@ describe('AssistantDrawer', () => {
     act(() => useDeployAssistantStore.getState().open(SERVER.id));
     expect(await screen.findByRole('alert')).toHaveTextContent('only an Admin');
     expect(screen.getByRole('button', { name: 'Start' })).toBeDisabled();
+  });
+});
+
+/**
+ * Leaving the Deploy page unmounts the drawer, while the AI's run goes on in main. Coming back
+ * finds the drawer as it was left and the run where it is now.
+ */
+describe('AssistantDrawer after leaving the page', () => {
+  const LOG_PROMPT = 'Read this log and tell me what is going wrong.';
+  type User = ReturnType<typeof renderWithProviders>['user'];
+  const away = (user: User) =>
+    user.click(screen.getByRole('button', { name: 'Go to another page' }));
+  const back = (user: User) => user.click(screen.getByRole('button', { name: 'Back to Deploy' }));
+
+  it('stays maximized', async () => {
+    const { user } = renderWithProviders(<Shell />, { bridge: bridge() });
+    act(() => useDeployAssistantStore.getState().open(SERVER.id));
+    let drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    await user.click(within(drawer).getByRole('button', { name: 'Maximize' }));
+
+    await away(user);
+    expect(screen.queryByRole('complementary', { name: 'Deploy AI' })).not.toBeInTheDocument();
+    await back(user);
+    drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    expect(drawer).toHaveClass('w-[calc(100%-1rem)]');
+    expect(within(drawer).getByRole('button', { name: 'Restore size' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  it('does not put a question already sent back in the box', async () => {
+    const { user, bridge: fake } = renderWithProviders(<Shell />, { bridge: bridge() });
+    act(() =>
+      useDeployAssistantStore.getState().open(SERVER.id, {
+        prompt: LOG_PROMPT,
+        context: { title: 'Logs: api' },
+      }),
+    );
+    let drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    await within(drawer).findByRole('radio', { name: /Approve every command/ });
+    await user.click(within(drawer).getByRole('button', { name: 'Start' }));
+    expect(fake.$fn('deployAssistant.start')).toHaveBeenCalledWith(
+      expect.objectContaining({ prompt: LOG_PROMPT }),
+    );
+    expect(within(drawer).getByLabelText('What should the AI look into?')).toHaveValue('');
+
+    await away(user);
+    await back(user);
+    drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    expect(within(drawer).getByLabelText('What should the AI look into?')).toHaveValue('');
+    // What the AI was pointed at still goes with the next question.
+    expect(within(drawer).getByLabelText('Context')).toHaveTextContent('Logs: api');
+  });
+
+  it('keeps what was typed and not sent yet', async () => {
+    const { user } = renderWithProviders(<Shell />, { bridge: bridge() });
+    act(() => useDeployAssistantStore.getState().open(SERVER.id));
+    let drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    await within(drawer).findByRole('radio', { name: /Approve every command/ });
+    await user.type(within(drawer).getByLabelText('What should the AI look into?'), 'Check nginx');
+
+    await away(user);
+    await back(user);
+    drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    expect(within(drawer).getByLabelText('What should the AI look into?')).toHaveValue(
+      'Check nginx',
+    );
+  });
+
+  it('follows the run while another page is open', async () => {
+    const { user, bridge: fake } = renderWithProviders(<Shell />, {
+      bridge: bridge({
+        'deployAssistant.state': { running: true, progress: null, context: null, history: [] },
+      }),
+    });
+    act(() => useDeployAssistantStore.getState().open(SERVER.id));
+    await screen.findByRole('complementary', { name: 'Deploy AI' });
+    progress('running', { command: 'uptime' });
+
+    await away(user);
+    act(() => {
+      fake.$emit('deployAssistant.onOutput', {
+        serverId: SERVER.id,
+        command: 'uptime',
+        lines: [{ stream: 'out', text: 'up 3 days' }],
+      });
+      fake.$emit('deployAssistant.onProgress', {
+        serverId: SERVER.id,
+        progress: { sessionId: KEY, phase: 'thinking', step: 2 },
+      });
+      fake.$emit('deployAssistant.onProgress', {
+        serverId: SERVER.id,
+        progress: { sessionId: KEY, phase: 'proposed', step: 2, command: 'df -h' },
+      });
+    });
+    await back(user);
+
+    await screen.findByRole('complementary', { name: 'Deploy AI' });
+    expect(screen.getByRole('listitem', { name: 'Step 1: uptime' })).toHaveTextContent('Done');
+    expect(useDeployAssistantStore.getState().runs[SERVER.id]?.steps[0]?.lines).toEqual([
+      { stream: 'out', text: 'up 3 days' },
+    ]);
+    expect(screen.getByRole('group', { name: 'Approve the command' })).toHaveTextContent('df -h');
+    await user.click(screen.getByRole('button', { name: 'Run it' }));
+    expect(fake.$fn('deployAssistant.approve')).toHaveBeenCalledWith(SERVER.id);
+  });
+
+  it('ends a run that ended in main while nothing was listening', async () => {
+    progress('running', { command: 'uptime' });
+    renderWithProviders(<Page />, {
+      bridge: bridge({
+        'deployAssistant.state': {
+          running: false,
+          progress: { sessionId: KEY, phase: 'finished', step: 1, message: 'nginx is back.' },
+          context: null,
+          history: [],
+        },
+      }),
+    });
+    act(() => useDeployAssistantStore.getState().open(SERVER.id));
+
+    expect(await screen.findByLabelText('Ask a follow-up')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Finished: nginx is back.');
+    expect(screen.queryByRole('button', { name: 'Stop' })).not.toBeInTheDocument();
+  });
+
+  it('stops a run on screen that main had already ended', async () => {
+    const { user, bridge: fake } = renderWithProviders(<Page />, {
+      bridge: bridge({
+        'deployAssistant.state': { running: true, progress: null, context: null, history: [] },
+      }),
+    });
+    act(() => useDeployAssistantStore.getState().open(SERVER.id));
+    await screen.findByRole('complementary', { name: 'Deploy AI' });
+    await waitFor(() => expect(fake.$fn('deployAssistant.state')).toHaveBeenCalled());
+    progress('running', { command: 'uptime' });
+
+    // Main has no run any more, so it ignores the stop and sends nothing back.
+    fake.$set('deployAssistant.state', {
+      running: false,
+      progress: null,
+      context: null,
+      history: [],
+    });
+    await user.click(screen.getAllByRole('button', { name: 'Stop' })[0] as HTMLElement);
+    expect(fake.$fn('deployAssistant.stop')).toHaveBeenCalledWith(SERVER.id);
+
+    expect(await screen.findByLabelText('Ask a follow-up')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(GONE_MESSAGE);
+    expect(screen.queryByRole('button', { name: 'Stop' })).not.toBeInTheDocument();
   });
 });
 

@@ -107,9 +107,9 @@ describe('ProblemsFeed', () => {
 
     const state = useDeployAssistantStore.getState();
     expect(state.openServerId).toBe(SERVER.id);
+    expect(state.prompts[SERVER.id]).toContain('keeps restarting');
     expect(state.draft).toMatchObject({
       serverId: SERVER.id,
-      prompt: expect.stringContaining('keeps restarting'),
       context: {
         title: 'Crash loop: shop-worker-1 keeps restarting',
         containerId: expect.any(String),

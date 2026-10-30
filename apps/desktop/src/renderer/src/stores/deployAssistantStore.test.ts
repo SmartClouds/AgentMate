@@ -1,6 +1,6 @@
 import type { SshAgentProgress } from '@shared/apiTypes';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { useDeployAssistantStore } from './deployAssistantStore';
+import { GONE_MESSAGE, useDeployAssistantStore } from './deployAssistantStore';
 
 /** The drawer's timeline as progress events and output arrive, for one server. */
 
@@ -19,7 +19,13 @@ function progress(
 const steps = () => useDeployAssistantStore.getState().runs[S]?.steps ?? [];
 
 beforeEach(() => {
-  useDeployAssistantStore.setState({ openServerId: null, draft: null, runs: {} });
+  useDeployAssistantStore.setState({
+    openServerId: null,
+    draft: null,
+    runs: {},
+    prompts: {},
+    maximized: false,
+  });
 });
 
 describe('deployAssistantStore', () => {
@@ -28,12 +34,13 @@ describe('deployAssistantStore', () => {
     store.open(S, { prompt: 'Why?', context: { title: 'Crash loop' } });
     expect(useDeployAssistantStore.getState().draft).toEqual({
       serverId: S,
-      prompt: 'Why?',
       context: { title: 'Crash loop' },
     });
+    // The question goes in the box, where the user may change or send it.
+    expect(useDeployAssistantStore.getState().prompts[S]).toBe('Why?');
     store.close();
     store.open(S);
-    expect(useDeployAssistantStore.getState().draft?.prompt).toBe('Why?');
+    expect(useDeployAssistantStore.getState().draft?.context.title).toBe('Crash loop');
     store.open('other');
     expect(useDeployAssistantStore.getState().draft).toBeNull();
     expect(useDeployAssistantStore.getState().openServerId).toBe('other');
@@ -127,5 +134,85 @@ describe('deployAssistantStore', () => {
     store.followUp(S, 'Carry on');
     expect(run()?.messages).toEqual([]);
     expect(run()?.earlier[0]?.messages).toHaveLength(2);
+  });
+
+  it('keeps the box per server, and a new question replaces only that one', () => {
+    const store = useDeployAssistantStore.getState();
+    store.setPrompt(S, 'Half typed');
+    store.setPrompt('other', 'Elsewhere');
+    // Opening without a draft, as the top bar button does, leaves the box alone.
+    store.open(S);
+    expect(useDeployAssistantStore.getState().prompts[S]).toBe('Half typed');
+    store.open(S, { prompt: 'Read this log.', context: { title: 'Logs: api' } });
+    expect(useDeployAssistantStore.getState().prompts).toEqual({
+      [S]: 'Read this log.',
+      other: 'Elsewhere',
+    });
+    // A sent prompt is cleared, and clearing the context does not bring it back.
+    store.setPrompt(S, '');
+    store.clearDraft();
+    store.open(S);
+    expect(useDeployAssistantStore.getState().prompts[S]).toBe('');
+  });
+
+  it('keeps the drawer maximized until the user restores it', () => {
+    const store = useDeployAssistantStore.getState();
+    store.setMaximized(true);
+    store.close();
+    store.open(S);
+    expect(useDeployAssistantStore.getState().maximized).toBe(true);
+    store.setMaximized(false);
+    expect(useDeployAssistantStore.getState().maximized).toBe(false);
+  });
+
+  describe('sync', () => {
+    const run = () => useDeployAssistantStore.getState().runs[S];
+    const state = (running: boolean, last: SshAgentProgress | null) => ({
+      running,
+      progress: last,
+      context: null,
+      history: [],
+    });
+    const at = (phase: SshAgentProgress['phase'], step: number, extra = {}) => ({
+      sessionId: `deploy:${S}`,
+      phase,
+      step,
+      ...extra,
+    });
+
+    it('picks up a run main has when there is none here', () => {
+      useDeployAssistantStore.getState().sync(S, state(true, at('needs-input', 2)));
+      expect(run()?.progress?.phase).toBe('needs-input');
+    });
+
+    it('leaves a run alone while main is still running it', () => {
+      progress('running', 3, { command: 'uptime' });
+      // An older word from main must not win over the events that came after it.
+      useDeployAssistantStore.getState().sync(S, state(true, at('thinking', 2)));
+      expect(run()?.progress?.phase).toBe('running');
+      expect(steps().map((s) => s.status)).toEqual(['running']);
+    });
+
+    it('ends a run here that ended in main while nothing was listening', () => {
+      progress('running', 3, { command: 'uptime' });
+      useDeployAssistantStore
+        .getState()
+        .sync(S, state(false, at('finished', 3, { message: 'All good.' })));
+      expect(run()?.progress?.phase).toBe('finished');
+      expect(steps().map((s) => s.status)).toEqual(['done']);
+    });
+
+    it('ends a run main has no word on any more as stopped', () => {
+      progress('proposed', 1, { command: 'df -h' });
+      useDeployAssistantStore.getState().sync(S, state(false, null));
+      expect(run()?.progress).toMatchObject({ phase: 'stopped', message: GONE_MESSAGE });
+    });
+
+    it('does not touch a run that is already over', () => {
+      progress('stopped', 1, { message: 'Stopped by user.' });
+      const before = run();
+      useDeployAssistantStore.getState().sync(S, state(false, null));
+      expect(run()).toBe(before);
+    });
   });
 });
