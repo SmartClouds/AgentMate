@@ -1,9 +1,9 @@
 import { execFile } from 'node:child_process';
-import { readdir, readFile, readlink } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import os from 'node:os';
 import { basename } from 'node:path';
 import { promisify } from 'node:util';
-import { app, ipcMain } from 'electron';
+import { ipcMain } from 'electron';
 import type {
   DiskUsage,
   KillProcessResult,
@@ -15,6 +15,7 @@ import type {
 import { IPC } from '../../shared/ipcChannels';
 import { probeAll } from '../network/pingProbe';
 import { store } from '../store';
+import { iconsForApps } from '../system/appIcons';
 import { readCpuArch } from '../system/cpuArch';
 import { sampleGpus } from '../system/gpuStats';
 import { sampleMemory } from '../system/memoryStats';
@@ -307,6 +308,9 @@ function cleanProcessName(raw: string): string {
   return noPath.replace(/#\d+$/, '').replace(/\.exe$/i, '');
 }
 
+/** A row of the list before its icon is added, with every pid it groups so one with a readable exe can be found. */
+type GroupedApp = TopResourceApp & { pids: number[] };
+
 function aggregateTopApps(
   rows: {
     pid: number;
@@ -316,7 +320,7 @@ function aggregateTopApps(
     rateBytesPerSec?: number;
   }[],
   sortBy: 'percent' | 'mem' | 'rate' = 'percent',
-): TopResourceApp[] {
+): GroupedApp[] {
   const byName = new Map<
     string,
     {
@@ -327,6 +331,7 @@ function aggregateTopApps(
       memBytes?: number;
       rateBytesPerSec?: number;
       maxWeight: number;
+      members: { pid: number; weight: number }[];
     }
   >();
   for (const row of rows) {
@@ -353,11 +358,13 @@ function aggregateTopApps(
         memBytes: row.memBytes,
         rateBytesPerSec: row.rateBytesPerSec,
         maxWeight: weight,
+        members: [{ pid: row.pid, weight }],
       });
       continue;
     }
     existing.percent += percent;
     existing.processCount += 1;
+    existing.members.push({ pid: row.pid, weight });
     if (row.memBytes != null) existing.memBytes = (existing.memBytes ?? 0) + row.memBytes;
     if (row.rateBytesPerSec != null) {
       existing.rateBytesPerSec = (existing.rateBytesPerSec ?? 0) + row.rateBytesPerSec;
@@ -377,59 +384,22 @@ function aggregateTopApps(
     if (sortBy === 'rate') return (b.rateBytesPerSec ?? 0) - (a.rateBytesPerSec ?? 0);
     return b.percent - a.percent || (b.memBytes ?? 0) - (a.memBytes ?? 0);
   });
-  return list.slice(0, TOP_APPS_LIMIT).map(({ maxWeight: _maxWeight, ...app }) => app);
+  return list.slice(0, TOP_APPS_LIMIT).map(({ maxWeight: _maxWeight, members, ...app }) => ({
+    ...app,
+    pids: members.sort((a, b) => b.weight - a.weight).map((member) => member.pid),
+  }));
 }
-
-const iconCache = new Map<string, string>();
 
 function isSafePid(pid: number): boolean {
   return Number.isInteger(pid) && pid > 0 && pid < 2 ** 32;
 }
 
-async function exePathForPid(pid: number): Promise<string | undefined> {
-  if (!isSafePid(pid)) return undefined;
-  try {
-    if (process.platform === 'win32') {
-      const parsed = await runPowerShellJson<{ path?: string | null }>(
-        `$p = Get-Process -Id ${pid} -ErrorAction SilentlyContinue; if ($p -and $p.Path) { @{ path = $p.Path } | ConvertTo-Json -Compress } else { '{}' }`,
-      );
-      return parsed?.path || undefined;
-    }
-    if (process.platform === 'linux') {
-      return await readlink(`/proc/${pid}/exe`);
-    }
-    const { stdout } = await execFileAsync('ps', ['-p', String(pid), '-o', 'comm='], {
-      timeout: 2000,
-    });
-    const comm = stdout.trim();
-    return comm.startsWith('/') ? comm : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-async function iconForPath(exePath: string): Promise<string | undefined> {
-  const key = exePath.toLowerCase();
-  const cached = iconCache.get(key);
-  if (cached) return cached;
-  try {
-    const image = await app.getFileIcon(exePath, { size: 'small' });
-    const url = image.toDataURL();
-    iconCache.set(key, url);
-    return url;
-  } catch {
-    return undefined;
-  }
-}
-
-async function withAppIcons(apps: TopResourceApp[]): Promise<TopResourceApp[]> {
-  return Promise.all(
-    apps.map(async (app) => {
-      const exePath = await exePathForPid(app.pid);
-      const iconDataUrl = exePath ? await iconForPath(exePath) : undefined;
-      return iconDataUrl ? { ...app, iconDataUrl } : app;
-    }),
-  );
+async function withAppIcons(apps: GroupedApp[]): Promise<TopResourceApp[]> {
+  const icons = await iconsForApps(apps.map(({ name, pids }) => ({ name, pids })));
+  return apps.map(({ pids: _pids, ...app }, i) => {
+    const iconDataUrl = icons[i];
+    return iconDataUrl ? { ...app, iconDataUrl } : app;
+  });
 }
 
 const WIN_CPU_PROCESS_SCRIPT = `
