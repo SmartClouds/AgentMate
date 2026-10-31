@@ -3,7 +3,10 @@ import type {
   PackageManagerSection,
   PackageUpdateRequest,
   PackageUpdateResult,
+  RuntimeUpdateRequest,
+  RuntimeUpdateResult,
 } from '../../shared/apiTypes';
+import type { RuntimeUpdateDeps } from './runtimeUpdate';
 
 export interface UpdateProgressTick {
   packageName: string;
@@ -24,4 +27,10 @@ export interface PackageManagerAdapter {
     updates: PackageUpdateRequest[],
     onProgress: (tick: UpdateProgressTick) => void,
   ): Promise<PackageUpdateResult>;
+  /** Moves one runtime target (an SDK constraint, a target framework, a pin) to its latest version. */
+  updateRuntime(
+    folderPath: string,
+    request: RuntimeUpdateRequest,
+    deps: RuntimeUpdateDeps,
+  ): Promise<RuntimeUpdateResult>;
 }

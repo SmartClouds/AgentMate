@@ -63,6 +63,8 @@ export const queryKeys = {
   /** One source's check. The round goes up when the person presses Check again, which forces it. */
   devSetupUpdatesFor: (source: string, ids: readonly string[], round: number) =>
     ['dev-setup', 'updates', source, ids.join(','), round] as const,
+  /** One tool's check, asked by the project Packages tab. Under the prefix so Dev Setup refreshes it. */
+  devSetupUpdateOne: (id: string) => ['dev-setup', 'updates', 'one', id] as const,
   /** An update handed to a terminal, looked at every few seconds until it lands. */
   devSetupUpdateWait: (id: string) => ['dev-setup', 'update-wait', id] as const,
   /** What the nav badge reads: remembered results only, never a probe. */

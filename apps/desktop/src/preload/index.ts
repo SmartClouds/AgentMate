@@ -277,6 +277,8 @@ import type {
   RunSetupSession,
   RunSkillAuditInput,
   RunSkillAuditResult,
+  RuntimeUpdateRequest,
+  RuntimeUpdateResult,
   SaveBlueprintPresetInput,
   SaveEnvCredentialInput,
   SaveEnvFileInput,
@@ -2424,6 +2426,8 @@ const packages = {
     ipcRenderer.invoke(IPC.packages.list, projectId),
   update: (projectId: string, updates: PackageUpdateRequest[]): Promise<PackageUpdateResult> =>
     ipcRenderer.invoke(IPC.packages.update, projectId, updates),
+  updateRuntime: (projectId: string, request: RuntimeUpdateRequest): Promise<RuntimeUpdateResult> =>
+    ipcRenderer.invoke(IPC.packages.updateRuntime, projectId, request),
   onUpdateProgress: (cb: (progress: PackageUpdateProgress) => void): (() => void) =>
     subscribe(IPC.packages.onUpdateProgress, cb),
 };

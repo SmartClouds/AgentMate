@@ -8,9 +8,27 @@ import type {
   PackageUpdateItemResult,
   PackageUpdateRequest,
   PackageUpdateResult,
+  RuntimeTarget,
+  RuntimeUpdateRequest,
+  RuntimeUpdateResult,
 } from '../../shared/apiTypes';
 import { stripAnsi } from '../process/spawnStreaming';
 import { CliNotFoundError, mapWithConcurrency, runCli, tryParseJson } from './execUtils';
+import { fetchLatestFromRegistry, runtimeFeeds } from './runtimeFeeds';
+import {
+  lowerBound,
+  parsePackageManagerPin,
+  parseSimpleRange,
+  rewriteEngine,
+  rewritePackageManager,
+  samePrecision,
+} from './runtimeTargets';
+import {
+  applyRuntimeUpdate,
+  type RuntimeCandidate,
+  type RuntimeUpdateDeps,
+  runtimeCandidate,
+} from './runtimeUpdate';
 import type { PackageManagerAdapter, UpdateProgressTick } from './types';
 
 const REGISTRY_TIMEOUT_MS = 8000;
@@ -32,6 +50,8 @@ interface PackageJsonShape {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   workspaces?: unknown;
+  packageManager?: unknown;
+  engines?: Record<string, unknown>;
 }
 
 interface DeclaredDep {
@@ -207,19 +227,6 @@ async function runOutdated(
   }
 }
 
-async function fetchLatestFromRegistry(name: string): Promise<string | null> {
-  try {
-    const res = await fetch(`https://registry.npmjs.org/${encodeURIComponent(name)}/latest`, {
-      signal: AbortSignal.timeout(REGISTRY_TIMEOUT_MS),
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { version?: string };
-    return data.version ?? null;
-  } catch {
-    return null;
-  }
-}
-
 async function detect(folderPath: string): Promise<boolean> {
   const manifests = await findPackageJsonFiles(folderPath);
   return manifests.length > 0;
@@ -235,11 +242,67 @@ function labelForManifest(
   return rel === '' ? basename(rootFolder) : rel;
 }
 
+/**
+ * The runtime a package.json pins: its `packageManager` (bun, pnpm or npm; Yarn's modern releases
+ * are not the `yarn` npm package, so there is nothing to compare a yarn pin with) and its
+ * `engines.node` / `engines.bun` ranges.
+ */
+async function runtimeCandidatesFor(
+  manifestPath: string,
+  pkgJson: PackageJsonShape,
+  projectLabel: string,
+): Promise<RuntimeCandidate[]> {
+  const candidates: RuntimeCandidate[] = [];
+  const base = { manifestPath, projectLabel, requires: null };
+
+  const pin = parsePackageManagerPin(pkgJson.packageManager);
+  if (pin && pin.kind !== 'yarn') {
+    const kind = pin.kind;
+    candidates.push(
+      runtimeCandidate({
+        ...base,
+        kind,
+        source: 'packageManager',
+        declared: String(pkgJson.packageManager),
+        currentVersion: pin.version,
+        latestVersion: await runtimeFeeds.npmPackage(kind),
+        next: (latest) => `${kind}@${latest}`,
+        rewrite: rewritePackageManager,
+      }),
+    );
+  }
+
+  for (const engine of ['node', 'bun'] as const) {
+    const range = pkgJson.engines?.[engine];
+    if (typeof range !== 'string') continue;
+    const simple = parseSimpleRange(range);
+    const currentVersion = simple?.version ?? lowerBound(range);
+    if (!currentVersion) continue;
+    candidates.push(
+      runtimeCandidate({
+        ...base,
+        kind: engine,
+        source: 'engines',
+        declared: range,
+        currentVersion,
+        latestVersion:
+          engine === 'node' ? await runtimeFeeds.nodeLts() : await runtimeFeeds.npmPackage('bun'),
+        next: simple
+          ? (latest) => `${simple.operator}${samePrecision(latest, simple.version)}`
+          : null,
+        rewrite: (source, value) => rewriteEngine(source, engine, value),
+      }),
+    );
+  }
+  return candidates;
+}
+
 interface ProjectScanOutcome {
   manager: PackageManagerKind;
   status: 'ok' | 'cli-missing' | 'error';
   message: string | null;
   packages: PackageInfo[];
+  runtimes: RuntimeTarget[];
 }
 
 async function listPackagesForManifest(
@@ -250,7 +313,13 @@ async function listPackagesForManifest(
   const manager = detectManager(folderPath, rootFolder);
   const pkgJson = await readPackageJson(manifestPath);
   if (!pkgJson) {
-    return { manager, status: 'error', message: `Failed to read ${manifestPath}`, packages: [] };
+    return {
+      manager,
+      status: 'error',
+      message: `Failed to read ${manifestPath}`,
+      packages: [],
+      runtimes: [],
+    };
   }
 
   const declared: DeclaredDep[] = [
@@ -258,6 +327,10 @@ async function listPackagesForManifest(
     ...Object.keys(pkgJson.devDependencies ?? {}).map((name) => ({ name, isDev: true })),
   ];
   const projectLabel = labelForManifest(rootFolder, manifestPath, pkgJson);
+  // Listed even when the manager is missing: the runtime rows are where that gets fixed.
+  const runtimes = (await runtimeCandidatesFor(manifestPath, pkgJson, projectLabel)).map(
+    (c) => c.target,
+  );
 
   let outdated: Record<string, OutdatedEntry> | null;
   try {
@@ -269,6 +342,7 @@ async function listPackagesForManifest(
         status: 'cli-missing',
         message: `Install ${manager} to manage packages for ${projectLabel}.`,
         packages: [],
+        runtimes,
       };
     }
     outdated = null;
@@ -288,7 +362,7 @@ async function listPackagesForManifest(
       // happens to share its name would show up as a bogus update.
       const isLocal = /^(workspace|file|link|portal):/.test(declaredRange ?? '');
       if (latestVersion === null && needsFallback && !isLocal) {
-        latestVersion = await fetchLatestFromRegistry(dep.name);
+        latestVersion = await fetchLatestFromRegistry(dep.name, REGISTRY_TIMEOUT_MS);
       }
       const isOutdated = latestVersion !== null && latestVersion !== currentVersion;
       return {
@@ -304,7 +378,7 @@ async function listPackagesForManifest(
     },
   );
 
-  return { manager, status: 'ok', message: null, packages };
+  return { manager, status: 'ok', message: null, packages, runtimes };
 }
 
 function sectionFor(
@@ -313,17 +387,17 @@ function sectionFor(
 ): PackageManagerSection {
   const packages = outcomes.flatMap((o) => o.packages);
   const errored = outcomes.filter((o) => o.status !== 'ok');
+  const base = {
+    ecosystem: 'node',
+    manager,
+    runtimes: outcomes.flatMap((o) => o.runtimes),
+    toolchain: toolchainFor(manager),
+  } as const;
 
   if (packages.length === 0 && errored.length > 0) {
     const cliMissing = errored.find((o) => o.status === 'cli-missing');
     const first = cliMissing ?? errored[0];
-    return {
-      ecosystem: 'node',
-      manager,
-      status: first.status,
-      message: first.message,
-      packages: [],
-    };
+    return { ...base, status: first.status, message: first.message, packages: [] };
   }
 
   const message =
@@ -331,7 +405,12 @@ function sectionFor(
       ? `${errored.length} of ${outcomes.length} sub-project${outcomes.length === 1 ? '' : 's'} failed to scan.`
       : null;
 
-  return { ecosystem: 'node', manager, status: 'ok', message, packages };
+  return { ...base, status: 'ok', message, packages };
+}
+
+/** Bun is its own runtime; npm, pnpm and Yarn all run on Node. */
+function toolchainFor(manager: PackageManagerKind): string {
+  return manager === 'bun' ? 'bun' : 'node';
 }
 
 /**
@@ -342,13 +421,16 @@ function sectionFor(
 async function listPackages(folderPath: string): Promise<PackageManagerSection[]> {
   const manifests = await findPackageJsonFiles(folderPath);
   if (manifests.length === 0) {
+    const manager = detectManager(folderPath);
     return [
       {
         ecosystem: 'node',
-        manager: detectManager(folderPath),
+        manager,
         status: 'ok',
         message: null,
         packages: [],
+        runtimes: [],
+        toolchain: toolchainFor(manager),
       },
     ];
   }
@@ -424,9 +506,25 @@ async function updatePackages(
   return { ok, results };
 }
 
+async function updateRuntime(
+  folderPath: string,
+  request: RuntimeUpdateRequest,
+  deps: RuntimeUpdateDeps,
+): Promise<RuntimeUpdateResult> {
+  const pkgJson = await readPackageJson(request.manifestPath);
+  if (!pkgJson) return { ok: false, message: `Failed to read ${request.manifestPath}.` };
+  const label = labelForManifest(folderPath, request.manifestPath, pkgJson);
+  return applyRuntimeUpdate(
+    request,
+    await runtimeCandidatesFor(request.manifestPath, pkgJson, label),
+    deps,
+  );
+}
+
 export const nodeAdapter: PackageManagerAdapter = {
   ecosystem: 'node',
   detect,
   listPackages,
   updatePackages,
+  updateRuntime,
 };

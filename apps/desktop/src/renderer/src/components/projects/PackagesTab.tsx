@@ -25,7 +25,9 @@ import {
   buildPackageNames,
   buildPackageUpdatePrompt,
   bumpKind,
+  outdatedRuntimes,
 } from '@/components/projects/packagesCopy';
+import { RuntimeBlock } from '@/components/projects/RuntimeBlock';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -355,7 +357,12 @@ function PackagesCopyMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5" disabled={targets.length === 0}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          disabled={targets.length === 0 && outdatedRuntimes(section).length === 0}
+        >
           <Copy className="h-3.5 w-3.5" />
           Copy
           <ChevronDown className="h-3 w-3" />
@@ -481,6 +488,7 @@ export function PackagesTab({ project }: { project: Project }): React.JSX.Elemen
     for (const section of sections) {
       packageCount += section.packages.length;
       outdatedCount += section.packages.filter((pkg) => pkg.isOutdated).length;
+      outdatedCount += outdatedRuntimes(section).length;
     }
     return { packageCount, outdatedCount };
   }, [sections]);
@@ -648,14 +656,18 @@ export function PackagesTab({ project }: { project: Project }): React.JSX.Elemen
           selected.has(packageKey(pkg)),
         );
         const groups = groupPackagesByProject(visiblePackages);
-        const outdatedInSection = section.packages.filter((pkg) => pkg.isOutdated).length;
+        const runtimesOutdated = outdatedRuntimes(section).length;
+        const outdatedInSection =
+          section.packages.filter((pkg) => pkg.isOutdated).length + runtimesOutdated;
+        const showRuntimes = !search && filter !== 'dev';
         const updatingThisSection =
           updateMutation.isPending && updatingSectionKey === sectionKey(section);
 
         if (
           (filter !== 'all' || search) &&
           visiblePackages.length === 0 &&
-          section.status === 'ok'
+          section.status === 'ok' &&
+          !(showRuntimes && filter === 'outdated' && runtimesOutdated > 0)
         ) {
           return null;
         }
@@ -692,7 +704,7 @@ export function PackagesTab({ project }: { project: Project }): React.JSX.Elemen
                     )}
                     {section.status === 'ok' &&
                       outdatedInSection === 0 &&
-                      section.packages.length > 0 && (
+                      (section.packages.length > 0 || section.runtimes.length > 0) && (
                         <Badge variant="success" className="gap-1">
                           <Check className="h-3 w-3" /> Up to date
                         </Badge>
@@ -709,7 +721,7 @@ export function PackagesTab({ project }: { project: Project }): React.JSX.Elemen
                   )}
                 </div>
               </div>
-              {section.status === 'ok' && section.packages.length > 0 && (
+              {section.status === 'ok' && (section.packages.length > 0 || runtimesOutdated > 0) && (
                 <div className="flex items-center gap-2">
                   <PackagesCopyMenu section={section} selectedPackages={sectionSelected} />
                   <Button
@@ -738,6 +750,14 @@ export function PackagesTab({ project }: { project: Project }): React.JSX.Elemen
                 </div>
               )}
             </div>
+
+            {showRuntimes && (
+              <RuntimeBlock
+                projectId={projectId}
+                section={section}
+                onlyOutdated={filter === 'outdated'}
+              />
+            )}
 
             {section.status === 'cli-missing' && (
               <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm">

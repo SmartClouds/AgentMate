@@ -246,6 +246,15 @@ describe('updateQueryFor', () => {
     expect(updateQueryFor(item('flutter'), win)).toEqual({ source: 'flutter' });
   });
 
+  it('asks winget about Bun on Windows and the npm registry elsewhere', () => {
+    expect(updateQueryFor(item('bun'), win)).toEqual({ source: 'winget', id: 'Oven-sh.Bun' });
+    expect(updateQueryFor(item('bun'), mac)).toEqual({ source: 'npm', package: 'bun' });
+    expect(updateQueryFor(item('bun'), linux(['apt-get']))).toEqual({
+      source: 'npm',
+      package: 'bun',
+    });
+  });
+
   it('names the sdkmanager package for the CPU, and skips what cannot be updated that way', () => {
     expect(updateQueryFor(item('android-platform-tools'), win)).toEqual({
       source: 'sdkmanager',

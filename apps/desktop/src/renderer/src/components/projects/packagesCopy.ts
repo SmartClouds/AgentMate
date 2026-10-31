@@ -1,4 +1,4 @@
-import type { PackageInfo, PackageManagerSection } from '@shared/apiTypes';
+import type { PackageInfo, PackageManagerSection, RuntimeTarget } from '@shared/apiTypes';
 
 export type BumpKind = 'major' | 'minor' | 'patch';
 
@@ -41,6 +41,38 @@ function installHint(section: PackageManagerSection): string {
   return 'npm install <name>@<version> (add -D for dev dependencies)';
 }
 
+const RUNTIME_NAMES: Record<RuntimeTarget['kind'], string> = {
+  bun: 'Bun',
+  node: 'Node.js',
+  pnpm: 'pnpm',
+  npm: 'npm',
+  yarn: 'Yarn',
+  dotnet: '.NET',
+  dart: 'Dart SDK',
+  flutter: 'Flutter SDK',
+};
+
+/** What a runtime row is called: "Dart SDK", ".NET target framework", "Bun (packageManager)". */
+export function runtimeLabel(target: RuntimeTarget): string {
+  switch (target.source) {
+    case 'target-framework':
+      return '.NET target framework';
+    case 'global-json':
+      return '.NET SDK (global.json)';
+    case 'packageManager':
+      return `${RUNTIME_NAMES[target.kind]} (packageManager)`;
+    case 'engines':
+      return `${RUNTIME_NAMES[target.kind]} (engines)`;
+    default:
+      return RUNTIME_NAMES[target.kind];
+  }
+}
+
+/** The runtime targets that have a newer version, the ones an update or the prompt is about. */
+export function outdatedRuntimes(section: PackageManagerSection): RuntimeTarget[] {
+  return section.runtimes.filter((target) => target.isOutdated && target.latestVersion);
+}
+
 /** Unique names in display order, one per line. */
 export function buildPackageNames(packages: PackageInfo[]): string {
   const names = [...new Set(packages.map((pkg) => pkg.name))].sort((a, b) => a.localeCompare(b));
@@ -58,6 +90,37 @@ export interface PackageUpdatePromptOptions {
   commit?: PackageCommitMode;
   /** Free text from the user, added as is. */
   notes?: string;
+  /** Put the section's outdated runtime targets in the prompt too. On unless turned off. */
+  includeRuntimes?: boolean;
+}
+
+function runtimeLine(target: RuntimeTarget): string {
+  const to =
+    target.nextDeclared ??
+    `${target.latestVersion} (write it in the same style as the current value)`;
+  return `- ${runtimeLabel(target)} in ${target.projectLabel} (${target.manifestPath}): ${target.declared} -> ${to}`;
+}
+
+/** The step that tells the agent how to go about a runtime move, per kind of runtime. */
+function runtimeStep(runtimes: RuntimeTarget[]): string {
+  const notes: string[] = [];
+  if (runtimes.some((t) => t.source === 'target-framework' || t.source === 'global-json')) {
+    notes.push(
+      'for .NET, move the Microsoft.* and System.* packages that follow the framework to the matching major version in the same change, and make sure global.json (if any) allows an SDK that can build the new target',
+    );
+  }
+  if (runtimes.some((t) => t.kind === 'dart' || t.kind === 'flutter')) {
+    notes.push(
+      'for Dart and Flutter, run pub get and dart analyze, and fix the language and API changes the new SDK reports',
+    );
+  }
+  if (runtimes.some((t) => t.source === 'packageManager' || t.source === 'engines')) {
+    notes.push(
+      'for the JavaScript runtime, reinstall so the lockfile is written by the new version',
+    );
+  }
+  const howTo = notes.length > 0 ? ` In particular, ${notes.join('; ')}.` : '';
+  return `Start with the runtime, before any package. Change the values listed under Runtime, make sure the installed toolchain is at least that new (upgrade it first if not), and read the release notes or migration guide for the versions in between.${howTo}`;
 }
 
 /** The packages the prompt would list, after the options have had their say. */
@@ -117,15 +180,22 @@ export function buildPackageUpdatePrompt(
   }
 
   const count = packages.length;
+  const runtimes = options.includeRuntimes === false ? [] : outdatedRuntimes(section);
+  const runtimeNames = [...new Set(runtimes.map(runtimeLabel))].join(', ');
   const steps = [
-    `Update each package with ${manager}, for example: ${installHint(section)}. Keep the existing version range style (^, ~, exact) in the manifest.`,
+    runtimes.length > 0 ? runtimeStep(runtimes) : null,
+    count > 0
+      ? `Update each package with ${manager}, for example: ${installHint(section)}. Keep the existing version range style (^, ~, exact) in the manifest.`
+      : null,
     majorCount > 0
       ? `${majorCount} of these ${majorCount === 1 ? 'is a major bump' : 'are major bumps'}. Before updating those, read the changelog or migration guide and fix any breaking changes in the code.`
       : null,
     skippedMajor > 0
       ? `Leave major version bumps alone this time. ${skippedMajor} outdated package${skippedMajor === 1 ? ' was' : 's were'} left off the list for that reason.`
       : null,
-    'Only touch the packages listed here. If one package forces another to move (peer dependencies, shared versions), say so and explain why.',
+    runtimes.length > 0
+      ? 'Only touch what is listed here and what the runtime move itself needs. If something forces another package to move (peer dependencies, shared versions), say so and explain why.'
+      : 'Only touch the packages listed here. If one package forces another to move (peer dependencies, shared versions), say so and explain why.',
     options.runChecks === false
       ? null
       : 'After updating, run the typecheck, lint, tests, and build the project already uses, and fix anything that breaks.',
@@ -134,12 +204,19 @@ export function buildPackageUpdatePrompt(
   ].filter((step): step is string => step !== null);
 
   const notes = options.notes?.trim();
+  const packagesGoal = `${count} outdated ${manager} package${count === 1 ? '' : 's'}`;
+  const goal =
+    runtimes.length === 0
+      ? `Update ${packagesGoal} in this project to their latest versions.`
+      : count === 0
+        ? `Move this project to the latest ${runtimeNames}.`
+        : `Move this project to the latest ${runtimeNames}, then update ${packagesGoal} to their latest versions.`;
   return [
-    `Update ${count} outdated ${manager} package${count === 1 ? '' : 's'} in this project to their latest versions.`,
-    '',
-    'Packages (current -> latest):',
-    '',
-    blocks.join('\n\n'),
+    goal,
+    ...(runtimes.length > 0
+      ? ['', 'Runtime (current -> target):', '', runtimes.map(runtimeLine).join('\n')]
+      : []),
+    ...(count > 0 ? ['', 'Packages (current -> latest):', '', blocks.join('\n\n')] : []),
     '',
     'How to do it:',
     ...steps.map((step, i) => `${i + 1}. ${step}`),

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PackageUpdateRequest } from '../../shared/apiTypes';
@@ -41,6 +42,26 @@ vi.mock('./execUtils', async (importOriginal) => {
       const answer = cliState.answers.get(command) ?? {};
       if (answer.notFound) throw new actual.CliNotFoundError(`${command} is not available on PATH`);
       return { stdout: answer.stdout ?? '', stderr: answer.stderr ?? '', code: answer.code ?? 0 };
+    },
+  };
+});
+
+const feedState = vi.hoisted(() => ({
+  versions: {} as Record<string, unknown>,
+}));
+
+// The runtime feeds are public JSON files; no test may reach them. Each test sets what they say.
+vi.mock('./runtimeFeeds', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./runtimeFeeds')>();
+  const answer = async (key: string) => feedState.versions[key] ?? null;
+  return {
+    ...actual,
+    runtimeFeeds: {
+      nodeLts: () => answer('node'),
+      npmPackage: (name: string) => answer(`npm:${name}`),
+      dotnet: () => answer('dotnet'),
+      dart: () => answer('dart'),
+      flutter: () => answer('flutter'),
     },
   };
 });
@@ -94,6 +115,7 @@ const MANIFEST = JSON.stringify({
 let root = '';
 
 beforeEach(() => {
+  feedState.versions = {};
   cliState.calls = [];
   cliState.answers = new Map();
   root = tempDir('runova-node-adapter-');
@@ -259,6 +281,8 @@ describe('listPackages with npm', () => {
       status: 'ok',
       message: null,
       packages: [],
+      runtimes: [],
+      toolchain: 'node',
     });
     expect(cliState.calls).toEqual([]);
   });
@@ -741,5 +765,165 @@ describe('updatePackages', () => {
 
     expect(result.ok).toBe(false);
     expect(result.results.map((r) => r.ok)).toEqual([true, false]);
+  });
+});
+
+describe('runtime targets', () => {
+  const deps = { installedVersion: async () => null };
+
+  beforeEach(() => {
+    stubRegistry({});
+    feedState.versions = { 'npm:bun': '1.3.2', 'npm:pnpm': '10.20.0', node: '24.11.1' };
+  });
+
+  it('lists the packageManager pin and the engines ranges of each package.json', async () => {
+    writeTree(root, {
+      'package.json': JSON.stringify({
+        name: 'web',
+        packageManager: 'bun@1.1.0',
+        engines: { node: '>=20', bun: '^1.3.2' },
+      }),
+      'bun.lock': '{}',
+    });
+
+    const [section] = await nodeAdapter.listPackages(root);
+
+    expect(section.toolchain).toBe('bun');
+    expect(section.runtimes).toEqual([
+      expect.objectContaining({
+        kind: 'bun',
+        source: 'packageManager',
+        declared: 'bun@1.1.0',
+        latestVersion: '1.3.2',
+        isOutdated: true,
+        nextDeclared: 'bun@1.3.2',
+        projectLabel: 'web',
+      }),
+      expect.objectContaining({
+        kind: 'node',
+        source: 'engines',
+        declared: '>=20',
+        latestVersion: '24.11.1',
+        nextDeclared: '>=24',
+      }),
+      expect.objectContaining({ kind: 'bun', source: 'engines', isOutdated: false }),
+    ]);
+  });
+
+  it('names Node as the toolchain for npm, pnpm and Yarn sections', async () => {
+    writeTree(root, { 'package.json': MANIFEST, 'pnpm-lock.yaml': '' });
+    cliState.answers.set('pnpm', { stdout: '{}' });
+
+    const [section] = await nodeAdapter.listPackages(root);
+
+    expect(section).toMatchObject({ manager: 'pnpm', toolchain: 'node', runtimes: [] });
+  });
+
+  it('leaves a Yarn pin out, since its releases are not on the npm registry', async () => {
+    writeTree(root, { 'package.json': JSON.stringify({ packageManager: 'yarn@4.5.0' }) });
+    cliState.answers.set('npm', { stdout: '{}' });
+
+    const [section] = await nodeAdapter.listPackages(root);
+
+    expect(section.runtimes).toEqual([]);
+  });
+
+  it('shows a range it will not rewrite, with no next value', async () => {
+    writeTree(root, { 'package.json': JSON.stringify({ engines: { node: '>=18 <22' } }) });
+    cliState.answers.set('npm', { stdout: '{}' });
+
+    const [section] = await nodeAdapter.listPackages(root);
+
+    expect(section.runtimes).toEqual([
+      expect.objectContaining({ currentVersion: '18', isOutdated: true, nextDeclared: null }),
+    ]);
+  });
+
+  it('keeps a feed that could not be reached apart from up to date', async () => {
+    feedState.versions = {};
+    writeTree(root, { 'package.json': JSON.stringify({ engines: { node: '>=20' } }) });
+    cliState.answers.set('npm', { stdout: '{}' });
+
+    const [section] = await nodeAdapter.listPackages(root);
+
+    expect(section.runtimes[0]).toMatchObject({ latestVersion: null, isOutdated: false });
+  });
+
+  it('still lists the runtime when the package manager is missing', async () => {
+    writeTree(root, {
+      'web/package.json': JSON.stringify({ name: 'web', packageManager: 'bun@1.1.0' }),
+      'web/bun.lock': '{}',
+    });
+    cliState.answers.set('bun', { notFound: true });
+
+    const [section] = await nodeAdapter.listPackages(root);
+
+    expect(section.status).toBe('cli-missing');
+    expect(section.runtimes).toHaveLength(1);
+  });
+
+  it('rewrites the pin in place, keeping the rest of the file', async () => {
+    const source = '{\n  "name": "web",\n  "packageManager": "bun@1.1.0",\n  "private": true\n}\n';
+    writeTree(root, { 'package.json': source });
+    const manifestPath = join(root, 'package.json');
+
+    const result = await nodeAdapter.updateRuntime(
+      root,
+      {
+        ecosystem: 'node',
+        source: 'packageManager',
+        kind: 'bun',
+        manifestPath,
+        targetVersion: '1.3.2',
+      },
+      deps,
+    );
+
+    expect(result).toEqual({ ok: true, message: 'Updated bun@1.1.0 to bun@1.3.2.' });
+    expect(readFileSync(manifestPath, 'utf-8')).toBe(source.replace('bun@1.1.0', 'bun@1.3.2'));
+    // Nothing is installed or run: the pin only says which version to use.
+    expect(cliState.calls).toEqual([]);
+  });
+
+  it('rewrites an engines range at the precision it was written in', async () => {
+    writeTree(root, { 'package.json': JSON.stringify({ engines: { node: '^20.1' } }) });
+    const manifestPath = join(root, 'package.json');
+
+    const result = await nodeAdapter.updateRuntime(
+      root,
+      {
+        ecosystem: 'node',
+        source: 'engines',
+        kind: 'node',
+        manifestPath,
+        targetVersion: '24.11.1',
+      },
+      deps,
+    );
+
+    expect(result.ok).toBe(true);
+    expect(JSON.parse(readFileSync(manifestPath, 'utf-8'))).toEqual({
+      engines: { node: '^24.11' },
+    });
+  });
+
+  it('refuses when the latest version moved on since the list was read', async () => {
+    writeTree(root, { 'package.json': JSON.stringify({ packageManager: 'bun@1.1.0' }) });
+    const manifestPath = join(root, 'package.json');
+
+    const result = await nodeAdapter.updateRuntime(
+      root,
+      {
+        ecosystem: 'node',
+        source: 'packageManager',
+        kind: 'bun',
+        manifestPath,
+        targetVersion: '1.2.0',
+      },
+      deps,
+    );
+
+    expect(result.ok).toBe(false);
+    expect(readFileSync(manifestPath, 'utf-8')).toContain('bun@1.1.0');
   });
 });

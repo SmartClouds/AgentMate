@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PackageUpdateRequest } from '../../shared/apiTypes';
@@ -39,6 +40,26 @@ vi.mock('./execUtils', async (importOriginal) => {
       const answer = cliState.handler(command, args);
       if (answer.notFound) throw new actual.CliNotFoundError(`${command} is not available on PATH`);
       return { stdout: answer.stdout ?? '', stderr: answer.stderr ?? '', code: answer.code ?? 0 };
+    },
+  };
+});
+
+const feedState = vi.hoisted(() => ({
+  versions: {} as Record<string, unknown>,
+}));
+
+// The runtime feeds are public JSON files; no test may reach them. Each test sets what they say.
+vi.mock('./runtimeFeeds', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./runtimeFeeds')>();
+  const answer = async (key: string) => feedState.versions[key] ?? null;
+  return {
+    ...actual,
+    runtimeFeeds: {
+      nodeLts: () => answer('node'),
+      npmPackage: (name: string) => answer(`npm:${name}`),
+      dotnet: () => answer('dotnet'),
+      dart: () => answer('dart'),
+      flutter: () => answer('flutter'),
     },
   };
 });
@@ -114,6 +135,7 @@ const RESTORE_PROBLEM = JSON.stringify({
 let root = '';
 
 beforeEach(() => {
+  feedState.versions = {};
   cliState.calls = [];
   cliState.handler = () => ({});
   root = tempDir('runova-dotnet-adapter-');
@@ -218,6 +240,8 @@ describe('listPackages CLI usage', () => {
       status: 'cli-missing',
       message: 'Install the .NET SDK to manage NuGet packages for this project.',
       packages: [],
+      runtimes: [expect.objectContaining({ source: 'target-framework', declared: 'net8.0' })],
+      toolchain: 'dotnet-sdk',
     });
   });
 
@@ -232,6 +256,8 @@ describe('listPackages CLI usage', () => {
       status: 'ok',
       message: null,
       packages: [],
+      runtimes: [],
+      toolchain: 'dotnet-sdk',
     });
     expect(cliState.calls).toEqual([]);
   });
@@ -653,5 +679,158 @@ describe('updatePackages', () => {
       ok: true,
       results: [],
     });
+  });
+});
+
+describe('runtime targets', () => {
+  const sdk = (version: string | null) => ({ installedVersion: async () => version });
+  const project = (tfm: string) =>
+    `<Project Sdk="Microsoft.NET.Sdk">\r\n  <PropertyGroup>\r\n    ${tfm}\r\n  </PropertyGroup>\r\n</Project>\r\n`;
+
+  beforeEach(() => {
+    feedState.versions = { dotnet: { channel: '10.0', latestSdk: '10.0.100' } };
+  });
+
+  it('lists each project target framework and the global.json SDK pin', async () => {
+    writeTree(root, {
+      'global.json': '{ "sdk": { "version": "8.0.404" } }',
+      'src/Api/Api.csproj': project('<TargetFramework>net8.0</TargetFramework>'),
+      'src/App/App.csproj': project('<TargetFramework>net9.0-android</TargetFramework>'),
+    });
+
+    const [section] = await dotnetAdapter.listPackages(root);
+
+    expect(section.toolchain).toBe('dotnet-sdk');
+    const bySource = (source: string) => section.runtimes.filter((t) => t.source === source);
+    expect(bySource('target-framework')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          projectLabel: 'Api',
+          declared: 'net8.0',
+          nextDeclared: 'net10.0',
+          requires: { toolchain: 'dotnet-sdk', minVersion: '10.0.100' },
+        }),
+        expect.objectContaining({ projectLabel: 'App', nextDeclared: 'net10.0-android' }),
+      ]),
+    );
+    // One global.json for the whole repo, so one row, not one per project.
+    expect(bySource('global-json')).toEqual([
+      expect.objectContaining({
+        declared: '8.0.404',
+        latestVersion: '10.0.100',
+        nextDeclared: '10.0.100',
+        projectLabel: 'global.json',
+      }),
+    ]);
+  });
+
+  it('shows a target framework inherited from Directory.Build.props once', async () => {
+    writeTree(root, {
+      'Directory.Build.props': project('<TargetFramework>net8.0</TargetFramework>'),
+      'src/A/A.csproj': '<Project Sdk="Microsoft.NET.Sdk" />',
+      'src/B/B.csproj': '<Project Sdk="Microsoft.NET.Sdk" />',
+    });
+
+    const [section] = await dotnetAdapter.listPackages(root);
+
+    expect(section.runtimes).toEqual([
+      expect.objectContaining({
+        source: 'target-framework',
+        manifestPath: join(root, 'Directory.Build.props'),
+        projectLabel: 'Directory.Build.props',
+      }),
+    ]);
+  });
+
+  it('reports a multi-target list but leaves it to the AI prompt', async () => {
+    writeTree(root, {
+      'Lib/Lib.csproj': project('<TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>'),
+    });
+
+    const [section] = await dotnetAdapter.listPackages(root);
+
+    expect(section.runtimes).toEqual([
+      expect.objectContaining({ currentVersion: '8.0', isOutdated: true, nextDeclared: null }),
+    ]);
+  });
+
+  it('leaves .NET Framework projects out', async () => {
+    writeTree(root, {
+      'Legacy/Legacy.csproj': project('<TargetFramework>net48</TargetFramework>'),
+    });
+
+    const [section] = await dotnetAdapter.listPackages(root);
+
+    expect(section.runtimes).toEqual([]);
+  });
+
+  it('rewrites the target framework when an SDK that can build it is installed', async () => {
+    const xml = project('<TargetFramework>net8.0</TargetFramework>');
+    writeTree(root, { 'Api/Api.csproj': xml });
+    const manifestPath = join(root, 'Api', 'Api.csproj');
+
+    const result = await dotnetAdapter.updateRuntime(
+      root,
+      {
+        ecosystem: 'dotnet',
+        source: 'target-framework',
+        kind: 'dotnet',
+        manifestPath,
+        targetVersion: '10.0',
+      },
+      sdk('10.0.100'),
+    );
+
+    expect(result).toEqual({ ok: true, message: 'Updated net8.0 to net10.0.' });
+    expect(readFileSync(manifestPath, 'utf-8')).toBe(xml.replace('net8.0', 'net10.0'));
+  });
+
+  it('refuses the target framework while only an older SDK is installed', async () => {
+    writeTree(root, { 'Api/Api.csproj': project('<TargetFramework>net8.0</TargetFramework>') });
+    const manifestPath = join(root, 'Api', 'Api.csproj');
+
+    const result = await dotnetAdapter.updateRuntime(
+      root,
+      {
+        ecosystem: 'dotnet',
+        source: 'target-framework',
+        kind: 'dotnet',
+        manifestPath,
+        targetVersion: '10.0',
+      },
+      sdk('8.0.404'),
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      message:
+        'This needs the .NET SDK 10.0.100 or newer, and 8.0.404 is installed. Upgrade the .NET SDK first.',
+    });
+    expect(readFileSync(manifestPath, 'utf-8')).toContain('net8.0');
+  });
+
+  it('moves the global.json pin to the newest SDK', async () => {
+    writeTree(root, {
+      'global.json': '{\n  "sdk": {\n    "version": "8.0.404"\n  }\n}\n',
+      'Api/Api.csproj': project('<TargetFramework>net10.0</TargetFramework>'),
+    });
+    const manifestPath = join(root, 'global.json');
+
+    const result = await dotnetAdapter.updateRuntime(
+      root,
+      {
+        ecosystem: 'dotnet',
+        source: 'global-json',
+        kind: 'dotnet',
+        manifestPath,
+        targetVersion: '10.0.100',
+      },
+      sdk('10.0.100'),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(readFileSync(manifestPath, 'utf-8')).toBe(
+      '{\n  "sdk": {\n    "version": "10.0.100"\n  }\n}\n',
+    );
   });
 });

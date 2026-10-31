@@ -287,7 +287,7 @@ describe('useDevSetup: updates', () => {
 
     await waitFor(() => expect(updates).toHaveBeenCalledTimes(2));
 
-    expect(updates).toHaveBeenCalledWith(['git', 'node', 'gh'], { force: false });
+    expect(updates).toHaveBeenCalledWith(['git', 'node', 'gh', 'bun'], { force: false });
     expect(updates).toHaveBeenCalledWith(['pnpm'], { force: false });
   });
 
@@ -428,7 +428,7 @@ describe('useDevSetup: updates', () => {
     act(() => result.current.recheckAll());
 
     await waitFor(() =>
-      expect(updates).toHaveBeenCalledWith(['git', 'node', 'gh'], { force: true }),
+      expect(updates).toHaveBeenCalledWith(['git', 'node', 'gh', 'bun'], { force: true }),
     );
     expect(updates).toHaveBeenCalledWith(['pnpm'], { force: true });
   });

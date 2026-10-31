@@ -28,6 +28,7 @@ describe('buildChecklist', () => {
       'npm',
       'gh',
       'pnpm',
+      'bun',
       'gh-auth',
     ]);
     expect(new Set(checklist.rows.map((row) => row.state.kind))).toEqual(new Set(['checking']));

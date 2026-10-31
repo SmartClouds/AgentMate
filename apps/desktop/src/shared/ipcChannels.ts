@@ -1837,6 +1837,9 @@ export const IPC = {
   packages: {
     list: 'packages:list',
     update: 'packages:update',
+    // (projectId, RuntimeUpdateRequest) -> RuntimeUpdateResult: moves an SDK constraint, target
+    // framework or runtime pin to its latest version
+    updateRuntime: 'packages:updateRuntime',
     // main -> renderer: per-package progress while an update batch runs
     onUpdateProgress: 'packages:onUpdateProgress',
   },

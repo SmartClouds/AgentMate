@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PackageUpdateRequest } from '../../shared/apiTypes';
@@ -50,6 +51,26 @@ vi.mock('./execUtils', async (importOriginal) => {
   };
 });
 
+const feedState = vi.hoisted(() => ({
+  versions: {} as Record<string, unknown>,
+}));
+
+// The runtime feeds are public JSON files; no test may reach them. Each test sets what they say.
+vi.mock('./runtimeFeeds', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./runtimeFeeds')>();
+  const answer = async (key: string) => feedState.versions[key] ?? null;
+  return {
+    ...actual,
+    runtimeFeeds: {
+      nodeLts: () => answer('node'),
+      npmPackage: (name: string) => answer(`npm:${name}`),
+      dotnet: () => answer('dotnet'),
+      dart: () => answer('dart'),
+      flutter: () => answer('flutter'),
+    },
+  };
+});
+
 const { dartAdapter } = await import('./dartAdapter');
 
 let root = '';
@@ -58,6 +79,7 @@ let pub: LocalServer | null = null;
 let latestByName: Record<string, string | null> = {};
 
 beforeEach(async () => {
+  feedState.versions = {};
   cliState.calls = [];
   cliState.handler = () => ({});
   root = tempDir('runova-dart-adapter-');
@@ -678,5 +700,172 @@ describe('updatePackages', () => {
       results: [],
     });
     expect(cliState.calls).toEqual([]);
+  });
+});
+
+describe('runtime targets', () => {
+  const FLUTTER_APP = [
+    'name: app',
+    'environment:',
+    '  sdk: ^3.11.5',
+    "  flutter: '>=3.38.0'",
+    'dependencies:',
+    '  flutter:',
+    '    sdk: flutter',
+    '',
+  ].join('\n');
+  const DART_TOOL = 'name: tool\nenvironment:\n  sdk: ^3.11.5\n';
+  const has = (versions: Record<string, string>) => ({
+    installedVersion: async (id: string) => versions[id] ?? null,
+  });
+
+  beforeEach(() => {
+    feedState.versions = {
+      flutter: { version: '3.47.7', dartVersion: '3.13.5' },
+      dart: '3.14.0',
+    };
+  });
+
+  it('moves a Flutter app to the Dart that ships with the newest Flutter', async () => {
+    writeTree(root, { 'app/pubspec.yaml': FLUTTER_APP });
+
+    const [section] = await dartAdapter.listPackages(root);
+
+    expect(section.toolchain).toBe('flutter');
+    expect(section.runtimes).toEqual([
+      expect.objectContaining({
+        kind: 'dart',
+        source: 'pubspec-sdk',
+        declared: '^3.11.5',
+        // Not the 3.14.0 the Dart feed has: no Flutter ships that yet.
+        latestVersion: '3.13.5',
+        nextDeclared: '^3.13.5',
+        requires: { toolchain: 'flutter', minVersion: '3.47.7' },
+        projectLabel: 'app',
+      }),
+      expect.objectContaining({
+        kind: 'flutter',
+        source: 'pubspec-flutter',
+        nextDeclared: "'>=3.47.7'",
+        requires: { toolchain: 'flutter', minVersion: '3.47.7' },
+      }),
+    ]);
+  });
+
+  it('moves a plain Dart package to the newest Dart stable', async () => {
+    writeTree(root, { 'pubspec.yaml': DART_TOOL });
+
+    const [section] = await dartAdapter.listPackages(root);
+
+    expect(section.toolchain).toBe('dart');
+    expect(section.runtimes).toEqual([
+      expect.objectContaining({
+        latestVersion: '3.14.0',
+        nextDeclared: '^3.14.0',
+        requires: { toolchain: 'dart', minVersion: '3.14.0' },
+      }),
+    ]);
+  });
+
+  it('lists the runtime even when pubspec.yaml has no dependencies', async () => {
+    writeTree(root, { 'pubspec.yaml': DART_TOOL });
+
+    const [section] = await dartAdapter.listPackages(root);
+
+    expect(section.packages).toEqual([]);
+    expect(section.runtimes).toHaveLength(1);
+  });
+
+  it('writes the constraint and resolves the project once with it', async () => {
+    writeTree(root, { 'app/pubspec.yaml': FLUTTER_APP });
+    const manifestPath = join(root, 'app', 'pubspec.yaml');
+
+    const result = await dartAdapter.updateRuntime(
+      root,
+      {
+        ecosystem: 'dart',
+        source: 'pubspec-sdk',
+        kind: 'dart',
+        manifestPath,
+        targetVersion: '3.13.5',
+      },
+      has({ flutter: '3.47.7' }),
+    );
+
+    expect(result).toEqual({ ok: true, message: 'Updated ^3.11.5 to ^3.13.5.' });
+    expect(readFileSync(manifestPath, 'utf-8')).toBe(FLUTTER_APP.replace('^3.11.5', '^3.13.5'));
+    expect(cliState.calls).toEqual([
+      {
+        command: 'flutter',
+        args: ['pub', 'get'],
+        cwd: join(root, 'app'),
+        timeoutMs: 5 * 60 * 1000,
+      },
+    ]);
+  });
+
+  it('uses dart pub get for a plain Dart package', async () => {
+    writeTree(root, { 'pubspec.yaml': DART_TOOL });
+
+    await dartAdapter.updateRuntime(
+      root,
+      {
+        ecosystem: 'dart',
+        source: 'pubspec-sdk',
+        kind: 'dart',
+        manifestPath: join(root, 'pubspec.yaml'),
+        targetVersion: '3.14.0',
+      },
+      has({ dart: '3.14.0' }),
+    );
+
+    expect(cliState.calls.map((call) => call.command)).toEqual(['dart']);
+  });
+
+  it('refuses while the installed Flutter is older than the one the new Dart comes with', async () => {
+    writeTree(root, { 'app/pubspec.yaml': FLUTTER_APP });
+    const manifestPath = join(root, 'app', 'pubspec.yaml');
+
+    const result = await dartAdapter.updateRuntime(
+      root,
+      {
+        ecosystem: 'dart',
+        source: 'pubspec-sdk',
+        kind: 'dart',
+        manifestPath,
+        targetVersion: '3.13.5',
+      },
+      has({ flutter: '3.38.1' }),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/3\.38\.1 is installed\. Upgrade Flutter first/);
+    expect(readFileSync(manifestPath, 'utf-8')).toBe(FLUTTER_APP);
+    expect(cliState.calls).toEqual([]);
+  });
+
+  it('reports a pub get that fails after the constraint is written', async () => {
+    writeTree(root, { 'app/pubspec.yaml': FLUTTER_APP });
+    const manifestPath = join(root, 'app', 'pubspec.yaml');
+    cliState.handler = () => ({ code: 1, stderr: 'Because app depends on foo ^1.0.0 ...' });
+
+    const result = await dartAdapter.updateRuntime(
+      root,
+      {
+        ecosystem: 'dart',
+        source: 'pubspec-sdk',
+        kind: 'dart',
+        manifestPath,
+        targetVersion: '3.13.5',
+      },
+      has({ flutter: '3.47.7' }),
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      message:
+        'Updated ^3.11.5 to ^3.13.5. Then flutter pub get failed: Because app depends on foo ^1.0.0 ...',
+    });
+    expect(readFileSync(manifestPath, 'utf-8')).toContain('^3.13.5');
   });
 });

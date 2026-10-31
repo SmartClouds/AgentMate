@@ -1,13 +1,31 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { basename, dirname, join, relative } from 'node:path';
+import { compareVersions } from '@runova/core';
 import type {
   PackageInfo,
   PackageManagerSection,
   PackageUpdateItemResult,
   PackageUpdateRequest,
   PackageUpdateResult,
+  RuntimeUpdateRequest,
+  RuntimeUpdateResult,
 } from '../../shared/apiTypes';
 import { CliNotFoundError, mapWithConcurrency, runCli, tryParseJson } from './execUtils';
+import { type DotnetChannel, runtimeFeeds } from './runtimeFeeds';
+import {
+  type DeclaredTargetFramework,
+  parseTargetFramework,
+  readGlobalJsonSdk,
+  readTargetFramework,
+  rewriteGlobalJsonSdk,
+  rewriteTargetFramework,
+} from './runtimeTargets';
+import {
+  applyRuntimeUpdate,
+  type RuntimeCandidate,
+  type RuntimeUpdateDeps,
+  runtimeCandidate,
+} from './runtimeUpdate';
 import type { PackageManagerAdapter, UpdateProgressTick } from './types';
 
 const MAX_SCAN_DEPTH = 4;
@@ -279,9 +297,130 @@ async function detect(folderPath: string): Promise<boolean> {
   return files.length > 0;
 }
 
+// --- Runtime targets --------------------------------------------------------
+
+/** The nearest `name` from `startDir` up to and including the scan root. */
+async function nearestFile(
+  rootFolder: string,
+  startDir: string,
+  name: string,
+): Promise<string | null> {
+  let dir = startDir;
+  for (;;) {
+    const candidate = join(dir, name);
+    if ((await readFileSafe(candidate)) !== null) return candidate;
+    const parent = dirname(dir);
+    if (parent === dir || relative(rootFolder, dir) === '') return null;
+    dir = parent;
+  }
+}
+
+function targetFrameworkCandidate(
+  rootFolder: string,
+  holderPath: string,
+  declared: DeclaredTargetFramework,
+  channel: DotnetChannel | null,
+): RuntimeCandidate | null {
+  const projectLabel = PROJECT_EXTENSIONS.some((ext) => holderPath.toLowerCase().endsWith(ext))
+    ? basename(holderPath).replace(/\.(cs|vb|fs)proj$/i, '')
+    : relative(rootFolder, holderPath);
+  const base = {
+    kind: 'dotnet',
+    source: 'target-framework',
+    declared: declared.declared,
+    latestVersion: channel?.channel ?? null,
+    manifestPath: holderPath,
+    projectLabel,
+    rewrite: rewriteTargetFramework,
+  } as const;
+
+  if (declared.multiple) {
+    // A multi-targeted library usually means it on purpose, so the list is only reported.
+    const versions = declared.declared
+      .split(';')
+      .map((tfm) => parseTargetFramework(tfm)?.version)
+      .filter((v): v is string => Boolean(v))
+      .sort(compareVersions);
+    const highest = versions.at(-1);
+    if (!highest) return null;
+    return runtimeCandidate({ ...base, currentVersion: highest, next: null, requires: null });
+  }
+
+  const parsed = parseTargetFramework(declared.declared);
+  if (!parsed) return null; // .NET Framework or netstandard, which are not moved this way
+  return runtimeCandidate({
+    ...base,
+    currentVersion: parsed.version,
+    next: (latest) => `net${latest}${parsed.suffix}`,
+    requires: (latest) => ({
+      toolchain: 'dotnet-sdk',
+      minVersion: `${latest.split('.')[0]}.0.100`,
+    }),
+  });
+}
+
+/**
+ * The target framework of each project (or the Directory.Build.props it inherits one from) and
+ * the global.json SDK pin. A file several projects share shows up once.
+ */
+async function dotnetRuntimeCandidates(
+  rootFolder: string,
+  projectFiles: string[],
+): Promise<RuntimeCandidate[]> {
+  const channel = await runtimeFeeds.dotnet();
+  const seen = new Set<string>();
+  const candidates: RuntimeCandidate[] = [];
+
+  for (const projectPath of projectFiles) {
+    const projectDir = dirname(projectPath);
+    let holder: string | null = projectPath;
+    const projectXml = await readFileSafe(projectPath);
+    let declared = projectXml ? readTargetFramework(projectXml) : null;
+    if (!declared) {
+      holder = await nearestFile(rootFolder, projectDir, 'Directory.Build.props');
+      const propsXml = holder ? await readFileSafe(holder) : null;
+      declared = propsXml ? readTargetFramework(propsXml) : null;
+    }
+    if (holder && declared && !seen.has(holder)) {
+      seen.add(holder);
+      const candidate = targetFrameworkCandidate(rootFolder, holder, declared, channel);
+      if (candidate) candidates.push(candidate);
+    }
+
+    const globalJson = await nearestFile(rootFolder, projectDir, 'global.json');
+    if (globalJson && !seen.has(globalJson)) {
+      seen.add(globalJson);
+      const source = await readFileSafe(globalJson);
+      const version = source ? readGlobalJsonSdk(source) : null;
+      if (version) {
+        candidates.push(
+          runtimeCandidate({
+            kind: 'dotnet',
+            source: 'global-json',
+            declared: version,
+            currentVersion: version,
+            latestVersion: channel?.latestSdk ?? null,
+            next: (latest) => latest,
+            requires: (latest) => ({ toolchain: 'dotnet-sdk', minVersion: latest }),
+            manifestPath: globalJson,
+            projectLabel: relative(rootFolder, globalJson),
+            rewrite: rewriteGlobalJsonSdk,
+          }),
+        );
+      }
+    }
+  }
+  return candidates;
+}
+
 async function listSection(folderPath: string): Promise<PackageManagerSection> {
-  const base = { ecosystem: 'dotnet', manager: 'nuget' } as const;
   const projectFiles = await findProjectFiles(folderPath);
+  const base = {
+    ecosystem: 'dotnet',
+    manager: 'nuget',
+    toolchain: 'dotnet-sdk',
+    runtimes: (await dotnetRuntimeCandidates(folderPath, projectFiles)).map((c) => c.target),
+  } as const;
   if (projectFiles.length === 0) {
     return { ...base, status: 'ok', message: null, packages: [] };
   }
@@ -354,9 +493,19 @@ async function updatePackages(
   return { ok: results.every((r) => r.ok), results };
 }
 
+async function updateRuntime(
+  folderPath: string,
+  request: RuntimeUpdateRequest,
+  deps: RuntimeUpdateDeps,
+): Promise<RuntimeUpdateResult> {
+  const candidates = await dotnetRuntimeCandidates(folderPath, await findProjectFiles(folderPath));
+  return applyRuntimeUpdate(request, candidates, deps);
+}
+
 export const dotnetAdapter: PackageManagerAdapter = {
   ecosystem: 'dotnet',
   detect,
   listPackages: async (folderPath) => [await listSection(folderPath)],
   updatePackages,
+  updateRuntime,
 };

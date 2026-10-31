@@ -19,6 +19,8 @@ export interface FlutterRelease {
   /** Lowercase hex. */
   sha256: string;
   format: 'zip' | 'tar.xz';
+  /** The Dart SDK this build ships, e.g. `3.13.5`, or null when the list does not say. */
+  dartVersion: string | null;
 }
 
 const OS_FILE: Record<DevOs, string> = { win32: 'windows', darwin: 'macos', linux: 'linux' };
@@ -81,7 +83,18 @@ export function pickFlutterRelease(
     const format = archive.endsWith('.tar.xz') ? 'tar.xz' : archive.endsWith('.zip') ? 'zip' : null;
     if (!format) continue;
 
-    return { version, url: `${base}/${archive}`, sha256: sha256.toLowerCase(), format };
+    // Betas print `3.14.0 (build 3.14.0-315.1.beta)`; the leading version is the one that counts.
+    const dart =
+      typeof release.dart_sdk_version === 'string'
+        ? (/^\d+\.\d+\.\d+/.exec(release.dart_sdk_version.trim())?.[0] ?? null)
+        : null;
+    return {
+      version,
+      url: `${base}/${archive}`,
+      sha256: sha256.toLowerCase(),
+      format,
+      dartVersion: dart,
+    };
   }
   return null;
 }

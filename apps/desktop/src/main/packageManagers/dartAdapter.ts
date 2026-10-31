@@ -6,8 +6,24 @@ import type {
   PackageUpdateItemResult,
   PackageUpdateRequest,
   PackageUpdateResult,
+  RuntimeTarget,
+  RuntimeUpdateRequest,
+  RuntimeUpdateResult,
 } from '../../shared/apiTypes';
 import { CliNotFoundError, mapWithConcurrency, runCli } from './execUtils';
+import { runtimeFeeds } from './runtimeFeeds';
+import {
+  lowerBound,
+  parseDartConstraint,
+  readPubspecEnvironment,
+  rewritePubspecEnvironment,
+} from './runtimeTargets';
+import {
+  applyRuntimeUpdate,
+  type RuntimeCandidate,
+  type RuntimeUpdateDeps,
+  runtimeCandidate,
+} from './runtimeUpdate';
 import type { PackageManagerAdapter, UpdateProgressTick } from './types';
 
 const MAX_SCAN_DEPTH = 4;
@@ -289,6 +305,65 @@ async function fetchLatestFromHost(
   }
 }
 
+// --- Runtime targets ---------------------------------------------------------
+
+/**
+ * pubspec's `environment.sdk` and `environment.flutter`. A Flutter app's Dart constraint moves to
+ * the Dart that ships inside the newest Flutter stable, never to a Dart no Flutter has yet, so
+ * the one upgrade (Flutter) covers both rows.
+ */
+async function dartRuntimeCandidates(
+  pubspecPath: string,
+  source: string,
+  projectLabel: string,
+): Promise<RuntimeCandidate[]> {
+  const { usesFlutter } = parsePubspec(source);
+  const environment = readPubspecEnvironment(source);
+  const candidates: RuntimeCandidate[] = [];
+
+  function add(
+    key: 'sdk' | 'flutter',
+    kind: 'dart' | 'flutter',
+    latestVersion: string | null,
+    requires: ((latest: string) => { toolchain: string; minVersion: string }) | null,
+  ): void {
+    const raw = environment[key];
+    if (!raw) return;
+    const constraint = parseDartConstraint(raw);
+    const currentVersion = constraint?.lower ?? lowerBound(raw);
+    if (!currentVersion) return;
+    candidates.push(
+      runtimeCandidate({
+        kind,
+        source: key === 'sdk' ? 'pubspec-sdk' : 'pubspec-flutter',
+        declared: raw,
+        currentVersion,
+        latestVersion,
+        next: constraint ? constraint.next : null,
+        requires,
+        manifestPath: pubspecPath,
+        projectLabel,
+        rewrite: (text, value) => rewritePubspecEnvironment(text, key, value),
+      }),
+    );
+  }
+
+  if (usesFlutter) {
+    const flutter = await runtimeFeeds.flutter();
+    const needsFlutter = flutter
+      ? () => ({ toolchain: 'flutter', minVersion: flutter.version })
+      : null;
+    add('sdk', 'dart', flutter?.dartVersion ?? null, needsFlutter);
+    add('flutter', 'flutter', flutter?.version ?? null, needsFlutter);
+  } else {
+    add('sdk', 'dart', await runtimeFeeds.dart(), (latest) => ({
+      toolchain: 'dart',
+      minVersion: latest,
+    }));
+  }
+  return candidates;
+}
+
 // --- Listing -----------------------------------------------------------------
 
 interface ProjectScanOutcome {
@@ -297,6 +372,8 @@ interface ProjectScanOutcome {
   /** Hosted packages whose latest version could not be looked up. */
   unresolvedCount: number;
   hasLockFile: boolean;
+  usesFlutter: boolean;
+  runtimes: RuntimeTarget[];
 }
 
 async function listPackagesForPubspec(
@@ -313,8 +390,7 @@ async function listPackagesForPubspec(
 
   const pubspec = parsePubspec(pubspecSource);
   const locked = lockSource ? parsePubspecLock(lockSource) : new Map<string, LockedPackage>();
-  const rel = relative(rootFolder, projectDir);
-  const projectLabel = pubspec.name ?? (rel === '' ? basename(rootFolder) : rel);
+  const projectLabel = labelForPubspec(rootFolder, pubspecPath, pubspec.name);
   let unresolvedCount = 0;
 
   // SDK packages (flutter, flutter_test, ...) ship with the SDK and can't be updated on their own.
@@ -354,7 +430,20 @@ async function listPackagesForPubspec(
   });
 
   packages.sort((a, b) => a.name.localeCompare(b.name));
-  return { projectLabel, packages, unresolvedCount, hasLockFile: lockSource !== null };
+  const runtimes = await dartRuntimeCandidates(pubspecPath, pubspecSource, projectLabel);
+  return {
+    projectLabel,
+    packages,
+    unresolvedCount,
+    hasLockFile: lockSource !== null,
+    usesFlutter: pubspec.usesFlutter,
+    runtimes: runtimes.map((c) => c.target),
+  };
+}
+
+function labelForPubspec(rootFolder: string, pubspecPath: string, name: string | null): string {
+  const rel = relative(rootFolder, dirname(pubspecPath));
+  return name ?? (rel === '' ? basename(rootFolder) : rel);
 }
 
 async function detect(folderPath: string): Promise<boolean> {
@@ -363,13 +452,20 @@ async function detect(folderPath: string): Promise<boolean> {
 }
 
 async function listSection(folderPath: string): Promise<PackageManagerSection> {
-  const base = { ecosystem: 'dart', manager: 'pub' } as const;
   const pubspecs = await findPubspecFiles(folderPath);
   const health = new HostHealth();
 
   const outcomes = (
     await Promise.all(pubspecs.map((p) => listPackagesForPubspec(folderPath, p, health)))
   ).filter((o): o is ProjectScanOutcome => o !== null);
+
+  const base = {
+    ecosystem: 'dart',
+    manager: 'pub',
+    runtimes: outcomes.flatMap((o) => o.runtimes),
+    // Flutter carries its own Dart, so one Flutter project makes Flutter the tool to keep current.
+    toolchain: outcomes.some((o) => o.usesFlutter) ? 'flutter' : 'dart',
+  } as const;
 
   if (pubspecs.length > 0 && outcomes.length === 0) {
     return { ...base, status: 'error', message: 'Failed to read pubspec.yaml.', packages: [] };
@@ -487,9 +583,51 @@ async function updatePackages(
   return { ok: results.every((r) => r.ok), results };
 }
 
+/**
+ * Writes the new constraint, then resolves the project once with it so a constraint that no
+ * dependency can live with shows up here rather than on the next build. The new constraint stays
+ * in the file either way, as a failed `pub add` leaves its own.
+ */
+async function updateRuntime(
+  folderPath: string,
+  request: RuntimeUpdateRequest,
+  deps: RuntimeUpdateDeps,
+): Promise<RuntimeUpdateResult> {
+  const source = await readFileSafe(request.manifestPath);
+  if (source === null) return { ok: false, message: `Failed to read ${request.manifestPath}.` };
+  const pubspec = parsePubspec(source);
+  const label = labelForPubspec(folderPath, request.manifestPath, pubspec.name);
+  const result = await applyRuntimeUpdate(
+    request,
+    await dartRuntimeCandidates(request.manifestPath, source, label),
+    deps,
+  );
+  if (!result.ok) return result;
+
+  const command = pubspec.usesFlutter ? 'flutter' : 'dart';
+  try {
+    const { code, stdout, stderr } = await runCli(
+      command,
+      ['pub', 'get'],
+      dirname(request.manifestPath),
+      UPDATE_TIMEOUT_MS,
+    );
+    if (code === 0) return result;
+    const tail = (stderr || stdout).slice(-500) || `${command} exited with code ${code}`;
+    return { ok: false, message: `${result.message} Then ${command} pub get failed: ${tail}` };
+  } catch (err) {
+    const why = err instanceof Error ? err.message : `${command} pub get failed.`;
+    return {
+      ok: false,
+      message: `${result.message} Then ${command} pub get could not run: ${why}`,
+    };
+  }
+}
+
 export const dartAdapter: PackageManagerAdapter = {
   ecosystem: 'dart',
   detect,
   listPackages: async (folderPath) => [await listSection(folderPath)],
   updatePackages,
+  updateRuntime,
 };

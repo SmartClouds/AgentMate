@@ -34,6 +34,7 @@ describe('pickFlutterRelease', () => {
       url: 'https://storage.googleapis.com/flutter_infra_release/releases/stable/windows/flutter_windows_3.47.7-stable.zip',
       sha256: 'c2c875da25a1a1448d18ee4e8f398b2f6fce888b4775d8f9130538e16d826cb4',
       format: 'zip',
+      dartVersion: '3.13.5',
     });
   });
 

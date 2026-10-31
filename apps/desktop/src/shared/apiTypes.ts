@@ -2077,12 +2077,67 @@ export interface PackageInfo {
   projectLabel: string;
 }
 
+/** The runtime or framework a project target names. */
+export type RuntimeKind = 'bun' | 'node' | 'pnpm' | 'npm' | 'yarn' | 'dotnet' | 'dart' | 'flutter';
+
+/** Where in the project a runtime target is written. */
+export type RuntimeSource =
+  /** package.json `"packageManager": "bun@1.2.3"`. */
+  | 'packageManager'
+  /** package.json `engines.node` or `engines.bun`. */
+  | 'engines'
+  /** `<TargetFramework>` in a project file or a Directory.Build.props. */
+  | 'target-framework'
+  /** global.json `sdk.version`. */
+  | 'global-json'
+  /** pubspec.yaml `environment.sdk`. */
+  | 'pubspec-sdk'
+  /** pubspec.yaml `environment.flutter`. */
+  | 'pubspec-flutter';
+
+export interface RuntimeTarget {
+  kind: RuntimeKind;
+  source: RuntimeSource;
+  /** The value as written in the file, e.g. `^3.11.5`, `net8.0-android` or `bun@1.1.0`. */
+  declared: string;
+  /** The version the declared value starts from, e.g. `3.11.5`, `8.0` or `1.1.0`. */
+  currentVersion: string;
+  /** Null when the release feed could not be reached, distinct from "up to date". */
+  latestVersion: string | null;
+  isOutdated: boolean;
+  /** What an update would write. Null when the value has a shape Runova will not rewrite itself. */
+  nextDeclared: string | null;
+  /** The installed tool the new value needs, checked before anything is written. */
+  requires: { toolchain: string; minVersion: string } | null;
+  /** Absolute path of the file that holds the value. */
+  manifestPath: string;
+  projectLabel: string;
+}
+
+export interface RuntimeUpdateRequest {
+  ecosystem: PackageManagerEcosystem;
+  source: RuntimeSource;
+  kind: RuntimeKind;
+  manifestPath: string;
+  /** A plain version. Main reads the file again and builds the new value from it. */
+  targetVersion: string;
+}
+
+export interface RuntimeUpdateResult {
+  ok: boolean;
+  message: string;
+}
+
 export interface PackageManagerSection {
   ecosystem: PackageManagerEcosystem;
   manager: PackageManagerKind;
   status: 'ok' | 'cli-missing' | 'error';
   message: string | null;
   packages: PackageInfo[];
+  /** Runtime and framework versions the section's projects declare. */
+  runtimes: RuntimeTarget[];
+  /** The Dev Setup item for the tool this section builds with (`bun`, `node`, `dotnet-sdk`, ...). */
+  toolchain: string | null;
 }
 
 export interface PackageScanResult {

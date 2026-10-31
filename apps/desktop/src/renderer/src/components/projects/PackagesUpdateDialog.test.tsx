@@ -51,16 +51,21 @@ const section: PackageManagerSection = {
   status: 'ok',
   message: null,
   packages: [react, zod, vite, current],
+  runtimes: [],
+  toolchain: 'node',
 };
 
-function renderDialog(selectedPackages: PackageInfo[] = []) {
+function renderDialog(
+  selectedPackages: PackageInfo[] = [],
+  shown: PackageManagerSection = section,
+) {
   const onOpenChange = vi.fn();
   const view = renderWithProviders(
     <PackagesUpdateDialog
       open
       onOpenChange={onOpenChange}
       project={project()}
-      section={section}
+      section={shown}
       sectionLabel="pnpm"
       selectedPackages={selectedPackages}
     />,
@@ -142,5 +147,64 @@ describe('PackagesUpdateDialog', () => {
     );
     expect(navigate).toHaveBeenCalledWith('/workspace/p1');
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  describe('with an outdated runtime', () => {
+    const withRuntime: PackageManagerSection = {
+      ...section,
+      manager: 'bun',
+      runtimes: [
+        {
+          kind: 'bun',
+          source: 'packageManager',
+          declared: 'bun@1.1.0',
+          currentVersion: '1.1.0',
+          latestVersion: '1.3.2',
+          isOutdated: true,
+          nextDeclared: 'bun@1.3.2',
+          requires: null,
+          manifestPath: 'C:\work\storefront\package.json',
+          projectLabel: 'storefront',
+        },
+      ],
+      toolchain: 'bun',
+    };
+
+    it('includes the runtime by default and can leave it out', async () => {
+      const { user } = renderDialog([], withRuntime);
+      await screen.findByRole('dialog', { name: 'Update pnpm packages with AI' });
+      const toggle = screen.getByRole('switch', { name: 'Include the runtime upgrade' });
+      expect(toggle).toBeChecked();
+      expect(screen.getByText('Bun (packageManager) bun@1.1.0 to bun@1.3.2')).toBeInTheDocument();
+      expect(prompt()).toContain('Runtime (current -> target):');
+      expect(prompt()).toContain('bun@1.1.0 -> bun@1.3.2');
+      expect(
+        screen.getByText(/3 packages and 1 runtime setting in the prompt/),
+      ).toBeInTheDocument();
+
+      await user.click(toggle);
+      expect(prompt()).not.toContain('Runtime (current -> target):');
+      expect(screen.getByText(/3 packages in the prompt/)).toBeInTheDocument();
+    });
+
+    it('can send a prompt for the runtime alone', async () => {
+      const runtimeOnly = { ...withRuntime, packages: [current] };
+      const { user } = renderDialog([], runtimeOnly);
+      await screen.findByRole('dialog', { name: 'Update pnpm packages with AI' });
+      expect(prompt()).toContain('Move this project to the latest Bun (packageManager).');
+      expect(prompt()).not.toContain('Packages (current -> latest)');
+
+      await user.click(screen.getByRole('switch', { name: 'Include the runtime upgrade' }));
+      expect(screen.getByText(/Turn on "Include the runtime upgrade"/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Send to Claude Code' })).toBeDisabled();
+    });
+
+    it('has no runtime switch when the runtime is current', async () => {
+      renderDialog();
+      await screen.findByRole('dialog', { name: 'Update pnpm packages with AI' });
+      expect(
+        screen.queryByRole('switch', { name: 'Include the runtime upgrade' }),
+      ).not.toBeInTheDocument();
+    });
   });
 });

@@ -22,6 +22,7 @@ const ALLOWED_HOSTS = new Set([
   'nodejs.org',
   'cli.github.com',
   'pnpm.io',
+  'bun.sh',
   'dotnet.microsoft.com',
   'adoptium.net',
   'docs.flutter.dev',
@@ -135,7 +136,7 @@ describe('the catalog data', () => {
   });
 
   it('uses only well-formed package identifiers, since they end up on a command line', () => {
-    const wingetId = /^[A-Za-z0-9]+(\.[A-Za-z0-9-]+)+$/;
+    const wingetId = /^[A-Za-z0-9][A-Za-z0-9-]*(\.[A-Za-z0-9-]+)+$/;
     const brewName = /^[a-z0-9][a-z0-9@._+-]*$/;
     const npmName = /^(@[a-z0-9-]+\/)?[a-z0-9][a-z0-9._-]*$/;
     const distroName = /^[a-z0-9][a-z0-9+.-]*$/;

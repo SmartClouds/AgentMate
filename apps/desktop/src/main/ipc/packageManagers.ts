@@ -1,4 +1,5 @@
-import { resolve, sep } from 'node:path';
+import { basename, resolve, sep } from 'node:path';
+import { isDevItemId } from '@runova/core';
 import { ipcMain } from 'electron';
 import type {
   PackageManagerEcosystem,
@@ -6,9 +7,15 @@ import type {
   PackageUpdateProgress,
   PackageUpdateRequest,
   PackageUpdateResult,
+  RuntimeKind,
+  RuntimeSource,
+  RuntimeUpdateRequest,
+  RuntimeUpdateResult,
 } from '../../shared/apiTypes';
 import { IPC } from '../../shared/ipcChannels';
+import { getDevSetupService } from '../devSetup/runtime';
 import { PACKAGE_MANAGER_ADAPTERS, scanProjectPackages } from '../packageManagers';
+import type { RuntimeUpdateDeps } from '../packageManagers/runtimeUpdate';
 import { findProjectScope } from '../worktrees/resolve';
 import { sendToContents } from './send';
 
@@ -60,7 +67,71 @@ function rejectUnsafeUpdate(update: PackageUpdateRequest, folderPath: string): s
   return null;
 }
 
+/** Which file each kind of runtime target lives in, and which runtimes it can name. */
+const RUNTIME_SOURCES: Record<
+  RuntimeSource,
+  { ecosystem: PackageManagerEcosystem; file: RegExp; kinds: RuntimeKind[] }
+> = {
+  packageManager: { ecosystem: 'node', file: /^package\.json$/, kinds: ['bun', 'pnpm', 'npm'] },
+  engines: { ecosystem: 'node', file: /^package\.json$/, kinds: ['node', 'bun'] },
+  'target-framework': {
+    ecosystem: 'dotnet',
+    file: /^(.+\.(cs|vb|fs)proj|Directory\.Build\.props)$/i,
+    kinds: ['dotnet'],
+  },
+  'global-json': { ecosystem: 'dotnet', file: /^global\.json$/i, kinds: ['dotnet'] },
+  'pubspec-sdk': { ecosystem: 'dart', file: /^pubspec\.yaml$/, kinds: ['dart'] },
+  'pubspec-flutter': { ecosystem: 'dart', file: /^pubspec\.yaml$/, kinds: ['flutter'] },
+};
+
+/** Same idea as {@link rejectUnsafeUpdate}: the request may only touch the file the list named. */
+export function rejectUnsafeRuntimeUpdate(
+  request: RuntimeUpdateRequest,
+  folderPath: string,
+): string | null {
+  const rule = Object.hasOwn(RUNTIME_SOURCES, request?.source)
+    ? RUNTIME_SOURCES[request.source]
+    : undefined;
+  if (!rule || rule.ecosystem !== request.ecosystem || !rule.kinds.includes(request.kind)) {
+    return 'Unknown runtime setting.';
+  }
+  if (typeof request.targetVersion !== 'string' || !VERSION_PATTERN.test(request.targetVersion)) {
+    return `"${String(request.targetVersion)}" is not a valid version.`;
+  }
+  if (typeof request.manifestPath !== 'string' || !isInside(request.manifestPath, folderPath)) {
+    return `"${String(request.manifestPath)}" is outside the project folder.`;
+  }
+  if (!rule.file.test(basename(request.manifestPath))) {
+    return `"${basename(request.manifestPath)}" is not where that setting is kept.`;
+  }
+  return null;
+}
+
+const runtimeUpdateDeps: RuntimeUpdateDeps = {
+  async installedVersion(toolchain) {
+    if (!isDevItemId(toolchain)) return null;
+    const detection = await getDevSetupService().detect(toolchain, { force: true });
+    return detection.state === 'found' ? detection.version : null;
+  },
+};
+
 export function registerPackageManagerHandlers(): void {
+  ipcMain.handle(
+    IPC.packages.updateRuntime,
+    async (
+      _event,
+      projectId: string,
+      request: RuntimeUpdateRequest,
+    ): Promise<RuntimeUpdateResult> => {
+      const folderPath = await getProjectPath(projectId);
+      const problem = rejectUnsafeRuntimeUpdate(request, folderPath);
+      if (problem) return { ok: false, message: problem };
+      const adapter = PACKAGE_MANAGER_ADAPTERS.find((a) => a.ecosystem === request.ecosystem);
+      if (!adapter) return { ok: false, message: 'Unknown runtime setting.' };
+      return adapter.updateRuntime(folderPath, request, runtimeUpdateDeps);
+    },
+  );
+
   ipcMain.handle(
     IPC.packages.list,
     async (_event, projectId: string): Promise<PackageScanResult> => {

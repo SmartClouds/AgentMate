@@ -8,8 +8,10 @@ import { FOOTER_HAIRLINE, SECTION_WELL, SEGMENT_TRACK, segmentClass } from '@/co
 import {
   buildPackageUpdatePrompt,
   bumpKind,
+  outdatedRuntimes,
   type PackageCommitMode,
   promptPackages,
+  runtimeLabel,
 } from '@/components/projects/packagesCopy';
 import { Button } from '@/components/ui/button';
 import {
@@ -126,6 +128,7 @@ export function PackagesUpdateDialog({
   const [runChecks, setRunChecks] = useState(true);
   const [commit, setCommit] = useState<PackageCommitMode>('none');
   const [notes, setNotes] = useState('');
+  const [includeRuntimes, setIncludeRuntimes] = useState(true);
 
   // Each opening starts from the tab's current selection, not from what was picked last time.
   useEffect(() => {
@@ -135,6 +138,7 @@ export function PackagesUpdateDialog({
     setRunChecks(true);
     setCommit('none');
     setNotes('');
+    setIncludeRuntimes(true);
   }, [open, hasSelection]);
 
   const outdated = useMemo(
@@ -145,9 +149,14 @@ export function PackagesUpdateDialog({
   const majorCount = targets.filter(
     (pkg) => pkg.latestVersion && bumpKind(pkg.currentVersion, pkg.latestVersion) === 'major',
   ).length;
-  const options = { skipMajor, runChecks, commit, notes };
+  const runtimes = useMemo(() => outdatedRuntimes(section), [section]);
+  const options = { skipMajor, runChecks, commit, notes, includeRuntimes };
   const included = promptPackages(targets, options);
-  const prompt = included.length > 0 ? buildPackageUpdatePrompt(section, targets, options) : null;
+  const runtimeCount = includeRuntimes ? runtimes.length : 0;
+  const prompt =
+    included.length > 0 || runtimeCount > 0
+      ? buildPackageUpdatePrompt(section, targets, options)
+      : null;
   const agent = useSendToAgent(project);
 
   function send(): void {
@@ -207,6 +216,23 @@ export function PackagesUpdateDialog({
               />
             </FormSection>
 
+            {runtimes.length > 0 && (
+              <FormSection title="Runtime">
+                <SwitchRow
+                  id={id('runtimes')}
+                  label="Include the runtime upgrade"
+                  hint={runtimes
+                    .map(
+                      (t) =>
+                        `${runtimeLabel(t)} ${t.declared} to ${t.nextDeclared ?? t.latestVersion}`,
+                    )
+                    .join(', ')}
+                  checked={includeRuntimes}
+                  onCheckedChange={setIncludeRuntimes}
+                />
+              </FormSection>
+            )}
+
             <FormSection title="After updating">
               <SwitchRow
                 id={id('checks')}
@@ -249,7 +275,11 @@ export function PackagesUpdateDialog({
 
           <div className="min-w-0 space-y-2">
             <p className="text-xs text-muted-foreground">
-              {included.length} package{included.length === 1 ? '' : 's'} in the prompt
+              {included.length} package{included.length === 1 ? '' : 's'}
+              {runtimeCount > 0
+                ? ` and ${runtimeCount} runtime setting${runtimeCount === 1 ? '' : 's'}`
+                : ''}{' '}
+              in the prompt
             </p>
             {prompt ? (
               <TextPane
@@ -265,7 +295,12 @@ export function PackagesUpdateDialog({
                   'flex min-h-40 items-center justify-center text-center text-sm text-muted-foreground',
                 )}
               >
-                Every package here is a major bump. Turn off "Skip major bumps" to include them.
+                {runtimes.length > 0 &&
+                !includeRuntimes &&
+                included.length === 0 &&
+                targets.length === 0
+                  ? 'Nothing is in the prompt. Turn on "Include the runtime upgrade" to add it.'
+                  : 'Every package here is a major bump. Turn off "Skip major bumps" to include them.'}
               </div>
             )}
           </div>

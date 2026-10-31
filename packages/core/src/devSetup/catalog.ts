@@ -180,6 +180,30 @@ export const DEV_ITEMS: readonly DevItem[] = [
     manualUrl: 'https://pnpm.io/installation',
   },
   {
+    id: 'bun',
+    name: 'Bun',
+    description:
+      'A JavaScript runtime and package manager in one. Projects with a bun.lock use it.',
+    stack: 'essentials',
+    optional: true,
+    // Off Windows it installs through npm.
+    dependsOn: ['npm'],
+    detect: {
+      kind: 'command',
+      command: 'bun',
+      args: ['--version'],
+      // Where Bun's own install script puts it.
+      fallbackPaths: ['~/.bun/bin/bun{exe}'],
+    },
+    recipes: {
+      win32: [{ kind: 'winget', id: 'Oven-sh.Bun' }],
+      // The Homebrew formula lives in Bun's own tap, which the brew recipe cannot name.
+      darwin: [{ kind: 'npm-global', pkg: 'bun' }],
+      linux: [{ kind: 'npm-global', pkg: 'bun' }],
+    },
+    manualUrl: 'https://bun.sh/docs/installation',
+  },
+  {
     id: 'gh-auth',
     name: 'GitHub sign-in',
     description: 'Signs the GitHub CLI in to your account so it can reach private repositories.',
