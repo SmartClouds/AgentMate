@@ -13,7 +13,13 @@ import {
 import { tmpdir } from 'node:os';
 import { basename, delimiter, join } from 'node:path';
 import { type ElectronApplication, _electron as electron, type Page, test } from '@playwright/test';
+import { workerDisplay } from './displays';
 import { E2E_OUT_DIR, MAIN_LOG_DIR } from './paths';
+
+// On Linux every worker can have an X display of its own (see displays.ts). It goes on
+// process.env, so the specs' own relaunches, which pass process.env along, land on it too.
+const display = workerDisplay();
+if (display) process.env.DISPLAY = display;
 
 export interface LaunchedApp {
   app: ElectronApplication;

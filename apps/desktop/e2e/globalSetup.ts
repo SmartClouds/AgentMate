@@ -1,6 +1,8 @@
 import { execSync } from 'node:child_process';
 import { cpSync, existsSync, renameSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import type { FullConfig } from '@playwright/test';
+import { startWorkerDisplays } from './displays';
 import { APP_ROOT, E2E_OUT_DIR, MAIN_LOG_DIR } from './paths';
 
 /**
@@ -36,11 +38,17 @@ function moveDirectory(from: string, to: string): void {
   rmSync(from, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }
 
-export default function globalSetup(): void {
+export default async function globalSetup(config: FullConfig): Promise<(() => void) | undefined> {
   // Workers inherit this, so things built once per run (the DevHost) know whether this run has.
   process.env.RUNOVA_E2E_RUN_ID = `${process.pid}-${Date.now()}`;
   // Playwright only sweeps its own output folder, so last run's app logs are cleared here.
   rmSync(MAIN_LOG_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  buildApp();
+  // The function returned is Playwright's global teardown.
+  return startWorkerDisplays(config.workers);
+}
+
+function buildApp(): void {
   if (process.env.RUNOVA_E2E_SKIP_BUILD === '1' && existsSync(join(E2E_OUT_DIR, 'main'))) {
     return;
   }
