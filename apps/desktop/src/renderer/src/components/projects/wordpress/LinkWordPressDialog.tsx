@@ -178,6 +178,13 @@ export function LinkWordPressDialog({
     selected.has(wpItemKey(item)),
   ).length;
   const linked = run?.result?.kind === 'link' ? run.result.value : null;
+  // A project linked to another site, or to one that was disconnected, moves to the one picked.
+  const fromSiteId = project.wordpress?.siteId;
+  const movingFrom =
+    fromSiteId && fromSiteId !== siteId
+      ? (sitesQuery.data?.find((candidate) => candidate.id === fromSiteId)?.label ??
+        (sitesQuery.data ? 'a disconnected site' : 'another site'))
+      : null;
 
   return (
     <>
@@ -206,6 +213,15 @@ export function LinkWordPressDialog({
 
             {step === 'items' ? (
               <div className="space-y-3">
+                {movingFrom ? (
+                  <p
+                    role="note"
+                    className="flex items-start gap-2 rounded-lg bg-warning/10 px-3 py-2 text-xs text-foreground ring-1 ring-inset ring-warning/25"
+                  >
+                    <CircleInfo className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
+                    {`${project.name} is linked to ${movingFrom} now. Linking moves it to ${site?.label ?? 'this site'}, and it stops syncing with ${movingFrom}.`}
+                  </p>
+                ) : null}
                 <ItemPicker
                   items={itemsQuery.data}
                   loading={itemsQuery.isPending}

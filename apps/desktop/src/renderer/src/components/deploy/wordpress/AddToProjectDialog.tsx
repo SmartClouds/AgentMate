@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ArrowRight, CircleCheck, FolderPlus, Plus, Search, Spinner } from '@/components/icons';
+import { ProjectIcon } from '@/components/projects/ProjectIcon';
 import { RunError } from '@/components/projects/wordpress/FlowParts';
 import { toItemRef } from '@/components/projects/wordpress/ItemPicker';
 import { OperationTimeline } from '@/components/projects/wordpress/OperationTimeline';
@@ -120,11 +121,22 @@ function ChoiceRow({
               : 'cursor-pointer bg-foreground/[0.03] ring-foreground/[0.07] hover:bg-foreground/[0.06]',
         )}
       >
+        <ProjectIcon
+          iconDataUrl={project.iconDataUrl ?? null}
+          bgColor={project.iconBgColor}
+          iconColor={project.iconColor}
+          className="h-8 w-8 rounded-md"
+          glyphClassName="h-3.5 w-3.5"
+        />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium">{project.name}</span>
           <span className="block truncate text-xs text-muted-foreground">{project.folderPath}</span>
         </span>
-        {detail ? <span className="shrink-0 text-xs text-muted-foreground">{detail}</span> : null}
+        {detail ? (
+          <span className="max-w-[45%] shrink-0 truncate text-xs text-muted-foreground">
+            {detail}
+          </span>
+        ) : null}
         {selected ? <CircleCheck className="h-4 w-4 shrink-0 text-primary" /> : null}
       </button>
     </li>
@@ -133,7 +145,8 @@ function ChoiceRow({
 
 /**
  * The projects a site's item can go into, grouped by what picking them means. Works as a radio
- * group: arrow keys move the choice, and projects linked to another site are passed over.
+ * group: arrow keys move the choice, and projects linked to another site are passed over unless
+ * `relink` lets them move to this one.
  */
 export function ProjectChoiceList({
   choices,
@@ -144,6 +157,7 @@ export function ProjectChoiceList({
   show = ALL_GROUPS,
   query = '',
   label = 'Projects',
+  relink = false,
 }: {
   choices: ProjectChoices;
   /** Connected sites, to name the one a project in "Linked to another site" belongs to. */
@@ -157,6 +171,8 @@ export function ProjectChoiceList({
   query?: string;
   /** The radio group's accessible name. */
   label?: string;
+  /** Projects linked to another site can be picked, to move them to this one. */
+  relink?: boolean;
 }): React.JSX.Element {
   const listRef = useRef<HTMLDivElement>(null);
   const needle = query.trim().toLowerCase();
@@ -177,9 +193,13 @@ export function ProjectChoiceList({
     otherSite: choices.otherSite.filter((choice) => matches(choice.project, needle)),
   };
   const shown = show.filter((group) => groups[group].length > 0);
-  const pickable = shown
-    .filter((group) => group !== 'otherSite')
-    .flatMap((group) => groups[group as 'siteProjects' | 'unlinked']);
+  const pickable = shown.flatMap((group) =>
+    group === 'otherSite'
+      ? relink
+        ? groups.otherSite.map((choice) => choice.project)
+        : []
+      : groups[group],
+  );
   // Roving focus: the picked project takes Tab, or the first one when none is picked yet.
   const focusId = pickable.some((project) => project.id === selectedId)
     ? selectedId
@@ -214,7 +234,9 @@ export function ProjectChoiceList({
   }
 
   function siteName(siteId: string): string {
-    return sites?.find((site) => site.id === siteId)?.label ?? 'another site';
+    const site = sites?.find((candidate) => candidate.id === siteId);
+    if (site) return site.label;
+    return sites ? 'a disconnected site' : 'another site';
   }
 
   return (
@@ -260,16 +282,20 @@ export function ProjectChoiceList({
             </>
           ) : (
             <>
-              <GroupHeading title="Linked to another site" />
+              {relink ? (
+                <GroupHeading title="WordPress projects" hint="Moves to this site" />
+              ) : (
+                <GroupHeading title="Linked to another site" />
+              )}
               <ul className="space-y-1.5">
                 {groups.otherSite.map(({ project, siteId }) => (
                   <ChoiceRow
                     key={project.id}
                     project={project}
                     detail={`Linked to ${siteName(siteId)}`}
-                    selected={false}
-                    disabled
-                    focusable={false}
+                    selected={relink && project.id === selectedId}
+                    disabled={!relink}
+                    focusable={relink && project.id === focusId}
                     onSelect={onSelect}
                   />
                 ))}

@@ -992,15 +992,113 @@ describe('linkProject', () => {
     ).toEqual(['inc/setup.php', 'index.php']);
   });
 
-  it('refuses a linked project and items the site does not have', async () => {
+  it('refuses a project already on this site and items the site does not have', async () => {
     const linked = await createShop([THEME]);
-    expect(wordPressErrorCode(await failure(link(linked, [TOOLS])))).toBe('badRequest');
+    const refused = await failure(link(linked, [TOOLS]));
+    expect(wordPressErrorCode(refused)).toBe('badRequest');
+    expect(refused.message).toContain('This project is already linked to this site.');
 
     const plain = plainProject();
     const error = await failure(link(plain, [{ kind: 'plugin', slug: 'nope' }]));
     expect(wordPressErrorCode(error)).toBe('itemUnknown');
     expect(projects.get(plain.id)?.wordpress).toBeUndefined();
     expect(await bases.read(plain.id)).toBeNull();
+  });
+
+  it('moves a project from a disconnected site, keeping the base for the same site key', async () => {
+    const project = await createShop([THEME]);
+    const before = await bases.read(project.id);
+    await service.disconnect({ siteId, revokeOnSite: false });
+    const again = await service.connect({ connectionKey: fake.createKey() });
+
+    const { project: moved, notPulled } = await service.linkProject({
+      operationId: op(),
+      projectId: project.id,
+      siteId: again.id,
+      items: [THEME, TOOLS],
+    });
+    expect(notPulled).toEqual([THEME]);
+    expect(moved.wordpress?.siteId).toBe(again.id);
+    expect(moved.wordpress?.items.map(wpItemKey)).toEqual(['theme:shop', 'plugin:tools']);
+    expect(moved.prompt.match(/This project mirrors part of/g)).toHaveLength(1);
+    expect(moved.websiteUrl).toBe(fake.siteUrl);
+    expect(local(moved, 'wp-content/plugins/tools/tools.php')).toBe('<?php // tools');
+    const kept = await bases.read(project.id);
+    expect(kept?.siteId).toBe(again.id);
+    expect(kept?.items['theme:shop']).toEqual(before?.items['theme:shop']);
+    siteId = again.id;
+    expect((await service.planPull({ projectId: project.id })).changes).toEqual([]);
+  });
+
+  describe('from another connected site', () => {
+    let other: FakeConnector;
+    let otherId: string;
+
+    beforeEach(async () => {
+      other = await new FakeConnector().start();
+      other.addItem(THEME, { 'style.css': '/* Theme Name: Other */' }, { active: true });
+      other.addItem(
+        TOOLS,
+        { 'tools.php': '<?php // other tools' },
+        { active: true, mainFile: 'tools/tools.php' },
+      );
+      otherId = (await service.connect({ connectionKey: other.createKey() })).id;
+    });
+
+    afterEach(async () => {
+      onProgress = null;
+      await other.stop();
+    });
+
+    const moveTo = (project: Project, items: WpItemRef[]) =>
+      service.linkProject({ operationId: op(), projectId: project.id, siteId: otherId, items });
+
+    it("moves the project and takes the new site's address", async () => {
+      const project = await createShop([THEME]);
+      const { project: moved, notPulled } = await moveTo(project, [THEME, TOOLS]);
+      expect(notPulled).toEqual([THEME]);
+      expect(moved.wordpress?.siteId).toBe(otherId);
+      expect(moved.websiteUrl).toBe(other.siteUrl);
+      expect(local(moved, 'wp-content/themes/shop/style.css')).toBe('/* Theme Name: Shop */');
+      expect(local(moved, 'wp-content/plugins/tools/tools.php')).toBe('<?php // other tools');
+      // The other site's key differs, so only what was pulled from it has a base.
+      expect(Object.keys((await bases.read(project.id))?.items ?? {})).toEqual(['plugin:tools']);
+    });
+
+    it('keeps an address the user set themselves', async () => {
+      const project = await createShop([THEME]);
+      projects.set(project.id, { ...project, websiteUrl: 'https://mine.example' });
+      const { project: moved } = await moveTo(project, [THEME]);
+      expect(moved.websiteUrl).toBe('https://mine.example');
+    });
+
+    it('leaves the old link and base alone when the move fails', async () => {
+      const project = await createShop([THEME]);
+      const before = await bases.read(project.id);
+      onProgress = (event) => {
+        if (event.phase === 'download') other.switches.foreign = { status: 503 };
+      };
+      expect(wordPressErrorCode(await failure(moveTo(project, [THEME, TOOLS])))).toBe(
+        'foreignResponse',
+      );
+      other.switches.foreign = null;
+      expect(projects.get(project.id)?.wordpress?.siteId).toBe(siteId);
+      expect(await bases.read(project.id)).toEqual(before);
+      expect(local(project, 'wp-content/plugins/tools/tools.php')).toBeNull();
+      expect((await service.planPull({ projectId: project.id })).changes).toEqual([]);
+    });
+
+    it('waits while the old site is busy', async () => {
+      const project = await createShop([THEME]);
+      let moving: Promise<Error> | null = null;
+      onProgress = (event) => {
+        if (moving === null && event.siteId === siteId) moving = failure(moveTo(project, [THEME]));
+      };
+      await createShop([TOOLS]);
+      const error = await (moving as Promise<Error> | null);
+      expect(error && wordPressErrorCode(error)).toBe('operationBusy');
+      expect(projects.get(project.id)?.wordpress?.siteId).toBe(siteId);
+    });
   });
 
   it('takes the site out of the prompt again on unlink', async () => {

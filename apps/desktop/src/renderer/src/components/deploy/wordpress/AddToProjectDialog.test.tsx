@@ -192,10 +192,11 @@ describe('AddToProjectDialog', () => {
     expect(screen.getByRole('button', { name: /Add and pull/ })).toBeDisabled();
   });
 
-  it('names the other site generically when it is not connected here', async () => {
+  it('says the other site was disconnected when it is not connected here', async () => {
     renderDialog([linked('gone', 'Orphan', [PLUGIN], 'site-gone')]);
     const row = await screen.findByRole('radio', { name: /Orphan/ });
-    expect(within(row).getByText('Linked to another site')).toBeTruthy();
+    expect(await within(row).findByText('Linked to a disconnected site')).toBeTruthy();
+    expect(row).toHaveAttribute('aria-disabled', 'true');
   });
 
   it("adds the item to a project on the site, keeping that project's items", async () => {

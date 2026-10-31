@@ -357,7 +357,7 @@ test.describe('WordPress items into projects from Deploy', () => {
     await p.getByRole('button', { name: 'Link an existing project' }).click();
     const picker = p.getByRole('dialog', { name: 'Link an existing project' });
     const choices = picker.getByRole('radiogroup', { name: 'Projects to link' });
-    // Only projects linked to no site are offered.
+    // A and B are already on this site, and no project is linked elsewhere, so C is the one choice.
     await expect(choices.getByRole('radio')).toHaveCount(1);
     const toC = choices.getByRole('radio', { name: new RegExp(`^${PROJECT_C}`) });
     await toC.click();

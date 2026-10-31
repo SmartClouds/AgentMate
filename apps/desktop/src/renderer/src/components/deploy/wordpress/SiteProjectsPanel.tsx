@@ -23,6 +23,7 @@ import {
 import { Chip, EmptyState } from '@/components/pageKit';
 import { LinkWordPressDialog } from '@/components/projects/wordpress/LinkWordPressDialog';
 import { NewWordPressProjectDialog } from '@/components/projects/wordpress/NewWordPressProjectDialog';
+import { siteHost } from '@/components/projects/wordpress/SitePicker';
 import { useUnlinkWordPressProject } from '@/components/projects/wordpress/useUnlinkWordPressProject';
 import { Button } from '@/components/ui/button';
 import {
@@ -44,10 +45,11 @@ import { OverflowScroll } from '@/components/ui/overflow-scroll';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { PullFlowDialog } from '@/components/wordpress/PullFlowDialog';
+import { cn } from '@/lib/utils';
 import { DeployCard, Notice } from '../deployKit';
 import { ProjectChoiceList } from './AddToProjectDialog';
-import { siteProjects, useProjects, useSiteItems } from './hooks';
-import type { ProjectChoices } from './itemProjects';
+import { siteProjects, useProjects, useSiteItems, useWordPressSites } from './hooks';
+import { type ProjectChoices, projectChoicesForSite } from './itemProjects';
 
 /** More projects than this to pick from and the picker offers a search. */
 const SEARCH_AFTER = 6;
@@ -193,7 +195,53 @@ function ProjectRow({
   );
 }
 
-/** Picks a project that isn't linked to any site yet, to go on to linking it to this one. */
+type PickerFilter = 'wordpress' | 'all';
+
+const FILTER_OPTIONS: { value: PickerFilter; label: string }[] = [
+  { value: 'wordpress', label: 'WordPress projects' },
+  { value: 'all', label: 'All projects' },
+];
+
+function FilterToggle({
+  value,
+  onChange,
+}: {
+  value: PickerFilter;
+  onChange: (value: PickerFilter) => void;
+}): React.JSX.Element {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Show"
+      className="inline-flex shrink-0 rounded-lg border border-border bg-background/60 p-0.5"
+    >
+      {FILTER_OPTIONS.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          role="radio"
+          aria-checked={value === option.value}
+          onClick={() => onChange(option.value)}
+          className={cn(
+            'rounded-md px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            value === option.value
+              ? 'bg-primary/15 text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.35)]'
+              : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Picks a project to link to this site. WordPress projects come first: the ones linked to another
+ * site (or to one that was disconnected), which move here, and plain projects at this site's
+ * address. "All projects" adds every other plain project. The ones already on this site are in
+ * the panel, so they aren't offered again.
+ */
 function LinkProjectPicker({
   open,
   onOpenChange,
@@ -208,22 +256,46 @@ function LinkProjectPicker({
   onNewProject: () => void;
 }): React.JSX.Element {
   const projectsQuery = useProjects();
+  const sitesQuery = useWordPressSites();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<PickerFilter>('wordpress');
 
   useEffect(() => {
     if (!open) return;
     setSelectedId(null);
     setQuery('');
+    setFilter('wordpress');
   }, [open]);
 
-  const unlinked = useMemo(
-    () => (projectsQuery.data ?? []).filter((project) => !project.wordpress).sort(byName),
-    [projectsQuery.data],
+  const all = useMemo(
+    () => projectChoicesForSite(projectsQuery.data ?? [], site.id),
+    [projectsQuery.data, site.id],
   );
-  const choices: ProjectChoices = { siteProjects: [], unlinked, otherSite: [], holding: [] };
-  const picked = unlinked.find((project) => project.id === selectedId) ?? null;
-  const none = projectsQuery.isSuccess && unlinked.length === 0;
+  const sameAddress = useMemo(() => {
+    const host = siteHost(site.siteUrl).toLowerCase();
+    return all.unlinked.filter(
+      (project) => project.websiteUrl && siteHost(project.websiteUrl).toLowerCase() === host,
+    );
+  }, [all, site.siteUrl]);
+  const wordpressCount = all.otherSite.length + sameAddress.length;
+  // The toggle only shows when each side has something the other doesn't.
+  const showFilter = wordpressCount > 0 && all.unlinked.length > sameAddress.length;
+  const shown: PickerFilter = wordpressCount === 0 ? 'all' : filter;
+  const choices: ProjectChoices = {
+    siteProjects: [],
+    unlinked: shown === 'all' ? all.unlinked : sameAddress,
+    otherSite: all.otherSite,
+    holding: [],
+  };
+  const visible = [...choices.otherSite.map((choice) => choice.project), ...choices.unlinked];
+  const picked = visible.find((project) => project.id === selectedId) ?? null;
+  const none = projectsQuery.isSuccess && all.otherSite.length + all.unlinked.length === 0;
+
+  const pickedFrom = picked?.wordpress
+    ? (sitesQuery.data?.find((candidate) => candidate.id === picked.wordpress?.siteId)?.label ??
+      (sitesQuery.data ? 'a disconnected site' : 'another site'))
+    : null;
 
   let body: React.ReactNode;
   if (projectsQuery.isError) {
@@ -235,33 +307,46 @@ function LinkProjectPicker({
   } else if (none) {
     body = (
       <p className="rounded-lg bg-foreground/[0.03] px-3 py-6 text-center text-sm text-muted-foreground ring-1 ring-inset ring-foreground/[0.07]">
-        Every project is already linked to a site. Make a new one instead.
+        Every project already works on this site. Make a new one instead.
       </p>
     );
   } else {
     body = (
       <>
-        {unlinked.length > SEARCH_AFTER ? (
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              aria-label="Search projects"
-              placeholder="Search projects"
-              className="pl-8"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
+        {showFilter || visible.length > SEARCH_AFTER ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {showFilter ? <FilterToggle value={shown} onChange={setFilter} /> : null}
+            {visible.length > SEARCH_AFTER ? (
+              <div className="relative min-w-40 flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  aria-label="Search projects"
+                  placeholder="Search projects"
+                  className="pl-8"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+              </div>
+            ) : null}
           </div>
         ) : null}
         <ProjectChoiceList
           choices={choices}
+          sites={sitesQuery.data}
           selectedId={selectedId}
           onSelect={(project) => setSelectedId(project.id)}
           loading={projectsQuery.isPending}
-          show={['unlinked']}
+          show={['otherSite', 'unlinked']}
           query={query}
           label="Projects to link"
+          relink
         />
+        {picked && pickedFrom ? (
+          <p role="note" className="px-1 text-xs text-muted-foreground">
+            {picked.name} stops syncing with {pickedFrom} and syncs with {site.label} instead. Its
+            files stay where they are.
+          </p>
+        ) : null}
       </>
     );
   }

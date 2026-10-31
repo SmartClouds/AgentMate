@@ -816,24 +816,42 @@ export class WordPressProjectService extends WordPressService {
    * pulled in now; one whose folder already holds files is linked without a pull, so nothing in
    * it is overwritten, and the next pull shows each file that differs from the site as a
    * conflict. The site's facts go into the project's prompt after what the user wrote.
+   *
+   * A project linked to another site (or to one that was disconnected) moves to this one. Its old
+   * link and base stay as they were until the new link is saved, so a move that fails changes
+   * nothing.
    */
   async linkProject(
     input: DeployWordPressLinkProjectInput,
   ): Promise<DeployWordPressLinkProjectResult> {
     const project = await this.projectDeps.projects.get(input.projectId);
     if (!project) throw wordPressError('projectNotLinked', 'That project no longer exists.');
-    if (normalizeProjectWordPressLink(project.wordpress)) {
-      throw wordPressError('badRequest', 'This project is already linked to a WordPress site.');
+    const previous = normalizeProjectWordPressLink(project.wordpress);
+    if (previous?.siteId === input.siteId) {
+      throw wordPressError('badRequest', 'This project is already linked to this site.');
+    }
+    if (previous && this.siteBusy(previous.siteId)) {
+      throw wordPressError(
+        'operationBusy',
+        'A pull or deploy for the site this project is linked to is still running. Wait for it to finish first.',
+      );
     }
     const site = await this.requireSite(input.siteId);
+    const previousSite = previous ? await this.deps.state.site(previous.siteId) : null;
+    // A site address that only came from the old link follows the project to the new site.
+    const keepUrl =
+      project.websiteUrl !== '' &&
+      (previousSite === null || project.websiteUrl !== previousSite.siteUrl);
     return this.runOperation(input.operationId, site.id, project.id, 'items', (signal, report) =>
       this.withSite(site.id, async (client) => {
         const folder = await stat(project.folderPath).catch(() => null);
         if (!folder?.isDirectory()) {
           throw wordPressError('badRequest', "This project's folder is missing.");
         }
-        // Whatever an earlier link left behind belongs to another sync.
-        await this.deps.bases.remove(project.id);
+        // Whatever an earlier link left behind belongs to another sync. A move keeps its base
+        // until the new link is in, below.
+        const previousBase = previous ? await this.deps.bases.read(project.id) : null;
+        if (!previous) await this.deps.bases.remove(project.id);
         report('manifest', 0, input.items.length);
         const gathered = await this.gather(client, site, project, input.items, signal);
         const fresh = new Set((input.newItems ?? []).map(wpItemKey));
@@ -864,6 +882,8 @@ export class WordPressProjectService extends WordPressService {
           .map((state) => ({ ...state, base: {} }));
         const writer = new WpLocalWriter(project.folderPath);
         try {
+          // The same site under a new id keeps its base; another site's is dropped.
+          if (previous) await this.relinkBase(project.id, site);
           const pulled = await this.applyPull(
             client,
             site,
@@ -890,7 +910,7 @@ export class WordPressProjectService extends WordPressService {
                 project.prompt ?? '',
                 buildWpProjectPrompt(gathered.info, siteItems),
               ),
-              ...(project.websiteUrl ? {} : { websiteUrl: site.siteUrl }),
+              ...(keepUrl ? {} : { websiteUrl: site.siteUrl }),
             },
           );
           this.dropPlans(project.id);
@@ -898,7 +918,8 @@ export class WordPressProjectService extends WordPressService {
           return { project: updated, notPulled };
         } catch (error) {
           await writer.removeCreated();
-          await this.deps.bases.remove(project.id);
+          if (previousBase) await this.deps.bases.write(project.id, previousBase);
+          else await this.deps.bases.remove(project.id);
           throw error;
         }
       }),

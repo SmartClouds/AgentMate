@@ -1,4 +1,4 @@
-import type { WpItemRef } from '@runova/core';
+import type { Project, WpItemRef } from '@runova/core';
 import type { DeployWordPressLinkProjectResult } from '@shared/deployWordPressTypes';
 import { act, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -15,6 +15,7 @@ import { deferred, SITE_ITEMS, wpProject, wpSite } from './testing/fixtures';
 const PLAIN = wpProject({ id: 'p-plain', name: 'Shop code', wordpress: undefined });
 
 interface StartingPoint {
+  project?: Project;
   initialSiteId?: string;
   initialItems?: WpItemRef[];
 }
@@ -164,6 +165,40 @@ describe('LinkWordPressDialog', () => {
         'data-state',
         'unchecked',
       );
+    });
+
+    it('says a project linked to another site moves to this one', async () => {
+      const moving = wpProject({ id: 'p-moving', name: 'Shop code' });
+      renderDialog({}, { project: moving, initialSiteId: 'site-2' });
+
+      await screen.findByText('Storefront');
+      await waitFor(() =>
+        expect(screen.getByRole('note')).toHaveTextContent(
+          'Shop code is linked to Acme Shop now. Linking moves it to Blog, and it stops syncing with Acme Shop.',
+        ),
+      );
+    });
+
+    it('names a disconnected site as such', async () => {
+      const orphan = wpProject({
+        id: 'p-orphan',
+        name: 'Shop code',
+        wordpress: { siteId: 'site-gone', items: [], linkedAt: '2026-10-01T00:00:00.000Z' },
+      });
+      renderDialog({}, { project: orphan, initialSiteId: 'site-2' });
+
+      await screen.findByText('Storefront');
+      await waitFor(() =>
+        expect(screen.getByRole('note')).toHaveTextContent(
+          'Shop code is linked to a disconnected site now.',
+        ),
+      );
+    });
+
+    it('has no move note for a plain project', async () => {
+      renderDialog({}, { initialSiteId: 'site-2' });
+      expect(await screen.findByText('Storefront')).toBeTruthy();
+      expect(screen.queryByRole('note')).toBeNull();
     });
 
     it('still shows a link running for the project instead', async () => {

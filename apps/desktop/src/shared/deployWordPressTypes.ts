@@ -197,7 +197,10 @@ export interface DeployWordPressIgnoreInput {
   ignore: Record<string, string[]>;
 }
 
-/** Makes an existing project, not yet linked to any site, a WordPress project. */
+/**
+ * Makes an existing project a WordPress project linked to this site. A project linked to another
+ * site, or to one that was disconnected, moves here.
+ */
 export interface DeployWordPressLinkProjectInput {
   operationId: string;
   projectId: string;

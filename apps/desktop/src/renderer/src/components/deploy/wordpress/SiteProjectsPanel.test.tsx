@@ -10,7 +10,7 @@ import { wpItem, wpProject, wpSite } from './testing/fixtures';
 
 /**
  * Every project on this computer that works on the site, with the ways to open one, pull into it
- * or unlink it, and to start a new one or link one that is not linked anywhere yet.
+ * or unlink it, and to start a new one or link another, WordPress projects first.
  */
 
 const toast = vi.hoisted(() =>
@@ -100,6 +100,7 @@ const SHOP = wpProject({
 const ELSEWHERE = wpProject({
   id: 'proj-3',
   name: 'Other site work',
+  iconDataUrl: 'data:image/png;base64,AAAA',
   wordpress: {
     siteId: 'another-site',
     items: [{ kind: 'theme', slug: 'other' }],
@@ -131,6 +132,7 @@ function renderPanel(bridge: Record<string, unknown> = {}) {
       bridge: {
         'projects.list': async () => PROJECTS,
         'deployWordPress.listItems': async () => ITEMS,
+        'deployWordPress.listSites': async () => [SITE],
         ...bridge,
       },
     },
@@ -211,23 +213,50 @@ describe('SiteProjectsPanel', () => {
     expect(flow).toMatchObject({ open: true, initialSiteId: SITE.id });
   });
 
-  it('links a project that is not linked anywhere, then goes to its WordPress tab', async () => {
-    const { user } = renderPanel();
-
+  async function openPicker(user: ReturnType<typeof renderPanel>['user']): Promise<HTMLElement> {
     await screen.findByRole('list', { name: 'Projects on this site' });
     await user.click(screen.getByRole('button', { name: 'Link an existing project' }));
+    return screen.findByRole('dialog', { name: 'Link an existing project' });
+  }
 
-    const picker = await screen.findByRole('dialog', { name: 'Link an existing project' });
-    const choices = within(picker).getByRole('radiogroup');
+  function choicesIn(picker: HTMLElement): HTMLElement {
+    return within(picker).getByRole('radiogroup', { name: 'Projects to link' });
+  }
+
+  it('shows WordPress projects first, and every project on request', async () => {
+    const { user } = renderPanel();
+    const picker = await openPicker(user);
+
+    const show = within(picker).getByRole('radiogroup', { name: 'Show' });
+    expect(within(show).getByRole('radio', { name: 'WordPress projects' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    const choices = choicesIn(picker);
     expect(within(choices).getAllByRole('radio')).toHaveLength(1);
-    expect(within(choices).getByText('Notes')).toBeTruthy();
+    const elsewhere = within(choices).getByRole('radio', { name: /Other site work/ });
+    expect(elsewhere).not.toHaveAttribute('aria-disabled');
+    expect(await within(elsewhere).findByText('Linked to a disconnected site')).toBeTruthy();
+    expect(elsewhere.querySelector('img')?.getAttribute('src')).toBe('data:image/png;base64,AAAA');
+    // Projects already on this site are in the panel, not in the picker.
     expect(within(choices).queryByText('Bakery theme')).toBeNull();
-    expect(within(choices).queryByText('Other site work')).toBeNull();
+    expect(within(choices).queryByText('Shop plugins')).toBeNull();
+
+    await user.click(within(show).getByRole('radio', { name: 'All projects' }));
+    expect(within(choicesIn(picker)).getAllByRole('radio')).toHaveLength(2);
+    expect(within(choicesIn(picker)).getByText('Notes')).toBeTruthy();
+  });
+
+  it('links a project that is not linked anywhere, then goes to its WordPress tab', async () => {
+    const { user } = renderPanel();
+    const picker = await openPicker(user);
+    await user.click(within(picker).getByRole('radio', { name: 'All projects' }));
 
     const next = within(picker).getByRole('button', { name: /Next/ }) as HTMLButtonElement;
     expect(next.disabled).toBe(true);
-    await user.click(within(choices).getByRole('radio', { name: /Notes/ }));
+    await user.click(within(choicesIn(picker)).getByRole('radio', { name: /Notes/ }));
     expect(next.disabled).toBe(false);
+    expect(within(picker).queryByRole('note')).toBeNull();
     await user.click(next);
 
     const link = await screen.findByTestId('link-project');
@@ -244,17 +273,54 @@ describe('SiteProjectsPanel', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/projects/proj-4?tab=wordpress');
   });
 
-  it('says every project is linked when there is none to pick', async () => {
-    const { user } = renderPanel({ 'projects.list': async () => [BAKERY, ELSEWHERE] });
+  it('moves a project linked to another site, saying what changes', async () => {
+    const { user } = renderPanel();
+    const picker = await openPicker(user);
 
-    await screen.findByRole('list', { name: 'Projects on this site' });
-    await user.click(screen.getByRole('button', { name: 'Link an existing project' }));
+    await user.click(within(choicesIn(picker)).getByRole('radio', { name: /Other site work/ }));
+    expect(within(picker).getByRole('note')).toHaveTextContent(
+      'Other site work stops syncing with a disconnected site and syncs with Bakery instead. Its files stay where they are.',
+    );
+    await user.click(within(picker).getByRole('button', { name: /Next/ }));
 
-    const picker = await screen.findByRole('dialog', { name: 'Link an existing project' });
+    const link = await screen.findByTestId('link-project');
+    expect(JSON.parse(link.firstChild?.textContent ?? '{}')).toMatchObject({
+      projectId: 'proj-3',
+      initialSiteId: SITE.id,
+    });
+  });
+
+  it('counts a plain project at the site address as a WordPress project', async () => {
+    const atAddress = wpProject({
+      id: 'proj-5',
+      name: 'Bakery redesign',
+      websiteUrl: 'https://Bakery.example/',
+      wordpress: undefined,
+    });
+    const { user } = renderPanel({ 'projects.list': async () => [BAKERY, NOTES, atAddress] });
+    const picker = await openPicker(user);
+
+    const choices = choicesIn(picker);
+    expect(within(choices).getAllByRole('radio')).toHaveLength(1);
+    expect(within(choices).getByText('Bakery redesign')).toBeTruthy();
+    await user.click(within(picker).getByRole('radio', { name: 'All projects' }));
+    expect(within(choicesIn(picker)).getAllByRole('radio')).toHaveLength(2);
+  });
+
+  it('lists every project, with no toggle, when none is a WordPress project', async () => {
+    const { user } = renderPanel({ 'projects.list': async () => [BAKERY, NOTES] });
+    const picker = await openPicker(user);
+
+    expect(within(picker).queryByRole('radiogroup', { name: 'Show' })).toBeNull();
+    expect(within(choicesIn(picker)).getByRole('radio', { name: /Notes/ })).toBeTruthy();
+  });
+
+  it('says every project works on this site when there is none to pick', async () => {
+    const { user } = renderPanel({ 'projects.list': async () => [BAKERY, SHOP] });
+    const picker = await openPicker(user);
+
     expect(
-      within(picker).getByText(
-        'Every project is already linked to a site. Make a new one instead.',
-      ),
+      within(picker).getByText('Every project already works on this site. Make a new one instead.'),
     ).toBeTruthy();
     expect(within(picker).queryByRole('radiogroup')).toBeNull();
 
@@ -272,14 +338,11 @@ describe('SiteProjectsPanel', () => {
       }),
     );
     const { user } = renderPanel({ 'projects.list': async () => [BAKERY, ...many] });
+    const picker = await openPicker(user);
 
-    await screen.findByRole('list', { name: 'Projects on this site' });
-    await user.click(screen.getByRole('button', { name: 'Link an existing project' }));
-
-    const picker = await screen.findByRole('dialog', { name: 'Link an existing project' });
-    expect(within(picker).getAllByRole('radio')).toHaveLength(8);
+    expect(within(choicesIn(picker)).getAllByRole('radio')).toHaveLength(8);
     await user.type(within(picker).getByRole('textbox', { name: 'Search projects' }), 'plain 3');
-    expect(within(picker).getAllByRole('radio')).toHaveLength(1);
+    expect(within(choicesIn(picker)).getAllByRole('radio')).toHaveLength(1);
     expect(within(picker).getByText('Plain 3')).toBeTruthy();
   });
 
