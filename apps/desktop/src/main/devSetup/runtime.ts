@@ -180,7 +180,9 @@ function createService(): DevSetupService {
     options: { force?: boolean } = {},
   ): Promise<DevDetection> => {
     await refreshPath(options.force);
-    return detector.detect(id, options);
+    const detection = await detector.detect(id, options);
+    for (const listener of detectionListeners) listener();
+    return detection;
   };
 
   const updateChecker = createUpdateChecker({
@@ -264,11 +266,28 @@ function createService(): DevSetupService {
   };
 }
 
+const detectionListeners = new Set<() => void>();
 let service: DevSetupService | null = null;
 
 export function getDevSetupService(): DevSetupService {
   service ??= createService();
   return service;
+}
+
+/** Called after every detection, for the news matcher (E42), which re-matches on a change. */
+export function onDevSetupDetected(listener: () => void): () => void {
+  detectionListeners.add(listener);
+  return () => detectionListeners.delete(listener);
+}
+
+/**
+ * What Dev Setup remembers for these items, without building the service: until the page (or an
+ * install) has run, there is nothing remembered and nothing is probed.
+ */
+export function peekDevSetup(
+  ids: readonly DevItemId[],
+): Partial<Record<DevItemId, DevDetection | undefined>> {
+  return service ? service.peek(ids) : {};
 }
 
 /** Stops a running install on quit. Does nothing when the page was never opened. */

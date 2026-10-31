@@ -46,6 +46,7 @@ import { registerHealthHandlers } from './ipc/health';
 import { registerHelpHandlers } from './ipc/help';
 import { registerIpGeoHandlers } from './ipc/ipGeo';
 import { registerMcpHandlers } from './ipc/mcp';
+import { registerNewsHandlers } from './ipc/news';
 import { registerNotificationHandlers } from './ipc/notifications';
 import { registerPackageManagerHandlers } from './ipc/packageManagers';
 import { registerPetHandlers } from './ipc/pet';
@@ -102,6 +103,7 @@ import {
   startNetworkQualityAlertWatcher,
   stopNetworkQualityAlertWatcher,
 } from './network/qualityAlerts';
+import { startNews, stopNews } from './news/runtime';
 import { startHookServer, stopHookServer } from './notifications/hookServer';
 import { registerNotificationActivation } from './notifications/osNotification';
 import { petManager } from './pet/petWindow';
@@ -408,6 +410,7 @@ function registerAllIpcHandlers(): void {
   registerGrammarHandlers();
   registerRelayHandlers();
   // Health targets carry sealed keys, so only the main window's own page may reach them.
+  registerNewsHandlers();
   registerHealthHandlers({
     guard: (event) => {
       const win = getMainWindow();
@@ -556,6 +559,8 @@ app.whenReady().then(async () => {
   startPipelineWatcher();
   void startCiAutoFix();
   startToolUpdateWatcher();
+  // A test run reaches no real API: news polls only when an e2e test points it at a fake one.
+  if (!isE2E || process.env.RUNOVA_NEWS_API_URL) startNews();
   startHealthScheduler();
   startScheduledTaskRunner();
   startHourlyUpdateChecks();
@@ -614,6 +619,7 @@ app.on('before-quit', (event) => {
   stopPipelineWatcher();
   stopCiAutoFix();
   stopToolUpdateWatcher();
+  stopNews();
   stopHealthScheduler();
   stopScheduledTaskRunner();
   shutdownLocalServer();

@@ -130,6 +130,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   terminalAiNotifications: true,
   keepAwake: 'agent',
   checkToolUpdatesEnabled: true,
+  newsState: { read: {}, dismissed: {}, notified: {} },
   workspaceTerminalCustomBackground: false,
   workspaceTerminalBackgroundColor: DEFAULT_TERMINAL_BACKGROUND_COLOR,
   vaultAutoLockMinutes: DEFAULT_VAULT_AUTO_LOCK_MINUTES,

@@ -327,7 +327,16 @@ export type AppNotificationKind =
   /** CI auto-fix made a run pass, needs the user, or ran out of attempts. */
   | 'pipeline-autofix-fixed'
   | 'pipeline-autofix-attention'
-  | 'pipeline-autofix-gave-up';
+  | 'pipeline-autofix-gave-up'
+  /** A high or critical security news item that affects a tool installed here (E42). */
+  | 'news-security';
+
+/** Item ids (as strings) mapped to when it happened, an ISO time. */
+export interface NewsLocalState {
+  read: Record<string, string>;
+  dismissed: Record<string, string>;
+  notified: Record<string, string>;
+}
 
 /** In-app inbox item: pipeline results from watched GitHub Actions, or a CLI/tool update. */
 export interface AppNotification {
@@ -724,6 +733,11 @@ export interface AppSettings {
    * has been published, and drops a bell notification in the app when one has.
    */
   checkToolUpdatesEnabled: boolean;
+  /**
+   * Which news items (E42) were read, dismissed or already notified about, by item id, each with
+   * the time it happened. Ids older than 180 days are pruned. Written by the main process only.
+   */
+  newsState: NewsLocalState;
   /**
    * Off by default: a Workspace terminal pane leaves colors alone, so whatever CLI is running
    * in it (Claude Code's own gray, say) looks the way it would in any ordinary terminal. On

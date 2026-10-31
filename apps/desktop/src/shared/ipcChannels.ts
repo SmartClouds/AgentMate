@@ -706,6 +706,21 @@ export const IPC = {
     // main -> renderer: HealthChangedEvent
     onChanged: 'health:changed',
   },
+  /** News from runovahq.com (E42), served from the local cache with the local fields added. */
+  news: {
+    // (NewsListQuery?) -> NewsListResult
+    list: 'news:list',
+    // ({ slug }) -> NewsItemDetailView | null
+    get: 'news:get',
+    // () -> NewsListResult, unfiltered, after a fetch that runs right away
+    refresh: 'news:refresh',
+    // ({ id }) -> void
+    markRead: 'news:markRead',
+    // ({ id }) -> void
+    dismiss: 'news:dismiss',
+    // main -> renderer: NewsChangedEvent
+    onChanged: 'news:changed',
+  },
   /**
    * Studio (E31): AI video projects, where each project keeps them, and their edit history. Every
    * input is checked against the schemas in @runova/studio before the service sees it.

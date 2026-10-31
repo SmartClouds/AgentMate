@@ -514,6 +514,7 @@ import { createDeployTelegram } from './deployTelegram';
 import { createDeployWordPress } from './deployWordPress';
 import { createErrorTracking } from './errorTracking';
 import { createHealth } from './health';
+import { createNews } from './news';
 import { createRelay } from './relay';
 import { createSftp } from './sftp';
 import {
@@ -2014,6 +2015,7 @@ const deployAppStore = {
 /** Private registries (E08): sign-ins on this computer and credentials stored on a server. */
 const deployRegistry = createDeployRegistry();
 const health = createHealth();
+const news = createNews();
 const studio = createStudio();
 const studioAi = createStudioAi();
 const studioScenes = createStudioScenes();
@@ -2935,6 +2937,7 @@ const runovaApi = {
   deployAppStore,
   deployRegistry,
   health,
+  news,
   studio,
   studioAi,
   studioScenes,

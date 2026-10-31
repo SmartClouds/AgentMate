@@ -166,6 +166,18 @@ const MISSING_CACHE_TTL_MS = 20 * 1000;
 
 let detectCache: { value: InstalledCli[]; at: number } | null = null;
 let detectInFlight: Promise<InstalledCli[]> | null = null;
+const detectedListeners = new Set<() => void>();
+
+/** The last sweep's result without starting one, or null before the first. */
+export function peekDetectedClis(): InstalledCli[] | null {
+  return detectCache?.value ?? null;
+}
+
+/** Called after every sweep, for the news matcher (E42), which re-matches on a change. */
+export function onClisDetected(listener: () => void): () => void {
+  detectedListeners.add(listener);
+  return () => detectedListeners.delete(listener);
+}
 
 export function detectAllClis(force: boolean): Promise<InstalledCli[]> {
   if (!force && detectCache) {
@@ -190,6 +202,7 @@ export function detectAllClis(force: boolean): Promise<InstalledCli[]> {
     })
     .then((value) => {
       detectCache = { value, at: Date.now() };
+      for (const listener of detectedListeners) listener();
       return value;
     })
     .finally(() => {

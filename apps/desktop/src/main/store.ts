@@ -80,6 +80,7 @@ import {
   normalizePingUrlInterval,
   normalizePingUrls,
 } from './network/pingProbe';
+import type { NewsCache } from './news/client';
 import { hydrateProjectIcons, persistProjectIcons } from './projectIconStore';
 
 /** Backup import reads the defaults from here. */
@@ -451,6 +452,10 @@ export const store = {
     readJsonFile('tool-update-watch.json', { lastCheckedAt: null }),
   setToolUpdateWatch: (state: ToolUpdateWatchState): Promise<void> =>
     writeJsonFile('tool-update-watch.json', state),
+
+  /** The last good news answer (E42), served when the API cannot be reached. Not backed up. */
+  getNewsCache: (): Promise<NewsCache | null> => readJsonFile('news-cache.json', null),
+  setNewsCache: (cache: NewsCache): Promise<void> => writeJsonFile('news-cache.json', cache),
 
   getLastRunInfoByCli: (): Promise<LastRunInfoByCli> => readJsonFile('last-run-info.json', {}),
   setLastRunInfoByCli: (info: LastRunInfoByCli): Promise<void> =>
