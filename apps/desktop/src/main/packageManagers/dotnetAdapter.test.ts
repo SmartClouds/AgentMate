@@ -210,7 +210,7 @@ describe('listPackages CLI usage', () => {
   it('reports cli-missing when the .NET SDK is not installed', async () => {
     cliState.handler = () => ({ notFound: true });
 
-    const section = await dotnetAdapter.listPackages(root);
+    const [section] = await dotnetAdapter.listPackages(root);
 
     expect(section).toEqual({
       ecosystem: 'dotnet',
@@ -224,7 +224,7 @@ describe('listPackages CLI usage', () => {
   it('returns an empty ok section when there is no project to scan', async () => {
     const empty = tempDir('runova-dotnet-empty-');
 
-    const section = await dotnetAdapter.listPackages(empty);
+    const [section] = await dotnetAdapter.listPackages(empty);
 
     expect(section).toEqual({
       ecosystem: 'dotnet',
@@ -250,7 +250,7 @@ describe('manifest parsing', () => {
       outdatedJson([]),
     );
 
-    const section = await dotnetAdapter.listPackages(root);
+    const [section] = await dotnetAdapter.listPackages(root);
 
     expect(section.packages.map((p) => p.name)).toEqual(['Newtonsoft.Json', 'Serilog']);
     expect(section.packages.map((p) => p.currentVersion)).toEqual(['13.0.1', '3.1.1']);
@@ -267,7 +267,7 @@ describe('manifest parsing', () => {
     });
     answerCli('', '');
 
-    const section = await dotnetAdapter.listPackages(root);
+    const [section] = await dotnetAdapter.listPackages(root);
 
     // A commented-out reference is not a dependency and must not be offered for update.
     expect(section.packages.map((p) => p.name)).toEqual(['Live']);
@@ -281,7 +281,7 @@ describe('manifest parsing', () => {
     });
     answerCli('', '');
 
-    const section = await dotnetAdapter.listPackages(root);
+    const [section] = await dotnetAdapter.listPackages(root);
 
     expect(section.packages[0]).toMatchObject({
       name: 'Microsoft.SourceLink.GitHub',
@@ -300,7 +300,7 @@ describe('manifest parsing', () => {
     });
     answerCli('', '');
 
-    const section = await dotnetAdapter.listPackages(root);
+    const [section] = await dotnetAdapter.listPackages(root);
 
     // Non-SDK-style projects keep their packages here, not in the .csproj.
     expect(section.packages.map((p) => p.name)).toEqual(['EntityFramework', 'NUnit']);
@@ -320,7 +320,7 @@ describe('manifest parsing', () => {
     });
     answerCli('', '');
 
-    const section = await dotnetAdapter.listPackages(root);
+    const [section] = await dotnetAdapter.listPackages(root);
 
     // Under CPM the .csproj carries no version, so the walk up the tree is the only source.
     expect(section.packages[0]).toMatchObject({
@@ -340,7 +340,7 @@ describe('manifest parsing', () => {
     });
     answerCli('', '');
 
-    const section = await dotnetAdapter.listPackages(root);
+    const [section] = await dotnetAdapter.listPackages(root);
 
     expect(section.packages[0].currentVersion).toBe('4.0.0');
   });
@@ -353,7 +353,7 @@ describe('manifest parsing', () => {
     answerCli('', '');
     stubNuget({ mystery: ['1.0.0'] });
 
-    const section = await dotnetAdapter.listPackages(root);
+    const [section] = await dotnetAdapter.listPackages(root);
 
     expect(section.packages[0].currentVersion).toBe('unknown');
     // An unknown current version can never be compared, so it is never flagged outdated.
@@ -376,7 +376,7 @@ describe('merging CLI output with the manifest', () => {
       outdatedJson([{ id: 'Newtonsoft.Json', resolved: '13.0.1', latest: '13.0.3' }]),
     );
 
-    const section = await dotnetAdapter.listPackages(root);
+    const [section] = await dotnetAdapter.listPackages(root);
 
     expect(section.packages.find((p) => p.name === 'Newtonsoft.Json')).toMatchObject({
       currentVersion: '13.0.1',
@@ -392,7 +392,7 @@ describe('merging CLI output with the manifest', () => {
     stubNuget({});
     answerCli(listJson([{ id: 'Serilog', resolvedVersion: '3.1.1' }]), outdatedJson([]));
 
-    const section = await dotnetAdapter.listPackages(root);
+    const [section] = await dotnetAdapter.listPackages(root);
 
     const serilog = section.packages.find((p) => p.name === 'Serilog');
     expect(serilog?.isOutdated).toBe(false);
@@ -410,7 +410,7 @@ describe('merging CLI output with the manifest', () => {
       outdatedJson([]),
     );
 
-    const section = await dotnetAdapter.listPackages(root);
+    const [section] = await dotnetAdapter.listPackages(root);
 
     // A package can come in through an imported .props file the parser never sees.
     expect(section.packages.map((p) => p.name)).toContain('Microsoft.Extensions.Logging');
@@ -427,7 +427,7 @@ describe('merging CLI output with the manifest', () => {
       outdatedJson([]),
     );
 
-    const section = await dotnetAdapter.listPackages(root);
+    const [section] = await dotnetAdapter.listPackages(root);
 
     expect(section.packages.map((p) => p.name)).toEqual([
       'AWSSDK.Core',
@@ -440,7 +440,7 @@ describe('merging CLI output with the manifest', () => {
     const requested = stubNuget({ serilog: ['3.1.1', '4.0.0', '4.1.0-dev.1'] });
     answerCli(listJson([{ id: 'Newtonsoft.Json', resolvedVersion: '13.0.1' }]), outdatedJson([]));
 
-    const section = await dotnetAdapter.listPackages(root);
+    const [section] = await dotnetAdapter.listPackages(root);
 
     // Newtonsoft.Json resolved, so its absence from the outdated list really means up to date.
     expect(requested).toEqual(['serilog']);
@@ -456,7 +456,7 @@ describe('merging CLI output with the manifest', () => {
     stubNuget({ 'newtonsoft.json': ['12.0.3', '13.0.3', '14.0.0-beta1'] });
     answerCli('', '');
 
-    const section = await dotnetAdapter.listPackages(root);
+    const [section] = await dotnetAdapter.listPackages(root);
 
     // The flat container index is sorted ascending, so the last stable entry is the latest.
     expect(section.packages.find((p) => p.name === 'Newtonsoft.Json')?.latestVersion).toBe(
@@ -468,7 +468,7 @@ describe('merging CLI output with the manifest', () => {
     stubNuget({});
     answerCli('', '');
 
-    const section = await dotnetAdapter.listPackages(root);
+    const [section] = await dotnetAdapter.listPackages(root);
 
     // A 404 means a private feed package, which is not an error worth showing.
     expect(section.packages.every((p) => p.isOutdated === false)).toBe(true);
@@ -481,7 +481,7 @@ describe('degraded projects', () => {
     stubNuget({});
     answerCli(RESTORE_PROBLEM, RESTORE_PROBLEM);
 
-    const section = await dotnetAdapter.listPackages(root);
+    const [section] = await dotnetAdapter.listPackages(root);
 
     expect(section.status).toBe('ok');
     expect(section.message).toContain('Could not restore App');
@@ -496,7 +496,7 @@ describe('degraded projects', () => {
     stubNuget({});
     answerCli('', '');
 
-    const section = await dotnetAdapter.listPackages(root);
+    const [section] = await dotnetAdapter.listPackages(root);
 
     expect(section.message).toContain('A, B');
     expect(section.message).toContain('those are');
@@ -513,7 +513,7 @@ describe('degraded projects', () => {
       outdatedJson([]),
     );
 
-    const section = await dotnetAdapter.listPackages(root);
+    const [section] = await dotnetAdapter.listPackages(root);
 
     expect(section.message).toBeNull();
   });
@@ -523,7 +523,7 @@ describe('degraded projects', () => {
     stubNuget({});
     answerCli('', '');
 
-    const section = await dotnetAdapter.listPackages(root);
+    const [section] = await dotnetAdapter.listPackages(root);
 
     expect(section.message).toBeNull();
     expect(section.packages).toEqual([]);

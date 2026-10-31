@@ -17,7 +17,8 @@ export interface PackageManagerAdapter {
   ecosystem: PackageManagerEcosystem;
   /** Filesystem-only check, must not spawn a CLI. */
   detect(folderPath: string): Promise<boolean>;
-  listPackages(folderPath: string): Promise<PackageManagerSection>;
+  /** One section per package manager the folder uses (Node can mix several). */
+  listPackages(folderPath: string): Promise<PackageManagerSection[]>;
   updatePackages(
     folderPath: string,
     updates: PackageUpdateRequest[],

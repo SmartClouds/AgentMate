@@ -362,7 +362,7 @@ async function detect(folderPath: string): Promise<boolean> {
   return files.length > 0;
 }
 
-async function listPackages(folderPath: string): Promise<PackageManagerSection> {
+async function listSection(folderPath: string): Promise<PackageManagerSection> {
   const base = { ecosystem: 'dart', manager: 'pub' } as const;
   const pubspecs = await findPubspecFiles(folderPath);
   const health = new HostHealth();
@@ -490,6 +490,6 @@ async function updatePackages(
 export const dartAdapter: PackageManagerAdapter = {
   ecosystem: 'dart',
   detect,
-  listPackages,
+  listPackages: async (folderPath) => [await listSection(folderPath)],
   updatePackages,
 };

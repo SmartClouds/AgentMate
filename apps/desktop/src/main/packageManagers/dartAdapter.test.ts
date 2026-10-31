@@ -157,7 +157,7 @@ dev_dependencies:
     });
     latestByName = { http: '1.2.0', test: '1.25.0' };
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     expect(section.ecosystem).toBe('dart');
     expect(section.manager).toBe('pub');
@@ -182,7 +182,7 @@ dev_dependencies:
     });
     latestByName = { http: '1.2.0' };
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     expect(section.packages.map((p) => p.name)).toEqual(['http']);
   });
@@ -201,7 +201,7 @@ dependencies:
     });
     latestByName = { odd: '9.9.9' };
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     // There is no registry version to compare a git or path dependency against.
     expect(section.packages[0]).toMatchObject({ name: 'odd', isOutdated: false });
@@ -218,7 +218,7 @@ dependencies:
     });
     latestByName = { sibling: '9.9.9' };
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     expect(section.packages[0].isOutdated).toBe(false);
     expect(pub?.requests).toEqual([]);
@@ -238,7 +238,7 @@ dependencies:
     });
     latestByName = { private_pkg: '3.0.0' };
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     expect(section.packages[0]).toMatchObject({ name: 'private_pkg', isOutdated: false });
     expect(pub?.requests).toEqual([]);
@@ -257,7 +257,7 @@ dependencies:
     });
     latestByName = { http: '1.2.0' };
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     expect(section.packages.map((p) => p.name)).toEqual(['http']);
     expect(section.packages[0].currentVersion).toBe('1.2.0');
@@ -269,7 +269,7 @@ dependencies:
       'packages/core/pubspec.yaml': 'dependencies:\n  http: ^1.2.0\n',
     });
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     const labels = new Set(section.packages.map((p) => p.projectLabel));
     // A pubspec with no name falls back to its path relative to the scanned folder.
@@ -311,7 +311,7 @@ describe('outdated detection', () => {
     project('^1.0.0', '1.0.0');
     latestByName = { http: '1.2.2' };
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     expect(section.packages[0]).toMatchObject({
       name: 'http',
@@ -327,7 +327,7 @@ describe('outdated detection', () => {
     project('^1.0.0', '1.2.2');
     latestByName = { http: '1.2.2' };
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     expect(section.packages[0]).toMatchObject({
       latestVersion: '1.2.2',
@@ -339,7 +339,7 @@ describe('outdated detection', () => {
     project('^2.0.0', '2.0.0');
     latestByName = { http: '1.9.9' };
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     expect(section.packages[0].isOutdated).toBe(false);
   });
@@ -348,7 +348,7 @@ describe('outdated detection', () => {
     project('^1.0.0', '1.0.0-beta.1');
     latestByName = { http: '1.0.0' };
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     expect(section.packages[0]).toMatchObject({ isOutdated: true, latestVersion: '1.0.0' });
   });
@@ -357,7 +357,7 @@ describe('outdated detection', () => {
     project('^1.0.0', '1.0.0');
     latestByName = { http: '1.0.0-beta.2' };
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     expect(section.packages[0].isOutdated).toBe(false);
   });
@@ -366,7 +366,7 @@ describe('outdated detection', () => {
     project('^1.0.0', '1.0.0+5');
     latestByName = { http: '1.0.0+9' };
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     expect(section.packages[0].isOutdated).toBe(false);
   });
@@ -378,7 +378,7 @@ describe('outdated detection', () => {
     });
     latestByName = { zeta: '1.0.0', alpha: '1.0.0' };
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     expect(section.packages.map((p) => p.name)).toEqual(['alpha', 'zeta']);
   });
@@ -391,7 +391,7 @@ describe('lookup failures', () => {
       'pubspec.lock': lockFile({ secret_pkg: '1.0.0' }),
     });
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     // Null is distinct from "up to date": the row cannot claim either way.
     expect(section.packages[0].latestVersion).toBeNull();
@@ -406,7 +406,7 @@ describe('lookup failures', () => {
     });
     latestByName = { http: null };
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     // A single dropped connection is common on a slow link, so one retry is worth it.
     expect(pub?.requests).toHaveLength(2);
@@ -425,7 +425,7 @@ describe('lookup failures', () => {
     });
     latestByName = Object.fromEntries(names.map((name) => [name, null]));
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     // Two attempts each would be 24; the host is given up on well before that.
     expect(pub?.requests.length).toBeLessThan(24);
@@ -438,7 +438,7 @@ describe('lookup failures', () => {
       'pubspec.lock': lockFile({ a_pkg: '1.0.0', b_pkg: '1.0.0' }),
     });
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     expect(section.message).toBe('The latest version of 2 packages could not be looked up.');
   });
@@ -448,7 +448,7 @@ describe('projects with no lock file', () => {
   it('falls back to the declared constraint and says so', async () => {
     writeTree(root, { 'pubspec.yaml': 'name: demo\ndependencies:\n  http: ^1.2.0\n' });
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     expect(section.packages[0]).toMatchObject({
       currentVersion: '^1.2.0',
@@ -467,7 +467,7 @@ describe('projects with no lock file', () => {
       'packages/b/pubspec.yaml': 'name: b\ndependencies:\n  http: ^1.0.0\n',
     });
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     expect(section.message).toContain('a, b have no pubspec.lock');
     expect(section.message).toContain('their versions');
@@ -476,7 +476,7 @@ describe('projects with no lock file', () => {
   it('says nothing for an unlocked project with no dependencies at all', async () => {
     writeTree(root, { 'pubspec.yaml': 'name: demo\n' });
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     expect(section).toMatchObject({ status: 'ok', message: null, packages: [] });
   });
@@ -485,7 +485,7 @@ describe('projects with no lock file', () => {
     writeTree(root, { 'pubspec.yaml': 'name: demo\ndependencies:\n  http: 1.0.0\n' });
     latestByName = { http: '1.2.2' };
 
-    const section = await dartAdapter.listPackages(root);
+    const [section] = await dartAdapter.listPackages(root);
 
     // An exact pin is a parseable version, so it can be checked straight away.
     expect(section.packages[0]).toMatchObject({

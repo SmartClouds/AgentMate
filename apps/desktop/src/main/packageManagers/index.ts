@@ -20,7 +20,7 @@ export async function scanProjectPackages(folderPath: string): Promise<PackageMa
   const sections = await Promise.all(
     detected.filter((d) => d.matched).map((d) => d.adapter.listPackages(folderPath)),
   );
-  return sections;
+  return sections.flat();
 }
 
 export type { PackageManagerAdapter, UpdateProgressTick } from './types';

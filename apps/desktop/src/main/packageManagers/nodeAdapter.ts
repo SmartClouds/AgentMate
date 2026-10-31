@@ -236,6 +236,7 @@ function labelForManifest(
 }
 
 interface ProjectScanOutcome {
+  manager: PackageManagerKind;
   status: 'ok' | 'cli-missing' | 'error';
   message: string | null;
   packages: PackageInfo[];
@@ -249,7 +250,7 @@ async function listPackagesForManifest(
   const manager = detectManager(folderPath, rootFolder);
   const pkgJson = await readPackageJson(manifestPath);
   if (!pkgJson) {
-    return { status: 'error', message: `Failed to read ${manifestPath}`, packages: [] };
+    return { manager, status: 'error', message: `Failed to read ${manifestPath}`, packages: [] };
   }
 
   const declared: DeclaredDep[] = [
@@ -264,6 +265,7 @@ async function listPackagesForManifest(
   } catch (err) {
     if (err instanceof CliNotFoundError) {
       return {
+        manager,
         status: 'cli-missing',
         message: `Install ${manager} to manage packages for ${projectLabel}.`,
         packages: [],
@@ -302,22 +304,13 @@ async function listPackagesForManifest(
     },
   );
 
-  return { status: 'ok', message: null, packages };
+  return { manager, status: 'ok', message: null, packages };
 }
 
-async function listPackages(folderPath: string): Promise<PackageManagerSection> {
-  const manifests = await findPackageJsonFiles(folderPath);
-  if (manifests.length === 0) {
-    return {
-      ecosystem: 'node',
-      manager: detectManager(folderPath),
-      status: 'ok',
-      message: null,
-      packages: [],
-    };
-  }
-
-  const outcomes = await Promise.all(manifests.map((m) => listPackagesForManifest(folderPath, m)));
+function sectionFor(
+  manager: PackageManagerKind,
+  outcomes: ProjectScanOutcome[],
+): PackageManagerSection {
   const packages = outcomes.flatMap((o) => o.packages);
   const errored = outcomes.filter((o) => o.status !== 'ok');
 
@@ -326,7 +319,7 @@ async function listPackages(folderPath: string): Promise<PackageManagerSection> 
     const first = cliMissing ?? errored[0];
     return {
       ecosystem: 'node',
-      manager: detectManager(folderPath),
+      manager,
       status: first.status,
       message: first.message,
       packages: [],
@@ -335,10 +328,38 @@ async function listPackages(folderPath: string): Promise<PackageManagerSection> 
 
   const message =
     errored.length > 0
-      ? `${errored.length} of ${manifests.length} sub-project${manifests.length === 1 ? '' : 's'} failed to scan.`
+      ? `${errored.length} of ${outcomes.length} sub-project${outcomes.length === 1 ? '' : 's'} failed to scan.`
       : null;
 
-  return { ecosystem: 'node', manager: detectManager(folderPath), status: 'ok', message, packages };
+  return { ecosystem: 'node', manager, status: 'ok', message, packages };
+}
+
+/**
+ * One section per package manager. A repo without a root lockfile can still have every
+ * sub-project on bun (or a mix, say web/ on bun and docs/ on npm), and each section's label,
+ * install hint and AI prompt have to name the manager its packages actually use.
+ */
+async function listPackages(folderPath: string): Promise<PackageManagerSection[]> {
+  const manifests = await findPackageJsonFiles(folderPath);
+  if (manifests.length === 0) {
+    return [
+      {
+        ecosystem: 'node',
+        manager: detectManager(folderPath),
+        status: 'ok',
+        message: null,
+        packages: [],
+      },
+    ];
+  }
+
+  const outcomes = await Promise.all(manifests.map((m) => listPackagesForManifest(folderPath, m)));
+  // Map keeps insertion order, so the root's manager (scanned first) leads.
+  const byManager = new Map<PackageManagerKind, ProjectScanOutcome[]>();
+  for (const outcome of outcomes) {
+    byManager.set(outcome.manager, [...(byManager.get(outcome.manager) ?? []), outcome]);
+  }
+  return [...byManager].map(([manager, group]) => sectionFor(manager, group));
 }
 
 function updateArgsFor(

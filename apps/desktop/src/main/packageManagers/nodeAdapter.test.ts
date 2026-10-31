@@ -177,7 +177,7 @@ describe('listPackages with npm', () => {
   });
 
   it('reports the section as npm when there is no other lockfile', async () => {
-    const section = await nodeAdapter.listPackages(root);
+    const [section] = await nodeAdapter.listPackages(root);
 
     expect(section.ecosystem).toBe('node');
     expect(section.manager).toBe('npm');
@@ -186,7 +186,7 @@ describe('listPackages with npm', () => {
   });
 
   it('marks a dependency outdated using the CLI current and latest versions', async () => {
-    const section = await nodeAdapter.listPackages(root);
+    const [section] = await nodeAdapter.listPackages(root);
 
     const leftPad = section.packages.find((p) => p.name === 'left-pad');
     expect(leftPad).toMatchObject({
@@ -202,7 +202,7 @@ describe('listPackages with npm', () => {
   });
 
   it('keeps devDependencies flagged as dev', async () => {
-    const section = await nodeAdapter.listPackages(root);
+    const [section] = await nodeAdapter.listPackages(root);
 
     const vitest = section.packages.find((p) => p.name === 'vitest');
     expect(vitest?.isDev).toBe(true);
@@ -212,7 +212,7 @@ describe('listPackages with npm', () => {
   });
 
   it('exit code 1 from npm means "found results", not a failure', async () => {
-    const section = await nodeAdapter.listPackages(root);
+    const [section] = await nodeAdapter.listPackages(root);
 
     expect(section.status).toBe('ok');
     expect(section.packages).toHaveLength(2);
@@ -221,7 +221,7 @@ describe('listPackages with npm', () => {
   it('falls back to the installed version when the CLI lists nothing for a package', async () => {
     cliState.answers.set('npm', { stdout: '{}' });
 
-    const section = await nodeAdapter.listPackages(root);
+    const [section] = await nodeAdapter.listPackages(root);
 
     const leftPad = section.packages.find((p) => p.name === 'left-pad');
     expect(leftPad?.currentVersion).toBe('1.2.0');
@@ -233,7 +233,7 @@ describe('listPackages with npm', () => {
   it('falls back to the declared range when nothing is installed either', async () => {
     cliState.answers.set('npm', { stdout: '{}' });
 
-    const section = await nodeAdapter.listPackages(root);
+    const [section] = await nodeAdapter.listPackages(root);
 
     expect(section.packages.find((p) => p.name === 'vitest')?.currentVersion).toBe('^3.0.0');
   });
@@ -241,7 +241,7 @@ describe('listPackages with npm', () => {
   it('reports cli-missing when npm is not on PATH', async () => {
     cliState.answers.set('npm', { notFound: true });
 
-    const section = await nodeAdapter.listPackages(root);
+    const [section] = await nodeAdapter.listPackages(root);
 
     expect(section.status).toBe('cli-missing');
     expect(section.message).toBe('Install npm to manage packages for demo-app.');
@@ -251,7 +251,7 @@ describe('listPackages with npm', () => {
   it('returns an empty ok section for a folder with no manifest', async () => {
     const empty = tempDir('runova-node-empty-');
 
-    const section = await nodeAdapter.listPackages(empty);
+    const [section] = await nodeAdapter.listPackages(empty);
 
     expect(section).toEqual({
       ecosystem: 'node',
@@ -266,7 +266,7 @@ describe('listPackages with npm', () => {
   it('reports an error when package.json cannot be parsed', async () => {
     writeTree(root, { 'package.json': '{ this is not json' });
 
-    const section = await nodeAdapter.listPackages(root);
+    const [section] = await nodeAdapter.listPackages(root);
 
     expect(section.status).toBe('error');
     expect(section.message).toContain('Failed to read');
@@ -279,7 +279,7 @@ describe('listPackages with pnpm and yarn', () => {
     cliState.answers.set('pnpm', { stdout: PNPM_OUTDATED, code: 1 });
     stubRegistry({});
 
-    const section = await nodeAdapter.listPackages(root);
+    const [section] = await nodeAdapter.listPackages(root);
 
     expect(cliState.calls[0]).toMatchObject({
       command: 'pnpm',
@@ -298,7 +298,7 @@ describe('listPackages with pnpm and yarn', () => {
     cliState.answers.set('yarn', { stdout: YARN_OUTDATED, code: 1 });
     stubRegistry({});
 
-    const section = await nodeAdapter.listPackages(root);
+    const [section] = await nodeAdapter.listPackages(root);
 
     expect(cliState.calls[0]).toMatchObject({ command: 'yarn', args: ['outdated', '--json'] });
     expect(section.manager).toBe('yarn');
@@ -319,7 +319,7 @@ describe('listPackages with pnpm and yarn', () => {
     cliState.answers.set('pnpm', { stdout: '{}' });
     stubRegistry({});
 
-    const section = await nodeAdapter.listPackages(root);
+    const [section] = await nodeAdapter.listPackages(root);
 
     expect(section.manager).toBe('pnpm');
   });
@@ -343,7 +343,7 @@ describe('listPackages with bun', () => {
     cliState.answers.set('bun', { stdout: BUN_OUTDATED });
     const requested = stubRegistry({});
 
-    const section = await nodeAdapter.listPackages(root);
+    const [section] = await nodeAdapter.listPackages(root);
 
     expect(cliState.calls[0]).toMatchObject({
       command: 'bun',
@@ -368,7 +368,7 @@ describe('listPackages with bun', () => {
     cliState.answers.set('bun', { stdout: 'bun outdated v1.4.3 (c6da4a4d3)\n' });
     const requested = stubRegistry({});
 
-    const section = await nodeAdapter.listPackages(root);
+    const [section] = await nodeAdapter.listPackages(root);
 
     expect(section.packages.find((p) => p.name === 'left-pad')).toMatchObject({
       currentVersion: '1.3.0',
@@ -406,7 +406,7 @@ describe('listPackages with bun', () => {
     });
     stubRegistry({});
 
-    const section = await nodeAdapter.listPackages(root);
+    const [section] = await nodeAdapter.listPackages(root);
 
     expect(section.packages.find((p) => p.name === 'left-pad')).toMatchObject({
       latestVersion: '1.3.0',
@@ -428,7 +428,7 @@ describe('listPackages with bun', () => {
     cliState.answers.set('bun', { code: 1 });
     const requested = stubRegistry({ 'left-pad': '1.3.0', '@demo/lib': '9.9.9' });
 
-    const section = await nodeAdapter.listPackages(root);
+    const [section] = await nodeAdapter.listPackages(root);
 
     expect(cliState.calls.map((call) => call.command)).toEqual(['bun', 'bun']);
     expect(section.packages.find((p) => p.name === 'left-pad')).toMatchObject({
@@ -454,7 +454,7 @@ describe('registry fallback', () => {
     cliState.answers.set('yarn', { stdout: JSON.stringify({ type: 'info', data: 'nope' }) });
     const requested = stubRegistry({ 'left-pad': '1.3.0', vitest: '3.2.4' });
 
-    const section = await nodeAdapter.listPackages(root);
+    const [section] = await nodeAdapter.listPackages(root);
 
     expect(requested.sort()).toEqual(['left-pad', 'vitest']);
     expect(section.packages.find((p) => p.name === 'left-pad')).toMatchObject({
@@ -468,7 +468,7 @@ describe('registry fallback', () => {
     cliState.answers.set('yarn', { stdout: 'not json at all' });
     stubRegistry({});
 
-    const section = await nodeAdapter.listPackages(root);
+    const [section] = await nodeAdapter.listPackages(root);
 
     const leftPad = section.packages.find((p) => p.name === 'left-pad');
     // A failed lookup currently reads back as the current version rather than null, so the row
@@ -503,7 +503,7 @@ describe('multiple sub-projects', () => {
   it('labels a sub-project by its package name, or its folder when it has none', async () => {
     cliState.answers.set('npm', { stdout: '{}' });
 
-    const section = await nodeAdapter.listPackages(root);
+    const [section] = await nodeAdapter.listPackages(root);
 
     const labels = new Set(section.packages.map((p) => p.projectLabel));
     // apps/web has no "name", so it falls back to its path relative to the scanned folder.
@@ -524,7 +524,7 @@ describe('multiple sub-projects', () => {
     writeTree(root, { 'apps/web/package.json': 'broken {' });
     cliState.answers.set('npm', { stdout: '{}' });
 
-    const section = await nodeAdapter.listPackages(root);
+    const [section] = await nodeAdapter.listPackages(root);
 
     expect(section.status).toBe('ok');
     expect(section.message).toBe('1 of 3 sub-projects failed to scan.');
@@ -534,10 +534,63 @@ describe('multiple sub-projects', () => {
   it('prefers the cli-missing outcome when nothing could be listed at all', async () => {
     cliState.answers.set('npm', { notFound: true });
 
-    const section = await nodeAdapter.listPackages(root);
+    const [section] = await nodeAdapter.listPackages(root);
 
     // cli-missing is actionable ("install npm"), a generic error is not.
     expect(section.status).toBe('cli-missing');
+  });
+});
+
+describe('one section per package manager', () => {
+  beforeEach(() => {
+    stubRegistry({});
+  });
+
+  it('names the manager of the sub-projects when the root has no lockfile', async () => {
+    // BitIronPlatform's shape: no root manifest or lockfile, the web app lives in web/ on bun.
+    writeTree(root, {
+      'web/package.json': JSON.stringify({ name: 'web', dependencies: { 'left-pad': '^1.2.0' } }),
+      'web/bun.lock': '{}',
+      'app/pubspec.yaml': 'name: app',
+    });
+
+    const sections = await nodeAdapter.listPackages(root);
+
+    expect(sections.map((s) => s.manager)).toEqual(['bun']);
+    expect(cliState.calls.map((call) => call.command)).toEqual(['bun']);
+  });
+
+  it('splits sub-projects on different managers into their own sections', async () => {
+    writeTree(root, {
+      'web/package.json': JSON.stringify({ name: 'web', dependencies: { 'left-pad': '^1.2.0' } }),
+      'web/bun.lock': '{}',
+      'docs/package.json': JSON.stringify({ name: 'docs', devDependencies: { vitest: '^3.0.0' } }),
+      'docs/package-lock.json': '{}',
+    });
+    cliState.answers.set('npm', { stdout: '{}' });
+
+    const sections = await nodeAdapter.listPackages(root);
+
+    const byManager = new Map(sections.map((s) => [s.manager, s]));
+    expect([...byManager.keys()].sort()).toEqual(['bun', 'npm']);
+    expect(byManager.get('bun')?.packages.map((p) => p.name)).toEqual(['left-pad']);
+    expect(byManager.get('npm')?.packages.map((p) => p.name)).toEqual(['vitest']);
+  });
+
+  it('marks only the section whose manager is missing', async () => {
+    writeTree(root, {
+      'web/package.json': JSON.stringify({ name: 'web', dependencies: { 'left-pad': '^1.2.0' } }),
+      'web/bun.lock': '{}',
+      'docs/package.json': JSON.stringify({ name: 'docs', devDependencies: { vitest: '^3.0.0' } }),
+    });
+    cliState.answers.set('bun', { notFound: true });
+    cliState.answers.set('npm', { stdout: '{}' });
+
+    const sections = await nodeAdapter.listPackages(root);
+
+    const byManager = new Map(sections.map((s) => [s.manager, s]));
+    expect(byManager.get('bun')).toMatchObject({ status: 'cli-missing', packages: [] });
+    expect(byManager.get('npm')).toMatchObject({ status: 'ok', message: null });
   });
 });
 

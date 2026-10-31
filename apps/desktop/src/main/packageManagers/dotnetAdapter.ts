@@ -279,7 +279,7 @@ async function detect(folderPath: string): Promise<boolean> {
   return files.length > 0;
 }
 
-async function listPackages(folderPath: string): Promise<PackageManagerSection> {
+async function listSection(folderPath: string): Promise<PackageManagerSection> {
   const base = { ecosystem: 'dotnet', manager: 'nuget' } as const;
   const projectFiles = await findProjectFiles(folderPath);
   if (projectFiles.length === 0) {
@@ -357,6 +357,6 @@ async function updatePackages(
 export const dotnetAdapter: PackageManagerAdapter = {
   ecosystem: 'dotnet',
   detect,
-  listPackages,
+  listPackages: async (folderPath) => [await listSection(folderPath)],
   updatePackages,
 };
