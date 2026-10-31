@@ -168,8 +168,10 @@ test.describe(() => {
           { timeout: 60_000, intervals: [100] },
         )
         .toBeGreaterThanOrEqual(1);
-      const asked = tts.requests.length;
+      // Counted once the app is gone, not when the first scene shows up: the next scene's
+      // request goes out right after that placement and can land between the two.
       await crash(first);
+      const asked = tts.requests.length;
       tts.setDelay(0);
 
       const second = await launch(first.root);
