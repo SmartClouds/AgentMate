@@ -23,16 +23,20 @@ import {
   faBriefcase,
   faBug,
   faBuildingColumns,
+  faBurst,
   faCalendarDays,
+  faCalendarXmark,
   faCamera,
   faCartShopping,
   faChartColumn,
   faChartSimple,
   faCheck,
   faChevronDown,
+  faChevronLeft,
   faChevronRight,
   faChevronUp,
   faCircleCheck,
+  faCircleExclamation,
   faCircleHalfStroke,
   faCircleInfo,
   faCirclePlay,
@@ -113,6 +117,7 @@ import {
   faMoon,
   faMugHot,
   faNetworkWired,
+  faNewspaper,
   faPaperclip,
   faPaperPlane,
   faPause,
@@ -133,6 +138,7 @@ import {
   faRoute,
   faSatelliteDish,
   faServer,
+  faShield,
   faShieldHalved,
   faSliders,
   faSort,
@@ -487,3 +493,11 @@ export const House = makeIcon(faHouse);
 export const Inbox = makeIcon(faInbox);
 export const Layers = makeIcon(faLayerGroup);
 export const SignIn = makeIcon(faRightToBracket);
+
+// News icons (E42): one per severity, so a level never reads by color alone.
+export const ShieldSolid = makeIcon(faShield);
+export const CircleAlert = makeIcon(faCircleExclamation);
+export const Burst = makeIcon(faBurst);
+export const Newspaper = makeIcon(faNewspaper);
+export const CalendarX = makeIcon(faCalendarXmark);
+export const ChevronLeft = makeIcon(faChevronLeft);

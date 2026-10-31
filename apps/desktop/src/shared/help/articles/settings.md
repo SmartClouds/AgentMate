@@ -192,6 +192,10 @@ The **Pipeline failures** card at the top of the **Notifications** tab chooses h
 
 You can still open Pipelines yourself from the sidebar at any time. See [Pipelines](pipelines.md#notifications-and-the-unread-badge).
 
+### News
+
+The **News** card controls the technology news on the Dashboard, and each change saves right away. **Show news** (on by default) turns the Dashboard's News card on or off, and while it is off Runova does not check for news at all. **Categories to show** keeps whole categories out of the card. **Notify me about security fixes at** sets the lowest severity of a security fix, for a tool on this computer, that sends you a notification (**High** by default, or **Never**). See [News](news.md#news-settings).
+
 ### Telegram bot
 
 The **Notifications** tab has the **Telegram bot** card, used by project notification hooks, scheduled task updates and usage reset alerts. A badge shows **Ready** once both a token and a chat ID are filled in, otherwise **Not configured**.

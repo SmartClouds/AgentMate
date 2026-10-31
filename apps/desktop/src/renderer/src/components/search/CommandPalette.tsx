@@ -4,6 +4,7 @@ import { useQueries, useQuery } from '@tanstack/react-query';
 import { Command as CommandPrimitive } from 'cmdk';
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { NewsPaletteGroup } from '@/components/dashboard/NewsPaletteGroup';
 import {
   Bell,
   Blocks,
@@ -229,6 +230,8 @@ export function CommandPalette(): React.JSX.Element {
               </CommandPrimitive.Group>
 
               <VaultPaletteGroup enabled={open} onDone={() => setOpen(false)} />
+
+              <NewsPaletteGroup onDone={() => setOpen(false)} />
 
               <SshFilesPaletteGroup enabled={open} query={query} onDone={() => setOpen(false)} />
 

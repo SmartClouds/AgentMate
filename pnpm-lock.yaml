@@ -299,6 +299,9 @@ importers:
       country-flag-icons:
         specifier: ^1.6.20
         version: 1.6.20
+      dompurify:
+        specifier: '>=3.4.12'
+        version: 3.4.12
       electron-updater:
         specifier: ^6.8.9
         version: 6.8.9(supports-color@8.1.1)

@@ -124,6 +124,8 @@ export interface NewsListResult {
   items: NewsItemView[];
   page: number;
   totalPages: number;
+  /** How many items pass the filters, over every page (the card's "View all (24)"). */
+  total: number;
   /** True when the last poll failed and these are the cached items. */
   stale: boolean;
   /** When the API last answered (200 or 304). Null before it ever has. */

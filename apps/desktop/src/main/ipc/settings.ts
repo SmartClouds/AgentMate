@@ -4,6 +4,7 @@ import { IPC } from '../../shared/ipcChannels';
 import { clearGrammarCache } from '../grammar/languageToolClient';
 import { stopLocalServer } from '../grammar/localServer';
 import { applyProxySettings } from '../network/proxy';
+import { applyNewsSettings } from '../news/runtime';
 import { petManager } from '../pet/petWindow';
 import { store } from '../store';
 import { getVaultService } from '../vault';
@@ -26,6 +27,8 @@ export function registerSettingsHandlers(): void {
       if (Object.keys(updates).some((key) => key.startsWith('vault'))) {
         getVaultService().applySettings(next);
       }
+      // News off stops the poll schedule right away, and on starts it again.
+      if ('newsEnabled' in updates) applyNewsSettings(next);
 
       // Waited on rather than fired off, so the settings call only resolves
       // once the new route is the one the next request will take.

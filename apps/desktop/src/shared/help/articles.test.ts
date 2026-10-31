@@ -2,7 +2,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { getHelpArticle, HELP_ARTICLES, helpArticlesByCategory } from './articles';
-import { HELP_CATEGORIES, resolveHelpLink } from './parse';
+import { HELP_CATEGORIES, parseArticle, resolveHelpLink } from './parse';
+import { createHelpSearch } from './search';
 
 /**
  * The bundled articles themselves, checked the way a reviewer would: every file loads, nothing
@@ -57,6 +58,41 @@ describe('HELP_ARTICLES', () => {
     const routes = [...nav.matchAll(/\bto: '(\/[^']*)'/g)].map((m) => m[1]);
     const covered = new Set(HELP_ARTICLES.map((a) => a.route));
     expect(routes.filter((r) => !covered.has(r))).toEqual([]);
+  });
+});
+
+describe('the News article (E42)', () => {
+  const raw = readFileSync(join(articleDir, 'news.md'), 'utf-8');
+
+  it('parses with the help parser and opens the Dashboard', () => {
+    const article = parseArticle('news', raw);
+    expect(article.title).toBe('News');
+    expect(article.category).toBe('Getting started');
+    expect(article.route).toBe('/');
+    expect(article.keywords).toEqual(expect.arrayContaining(['news', 'security']));
+    expect(article.sections.map((section) => section.heading)).toEqual(
+      expect.arrayContaining(['Affects your system', 'News settings', 'Privacy']),
+    );
+  });
+
+  it('is listed on the Help page next to the Dashboard article', () => {
+    const group = helpArticlesByCategory().find((g) => g.category === 'Getting started');
+    expect(group?.articles.map((a) => a.slug)).toEqual(
+      expect.arrayContaining(['dashboard', 'news']),
+    );
+  });
+
+  it('is found by Help search', () => {
+    const search = createHelpSearch(HELP_ARTICLES);
+    expect(search('news')[0]?.slug).toBe('news');
+    expect(search('affects your system').map((hit) => hit.slug)).toContain('news');
+    expect(search('security fix notification').map((hit) => hit.slug)).toContain('news');
+  });
+
+  it('follows the website copy rules, since the website shows it too', () => {
+    // No phone app is part of this feature, so the article never sends anyone to one.
+    expect(raw).not.toMatch(/\bmobile\b|\bphone\b/i);
+    expect(raw).not.toContain(String.fromCharCode(0x2014));
   });
 });
 

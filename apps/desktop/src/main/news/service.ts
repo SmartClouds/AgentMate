@@ -1,9 +1,12 @@
 import type { NewsLocalState } from '@runova/core';
+import { isCategoryShown } from '../../shared/newsSettings';
 import {
   type InstalledTool,
   NEWS_SEVERITIES,
+  type NewsCategory,
   type NewsChangedEvent,
   type NewsItemDetailView,
+  type NewsItemView,
   type NewsListItem,
   type NewsListQuery,
   type NewsListResult,
@@ -24,6 +27,27 @@ import { markNews, pruneNewsState } from './state';
 const DEFAULT_PAGE_SIZE = 20;
 const INSTALLED_SETTLE_MS = 2_000;
 
+/** A security fix for something installed here, which the card lists before everything else. */
+function isAffectedSecurity(item: NewsItemView): boolean {
+  return item.category === 'security' && item.affected !== null;
+}
+
+/**
+ * Affected security items first, the most severe first, then everything else newest first. Done
+ * before paging, so the card and every page of View all share one order.
+ */
+function orderNews(items: NewsItemView[]): NewsItemView[] {
+  return [...items].sort((a, b) => {
+    const urgent = Number(isAffectedSecurity(b)) - Number(isAffectedSecurity(a));
+    if (urgent !== 0) return urgent;
+    if (isAffectedSecurity(a)) {
+      const worse = NEWS_SEVERITIES.indexOf(b.severity) - NEWS_SEVERITIES.indexOf(a.severity);
+      if (worse !== 0) return worse;
+    }
+    return Date.parse(b.publishedAt) - Date.parse(a.publishedAt);
+  });
+}
+
 export interface NewsServiceDeps {
   client: Pick<NewsClient, 'fetchList' | 'fetchDetail' | 'cached'>;
   getState: () => Promise<NewsLocalState>;
@@ -31,6 +55,8 @@ export interface NewsServiceDeps {
   installed: () => readonly InstalledTool[] | Promise<readonly InstalledTool[]>;
   notifier: NewsNotifier;
   broadcast: (event: NewsChangedEvent) => void;
+  /** The categories picked in Settings, read on every list. Empty (or unset) shows all. */
+  shownCategories?: () => readonly NewsCategory[] | Promise<readonly NewsCategory[]>;
   now?: () => Date;
 }
 
@@ -92,31 +118,37 @@ export function createNewsService(deps: NewsServiceDeps): NewsService {
   const poller = createNewsPoller({ poll });
 
   async function list(query: NewsListQuery): Promise<NewsListResult> {
-    const [cache, state, installed] = await Promise.all([
+    const [cache, state, installed, shown] = await Promise.all([
       deps.client.cached(),
       deps.getState(),
       deps.installed(),
+      deps.shownCategories?.() ?? [],
     ]);
     const categories = query.category?.length ? new Set(query.category) : null;
     const minRank = NEWS_SEVERITIES.indexOf(query.minSeverity ?? 'info');
     const items = cache.items.filter(
       (item) =>
         !has(state.dismissed, item.id) &&
+        isCategoryShown(shown, item.category) &&
         (!categories || categories.has(item.category)) &&
         NEWS_SEVERITIES.indexOf(item.severity) >= minRank,
     );
-    const pageSize = query.pageSize ?? DEFAULT_PAGE_SIZE;
-    const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
-    const page = Math.min(Math.max(1, query.page ?? 1), totalPages);
-    return {
-      items: items.slice((page - 1) * pageSize, page * pageSize).map((item) => ({
+    const views = orderNews(
+      items.map((item) => ({
         ...item,
         read: has(state.read, item.id),
         dismissed: false,
         affected: matchNews(item, installed),
       })),
+    );
+    const pageSize = query.pageSize ?? DEFAULT_PAGE_SIZE;
+    const totalPages = Math.max(1, Math.ceil(views.length / pageSize));
+    const page = Math.min(Math.max(1, query.page ?? 1), totalPages);
+    return {
+      items: views.slice((page - 1) * pageSize, page * pageSize),
       page,
       totalPages,
+      total: views.length,
       stale,
       checkedAt: cache.checkedAt,
     };

@@ -769,6 +769,40 @@ describe('DashboardPage editing the layout', () => {
     expect(screen.getByText('CPU Usage')).toBeTruthy();
   });
 
+  it('removes the News card and brings it back from the Add card menu', async () => {
+    seedLayout(['news']);
+    const { user } = renderPage(withStats());
+    expect(await screen.findByRole('list', { name: 'News' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Edit layout' }));
+
+    await user.click(
+      within(cardFor('News')).getByRole('button', { name: 'Remove from dashboard' }),
+    );
+    await waitFor(() => expect(screen.queryByText('News')).toBeNull());
+    expect(useDashboardLayoutStore.getState().chartCards).not.toContain('news');
+
+    await user.click(screen.getByRole('button', { name: /Add card/ }));
+    await user.click(await screen.findByRole('menuitemcheckbox', { name: 'News' }));
+    await waitFor(() => expect(useDashboardLayoutStore.getState().chartCards).toContain('news'));
+    expect(await screen.findByText('No news yet.')).toBeTruthy();
+  });
+
+  it('hides the News card and its Add card entry while news is off in Settings', async () => {
+    seedLayout(['cpu', 'news']);
+    const { user, bridge } = renderPage(withStats({ 'settings.get': { newsEnabled: false } }));
+    await screen.findByText('CPU Usage');
+    await waitFor(() => expect(bridge.$fn('settings.get')).toHaveBeenCalled());
+    expect(screen.queryByRole('list', { name: 'News' })).toBeNull();
+    expect(screen.queryByText('No news yet.')).toBeNull();
+    // Kept in the layout, so turning news back on puts the card where it was.
+    expect(useDashboardLayoutStore.getState().rows[0].items).toContain('news');
+
+    await user.click(screen.getByRole('button', { name: 'Edit layout' }));
+    await user.click(screen.getByRole('button', { name: /Add card/ }));
+    expect(await screen.findByRole('menuitemcheckbox', { name: 'CPU Usage' })).toBeTruthy();
+    expect(screen.queryByRole('menuitemcheckbox', { name: 'News' })).toBeNull();
+  });
+
   it('brings back the Docker and emulator cards from the Add card menu', async () => {
     const without = DASHBOARD_CHART_IDS.filter(
       (id) => id !== 'resource-usage' && id !== 'idle-resources',
@@ -824,10 +858,11 @@ describe('DashboardPage editing the layout', () => {
 
     await waitFor(() =>
       expect(useDashboardLayoutStore.getState().rows.map((row) => row.columns)).toEqual([
-        4, 2, 3, 2, 2,
+        4, 1, 2, 3, 2, 2,
       ]),
     );
     const state = useDashboardLayoutStore.getState();
+    expect(state.rows[1].items).toEqual(['news']);
     expect(state.rows[0].items).toEqual([
       summaryItemId('tokens-today'),
       summaryItemId('tokens-week'),

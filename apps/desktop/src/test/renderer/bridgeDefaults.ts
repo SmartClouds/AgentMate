@@ -157,6 +157,7 @@ export function bridgeDefaults(): Record<string, unknown> {
       resources: [],
       history: [],
     },
+    'news.list': { items: [], page: 1, totalPages: 1, total: 0, stale: false, checkedAt: null },
     'fs.listDirectory': [],
     'projects.listClaudeHooks': [],
     'environments.list': [],

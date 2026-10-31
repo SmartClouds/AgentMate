@@ -27,10 +27,11 @@ beforeEach(() => {
 
 describe('initDashboardLayout introduces charts added later', () => {
   const existing = {
-    // Stat tiles are left out so only the charts decide where the new cards land.
+    // Stat tiles are left out so only the charts decide where the new cards land. The News card
+    // counts as offered (and removed), so it stays out of these and has its own tests below.
     dashboardStatCards: [],
     dashboardChartCards: [...ORIGINAL, 'github-actions'],
-    dashboardIntroducedCharts: [...ORIGINAL, 'github-actions'],
+    dashboardIntroducedCharts: [...ORIGINAL, 'github-actions', 'news'],
     dashboardLayout: [
       { id: 'a', columns: 2, items: ['network', 'pings'] },
       { id: 'b', columns: 2, items: ['cpu', 'gpu'] },
@@ -78,6 +79,7 @@ describe('initDashboardLayout introduces charts added later', () => {
         'github-actions',
         'resource-usage',
         'idle-resources',
+        'news',
       ],
       dashboardChartCards: [...ORIGINAL, 'github-actions', 'resource-usage'],
     });
@@ -96,6 +98,7 @@ describe('initDashboardLayout introduces charts added later', () => {
       dashboardChartCards: [...DASHBOARD_CHART_IDS],
       dashboardIntroducedCharts: [...DASHBOARD_CHART_IDS],
       dashboardLayout: [
+        { id: 'n', columns: 1, items: ['news'] },
         ...existing.dashboardLayout,
         { id: 'e', columns: 2, items: ['resource-usage', 'idle-resources'] },
       ],
@@ -130,5 +133,101 @@ describe('initDashboardLayout introduces charts added later', () => {
     // Each card appears once.
     const all = layoutOf(rows).flat();
     expect(new Set(all).size).toBe(all.length);
+  });
+});
+
+describe('initDashboardLayout introduces the News card', () => {
+  const beforeNews = DASHBOARD_CHART_IDS.filter((id) => id !== 'news');
+  const saved = {
+    dashboardStatCards: [],
+    dashboardUsageCards: [],
+    dashboardUsageSummaryCards: [],
+    dashboardChartCards: ['cpu', 'memory', 'disk'],
+    dashboardIntroducedCharts: beforeNews,
+    dashboardLayout: [
+      { id: 'a', columns: 2, items: ['cpu', 'memory'] },
+      { id: 'b', columns: 3, items: ['disk'] },
+      { id: 'c', columns: 2, items: [] },
+    ],
+  };
+
+  it('adds it at the end of the first row with room, and moves no other card', async () => {
+    start(saved);
+
+    await initDashboardLayout();
+
+    const state = useDashboardLayoutStore.getState();
+    expect(state.chartCards).toContain('news');
+    expect(state.rows.map((row) => [row.id, row.items])).toEqual([
+      ['a', ['cpu', 'memory']],
+      ['b', ['disk', 'news']],
+      ['c', []],
+    ]);
+  });
+
+  it('opens a new row for it when every row is full', async () => {
+    start({
+      ...saved,
+      dashboardLayout: [
+        { id: 'a', columns: 2, items: ['cpu', 'memory'] },
+        { id: 'b', columns: 1, items: ['disk'] },
+      ],
+    });
+
+    await initDashboardLayout();
+
+    expect(layoutOf(useDashboardLayoutStore.getState().rows)).toEqual([
+      ['cpu', 'memory'],
+      ['disk'],
+      ['news'],
+    ]);
+  });
+
+  it('adds it once: a profile that removed it after being offered it keeps it off', async () => {
+    const bridge = start(saved);
+    await initDashboardLayout();
+    const written = bridge.$fn('settings.update').mock.calls.at(-1)?.[0] as {
+      dashboardIntroducedCharts: string[];
+    };
+    expect(written.dashboardIntroducedCharts).toContain('news');
+
+    start({
+      ...saved,
+      dashboardIntroducedCharts: written.dashboardIntroducedCharts,
+      // Removed from the layout editor since.
+      dashboardChartCards: ['cpu', 'memory', 'disk'],
+    });
+    await initDashboardLayout();
+
+    const state = useDashboardLayoutStore.getState();
+    expect(state.chartCards).not.toContain('news');
+    expect(layoutOf(state.rows).flat()).not.toContain('news');
+  });
+
+  it('is on a brand new install, exactly once', async () => {
+    start({
+      dashboardChartCards: [...DEFAULT_DASHBOARD.dashboardChartCards],
+      dashboardIntroducedCharts: [...DASHBOARD_CHART_IDS],
+      dashboardStatCards: DEFAULT_DASHBOARD.dashboardStatCards,
+      dashboardUsageCards: DEFAULT_DASHBOARD.dashboardUsageCards,
+      dashboardUsageSummaryCards: DEFAULT_DASHBOARD.dashboardUsageSummaryCards,
+      dashboardLayout: DEFAULT_DASHBOARD.dashboardLayout,
+    });
+
+    await initDashboardLayout();
+
+    const all = layoutOf(useDashboardLayoutStore.getState().rows).flat();
+    expect(all.filter((id) => id === 'news')).toHaveLength(1);
+  });
+
+  it('can be removed and added back from the layout editor', async () => {
+    start(saved);
+    await initDashboardLayout();
+    const { toggleChartCard } = useDashboardLayoutStore.getState();
+
+    expect(toggleChartCard('news')).toBe(false);
+    expect(layoutOf(useDashboardLayoutStore.getState().rows).flat()).not.toContain('news');
+    expect(toggleChartCard('news')).toBe(true);
+    expect(layoutOf(useDashboardLayoutStore.getState().rows).flat()).toContain('news');
   });
 });

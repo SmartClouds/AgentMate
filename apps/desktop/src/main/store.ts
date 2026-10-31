@@ -71,6 +71,7 @@ import type {
 } from '../shared/apiTypes';
 import type { AutoFixSession } from '../shared/ciAutoFixTypes';
 import { DEFAULT_SETTINGS, ORIGINAL_CHART_IDS } from '../shared/defaultSettings';
+import { newsSettingsOf } from '../shared/newsSettings';
 import { referencedAttachmentFiles, removeOrphanAttachments } from './blueprintFileStore';
 import { blueprintRevisionDb } from './blueprintRevisionDb';
 import {
@@ -151,6 +152,18 @@ const FIRST_RUN_SETTINGS: AppSettings = {
  * Normalizing first is what keeps a half-written block (no `windows` array, say)
  * from reaching either process as something that throws on first access.
  */
+/** The news choices (E42) as Settings shows them, so a hand-edited value never reaches either process. */
+function newsSettingsFields(
+  settings: AppSettings,
+): Pick<AppSettings, 'newsEnabled' | 'newsCategories' | 'newsNotifyMinSeverity'> {
+  const news = newsSettingsOf(settings);
+  return {
+    newsEnabled: news.enabled,
+    newsCategories: news.categories,
+    newsNotifyMinSeverity: news.notifyMinSeverity,
+  };
+}
+
 /**
  * A user-typed path reaches a command line, so anything that is not a non-empty string becomes
  * null and detection takes over again. Blank is the same as unset on purpose: clearing the field
@@ -275,6 +288,7 @@ function withSettingsMigrations(settings: AppSettings): AppSettings {
     workspaceNotifications: settings.workspaceNotifications !== false,
     terminalAiNotifications: settings.terminalAiNotifications !== false,
     checkToolUpdatesEnabled: settings.checkToolUpdatesEnabled !== false,
+    ...newsSettingsFields(settings),
     keepAwake:
       settings.keepAwake === 'on' || settings.keepAwake === 'off' ? settings.keepAwake : 'agent',
     theme: isThemeMode(settings.theme) ? settings.theme : 'system',

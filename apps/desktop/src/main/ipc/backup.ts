@@ -32,6 +32,7 @@ import {
   referencedAttachmentFiles,
 } from '../blueprintFileStore';
 import { blueprintRevisionDb } from '../blueprintRevisionDb';
+import { applyNewsSettings } from '../news/runtime';
 import { petManager } from '../pet/petWindow';
 import { promptHistoryDb } from '../promptHistoryDb';
 import { skillAuditDb } from '../skillAuditDb';
@@ -296,6 +297,7 @@ export function registerBackupHandlers(): void {
 
       pendingRestore = null;
       void petManager.syncFromSettings();
+      applyNewsSettings(await store.getSettings());
       return { ok: true, warnings };
     },
   );

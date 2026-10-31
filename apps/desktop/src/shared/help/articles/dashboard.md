@@ -113,6 +113,10 @@ The **Idle Docker and Emulators** card lists running containers and emulators th
 > [!NOTE]
 > The idle clock starts when Runova first sees something running. Restarting Runova starts it again, and so does waking the computer from sleep, so nothing is called idle for time nobody was watching. An emulator started outside Runova is found through its console port. If it cannot be matched to a running process the card says it cannot be measured, and never calls it idle.
 
+### News
+
+The **News** card lists technology news from runovahq.com and marks the security fixes that affect the tools installed on this computer. It is described in its own article, [News](news.md).
+
 ### Stat tiles
 
 | Tile | What it shows |
@@ -166,7 +170,7 @@ Each row has its own **Columns** buttons, 1, 2, 3 and 4. A row of four small til
 ### Hide and bring back cards
 
 - Click the **X** on a card (**Remove from dashboard**) to hide it. A message confirms which card was removed.
-- Click **Add card** to open the menu of everything you can show. It has three groups: **Charts** (CPU Usage, Memory Usage, Disk I/O, GPU Usage, Network Throughput, Network Status, GitHub Activity, GitHub Actions, Docker and Emulator Usage, Idle Docker and Emulators), **Dashboard stats** (Installed CLIs, Active Projects, Skill Repositories, Your Location) and **Token Usage** (All agents, Tokens today, Tokens (7 days), Cost today, Providers tracked). Cards that are showing are ticked. Click one to add or remove it. New cards go into the last row that has a free space.
+- Click **Add card** to open the menu of everything you can show. It has three groups: **Charts** (CPU Usage, Memory Usage, Disk I/O, GPU Usage, Network Throughput, Network Status, GitHub Activity, GitHub Actions, Docker and Emulator Usage, Idle Docker and Emulators, News), **Dashboard stats** (Installed CLIs, Active Projects, Skill Repositories, Your Location) and **Token Usage** (All agents, Tokens today, Tokens (7 days), Cost today, Providers tracked). Cards that are showing are ticked. Click one to add or remove it. New cards go into the last row that has a free space.
 
 A built-in chart added by a later version of Runova shows up on its own once. If you hide it, it stays hidden.
 
@@ -185,5 +189,6 @@ A built-in chart added by a later version of Runova shows up on its own once. If
 - [Projects](projects.md)
 - [AI CLI Manager](cli-manager.md)
 - [Token Usage](token-usage.md)
+- [News](news.md)
 - [Pipelines](pipelines.md)
 - [Settings](settings.md)

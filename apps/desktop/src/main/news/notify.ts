@@ -1,10 +1,6 @@
 import type { AppNotification, NewsLocalState } from '@runova/core';
-import {
-  type InstalledTool,
-  NEWS_SEVERITIES,
-  type NewsListItem,
-  type NewsSeverity,
-} from '../../shared/newsTypes';
+import { DEFAULT_NEWS_NOTIFY_LEVEL, type NewsNotifyLevel } from '../../shared/newsSettings';
+import { type InstalledTool, NEWS_SEVERITIES, type NewsListItem } from '../../shared/newsTypes';
 import type { OsNotificationInput } from '../notifications/osNotification';
 import { matchNews } from './match';
 import { markNews } from './state';
@@ -21,8 +17,11 @@ export interface NewsNotifierDeps {
   toast: (input: Pick<OsNotificationInput, 'title' | 'body' | 'route'>) => void;
   getState: () => NewsLocalState | Promise<NewsLocalState>;
   updateState: (update: (state: NewsLocalState) => NewsLocalState) => Promise<void>;
-  /** The lowest severity worth a notification. High unless set. */
-  minSeverity?: NewsSeverity;
+  /**
+   * The lowest severity worth a notification, or never. Read on every call, so a change in
+   * Settings applies to the next poll. High unless set.
+   */
+  minSeverity?: () => NewsNotifyLevel | Promise<NewsNotifyLevel>;
   now?: () => Date;
   log?: (message: string) => void;
 }
@@ -39,7 +38,7 @@ export function createNewsNotifier(deps: NewsNotifierDeps): NewsNotifier {
   const now = deps.now ?? (() => new Date());
   // biome-ignore lint/suspicious/noConsole: the only record of an announcement that was skipped
   const log = deps.log ?? ((message: string) => console.warn(message));
-  const minRank = NEWS_SEVERITIES.indexOf(deps.minSeverity ?? 'high');
+  const minSeverity = deps.minSeverity ?? (() => DEFAULT_NEWS_NOTIFY_LEVEL);
   // A poll and a detection change can both ask at once; one after the other, the second sees the
   // first one's marks.
   let queue: Promise<void> = Promise.resolve();
@@ -50,6 +49,9 @@ export function createNewsNotifier(deps: NewsNotifierDeps): NewsNotifier {
   }
 
   async function run(items: readonly NewsListItem[], installed: readonly InstalledTool[]) {
+    const level = await minSeverity();
+    if (level === 'never') return;
+    const minRank = NEWS_SEVERITIES.indexOf(level);
     const candidates = items.flatMap((item) => {
       if (item.category !== 'security' || NEWS_SEVERITIES.indexOf(item.severity) < minRank)
         return [];

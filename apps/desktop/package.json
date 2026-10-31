@@ -101,6 +101,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "country-flag-icons": "^1.6.20",
+    "dompurify": "^3.4.12",
     "electron-updater": "^6.8.9",
     "framer-motion": "^13.0.0",
     "monaco-editor": "^0.56.0",

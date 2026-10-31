@@ -27,6 +27,8 @@ import { CliLogo } from '@/components/cliLogos';
 import { GithubActionsCard } from '@/components/dashboard/GithubActionsCard';
 import { GithubActivityCard } from '@/components/dashboard/GithubActivityCard';
 import { IdleResourcesCard } from '@/components/dashboard/IdleResourcesCard';
+import { NewsCard } from '@/components/dashboard/NewsCard';
+import { useNewsEnabled } from '@/components/dashboard/newsParts';
 import { ResourceUsageCard } from '@/components/dashboard/ResourceUsageCard';
 import { SparklineChart, type SparklineSeries } from '@/components/dashboard/SparklineChart';
 import { TopResourceAppsDialog } from '@/components/dashboard/TopResourceAppsDialog';
@@ -269,6 +271,7 @@ const CHART_LABELS: Record<DashboardChartId, string> = {
   'github-actions': 'GitHub Actions',
   'resource-usage': 'Docker and Emulator Usage',
   'idle-resources': 'Idle Docker and Emulators',
+  news: 'News',
 };
 
 /** Labels for the "Add card" menu, which re-shows hidden built-in stat tiles. */
@@ -876,6 +879,10 @@ export default function DashboardPage(): React.JSX.Element {
     queryFn: () => window.runova.settings.get(),
     enabled: usageCards.length > 0,
   });
+  const newsOn = useNewsEnabled();
+  // News off in Settings hides its card but keeps its place, so turning it on puts it back there.
+  const shownItems = <T extends string>(items: readonly T[]): T[] =>
+    newsOn ? [...items] : items.filter((id) => id !== 'news');
   const usageById = useMemo(() => {
     const map = new Map<string, ProviderUsage>();
     for (const u of usageQuery.data ?? []) map.set(u.providerId, u);
@@ -1572,6 +1579,14 @@ export default function DashboardPage(): React.JSX.Element {
         chartHeight={CHART_HEIGHT}
       />
     ),
+
+    news: (
+      <NewsCard
+        className={cardClass('news')}
+        dragHandle={dragHandle('news')}
+        onRemove={editing ? () => removeChartCard('news', CHART_LABELS.news) : undefined}
+      />
+    ),
   };
 
   const statTiles: Record<DashboardStatId, React.ReactNode> = {
@@ -1788,7 +1803,7 @@ export default function DashboardPage(): React.JSX.Element {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Charts</DropdownMenuLabel>
-              {DASHBOARD_CHART_IDS.map((id) => (
+              {shownItems(DASHBOARD_CHART_IDS).map((id) => (
                 <DropdownMenuCheckboxItem
                   key={id}
                   checked={chartCardsShown.includes(id)}
@@ -1856,9 +1871,10 @@ export default function DashboardPage(): React.JSX.Element {
 
       <div className="space-y-2">
         {rows.map((row) => {
+          const items = shownItems(row.items);
           // Rows the user emptied are kept as drop targets while editing, but
           // leave no gap on the finished dashboard.
-          if (!editing && row.items.length === 0) return null;
+          if (!editing && items.length === 0) return null;
           return (
             <div
               key={row.id}
@@ -1882,9 +1898,9 @@ export default function DashboardPage(): React.JSX.Element {
                     onDragEnd={() => setDragRowId(null)}
                   />
                   <span className="mr-auto text-xs font-medium text-muted-foreground">
-                    {row.items.length === 0
+                    {items.length === 0
                       ? 'Empty row'
-                      : `${row.items.length} card${row.items.length > 1 ? 's' : ''}`}
+                      : `${items.length} card${items.length > 1 ? 's' : ''}`}
                   </span>
                   <div role="group" aria-label="Columns" className={SEGMENT_TRACK}>
                     <span className="px-2 text-[11px] text-muted-foreground">Columns</span>
@@ -1922,7 +1938,7 @@ export default function DashboardPage(): React.JSX.Element {
               )}
 
               <div className={cn('grid gap-2', GRID_COLUMN_CLASS[row.columns])}>
-                {row.items.map((rawId) => {
+                {items.map((rawId) => {
                   const id = rawId as DashboardItemId;
                   const providerId = usageProviderIdOf(id);
                   const statId = statIdOf(id);
@@ -2006,7 +2022,7 @@ export default function DashboardPage(): React.JSX.Element {
                     onDrop={() => handleChartDrop(row.id, null)}
                     className={cn(
                       'flex min-h-24 items-center justify-center rounded-[calc(var(--radius)+2px)] border border-dashed border-border bg-foreground/[0.02] px-3 text-center text-xs text-muted-foreground',
-                      row.items.length === 0 && 'col-span-full',
+                      items.length === 0 && 'col-span-full',
                     )}
                   >
                     Drop a card here

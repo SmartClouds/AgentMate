@@ -560,7 +560,7 @@ app.whenReady().then(async () => {
   void startCiAutoFix();
   startToolUpdateWatcher();
   // A test run reaches no real API: news polls only when an e2e test points it at a fake one.
-  if (!isE2E || process.env.RUNOVA_NEWS_API_URL) startNews();
+  if (!isE2E || process.env.RUNOVA_NEWS_API_URL) void startNews();
   startHealthScheduler();
   startScheduledTaskRunner();
   startHourlyUpdateChecks();

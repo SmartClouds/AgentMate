@@ -2,6 +2,7 @@ import type { NewsLocalState } from '@runova/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   InstalledTool,
+  NewsCategory,
   NewsItemDetail,
   NewsListItem,
   NewsSeverity,
@@ -57,7 +58,10 @@ const installed: InstalledTool[] = [
   { slug: 'nodejs', version: '22.1.0', label: 'Node.js' },
 ];
 
-function setup(items: NewsListItem[] = [], options: { state?: NewsLocalState } = {}) {
+function setup(
+  items: NewsListItem[] = [],
+  options: { state?: NewsLocalState; shownCategories?: () => NewsCategory[] } = {},
+) {
   let state: NewsLocalState = options.state ?? { read: {}, dismissed: {}, notified: {} };
   let cache: NewsCache = { etag: 'W/"v1"', checkedAt: CHECKED, items, details: {} };
   const fetchList = vi.fn(
@@ -81,6 +85,7 @@ function setup(items: NewsListItem[] = [], options: { state?: NewsLocalState } =
     installed: () => installed,
     notifier: { notify },
     broadcast,
+    shownCategories: options.shownCategories,
     now: () => NOW,
   });
   return {
@@ -140,16 +145,55 @@ describe('list', () => {
     expect(await ids({ category: [] })).toEqual([1, 2, 3, 4]);
   });
 
+  it('only lists the categories picked in Settings, read again on every call', async () => {
+    let shown: NewsCategory[] = ['security', 'ai'];
+    const { service } = setup(
+      [
+        newsItem(1, { category: 'security' }),
+        newsItem(2, { category: 'release' }),
+        newsItem(3, { category: 'ai' }),
+      ],
+      { shownCategories: () => shown },
+    );
+    const ids = async (query: Parameters<typeof service.list>[0]) =>
+      (await service.list(query)).items.map((item) => item.id);
+    expect(await ids({})).toEqual([1, 3]);
+    // The card's own filter narrows within them, never past them.
+    expect(await ids({ category: ['ai', 'release'] })).toEqual([3]);
+    expect((await service.list({})).total).toBe(2);
+
+    shown = [];
+    expect(await ids({})).toEqual([1, 2, 3]);
+  });
+
   it('pages 20 at a time by default, and keeps the page in range', async () => {
     const items = Array.from({ length: 45 }, (_, index) => newsItem(index + 1));
     const { service } = setup(items);
     const first = await service.list({});
     expect(first.items).toHaveLength(20);
     expect(first.totalPages).toBe(3);
+    expect(first.total).toBe(45);
     const last = await service.list({ page: 3 });
     expect(last.items.map((item) => item.id)).toEqual([41, 42, 43, 44, 45]);
     expect((await service.list({ page: 9 })).page).toBe(3);
     expect((await service.list({ page: 2, pageSize: 5 })).items[0]?.id).toBe(6);
+  });
+
+  it('puts affected security items first, worst first, then the rest newest first', async () => {
+    const at = (day: number) => `2026-10-${String(day).padStart(2, '0')}T08:00:00.000Z`;
+    const { service } = setup([
+      newsItem(1, { publishedAt: at(28) }),
+      { ...gitFix(2, 'high'), publishedAt: at(20) },
+      newsItem(3, { publishedAt: at(30) }),
+      // Security, but nothing here matches it, so it is just news.
+      newsItem(4, { category: 'security', severity: 'critical', publishedAt: at(29) }),
+      { ...gitFix(5, 'critical'), publishedAt: at(10) },
+    ]);
+    const ids = async (query: Parameters<typeof service.list>[0]) =>
+      (await service.list(query)).items.map((item) => item.id);
+    expect(await ids({})).toEqual([5, 2, 3, 4, 1]);
+    // The order holds across pages, so View all and the card agree.
+    expect(await ids({ pageSize: 2, page: 2 })).toEqual([3, 4]);
   });
 
   it('answers one empty page when there is nothing', async () => {
@@ -158,6 +202,7 @@ describe('list', () => {
       items: [],
       page: 1,
       totalPages: 1,
+      total: 0,
       stale: false,
       checkedAt: CHECKED,
     });

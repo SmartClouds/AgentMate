@@ -1,6 +1,7 @@
-import type { NewsLocalState } from '@runova/core';
+import type { AppSettings, NewsLocalState } from '@runova/core';
 import { app } from 'electron';
 import { IPC } from '../../shared/ipcChannels';
+import { newsSettingsOf, notifyThreshold } from '../../shared/newsSettings';
 import { appNotificationInbox } from '../deploy/watcher';
 import { onDevSetupDetected, peekDevSetup } from '../devSetup/runtime';
 import { onClisDetected, peekDetectedClis } from '../ipc/cliDetection';
@@ -16,8 +17,13 @@ import { normalizeNewsState } from './state';
 /**
  * Binds the news service (E42) to the real app: the proxy-aware fetch that `installProxyFetch()`
  * puts on globalThis, news-cache.json, `newsState` in settings.json, the inbox and the OS
- * notification, and the detections Dev Setup and CLI Manager already remember.
+ * notification, and the detections Dev Setup and CLI Manager already remember. The news choices
+ * in Settings are read on every call, and turning news off stops the poll schedule (T025).
  */
+
+async function newsSettings() {
+  return newsSettingsOf(await store.getSettings());
+}
 
 async function getState(): Promise<NewsLocalState> {
   return normalizeNewsState((await store.getSettings()).newsState);
@@ -51,6 +57,7 @@ function createService(): NewsService {
     },
     getState,
     updateState,
+    minSeverity: async () => notifyThreshold(await newsSettings()),
   });
   return createNewsService({
     client,
@@ -66,19 +73,21 @@ function createService(): NewsService {
       }),
     notifier,
     broadcast: (event) => broadcastToWindows(IPC.news.onChanged, event),
+    shownCategories: async () => (await newsSettings()).categories,
   });
 }
 
 let service: NewsService | null = null;
 let unsubscribe: (() => void)[] = [];
+/** Set once the app has asked for news at all; an e2e run with no fake API never does. */
+let started = false;
 
 export function getNewsService(): NewsService {
   service ??= createService();
   return service;
 }
 
-/** Starts polling, and re-matching whenever Dev Setup or CLI Manager detects something. */
-export function startNews(): void {
+function resume(): void {
   const news = getNewsService();
   if (unsubscribe.length === 0) {
     const changed = () => news.installedChanged();
@@ -87,9 +96,30 @@ export function startNews(): void {
   news.start();
 }
 
-/** Stops polling on quit. Does nothing when news never started. */
-export function stopNews(): void {
+function pause(): void {
   for (const off of unsubscribe) off();
   unsubscribe = [];
   service?.stop();
+}
+
+/**
+ * Starts polling, and re-matching whenever Dev Setup or CLI Manager detects something, unless
+ * news is turned off in Settings.
+ */
+export async function startNews(): Promise<void> {
+  started = true;
+  applyNewsSettings(await store.getSettings());
+}
+
+/** Follows Show news after a change in Settings or a restore. */
+export function applyNewsSettings(settings: AppSettings): void {
+  if (!started) return;
+  if (newsSettingsOf(settings).enabled) resume();
+  else pause();
+}
+
+/** Stops polling on quit. Does nothing when news never started. */
+export function stopNews(): void {
+  started = false;
+  pause();
 }

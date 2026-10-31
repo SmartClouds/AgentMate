@@ -37,6 +37,8 @@ vi.mock('../grammar/languageToolClient', () => ({ clearGrammarCache: vi.fn() }))
 vi.mock('../grammar/localServer', () => ({ stopLocalServer: vi.fn() }));
 vi.mock('../network/proxy', () => ({ applyProxySettings: vi.fn() }));
 vi.mock('../pet/petWindow', () => ({ petManager: { syncFromSettings: vi.fn() } }));
+const applyNewsSettings = vi.hoisted(() => vi.fn());
+vi.mock('../news/runtime', () => ({ applyNewsSettings }));
 
 const dataFile = (name: string): string => join(userData.dir, 'data', name);
 
@@ -153,6 +155,58 @@ describe('checkToolUpdatesEnabled', () => {
     const on = await ipc<AppSettings>(IPC.settings.update, { checkToolUpdatesEnabled: true });
     expect(on.checkToolUpdatesEnabled).toBe(true);
     expect((await readSettingsFile()).checkToolUpdatesEnabled).toBe(true);
+  });
+});
+
+describe('news (E42)', () => {
+  it('is on for a fresh install, with every category and notifications from high', async () => {
+    const settings = await ipc<AppSettings>(IPC.settings.get);
+    expect(settings.newsEnabled).toBe(true);
+    expect(settings.newsCategories).toEqual([]);
+    expect(settings.newsNotifyMinSeverity).toBe('high');
+  });
+
+  it('persists the three choices and reads them back after a restart', async () => {
+    await ipc(IPC.settings.update, {
+      newsEnabled: false,
+      newsCategories: ['security', 'ai'],
+      newsNotifyMinSeverity: 'critical',
+    });
+    expect(await readSettingsFile()).toMatchObject({
+      newsEnabled: false,
+      newsCategories: ['security', 'ai'],
+      newsNotifyMinSeverity: 'critical',
+    });
+
+    vi.resetModules();
+    const { store } = await import('../store');
+    expect(await store.getSettings()).toMatchObject({
+      newsEnabled: false,
+      newsCategories: ['security', 'ai'],
+      newsNotifyMinSeverity: 'critical',
+    });
+  });
+
+  it('drops values this version does not know when it reads the file', async () => {
+    await writeData('settings.json', {
+      newsEnabled: 'off',
+      newsCategories: ['security', 'gossip', 3],
+      newsNotifyMinSeverity: 'urgent',
+    });
+    const settings = await ipc<AppSettings>(IPC.settings.get);
+    expect(settings.newsEnabled).toBe(true);
+    expect(settings.newsCategories).toEqual(['security']);
+    expect(settings.newsNotifyMinSeverity).toBe('high');
+  });
+
+  it('tells the news runtime when news is turned on or off, and only then', async () => {
+    applyNewsSettings.mockClear();
+    await ipc(IPC.settings.update, { startupPage: '/' });
+    expect(applyNewsSettings).not.toHaveBeenCalled();
+
+    await ipc(IPC.settings.update, { newsEnabled: false });
+    expect(applyNewsSettings).toHaveBeenCalledTimes(1);
+    expect(applyNewsSettings.mock.calls[0]?.[0]).toMatchObject({ newsEnabled: false });
   });
 });
 

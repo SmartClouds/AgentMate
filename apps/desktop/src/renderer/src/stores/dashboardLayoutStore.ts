@@ -138,6 +138,16 @@ function appendItem(rows: DashboardRow[], id: DashboardItemId): DashboardRow[] {
 }
 
 /**
+ * A card a newer release brings to a dashboard someone already arranged goes at the end of the
+ * first row with a free cell, high enough to be noticed, and without moving any other card.
+ */
+function introduceItem(rows: DashboardRow[], id: DashboardItemId): DashboardRow[] {
+  const target = rows.findIndex((row) => row.items.length < row.columns);
+  if (target === -1) return [...rows, { ...emptyRow(), items: [id] }];
+  return rows.map((row, i) => (i === target ? { ...row, items: [...row.items, id] } : row));
+}
+
+/**
  * Keeps only cards that still exist (charts that were removed, or usage/stat/
  * summary cards taken off the dashboard), drops duplicates left by an
  * interrupted write, and appends anything new so an upgrade never silently
@@ -367,9 +377,14 @@ export async function initDashboardLayout(): Promise<void> {
     (id): id is DashboardUsageSummaryId =>
       (DASHBOARD_USAGE_SUMMARY_IDS as readonly string[]).includes(id),
   );
-  const stored = settings.dashboardLayout?.length
+  let stored = settings.dashboardLayout?.length
     ? settings.dashboardLayout
     : rowsFromLegacyOrder(settings.dashboardChartOrder, usageCards);
+  if (stored.length > 0) {
+    for (const id of novel) {
+      if (!stored.some((row) => row.items.includes(id))) stored = introduceItem(stored, id);
+    }
+  }
   const rows = sanitizeLayout(stored, chartCards, usageCards, statCards, summaryCards);
   useDashboardLayoutStore.setState({
     chartCards,

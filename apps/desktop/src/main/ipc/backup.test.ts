@@ -67,6 +67,9 @@ vi.mock('../blueprintRevisionDb', () => ({
   },
 }));
 
+const applyNewsSettings = vi.hoisted(() => vi.fn());
+vi.mock('../news/runtime', () => ({ applyNewsSettings }));
+
 const userData = useTempUserData();
 const out = { dir: '' };
 const PASSWORD = 'backup password 123';
@@ -207,6 +210,28 @@ describe('backup:open and backup:restore', () => {
     expect(restored.ok).toBe(true);
     const projects = await store.getProjects();
     expect(projects.map((project) => project.name)).toEqual(['Before export']);
+  });
+
+  it('carries the news settings and read marks, and applies them on restore (E42)', async () => {
+    seedProject();
+    const news = {
+      newsEnabled: false,
+      newsCategories: ['security', 'release'],
+      newsNotifyMinSeverity: 'critical',
+      newsState: { read: { '7': '2026-10-30T10:00:00.000Z' }, dismissed: {}, notified: {} },
+    };
+    userData.writeData('settings.json', news);
+    const { path } = await exportTo('news.json');
+    expect(readEnvelope(path).data.settings).toMatchObject(news);
+
+    // Changed after the export, and put back by the restore.
+    userData.writeData('settings.json', { newsEnabled: true, newsNotifyMinSeverity: 'low' });
+    applyNewsSettings.mockClear();
+    const opened = await open(path);
+    await invoke(IPC.backup.restore, opened.token, { environmentsPassword: null });
+    expect(await store.getSettings()).toMatchObject(news);
+    // Polling follows the restored choice without a restart.
+    expect(applyNewsSettings).toHaveBeenCalledWith(expect.objectContaining({ newsEnabled: false }));
   });
 
   it('carries the prompt history along and puts it back on restore', async () => {

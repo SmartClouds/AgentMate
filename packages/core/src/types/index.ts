@@ -338,6 +338,15 @@ export interface NewsLocalState {
   notified: Record<string, string>;
 }
 
+/**
+ * What the Dashboard News card filters by. Plain strings, since the category and severity lists
+ * live with the news types in the desktop app; the card drops any it does not know.
+ */
+export interface DashboardNewsFilter {
+  categories: string[];
+  minSeverity: string;
+}
+
 /** In-app inbox item: pipeline results from watched GitHub Actions, or a CLI/tool update. */
 export interface AppNotification {
   id: string;
@@ -385,6 +394,7 @@ export const DASHBOARD_CHART_IDS = [
   'github-actions',
   'resource-usage',
   'idle-resources',
+  'news',
 ] as const;
 export type DashboardChartId = (typeof DASHBOARD_CHART_IDS)[number];
 
@@ -396,6 +406,7 @@ export const LATE_DASHBOARD_CHART_IDS: readonly DashboardChartId[] = [
   'github-actions',
   'resource-usage',
   'idle-resources',
+  'news',
 ];
 
 /** Built-in Dashboard stat tiles, movable and hideable like any other dashboard card. */
@@ -438,6 +449,7 @@ export const DEFAULT_DASHBOARD: {
       columns: 4,
       items: ['summary:tokens-today', 'summary:tokens-week', 'summary:cost-today', 'stat:location'],
     },
+    { id: 'default-row-news', columns: 1, items: ['news'] },
     { id: 'default-row-2', columns: 2, items: ['network', 'pings', 'cpu', 'gpu'] },
     { id: 'default-row-3', columns: 3, items: ['usage:claude-code', 'memory', 'disk'] },
     { id: 'default-row-4', columns: 2, items: ['github', 'github-actions'] },
@@ -738,6 +750,23 @@ export interface AppSettings {
    * the time it happened. Ids older than 180 days are pruned. Written by the main process only.
    */
   newsState: NewsLocalState;
+  /**
+   * The Dashboard News card's filters: the categories it shows (empty shows all) and the lowest
+   * severity it lists. Values the app does not know are ignored when read.
+   */
+  dashboardNewsFilter: DashboardNewsFilter;
+  /**
+   * News on the Dashboard (E42). Off hides the News card and stops polling runovahq.com, and
+   * nothing about news notifies.
+   */
+  newsEnabled: boolean;
+  /** The news categories shown anywhere, the card's own filter included. Empty shows all. */
+  newsCategories: string[];
+  /**
+   * The lowest severity of a security fix for something installed here that notifies, or
+   * 'never'. A plain string for the same reason as DashboardNewsFilter.
+   */
+  newsNotifyMinSeverity: string;
   /**
    * Off by default: a Workspace terminal pane leaves colors alone, so whatever CLI is running
    * in it (Claude Code's own gray, say) looks the way it would in any ordinary terminal. On

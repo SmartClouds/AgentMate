@@ -237,6 +237,25 @@ describe('SettingsPage CI auto-fix', () => {
   });
 });
 
+describe('SettingsPage news', () => {
+  it('sits on the Notifications tab', async () => {
+    renderSettings({}, '/settings?tab=notifications');
+    expect(await screen.findByRole('switch', { name: 'Show news' })).toBeChecked();
+    expect(
+      screen.getByRole('combobox', { name: 'Notify me about security fixes at' }),
+    ).toBeVisible();
+  });
+
+  it('is found by searching for security notifications', async () => {
+    const { user } = renderSettings();
+    await screen.findByText('Keep terminals running');
+
+    await user.type(screen.getByLabelText('Search settings'), 'security fix');
+
+    expect(await screen.findByRole('switch', { name: 'Show news' })).toBeVisible();
+  });
+});
+
 describe('SettingsPage pipeline failures', () => {
   const NOTIFY = 'Show failed pipelines in notifications';
   const PET = 'Show failed pipelines on my AI Pet';

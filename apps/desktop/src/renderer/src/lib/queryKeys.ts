@@ -1,3 +1,5 @@
+import type { NewsListQuery } from '@shared/newsTypes';
+
 export const queryKeys = {
   /** A project file open in an editor tab. */
   workspaceFile: (path: string) => ['workspace-file', path] as const,
@@ -197,6 +199,14 @@ export const queryKeys = {
     ['docker-hub', 'tags', namespace, name] as const,
   /** The Dashboard's Docker and emulator usage chart and idle list, read from the main process. */
   resourceActivity: ['resource-activity'] as const,
+  /** Every news query, so a change pushed from main reloads the card, View all and the sheet. */
+  news: ['news'] as const,
+  /** Every page of news, which marking an item read changes. */
+  newsLists: ['news', 'list'] as const,
+  /** One page of news under the card's filters. */
+  newsList: (query: NewsListQuery) => ['news', 'list', query] as const,
+  /** One item with its body, for the detail sheet. */
+  newsItem: (slug: string) => ['news', 'item', slug] as const,
   /** Saved servers with the server core each one runs, for the Deploy rail. */
   deployServers: ['deploy', 'servers'] as const,
   /** A core's live health, shared by its rail entry and its health card. */

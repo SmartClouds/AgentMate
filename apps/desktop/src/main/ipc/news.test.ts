@@ -12,7 +12,14 @@ import type { NewsService } from '../news/service';
 // onChanged is main to renderer, broadcast by the service.
 expectChannelsCovered(IPC.news, [IPC.news.onChanged]);
 
-const RESULT: NewsListResult = { items: [], page: 1, totalPages: 1, stale: false, checkedAt: null };
+const RESULT: NewsListResult = {
+  items: [],
+  page: 1,
+  totalPages: 1,
+  total: 0,
+  stale: false,
+  checkedAt: null,
+};
 
 const service = {
   list: vi.fn(async () => RESULT),

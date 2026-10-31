@@ -1,5 +1,6 @@
 import type { AppNotification, NewsLocalState } from '@runova/core';
 import { describe, expect, it, vi } from 'vitest';
+import type { NewsNotifyLevel } from '../../shared/newsSettings';
 import type { InstalledTool, NewsListItem } from '../../shared/newsTypes';
 import { createNewsNotifier } from './notify';
 import { markNews } from './state';
@@ -162,9 +163,38 @@ describe('createNewsNotifier', () => {
     expect(defaults.added).toHaveLength(1);
 
     const strict = setup();
-    const notifier = createNewsNotifier({ ...strict.deps, minSeverity: 'critical' });
+    const notifier = createNewsNotifier({ ...strict.deps, minSeverity: () => 'critical' });
     await notifier.notify([high], installed);
     expect(strict.added).toHaveLength(0);
+  });
+
+  it('reads the minimum severity on every call, so a change in Settings applies to the next poll', async () => {
+    let level: NewsNotifyLevel = 'critical';
+    const { deps, added, toast } = setup();
+    const notifier = createNewsNotifier({ ...deps, minSeverity: async () => level });
+    const medium = newsItem(9, { severity: 'medium' });
+
+    await notifier.notify([medium], installed);
+    expect(added).toHaveLength(0);
+
+    level = 'medium';
+    await notifier.notify([medium], installed);
+    expect(added.map((item) => item.id)).toEqual(['news:9']);
+    expect(toast).toHaveBeenCalledTimes(1);
+  });
+
+  it('announces nothing at Never, and marks nothing, so turning it back on still notifies', async () => {
+    let level: NewsNotifyLevel = 'never';
+    const { deps, added, state } = setup();
+    const notifier = createNewsNotifier({ ...deps, minSeverity: () => level });
+
+    await notifier.notify([newsItem(10)], installed);
+    expect(added).toHaveLength(0);
+    expect(state().notified).toEqual({});
+
+    level = 'high';
+    await notifier.notify([newsItem(10)], installed);
+    expect(added).toHaveLength(1);
   });
 
   it('marks every new match in one write before announcing any of them', async () => {

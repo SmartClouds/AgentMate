@@ -31,6 +31,11 @@
   --color-success-foreground: hsl(var(--success-foreground));
   --color-warning: hsl(var(--warning));
   --color-warning-foreground: hsl(var(--warning-foreground));
+  --color-severity-info: hsl(var(--severity-info));
+  --color-severity-low: hsl(var(--severity-low));
+  --color-severity-medium: hsl(var(--severity-medium));
+  --color-severity-high: hsl(var(--severity-high));
+  --color-severity-critical: hsl(var(--severity-critical));
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -63,6 +68,12 @@
   --success-foreground: 0 0% 100%;
   --warning: 38 92% 27%;
   --warning-foreground: 0 0% 100%;
+  /* News severity (docs/website/design.md), the same values as the website. */
+  --severity-info: 212 85% 34%;
+  --severity-low: 190 90% 24%;
+  --severity-medium: 38 92% 27%;
+  --severity-high: 22 90% 32%;
+  --severity-critical: 4 78% 38%;
   --border: 0 0% 83%;
   --input: 0 0% 83%;
   --ring: 150 100% 23%;
@@ -93,6 +104,11 @@
   --success-foreground: 0 0% 4%;
   --warning: 38 92% 50%;
   --warning-foreground: 30 40% 10%;
+  --severity-info: 210 90% 66%;
+  --severity-low: 185 70% 48%;
+  --severity-medium: 38 92% 50%;
+  --severity-high: 24 95% 58%;
+  --severity-critical: 4 90% 67%;
   --border: 0 0% 17%;
   --input: 0 0% 17%;
   --ring: 150 100% 45%;

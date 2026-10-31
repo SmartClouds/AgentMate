@@ -82,6 +82,7 @@ import { CliLaunchDefaultsSettings } from '@/components/settings/CliLaunchDefaul
 import { CliOrderSettings } from '@/components/settings/CliOrderSettings';
 import { CommitMessageSettingsForm } from '@/components/settings/CommitMessageSettingsCard';
 import { HelpSearchSettings } from '@/components/settings/HelpSearchSettings';
+import { NewsSettings } from '@/components/settings/NewsSettings';
 import { ProxySettings } from '@/components/settings/ProxySettings';
 import { ReviewCommandsSettings } from '@/components/settings/ReviewCommandsSettings';
 import { ShortcutSettings } from '@/components/settings/ShortcutSettings';
@@ -456,6 +457,12 @@ const SECTIONS = {
     tab: 'notifications',
     title: 'Pipeline failures',
     keywords: PIPELINE_FAILURE_KEYWORDS,
+  },
+  news: {
+    tab: 'notifications',
+    title: 'News',
+    keywords:
+      'news dashboard runovahq security fix fixes vulnerability cve severity critical high category categories notify notification privacy affects your system',
   },
   ciAutoFix: {
     tab: 'notifications',
@@ -2608,6 +2615,12 @@ export default function SettingsPage(): React.JSX.Element {
                         />
                       }
                     />
+                  </Card>
+                ) : null}
+
+                {show('news') ? (
+                  <Card className="glass settings-rows">
+                    <NewsSettings />
                   </Card>
                 ) : null}
 
