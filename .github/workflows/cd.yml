@@ -4,7 +4,8 @@ name: CD
 # Android mobile app (a universal APK and one per CPU architecture), and the
 # server core the desktop installs on users' servers (linux-x64 and
 # linux-arm64), and publishes all of it to a GitHub Release. Once the release
-# is out, the Windows installer goes to winget as a PR on microsoft/winget-pkgs.
+# is out, the Windows installer goes to winget as a PR on microsoft/winget-pkgs
+# (turned off until the installer is code signed, see the winget job).
 #
 # Triggers:
 #   - Pushing a tag like "v1.2.3" builds and releases automatically.
@@ -509,10 +510,13 @@ jobs:
   # token can't open a PR on a repo the account doesn't own). This runs after the release is
   # out, so a failure here never holds the release back; re-run the job once it's fixed.
   # Tags with a "-" (v1.2.3-beta.1) are prereleases and stay off winget.
+  #
+  # Turned off for now: the Windows installer needs a code signing certificate before it goes to
+  # winget. Once it's signed, drop the "false &&" from the condition below to turn this back on.
   winget:
     name: Submit to winget
     needs: release
-    if: ${{ !contains(github.ref_type == 'tag' && github.ref_name || inputs.tag, '-') }}
+    if: ${{ false && !contains(github.ref_type == 'tag' && github.ref_name || inputs.tag, '-') }}
     runs-on: ubuntu-latest
     steps:
       - name: Determine release tag
