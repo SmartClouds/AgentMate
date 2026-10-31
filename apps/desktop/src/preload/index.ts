@@ -369,6 +369,9 @@ import type {
   CloudflareStatus,
   CloudflareZone,
   CloudflareZoneSettings,
+  TurnstileWidget,
+  TurnstileWidgetInput,
+  TurnstileWithSecret,
 } from '../shared/cloudflareTypes';
 import type {
   AccountInfo,
@@ -2282,6 +2285,30 @@ const cloudflare = {
     ipcRenderer.invoke(IPC.cloudflare.planPointDomain, input),
   pointDomain: (input: CloudflarePointDomainInput): Promise<CloudflarePointDomainResult> =>
     ipcRenderer.invoke(IPC.cloudflare.pointDomain, input),
+  listTurnstileWidgets: (zoneId: string): Promise<TurnstileWidget[]> =>
+    ipcRenderer.invoke(IPC.cloudflare.listTurnstileWidgets, zoneId),
+  createTurnstileWidget: (
+    zoneId: string,
+    input: TurnstileWidgetInput,
+  ): Promise<TurnstileWithSecret> =>
+    ipcRenderer.invoke(IPC.cloudflare.createTurnstileWidget, zoneId, input),
+  updateTurnstileWidget: (
+    zoneId: string,
+    sitekey: string,
+    input: TurnstileWidgetInput,
+  ): Promise<TurnstileWidget> =>
+    ipcRenderer.invoke(IPC.cloudflare.updateTurnstileWidget, zoneId, sitekey, input),
+  deleteTurnstileWidget: (zoneId: string, sitekey: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.cloudflare.deleteTurnstileWidget, zoneId, sitekey),
+  turnstileSecret: (zoneId: string, sitekey: string): Promise<string> =>
+    ipcRenderer.invoke(IPC.cloudflare.turnstileSecret, zoneId, sitekey),
+  /** `invalidateNow` stops the old secret at once; otherwise it keeps working for two hours. */
+  rotateTurnstileSecret: (
+    zoneId: string,
+    sitekey: string,
+    invalidateNow: boolean,
+  ): Promise<TurnstileWithSecret> =>
+    ipcRenderer.invoke(IPC.cloudflare.rotateTurnstileSecret, zoneId, sitekey, invalidateNow),
 };
 
 const pullRequests = {

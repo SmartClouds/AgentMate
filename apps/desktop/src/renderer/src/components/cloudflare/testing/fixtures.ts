@@ -4,6 +4,7 @@ import type {
   CloudflareStatus,
   CloudflareZone,
   CloudflareZoneSettings,
+  TurnstileWidget,
 } from '@shared/cloudflareTypes';
 
 /** Sample data for the Cloudflare page's component tests. */
@@ -11,6 +12,7 @@ import type {
 export const ZONE: CloudflareZone = {
   id: '023e105f4ecef8ad9ca31a8372d0c353',
   accountId: 'acct-1',
+  cloudflareAccountId: '01a7362d577a6c3019a474fd6f485823',
   name: 'example.com',
   status: 'active',
   paused: false,
@@ -24,6 +26,30 @@ export const OTHER_ZONE: CloudflareZone = {
   name: 'example.org',
   status: 'pending',
 };
+
+/** A Turnstile widget that covers ZONE, and one in the same account that does not. */
+export const WIDGET: TurnstileWidget = {
+  sitekey: '0x4AAAAAAABkMYinukE8nzY',
+  name: 'Contact form',
+  domains: ['example.com', 'www.example.com', 'shop.example.com'],
+  mode: 'managed',
+  clearance: 'no_clearance',
+  region: 'world',
+  offlabel: false,
+  ephemeralId: false,
+  createdOn: '2026-03-01T10:00:00Z',
+  modifiedOn: '2026-03-01T10:00:00Z',
+};
+
+export const OTHER_WIDGET: TurnstileWidget = {
+  ...WIDGET,
+  sitekey: '0x4AAAAAAAOtherWidget1',
+  name: 'Blog comments',
+  domains: ['blog.io'],
+  mode: 'invisible',
+};
+
+export const TURNSTILE_SECRET = '0x4AAAAAAABkMYsecretValue123';
 
 export const A_RECORD: CloudflareDnsRecord = {
   id: '372e67954025e0ba6aaa6d586b9e0b59',

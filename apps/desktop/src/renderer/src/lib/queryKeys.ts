@@ -349,6 +349,12 @@ export const queryKeys = {
   cloudflareSettings: (zoneId: string) => ['cloudflare', 'data', 'settings', zoneId] as const,
   cloudflareCustomRules: (zoneId: string) => ['cloudflare', 'data', 'customRules', zoneId] as const,
   cloudflareAccessRules: (zoneId: string) => ['cloudflare', 'data', 'accessRules', zoneId] as const,
+  /** Turnstile widgets live in the Cloudflare account, so zones of one account share the list. */
+  cloudflareTurnstile: (cloudflareAccountId: string) =>
+    ['cloudflare', 'data', 'turnstile', cloudflareAccountId] as const,
+  /** Apart from the list, so refreshing the list never reads a secret again. */
+  cloudflareTurnstileSecret: (cloudflareAccountId: string, sitekey: string) =>
+    ['cloudflare', 'data', 'turnstileSecret', cloudflareAccountId, sitekey] as const,
   /** The Google sign-ins of the reCAPTCHA page (E40), never their tokens. */
   recaptchaStatus: ['recaptcha', 'status'] as const,
   /** Prefix of everything read with a Google sign-in, dropped when the sign-ins change. */

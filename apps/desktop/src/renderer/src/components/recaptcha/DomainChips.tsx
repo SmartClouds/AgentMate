@@ -7,28 +7,40 @@ import { cn } from '@/lib/utils';
 
 const LOCALHOST = 'localhost';
 
+/** "a.com", "a.com and b.com", "a.com, b.com and c.com". */
+function joinNames(names: string[]): string {
+  if (names.length < 2) return names.join('');
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
 /**
- * The domains a key works on, as chips in one field. Typing a domain and pressing Enter, a comma
+ * The domains a key (or a Turnstile widget) works on, as chips in one field. Typing a domain and pressing Enter, a comma
  * or a space adds it, and so does leaving the field; a pasted list or URL is split and trimmed to
  * bare domains. What cannot be used is listed under the field with the reason. `localhost` has a
- * switch of its own, since it is for testing and easy to forget to take off.
+ * switch of its own, since it is for testing and easy to forget to take off; `localhostSwitch`
+ * off makes it a chip like any other. Below `max` the field counts what is left.
  */
 export function DomainChips({
   id,
   domains,
   onChange,
   invalid,
+  max = MAX_DOMAINS,
+  localhostSwitch = true,
 }: {
   id: string;
   domains: string[];
   onChange: (domains: string[]) => void;
   invalid?: boolean;
+  max?: number;
+  localhostSwitch?: boolean;
 }): React.JSX.Element {
   const [draft, setDraft] = useState('');
   const [problems, setProblems] = useState<{ input: string; reason: string }[]>([]);
+  const [leftOut, setLeftOut] = useState<string[]>([]);
   const localhostId = useId();
   const hintId = useId();
-  const shown = domains.filter((domain) => domain !== LOCALHOST);
+  const shown = localhostSwitch ? domains.filter((domain) => domain !== LOCALHOST) : domains;
   const localhost = domains.includes(LOCALHOST);
 
   function add(text: string): void {
@@ -36,7 +48,8 @@ export function DomainChips({
     setProblems(parsed.invalid);
     const next = [...domains];
     for (const domain of parsed.domains) if (!next.includes(domain)) next.push(domain);
-    if (next.length !== domains.length) onChange(next.slice(0, MAX_DOMAINS));
+    setLeftOut(next.slice(max));
+    if (next.length !== domains.length) onChange(next.slice(0, max));
   }
 
   function commit(): void {
@@ -105,6 +118,12 @@ export function DomainChips({
           onBlur={commit}
         />
       </div>
+      {leftOut.length > 0 && (
+        <p className="text-xs text-warning" aria-live="polite">
+          Only {max} domains fit, so {joinNames(leftOut)} {leftOut.length === 1 ? 'was' : 'were'}{' '}
+          left out.
+        </p>
+      )}
       {problems.length > 0 && (
         <ul className="space-y-0.5 text-xs text-destructive" aria-live="polite">
           {problems.map((problem) => (
@@ -118,20 +137,27 @@ export function DomainChips({
         <p id={hintId} className="text-xs text-muted-foreground">
           Subdomains of each domain work too, so shop.com covers www.shop.com.
         </p>
-        <label
-          htmlFor={localhostId}
-          className="flex items-center gap-2 text-xs text-muted-foreground"
-        >
-          <Switch
-            id={localhostId}
-            aria-label="Allow localhost for testing"
-            checked={localhost}
-            onCheckedChange={(on) =>
-              onChange(on ? [...domains, LOCALHOST] : domains.filter((one) => one !== LOCALHOST))
-            }
-          />
-          Allow localhost for testing
-        </label>
+        {max < MAX_DOMAINS && (
+          <span className="text-xs tabular-nums text-muted-foreground">
+            {domains.length} of {max}
+          </span>
+        )}
+        {localhostSwitch && (
+          <label
+            htmlFor={localhostId}
+            className="flex items-center gap-2 text-xs text-muted-foreground"
+          >
+            <Switch
+              id={localhostId}
+              aria-label="Allow localhost for testing"
+              checked={localhost}
+              onCheckedChange={(on) =>
+                onChange(on ? [...domains, LOCALHOST] : domains.filter((one) => one !== LOCALHOST))
+              }
+            />
+            Allow localhost for testing
+          </label>
+        )}
       </div>
     </div>
   );

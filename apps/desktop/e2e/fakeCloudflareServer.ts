@@ -26,7 +26,7 @@ export async function startFakeCloudflare(): Promise<FakeCloudflareServer> {
   const fake = createFakeCloudflare({
     tokens: {
       [E2E_CLOUDFLARE_TOKEN]: {
-        grants: { ...ALL_GRANTS, sslCertificates: 'edit', apiTokens: 'edit' },
+        grants: { ...ALL_GRANTS, sslCertificates: 'edit', apiTokens: 'edit', turnstile: 'edit' },
       },
     },
   });

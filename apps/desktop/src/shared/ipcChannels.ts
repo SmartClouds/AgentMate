@@ -1594,7 +1594,7 @@ export const IPC = {
     /** main -> renderer: FilesSitesChangedEvent after any change to the site list. */
     onSitesChanged: 'deployFiles:onSitesChanged',
   },
-  /** The Deploy section's Cloudflare dialog: the API token, zones, DNS, settings and rules. */
+  /** The Deploy section's Cloudflare page: the API token, zones, DNS, settings, rules, Turnstile. */
   cloudflare: {
     status: 'cloudflare:status',
     saveToken: 'cloudflare:saveToken',
@@ -1617,6 +1617,12 @@ export const IPC = {
     deleteAccessRule: 'cloudflare:deleteAccessRule',
     planPointDomain: 'cloudflare:planPointDomain',
     pointDomain: 'cloudflare:pointDomain',
+    listTurnstileWidgets: 'cloudflare:listTurnstileWidgets',
+    createTurnstileWidget: 'cloudflare:createTurnstileWidget',
+    updateTurnstileWidget: 'cloudflare:updateTurnstileWidget',
+    deleteTurnstileWidget: 'cloudflare:deleteTurnstileWidget',
+    turnstileSecret: 'cloudflare:turnstileSecret',
+    rotateTurnstileSecret: 'cloudflare:rotateTurnstileSecret',
   },
   /** reCAPTCHA keys on the Deploy page (E40): Google sign-in, the project and its keys. */
   deployRecaptcha: {

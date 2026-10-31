@@ -9,11 +9,25 @@ import { DomainChips } from './DomainChips';
  * say plainly what could not be used, and turn localhost on with a switch for testing.
  */
 
-function Harness({ initial = [] as string[] }) {
+function Harness({
+  initial = [] as string[],
+  max,
+  localhostSwitch,
+}: {
+  initial?: string[];
+  max?: number;
+  localhostSwitch?: boolean;
+}) {
   const [domains, setDomains] = useState<string[]>(initial);
   return (
     <>
-      <DomainChips id="domains" domains={domains} onChange={setDomains} />
+      <DomainChips
+        id="domains"
+        domains={domains}
+        onChange={setDomains}
+        max={max}
+        localhostSwitch={localhostSwitch}
+      />
       <output data-testid="value">{domains.join(',')}</output>
     </>
   );
@@ -37,9 +51,7 @@ describe('DomainChips', () => {
     await user.click(input);
     await user.paste('a.com b.com 10.0.0.1 nope');
     expect(value()).toBe('a.com,b.com');
-    expect(
-      screen.getByText(/10\.0\.0\.1: reCAPTCHA keys take domains, not an IP address/),
-    ).toBeTruthy();
+    expect(screen.getByText(/10\.0\.0\.1: Use a domain, not an IP address/)).toBeTruthy();
     expect(screen.getByText(/nope: Type the full domain/)).toBeTruthy();
   });
 
@@ -73,5 +85,22 @@ describe('DomainChips', () => {
   it('says that subdomains come along', () => {
     renderWithProviders(<Harness initial={['a.com']} />);
     expect(screen.getByText(/Subdomains of each domain work too/)).toBeTruthy();
+  });
+
+  it('keeps to a smaller limit and says why the rest were left out', async () => {
+    const { user } = renderWithProviders(<Harness initial={['a.com']} max={2} />);
+    await user.click(screen.getByRole('textbox', { name: 'Domains' }));
+    await user.paste('b.com c.com d.com');
+    expect(value()).toBe('a.com,b.com');
+    expect(screen.getByText('Only 2 domains fit, so c.com and d.com were left out.')).toBeTruthy();
+    expect(screen.getByText('2 of 2')).toBeTruthy();
+  });
+
+  it('can treat localhost as a plain domain, without the switch', async () => {
+    const { user } = renderWithProviders(<Harness initial={['a.com']} localhostSwitch={false} />);
+    expect(screen.queryByRole('switch')).toBeNull();
+    await user.type(screen.getByRole('textbox', { name: 'Domains' }), 'localhost{Enter}');
+    expect(value()).toBe('a.com,localhost');
+    expect(screen.getByRole('button', { name: 'Remove localhost' })).toBeTruthy();
   });
 });

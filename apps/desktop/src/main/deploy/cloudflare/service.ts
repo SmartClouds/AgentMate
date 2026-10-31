@@ -7,10 +7,12 @@ import type {
 import type { AccessRuleCreateParams } from 'cloudflare/resources/firewall/access-rules';
 import type { RuleCreateParams, RuleEditParams } from 'cloudflare/resources/rulesets/rules';
 import type { RulesetCreateParams } from 'cloudflare/resources/rulesets/rulesets';
+import type { Widget, WidgetListResponse } from 'cloudflare/resources/turnstile/widgets';
 import type { SecretEnvelope } from '../../../shared/apiTypes';
 import { PROXIABLE_TYPES } from '../../../shared/cloudflare/dns';
-import { tokenProblem } from '../../../shared/cloudflare/permissions';
+import { CLOUDFLARE_PERMISSIONS, tokenProblem } from '../../../shared/cloudflare/permissions';
 import { accessRuleTarget, type BuiltRule, buildRule } from '../../../shared/cloudflare/rules';
+import { isTurnstileSitekey, validateTurnstileInput } from '../../../shared/cloudflare/turnstile';
 import { encodeCloudflareError } from '../../../shared/cloudflareErrors';
 import type {
   CloudflareAccessMode,
@@ -36,6 +38,9 @@ import type {
   CloudflareStatus,
   CloudflareZone,
   CloudflareZoneSettings,
+  TurnstileWidget,
+  TurnstileWidgetInput,
+  TurnstileWithSecret,
 } from '../../../shared/cloudflareTypes';
 import { type CloudflareApi, type CloudflareFetch, createCloudflareApi } from './client';
 import { cloudflareFailure, isNotFound, isPermissionDenied, isUnauthorized } from './errors';
@@ -80,7 +85,7 @@ const CUSTOM_PHASE = 'http_request_firewall_custom';
 
 /** The permissions the saved report tracks (the extra ones are only named when refused). */
 function isMainPermission(id: CloudflareAnyPermissionId): id is CloudflarePermissionId {
-  return id !== 'sslCertificates' && id !== 'apiTokens';
+  return CLOUDFLARE_PERMISSIONS.some((permission) => permission.id === id);
 }
 const PAGE_SIZE = 100;
 const MAX_PAGES = 50;
@@ -104,6 +109,10 @@ const MAX_LABEL = 60;
 const LOCKED =
   'Your saved servers are locked with a passkey, and the Cloudflare token with them. Unlock them first.';
 const RULE_GONE = 'That rule is not in this zone any more. Refresh the list.';
+const WIDGET_GONE = 'That widget is not in this Cloudflare account any more. Refresh the list.';
+const NO_CLOUDFLARE_ACCOUNT =
+  'Cloudflare did not say which account this domain is in, so its Turnstile widgets cannot be found.';
+const BAD_SITEKEY = 'That is not a Turnstile site key.';
 
 /** The fields of a DNS record the page reads, whatever its type. */
 interface ApiRecord {
@@ -272,6 +281,40 @@ async function allPages<T>(
   return items;
 }
 
+function toWidget(widget: Widget | WidgetListResponse): TurnstileWidget {
+  return {
+    sitekey: widget.sitekey,
+    name: widget.name,
+    domains: [...widget.domains],
+    mode: widget.mode,
+    clearance: widget.clearance_level,
+    region: widget.region,
+    offlabel: widget.offlabel,
+    ephemeralId: widget.ephemeral_id,
+    createdOn: widget.created_on,
+    modifiedOn: widget.modified_on,
+  };
+}
+
+/** The whole body Cloudflare wants on both create and update, checked first. */
+function widgetBody(input: TurnstileWidgetInput) {
+  const problem = validateTurnstileInput(input);
+  if (problem) throw new Error(problem);
+  return {
+    name: input.name.trim(),
+    domains: input.domains,
+    mode: input.mode,
+    clearance_level: input.clearance,
+    region: input.region,
+    offlabel: input.offlabel,
+    ephemeral_id: input.ephemeralId,
+  };
+}
+
+function checkSitekey(sitekey: string): void {
+  if (!isTurnstileSitekey(sitekey)) throw new Error(BAD_SITEKEY);
+}
+
 /** What the user typed for a new account's name, or "Account 2" and so on when they left it out. */
 function cleanLabel(typed: string | undefined, existing: { label: string }[]): string {
   const label = (typed ?? '').trim().slice(0, MAX_LABEL);
@@ -288,6 +331,8 @@ export class CloudflareService {
   private readonly newId: () => string;
   /** Which account each listed zone came from, so a zone call finds its token. */
   private readonly zoneOwners = new Map<string, string>();
+  /** Cloudflare's own account id for each listed zone, for the account-level Turnstile API. */
+  private readonly zoneCloudflareAccounts = new Map<string, string>();
 
   constructor(private readonly deps: CloudflareServiceDeps) {
     this.now = deps.now ?? Date.now;
@@ -381,10 +426,13 @@ export class CloudflareService {
     return this.withAccount(accountId, 'zone', async (api) => {
       const zones = await allPages((page) => api.zones.list({ page, per_page: 50 }));
       return zones.map((zone) => {
+        const cloudflareAccountId = zone.account?.id ?? '';
         this.zoneOwners.set(zone.id, accountId);
+        this.zoneCloudflareAccounts.set(zone.id, cloudflareAccountId);
         return {
           id: zone.id,
           accountId,
+          cloudflareAccountId,
           name: zone.name,
           status: zone.status ?? 'active',
           paused: zone.paused ?? false,
@@ -576,6 +624,74 @@ export class CloudflareService {
   }
 
   /** What pointing the name at the server would change, without changing anything. */
+  /** Every Turnstile widget in the zone's Cloudflare account; the zone's tab picks its own. */
+  listTurnstileWidgets(zoneId: string): Promise<TurnstileWidget[]> {
+    return this.withTurnstile(zoneId, async (api, account_id) => {
+      const widgets = await allPages((page) =>
+        api.turnstile.widgets.list({ account_id, page, per_page: 25 }),
+      );
+      return widgets.map(toWidget);
+    });
+  }
+
+  async createTurnstileWidget(
+    zoneId: string,
+    input: TurnstileWidgetInput,
+  ): Promise<TurnstileWithSecret> {
+    const body = widgetBody(input);
+    return this.withTurnstile(zoneId, async (api, account_id) => {
+      const widget = await api.turnstile.widgets.create({ account_id, ...body });
+      return { widget: toWidget(widget), secret: widget.secret };
+    });
+  }
+
+  async updateTurnstileWidget(
+    zoneId: string,
+    sitekey: string,
+    input: TurnstileWidgetInput,
+  ): Promise<TurnstileWidget> {
+    checkSitekey(sitekey);
+    const body = widgetBody(input);
+    return this.withTurnstile(zoneId, async (api, account_id) =>
+      toWidget(await api.turnstile.widgets.update(sitekey, { account_id, ...body })),
+    );
+  }
+
+  async deleteTurnstileWidget(zoneId: string, sitekey: string): Promise<void> {
+    checkSitekey(sitekey);
+    return this.withTurnstile(zoneId, async (api, account_id) => {
+      await api.turnstile.widgets.delete(sitekey, { account_id });
+    });
+  }
+
+  /** A widget's secret, read from Cloudflare each time it is asked for and never kept here. */
+  async turnstileSecret(zoneId: string, sitekey: string): Promise<string> {
+    checkSitekey(sitekey);
+    return this.withTurnstile(
+      zoneId,
+      async (api, account_id) => (await api.turnstile.widgets.get(sitekey, { account_id })).secret,
+    );
+  }
+
+  /**
+   * A new secret for a widget. Cloudflare keeps the old one working for two hours, so servers
+   * can be moved over, unless `invalidateNow` asks it to stop at once (after a leak).
+   */
+  async rotateTurnstileSecret(
+    zoneId: string,
+    sitekey: string,
+    invalidateNow: boolean,
+  ): Promise<TurnstileWithSecret> {
+    checkSitekey(sitekey);
+    return this.withTurnstile(zoneId, async (api, account_id) => {
+      const widget = await api.turnstile.widgets.rotateSecret(sitekey, {
+        account_id,
+        invalidate_immediately: invalidateNow,
+      });
+      return { widget: toWidget(widget), secret: widget.secret };
+    });
+  }
+
   planPointDomain(input: CloudflarePointDomainInput): Promise<CloudflarePointDomainPlan> {
     return this.withZone(input.zoneId, 'dns', (api) => this.plan(api, input));
   }
@@ -795,6 +911,27 @@ export class CloudflareService {
     work: (api: CloudflareApi) => Promise<T>,
   ): Promise<T> {
     return this.withAccount(await this.accountOfZone(zoneId), permission, work);
+  }
+
+  /**
+   * Runs `work` against the Cloudflare account that holds a zone, with Turnstile as the permission
+   * a refusal names. A widget that is gone says so in words.
+   */
+  private async withTurnstile<T>(
+    zoneId: string,
+    work: (api: CloudflareApi, cloudflareAccountId: string) => Promise<T>,
+  ): Promise<T> {
+    const owner = await this.accountOfZone(zoneId);
+    const cloudflareAccountId = this.zoneCloudflareAccounts.get(zoneId);
+    if (!cloudflareAccountId) throw new Error(NO_CLOUDFLARE_ACCOUNT);
+    return this.withAccount(owner, 'turnstile', async (api) => {
+      try {
+        return await work(api, cloudflareAccountId);
+      } catch (error) {
+        if (isNotFound(error)) throw new Error(WIDGET_GONE);
+        throw error;
+      }
+    });
   }
 
   /**

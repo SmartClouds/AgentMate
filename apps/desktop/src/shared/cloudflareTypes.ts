@@ -71,6 +71,11 @@ export interface CloudflareZone {
   id: string;
   /** The connected account that holds this zone. */
   accountId: string;
+  /**
+   * Cloudflare's own id for the account the zone is in, for the account-level APIs such as
+   * Turnstile. Not the same as `accountId`, which is Runova's id for a saved token.
+   */
+  cloudflareAccountId: string;
   name: string;
   /** Cloudflare's word for it: active, pending, initializing or moved. */
   status: string;
@@ -263,7 +268,7 @@ export interface CloudflarePointDomainResult {
  * Permissions only some features need, asked for when one of them is used (E14): the setup guide
  * lists them as optional, and a refusal names them like the others.
  */
-export type CloudflareExtraPermissionId = 'sslCertificates' | 'apiTokens';
+export type CloudflareExtraPermissionId = 'sslCertificates' | 'apiTokens' | 'turnstile';
 
 export type CloudflareAnyPermissionId = CloudflarePermissionId | CloudflareExtraPermissionId;
 
@@ -304,4 +309,38 @@ export interface CloudflareOriginCertificateInput {
 export interface CloudflareOriginLockPlan {
   preview: OriginLockPreview;
   domains: CloudflareDomainCheck[];
+}
+
+/** How a Turnstile widget asks: managed shows a checkbox only when it must. */
+export type TurnstileMode = 'managed' | 'non-interactive' | 'invisible';
+
+/** Whether a solved widget also earns a cf_clearance cookie, and for which challenge level. */
+export type TurnstileClearance = 'no_clearance' | 'jschallenge' | 'managed' | 'interactive';
+
+export type TurnstileRegion = 'world' | 'china';
+
+/** What the page sends to make or change a widget. Cloudflare wants the whole body each time. */
+export interface TurnstileWidgetInput {
+  name: string;
+  domains: string[];
+  mode: TurnstileMode;
+  clearance: TurnstileClearance;
+  region: TurnstileRegion;
+  /** Hides the Cloudflare branding on the widget (Enterprise). */
+  offlabel: boolean;
+  /** Adds an ephemeral visitor id to the check result (Enterprise). */
+  ephemeralId: boolean;
+}
+
+/** A widget as listed; the secret is read on its own, only when asked for. */
+export interface TurnstileWidget extends TurnstileWidgetInput {
+  sitekey: string;
+  createdOn: string;
+  modifiedOn: string;
+}
+
+/** A widget just made, or one whose secret was just rotated, with its secret. */
+export interface TurnstileWithSecret {
+  widget: TurnstileWidget;
+  secret: string;
 }

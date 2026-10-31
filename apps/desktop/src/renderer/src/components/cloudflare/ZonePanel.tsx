@@ -13,10 +13,11 @@ import { PurgeCard } from './PurgeCard';
 import { SecurityLevelCard } from './SecurityLevelCard';
 import { SslTlsCard } from './SslTlsCard';
 import { DnsTokensCard } from './server/DnsTokensCard';
+import { TurnstileCard } from './turnstile/TurnstileCard';
 import { ZoneQuickToggles } from './ZoneQuickToggles';
 import { zoneStateText } from './ZoneRail';
 
-export type ZoneTab = 'dns' | 'ssl' | 'caching' | 'security' | 'servers';
+export type ZoneTab = 'dns' | 'ssl' | 'caching' | 'security' | 'servers' | 'turnstile';
 
 const TABS: { value: ZoneTab; label: string }[] = [
   { value: 'dns', label: 'DNS' },
@@ -24,6 +25,7 @@ const TABS: { value: ZoneTab; label: string }[] = [
   { value: 'caching', label: 'Caching' },
   { value: 'security', label: 'Security' },
   { value: 'servers', label: 'Servers' },
+  { value: 'turnstile', label: 'Turnstile' },
 ];
 
 /**
@@ -40,7 +42,8 @@ const CONTENT = 'mt-0 flex flex-col gap-2 focus-visible:ring-offset-0';
 
 /**
  * One zone: its state with the two switches an emergency needs, and by tab its DNS records, its
- * SSL/TLS, its caching, its rules, and the DNS tokens its servers hold for DNS-01.
+ * SSL/TLS, its caching, its rules, the DNS tokens its servers hold for DNS-01, and the Turnstile
+ * widgets (captcha) that cover it.
  */
 export function ZonePanel({
   zone,
@@ -145,6 +148,9 @@ export function ZonePanel({
       </TabsContent>
       <TabsContent value="servers" className={CONTENT}>
         <DnsTokensCard zone={zone} />
+      </TabsContent>
+      <TabsContent value="turnstile" className={CONTENT}>
+        <TurnstileCard zone={zone} />
       </TabsContent>
     </Tabs>
   );

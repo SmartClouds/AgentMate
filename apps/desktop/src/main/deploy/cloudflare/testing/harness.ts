@@ -39,6 +39,7 @@ export function makeService(
     token?: FakeToken;
     tokens?: Record<string, FakeToken>;
     zones?: FakeZoneSeed[];
+    widgets?: Parameters<typeof createFakeCloudflare>[0]['widgets'];
     locked?: boolean;
     unseal?: (envelope: SecretEnvelope) => Promise<string>;
   } = {},
@@ -46,6 +47,7 @@ export function makeService(
   const fake = createFakeCloudflare({
     tokens: options.tokens ?? { [TOKEN]: options.token ?? { grants: ALL_GRANTS } },
     zones: options.zones,
+    widgets: options.widgets,
   });
   const port = memoryPort();
   const state = new CloudflareState(port);

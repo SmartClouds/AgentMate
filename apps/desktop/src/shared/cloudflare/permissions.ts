@@ -5,9 +5,10 @@ import type {
 } from '../cloudflareTypes';
 
 /**
- * The Cloudflare permissions Runova asks for, and nothing beyond them: every one is a zone
- * permission, so the token cannot touch billing, members, Workers or other tokens. The renderer
- * lists them in the setup guide; the main process checks a token against them.
+ * The Cloudflare permissions Runova asks for, and nothing beyond them: every main one is a zone
+ * permission, so the token cannot touch billing, members, Workers or other tokens. Of the extras,
+ * only Turnstile is an account permission, and only widgets use it. The renderer lists them in the
+ * setup guide; the main process checks a token against them.
  */
 
 export interface CloudflarePermission<
@@ -23,8 +24,9 @@ export interface CloudflarePermission<
   /**
    * The key and type for Cloudflare's token template link. Every key but `zone_waf` is in
    * Cloudflare's published table; if the page skips one, the check after pasting still asks for it.
+   * Turnstile has no key in that table, so it has none here and is added by hand.
    */
-  template: { key: string; type: 'read' | 'edit' | 'purge' };
+  template?: { key: string; type: 'read' | 'edit' | 'purge' };
   /** Permission group names, as the API reports them on a token's policies, that grant it. */
   apiNames: readonly string[];
 }
@@ -82,8 +84,9 @@ export const CLOUDFLARE_PERMISSIONS: readonly CloudflarePermission[] = [
 
 /**
  * Asked for only when a feature needs it, so the main token can stay without them: Origin CA
- * certificates need SSL and Certificates, and making a server its own zone-scoped DNS token needs
- * API Tokens (a user permission, which is why pasting a token made by hand is offered too).
+ * certificates need SSL and Certificates, making a server its own zone-scoped DNS token needs
+ * API Tokens (a user permission, which is why pasting a token made by hand is offered too), and
+ * Turnstile widgets need Turnstile, an account permission.
  */
 export const CLOUDFLARE_EXTRA_PERMISSIONS: readonly CloudflarePermission<CloudflareExtraPermissionId>[] =
   [
@@ -103,6 +106,13 @@ export const CLOUDFLARE_EXTRA_PERMISSIONS: readonly CloudflarePermission<Cloudfl
       template: { key: 'api_tokens', type: 'edit' },
       apiNames: ['API Tokens Write'],
     },
+    {
+      id: 'turnstile',
+      label: 'Account > Turnstile > Edit',
+      purpose: 'Turnstile widgets (captcha) for your forms',
+      action: 'manage Turnstile widgets',
+      apiNames: ['Turnstile Write', 'Turnstile Sites Write'],
+    },
   ];
 
 /** Cloudflare's page for creating and editing user API tokens. */
@@ -120,10 +130,9 @@ export function cloudflarePermission(
 
 /** The token page with Runova's permissions, all zones and a name filled in. */
 export function tokenTemplateUrl(): string {
-  const keys = CLOUDFLARE_PERMISSIONS.map(({ template }) => ({
-    key: template.key,
-    type: template.type,
-  }));
+  const keys = CLOUDFLARE_PERMISSIONS.flatMap(({ template }) =>
+    template ? [{ key: template.key, type: template.type }] : [],
+  );
   const query = [
     `permissionGroupKeys=${encodeURIComponent(JSON.stringify(keys))}`,
     'accountId=*',

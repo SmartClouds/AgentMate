@@ -94,6 +94,7 @@ describe('zoneOf', () => {
       {
         id: '1',
         accountId: 'a',
+        cloudflareAccountId: 'cf',
         name: 'example.com',
         status: 'active',
         paused: false,
@@ -103,6 +104,7 @@ describe('zoneOf', () => {
       {
         id: '2',
         accountId: 'a',
+        cloudflareAccountId: 'cf',
         name: 'dev.example.com',
         status: 'active',
         paused: false,

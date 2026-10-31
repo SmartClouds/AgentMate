@@ -30,7 +30,7 @@ function CloudflareHeader({ children }: { children?: React.ReactNode }): React.J
           Cloudflare
         </h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          Your domains on Cloudflare: DNS, SSL/TLS, caching and security rules.
+          Your domains on Cloudflare: DNS, SSL/TLS, caching, security rules and Turnstile.
         </p>
       </div>
       {children}

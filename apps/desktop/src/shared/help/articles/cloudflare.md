@@ -2,12 +2,12 @@
 title: Cloudflare
 category: Deploy
 order: 90
-summary: Connect your Cloudflare account with an API token, manage DNS records, zone settings and security rules, point a domain at a server, and use Cloudflare with your servers for DNS-01 certificates, Origin CA certificates and the Cloudflare-only origin lock.
-keywords: cloudflare, dns, domain, zone, api token, records, proxy, orange cloud, waf, firewall rules, cache purge, ssl mode, dns-01, wildcard certificate, origin ca, origin lock, point domain, nameservers
+summary: Connect your Cloudflare account with an API token, manage DNS records, zone settings and security rules, get Turnstile captcha keys for your forms, point a domain at a server, and use Cloudflare with your servers for DNS-01 certificates, Origin CA certificates and the Cloudflare-only origin lock.
+keywords: cloudflare, dns, domain, zone, api token, records, proxy, orange cloud, waf, firewall rules, cache purge, ssl mode, dns-01, wildcard certificate, origin ca, origin lock, point domain, nameservers, turnstile, captcha, bot protection, site key, secret key
 route: /deploy?cloudflare=1
 ---
 
-The Cloudflare page manages your domains on Cloudflare without leaving Runova. You connect each account once with an API token, then pick a domain (a zone) to edit its DNS records, its settings, its cache and its security rules. It also links Cloudflare to your servers in Deploy: you can point a domain at a server in one step, give a server a DNS token for wildcard certificates, install a Cloudflare Origin CA certificate, and lock a server so only Cloudflare can reach it.
+The Cloudflare page manages your domains on Cloudflare without leaving Runova. You connect each account once with an API token, then pick a domain (a zone) to edit its DNS records, its settings, its cache and its security rules, and to get Turnstile captcha keys for its forms. It also links Cloudflare to your servers in Deploy: you can point a domain at a server in one step, give a server a DNS token for wildcard certificates, install a Cloudflare Origin CA certificate, and lock a server so only Cloudflare can reach it.
 
 ## Where to find it
 
@@ -35,7 +35,7 @@ The permissions the token should have:
 | Zone > Zone WAF > Edit | WAF custom rules |
 | Zone > Firewall Services > Edit | IP access rules |
 
-Two more permissions are asked for only when a feature needs them, so the main token can stay without them: **Zone > SSL and Certificates > Edit** (Origin CA certificates for your servers) and **User > API Tokens > Edit** (making a separate DNS token for a server).
+Three more permissions are asked for only when a feature needs them, so the main token can stay without them: **Zone > SSL and Certificates > Edit** (Origin CA certificates for your servers), **User > API Tokens > Edit** (making a separate DNS token for a server) and **Account > Turnstile > Edit** (Turnstile widgets on the Turnstile tab). Cloudflare's token page can't fill in the Turnstile permission for you, so add it by hand under Account permissions.
 
 ### The token card
 
@@ -84,7 +84,7 @@ Two quick switches sit on the right of the zone's header, so they are one click 
 - **Development mode** shows **Off**, or **On** with the time left.
 - **I'm Under Attack** turns Cloudflare's strongest check on for every visitor. Turning it off puts the security level back where it was before (Medium if Runova does not know).
 
-A zone has five tabs: **DNS**, **SSL/TLS**, **Caching**, **Security** and **Servers**. An older link to the Settings tab opens SSL/TLS.
+A zone has six tabs: **DNS**, **SSL/TLS**, **Caching**, **Security**, **Servers** and **Turnstile**. An older link to the Settings tab opens SSL/TLS.
 
 ## DNS tab
 
@@ -180,6 +180,36 @@ For each server you see whether it **Holds a DNS token** (with when it was last 
 When Cloudflare refuses a step for want of a permission, a yellow box names the permission to add to the token and offers **Open Cloudflare's token page**.
 
 Once a server has the token, the **Issue a certificate** dialog on a site's SSL tab can use **Validate over DNS (Cloudflare DNS-01)**. See [Websites and certificates](deploy-websites-certificates.md#certificates).
+
+## Turnstile tab
+
+Turnstile is Cloudflare's free captcha. It stops bots on your forms, and most visitors never see a puzzle. A form needs a widget: the **site key** goes in your page, and the **secret** stays on your server, where it checks each visitor's token with Cloudflare.
+
+Widgets belong to the Cloudflare account, not to one domain, and a widget can cover up to 10 domains. The tab shows the widgets that cover the open domain (or one of its subdomains). Click **All in account** to see every widget in the account, and **This domain** to go back. With seven widgets or more, a search box finds one by name, domain or site key.
+
+This needs **Account > Turnstile > Edit** on the token. Without it, the tab names the permission and offers **Open Cloudflare's token page**. Add the permission, then click **I added it, try again**.
+
+### Add a widget
+
+1. Click **Add widget** (or **Add a widget for example.com** when there is none yet). The name and the domain start as the open domain.
+2. Change the **Name** if you like, for example "Contact form".
+3. Pick how it checks people: **Managed** (recommended, most visitors only see a short check, and a checkbox shows when a visit looks off), **Non-interactive** (the widget shows but never asks anyone to click) or **Invisible** (nothing shows at all).
+4. Add or remove **Domains**. Paste a list or a URL and it is cleaned up to bare domains. The counter shows how many of the 10 are used.
+5. **Advanced** holds options most sites leave alone: **Pre-clearance** (a solved widget also lets the visitor past Cloudflare challenges of that level on your site), and, on Enterprise plans only, **Region**, **Hide Cloudflare branding** and **Ephemeral IDs**. If your plan can't use one, Cloudflare's answer shows in the dialog.
+6. Click **Create widget**.
+
+The dialog then shows **Your widget is ready** with the site key, the secret (click **Show secret** to read it) and the code to paste: **HTML**, **React**, a **PHP check** and a **Node.js check**. The server code reads the secret from `TURNSTILE_SECRET`, so set that on your server rather than putting the secret in your code.
+
+**Testing on localhost? Use Cloudflare's test keys** opens Cloudflare's dummy site keys and secrets. They always pass, always block or always ask the visitor to click, so a form can be tried on your own machine or in automated tests. Pair a test site key with a test secret.
+
+### Manage a widget
+
+Each widget shows its mode, its domains, its site key with a copy button, and **Get secret**, which reads the secret from Cloudflare only when you ask. Runova never keeps it.
+
+- **Add to your site** opens the site key, the secret and the code again.
+- The pencil edits the name, the mode, the domains and the advanced options. The site key stays the same, so your pages keep working.
+- **Rotate secret** makes a new secret. By default the old one keeps working for 2 hours, so you have time to update your servers. Pick **Stop the old secret now** if the secret leaked. The new secret is shown right away.
+- The trash deletes the widget after a confirmation. Forms that use it stop passing checks right away.
 
 ## Cloudflare on each server
 

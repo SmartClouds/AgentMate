@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CLOUDFLARE_EXTRA_PERMISSIONS,
   CLOUDFLARE_PERMISSIONS,
   cloudflarePermission,
   missingPermissionLabels,
@@ -26,6 +27,20 @@ describe('the permission catalog', () => {
     ]);
     expect(cloudflarePermission('dns').purpose).toMatch(/DNS records/);
     expect(() => cloudflarePermission('billing' as never)).toThrow(/Unknown/);
+  });
+
+  it('asks for Turnstile only when widgets are managed, and names it as the token page does', () => {
+    expect(CLOUDFLARE_EXTRA_PERMISSIONS.map((permission) => permission.id)).toEqual([
+      'sslCertificates',
+      'apiTokens',
+      'turnstile',
+    ]);
+    const turnstile = cloudflarePermission('turnstile');
+    expect(turnstile.label).toBe('Account > Turnstile > Edit');
+    expect(turnstile.apiNames).toContain('Turnstile Write');
+    expect(permissionDeniedMessage('turnstile')).toBe(
+      'This token is not allowed to manage Turnstile widgets. On Cloudflare, edit the token and add Account > Turnstile > Edit, then check it again here.',
+    );
   });
 
   it('builds the token page link with every permission filled in', () => {

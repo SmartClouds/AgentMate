@@ -5,6 +5,11 @@ import {
   recordProblem,
 } from '../../shared/cloudflare/dns';
 import { accessRuleTarget, buildRule } from '../../shared/cloudflare/rules';
+import {
+  isTurnstileSitekey,
+  MAX_TURNSTILE_DOMAINS,
+  validateTurnstileInput,
+} from '../../shared/cloudflare/turnstile';
 import { BROWSER_CACHE_TTLS, checkPurgeUrls, PURGE_URL_LIMIT } from '../../shared/cloudflare/zone';
 import type {
   CloudflareAccessMode,
@@ -17,6 +22,7 @@ import type {
   CloudflareRuleSpec,
   CloudflareSaveTokenInput,
   CloudflareSettingChange,
+  TurnstileWidgetInput,
 } from '../../shared/cloudflareTypes';
 import { IPC } from '../../shared/ipcChannels';
 import type { CloudflareService } from '../deploy/cloudflare/service';
@@ -249,6 +255,30 @@ function accessRuleInput(value: unknown): CloudflareAccessRuleInput {
   return { mode: input.mode as CloudflareAccessMode, value: ruleValue, notes };
 }
 
+function sitekey(value: unknown): string {
+  if (!isTurnstileSitekey(value)) throw new Error('That is not a Turnstile site key.');
+  return value;
+}
+
+function turnstileInput(value: unknown): TurnstileWidgetInput {
+  const input = object(value, 'a Turnstile widget');
+  if (!Array.isArray(input.domains) || input.domains.length > MAX_TURNSTILE_DOMAINS) {
+    throw new Error('The domains must be a list.');
+  }
+  const widget = {
+    name: text(input.name, 300, 'widget name'),
+    domains: input.domains.map((domain) => text(domain, MAX_NAME, 'domain')),
+    mode: input.mode,
+    clearance: input.clearance,
+    region: input.region,
+    offlabel: flag(input.offlabel, 'Say whether to hide the Cloudflare branding.'),
+    ephemeralId: flag(input.ephemeralId, 'Say whether to add an ephemeral id.'),
+  } as TurnstileWidgetInput;
+  const problem = validateTurnstileInput(widget);
+  if (problem) throw new Error(problem);
+  return widget;
+}
+
 function pointDomainInput(value: unknown): CloudflarePointDomainInput {
   const input = object(value, 'what to point');
   const name = typeof input.name === 'string' ? input.name.trim() : '';
@@ -320,4 +350,24 @@ export function registerCloudflareHandlers({ ipc, service, guard }: CloudflareHa
     service.planPointDomain(pointDomainInput(input)),
   );
   handle(IPC.cloudflare.pointDomain, (input) => service.pointDomain(pointDomainInput(input)));
+  handle(IPC.cloudflare.listTurnstileWidgets, (zone) => service.listTurnstileWidgets(zoneId(zone)));
+  handle(IPC.cloudflare.createTurnstileWidget, (zone, input) =>
+    service.createTurnstileWidget(zoneId(zone), turnstileInput(input)),
+  );
+  handle(IPC.cloudflare.updateTurnstileWidget, (zone, key, input) =>
+    service.updateTurnstileWidget(zoneId(zone), sitekey(key), turnstileInput(input)),
+  );
+  handle(IPC.cloudflare.deleteTurnstileWidget, (zone, key) =>
+    service.deleteTurnstileWidget(zoneId(zone), sitekey(key)),
+  );
+  handle(IPC.cloudflare.turnstileSecret, (zone, key) =>
+    service.turnstileSecret(zoneId(zone), sitekey(key)),
+  );
+  handle(IPC.cloudflare.rotateTurnstileSecret, (zone, key, now) =>
+    service.rotateTurnstileSecret(
+      zoneId(zone),
+      sitekey(key),
+      flag(now, 'Say whether the old secret stops working now.'),
+    ),
+  );
 }

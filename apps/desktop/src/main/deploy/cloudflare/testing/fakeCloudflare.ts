@@ -43,6 +43,8 @@ export interface FakeZoneSeed {
   /** The custom rules entry point; null when the zone has no custom rules yet. */
   ruleset?: Json | null;
   accessRules?: Json[];
+  /** Cloudflare's id for the account the zone is in; the recorded account when left out. */
+  cloudflareAccountId?: string | null;
 }
 
 export interface FakeZoneState {
@@ -68,6 +70,8 @@ export interface FakeCloudflare {
   tokens: Record<string, FakeToken>;
   requests: FakeRequest[];
   zones: Map<string, FakeZoneState>;
+  /** Turnstile widgets by Cloudflare account id, secrets included. */
+  widgets: Map<string, Json[]>;
   /** The requests that could change something: everything but GET. */
   writes: () => FakeRequest[];
   /** Answers the next request whose path matches with this status and body, once. */
@@ -84,6 +88,7 @@ const PERMISSION_NAMES: Record<CloudflareAnyPermissionId, Record<Access, string>
   accessRules: { read: 'Firewall Services Read', edit: 'Firewall Services Write' },
   sslCertificates: { read: 'SSL and Certificates Read', edit: 'SSL and Certificates Write' },
   apiTokens: { read: 'API Tokens Read', edit: 'API Tokens Write' },
+  turnstile: { read: 'Turnstile Read', edit: 'Turnstile Write' },
 };
 const SETTING_VALUES: Record<string, readonly string[]> = {
   development_mode: ['on', 'off'],
@@ -139,6 +144,8 @@ function page(items: Json[], query: URLSearchParams, defaultPerPage: number) {
 export function createFakeCloudflare(options: {
   tokens: Record<string, FakeToken>;
   zones?: FakeZoneSeed[];
+  /** Turnstile widgets already in an account, keyed by its Cloudflare id. */
+  widgets?: Record<string, Json[]>;
 }): FakeCloudflare {
   let counter = 0;
   const nextId = () => {
@@ -148,8 +155,12 @@ export function createFakeCloudflare(options: {
 
   const zones = new Map<string, FakeZoneState>();
   for (const seed of options.zones ?? [{ id: recorded.ZONE_ID, name: 'example.com' }]) {
+    const account =
+      seed.cloudflareAccountId === null
+        ? undefined
+        : { ...recorded.zone.account, id: seed.cloudflareAccountId ?? recorded.CF_ACCOUNT_ID };
     zones.set(seed.id, {
-      zone: { ...copy(recorded.zone), id: seed.id, name: seed.name },
+      zone: { ...copy(recorded.zone), id: seed.id, name: seed.name, account },
       records: copy(seed.records ?? []),
       settings: copy(recorded.settings) as Record<string, Json>,
       ruleset: seed.ruleset === undefined ? null : copy(seed.ruleset),
@@ -157,6 +168,10 @@ export function createFakeCloudflare(options: {
       purges: [],
     });
   }
+
+  const widgets = new Map<string, Json[]>(
+    Object.entries(options.widgets ?? {}).map(([id, list]) => [id, copy(list)]),
+  );
 
   const requests: FakeRequest[] = [];
   const failures: Array<{ path: RegExp; status: number; body: unknown }> = [];
@@ -393,6 +408,71 @@ export function createFakeCloudflare(options: {
     return null;
   }
 
+  /**
+   * Turnstile widgets under /accounts/:id/challenges/widgets. The account must hold a zone the
+   * token can see, the way Cloudflare refuses an account the token has no access to.
+   */
+  function turnstileRoutes(
+    token: FakeToken,
+    request: FakeRequest,
+    accountId: string,
+    rest: string,
+  ) {
+    const { method, query } = request;
+    const body = (request.body ?? {}) as Json;
+    const known = [...zones.values()].some(
+      (state) =>
+        (state.zone.account as Json | undefined)?.id === accountId &&
+        (!token.zoneIds || token.zoneIds.includes(String(state.zone.id))),
+    );
+    if (!known || !allowed(token, 'turnstile', method === 'GET' ? 'read' : 'edit')) {
+      return { status: 403, body: copy(recorded.permissionDenied) };
+    }
+    const list = widgets.get(accountId) ?? [];
+    widgets.set(accountId, list);
+    const secretFree = (widget: Json) => {
+      const { secret: _secret, ...rest } = widget;
+      return rest;
+    };
+    const invalid = () =>
+      typeof body.name !== 'string' ||
+      !Array.isArray(body.domains) ||
+      !['managed', 'non-interactive', 'invisible'].includes(String(body.mode));
+    if (rest === '') {
+      if (method === 'GET') return page(list.map(secretFree), query, 25);
+      if (invalid()) return fail(400, 10002, 'Invalid widget');
+      const id = nextId().slice(-12);
+      const widget = {
+        ...copy(recorded.turnstileWidget),
+        clearance_level: 'no_clearance',
+        region: 'world',
+        offlabel: false,
+        ephemeral_id: false,
+        ...body,
+        sitekey: `0x4AAAAAAAA${id}`,
+        secret: `0x4AAAAAAAAsecret${id}`,
+      };
+      list.push(widget);
+      return ok(widget);
+    }
+    const one = rest.match(/^\/([0-9a-zA-Z_-]+)(\/rotate_secret)?$/);
+    const index = one ? list.findIndex((widget) => widget.sitekey === one[1]) : -1;
+    if (!one || index < 0) return fail(404, 10404, 'Widget not found');
+    const widget = list[index];
+    if (one[2] && method === 'POST') {
+      widget.secret = `0x4AAAAAAAArotated${nextId().slice(-12)}`;
+      return ok(widget);
+    }
+    if (method === 'GET') return ok(widget);
+    if (method === 'DELETE') {
+      list.splice(index, 1);
+      return ok(widget);
+    }
+    if (invalid()) return fail(400, 10002, 'Invalid widget');
+    list[index] = { ...widget, ...body, sitekey: widget.sitekey, secret: widget.secret };
+    return ok(list[index]);
+  }
+
   /** Which permission a zone route needs, as Cloudflare's gateway sees it. */
   function routePermission(method: string, rest: string): [CloudflarePermissionId, Access] {
     const access: Access = method === 'GET' ? 'read' : 'edit';
@@ -438,6 +518,9 @@ export function createFakeCloudflare(options: {
         : [];
       return page(visible, query, 20);
     }
+    const widgetsMatch = path.match(/^\/accounts\/([0-9a-f]{32})\/challenges\/widgets(\/.*)?$/);
+    if (widgetsMatch)
+      return turnstileRoutes(token, request, widgetsMatch[1], widgetsMatch[2] ?? '');
     const zoneMatch = path.match(/^\/zones\/([0-9a-f]{32})(\/.*)?$/);
     if (!zoneMatch) return fail(404, 7000, 'No route for that URI');
     const state = zones.get(zoneMatch[1]);
@@ -539,6 +622,7 @@ export function createFakeCloudflare(options: {
     tokens: options.tokens,
     requests,
     zones,
+    widgets,
     writes: () => requests.filter((request) => request.method !== 'GET'),
     failNext: (path, status, body) => {
       failures.push({ path, status, body });

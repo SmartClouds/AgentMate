@@ -6,6 +6,7 @@ function zone(name: string): CloudflareZone {
   return {
     id: name,
     accountId: 'acct-1',
+    cloudflareAccountId: 'cf-1',
     name,
     status: 'active',
     paused: false,

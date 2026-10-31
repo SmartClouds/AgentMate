@@ -1,7 +1,8 @@
 /**
- * The domains a reCAPTCHA key works on. Google takes bare host names (subdomains of one are allowed
- * on their own), so pasted URLs, ports, paths and `*.` are trimmed off here. The renderer uses it
- * for the domain chips and the main process checks with it again before anything goes to Google.
+ * The domains a reCAPTCHA key or a Turnstile widget works on. Both take bare host names (subdomains
+ * of one are allowed on their own), so pasted URLs, ports, paths and `*.` are trimmed off here. The
+ * renderer uses it for the domain chips and the main process checks with it again before anything
+ * goes out.
  */
 
 /** Google's limit per key. */
@@ -36,7 +37,7 @@ export function normalizeDomain(input: string): DomainResult {
   }
   host = host.replace(/\.$/, '');
   if (host.startsWith('[') || IPV4.test(host)) {
-    return fail(trimmed, 'reCAPTCHA keys take domains, not an IP address.');
+    return fail(trimmed, 'Use a domain, not an IP address.');
   }
   if (host === 'localhost') return { ok: true, domain: host };
   const labels = host.split('.');
@@ -65,9 +66,13 @@ export function parseDomainList(text: string): DomainList {
 }
 
 /** Checks a finished list; gives the first problem in words, or null when it is fine. */
-export function validateDomains(domains: readonly string[]): string | null {
+export function validateDomains(
+  domains: readonly string[],
+  max: number = MAX_DOMAINS,
+  what = 'A key',
+): string | null {
   if (domains.length === 0) return 'Add at least one domain.';
-  if (domains.length > MAX_DOMAINS) return `A key takes at most ${MAX_DOMAINS} domains.`;
+  if (domains.length > max) return `${what} takes at most ${max} domains.`;
   const seen = new Set<string>();
   for (const domain of domains) {
     const result = normalizeDomain(domain);

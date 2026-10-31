@@ -240,3 +240,23 @@ export const invalidToken = {
   messages: [],
   result: null,
 };
+
+/** The Cloudflare account the recorded zone is in (`zone.account.id`). */
+export const CF_ACCOUNT_ID = zone.account.id;
+export const SITEKEY = '0x4AAF00AAAABn0R22HWm-YUc';
+
+/** GET /accounts/:id/challenges/widgets/:sitekey (the list leaves `secret` out). */
+export const turnstileWidget = {
+  bot_fight_mode: false,
+  clearance_level: 'no_clearance',
+  created_on: '2014-01-01T05:20:00.123123Z',
+  domains: ['example.com', 'blog.example.com'],
+  ephemeral_id: false,
+  mode: 'managed',
+  modified_on: '2014-01-01T05:20:00.123123Z',
+  name: 'blog.example.com login form',
+  offlabel: false,
+  region: 'world',
+  secret: '0x4AAF00AAAABn0R22HWm098HVBjhdsYUc',
+  sitekey: SITEKEY,
+};

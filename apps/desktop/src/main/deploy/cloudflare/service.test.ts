@@ -8,7 +8,14 @@ import {
 import type { CloudflarePermissionId, CloudflareStatus } from '../../../shared/cloudflareTypes';
 import { ALL_GRANTS, type FakeToken } from './testing/fakeCloudflare';
 import { ACCOUNT, connectedService, makeService, NOW, TOKEN } from './testing/harness';
-import { dnsRecord, OTHER_ZONE_ID, RECORD_ID, TOKEN_ID, ZONE_ID } from './testing/recorded';
+import {
+  CF_ACCOUNT_ID,
+  dnsRecord,
+  OTHER_ZONE_ID,
+  RECORD_ID,
+  TOKEN_ID,
+  ZONE_ID,
+} from './testing/recorded';
 
 /**
  * The Cloudflare service in the main process: the token goes in once, sealed, and never comes
@@ -171,6 +178,7 @@ describe('zones and DNS records (T2)', () => {
       {
         id: ZONE_ID,
         accountId: ACCOUNT,
+        cloudflareAccountId: CF_ACCOUNT_ID,
         name: 'example.com',
         status: 'active',
         paused: false,

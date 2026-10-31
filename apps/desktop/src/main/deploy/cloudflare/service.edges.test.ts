@@ -76,7 +76,9 @@ describe('sparse answers', () => {
       cache_level: { id: 'cache_level' },
       browser_cache_ttl: { id: 'browser_cache_ttl', value: '14400' },
     };
-    for (const key of ['status', 'paused', 'plan', 'name_servers']) delete state.zone[key];
+    for (const key of ['status', 'paused', 'plan', 'name_servers', 'account']) {
+      delete state.zone[key];
+    }
 
     expect(await service.zoneSettings(ZONE_ID)).toEqual({
       developmentMode: { value: 'off', secondsRemaining: 0, editable: true },
@@ -93,6 +95,7 @@ describe('sparse answers', () => {
       {
         id: ZONE_ID,
         accountId: ACCOUNT,
+        cloudflareAccountId: '',
         name: 'example.com',
         status: 'active',
         paused: false,

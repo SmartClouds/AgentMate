@@ -10,6 +10,7 @@ import {
   ipcError,
   OTHER_ZONE,
   SETTINGS,
+  WIDGET,
   ZONE,
 } from './testing/fixtures';
 
@@ -117,6 +118,7 @@ describe('CloudflareView', () => {
       'Caching',
       'Security',
       'Servers',
+      'Turnstile',
     ]);
     await user.click(screen.getByRole('tab', { name: 'SSL/TLS' }));
     expect(await screen.findByRole('radiogroup', { name: 'Encryption mode' })).toBeInTheDocument();
@@ -129,6 +131,22 @@ describe('CloudflareView', () => {
     expect(await screen.findByRole('heading', { name: 'WAF custom rules' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'IP access rules' })).toBeInTheDocument();
     expect(address().get('tab')).toBe('security');
+  });
+
+  it('opens the Turnstile tab from the address and keeps it there', async () => {
+    const { user } = renderPage(
+      { 'cloudflare.listTurnstileWidgets': async () => [WIDGET] },
+      `/deploy?cloudflare=1&zone=${ZONE.id}&tab=turnstile`,
+    );
+    expect(await screen.findByRole('tab', { name: 'Turnstile' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(await screen.findByRole('listitem', { name: 'Contact form' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'DNS' }));
+    await user.click(screen.getByRole('tab', { name: 'Turnstile' }));
+    expect(address().get('tab')).toBe('turnstile');
   });
 
   it('opens an old Settings link on the SSL/TLS tab', async () => {

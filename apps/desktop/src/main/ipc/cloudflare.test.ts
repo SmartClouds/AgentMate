@@ -14,6 +14,7 @@ type Listener = (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown;
 const ZONE = '023e105f4ecef8ad9ca31a8372d0c353';
 const ACCOUNT = 'acct-1';
 const RECORD = '372e67954025e0ba6aaa6d586b9e0b59';
+const SITEKEY = '0x4AAF00AAAABn0R22HWm-YUc';
 const TOKEN = 'Gm4pR2e6Tq9VxYb1Lk0NsHjW3cZaDf7U8iOoPl5M';
 const A_RECORD = {
   type: 'A',
@@ -131,6 +132,33 @@ describe('registerCloudflareHandlers', () => {
     });
     expect(service.planPointDomain).toHaveBeenCalledWith(point);
     expect(service.pointDomain).toHaveBeenCalledWith(point);
+
+    const widget = {
+      name: ' Contact form ',
+      domains: ['example.com'],
+      mode: 'managed',
+      clearance: 'no_clearance',
+      region: 'world',
+      offlabel: false,
+      ephemeralId: false,
+      extra: 'dropped',
+    };
+    const { extra: _extra, ...checked } = widget;
+
+    await call(IPC.cloudflare.listTurnstileWidgets, ZONE);
+    await call(IPC.cloudflare.createTurnstileWidget, ZONE, widget);
+    await call(IPC.cloudflare.updateTurnstileWidget, ZONE, SITEKEY, widget);
+    await call(IPC.cloudflare.deleteTurnstileWidget, ZONE, SITEKEY);
+    await call(IPC.cloudflare.turnstileSecret, ZONE, SITEKEY);
+    await call(IPC.cloudflare.rotateTurnstileSecret, ZONE, SITEKEY, true);
+
+    expect(service.listTurnstileWidgets).toHaveBeenCalledWith(ZONE);
+    expect(service.createTurnstileWidget).toHaveBeenCalledWith(ZONE, checked);
+    expect(service.updateTurnstileWidget).toHaveBeenCalledWith(ZONE, SITEKEY, checked);
+    expect(service.deleteTurnstileWidget).toHaveBeenCalledWith(ZONE, SITEKEY);
+    expect(service.turnstileSecret).toHaveBeenCalledWith(ZONE, SITEKEY);
+    expect(service.rotateTurnstileSecret).toHaveBeenCalledWith(ZONE, SITEKEY, true);
+
     for (const name of Object.keys(IPC.cloudflare)) expect(service[name], name).toHaveBeenCalled();
   });
 
@@ -321,5 +349,46 @@ describe('registerCloudflareHandlers', () => {
     }
     expect(service.createAccessRule).not.toHaveBeenCalled();
     expect(service.pointDomain).not.toHaveBeenCalled();
+  });
+
+  it('refuses Turnstile requests of the wrong shape', async () => {
+    const { service, call } = harness();
+    const widget = {
+      name: 'Contact form',
+      domains: ['example.com'],
+      mode: 'managed',
+      clearance: 'no_clearance',
+      region: 'world',
+      offlabel: false,
+      ephemeralId: false,
+    };
+    for (const wrong of [
+      { ...widget, name: 7 },
+      { ...widget, domains: 'example.com' },
+      { ...widget, domains: [] },
+      { ...widget, domains: Array.from({ length: 11 }, (_, i) => `s${i}.example.com`) },
+      { ...widget, mode: 'loud' },
+      { ...widget, clearance: undefined },
+      { ...widget, region: 'mars' },
+      { ...widget, offlabel: 'yes' },
+      { ...widget, ephemeralId: undefined },
+      'example.com',
+    ]) {
+      await expect(
+        call(IPC.cloudflare.createTurnstileWidget, ZONE, wrong),
+        JSON.stringify(wrong),
+      ).rejects.toThrow();
+    }
+    await expect(call(IPC.cloudflare.listTurnstileWidgets, 'nope')).rejects.toThrow(/zone/);
+    for (const sitekey of ['', '../../zones', 7, `0x${'a'.repeat(80)}`]) {
+      await expect(call(IPC.cloudflare.turnstileSecret, ZONE, sitekey)).rejects.toThrow(/site key/);
+    }
+    await expect(call(IPC.cloudflare.rotateTurnstileSecret, ZONE, SITEKEY, 'now')).rejects.toThrow(
+      /old secret/,
+    );
+    expect(service.createTurnstileWidget).not.toHaveBeenCalled();
+    expect(service.listTurnstileWidgets).not.toHaveBeenCalled();
+    expect(service.turnstileSecret).not.toHaveBeenCalled();
+    expect(service.rotateTurnstileSecret).not.toHaveBeenCalled();
   });
 });

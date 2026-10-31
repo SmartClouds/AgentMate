@@ -5,6 +5,7 @@ import { BaseOriginCACertificates } from 'cloudflare/resources/origin-ca-certifi
 import { BasePhases } from 'cloudflare/resources/rulesets/phases/phases';
 import { BaseRules } from 'cloudflare/resources/rulesets/rules';
 import { BaseRulesets } from 'cloudflare/resources/rulesets/rulesets';
+import { BaseWidgets } from 'cloudflare/resources/turnstile/widgets';
 import { BasePermissionGroups } from 'cloudflare/resources/user/tokens/permission-groups';
 import { BaseTokens } from 'cloudflare/resources/user/tokens/tokens';
 import { BaseSettings } from 'cloudflare/resources/zones/settings';
@@ -58,6 +59,7 @@ export function createCloudflareApi(token: string, options: CloudflareClientOpti
       BaseAccessRules,
       BaseOriginCACertificates,
       BasePermissionGroups,
+      BaseWidgets,
     ],
     apiToken: token,
     apiKey: null,
