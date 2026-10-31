@@ -837,6 +837,30 @@ export function splitJobLog(raw: string, steps: GithubJobLogInput['steps']): Git
 const JOB_LOG_CACHE_CAP = 20;
 const jobLogCache = new Map<string, string>();
 
+/**
+ * Newer gh refuses to print a response with terminal escape sequences in it unless told to, and
+ * logs are full of colored output. Older gh has no such flag and fails on it, so once that is seen
+ * the flag is left off.
+ */
+let escapeFlagUnsupported = false;
+
+async function readJobLog(path: string): Promise<string> {
+  const run = (extra: string[]) =>
+    runGh(['api', '-H', 'Accept: application/vnd.github+json', ...extra, path], {
+      timeout: 60_000,
+      maxBuffer: 64 * 1024 * 1024,
+      readOnly: true,
+    });
+  if (escapeFlagUnsupported) return (await run([])).stdout;
+  try {
+    return (await run(['--allow-escape-sequences'])).stdout;
+  } catch (error) {
+    if (!/unknown flag: --allow-escape-sequences/.test(ghErrorMessage(error))) throw error;
+    escapeFlagUnsupported = true;
+    return (await run([])).stdout;
+  }
+}
+
 /** One job's log, split by step, for the step logs in the Pipelines details. */
 export async function fetchJobLog(input: GithubJobLogInput): Promise<GithubJobLogResult> {
   const parsed = parseOwnerRepo(input.repo);
@@ -851,16 +875,7 @@ export async function fetchJobLog(input: GithubJobLogInput): Promise<GithubJobLo
   if (raw === undefined) {
     try {
       // Not `ghApi`: the log is plain text, which gh fetches by following GitHub's redirect.
-      const { stdout } = await runGh(
-        [
-          'api',
-          '-H',
-          'Accept: application/vnd.github+json',
-          `repos/${parsed.owner}/${parsed.repo}/actions/jobs/${jobId}/logs`,
-        ],
-        { timeout: 60_000, maxBuffer: 64 * 1024 * 1024, readOnly: true },
-      );
-      raw = stdout;
+      raw = await readJobLog(`repos/${parsed.owner}/${parsed.repo}/actions/jobs/${jobId}/logs`);
     } catch (error) {
       if ((error as { code?: string }).code === 'ENOENT') {
         return { ok: false, error: 'Install the GitHub CLI and sign in to see this log.' };

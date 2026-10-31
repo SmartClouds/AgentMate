@@ -77,9 +77,11 @@ interface Scenario {
 let scenario: Scenario;
 let actions: typeof import('./githubActions');
 
+const ALLOW_ESCAPES = '--allow-escape-sequences';
+
 /** The path argument of a `gh api` call: `['api', '-H', accept, <path>, ...]`. */
 function apiPath(args: string[]): string {
-  return args[3];
+  return args.filter((arg) => arg !== ALLOW_ESCAPES)[3];
 }
 
 async function reply(file: string, args: string[]): Promise<ExecReply> {
@@ -96,7 +98,16 @@ async function reply(file: string, args: string[]): Promise<ExecReply> {
     const path = apiPath(args);
     const failure = scenario.apiErrors[path];
     if (failure) throw execError(failure);
-    if (path in scenario.apiRaw) return { stdout: scenario.apiRaw[path], stderr: '' };
+    if (path in scenario.apiRaw) {
+      const stdout = scenario.apiRaw[path];
+      // What newer gh does with a reply that would color the terminal.
+      if (stdout.includes('\x1b') && !args.includes(ALLOW_ESCAPES)) {
+        throw execError(
+          `the response contains terminal escape sequences; pass ${ALLOW_ESCAPES} to output it anyway`,
+        );
+      }
+      return { stdout, stderr: '' };
+    }
     if (!(path in scenario.api)) throw execError(`HTTP 404: Not Found (${path})`);
     return { stdout: JSON.stringify(scenario.api[path]), stderr: '' };
   }
@@ -1699,7 +1710,9 @@ describe('fetchJobLog', () => {
 
     const result = await actions.fetchJobLog({ repo: 'acme/demo', jobId: 11, steps: STEPS });
 
-    expect(ghCalls()).toEqual([['api', '-H', 'Accept: application/vnd.github+json', LOG_PATH]]);
+    expect(ghCalls()).toEqual([
+      ['api', '-H', 'Accept: application/vnd.github+json', ALLOW_ESCAPES, LOG_PATH],
+    ]);
     expect(result).toEqual({
       ok: true,
       steps: [
@@ -1720,6 +1733,43 @@ describe('fetchJobLog', () => {
         },
       ],
     });
+  });
+
+  it('reads a log with colored output, which gh refuses to print unless allowed', async () => {
+    scenario.apiRaw[LOG_PATH] = [
+      logLine('01', 'Current runner version: 2.320.0'),
+      logLine('03', '##[group]Run trivy image --format sarif api:scan'),
+      logLine('04', '\x1b[31mCRITICAL\x1b[0m: 2 vulnerabilities'),
+      logLine('04', '##[error]Process completed with exit code 1.'),
+    ].join('\n');
+
+    const result = await actions.fetchJobLog({ repo: 'acme/demo', jobId: 11, steps: STEPS });
+
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.steps[1].lines).toEqual([
+      { text: 'Run trivy image --format sarif api:scan', kind: 'group' },
+      { text: 'CRITICAL: 2 vulnerabilities', kind: 'plain' },
+      { text: 'Process completed with exit code 1.', kind: 'error' },
+    ]);
+  });
+
+  it('leaves the escape flag off for an older gh that does not know it', async () => {
+    scenario.apiRaw[LOG_PATH] = RAW;
+    scenario.apiRaw['repos/acme/demo/actions/jobs/12/logs'] = RAW;
+    proc.reply = async (file, args) => {
+      if (args.includes(ALLOW_ESCAPES)) throw execError(`unknown flag: ${ALLOW_ESCAPES}`);
+      return reply(file, args);
+    };
+
+    const first = await actions.fetchJobLog({ repo: 'acme/demo', jobId: 11, steps: STEPS });
+    const second = await actions.fetchJobLog({ repo: 'acme/demo', jobId: 12, steps: STEPS });
+
+    expect(first.ok && second.ok).toBe(true);
+    expect(ghCalls()).toEqual([
+      ['api', '-H', 'Accept: application/vnd.github+json', ALLOW_ESCAPES, LOG_PATH],
+      ['api', '-H', 'Accept: application/vnd.github+json', LOG_PATH],
+      ['api', '-H', 'Accept: application/vnd.github+json', 'repos/acme/demo/actions/jobs/12/logs'],
+    ]);
   });
 
   it('keeps a finished job log in memory, since it never changes', async () => {
