@@ -1,11 +1,11 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GONE_MESSAGE, SETTINGS_AI, useDeployAssistantStore } from '@/stores/deployAssistantStore';
 import { renderWithProviders } from '../../../../../test/renderer/renderWithProviders';
 import { SERVER, STEP_UP_REFUSAL } from '../overview/testing/fixtures';
 import { signedIn } from '../security/testing/fixtures';
-import { CONTINUE_PROMPT } from './AssistantComposer';
+import { ATTACHMENTS_PROMPT, CONTINUE_PROMPT } from './AssistantComposer';
 import { AssistantLauncher, AssistantTopBarButton } from './AssistantLauncher';
 import { useDeployAssistantEvents } from './hooks';
 
@@ -69,6 +69,7 @@ beforeEach(() => {
     pageServerId: null,
     draft: null,
     prompts: {},
+    attachments: {},
     maximized: false,
     runs: {},
     ai: SETTINGS_AI,
@@ -527,6 +528,69 @@ describe('AssistantDrawer after leaving the page', () => {
     expect(within(drawer).getByLabelText('What should the AI look into?')).toHaveValue('');
     // What the AI was pointed at still goes with the next question.
     expect(within(drawer).getByLabelText('Context')).toHaveTextContent('Logs: api');
+  });
+
+  it('sends a long pasted task whole', async () => {
+    const { user, bridge: fake } = renderWithProviders(<Page />, { bridge: bridge() });
+    act(() => useDeployAssistantStore.getState().open(SERVER.id));
+    const drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    const long = `Here is the analysis.
+${'The api restarts after the migration. '.repeat(200)}`;
+    fireEvent.change(within(drawer).getByLabelText('What should the AI look into?'), {
+      target: { value: long },
+    });
+    await user.click(within(drawer).getByRole('button', { name: 'Start' }));
+    expect(fake.$fn('deployAssistant.start')).toHaveBeenCalledWith(
+      expect.objectContaining({ prompt: long.trim() }),
+    );
+  });
+
+  it('attaches a pasted screenshot, sends it with the task and clears it after', async () => {
+    const shot = 'C:/Users/me/AppData/Roaming/Runova/pasted-images/pasted-1.png';
+    const { user, bridge: fake } = renderWithProviders(<Page />, {
+      bridge: bridge({
+        'terminalClipboard.read': { kind: 'files', paths: [shot] },
+        'terminalClipboard.previewImage': async () => null,
+      }),
+    });
+    act(() => useDeployAssistantStore.getState().open(SERVER.id));
+    const drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    const box = within(drawer).getByLabelText('What should the AI look into?');
+    // Chromium gives a textarea no text and no files for a screenshot.
+    fireEvent.paste(box, { clipboardData: { getData: () => '', files: [] } });
+    const attached = await within(drawer).findByRole('list', { name: 'Attached files' });
+    expect(within(attached).getByText('pasted-1.png')).toBeInTheDocument();
+
+    // Files alone are a task.
+    await user.click(within(drawer).getByRole('button', { name: 'Start' }));
+    expect(fake.$fn('deployAssistant.start')).toHaveBeenCalledWith(
+      expect.objectContaining({ prompt: ATTACHMENTS_PROMPT, attachments: [shot] }),
+    );
+    await waitFor(() =>
+      expect(within(drawer).queryByRole('list', { name: 'Attached files' })).toBeNull(),
+    );
+  });
+
+  it('leaves text pastes to the box and takes a file back off', async () => {
+    const shot = '/home/me/shot.png';
+    const read = vi.fn(async () => ({ kind: 'files', paths: [shot] }));
+    const { user } = renderWithProviders(<Page />, {
+      bridge: bridge({
+        'terminalClipboard.read': read,
+        'terminalClipboard.previewImage': async () => null,
+      }),
+    });
+    act(() => useDeployAssistantStore.getState().open(SERVER.id));
+    const drawer = await screen.findByRole('complementary', { name: 'Deploy AI' });
+    const box = within(drawer).getByLabelText('What should the AI look into?');
+    fireEvent.paste(box, { clipboardData: { getData: () => 'some text', files: [] } });
+    expect(read).not.toHaveBeenCalled();
+
+    fireEvent.paste(box, { clipboardData: { getData: () => '', files: [] } });
+    await within(drawer).findByRole('list', { name: 'Attached files' });
+    await user.click(within(drawer).getByRole('button', { name: 'Remove shot.png' }));
+    expect(within(drawer).queryByRole('list', { name: 'Attached files' })).toBeNull();
+    expect(within(drawer).getByRole('button', { name: 'Start' })).toBeDisabled();
   });
 
   it('keeps what was typed and not sent yet', async () => {

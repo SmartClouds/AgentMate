@@ -265,10 +265,15 @@ export interface HeadlessPromptOptions {
    */
   runArgs?: string[];
   /**
-   * Screenshots for the CLI to look at, as paths relative to `cwd`. Only CLIs whose registry
-   * entry says how to attach an image can take them; any other CLI is not started at all.
+   * Images for the CLI to look at, as paths relative to `cwd` or absolute. Only CLIs whose
+   * registry entry says how to attach an image can take them; any other CLI is not started at all.
    */
   images?: string[];
+  /**
+   * The run also works with its tools (a project it reads), so the images must not come with
+   * "use your tools for nothing else". Only matters when `images` is set.
+   */
+  imagesWithTools?: boolean;
   /**
    * `cwd` is a folder the app made for this run (a Studio work folder), so the CLI is told to
    * trust it instead of stopping to ask. Never set for a folder the user works in.
@@ -398,7 +403,9 @@ export async function prepareHeadlessRun(
     allowWrites: options.allowWrites,
     trustCwd: options.trustCwd,
   });
-  const imageInput = buildHeadlessImageInput(cli, images);
+  const imageInput = buildHeadlessImageInput(cli, images, {
+    lookOnly: !options.imagesWithTools,
+  });
   // Cline's CLI self-updates on every invocation by spawning a detached background installer;
   // on Windows that can flash open a visible console mid-run. This is a no-op env var for every
   // other CLI we shell out to. The extra tool folders let a CLI that a native installer put in

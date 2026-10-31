@@ -96,6 +96,7 @@ beforeEach(() => {
     continueFrom: {},
     draft: null,
     prompts: {},
+    attachments: {},
     maximized: false,
     runs: {},
     ai: SETTINGS_AI,

@@ -68,6 +68,11 @@ export interface DeployAssistantStartInput {
   /** Only with a CLI: the provider from Settings cannot open files. */
   project?: DeployAssistantProjectInput;
   app?: DeployAssistantAppInput;
+  /**
+   * Absolute paths of files the user pasted or dropped into the box. Images go to the AI as
+   * images, text files go into the task.
+   */
+  attachments?: string[];
 }
 
 /** The run's state, as the SSH AI reports it. `progress.sessionId` is the run's key. */

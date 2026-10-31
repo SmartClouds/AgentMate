@@ -251,6 +251,8 @@ describe('choosing the AI', () => {
       expect.any(String),
       [],
       expect.any(AbortSignal),
+      // No images were attached.
+      [],
     );
     expect(runHeadlessCliPrompt).not.toHaveBeenCalled();
     expect(getSshTaskHistory(sessionId)[0]?.aiLabel).toBe('Gemini');

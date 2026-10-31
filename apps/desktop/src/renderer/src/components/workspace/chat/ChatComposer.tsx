@@ -1,25 +1,21 @@
-import { forwardRef, useEffect, useState } from 'react';
-import { Send, StopCircle, X } from '@/components/icons';
+import type { AgentRunInfo } from '@shared/apiTypes';
+import { forwardRef, useState } from 'react';
+import { Send, StopCircle } from '@/components/icons';
 import { AgentPromptField } from '@/components/terminal/AgentPromptField';
+import { AttachmentChip } from '@/components/ui/attachment-chip';
 import { Button } from '@/components/ui/button';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { pathsForFiles, pathsToChips } from '@/lib/terminal/pasteFiles';
-import { terminalRuntime } from '@/lib/terminal/terminalRuntime';
 import { cn } from '@/lib/utils';
 import { useAgentChatStore } from '@/stores/agentChatStore';
+import { ChatRunPicker } from './ChatRunPicker';
 import type { ChatTheme } from './chatThemes';
-
-/** Gives the CLI a moment to take the paste in before Enter submits it, as Relay does. */
-const SUBMIT_DELAY_MS = 150;
+import { typeIntoCli } from './typeIntoCli';
 
 const NO_ATTACHMENTS: string[] = [];
 
 /** Gemini and Qwen read a file into the prompt from an `@path` mention. */
 const AT_MENTION_CLIS = new Set(['gemini-cli', 'qwen-cli']);
-
-function fileLabel(path: string): string {
-  return path.replace(/\\/g, '/').split('/').pop() || path;
-}
 
 /**
  * The attached images as the CLI wants them in the prompt. Claude Code and Codex attach an image
@@ -34,54 +30,17 @@ function attachmentText(cliId: string, paths: string[]): string {
     .join(' ');
 }
 
-function AttachmentChip({
-  path,
-  onRemove,
-}: {
-  path: string;
-  onRemove: () => void;
-}): React.JSX.Element {
-  const [preview, setPreview] = useState<string | null>(null);
-  const label = fileLabel(path);
-  useEffect(() => {
-    let live = true;
-    void window.runova.terminalClipboard
-      .previewImage(path, false)
-      .then((url) => {
-        if (live) setPreview(url);
-      })
-      .catch(() => undefined);
-    return () => {
-      live = false;
-    };
-  }, [path]);
-
-  return (
-    <div className="group relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-border bg-muted">
-      {preview ? (
-        <img src={preview} alt={label} className="h-full w-full object-cover" />
-      ) : (
-        <span className="flex h-full w-full items-center justify-center p-1 text-center text-[9px] text-muted-foreground">
-          {label}
-        </span>
-      )}
-      <button
-        type="button"
-        aria-label={`Remove ${label}`}
-        onClick={onRemove}
-        className="absolute right-0.5 top-0.5 flex h-4 w-4 cursor-pointer items-center justify-center rounded-full bg-background/90 text-foreground opacity-0 shadow transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
-      >
-        <X className="h-2.5 w-2.5" />
-      </button>
-    </div>
-  );
-}
-
 export interface ChatComposerProps {
   sessionId: string;
   cliId: string;
   theme: ChatTheme;
   working: boolean;
+  /** The agent is asking the user something, so a typed command would answer it. */
+  needsInput?: boolean;
+  /** What the agent runs on now, for the model and effort picker. */
+  runInfo?: AgentRunInfo;
+  /** What to show in the picker when the agent reports no model. */
+  runLabel?: string | null;
 }
 
 /**
@@ -92,7 +51,10 @@ export interface ChatComposerProps {
  * A pasted screenshot is saved as a file and goes along as its path.
  */
 export const ChatComposer = forwardRef<HTMLTextAreaElement, ChatComposerProps>(
-  function ChatComposer({ sessionId, cliId, theme, working }, ref) {
+  function ChatComposer(
+    { sessionId, cliId, theme, working, needsInput = false, runInfo, runLabel = null },
+    ref,
+  ) {
     const draft = useAgentChatStore((s) => s.drafts[sessionId] ?? '');
     const setDraft = useAgentChatStore((s) => s.setDraft);
     const attachments = useAgentChatStore((s) => s.attachments[sessionId] ?? NO_ATTACHMENTS);
@@ -128,7 +90,7 @@ export const ChatComposer = forwardRef<HTMLTextAreaElement, ChatComposerProps>(
       const message = [attachments.length > 0 ? attachmentText(cliId, attachments) : '', text]
         .filter(Boolean)
         .join(' ');
-      if (!terminalRuntime.insertText(sessionId, message)) {
+      if (!typeIntoCli(sessionId, message)) {
         setNote(`${theme.name} isn't ready for a message yet. Try again in a moment.`);
         return;
       }
@@ -140,7 +102,6 @@ export const ChatComposer = forwardRef<HTMLTextAreaElement, ChatComposerProps>(
       setDraft(sessionId, '');
       setAttachments(sessionId, []);
       setNote(null);
-      setTimeout(() => void window.runova.terminal.write(sessionId, '\r'), SUBMIT_DELAY_MS);
     }
 
     return (
@@ -185,6 +146,23 @@ export const ChatComposer = forwardRef<HTMLTextAreaElement, ChatComposerProps>(
           textClassName="text-sm"
           trailing={
             <div className="flex items-center gap-1">
+              <ChatRunPicker
+                sessionId={sessionId}
+                cliId={cliId}
+                theme={theme}
+                runInfo={runInfo}
+                fallbackLabel={runLabel}
+                blockedReason={
+                  working
+                    ? `${theme.name} is working. Switch once it's done.`
+                    : needsInput
+                      ? `Answer ${theme.name} first.`
+                      : null
+                }
+                onNotReady={() =>
+                  setNote(`${theme.name} isn't ready for a command yet. Try again in a moment.`)
+                }
+              />
               {working ? (
                 <SimpleTooltip label={`Stop ${theme.name} (Esc)`}>
                   <Button

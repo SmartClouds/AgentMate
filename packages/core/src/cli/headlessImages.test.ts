@@ -87,6 +87,38 @@ describe('buildHeadlessImageInput', () => {
     expect(input.promptPrefix).toContain('./b.png');
   });
 
+  it('names an absolute image as it is and opens its folder to Claude Code', () => {
+    const input = buildHeadlessImageInput(cli('claude-code'), [
+      'C:\\Temp\\attach\\shot.png',
+      'C:\\Temp\\attach\\other.png',
+    ]);
+    expect(input.args).toEqual(['--allowedTools', 'Read', '--add-dir', 'C:/Temp/attach']);
+    expect(input.promptPrefix).toContain('C:/Temp/attach/shot.png');
+    expect(input.promptPrefix).not.toContain('./C:');
+  });
+
+  it('opens the folder of an absolute image to Gemini', () => {
+    const input = buildHeadlessImageInput(cli('gemini-cli'), ['/tmp/attach/shot.png']);
+    expect(input.args).toEqual(['--include-directories', '/tmp/attach']);
+    expect(input.promptPrefix).toBe('@/tmp/attach/shot.png ');
+  });
+
+  it('leaves Codex its own flag for an absolute image', () => {
+    expect(buildHeadlessImageInput(cli('codex-cli'), ['/tmp/a.png']).args).toEqual([
+      '--skip-git-repo-check',
+      '--image',
+      '/tmp/a.png',
+    ]);
+  });
+
+  it('lets a run that works in a project keep using its tools', () => {
+    const looking = buildHeadlessImageInput(cli('claude-code'), ['a.png']);
+    const working = buildHeadlessImageInput(cli('claude-code'), ['a.png'], { lookOnly: false });
+    expect(looking.promptPrefix).toContain('Do not read or do anything else');
+    expect(working.promptPrefix).not.toContain('Do not read or do anything else');
+    expect(working.promptPrefix).toContain('./a.png');
+  });
+
   it('returns nothing without images', () => {
     for (const id of ['claude-code', 'codex-cli', 'gemini-cli']) {
       expect(buildHeadlessImageInput(cli(id), []), id).toEqual({

@@ -54,6 +54,12 @@ import {
 } from './shellCommand';
 import { previousTaskContext } from './sshTaskContext';
 import { createSshHistoryStore } from './sshTaskHistoryStore';
+import {
+  attachmentImageData,
+  disposeTaskAttachments,
+  NO_ATTACHMENTS,
+  type TaskAttachments,
+} from './taskAttachments';
 
 /** Refuses to loop forever if the AI never says FINISHED. */
 const MAX_STEPS = 40;
@@ -213,14 +219,14 @@ function buildPrompt(run: RunState): string {
   const tail = transcriptTail(run.transcript);
   if (run.buildPrompt) {
     return run.buildPrompt({
-      task: run.prompt + previousBlock(run) + followUpBlock(run),
+      task: run.prompt + run.attachments.text + previousBlock(run) + followUpBlock(run),
       transcript: tail,
       viaCli: run.cliId !== null,
     });
   }
   return `${run.cliId ? cliPreamble(run.target) : ''}You are operating ${run.target.description}, on behalf of a user who is watching every command execute live in their terminal.
 
-User's task: "${run.prompt}"${previousBlock(run)}${followUpBlock(run)}
+User's task: "${run.prompt}"${run.attachments.text}${previousBlock(run)}${followUpBlock(run)}
 
 Reply with EXACTLY one of these three forms, and nothing else:
 RUN: <a single shell command>
@@ -284,6 +290,10 @@ interface RunState {
   /** Model and effort flags for that CLI. */
   runArgs: string[];
   cliWorkspace: CliWorkspace | null;
+  /** Files the user attached to the task. The run owns them and removes them when it ends. */
+  attachments: TaskAttachments;
+  /** The attached images as base64, read the first time an API provider needs them. */
+  imageData: string[] | null;
   /** Set while a CLI is working out the next step, so Stop can kill it. */
   cliRequestId: string | null;
   prompt: string;
@@ -713,6 +723,7 @@ function appendCompletedCommand(run: RunState, command: string, result: CommandR
 
 function cleanupRun(run: RunState): void {
   run.unsubscribeExit();
+  void disposeTaskAttachments(run.attachments);
   runs.delete(run.sessionId);
   if (run.history.endedAt === null) endHistory(run, 'error');
 }
@@ -736,6 +747,9 @@ async function askCli(run: RunState, prompt: string): Promise<string> {
       strictCli: true,
       runArgs: run.runArgs,
       ...(workspace ? { allowWrites: workspace.allowWrites } : {}),
+      ...(run.attachments.images.length > 0
+        ? { images: run.attachments.images, imagesWithTools: workspace !== null }
+        : {}),
       timeoutMs: workspace ? CLI_WORKSPACE_STEP_TIMEOUT_MS : CLI_STEP_TIMEOUT_MS,
     });
     if (!result.ok) throw new Error(result.error || `${result.cliName ?? 'The CLI'} failed.`);
@@ -802,8 +816,18 @@ async function runLoop(run: RunState): Promise<void> {
       let reply: string;
       try {
         const prompt = buildPrompt(run);
+        if (api && run.imageData === null) {
+          run.imageData = await attachmentImageData(run.attachments);
+        }
         reply = api
-          ? await runAiPrompt(api.provider, api.model, prompt, [], run.controller.signal)
+          ? await runAiPrompt(
+              api.provider,
+              api.model,
+              prompt,
+              [],
+              run.controller.signal,
+              run.imageData ?? [],
+            )
           : await askCli(run, prompt);
       } catch (error) {
         if (run.aborted) return;
@@ -960,6 +984,11 @@ export interface AgentTaskSpec {
   runArgs: string[];
   /** Where the CLI works, when the user gave the run a folder of theirs. */
   cliWorkspace?: CliWorkspace;
+  /**
+   * Files the user attached, already loaded. From here on the run owns them: they are removed
+   * when it ends, or right away when it cannot start.
+   */
+  attachments?: TaskAttachments;
   /** What it says when it is not connected; the SSH and local wording otherwise. */
   notConnectedMessage?: string;
   /** How a terminal task was started, kept in its history so it can be run again. */
@@ -979,16 +1008,21 @@ export function startAgentTask(
   listener: (progress: SshAgentProgress) => void,
 ): void {
   const { key: sessionId, prompt, target } = spec;
-  if (runs.has(sessionId)) throw new Error('An AI task is already running in this session.');
+  const attachments = spec.attachments ?? NO_ATTACHMENTS;
+  const refuse = (message: string): never => {
+    void disposeTaskAttachments(attachments);
+    throw new Error(message);
+  };
+  if (runs.has(sessionId)) refuse('An AI task is already running in this session.');
   if (!target.isConnected()) {
-    throw new Error(
+    refuse(
       spec.notConnectedMessage ??
         (target.kind === 'ssh'
           ? 'This SSH session is not connected.'
           : 'This terminal is not running anymore.'),
     );
   }
-  if (!prompt.trim()) throw new Error('Describe what you want the AI to do first.');
+  if (!prompt.trim()) refuse('Describe what you want the AI to do first.');
 
   const run: RunState = {
     sessionId,
@@ -999,6 +1033,8 @@ export function startAgentTask(
     cliId: spec.cliId,
     runArgs: spec.runArgs,
     cliWorkspace: spec.cliWorkspace ?? null,
+    attachments,
+    imageData: null,
     cliRequestId: null,
     prompt: prompt.trim(),
     previousContext: spec.previousContext ?? '',
@@ -1019,7 +1055,11 @@ export function startAgentTask(
     history: startHistory(
       sessionId,
       target.kind === 'ssh' ? sshSessionServerId(sessionId) : (spec.history?.serverId ?? null),
-      prompt.trim(),
+      attachments.names.length > 0
+        ? `${prompt.trim()}
+
+Attached: ${attachments.names.join(', ')}`
+        : prompt.trim(),
       {
         settings: spec.settings,
         continuedFromRunId: spec.continuedFromRunId,

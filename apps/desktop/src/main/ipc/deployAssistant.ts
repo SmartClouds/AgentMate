@@ -1,4 +1,5 @@
 import type { EffortLevel } from '@runova/core';
+import { isAbsolute } from 'node:path';
 import type { IpcMainInvokeEvent } from 'electron';
 import type {
   DeployAssistantAppInput,
@@ -12,6 +13,7 @@ import type {
 import { OBJECT_NAME } from '../../shared/dockerNames';
 import { IPC } from '../../shared/ipcChannels';
 import { MAX_SSH_AGENT_MESSAGE_CHARS } from '../../shared/sshAgentMessage';
+import { MAX_TASK_ATTACHMENTS } from '../agents/taskAttachments';
 import type { DeployAssistant } from '../deploy/assistant/service';
 import type { SubscriptionOwner } from '../deploy/live/subscriptions';
 import type { JournalSubscriptions } from '../deploy/logs/journal';
@@ -53,7 +55,12 @@ export interface DeployAssistantHandlerDeps {
   owner: (event: IpcMainInvokeEvent) => SubscriptionOwner;
 }
 
-const MAX_PROMPT = 4_000;
+/**
+ * Room for whatever the user pastes (a long log, a whole plan). The cap only keeps a broken
+ * renderer from flooding the process; a CLI takes a prompt this size on stdin.
+ */
+const MAX_PROMPT = 200_000;
+const MAX_PATH = 1_024;
 const MAX_ANSWER = 2_000;
 const MAX_TITLE = 200;
 const MAX_FACT = 1_000;
@@ -109,10 +116,30 @@ function appInput(value: unknown): DeployAssistantAppInput | undefined {
   return { stackId: input.stackId };
 }
 
+function attachmentsInput(value: unknown): string[] {
+  if (value === undefined || value === null) return [];
+  if (
+    !Array.isArray(value) ||
+    !value.every((path) => typeof path === 'string' && path.length <= MAX_PATH && isAbsolute(path))
+  ) {
+    throw new Error('Those attachments are not files on this computer.');
+  }
+  if (value.length > MAX_TASK_ATTACHMENTS) {
+    throw new Error(`Attach at most ${MAX_TASK_ATTACHMENTS} files to one task.`);
+  }
+  return [...new Set(value as string[])];
+}
+
 export function startInput(value: unknown): DeployAssistantStartInput {
   const input = object(value, 'a task for the AI');
+  if (typeof input.prompt === 'string' && input.prompt.length > MAX_PROMPT) {
+    throw new Error(
+      `The task is longer than ${MAX_PROMPT.toLocaleString('en-US')} characters. Attach the long part as a file instead.`,
+    );
+  }
   const prompt = text(input.prompt, MAX_PROMPT, 'task');
   if (!prompt.trim()) throw new Error('Describe what you want the AI to do first.');
+  const attachments = attachmentsInput(input.attachments);
   const effort = optionalId(input.effort, /^[a-z]+$/, 'reasoning effort');
   if (effort && !EFFORTS.has(effort)) throw new Error('That is not a reasoning effort.');
   const found = context(input.context);
@@ -130,6 +157,7 @@ export function startInput(value: unknown): DeployAssistantStartInput {
     ...(project ? { project } : {}),
     ...(app ? { app } : {}),
     ...(continueFromRunId ? { continueFromRunId } : {}),
+    ...(attachments.length > 0 ? { attachments } : {}),
   };
 }
 

@@ -85,6 +85,11 @@ export const CliDefinitionSchema = z.object({
   promptImageArgs: z.array(z.string()).optional(),
   /** For `flag`: the flag that names one image, repeated with each image's path. */
   promptImageFlag: z.string().optional(),
+  /**
+   * The flag that lets the CLI read a folder outside its workspace, given once per folder an
+   * attached image sits in when the run passes it by absolute path.
+   */
+  promptImageDirFlag: z.string().optional(),
   /** Env vars for a run that attaches images, e.g. to let the CLI read from a temp folder. */
   promptImageEnv: z.record(z.string(), z.string()).optional(),
   /**
@@ -118,6 +123,7 @@ export const CLI_REGISTRY: CliDefinition[] = [
     // may only use when it is allowed up front.
     promptImageInput: 'read-tool',
     promptImageArgs: ['--allowedTools', 'Read'],
+    promptImageDirFlag: '--add-dir',
     argsExample: `--model ${CLI_MODEL_EXAMPLES['claude-code']}`,
     // Anthropic's native installer: no Node needed, and it keeps itself up to date. The npm
     // package still works but needs Node and a writable npm prefix, which a stock Mac lacks.
@@ -155,6 +161,7 @@ export const CLI_REGISTRY: CliDefinition[] = [
     // Headless gemini refuses to read from a folder it doesn't trust, and a per-run temp folder
     // never is.
     promptImageEnv: { GEMINI_CLI_TRUST_WORKSPACE: 'true' },
+    promptImageDirFlag: '--include-directories',
     argsExample: `-m ${CLI_MODEL_EXAMPLES['gemini-cli']}`,
     // Google publishes no native installer, so npm (Node 20+) it is.
     installCommand: {

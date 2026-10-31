@@ -3,7 +3,7 @@ title: Deploy AI assistant and logs
 category: Deploy
 order: 70
 summary: Use the Deploy AI to diagnose a server with commands you approve, read every log in one viewer, and see what is broken right now in the Problems feed.
-keywords: deploy ai, assistant, diagnose, troubleshoot, logs, problems, journal, journalctl, container logs, site logs, crash loop, approve command, auto-run diagnostics, alerts, log viewer, fix in project
+keywords: deploy ai, assistant, diagnose, troubleshoot, paste image, attach file, screenshot, logs, problems, journal, journalctl, container logs, site logs, crash loop, approve command, auto-run diagnostics, alerts, log viewer, fix in project
 route: /deploy
 ---
 
@@ -114,6 +114,25 @@ Turning on **Auto-run diagnostics** asks for your password (or a code from your 
 5. Click **Start**, or press `Ctrl+Enter` (`Cmd+Enter` on macOS) in the text box.
 
 The drawer remembers the AI, model and effort you picked, for the next run and the next time you open it. If the CLI you used last is no longer installed, it goes back to **AI provider (Settings)**.
+
+### Paste long text, images and files
+
+The task box takes text of any length, so you can paste a whole log, a plan or another AI's analysis as it is.
+
+To give the AI an image or a file, do any of these in the task box:
+
+- Paste a screenshot with `Ctrl+V` (`Cmd+V` on macOS).
+- Copy a file in Explorer or Finder and paste it.
+- Drag files onto the box.
+- Click the paperclip in the corner of the box and pick files.
+
+Each file shows as a small tile above the box (a thumbnail for an image). Hover a tile and click its **x** to take it off. You can start a run with files and no text, and the AI is asked to look at what you attached.
+
+- **Images** (PNG, JPEG, GIF, WebP) go to the AI as images. With a CLI, that works with Claude Code, Codex and Gemini; other CLIs say they can't look at images. The AI provider from Settings gets them as PNG.
+- **Text files** (logs, configs, code, Markdown) go into the task, so any AI can read them, up to 512 KB in all.
+- Other files, such as archives or programs, are refused with the file's name.
+
+You can attach up to 10 files to a task. Files go with a new task or a follow-up, not with a message to a run that is still going. The AI works on copies, which are removed when the run ends.
 
 ### Approve, skip, answer
 

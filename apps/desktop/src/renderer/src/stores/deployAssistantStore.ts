@@ -132,6 +132,9 @@ interface DeployAssistantStoreState {
   /** What is in each server's task box, so leaving the page does not lose it or bring it back. */
   prompts: Record<string, string>;
   setPrompt: (serverId: string, text: string) => void;
+  /** Per server, the files pasted or dropped into the task box, as paths. */
+  attachments: Record<string, string[]>;
+  setAttachments: (serverId: string, paths: string[]) => void;
   /** The drawer fills the page area, kept while the user goes to other pages. */
   maximized: boolean;
   setMaximized: (maximized: boolean) => void;
@@ -211,6 +214,12 @@ export const useDeployAssistantStore = create<DeployAssistantStoreState>((set) =
   prompts: {},
   setPrompt: (serverId, text) =>
     set((state) => ({ prompts: { ...state.prompts, [serverId]: text } })),
+  attachments: {},
+  setAttachments: (serverId, paths) =>
+    set((state) => {
+      const { [serverId]: _old, ...others } = state.attachments;
+      return { attachments: paths.length > 0 ? { ...others, [serverId]: paths } : others };
+    }),
   maximized: false,
   setMaximized: (maximized) => set({ maximized }),
   runs: {},

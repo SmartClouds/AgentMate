@@ -137,6 +137,7 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
     prompt: string,
     ai: AssistantAiChoice,
     project: AssistantProjectChoice | null,
+    attachments: string[],
   ): Promise<boolean> {
     const before = useDeployAssistantStore.getState().runs[serverId];
     follow.current = true;
@@ -152,6 +153,7 @@ export function AssistantDrawer({ server }: { server: DeployServer }): React.JSX
         ...(project ? { project } : {}),
         ...(context ? { context } : {}),
         ...(app ? { app: { stackId: app.stackId } } : {}),
+        ...(attachments.length > 0 ? { attachments } : {}),
         // A chat picked from the history carries on from its own last run.
         ...(continueFrom
           ? { continueFromRunId: continueFrom }

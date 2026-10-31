@@ -1,6 +1,7 @@
 import type { IpcMainInvokeEvent } from 'electron';
 import { describe, expect, it, vi } from 'vitest';
 import { IPC } from '../../shared/ipcChannels';
+import { MAX_SSH_AGENT_MESSAGE_CHARS } from '../../shared/sshAgentMessage';
 import {
   journalInput,
   modeInput,
@@ -113,7 +114,9 @@ describe('deployAssistant channels', () => {
     await call(IPC.deployAssistant.message, 'srv-1', 'Leave the database alone.');
     expect(assistant.message).toHaveBeenCalledWith('srv-1', 'Leave the database alone.');
     await expect(call(IPC.deployAssistant.message, 'srv-1', '   ')).rejects.toThrow('Type a');
-    await expect(call(IPC.deployAssistant.message, 'srv-1', 'a'.repeat(2_001))).rejects.toThrow();
+    await expect(
+      call(IPC.deployAssistant.message, 'srv-1', 'a'.repeat(MAX_SSH_AGENT_MESSAGE_CHARS + 1)),
+    ).rejects.toThrow();
     await expect(call(IPC.deployAssistant.message, '../x', 'hi')).rejects.toThrow('saved server');
     expect(assistant.message).toHaveBeenCalledTimes(1);
     await call(IPC.deployAssistant.setMode, {
@@ -175,7 +178,13 @@ describe('argument checks', () => {
       }),
     ).toThrow('may edit files');
     expect(() => startInput({ serverId: 'srv-1', prompt: '   ' })).toThrow('Describe what');
-    expect(() => startInput({ serverId: 'srv-1', prompt: 'a'.repeat(4_001) })).toThrow();
+    // A long paste is a task like any other; only an absurd one is refused, saying what to do.
+    expect(startInput({ serverId: 'srv-1', prompt: 'a'.repeat(50_000) }).prompt).toHaveLength(
+      50_000,
+    );
+    expect(() => startInput({ serverId: 'srv-1', prompt: 'a'.repeat(200_001) })).toThrow(
+      'Attach the long part as a file',
+    );
     expect(() => startInput({ serverId: '../x', prompt: 'x' })).toThrow('saved server');
     expect(() => startInput({ serverId: 'srv-1', prompt: 'x', cliId: 'rm -rf' })).toThrow('CLI');
     expect(() => startInput({ serverId: 'srv-1', prompt: 'x', effort: 'huge' })).toThrow('effort');
@@ -212,6 +221,30 @@ describe('argument checks', () => {
     expect(() => startInput({ serverId: 'srv-1', prompt: 'x', continueFromRunId: 'nope' })).toThrow(
       'not a chat',
     );
+  });
+
+  it('start: attachments are absolute paths, at most ten, without repeats', () => {
+    const shot = process.platform === 'win32' ? 'C:/Temp/shot.png' : '/tmp/shot.png';
+    expect(
+      startInput({ serverId: 'srv-1', prompt: 'x', attachments: [shot, shot] }).attachments,
+    ).toEqual([shot]);
+    expect(startInput({ serverId: 'srv-1', prompt: 'x', attachments: [] })).not.toHaveProperty(
+      'attachments',
+    );
+    expect(() => startInput({ serverId: 'srv-1', prompt: 'x', attachments: ['shot.png'] })).toThrow(
+      'not files on this computer',
+    );
+    expect(() => startInput({ serverId: 'srv-1', prompt: 'x', attachments: [7] })).toThrow(
+      'not files on this computer',
+    );
+    expect(() => startInput({ serverId: 'srv-1', prompt: 'x', attachments: shot })).toThrow();
+    expect(() =>
+      startInput({
+        serverId: 'srv-1',
+        prompt: 'x',
+        attachments: Array.from({ length: 11 }, (_, i) => `${shot}${i}`),
+      }),
+    ).toThrow('at most 10');
   });
 
   it('mode: one of the two, with an optional step-up', () => {

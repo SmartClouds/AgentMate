@@ -1,9 +1,12 @@
 import { access } from 'node:fs/promises';
 import {
   buildDeployAssistantPrompt,
+  CLI_REGISTRY,
   type DeployAssistantAppFacts,
   type DeployAssistantContext,
   type DeployAssistantLog,
+  getCliDefinition,
+  supportsPromptImages,
 } from '@runova/core';
 import type { SshAgentHistoryRun, SshAgentProgress } from '../../../shared/apiTypes';
 import type {
@@ -48,6 +51,7 @@ import type { DeployDocker } from '../docker';
 import type { DeployStacks } from '../stacks/service';
 import { chainOf, chatsFrom } from './chats';
 import { coreExecutor } from './coreExecutor';
+import { isImagePath, loadTaskAttachments } from '../../agents/taskAttachments';
 
 /**
  * The Deploy AI (E09 T5, T7): the SSH AI's loop with the server core as its shell. Its modes are
@@ -99,6 +103,14 @@ export function projectPreamble(
   );
 }
 
+/** The CLIs that can look at an image, for an error that says what to pick instead. */
+function imageCliLabels(): string {
+  const labels = CLI_REGISTRY.filter(supportsPromptImages).map((cli) => cli.label);
+  return labels.length <= 1
+    ? labels.join('')
+    : `${labels.slice(0, -1).join(', ')} or ${labels.at(-1)}`;
+}
+
 /** A run's key in the loop, apart from every terminal session id. */
 export function assistantKey(serverId: string): string {
   return `deploy:${serverId}`;
@@ -146,6 +158,15 @@ export class DeployAssistant {
         'Only an agent CLI can work in a project. Pick a CLI, or take the project off.',
       );
     }
+    if (input.attachments?.length && input.cliId) {
+      const cli = getCliDefinition(input.cliId);
+      const images = input.attachments.some(isImagePath);
+      if (cli && images && !supportsPromptImages(cli)) {
+        throw new Error(
+          `${cli.label} can't look at images. Pick ${imageCliLabels()}, or take the images off.`,
+        );
+      }
+    }
     const workspace = input.project ? await this.workspace(input.project) : undefined;
     // Asking the core first also checks the role: only Admins may run commands.
     await this.mode(serverId);
@@ -174,6 +195,9 @@ export class DeployAssistant {
       : input.continuePrevious
         ? getSshTaskHistory(key)[0]
         : undefined;
+    // Read last, after everything that can still refuse the task, so a refusal leaves no copies.
+    // From here startAgentTask owns them, and removes them itself if it refuses the run.
+    const attachments = await loadTaskAttachments(input.attachments ?? []);
     this.progress.delete(serverId);
     if (input.context) this.contexts.set(serverId, input.context);
     else this.contexts.delete(serverId);
@@ -186,6 +210,7 @@ export class DeployAssistant {
           ? { continuedFromRunId: previous.id, previousContext: continuedTaskContext(previous.id) }
           : {}),
         ...(workspace ? { cliWorkspace: workspace.cli } : {}),
+        attachments,
         longAnswers: true,
         history: { serverId, scope: 'deploy', ...(app ? { app: app.ref } : {}) },
         // In auto-run mode nothing waits here: the core runs its allowlist and refuses the rest,

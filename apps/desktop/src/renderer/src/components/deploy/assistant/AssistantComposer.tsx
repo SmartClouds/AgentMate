@@ -8,15 +8,18 @@ import {
 import type { SshAgentPhase } from '@shared/apiTypes';
 import { MAX_SSH_AGENT_MESSAGE_CHARS } from '@shared/sshAgentMessage';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { CliLogo } from '@/components/cliLogos';
-import { Play, Send, StopCircle, TriangleAlert } from '@/components/icons';
+import { Paperclip, Play, Send, StopCircle, TriangleAlert } from '@/components/icons';
+import { AttachmentChip } from '@/components/ui/attachment-chip';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { queryKeys } from '@/lib/queryKeys';
 import { isMacPlatform } from '@/lib/shortcuts';
+import { pathsForFiles } from '@/lib/terminal/pasteFiles';
 import { cn } from '@/lib/utils';
 import {
   type AssistantAiChoice,
@@ -44,6 +47,11 @@ const CLI_DEFAULT_MODEL = '__cli-default__';
 
 /** What a Continue asks for. The AI is told what happened in the run it picks up. */
 export const CONTINUE_PROMPT = 'Carry on from where you stopped.';
+
+/** What a task with files and no words asks for. */
+export const ATTACHMENTS_PROMPT = 'Look at what I attached.';
+
+const NO_ATTACHMENTS: string[] = [];
 
 const PICKER = 'h-8 pl-3 pr-2 text-xs';
 
@@ -135,11 +143,15 @@ export function AssistantComposer({
   disabled?: boolean;
   /** What the next run is about (the app the user has open), shown above the box. */
   attachment?: React.ReactNode;
-  /** `project` is only ever set with a CLI, since the Settings provider cannot open files. */
+  /**
+   * `project` is only ever set with a CLI, since the Settings provider cannot open files.
+   * `attachments` are the paths of the files pasted or dropped into the box.
+   */
   onStart: (
     prompt: string,
     ai: AssistantAiChoice,
     project: AssistantProjectChoice | null,
+    attachments: string[],
   ) => Promise<boolean>;
   /** Resolves true once the run took the message. */
   onMessage: (text: string) => Promise<boolean>;
@@ -149,6 +161,13 @@ export function AssistantComposer({
   const prompt = useDeployAssistantStore((state) => state.prompts[serverId] ?? '');
   const setText = useDeployAssistantStore((state) => state.setPrompt);
   const setPrompt = (text: string) => setText(serverId, text);
+  const attachments = useDeployAssistantStore(
+    (state) => state.attachments[serverId] ?? NO_ATTACHMENTS,
+  );
+  const setAttachments = useDeployAssistantStore((state) => state.setAttachments);
+  const [note, setNote] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
   const [starting, setStarting] = useState(false);
   const picked = useDeployAssistantStore((state) => state.ai);
   const setAi = useDeployAssistantStore((state) => state.setAi);
@@ -201,11 +220,53 @@ export function AssistantComposer({
     });
   }
 
+  function attach(paths: string[]): void {
+    if (paths.length === 0) return;
+    const current = useDeployAssistantStore.getState().attachments[serverId] ?? [];
+    setAttachments(serverId, [...current, ...paths.filter((path) => !current.includes(path))]);
+    setNote(null);
+  }
+
+  /** Files can only go with a new task or a follow-up, not a message to a run still going. */
+  function attachFrom(paths: Promise<string[]>): void {
+    if (running) {
+      setNote('Files go with the next task. Attach them once this one ends.');
+      return;
+    }
+    void paths.then(attach).catch(() => setNote("That file couldn't be attached."));
+  }
+
+  function onPaste(event: React.ClipboardEvent): void {
+    // Text pastes as text, however long; only a paste with no text in it is an image or a file.
+    if (event.clipboardData.getData('text/plain')) return;
+    event.preventDefault();
+    const files = Array.from(event.clipboardData.files ?? []);
+    attachFrom(
+      files.length > 0
+        ? pathsForFiles(files)
+        : // Chromium hands a textarea nothing for a screenshot; the main process can see it.
+          window.runova.terminalClipboard
+            .read()
+            .then((content) => (content?.kind === 'files' ? content.paths : [])),
+    );
+  }
+
+  function onDrop(event: React.DragEvent): void {
+    setDragging(false);
+    const files = Array.from(event.dataTransfer.files ?? []);
+    if (files.length === 0) return;
+    event.preventDefault();
+    attachFrom(pathsForFiles(files));
+  }
+
   async function begin(text: string, clearAfter: boolean): Promise<void> {
     if (starting) return;
     setStarting(true);
     try {
-      if ((await onStart(text, ai, project)) && clearAfter) setPrompt('');
+      if ((await onStart(text, ai, project, clearAfter ? attachments : [])) && clearAfter) {
+        setPrompt('');
+        setAttachments(serverId, []);
+      }
     } finally {
       setStarting(false);
     }
@@ -224,9 +285,12 @@ export function AssistantComposer({
 
   function submit(): void {
     const trimmed = prompt.trim();
-    if (!trimmed) return;
-    if (running) void send(trimmed);
-    else void begin(trimmed, true);
+    if (running) {
+      if (trimmed) void send(trimmed);
+      return;
+    }
+    if (trimmed) void begin(trimmed, true);
+    else if (attachments.length > 0) void begin(ATTACHMENTS_PROMPT, true);
   }
 
   const locked = running || disabled;
@@ -251,25 +315,93 @@ export function AssistantComposer({
             : 'What should the AI look into?'}
       </Label>
       {attachment}
-      <Textarea
-        id="deploy-assistant-task"
-        value={prompt}
-        onChange={(event) => setPrompt(event.target.value)}
-        placeholder={
-          running
-            ? 'e.g. Leave the database alone, or check the api container too'
-            : 'e.g. Find out why the sender keeps restarting'
-        }
-        className="min-h-20 resize-none text-sm"
-        disabled={disabled || (running && asking)}
-        maxLength={running ? MAX_SSH_AGENT_MESSAGE_CHARS : undefined}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-            event.preventDefault();
-            submit();
-          }
+      {attachments.length > 0 && (
+        <ul aria-label="Attached files" className="flex gap-2 overflow-x-auto pb-0.5">
+          {attachments.map((path) => (
+            <li key={path}>
+              <AttachmentChip
+                path={path}
+                onRemove={() =>
+                  setAttachments(
+                    serverId,
+                    attachments.filter((other) => other !== path),
+                  )
+                }
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+      <div
+        className="relative"
+        onPaste={onPaste}
+        onDragOver={(event) => {
+          if (!event.dataTransfer.types.includes('Files')) return;
+          event.preventDefault();
+          setDragging(true);
         }}
-      />
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+      >
+        <Textarea
+          id="deploy-assistant-task"
+          value={prompt}
+          onChange={(event) => {
+            setPrompt(event.target.value);
+            setNote(null);
+          }}
+          placeholder={
+            running
+              ? 'e.g. Leave the database alone, or check the api container too'
+              : 'e.g. Find out why the sender keeps restarting'
+          }
+          className={cn(
+            'min-h-20 resize-none pr-10 text-sm',
+            dragging && 'border-primary ring-1 ring-primary/40',
+          )}
+          disabled={disabled || (running && asking)}
+          maxLength={running ? MAX_SSH_AGENT_MESSAGE_CHARS : undefined}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+              event.preventDefault();
+              submit();
+            }
+          }}
+        />
+        {!running && (
+          <SimpleTooltip label="Attach files or images. You can also paste or drop them here.">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-label="Attach files"
+              disabled={disabled}
+              className="absolute bottom-1.5 right-1.5 h-7 w-7 p-0 text-muted-foreground"
+              onClick={() => fileInput.current?.click()}
+            >
+              <Paperclip className="h-3.5 w-3.5" />
+            </Button>
+          </SimpleTooltip>
+        )}
+        <input
+          ref={fileInput}
+          type="file"
+          multiple
+          hidden
+          data-testid="deploy-assistant-file-input"
+          onChange={(event) => {
+            const files = Array.from(event.target.files ?? []);
+            // Cleared, so picking the same file again still fires a change.
+            event.target.value = '';
+            if (files.length > 0) attachFrom(pathsForFiles(files));
+          }}
+        />
+      </div>
+      {note && (
+        <p role="status" className="text-[11px] text-muted-foreground">
+          {note}
+        </p>
+      )}
       {/* One line, each picker labelled; Model and Effort only show once they can apply. */}
       <div role="group" aria-label="AI to use" className="flex flex-wrap gap-2">
         <Field id="deploy-assistant-ai" label="Which AI">
@@ -403,7 +535,10 @@ export function AssistantComposer({
                 <Play /> Continue
               </Button>
             )}
-            <Button onClick={submit} disabled={!prompt.trim() || starting || disabled}>
+            <Button
+              onClick={submit}
+              disabled={(!prompt.trim() && attachments.length === 0) || starting || disabled}
+            >
               <Send /> {followUp ? 'Ask' : 'Start'}
             </Button>
           </>

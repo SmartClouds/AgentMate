@@ -1,5 +1,5 @@
 import { createPublicKey, verify } from 'node:crypto';
-import { mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -365,6 +365,65 @@ describe('approve every command (the default)', () => {
     expect(plain?.[2]).toMatchObject({ timeoutMs: 5 * 60 * 1000 });
     expect(plain?.[2]).not.toHaveProperty('allowWrites');
     expect(fake.prompts.at(-1)).toContain('Do not use any tools');
+  });
+
+  it('shows a CLI the attached images and puts text files into the task', async () => {
+    const { assistant, serverId, progress } = setup();
+    const shot = join(SHOP, 'error.png');
+    const log = join(SHOP, 'deploy.log');
+    writeFileSync(shot, 'png bytes');
+    writeFileSync(log, 'ERROR: port 5432 refused\n');
+    fake.replies.push('FINISHED: The database is down.');
+    await assistant.start({
+      serverId,
+      prompt: 'Why does this fail?',
+      cliId: 'claude-code',
+      attachments: [shot, log],
+    });
+    await until(progress, 'finished');
+    const options = vi.mocked(runHeadlessCliPrompt).mock.lastCall?.[2];
+    // A copy of the run's own, which goes when the run ends.
+    expect(options?.images).toHaveLength(1);
+    expect(options?.images?.[0]).not.toBe(shot);
+    expect(options?.images?.[0]).toMatch(/error\.png$/);
+    expect(options?.imagesWithTools).toBe(false);
+    const prompt = fake.prompts.at(-1) ?? '';
+    expect(prompt).toContain('The user attached an image (error.png)');
+    expect(prompt).toContain('ERROR: port 5432 refused');
+    await vi.waitFor(() => expect(existsSync(options?.images?.[0] ?? '')).toBe(false));
+    expect(existsSync(shot)).toBe(true);
+    await flushSshTaskHistory();
+    const saved = (fake.saved as SshAgentHistoryRun[]).find((run) =>
+      run.prompt.startsWith('Why does this fail?'),
+    );
+    expect(saved?.prompt).toContain('Attached: error.png, deploy.log');
+  });
+
+  it('sends the attached images to the provider from Settings as image data', async () => {
+    const { assistant, serverId, progress } = setup();
+    const shot = join(SHOP, 'chart.png');
+    writeFileSync(shot, 'png bytes');
+    fake.replies.push('FINISHED: ok');
+    await assistant.start({ serverId, prompt: 'What is this?', attachments: [shot] });
+    await until(progress, 'finished');
+    expect(vi.mocked(runAiPrompt).mock.lastCall?.[5]).toEqual([
+      Buffer.from('png bytes').toString('base64'),
+    ]);
+  });
+
+  it('refuses images for a CLI that cannot look at them, and a file the AI cannot read', async () => {
+    const { assistant, serverId } = setup();
+    const shot = join(SHOP, 'shot.png');
+    const archive = join(SHOP, 'backup.tar');
+    writeFileSync(shot, 'png bytes');
+    writeFileSync(archive, Buffer.from([1, 0, 2]));
+    await expect(
+      assistant.start({ serverId, prompt: 'x', cliId: 'opencode', attachments: [shot] }),
+    ).rejects.toThrow("can't look at images");
+    await expect(
+      assistant.start({ serverId, prompt: 'x', cliId: 'claude-code', attachments: [archive] }),
+    ).rejects.toThrow("backup.tar isn't text or an image");
+    expect(assistant.state(serverId).running).toBe(false);
   });
 
   it('refuses a project without a CLI, one Runova no longer has, or a folder that is gone', async () => {

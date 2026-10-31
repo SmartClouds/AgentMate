@@ -25,6 +25,7 @@ beforeEach(() => {
     draft: null,
     runs: {},
     prompts: {},
+    attachments: {},
     maximized: false,
     pageApp: null,
     dismissedApps: {},
